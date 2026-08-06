@@ -304,6 +304,9 @@
 <script>
   // ── Constants & DOM refs (declared first to avoid TDZ errors) ────────────
   const FONT_FAMILY = 'Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif';
+  // Same font list, but with single quotes — FONT_FAMILY's double quotes
+  // would prematurely close the SVG's font-family="..." XML attribute.
+  const SVG_FONT_FAMILY = "Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif";
 
   const THEMES = {
     pastel: {
@@ -580,7 +583,7 @@
     const texts = placed.map((p) => {
       const rotate = p.rotated ? ` transform="rotate(-90 ${p.x.toFixed(1)} ${p.y.toFixed(1)})"` : '';
       return `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * 0.34).toFixed(1)}" ` +
-        `font-size="${p.fontPx.toFixed(1)}" font-family="${FONT_FAMILY}" ` +
+        `font-size="${p.fontPx.toFixed(1)}" font-family="${SVG_FONT_FAMILY}" ` +
         `fill="${p.color}" text-anchor="middle"${rotate}>${escapeXML(p.word)}</text>`;
     }).join('\n  ');
 
