@@ -140,6 +140,8 @@
 
     #word-input {
       flex: 1;
+      min-width: 0; /* otherwise a flex item won't shrink below its placeholder's
+                       intrinsic width, pushing the button out on narrow phones */
       border: none;
       outline: none;
       background: transparent;

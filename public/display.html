@@ -110,7 +110,7 @@
     /* ── Canvas ── */
     #cloud-container {
       position: fixed;
-      top: 80px; left: 0; right: 0; bottom: 72px;
+      top: 80px; left: 0; right: 0; bottom: 100px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -167,7 +167,7 @@
     .footer {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      height: 72px;
+      height: 100px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -202,8 +202,8 @@
     }
 
     .qr-code {
-      width: 56px; height: 56px;
-      border-radius: 8px;
+      width: 84px; height: 84px;
+      border-radius: 10px;
       border: 2px solid var(--qr-bd);
       padding: 3px;
       background: var(--bg);
@@ -399,19 +399,13 @@
     return Math.max(minPx, base * lengthPenalty(word));
   }
 
-  // Deterministic, not random — a word's rotation only depends on its own
-  // text, so the on-screen canvas and the SVG export (two separate calls to
-  // layoutWords) always agree on which words are rotated.
-  function isRotated(word) {
-    // FNV-1a — a simple *31 hash mixes short lowercase German words poorly
-    // (correlated low bits), which skewed the rotated ratio well below 25%.
-    let hash = 2166136261;
-    for (let i = 0; i < word.length; i++) {
-      hash ^= word.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return (hash >>> 0) % 4 === 0; // ~25% of words, for visual variety
-  }
+  // Exactly 1 in 5 words rotated (20%) — a per-word probability (e.g. a
+  // hash-based coin flip) can easily land near 50/50 by chance with the
+  // small word counts typical of an event like this, so rotation is
+  // assigned by rank in the sorted list instead, which is exact regardless
+  // of how many words there are. Also spreads rotated words evenly across
+  // the size spectrum rather than clustering them at one end.
+  const ROTATE_EVERY_N = 5;
 
   // Shared spiral+collision layout used by both the live canvas and the SVG
   // export, so the two are always identical by construction — and retries
@@ -423,8 +417,10 @@
     const { minPx, maxPx } = getFontSizeRange(words, side);
 
     const sized = words
-      .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx), rotated: isRotated(word) }))
+      .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx) }))
       .sort((a, b) => b.fontPx - a.fontPx);
+
+    sized.forEach((item, i) => { item.rotated = (i % ROTATE_EVERY_N === ROTATE_EVERY_N - 1); });
 
     const placed = [];
     const cx = side / 2, cy = side / 2;
