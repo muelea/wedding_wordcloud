@@ -40,23 +40,6 @@
       --qr-bd:   rgba(255,16,240,0.55);
     }
 
-    [data-theme="neon"] .header-name,
-    [data-theme="neon"] .word-counter .count {
-      text-shadow: 0 0 12px currentColor, 0 0 30px currentColor;
-    }
-
-    [data-theme="neon"] .toast {
-      box-shadow: 0 0 16px var(--primary), 0 0 36px var(--accent);
-    }
-
-    [data-theme="neon"] .qr-code {
-      box-shadow: 0 0 14px var(--primary);
-    }
-
-    [data-theme="neon"] .empty-ornament {
-      text-shadow: 0 0 24px var(--orn);
-    }
-
     /* Real neon needs a flat black backdrop, not a gradient wash */
     [data-theme="neon"] body::before {
       background: var(--bg);
@@ -96,15 +79,6 @@
     }
 
     .header-title { display: flex; flex-direction: column; }
-
-    .header-eyebrow {
-      font-size: 10px;
-      letter-spacing: 3.5px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 3px;
-      transition: color 0.6s;
-    }
 
     .header-name {
       font-family: Georgia, 'Times New Roman', serif;
@@ -236,23 +210,23 @@
       transition: border-color 0.6s, background 0.6s;
     }
 
-    /* ── Corner hints (theme toggle / SVG export / new session) ── */
-    .theme-hint, .export-hint, .clear-hint {
-      position: fixed;
-      right: 16px;
-      font-size: 10px;
+    /* ── Footer actions (theme toggle / SVG export / new session) ── */
+    .footer-actions {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+    .footer-actions span {
+      font-size: 11px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
-      opacity: 0.45;
+      opacity: 0.6;
       transition: opacity 0.3s, color 0.6s;
       cursor: pointer;
       user-select: none;
     }
-    .theme-hint:hover, .export-hint:hover, .clear-hint:hover { opacity: 0.85; }
-    .theme-hint  { bottom: 80px; }
-    .export-hint { bottom: 106px; }
-    .clear-hint  { bottom: 132px; }
+    .footer-actions span:hover { opacity: 1; }
 
     /* ── Toast ── */
     .toast-container {
@@ -291,7 +265,6 @@
 
 <header class="header">
   <div class="header-title">
-    <span class="header-eyebrow">Herzlich willkommen zur</span>
     <span class="header-name" id="couple-name">♡</span>
   </div>
   <div class="word-counter">
@@ -311,6 +284,11 @@
 
 <footer class="footer">
   <span class="footer-ornament">· · · ✦ · · ·</span>
+  <div class="footer-actions">
+    <span id="theme-hint" title="Theme wechseln">Theme</span>
+    <span id="export-hint" title="Als SVG exportieren">SVG</span>
+    <span id="clear-hint" title="Wörter archivieren & neue Runde starten">Neue Runde</span>
+  </div>
   <div class="qr-wrap">
     <div class="qr-label">
       <div class="line1">Scannen &amp; mitmachen</div>
@@ -320,15 +298,13 @@
   </div>
 </footer>
 
-<div class="theme-hint" id="theme-hint" title="Theme wechseln (T)">T – Theme</div>
-<div class="export-hint" id="export-hint" title="Als SVG exportieren (S)">S – SVG</div>
-<div class="clear-hint" id="clear-hint" title="Wörter archivieren & neue Runde starten (N)">N – Neue Runde</div>
 <div class="toast-container" id="toast-container"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/js/wordcloud2.js"></script>
 <script>
   // ── Constants & DOM refs (declared first to avoid TDZ errors) ────────────
+  const FONT_FAMILY = 'Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif';
+
   const THEMES = {
     pastel: {
       colors: [
@@ -346,11 +322,12 @@
     },
   };
 
-  const canvas        = document.getElementById('cloud-canvas');
-  const container     = document.getElementById('cloud-container');
-  const emptyState    = document.getElementById('empty-state');
-  const wordTotalEl   = document.getElementById('word-total');
-  const toastContainer = document.getElementById('toast-container');
+  const canvas         = document.getElementById('cloud-canvas');
+  const ctx             = canvas.getContext('2d');
+  const container       = document.getElementById('cloud-container');
+  const emptyState      = document.getElementById('empty-state');
+  const wordTotalEl     = document.getElementById('word-total');
+  const toastContainer  = document.getElementById('toast-container');
 
   let currentWords = [];
   let renderTimer  = null;
@@ -365,7 +342,6 @@
     currentTheme = t;
     wordColors.clear(); // re-assign colors from new palette
     document.documentElement.dataset.theme = t;
-    document.getElementById('theme-hint').textContent = 'T – ' + (t === 'neon' ? 'Neon' : 'Pastell');
     if (currentWords.length > 0) scheduleRender(currentWords);
   }
 
@@ -383,7 +359,6 @@
 
   // Scale font sizes to the available area per word so a crowded cloud
   // shrinks to fit and a sparse one grows to fill the square nicely.
-  // Shared by the live canvas render and the SVG export so both match.
   function getFontSizeRange(words, side) {
     const density = Math.sqrt((side * side) / words.length);
     const maxPx = clamp(density * 0.85, side * 0.05, side * 0.30);
@@ -399,14 +374,95 @@
     return clamp(1 - Math.max(0, word.length - 5) * 0.018, 0.6, 1);
   }
 
+  // Only 4 distinct sizes. Ratio is measured against a floored spread, not
+  // the raw max — otherwise a word jumped straight to the biggest tier the
+  // moment it equaled a still-tiny current max (e.g. after just its 2nd
+  // submission). Flooring the spread means a word needs a real lead over
+  // the rest, not just one extra vote early on, before it reads as "big".
+  const SIZE_TIERS = [0.3, 0.5, 0.72, 1];
+  const MIN_TIER_SPREAD = 6;
+
   function sizeForCount(word, count, minCount, maxCount, minPx, maxPx) {
-    // Always spans the full 0–1 range across whatever min/max counts are
-    // currently present, so the smallest word is always minPx and the
-    // biggest is always maxPx — not anchored to an absolute count of 1.
-    const ratio = maxCount === minCount ? 0.5 : (count - minCount) / (maxCount - minCount);
-    const base = minPx + Math.pow(ratio, 0.55) * (maxPx - minPx);
-    // Never go below the floor, even after the length penalty.
+    let tierRatio;
+    if (maxCount === minCount) {
+      tierRatio = 0.6; // no variation yet — keep everything one pleasant size
+    } else {
+      const spread = Math.max(maxCount - minCount, MIN_TIER_SPREAD);
+      const ratio = clamp((count - minCount) / spread, 0, 1);
+      const tierIndex = Math.min(SIZE_TIERS.length - 1, Math.floor(ratio * SIZE_TIERS.length));
+      tierRatio = SIZE_TIERS[tierIndex];
+    }
+    const base = minPx + tierRatio * (maxPx - minPx);
     return Math.max(minPx, base * lengthPenalty(word));
+  }
+
+  // Deterministic, not random — a word's rotation only depends on its own
+  // text, so the on-screen canvas and the SVG export (two separate calls to
+  // layoutWords) always agree on which words are rotated.
+  function isRotated(word) {
+    // FNV-1a — a simple *31 hash mixes short lowercase German words poorly
+    // (correlated low bits), which skewed the rotated ratio well below 25%.
+    let hash = 2166136261;
+    for (let i = 0; i < word.length; i++) {
+      hash ^= word.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0) % 4 === 0; // ~25% of words, for visual variety
+  }
+
+  // Shared spiral+collision layout used by both the live canvas and the SVG
+  // export, so the two are always identical by construction — and retries
+  // at a smaller size instead of ever dropping a word that doesn't fit.
+  function layoutWords(words, side, measureCtx) {
+    const counts = words.map(([, c]) => c);
+    const maxCount = Math.max(...counts);
+    const minCount = Math.min(...counts);
+    const { minPx, maxPx } = getFontSizeRange(words, side);
+
+    const sized = words
+      .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx), rotated: isRotated(word) }))
+      .sort((a, b) => b.fontPx - a.fontPx);
+
+    const placed = [];
+    const cx = side / 2, cy = side / 2;
+    const maxRadius = side * 0.72;
+    const steps = 2000;
+
+    for (const item of sized) {
+      let fontPx = item.fontPx;
+      let spot = null;
+
+      for (let attempt = 0; attempt < 8 && !spot; attempt++) {
+        measureCtx.font = `${fontPx}px ${FONT_FAMILY}`;
+        const textHalf = measureCtx.measureText(item.word).width / 2 + side * 0.004;
+        const fontHalf = fontPx / 2 + side * 0.004;
+        // Rotated words occupy a footprint with width/height swapped.
+        const halfW = item.rotated ? fontHalf : textHalf;
+        const halfH = item.rotated ? textHalf : fontHalf;
+
+        for (let t = 0; t < steps; t++) {
+          const angle = 0.3 * t;
+          const radius = (maxRadius / Math.sqrt(steps)) * Math.sqrt(t);
+          const x = cx + radius * Math.cos(angle);
+          const y = cy + radius * Math.sin(angle);
+          const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
+          if (box.x1 < 0 || box.y1 < 0 || box.x2 > side || box.y2 > side) continue;
+          const collides = placed.some((p) =>
+            !(box.x2 < p.x1 || box.x1 > p.x2 || box.y2 < p.y1 || box.y1 > p.y2));
+          if (!collides) { spot = { x, y, halfW, halfH }; break; }
+        }
+        if (!spot) fontPx *= 0.82; // didn't fit at this size — shrink and retry
+      }
+      if (!spot) continue; // extremely unlikely after 8 shrink attempts
+
+      placed.push({
+        word: item.word, fontPx, rotated: item.rotated, x: spot.x, y: spot.y,
+        x1: spot.x - spot.halfW, x2: spot.x + spot.halfW,
+        y1: spot.y - spot.halfH, y2: spot.y + spot.halfH,
+        color: getWordColor(item.word),
+      });
+    }
+    return placed;
   }
 
   function renderCloud(words) {
@@ -414,42 +470,30 @@
 
     const rect = container.getBoundingClientRect();
     // Keep a fixed, roughly square drawing area regardless of word count —
-    // only the font sizes below adapt to make everything fit inside it.
+    // only the font sizes adapt to make everything fit inside it.
     const side = Math.min(rect.width, rect.height) * 0.94;
-    const w = side, h = side;
+    canvas.width = side;
+    canvas.height = side;
 
-    const counts = words.map(([, c]) => c);
-    const maxCount = Math.max(...counts);
-    const minCount = Math.min(...counts);
-    const { minPx, maxPx } = getFontSizeRange(words, side);
+    const placed = layoutWords(words, side, ctx);
 
-    const list = words.map(([word, count]) =>
-      [word, Math.round(sizeForCount(word, count, minCount, maxCount, minPx, maxPx))]);
-
-    // Render offscreen → swap when done, so the visible canvas never flashes blank
-    const off = document.createElement('canvas');
-    off.width = w; off.height = h;
-
-    off.addEventListener('wordcloudstop', () => {
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(off, 0, 0);
-      canvas.classList.add('visible');
-    }, { once: true });
-
-    WordCloud(off, {
-      list,
-      fontFamily: 'Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif',
-      color: (word) => getWordColor(word),
-      rotateRatio: 0.25,
-      rotationSteps: 2,
-      backgroundColor: 'transparent',
-      shuffle: true,
-      drawOutOfBound: false,
-      shrinkToFit: true,
-      minSize: 8,
-      gridSize: Math.round(side / 80),
-      weightFactor: 1,
-    });
+    ctx.clearRect(0, 0, side, side);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    for (const p of placed) {
+      ctx.font = `${p.fontPx}px ${FONT_FAMILY}`;
+      ctx.fillStyle = p.color;
+      if (p.rotated) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(p.word, 0, p.fontPx * 0.34);
+        ctx.restore();
+      } else {
+        ctx.fillText(p.word, p.x, p.y + p.fontPx * 0.34);
+      }
+    }
+    canvas.classList.add('visible');
   }
 
   function scheduleRender(words) {
@@ -507,7 +551,7 @@
     }
   });
 
-  // ── Theme toggle (press "T" or click the hint) ──────────────────────────
+  // ── Theme toggle ──────────────────────────────────────────────────────────
   function toggleTheme() {
     const next = currentTheme === 'neon' ? 'pastel' : 'neon';
     applyTheme(next);
@@ -517,59 +561,13 @@
   document.getElementById('theme-hint').addEventListener('click', toggleTheme);
 
   // ── SVG export (for print) ───────────────────────────────────────────────
-  // Builds an independent spiral layout with real <text> elements (not a
-  // rasterized canvas dump), so the exported file stays crisp at poster size.
-  function layoutWordsForSVG(words, side) {
-    const measureCtx = document.createElement('canvas').getContext('2d');
-    const fontFamily = 'Georgia, "Times New Roman", serif';
-    const counts = words.map(([, c]) => c);
-    const maxCount = Math.max(...counts);
-    const minCount = Math.min(...counts);
-    const { minPx, maxPx } = getFontSizeRange(words, side);
-
-    const sized = words
-      .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx) }))
-      .sort((a, b) => b.fontPx - a.fontPx);
-
-    const placed = [];
-    const cx = side / 2, cy = side / 2;
-    const maxRadius = side * 0.72;
-    const steps = 3000;
-
-    for (const item of sized) {
-      measureCtx.font = `${item.fontPx}px ${fontFamily}`;
-      const halfW = measureCtx.measureText(item.word).width / 2 + side * 0.004;
-      const halfH = item.fontPx / 2 + side * 0.004;
-
-      let spot = null;
-      for (let t = 0; t < steps; t++) {
-        const angle = 0.3 * t;
-        const radius = (maxRadius / Math.sqrt(steps)) * Math.sqrt(t);
-        const x = cx + radius * Math.cos(angle);
-        const y = cy + radius * Math.sin(angle);
-        const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
-        if (box.x1 < 0 || box.y1 < 0 || box.x2 > side || box.y2 > side) continue;
-        const collides = placed.some((p) =>
-          !(box.x2 < p.x1 || box.x1 > p.x2 || box.y2 < p.y1 || box.y1 > p.y2));
-        if (!collides) { spot = { x, y }; break; }
-      }
-      if (!spot) continue; // ran out of room in the spiral; skip rather than overlap
-
-      placed.push({
-        word: item.word, fontPx: item.fontPx, x: spot.x, y: spot.y,
-        x1: spot.x - halfW, x2: spot.x + halfW, y1: spot.y - halfH, y2: spot.y + halfH,
-        color: getWordColor(item.word),
-      });
-    }
-    return placed;
-  }
-
+  // Reuses layoutWords() at a high-resolution square, so the export always
+  // matches what's on screen — same words, same relative sizes/positions.
   function escapeXML(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function buildSVG(placed, side, theme) {
-    const fontFamily = "Georgia, 'Times New Roman', serif";
     let defs = '', bg;
     if (theme === 'neon') {
       bg = `<rect width="${side}" height="${side}" fill="#000000"/>`;
@@ -579,11 +577,12 @@
         `</linearGradient></defs>`;
       bg = `<rect width="${side}" height="${side}" fill="url(#bg)"/>`;
     }
-    const texts = placed.map((p) =>
-      `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * 0.34).toFixed(1)}" ` +
-      `font-size="${p.fontPx.toFixed(1)}" font-family="${fontFamily}" ` +
-      `fill="${p.color}" text-anchor="middle">${escapeXML(p.word)}</text>`
-    ).join('\n  ');
+    const texts = placed.map((p) => {
+      const rotate = p.rotated ? ` transform="rotate(-90 ${p.x.toFixed(1)} ${p.y.toFixed(1)})"` : '';
+      return `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * 0.34).toFixed(1)}" ` +
+        `font-size="${p.fontPx.toFixed(1)}" font-family="${FONT_FAMILY}" ` +
+        `fill="${p.color}" text-anchor="middle"${rotate}>${escapeXML(p.word)}</text>`;
+    }).join('\n  ');
 
     return `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<svg xmlns="http://www.w3.org/2000/svg" width="${side}" height="${side}" viewBox="0 0 ${side} ${side}">\n` +
@@ -593,7 +592,8 @@
   function exportSVG() {
     if (!currentWords.length) return;
     const side = 2000; // fixed high-resolution square so print output stays crisp
-    const placed = layoutWordsForSVG(currentWords, side);
+    const measureCtx = document.createElement('canvas').getContext('2d');
+    const placed = layoutWords(currentWords, side, measureCtx);
     const svg = buildSVG(placed, side, currentTheme);
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
@@ -616,12 +616,6 @@
   }
 
   document.getElementById('clear-hint').addEventListener('click', startNewSession);
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 't' || e.key === 'T') toggleTheme();
-    if (e.key === 's' || e.key === 'S') exportSVG();
-    if (e.key === 'n' || e.key === 'N') startNewSession();
-  });
 
   // ── Resize ───────────────────────────────────────────────────────────────
   let resizeTimer;
