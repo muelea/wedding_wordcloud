@@ -1,0 +1,15 @@
+{
+  "name": "wedding-wordcloud",
+  "version": "1.0.0",
+  "description": "Real-time word cloud for wedding events",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "compression": "^1.8.1",
+    "express": "^4.18.2",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.2"
+  }
+}

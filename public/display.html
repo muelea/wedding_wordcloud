@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="pastel">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hochzeit Wortwolke – Anzeige</title>
+  <style>
+    /* Georgia covers all needed chars incl. German umlauts — no CDN needed */
+  </style>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Pastel theme (default) ── */
+    :root {
+      --bg:      #eef6f4;
+      --bg2:     #ddeee9;
+      --primary: #3d7a96;
+      --accent:  #6aae94;
+      --text:    #1e3d4a;
+      --muted:   #5a8896;
+      --border:  rgba(58,120,150,0.14);
+      --rad1:    rgba(106,174,148,0.13);
+      --rad2:    rgba(58,120,150,0.10);
+      --orn:     rgba(58,120,150,0.45);
+      --qr-bd:   rgba(58,120,150,0.28);
+    }
+
+    /* ── Neon theme ── */
+    [data-theme="neon"] {
+      --bg:      #000000;
+      --bg2:     #000000;
+      --primary: #ff10f0;
+      --accent:  #00fff2;
+      --text:    #f5f0ff;
+      --muted:   #b39ddb;
+      --border:  rgba(255,16,240,0.30);
+      --rad1:    rgba(0,255,242,0.22);
+      --rad2:    rgba(191,0,255,0.22);
+      --orn:     rgba(191,0,255,0.80);
+      --qr-bd:   rgba(255,16,240,0.55);
+    }
+
+    [data-theme="neon"] .header-name,
+    [data-theme="neon"] .word-counter .count {
+      text-shadow: 0 0 12px currentColor, 0 0 30px currentColor;
+    }
+
+    [data-theme="neon"] .toast {
+      box-shadow: 0 0 16px var(--primary), 0 0 36px var(--accent);
+    }
+
+    [data-theme="neon"] .qr-code {
+      box-shadow: 0 0 14px var(--primary);
+    }
+
+    [data-theme="neon"] .empty-ornament {
+      text-shadow: 0 0 24px var(--orn);
+    }
+
+    /* Real neon needs a flat black backdrop, not a gradient wash */
+    [data-theme="neon"] body::before {
+      background: var(--bg);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      transition: background 0.6s, color 0.6s;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 55% at 15% 10%, var(--rad1) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 90%, var(--rad2) 0%, transparent 60%),
+        linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
+      pointer-events: none;
+      transition: background 0.6s;
+    }
+
+    /* ── Header ── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      z-index: 10;
+    }
+
+    .header-title { display: flex; flex-direction: column; }
+
+    .header-eyebrow {
+      font-size: 10px;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 3px;
+      transition: color 0.6s;
+    }
+
+    .header-name {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(22px, 2.8vw, 36px);
+      font-weight: 400;
+      color: var(--primary);
+      transition: color 0.6s;
+    }
+
+    .word-counter { text-align: right; }
+
+    .word-counter .count {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(28px, 3.5vw, 48px);
+      color: var(--primary);
+      line-height: 1;
+      transition: color 0.6s;
+    }
+
+    .word-counter .label {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2px;
+      transition: color 0.6s;
+    }
+
+    /* ── Canvas ── */
+    #cloud-container {
+      position: fixed;
+      top: 80px; left: 0; right: 0; bottom: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #cloud-canvas {
+      display: block;
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+    #cloud-canvas.visible { opacity: 1; }
+
+    /* ── Empty state ── */
+    #empty-state {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    #empty-state.hidden { opacity: 0; }
+
+    .empty-ornament {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(60px, 8vw, 100px);
+      color: var(--rad1);
+      line-height: 1;
+      /* fallback for the rgba var */
+      opacity: 0.5;
+    }
+    .empty-text {
+      margin-top: 18px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(18px, 2.5vw, 28px);
+      font-style: italic;
+      color: var(--muted);
+      opacity: 0.7;
+      transition: color 0.6s;
+    }
+    .empty-sub {
+      margin-top: 10px;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.5;
+      transition: color 0.6s;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      border-top: 1px solid var(--border);
+      transition: border-color 0.6s;
+    }
+
+    .footer-ornament {
+      font-size: 13px;
+      letter-spacing: 6px;
+      color: var(--orn);
+      transition: color 0.6s;
+    }
+
+    .qr-wrap { display: flex; align-items: center; gap: 14px; }
+
+    .qr-label { text-align: right; }
+    .qr-label .line1 {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color 0.6s;
+    }
+    .qr-label .line2 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 14px;
+      color: var(--primary);
+      margin-top: 2px;
+      transition: color 0.6s;
+    }
+
+    .qr-code {
+      width: 56px; height: 56px;
+      border-radius: 8px;
+      border: 2px solid var(--qr-bd);
+      padding: 3px;
+      background: var(--bg);
+      transition: border-color 0.6s, background 0.6s;
+    }
+
+    /* ── Corner hints (theme toggle / SVG export / new session) ── */
+    .theme-hint, .export-hint, .clear-hint {
+      position: fixed;
+      right: 16px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.45;
+      transition: opacity 0.3s, color 0.6s;
+      cursor: pointer;
+      user-select: none;
+    }
+    .theme-hint:hover, .export-hint:hover, .clear-hint:hover { opacity: 0.85; }
+    .theme-hint  { bottom: 80px; }
+    .export-hint { bottom: 106px; }
+    .clear-hint  { bottom: 132px; }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .toast {
+      background: var(--primary);
+      color: #fff;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 16px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      animation: toastIn 0.3s ease both, toastOut 0.4s ease 1.8s both;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.9); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateY(-8px) scale(0.92); }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">
+    <span class="header-eyebrow">Herzlich willkommen zur</span>
+    <span class="header-name" id="couple-name">♡</span>
+  </div>
+  <div class="word-counter">
+    <div class="count" id="word-total">0</div>
+    <div class="label">Wörter geteilt</div>
+  </div>
+</header>
+
+<div id="cloud-container">
+  <canvas id="cloud-canvas"></canvas>
+  <div id="empty-state">
+    <div class="empty-ornament">♡</div>
+    <p class="empty-text">Wir warten auf eure Wörter&hellip;</p>
+    <p class="empty-sub">QR-Code scannen &amp; mitmachen</p>
+  </div>
+</div>
+
+<footer class="footer">
+  <span class="footer-ornament">· · · ✦ · · ·</span>
+  <div class="qr-wrap">
+    <div class="qr-label">
+      <div class="line1">Scannen &amp; mitmachen</div>
+      <div class="line2" id="qr-url"></div>
+    </div>
+    <img class="qr-code" id="qr-img" src="" alt="QR Code" />
+  </div>
+</footer>
+
+<div class="theme-hint" id="theme-hint" title="Theme wechseln (T)">T – Theme</div>
+<div class="export-hint" id="export-hint" title="Als SVG exportieren (S)">S – SVG</div>
+<div class="clear-hint" id="clear-hint" title="Wörter archivieren & neue Runde starten (N)">N – Neue Runde</div>
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/wordcloud2.js"></script>
+<script>
+  // ── Constants & DOM refs (declared first to avoid TDZ errors) ────────────
+  const THEMES = {
+    pastel: {
+      colors: [
+        '#3a7a96', '#5aae8e', '#6a90b0', '#4a9478',
+        '#8ac0d8', '#7aaeb4', '#3a6e84', '#8abaaa',
+        '#e8846e', '#c0906a',
+      ],
+    },
+    neon: {
+      colors: [
+        '#ff10f0', '#00fff2', '#bf00ff', '#39ff14',
+        '#ffea00', '#ff073a', '#0aff99', '#ff6ec7',
+        '#00b3ff', '#ff9500',
+      ],
+    },
+  };
+
+  const canvas        = document.getElementById('cloud-canvas');
+  const container     = document.getElementById('cloud-container');
+  const emptyState    = document.getElementById('empty-state');
+  const wordTotalEl   = document.getElementById('word-total');
+  const toastContainer = document.getElementById('toast-container');
+
+  let currentWords = [];
+  let renderTimer  = null;
+  let lastWords    = null;
+  const wordColors = new Map();
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  const urlTheme = new URLSearchParams(location.search).get('theme');
+  let currentTheme = (urlTheme === 'neon' || urlTheme === 'pastel') ? urlTheme : 'pastel';
+
+  function applyTheme(t) {
+    currentTheme = t;
+    wordColors.clear(); // re-assign colors from new palette
+    document.documentElement.dataset.theme = t;
+    document.getElementById('theme-hint').textContent = 'T – ' + (t === 'neon' ? 'Neon' : 'Pastell');
+    if (currentWords.length > 0) scheduleRender(currentWords);
+  }
+
+  applyTheme(currentTheme); // safe: currentWords is already declared above
+
+  function getWordColor(word) {
+    if (!wordColors.has(word)) {
+      const palette = THEMES[currentTheme].colors;
+      wordColors.set(word, palette[wordColors.size % palette.length]);
+    }
+    return wordColors.get(word);
+  }
+
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+  // Scale font sizes to the available area per word so a crowded cloud
+  // shrinks to fit and a sparse one grows to fill the square nicely.
+  // Shared by the live canvas render and the SVG export so both match.
+  function getFontSizeRange(words, side) {
+    const density = Math.sqrt((side * side) / words.length);
+    const maxPx = clamp(density * 0.85, side * 0.05, side * 0.30);
+    // Floor is a % of side (not a fixed px) so it stays readable at both the
+    // on-screen size (~700px) and the much larger SVG export canvas (2000px).
+    const minPx = clamp(maxPx * 0.24, side * 0.022, maxPx * 0.5);
+    return { minPx, maxPx };
+  }
+
+  // Longer words are scaled down a bit relative to short ones of the same
+  // frequency, so a single long word can't dominate/overflow the square.
+  function lengthPenalty(word) {
+    return clamp(1 - Math.max(0, word.length - 5) * 0.018, 0.6, 1);
+  }
+
+  function sizeForCount(word, count, minCount, maxCount, minPx, maxPx) {
+    // Always spans the full 0–1 range across whatever min/max counts are
+    // currently present, so the smallest word is always minPx and the
+    // biggest is always maxPx — not anchored to an absolute count of 1.
+    const ratio = maxCount === minCount ? 0.5 : (count - minCount) / (maxCount - minCount);
+    const base = minPx + Math.pow(ratio, 0.55) * (maxPx - minPx);
+    // Never go below the floor, even after the length penalty.
+    return Math.max(minPx, base * lengthPenalty(word));
+  }
+
+  function renderCloud(words) {
+    if (!words || words.length === 0) return;
+
+    const rect = container.getBoundingClientRect();
+    // Keep a fixed, roughly square drawing area regardless of word count —
+    // only the font sizes below adapt to make everything fit inside it.
+    const side = Math.min(rect.width, rect.height) * 0.94;
+    const w = side, h = side;
+
+    const counts = words.map(([, c]) => c);
+    const maxCount = Math.max(...counts);
+    const minCount = Math.min(...counts);
+    const { minPx, maxPx } = getFontSizeRange(words, side);
+
+    const list = words.map(([word, count]) =>
+      [word, Math.round(sizeForCount(word, count, minCount, maxCount, minPx, maxPx))]);
+
+    // Render offscreen → swap when done, so the visible canvas never flashes blank
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+
+    off.addEventListener('wordcloudstop', () => {
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(off, 0, 0);
+      canvas.classList.add('visible');
+    }, { once: true });
+
+    WordCloud(off, {
+      list,
+      fontFamily: 'Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif',
+      color: (word) => getWordColor(word),
+      rotateRatio: 0.25,
+      rotationSteps: 2,
+      backgroundColor: 'transparent',
+      shuffle: true,
+      drawOutOfBound: false,
+      shrinkToFit: true,
+      minSize: 8,
+      gridSize: Math.round(side / 80),
+      weightFactor: 1,
+    });
+  }
+
+  function scheduleRender(words) {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => renderCloud(words), 300);
+  }
+
+  function showToast(word) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = '✦  ' + word;
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), 2400);
+  }
+
+  // ── Config & QR ──────────────────────────────────────────────────────────
+  fetch('/config').then(r => r.json()).then(({ coupleName }) => {
+    document.getElementById('couple-name').textContent = coupleName;
+    document.title = coupleName + ' – Wortwolke';
+  });
+
+  fetch('/qr').then(r => r.json()).then(({ dataUrl, url }) => {
+    document.getElementById('qr-img').src = dataUrl;
+    document.getElementById('qr-url').textContent = url.replace('http://', '');
+  });
+
+  // ── Socket ───────────────────────────────────────────────────────────────
+  const socket = io();
+
+  socket.on('word-update', (words) => {
+    currentWords = words;
+    const total = words.reduce((s, [, c]) => s + c, 0);
+    wordTotalEl.textContent = total;
+
+    if (words.length === 0) {
+      emptyState.classList.remove('hidden');
+      canvas.classList.remove('visible');
+      return;
+    }
+    emptyState.classList.add('hidden');
+
+    if (lastWords) {
+      const prev = new Map(lastWords);
+      for (const [word, count] of words) {
+        if (!prev.has(word) || prev.get(word) < count) { showToast(word); break; }
+      }
+    }
+    lastWords = words;
+    scheduleRender(words);
+  });
+
+  socket.on('theme-change', (t) => {
+    if (t === 'neon' || t === 'pastel') {
+      applyTheme(t);
+    }
+  });
+
+  // ── Theme toggle (press "T" or click the hint) ──────────────────────────
+  function toggleTheme() {
+    const next = currentTheme === 'neon' ? 'pastel' : 'neon';
+    applyTheme(next);
+    socket.emit('theme-change', next);
+  }
+
+  document.getElementById('theme-hint').addEventListener('click', toggleTheme);
+
+  // ── SVG export (for print) ───────────────────────────────────────────────
+  // Builds an independent spiral layout with real <text> elements (not a
+  // rasterized canvas dump), so the exported file stays crisp at poster size.
+  function layoutWordsForSVG(words, side) {
+    const measureCtx = document.createElement('canvas').getContext('2d');
+    const fontFamily = 'Georgia, "Times New Roman", serif';
+    const counts = words.map(([, c]) => c);
+    const maxCount = Math.max(...counts);
+    const minCount = Math.min(...counts);
+    const { minPx, maxPx } = getFontSizeRange(words, side);
+
+    const sized = words
+      .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx) }))
+      .sort((a, b) => b.fontPx - a.fontPx);
+
+    const placed = [];
+    const cx = side / 2, cy = side / 2;
+    const maxRadius = side * 0.72;
+    const steps = 3000;
+
+    for (const item of sized) {
+      measureCtx.font = `${item.fontPx}px ${fontFamily}`;
+      const halfW = measureCtx.measureText(item.word).width / 2 + side * 0.004;
+      const halfH = item.fontPx / 2 + side * 0.004;
+
+      let spot = null;
+      for (let t = 0; t < steps; t++) {
+        const angle = 0.3 * t;
+        const radius = (maxRadius / Math.sqrt(steps)) * Math.sqrt(t);
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
+        if (box.x1 < 0 || box.y1 < 0 || box.x2 > side || box.y2 > side) continue;
+        const collides = placed.some((p) =>
+          !(box.x2 < p.x1 || box.x1 > p.x2 || box.y2 < p.y1 || box.y1 > p.y2));
+        if (!collides) { spot = { x, y }; break; }
+      }
+      if (!spot) continue; // ran out of room in the spiral; skip rather than overlap
+
+      placed.push({
+        word: item.word, fontPx: item.fontPx, x: spot.x, y: spot.y,
+        x1: spot.x - halfW, x2: spot.x + halfW, y1: spot.y - halfH, y2: spot.y + halfH,
+        color: getWordColor(item.word),
+      });
+    }
+    return placed;
+  }
+
+  function escapeXML(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function buildSVG(placed, side, theme) {
+    const fontFamily = "Georgia, 'Times New Roman', serif";
+    let defs = '', bg;
+    if (theme === 'neon') {
+      bg = `<rect width="${side}" height="${side}" fill="#000000"/>`;
+    } else {
+      defs = `<defs><linearGradient id="bg" x1="0%" y1="0%" x2="60%" y2="100%">` +
+        `<stop offset="0%" stop-color="#eef6f4"/><stop offset="100%" stop-color="#ddeee9"/>` +
+        `</linearGradient></defs>`;
+      bg = `<rect width="${side}" height="${side}" fill="url(#bg)"/>`;
+    }
+    const texts = placed.map((p) =>
+      `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * 0.34).toFixed(1)}" ` +
+      `font-size="${p.fontPx.toFixed(1)}" font-family="${fontFamily}" ` +
+      `fill="${p.color}" text-anchor="middle">${escapeXML(p.word)}</text>`
+    ).join('\n  ');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${side}" height="${side}" viewBox="0 0 ${side} ${side}">\n` +
+      `  ${defs}\n  ${bg}\n  ${texts}\n</svg>`;
+  }
+
+  function exportSVG() {
+    if (!currentWords.length) return;
+    const side = 2000; // fixed high-resolution square so print output stays crisp
+    const placed = layoutWordsForSVG(currentWords, side);
+    const svg = buildSVG(placed, side, currentTheme);
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wortwolke-${currentTheme}-${new Date().toISOString().slice(0, 10)}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('export-hint').addEventListener('click', exportSVG);
+
+  // ── New session (archive current words on the server, then clear) ───────
+  function startNewSession() {
+    if (!currentWords.length) return;
+    if (!confirm('Aktuelle Wörter archivieren und eine neue Runde starten?')) return;
+    fetch('/reset', { method: 'POST' }).catch(() => {});
+  }
+
+  document.getElementById('clear-hint').addEventListener('click', startNewSession);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 't' || e.key === 'T') toggleTheme();
+    if (e.key === 's' || e.key === 'S') exportSVG();
+    if (e.key === 'n' || e.key === 'N') startNewSession();
+  });
+
+  // ── Resize ───────────────────────────────────────────────────────────────
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (currentWords.length > 0) renderCloud(currentWords);
+    }, 200);
+  });
+</script>
+</body>
+</html>
