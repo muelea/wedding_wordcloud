@@ -109,6 +109,12 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 
+// The public root is the product landing page. Guests use this focused screen
+// after scanning the QR code during an event.
+app.get('/join', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'join.html'));
+});
+
 app.get('/display', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'display.html'));
 });
@@ -118,7 +124,7 @@ app.get('/config', (req, res) => {
 });
 
 app.get('/qr', async (req, res) => {
-  const url = getBaseUrl(req);
+  const url = `${getBaseUrl(req)}/join`;
   try {
     const dataUrl = await QRCode.toDataURL(url, {
       width: 220,
@@ -176,7 +182,7 @@ io.on('connection', (socket) => {
 server.listen(CONFIG.port, () => {
   const base = getBaseUrl();
   console.log('\n  ♡  Wedding Word Cloud is running!\n');
-  console.log(`  Guest URL   →  ${base}`);
+  console.log(`  Guest URL   →  ${base}/join`);
   console.log(`  Display URL →  ${base}/display`);
   console.log(`\n  Open the display URL on the big screen.`);
   console.log(`  Guests scan the QR code shown on the display.\n`);

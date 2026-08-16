@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="pastel">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Hochzeit Wortwolke</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Pastel theme (default) ── */
+    :root {
+      --bg:       #fffdfb;
+      --bg2:      #fbf4ec;
+      --primary:  #8d2949;
+      --primary2: #5e102b;
+      --accent:   #ad7d5c;
+      --accent2:  #c9687f;
+      --text:     #401827;
+      --muted:    #806873;
+      --border:   rgba(154,52,80,0.25);
+      --shadow:   rgba(81,26,43,0.12);
+      --tag-bg:   rgba(173,63,93,0.08);
+      --tag-bd:   rgba(173,63,93,0.21);
+      --tag-tx:   #7c2943;
+      --ph:       #bc9ba4;
+      --header-grad: rgba(247,220,218,0.42);
+      --header-bd:   rgba(154,52,80,0.14);
+      --orn:      rgba(154,52,80,0.40);
+    }
+
+    /* ── Neon theme ── */
+    [data-theme="neon"] {
+      --bg:       #000000;
+      --bg2:      #000000;
+      --primary:  #ff10f0;
+      --primary2: #bf00ff;
+      --accent:   #00fff2;
+      --accent2:  #39ff14;
+      --text:     #f5f0ff;
+      --muted:    #b39ddb;
+      --border:   rgba(255,16,240,0.40);
+      --shadow:   rgba(255,16,240,0.35);
+      --tag-bg:   rgba(255,16,240,0.14);
+      --tag-bd:   rgba(255,16,240,0.40);
+      --tag-tx:   #ff8cf5;
+      --ph:       #7a6a99;
+      --header-grad: rgba(0,255,242,0.16);
+      --header-bd:   rgba(255,16,240,0.28);
+      --orn:      rgba(191,0,255,0.75);
+    }
+
+    html, body {
+      height: 100%;
+      background: linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 300;
+      transition: background 0.5s, color 0.5s;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 0 0 48px;
+    }
+
+    /* ── Header ── */
+    .header {
+      width: 100%;
+      text-align: center;
+      padding: 36px 24px 28px;
+      background: linear-gradient(180deg, var(--header-grad) 0%, transparent 100%);
+      border-bottom: 1px solid var(--header-bd);
+      transition: background 0.5s, border-color 0.5s;
+    }
+
+    .header .eyebrow {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 300;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+      transition: color 0.5s;
+    }
+
+    .header h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(26px, 7vw, 36px);
+      font-weight: 400;
+      color: var(--primary2);
+      line-height: 1.2;
+      transition: color 0.5s;
+    }
+
+    .header .subtitle {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      transition: color 0.5s;
+    }
+
+    /* ── Main ── */
+    .card {
+      width: 100%;
+      max-width: 480px;
+      padding: 32px 24px 0;
+    }
+
+    .prompt {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      font-style: italic;
+      color: var(--primary2);
+      text-align: center;
+      margin-bottom: 28px;
+      transition: color 0.5s;
+    }
+
+    /* ── Input ── */
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px var(--shadow);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 4px 28px var(--shadow);
+    }
+
+    #word-input {
+      flex: 1;
+      min-width: 0; /* otherwise a flex item won't shrink below its placeholder's
+                       intrinsic width, pushing the button out on narrow phones */
+      border: none;
+      outline: none;
+      background: transparent;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 20px;
+      color: var(--text);
+      padding: 18px 16px 18px 22px;
+      transition: color 0.5s;
+    }
+
+    #word-input::placeholder { color: var(--ph); font-style: italic; }
+
+    #submit-btn {
+      margin: 8px;
+      padding: 12px 22px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary2) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 20px;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s, background 0.5s;
+      line-height: 1;
+    }
+
+    #submit-btn:active { transform: scale(0.94); }
+    #submit-btn:disabled { opacity: 0.40; cursor: default; }
+
+    .char-counter {
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      padding-right: 4px;
+      transition: color 0.5s;
+    }
+
+    /* ── Flash ── */
+    .flash {
+      text-align: center;
+      margin-top: 20px;
+      height: 28px;
+      font-size: 14px;
+      color: var(--primary2);
+      opacity: 0;
+      transition: opacity 0.3s, color 0.5s;
+    }
+    .flash.show { opacity: 1; }
+
+    /* ── Tags ── */
+    .submitted-section { margin-top: 32px; }
+
+    .submitted-label {
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+      transition: color 0.5s;
+    }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .tag {
+      background: var(--tag-bg);
+      border: 1px solid var(--tag-bd);
+      color: var(--tag-tx);
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      animation: tagIn 0.35s ease both;
+      transition: background 0.5s, border-color 0.5s, color 0.5s;
+    }
+
+    @keyframes tagIn {
+      from { opacity: 0; transform: scale(0.8) translateY(6px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .ornament {
+      text-align: center;
+      color: var(--orn);
+      font-size: 18px;
+      margin: 32px 0 0;
+      letter-spacing: 8px;
+      transition: color 0.5s;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <p class="eyebrow">Herzlich willkommen</p>
+  <h1 id="couple-name">♡</h1>
+  <p class="subtitle" id="event-title">Hochzeit</p>
+</header>
+
+<main class="card">
+  <p class="prompt">Teile ein Wort für das Brautpaar&nbsp;✦</p>
+
+  <div class="input-wrap">
+    <input
+      id="word-input"
+      type="text"
+      inputmode="text"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      maxlength="30"
+      placeholder="Liebe, Glück, Freude, Vertrauen…"
+      aria-label="Ein Wort eingeben"
+    />
+    <button id="submit-btn" aria-label="Absenden">♡</button>
+  </div>
+  <div class="char-counter"><span id="char-count">0</span> / 30</div>
+
+  <div class="flash" id="flash"></div>
+
+  <section class="submitted-section" id="submitted-section" hidden>
+    <p class="submitted-label">Deine Wörter</p>
+    <div class="tags" id="tags"></div>
+  </section>
+
+  <p class="ornament">· · ·</p>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // Sync theme from URL param
+  const urlTheme = new URLSearchParams(location.search).get('theme');
+  if (urlTheme === 'neon' || urlTheme === 'pastel') {
+    document.documentElement.dataset.theme = urlTheme;
+  }
+
+  const socket = io();
+  const input   = document.getElementById('word-input');
+  const btn     = document.getElementById('submit-btn');
+  const flash   = document.getElementById('flash');
+  const tags    = document.getElementById('tags');
+  const section = document.getElementById('submitted-section');
+  const charCount = document.getElementById('char-count');
+
+  fetch('/config').then(r => r.json()).then(({ coupleName, eventTitle }) => {
+    document.getElementById('couple-name').textContent = coupleName;
+    document.getElementById('event-title').textContent = eventTitle;
+    document.title = coupleName + ' – Wortwolke';
+  });
+
+  input.addEventListener('input', () => { charCount.textContent = input.value.length; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) submitWord(); });
+  btn.addEventListener('click', submitWord);
+
+  function submitWord() {
+    const word = input.value.trim();
+    if (!word) return;
+    btn.disabled = true;
+    socket.emit('submit-word', word);
+    input.value = '';
+    charCount.textContent = '0';
+  }
+
+  socket.on('word-accepted', (word) => {
+    btn.disabled = false;
+    input.focus();
+    flash.textContent = `„${word}" wurde hinzugefügt!`;
+    flash.classList.add('show');
+    setTimeout(() => flash.classList.remove('show'), 2200);
+    section.hidden = false;
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = word;
+    tags.prepend(tag);
+  });
+
+  socket.on('theme-change', (t) => {
+    document.documentElement.dataset.theme = t;
+  });
+
+  socket.on('disconnect', () => { btn.disabled = true; });
+  socket.on('connect',    () => { btn.disabled = false; });
+</script>
+</body>
+</html>

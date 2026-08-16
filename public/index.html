@@ -1,328 +1,36 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="pastel">
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Hochzeit Wortwolke</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Wolkenworte macht aus den Wünschen eurer Gäste eine lebendige Wortwolke – in Echtzeit." />
+  <title>Wolkenworte – Eure Hochzeit in einem Wort</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    /* ── Pastel theme (default) ── */
-    :root {
-      --bg:       #eef6f4;
-      --bg2:      #ddeee9;
-      --primary:  #4a8fa8;
-      --primary2: #2e6e8a;
-      --accent:   #6aae94;
-      --accent2:  #e87c6a;
-      --text:     #1e3d4a;
-      --muted:    #6a8c96;
-      --border:   rgba(74,143,168,0.28);
-      --shadow:   rgba(74,143,168,0.14);
-      --tag-bg:   rgba(74,143,168,0.10);
-      --tag-bd:   rgba(74,143,168,0.22);
-      --tag-tx:   #2e6e8a;
-      --ph:       #9abcc8;
-      --header-grad: rgba(106,174,148,0.13);
-      --header-bd:   rgba(74,143,168,0.16);
-      --orn:      rgba(74,143,168,0.50);
-    }
-
-    /* ── Neon theme ── */
-    [data-theme="neon"] {
-      --bg:       #000000;
-      --bg2:      #000000;
-      --primary:  #ff10f0;
-      --primary2: #bf00ff;
-      --accent:   #00fff2;
-      --accent2:  #39ff14;
-      --text:     #f5f0ff;
-      --muted:    #b39ddb;
-      --border:   rgba(255,16,240,0.40);
-      --shadow:   rgba(255,16,240,0.35);
-      --tag-bg:   rgba(255,16,240,0.14);
-      --tag-bd:   rgba(255,16,240,0.40);
-      --tag-tx:   #ff8cf5;
-      --ph:       #7a6a99;
-      --header-grad: rgba(0,255,242,0.16);
-      --header-bd:   rgba(255,16,240,0.28);
-      --orn:      rgba(191,0,255,0.75);
-    }
-
-    html, body {
-      height: 100%;
-      background: linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
-      color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
-      font-weight: 300;
-      transition: background 0.5s, color 0.5s;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 0 0 48px;
-    }
-
-    /* ── Header ── */
-    .header {
-      width: 100%;
-      text-align: center;
-      padding: 36px 24px 28px;
-      background: linear-gradient(180deg, var(--header-grad) 0%, transparent 100%);
-      border-bottom: 1px solid var(--header-bd);
-      transition: background 0.5s, border-color 0.5s;
-    }
-
-    .header .eyebrow {
-      font-family: system-ui, -apple-system, sans-serif;
-      font-weight: 300;
-      font-size: 11px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 8px;
-      transition: color 0.5s;
-    }
-
-    .header h1 {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: clamp(26px, 7vw, 36px);
-      font-weight: 400;
-      color: var(--primary2);
-      line-height: 1.2;
-      transition: color 0.5s;
-    }
-
-    .header .subtitle {
-      margin-top: 6px;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      transition: color 0.5s;
-    }
-
-    /* ── Main ── */
-    .card {
-      width: 100%;
-      max-width: 480px;
-      padding: 32px 24px 0;
-    }
-
-    .prompt {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 18px;
-      font-style: italic;
-      color: var(--primary2);
-      text-align: center;
-      margin-bottom: 28px;
-      transition: color 0.5s;
-    }
-
-    /* ── Input ── */
-    .input-wrap {
-      display: flex;
-      align-items: center;
-      background: #fff;
-      border: 1.5px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 24px var(--shadow);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .input-wrap:focus-within {
-      border-color: var(--primary);
-      box-shadow: 0 4px 28px var(--shadow);
-    }
-
-    #word-input {
-      flex: 1;
-      min-width: 0; /* otherwise a flex item won't shrink below its placeholder's
-                       intrinsic width, pushing the button out on narrow phones */
-      border: none;
-      outline: none;
-      background: transparent;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 20px;
-      color: var(--text);
-      padding: 18px 16px 18px 22px;
-      transition: color 0.5s;
-    }
-
-    #word-input::placeholder { color: var(--ph); font-style: italic; }
-
-    #submit-btn {
-      margin: 8px;
-      padding: 12px 22px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary2) 100%);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 20px;
-      cursor: pointer;
-      transition: transform 0.15s, opacity 0.15s, background 0.5s;
-      line-height: 1;
-    }
-
-    #submit-btn:active { transform: scale(0.94); }
-    #submit-btn:disabled { opacity: 0.40; cursor: default; }
-
-    .char-counter {
-      text-align: right;
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 8px;
-      padding-right: 4px;
-      transition: color 0.5s;
-    }
-
-    /* ── Flash ── */
-    .flash {
-      text-align: center;
-      margin-top: 20px;
-      height: 28px;
-      font-size: 14px;
-      color: var(--primary2);
-      opacity: 0;
-      transition: opacity 0.3s, color 0.5s;
-    }
-    .flash.show { opacity: 1; }
-
-    /* ── Tags ── */
-    .submitted-section { margin-top: 32px; }
-
-    .submitted-label {
-      font-size: 11px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 14px;
-      transition: color 0.5s;
-    }
-
-    .tags { display: flex; flex-wrap: wrap; gap: 10px; }
-
-    .tag {
-      background: var(--tag-bg);
-      border: 1px solid var(--tag-bd);
-      color: var(--tag-tx);
-      padding: 7px 16px;
-      border-radius: 999px;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 15px;
-      animation: tagIn 0.35s ease both;
-      transition: background 0.5s, border-color 0.5s, color 0.5s;
-    }
-
-    @keyframes tagIn {
-      from { opacity: 0; transform: scale(0.8) translateY(6px); }
-      to   { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
-    .ornament {
-      text-align: center;
-      color: var(--orn);
-      font-size: 18px;
-      margin: 32px 0 0;
-      letter-spacing: 8px;
-      transition: color 0.5s;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
+    :root { --ink:#56112a; --muted:#806971; --paper:#fffefb; --sage:#fcf8f1; --sage-deep:#7c1f42; --coral:#b96f82; --cream:#f7eedf; --champagne:#b99558; --line:rgba(103,46,63,.12); --shadow:0 20px 54px rgba(86,17,42,.055); }
+    * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; background:var(--paper); color:var(--ink); font-family:'DM Sans',Arial,sans-serif; } a { color:inherit; text-decoration:none; } .shell { width:min(1120px, calc(100% - 48px)); margin:auto; } .eyebrow { color:var(--sage-deep); font-size:.66rem; font-weight:700; letter-spacing:.19em; text-transform:uppercase; }
+    .nav { height:76px; display:flex; align-items:center; justify-content:space-between; }.brand { display:flex; align-items:center; gap:8px; font-family:'Playfair Display',Georgia,serif; font-size:1.35rem; font-weight:600; }.brand-mark { color:var(--coral); font-size:1.5rem; line-height:1; }.nav-links { display:flex; gap:27px; align-items:center; color:var(--muted); font-size:.84rem; }.nav-links a:hover { color:var(--ink); }
+    .button { display:inline-flex; align-items:center; justify-content:center; gap:9px; border-radius:999px; padding:12px 19px; font-size:.84rem; font-weight:700; border:1px solid transparent; transition:transform .2s, box-shadow .2s; }.button:hover { transform:translateY(-2px); box-shadow:0 8px 18px rgba(99,48,64,.11); }.button.primary { background:var(--ink); color:#fff; }.button.light { background:var(--paper); color:var(--ink); }.button.outline { border-color:var(--line); color:var(--ink); background:transparent; }
+    .hand-drawn { position:absolute; pointer-events:none; z-index:0; opacity:.52; }.hero-grid { position:relative; z-index:1; }.hand-heart { left:max(14px, calc((100vw - 1120px) / 2 - 58px)); bottom:24px; width:52px; color:var(--coral); transform:rotate(-13deg); }.hand-heart path { fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }.small-heart { right:max(14px, calc((100vw - 1120px) / 2 - 30px)); bottom:28px; width:24px; color:var(--champagne); transform:rotate(12deg); }
+    .hero { padding:44px 0 72px; position:relative; overflow:hidden; }.hero::before { content:''; position:absolute; width:470px; height:350px; border-radius:50%; background:radial-gradient(circle, rgba(247,238,223,.7), transparent 68%); top:-135px; right:-85px; z-index:-1; }.hero-grid { display:grid; grid-template-columns:1.02fr .98fr; align-items:center; gap:52px; } h1,h2,h3,p { margin-top:0; } h1 { font-family:'Playfair Display',Georgia,serif; font-size:clamp(2.8rem,4.8vw,4.35rem); line-height:1.08; letter-spacing:-.055em; margin:15px 0 20px; font-weight:500; } h1 em { color:var(--sage-deep); font-weight:500; }.lead { max-width:475px; color:var(--muted); font-size:.98rem; line-height:1.78; margin-bottom:25px; }.hero-actions { display:flex; flex-wrap:wrap; gap:10px; }.trust { margin-top:22px; color:var(--muted); font-size:.76rem; display:flex; align-items:center; gap:9px; }.avatars { display:flex; }.avatars i { width:20px; height:20px; margin-right:-5px; display:block; border-radius:50%; border:2px solid var(--paper); background:var(--sage-deep); }.avatars i:nth-child(2) { background:var(--champagne); }.avatars i:nth-child(3) { background:var(--coral); }
+    .reel { position:relative; min-height:385px; }.reel-frame { position:absolute; inset:16px 14px 14px 27px; display:flex; flex-direction:column; align-items:center; background:transparent; overflow:hidden; }.reel-bar { display:none; }.demo-title { margin-top:28px; color:var(--ink); text-align:center; font-family:'Playfair Display',Georgia,serif; font-size:1.4rem; font-weight:500; }.demo-subtitle { margin-top:7px; color:var(--muted); text-align:center; font-size:.58rem; letter-spacing:.16em; text-transform:uppercase; }.cloud { width:min(100%, 405px); margin:auto 0 30px; padding:12px 15px; display:flex; flex-wrap:wrap; align-content:center; justify-content:center; align-items:baseline; gap:16px 13px; }.cloud span { position:static; display:block; max-width:100%; color:var(--ink); font-family:'Playfair Display',Georgia,serif; line-height:1.05; white-space:nowrap; animation:float 4.8s ease-in-out infinite; }.cloud span:nth-child(1){font-size:clamp(2.25rem,5.2vw,3.15rem);color:var(--sage-deep);animation-delay:-1.8s}.cloud span:nth-child(2){font-size:1.05rem;color:var(--champagne);animation-delay:-.6s}.cloud span:nth-child(3){font-size:1.28rem;color:var(--coral);animation-delay:-2.3s}.cloud span:nth-child(4){font-size:.95rem;animation-delay:-3.4s}.cloud span:nth-child(5){font-size:.95rem;color:var(--champagne);animation-delay:-1.1s}.cloud span:nth-child(6){font-size:1rem;color:var(--coral);animation-delay:-4s}.cloud span:nth-child(7){font-size:.92rem;animation-delay:-2.8s}.cloud span:nth-child(8){font-size:.8rem;animation-delay:-.2s}.cloud span:nth-child(9){font-size:.8rem;color:var(--champagne);animation-delay:-3.1s}.cloud span:nth-child(10){font-size:.76rem;color:var(--coral);animation-delay:-1.4s}.cloud span:nth-child(11){font-size:.75rem;animation-delay:-3.8s}.cloud span:nth-child(12){font-size:.72rem;color:var(--champagne);animation-delay:-2s}.cloud span:nth-child(13){font-size:.68rem;animation-delay:-.9s}@keyframes float { 50% { transform:translateY(-3px); } }.play,.reel-label,.live-pill { display:none; }
+    .numbers { background:transparent; padding:24px 0 26px; }.number-grid { display:grid; grid-template-columns:repeat(3,1fr); text-align:center; max-width:760px; }.number-grid > div + div { border-left:1px solid rgba(185,149,88,.32); }.number-grid strong { display:block; font-family:'Playfair Display',Georgia,serif; font-size:1.45rem; font-weight:500; color:var(--ink); }.number-grid span { font-size:.72rem; color:var(--muted); } section { padding:82px 0; }.section-top { max-width:570px; margin-bottom:38px; }.section-top h2 { font-family:'Playfair Display',Georgia,serif; font-size:clamp(2rem,3.5vw,3rem); letter-spacing:-.045em; line-height:1.12; margin:12px 0; font-weight:500; }.section-top p { color:var(--muted); font-size:.94rem; line-height:1.72; }.steps { display:grid; grid-template-columns:repeat(4,1fr); gap:28px; border:0; }.step { min-height:0; padding:3px 4px 0; background:transparent; border:0; }.step + .step { border-left:0; }.step-n { display:grid; width:28px; height:28px; place-items:center; border-radius:50%; background:var(--cream); color:var(--sage-deep); font-family:'Playfair Display',Georgia,serif; font-size:.78rem; }.step h3 { font-family:'Playfair Display',Georgia,serif; font-size:1.28rem; font-weight:500; margin:24px 0 8px; }.step p { color:var(--muted); font-size:.86rem; line-height:1.68; max-width:245px; }
+    .feature { background:var(--sage); }.feature-grid { display:grid; grid-template-columns:.82fr 1.18fr; align-items:center; gap:80px; }.phone { width:265px; min-height:335px; height:auto; margin:auto; background:rgba(255,255,255,.54); padding:41px 27px 30px; position:relative; box-shadow:none; border-top:1px solid rgba(185,149,88,.42); border-bottom:1px solid rgba(185,149,88,.42); }.phone::before { content:'♡'; position:absolute; top:13px; left:0; right:0; text-align:center; color:var(--champagne); font-size:.9rem; }.phone .mini-brand { font-family:'Playfair Display',Georgia,serif; text-align:center; color:var(--sage-deep); font-size:1.1rem; }.phone .question { font-family:'Playfair Display',Georgia,serif; font-size:1.22rem; text-align:center; line-height:1.4; margin:31px 0 21px; }.phone .entry { display:flex; gap:7px; padding:12px 0; background:transparent; border:0; border-bottom:1px solid rgba(185,149,88,.54); border-radius:0; color:#ac8f96; font-size:.72rem; }.phone .heart { margin-left:auto; color:var(--sage-deep); background:transparent; border-radius:0; padding:0; }.phone .sent { margin-top:22px; text-align:center; color:var(--sage-deep); font-size:.7rem; }.feature-copy h2 { font-family:'Playfair Display',Georgia,serif; font-size:clamp(2rem,3.5vw,3rem); font-weight:500; letter-spacing:-.045em; line-height:1.12; margin:11px 0 16px; }.feature-copy p { color:var(--muted); font-size:.94rem; line-height:1.72; max-width:475px; }.checks { padding:0; list-style:none; margin:22px 0 0; display:grid; gap:11px; font-size:.9rem; }.checks li::before { content:'♡'; display:inline-grid; place-items:center; width:19px; height:19px; color:var(--sage-deep); font-size:.82rem; margin-right:7px; }
+    .print { background:#fffdf9; }.print-grid { display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:80px; }.print-copy h2 { font-family:'Playfair Display',Georgia,serif; font-size:clamp(2rem,3.5vw,3rem); font-weight:500; letter-spacing:-.045em; line-height:1.12; margin:11px 0 16px; }.print-copy p { max-width:450px; color:var(--muted); font-size:.94rem; line-height:1.72; }.print-note { margin-top:24px; color:var(--sage-deep); font-size:.8rem; letter-spacing:.04em; }.cup-stage { min-height:360px; display:grid; place-items:center; position:relative; }.cup { width:205px; height:226px; position:relative; border-radius:14px 14px 40px 40px; background:linear-gradient(100deg,#f7f0e7,#fffefa 42%,#f0e4d7); box-shadow:18px 21px 26px rgba(86,17,42,.1); }.cup::before { content:''; position:absolute; width:74px; height:98px; border:12px solid #f3e8da; border-left:0; border-radius:0 48px 48px 0; right:-60px; top:46px; }.cup::after { content:''; position:absolute; inset:10px; border-top:1px solid rgba(185,149,88,.38); border-radius:50%; }.cup-cloud { position:absolute; inset:42px 14px 22px; overflow:visible; color:var(--sage-deep); font-family:'Playfair Display',Georgia,serif; }.cup-cloud span { position:absolute; white-space:nowrap; text-shadow:0 1px 0 rgba(255,255,255,.85); }.cup-cloud span:nth-child(1){left:35px;top:42px;font-size:1.7rem}.cup-cloud span:nth-child(2){left:8px;top:22px;font-size:.66rem;color:var(--champagne)}.cup-cloud span:nth-child(3){right:7px;top:24px;font-size:.7rem;color:var(--coral)}.cup-cloud span:nth-child(4){left:16px;bottom:34px;font-size:.64rem;color:var(--coral)}.cup-cloud span:nth-child(5){right:5px;bottom:28px;font-size:.58rem;color:var(--champagne)}.cup-caption { position:absolute; bottom:8px; color:var(--muted); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; }.quote { padding:90px 0; text-align:center; }.quote blockquote { max-width:680px; margin:14px auto 18px; font-family:'Playfair Display',Georgia,serif; font-size:clamp(1.75rem,3.4vw,2.7rem); font-weight:500; letter-spacing:-.04em; line-height:1.3; }.quote cite { color:var(--muted); font-size:.78rem; font-style:normal; }.cta { padding:0 0 80px; }.cta-box { background:var(--cream); color:var(--ink); text-align:center; padding:55px 25px; border-radius:0; position:relative; overflow:hidden; border-block:1px solid rgba(185,149,88,.42); }.cta-box::before,.cta-box::after { content:'♡'; position:absolute; color:rgba(185,149,88,.48); font-family:'Playfair Display',Georgia,serif; font-size:3rem; }.cta-box::before { left:11%; top:20%; }.cta-box::after { right:12%; bottom:15%; }.cta h2 { font-family:'Playfair Display',Georgia,serif; font-size:clamp(2rem,3.5vw,3rem); font-weight:500; margin:9px 0 13px; letter-spacing:-.05em; }.cta p { color:var(--muted); font-size:.9rem; margin-bottom:23px; }.cta .eyebrow { color:var(--sage-deep); } footer { border-top:1px solid var(--line); padding:25px 0 36px; color:var(--muted); font-size:.73rem; }.footer-inner { display:flex; justify-content:space-between; gap:20px; }.footer-links { display:flex; gap:20px; }
+    @media (max-width:1240px) { .hand-drawn { display:none; } }
+    @media (max-width:760px) { .shell { width:min(100% - 32px, 560px); }.nav { height:72px; }.nav-links { display:none; }.nav .button { padding:10px 15px; font-size:.78rem; }.hero { padding:32px 0 67px; }.hero-grid,.feature-grid,.print-grid { grid-template-columns:1fr; gap:42px; }.hero-copy { text-align:center; }.lead { margin-inline:auto; }.hero-actions { justify-content:center; }.trust { justify-content:center; }.reel { min-height:390px; width:100%; }.reel-frame { inset:14px 0; }.demo-title { margin-top:23px; font-size:1.3rem; }.demo-subtitle { font-size:.54rem; }.cloud { width:100%; margin-bottom:20px; padding:8px 4px; gap:12px 10px; }.cloud span:nth-child(1){font-size:2.2rem}.cloud span:nth-child(2){font-size:.95rem}.cloud span:nth-child(3){font-size:1.14rem}.cloud span:nth-child(5){font-size:.85rem}.cloud span:nth-child(13){font-size:.62rem}.numbers { padding:20px 0; }.number-grid strong { font-size:1.5rem; }.number-grid span { font-size:.65rem; }.steps { grid-template-columns:1fr; }.step { min-height:0; }.step + .step { border-left:0; }.step h3 { margin-top:24px; }.feature-grid,.print-grid { text-align:center; }.checks { text-align:left; max-width:330px; margin-inline:auto; }.cup-stage { order:-1; min-height:310px; }.footer-inner { display:block; }.footer-links { margin-top:12px; } section { padding:75px 0; } }
   </style>
 </head>
 <body>
-
-<header class="header">
-  <p class="eyebrow">Herzlich willkommen</p>
-  <h1 id="couple-name">♡</h1>
-  <p class="subtitle" id="event-title">Hochzeit</p>
-</header>
-
-<main class="card">
-  <p class="prompt">Teile ein Wort für das Brautpaar&nbsp;✦</p>
-
-  <div class="input-wrap">
-    <input
-      id="word-input"
-      type="text"
-      inputmode="text"
-      autocomplete="off"
-      autocorrect="off"
-      spellcheck="false"
-      maxlength="30"
-      placeholder="Liebe, Glück, Freude, Vertrauen…"
-      aria-label="Ein Wort eingeben"
-    />
-    <button id="submit-btn" aria-label="Absenden">♡</button>
-  </div>
-  <div class="char-counter"><span id="char-count">0</span> / 30</div>
-
-  <div class="flash" id="flash"></div>
-
-  <section class="submitted-section" id="submitted-section" hidden>
-    <p class="submitted-label">Deine Wörter</p>
-    <div class="tags" id="tags"></div>
-  </section>
-
-  <p class="ornament">· · ·</p>
-</main>
-
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  // Sync theme from URL param
-  const urlTheme = new URLSearchParams(location.search).get('theme');
-  if (urlTheme === 'neon' || urlTheme === 'pastel') {
-    document.documentElement.dataset.theme = urlTheme;
-  }
-
-  const socket = io();
-  const input   = document.getElementById('word-input');
-  const btn     = document.getElementById('submit-btn');
-  const flash   = document.getElementById('flash');
-  const tags    = document.getElementById('tags');
-  const section = document.getElementById('submitted-section');
-  const charCount = document.getElementById('char-count');
-
-  fetch('/config').then(r => r.json()).then(({ coupleName, eventTitle }) => {
-    document.getElementById('couple-name').textContent = coupleName;
-    document.getElementById('event-title').textContent = eventTitle;
-    document.title = coupleName + ' – Wortwolke';
-  });
-
-  input.addEventListener('input', () => { charCount.textContent = input.value.length; });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) submitWord(); });
-  btn.addEventListener('click', submitWord);
-
-  function submitWord() {
-    const word = input.value.trim();
-    if (!word) return;
-    btn.disabled = true;
-    socket.emit('submit-word', word);
-    input.value = '';
-    charCount.textContent = '0';
-  }
-
-  socket.on('word-accepted', (word) => {
-    btn.disabled = false;
-    input.focus();
-    flash.textContent = `„${word}" wurde hinzugefügt!`;
-    flash.classList.add('show');
-    setTimeout(() => flash.classList.remove('show'), 2200);
-    section.hidden = false;
-    const tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = word;
-    tags.prepend(tag);
-  });
-
-  socket.on('theme-change', (t) => {
-    document.documentElement.dataset.theme = t;
-  });
-
-  socket.on('disconnect', () => { btn.disabled = true; });
-  socket.on('connect',    () => { btn.disabled = false; });
-</script>
+  <header class="shell nav"><a href="/" class="brand"><span class="brand-mark">♡</span>Wolkenworte</a><nav class="nav-links"><a href="#so-gehts">So geht’s</a><a href="#erleben">Erleben</a><a href="#ueber-uns">Über uns</a></nav></header>
+  <main>
+    <section class="hero"><svg class="hand-drawn hand-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z"/><path d="M17 16c3-4 8-5 12-3"/></svg><svg class="hand-drawn hand-heart small-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z"/></svg><div class="shell hero-grid"><div class="hero-copy"><p class="eyebrow">Die Erinnerung, die weiterwächst</p><h1>Eine Wolke<br><em>voller Glück.</em></h1><p class="lead">Lasst eure Gäste Wünsche, Erinnerungen und kleine Liebeserklärungen teilen. Wolkenworte macht daraus eine lebendige Wortwolke – direkt auf eurer Feier.</p><div class="hero-actions"><a class="button primary" href="/join">Demo starten <span>→</span></a></div><div class="trust"><span class="avatars"><i></i><i></i><i></i></span>Gemacht für große Gefühle &amp; kleine Momente</div></div><div class="reel" aria-label="Animierte Vorschau einer Hochzeits-Wortwolke"><div class="reel-frame"><div class="reel-bar"><b></b><b></b><b></b></div><div class="demo-title">Johanna &amp; Peter</div><div class="demo-subtitle">Unsere Hochzeit · 2026</div><div class="cloud"><span>Liebe</span><span>für immer</span><span>Wunderbar</span><span>Freude</span><span>unvergesslich</span><span>Glück</span><span>Zusammen</span><span>Vertrauen</span><span>Heimat</span><span>Lachen</span><span>Abenteuer</span><span>Segen</span><span>Hand in Hand</span></div></div><span class="play" aria-hidden="true"></span><span class="reel-label">Live Demo</span></div></div></section>
+    <section id="so-gehts"><div class="shell"><div class="section-top"><p class="eyebrow">Ganz unkompliziert</p><h2>Ein Moment, den alle mitgestalten.</h2><p>Kein Download, keine Accounts und keine komplizierte Technik. Nur ein QR-Code, eure Gäste und ganz viel Liebe.</p></div><div class="steps"><article class="step"><span class="step-n">01</span><h3>QR-Code zeigen</h3><p>Platziert den Code auf eurer Leinwand, auf den Tischen oder in eurer Papeterie.</p></article><article class="step"><span class="step-n">02</span><h3>Wünsche sammeln</h3><p>Alle geben auf dem eigenen Handy ihr persönliches Wort für euch ein.</p></article><article class="step"><span class="step-n">03</span><h3>Staunen</h3><p>Auf dem großen Screen wächst eure Wortwolke in Echtzeit – Wort für Wort.</p></article><article class="step"><span class="step-n">04</span><h3>Bewahren</h3><p>Lasst eure Wortwolke als Tasse, Box oder Print gestalten – für eine Erinnerung, die bleibt.</p></article></div></div></section>
+    <section class="feature" id="erleben"><div class="shell feature-grid"><div class="phone" aria-label="Vorschau der mobilen Eingabe"><div class="mini-brand">Wolkenworte</div><p class="question">Dein Wort für<br>das Brautpaar ✦</p><div class="entry">Liebe, Glück, Freude <span class="heart">♡</span></div><p class="sent">„Glück“ wurde hinzugefügt!</p></div><div class="feature-copy"><p class="eyebrow">Eure Gäste im Mittelpunkt</p><h2>So einfach, dass jeder mitmacht.</h2><p>Vom ersten Scan bis zum großen Wow-Moment ist alles bewusst leicht gehalten. Die Wortwolke aktualisiert sich sofort auf eurem Display – ganz ohne App.</p><ul class="checks"><li>Funktioniert auf jedem Smartphone</li><li>Live-Ansicht für Beamer oder Fernseher</li><li>Auch Menschen, die nicht dabei sein können, schenken euch ein Wort – von überall auf der Welt.</li><li>Sanftes Pastell- oder leuchtendes Neon-Design</li></ul></div></div></section>
+    <section class="print"><div class="shell print-grid"><div class="print-copy"><p class="eyebrow">Eine Erinnerung zum Anfassen</p><h2>Aus eurer Wolke wird ein Lieblingsstück.</h2><p>Nach der Feier kann eure ganz persönliche Wortwolke auf einem Erinnerungsstück weiterleben – als Tasse für den ersten Kaffee als Ehepaar, als Poster oder als Geschenk für eure Liebsten.</p><p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p></div><div class="cup-stage" aria-label="Vorschau einer bedruckten Tasse"><div class="cup"><div class="cup-cloud"><span>Liebe</span><span>für immer</span><span>Glück</span><span>Freude</span><span>Zusammen</span></div></div><span class="cup-caption">Eure Worte auf einer Tasse</span></div></div></section>
+    <section class="quote" id="ueber-uns"><div class="shell"><p class="eyebrow">Für euren Lieblingsmoment</p><blockquote>„Am Ende des Abends war unsere Wortwolke voller kleiner Dinge, die uns für immer an unsere Menschen erinnern werden.“</blockquote><cite>— Lena &amp; Max, Sommerhochzeit am See</cite></div></section>
+    <section class="cta"><div class="shell"><div class="cta-box"><p class="eyebrow">Bereit für euren Moment?</p><h2>Lasst eure Liebe<br>Wellen schlagen.</h2><p>Probiert die Live-Wortwolke jetzt aus – kostenlos und ohne Anmeldung.</p></div></div></section>
+  </main>
+  <footer><div class="shell footer-inner"><span>© 2026 Wolkenworte</span><span class="footer-links"><a href="/join">Live-Demo</a><a href="#so-gehts">So geht’s</a></span></div></footer>
 </body>
 </html>
