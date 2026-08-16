@@ -49,7 +49,10 @@
     .flourish i { width: 7px; height: 7px; border: 1px solid var(--gold-line); transform: rotate(45deg); display: block; }
 
     /* ── Nav ── */
+    .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,253,250,.82); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid transparent; box-shadow: 0 0 0 rgba(64,15,38,0); transition: border-color .35s ease, box-shadow .35s ease; }
+    .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(64,15,38,.06); }
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
+    #so-gehts, #erleben, #tassen-duo { scroll-margin-top: 84px; }
     .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; }
     .nav-links { display: flex; gap: 30px; align-items: center; color: var(--muted); font-size: .85rem; letter-spacing: .01em; }
     .nav-links a { position: relative; padding-bottom: 3px; }
@@ -78,7 +81,7 @@
     /* ── Live preview — open and airy, no boxed card: the words themselves
        (each drifting on its own path) are the visual, not a frame around
        them. ── */
-    .reel { position: relative; text-align: center; padding: 46px 34px 40px; border-radius: 22px; background: #ffffff; box-shadow: var(--shadow); }
+    .reel { position: relative; text-align: center; padding: 46px 34px 40px; border-radius: 22px; background: #fffefc; box-shadow: var(--shadow); }
     .reel::before { content: ''; position: absolute; inset: -60px -40px; background: radial-gradient(ellipse at center, rgba(247,238,223,.6), transparent 70%); z-index: -1; }
     .reel-label { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: .62rem; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 18px; }
     .reel-label .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: pulse 1.8s ease-in-out infinite; }
@@ -92,11 +95,21 @@
        per word — stays balanced no matter how many words are in the list.
        Word 1 is the single deliberate stand-out ("hero" word), overridden
        below so it wins regardless of which cycle position it lands on. */
-    .cloud span:nth-child(4n+1) { font-size: 1.1rem; }
-    .cloud span:nth-child(4n+2) { font-size: 1.45rem; color: var(--coral); }
-    .cloud span:nth-child(4n+3) { font-size: 1.2rem; color: var(--champagne); }
-    .cloud span:nth-child(4n)   { font-size: 1.3rem; }
-    .cloud span:nth-child(1) { font-size: clamp(2.1rem,4.4vw,2.7rem); color: var(--sage-deep); font-weight: 600; }
+    .cloud span:nth-child(4n+1) { font-size: 1.3rem; }
+    .cloud span:nth-child(4n+2) { font-size: 1.5rem; color: var(--coral); }
+    .cloud span:nth-child(4n+3) { font-size: 1.35rem; color: var(--champagne); }
+    .cloud span:nth-child(4n)   { font-size: 1.4rem; }
+    .cloud span:nth-child(1) { font-size: clamp(1.9rem,3.8vw,2.3rem); color: var(--sage-deep); font-weight: 600; }
+    /* 5 more words picked at random (not the biggest word, but noticeably
+       larger than the base cycle) so the cloud has several standout spots
+       rather than just the one hero word. */
+    .cloud span:nth-child(4)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--coral); font-weight: 600; }
+    .cloud span:nth-child(5)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--champagne); font-weight: 600; }
+    .cloud span:nth-child(7)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--sage-deep); font-weight: 600; }
+    .cloud span:nth-child(10) { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--coral); font-weight: 600; }
+    .cloud span:nth-child(13) { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--champagne); font-weight: 600; }
+    /* A couple more standout words besides the hero one, so the cloud reads
+       as varied rather than one big word plus a flat field of small ones. */
 
     /* Three drift paths (different offsets/rotation), cycled across words
        with staggered duration + delay so nothing moves in lockstep. */
@@ -156,23 +169,34 @@
     .print-copy h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
     .print-copy p { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
     .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; letter-spacing: .03em; font-style: italic; font-family: 'Playfair Display', Georgia, serif; }
-    .cup-stage { min-height: 360px; display: grid; place-items: center; position: relative; }
-    .cup { width: 210px; height: 230px; position: relative; border-radius: 10px 10px 42px 42px; background: linear-gradient(100deg, #f7f0e7, #fffefa 42%, #f0e4d7); box-shadow: 20px 24px 32px rgba(61,15,34,.12); }
-    .cup::before { content: ''; position: absolute; width: 76px; height: 100px; border: 12px solid #f3e8da; border-left: 0; border-radius: 0 50px 50px 0; right: -62px; top: 46px; }
-    .cup::after { content: ''; position: absolute; inset: 10px; border-top: 1px solid var(--gold-line); border-radius: 50%; }
-    .cup-cloud { position: absolute; inset: 44px 16px 24px; overflow: visible; color: var(--sage-deep); font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; }
-    .cup-cloud span { position: absolute; white-space: nowrap; text-shadow: 0 1px 0 rgba(255,255,255,.85); }
-    .cup-cloud span:nth-child(1) { left: 34px; top: 40px; font-size: 1.7rem; font-style: italic; }
-    .cup-cloud span:nth-child(2) { left: 6px; top: 20px; font-size: .66rem; color: var(--champagne); }
-    .cup-cloud span:nth-child(3) { right: 5px; top: 22px; font-size: .7rem; color: var(--coral); }
-    .cup-cloud span:nth-child(4) { left: 14px; bottom: 32px; font-size: .64rem; color: var(--coral); }
-    .cup-cloud span:nth-child(5) { right: 3px; bottom: 26px; font-size: .58rem; color: var(--champagne); }
-    .cup-caption { position: absolute; bottom: 6px; color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; }
+    /* True volumetric cup: a ring of many thin flat facets in 3D space
+       (transform-style: preserve-3d) approximates a cylinder — the browser
+       does real perspective foreshortening and depth-sorting on it, so it
+       actually rotates as a solid object rather than faking depth on a
+       flat card. Facets/caps/words are generated at runtime (see the
+       script at the end of the page) since hand-authoring ~48 per-facet
+       CSS rules isn't practical. */
+    .cup-stage { min-height: 420px; display: grid; place-items: center; position: relative; gap: 20px; }
+    .cup-turntable { perspective: 1300px; }
+    .cup {
+      position: relative; width: 1px; height: 1px;
+      transform-style: preserve-3d;
+      transform: rotateY(-28deg) rotateX(-6deg);
+      transition: transform .5s cubic-bezier(.22,.85,.4,1);
+      cursor: grab;
+      touch-action: pan-y;
+    }
+    .cup.dragging { transition: none; cursor: grabbing; }
+    .cup:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 14px; }
+    .cup-facet { position: absolute; top: 0; left: 0; background: linear-gradient(180deg, #ffffff, #eef0f1); }
+    .cup-cap { position: absolute; top: 0; left: 0; border-radius: 50%; background: radial-gradient(circle at 38% 35%, #ffffff, #e6e8e9); }
+    .cup-cap.top { box-shadow: inset 0 0 0 2px var(--gold-line); }
+    .cup-handle-bead { position: absolute; top: 0; left: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffffff, #e6e8e9); }
+    .cup-word-char { position: absolute; top: 0; left: 0; white-space: pre; text-align: center; color: var(--sage-deep); font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; text-shadow: 0 1px 1px rgba(255,255,255,.9); pointer-events: none; }
+    .cup-caption { color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+    .cup-caption .icon-rotate { width: 13px; height: 13px; opacity: .7; }
 
     /* ── Quote ── */
-    .quote { text-align: center; }
-    .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-style: italic; font-weight: 500; letter-spacing: -.02em; line-height: 1.35; }
-    .quote cite { color: var(--muted); font-size: .82rem; font-style: normal; letter-spacing: .01em; }
 
     /* ── Bottom CTA ── */
     .cta-box { background: var(--cream); color: var(--ink); text-align: center; padding: 64px 25px; position: relative; overflow: hidden; border-block: 1px solid var(--gold-line); }
@@ -189,10 +213,27 @@
     .footer-links { display: flex; gap: 22px; }
     .footer-links a:hover { color: var(--ink); }
 
+    /* Subtle scroll-reveal, progressive enhancement only: content is fully
+       visible by default, and only hidden pre-animation once JS confirms
+       IntersectionObserver support and the visitor hasn't asked for
+       reduced motion (see the script at the end of the page). */
+    html.js-reveal-ready .section-top, html.js-reveal-ready .step,
+    html.js-reveal-ready .phone, html.js-reveal-ready .feature-copy,
+    html.js-reveal-ready .print-copy, html.js-reveal-ready .cup-stage,
+    html.js-reveal-ready .cta-box {
+      opacity: 0; transform: translateY(18px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    html.js-reveal-ready .is-visible { opacity: 1; transform: translateY(0); }
+    html.js-reveal-ready .step:nth-child(2) { transition-delay: .08s; }
+    html.js-reveal-ready .step:nth-child(3) { transition-delay: .16s; }
+    html.js-reveal-ready .step:nth-child(4) { transition-delay: .24s; }
+
     @media (max-width: 760px) { .cta-box .deco { display: none; } }
     @media (max-width: 760px) {
       .shell { width: min(100% - 32px, 560px); }
       .nav { height: 76px; }
+      #so-gehts, #erleben, #tassen-duo { scroll-margin-top: 76px; }
       .nav-links { display: none; }
       .nav .button { padding: 11px 17px; font-size: .8rem; }
       .hero { padding: 30px 0 72px; }
@@ -207,7 +248,8 @@
       .steps { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
       .feature-grid, .print-grid { text-align: center; }
       .checks { text-align: left; max-width: 330px; margin-inline: auto; }
-      .cup-stage { order: -1; min-height: 300px; }
+      .cup-stage { order: -1; min-height: 320px; }
+      .cup-turntable { transform: scale(.82); }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
@@ -215,10 +257,12 @@
   </style>
 </head>
 <body>
-  <header class="shell nav">
-    <a href="/" class="brand">Wolkenworte</a>
-    <nav class="nav-links"><a href="#so-gehts">So geht's</a><a href="#erleben">Erleben</a><a href="#ueber-uns">Über uns</a></nav>
-    <a class="button outline" href="/start">Kostenlos starten</a>
+  <header class="site-header" id="site-header">
+    <div class="shell nav">
+      <a href="/" class="brand">Wolkenworte</a>
+      <nav class="nav-links"><a href="#so-gehts">So geht's</a><a href="#erleben">Erleben</a><a href="#tassen-duo">Tassen-Duo</a></nav>
+      <a class="button outline" href="/start">Kostenlos starten</a>
+    </div>
   </header>
 
   <main>
@@ -242,7 +286,7 @@
           <div class="demo-title">Johanna &amp; Peter</div>
           <div class="demo-subtitle">Unsere Hochzeit · 2026</div>
           <div class="cloud">
-            <span>Liebe</span><span>für immer</span><span>Glück</span><span>Freude</span><span>unvergesslich</span><span>Zusammen</span><span>Herzklopfen</span><span>Sommerabend</span><span>Gänsehaut</span><span>Vertrauen</span><span>goldenes Licht</span><span>Lachen</span><span>Geborgenheit</span><span>Hand in Hand</span>
+            <span>Liebe</span><span>für immer</span><span>Freude</span><span>unvergesslich</span><span>Zusammen</span><span>Herzklopfen</span><span>Sommerabend</span><span>Gänsehaut</span><span>Vertrauen</span><span>goldenes Licht</span><span>Lachen</span><span>Geborgenheit</span><span>Hand in Hand</span>
           </div>
           <p class="reel-caption">So wächst eure Wortwolke live auf dem großen Bildschirm – Wort für Wort, während eure Gäste feiern.</p>
         </div>
@@ -308,7 +352,7 @@
       </div>
     </section>
 
-    <section class="print">
+    <section class="print" id="tassen-duo">
       <div class="shell print-grid">
         <div class="print-copy">
           <p class="eyebrow">Eine Erinnerung zum Anfassen</p>
@@ -316,21 +360,12 @@
           <p>Nach der Feier kann eure ganz persönliche Wortwolke auf einem Erinnerungsstück weiterleben – als Tasse für den ersten Kaffee als Ehepaar, als Poster oder als Geschenk für eure Liebsten.</p>
           <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
         </div>
-        <div class="cup-stage" aria-label="Vorschau einer bedruckten Tasse">
-          <div class="cup">
-            <div class="cup-cloud"><span>Liebe</span><span>für immer</span><span>Glück</span><span>Freude</span><span>Zusammen</span></div>
+        <div class="cup-stage">
+          <div class="cup-turntable">
+            <div class="cup" id="cup" role="img" tabindex="0" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse mit den Worten der Wortwolke, rundum bedruckt. Zum Drehen ziehen oder Pfeiltasten verwenden."></div>
           </div>
-          <span class="cup-caption">Eure Worte auf einer Tasse</span>
+          <span class="cup-caption"><svg class="icon-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20"/><path d="M20 5v6h-6"/></svg>Zum Drehen ziehen</span>
         </div>
-      </div>
-    </section>
-
-    <section class="quote" id="ueber-uns">
-      <div class="shell">
-        <div class="flourish"><i></i></div>
-        <p class="eyebrow center">Für euren Lieblingsmoment</p>
-        <blockquote>„Am Ende des Abends war unsere Wortwolke voller kleiner Dinge, die uns für immer an diesen besonderen Tag erinnern werden."</blockquote>
-        <cite>— Lena &amp; Max, Sommerhochzeit am See</cite>
       </div>
     </section>
 
@@ -354,5 +389,207 @@
       <span class="footer-links"><a href="/start">Jetzt starten</a><a href="#so-gehts">So geht's</a></span>
     </div>
   </footer>
+
+  <script>
+    (function () {
+      var header = document.getElementById('site-header');
+      function onScroll() { header.classList.toggle('scrolled', window.scrollY > 4); }
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if ('IntersectionObserver' in window && !reduceMotion) {
+        document.documentElement.classList.add('js-reveal-ready');
+        var targets = document.querySelectorAll(
+          '.section-top, .step, .phone, .feature-copy, .print-copy, .cup-stage, .cta-box'
+        );
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+        targets.forEach(function (el) { io.observe(el); });
+      }
+    })();
+
+    (function () {
+      var cup = document.getElementById('cup');
+      if (!cup) return;
+
+      // ── Build a real 3D cylinder out of thin flat facets arranged in a
+      // ring (transform-style: preserve-3d on the parent). The browser
+      // does genuine perspective foreshortening + depth-sorting on these,
+      // so the result is an actual rotating solid, not a flat illusion.
+      var R = 92, H = 190, N = 120;
+
+      // Two-term lighting (key light + a dimmer fill light from the
+      // opposite side) so the back of the cup is still visibly lit
+      // instead of falling into near-black once rotated into view.
+      function lightingFor(angleDeg) {
+        var rad = angleDeg * Math.PI / 180;
+        var key = Math.max(0, Math.cos(rad - (25 * Math.PI / 180)));
+        var fill = Math.max(0, Math.cos(rad - (25 * Math.PI / 180) + Math.PI));
+        return Math.min(1.15, 0.82 + 0.24 * key + 0.16 * fill);
+      }
+
+      for (var i = 0; i < N; i++) {
+        var angle = i * (360 / N);
+        var facetWidth = ((2 * Math.PI * R) / N) * 1.3;
+        var facet = document.createElement('div');
+        facet.className = 'cup-facet';
+        facet.style.width = facetWidth + 'px';
+        facet.style.height = H + 'px';
+        facet.style.filter = 'brightness(' + lightingFor(angle).toFixed(2) + ')';
+        facet.style.transform = 'translate(-50%,-50%) rotateY(' + angle + 'deg) translateZ(' + R + 'px)';
+        cup.appendChild(facet);
+      }
+      ['top', 'bottom'].forEach(function (which) {
+        var cap = document.createElement('div');
+        cap.className = 'cup-cap ' + which;
+        cap.style.width = cap.style.height = (2 * R) + 'px';
+        var z = which === 'top' ? H / 2 : -H / 2;
+        cap.style.transform = 'translate(-50%,-50%) rotateX(90deg) translateZ(' + z + 'px)';
+        cup.appendChild(cap);
+      });
+
+      // Handle: a ring of small round beads (orientation-agnostic, so it
+      // reads as a smooth curved tube regardless of viewing angle) swept
+      // via rotateX within the local plane established by rotateY(90deg)
+      // — that plane is world (vertical × outward), i.e. exactly the
+      // plane a real handle loop bulges through, attached flush to the
+      // right side of the barrel (rotateY(90deg) + translateZ(R) puts its
+      // anchor at world +X, the conventional handle side).
+      var handleLoopR = 42, handleBeads = 16, handleSpan = 170;
+      for (var b = 0; b <= handleBeads; b++) {
+        var phi = -handleSpan / 2 + (handleSpan * b) / handleBeads;
+        var bead = document.createElement('div');
+        bead.className = 'cup-handle-bead';
+        bead.style.width = bead.style.height = '22px';
+        bead.style.filter = 'brightness(' + lightingFor(90).toFixed(2) + ')';
+        bead.style.transform =
+          'translate(-50%,-50%) rotateY(90deg) translateZ(' + R + 'px) rotateX(' + phi + 'deg) translateZ(' + handleLoopR + 'px)';
+        cup.appendChild(bead);
+      }
+
+      // Words wrapped as genuinely curved text: each character is placed
+      // and oriented individually around the cylinder's own curvature
+      // (same rotateY(angle) translateZ(R) pattern as the facets above),
+      // not a flat label pasted on top of a curved surface.
+      // Same 13 words as the hero "Live-Vorschau" cloud, wrapped across
+      // the full 360° in three vertical bands so nothing angularly
+      // overlaps its neighbors — rotating the cup reveals the rest, the
+      // same way text wraps all the way around a real printed mug.
+      var words = [
+        { text: 'Liebe', angle: 0, y: 0, size: 26, weight: 600, color: 'var(--sage-deep)' },
+        { text: 'Zusammen', angle: 72, y: 0, size: 15, weight: 500, color: 'var(--champagne)' },
+        { text: 'Vertrauen', angle: 144, y: 0, size: 14, weight: 500, color: 'var(--coral)' },
+        { text: 'Lachen', angle: -144, y: 0, size: 16, weight: 500, color: 'var(--champagne)' },
+        { text: 'Hand in Hand', angle: -72, y: 0, size: 13, weight: 500, color: 'var(--coral)' },
+
+        { text: 'für immer', angle: -20, y: -44, size: 14, weight: 500, color: 'var(--coral)' },
+        { text: 'Sommerabend', angle: 70, y: -44, size: 13, weight: 500, color: 'var(--sage-deep)' },
+        { text: 'Geborgenheit', angle: 160, y: -44, size: 13, weight: 500, color: 'var(--champagne)' },
+        { text: 'goldenes Licht', angle: -110, y: -44, size: 12, weight: 500, color: 'var(--coral)' },
+
+        { text: 'unvergesslich', angle: 25, y: 44, size: 13, weight: 500, color: 'var(--champagne)' },
+        { text: 'Herzklopfen', angle: 115, y: 44, size: 14, weight: 500, color: 'var(--sage-deep)' },
+        { text: 'Gänsehaut', angle: -155, y: 44, size: 14, weight: 500, color: 'var(--coral)' },
+        { text: 'Freude', angle: -65, y: 44, size: 15, weight: 500, color: 'var(--champagne)' }
+      ];
+      words.forEach(function (w) {
+        var chars = w.text.split('');
+        var avgCharWidth = w.size * 0.52;
+        var angStep = (avgCharWidth / R) * (180 / Math.PI);
+        var startAngle = w.angle - (angStep * (chars.length - 1)) / 2;
+        chars.forEach(function (ch, idx) {
+          var a = startAngle + idx * angStep;
+          var el = document.createElement('div');
+          el.className = 'cup-word-char';
+          el.textContent = ch;
+          el.style.fontSize = w.size + 'px';
+          el.style.fontWeight = w.weight;
+          el.style.color = w.color;
+          el.style.transform =
+            'translate(-50%,-50%) rotateY(' + a + 'deg) translateZ(' + (R + 0.5) + 'px) translateY(' + w.y + 'px)';
+          cup.appendChild(el);
+        });
+      });
+
+      // ── Drag/keyboard rotation of the whole assembly — full trackball
+      // orbit (both axes), not just horizontal spin. Neither axis is
+      // clamped, so it's genuinely a full 360° rotation in any direction.
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var ry = -28, rx = -6, dragging = false, startX = 0, startY = 0, startRy = 0, startRx = 0, pointerId = null;
+
+      function setRy(v) {
+        ry = v;
+        cup.style.transform = 'rotateY(' + ry + 'deg) rotateX(' + rx + 'deg)';
+      }
+      function setRotation(nextRy, nextRx) {
+        ry = nextRy;
+        rx = nextRx;
+        cup.style.transform = 'rotateY(' + ry + 'deg) rotateX(' + rx + 'deg)';
+      }
+      setRy(ry);
+
+      function pointerDown(e) {
+        dragging = true;
+        pointerId = e.pointerId;
+        cup.setPointerCapture(pointerId);
+        cup.classList.add('dragging');
+        startX = e.clientX;
+        startY = e.clientY;
+        startRy = ry;
+        startRx = rx;
+      }
+      function pointerMove(e) {
+        if (!dragging || e.pointerId !== pointerId) return;
+        setRotation(startRy + (e.clientX - startX) * 0.5, startRx - (e.clientY - startY) * 0.5);
+      }
+      function pointerUp(e) {
+        if (e.pointerId !== pointerId) return;
+        dragging = false;
+        cup.classList.remove('dragging');
+      }
+      cup.addEventListener('pointerdown', pointerDown);
+      cup.addEventListener('pointermove', pointerMove);
+      cup.addEventListener('pointerup', pointerUp);
+      cup.addEventListener('pointercancel', pointerUp);
+
+      cup.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') { setRotation(ry - 15, rx); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { setRotation(ry + 15, rx); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { setRotation(ry, rx - 15); e.preventDefault(); }
+        else if (e.key === 'ArrowDown') { setRotation(ry, rx + 15); e.preventDefault(); }
+      });
+
+      // One-time slow full turn so first-time visitors can see it's a
+      // real rotatable object (not just a wiggle), without looping
+      // forever or fighting a real drag. Rotation itself is never
+      // clamped — setRy() above accepts any value, so a manual drag can
+      // always keep spinning past this demo turn in either direction.
+      if (!reduceMotion && 'IntersectionObserver' in window) {
+        var hinted = false;
+        var hintIo = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting && !hinted) {
+              hinted = true;
+              setTimeout(function () {
+                if (dragging) return;
+                cup.style.transition = 'transform 2.2s cubic-bezier(.4,0,.2,1)';
+                setRy(ry - 360);
+                setTimeout(function () { cup.style.transition = ''; }, 2300);
+              }, 400);
+              hintIo.disconnect();
+            }
+          });
+        }, { threshold: 0.4 });
+        hintIo.observe(cup);
+      }
+    })();
+  </script>
 </body>
 </html>
