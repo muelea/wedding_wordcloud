@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="pastel">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>WeddingCloud – Eure Wortwolke einrichten</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #eef6f4;
+      --bg2:      #ddeee9;
+      --primary:  #4a8fa8;
+      --primary2: #2e6e8a;
+      --accent:   #6aae94;
+      --accent2:  #e87c6a;
+      --text:     #1e3d4a;
+      --muted:    #6a8c96;
+      --border:   rgba(74,143,168,0.28);
+      --shadow:   rgba(74,143,168,0.14);
+      --ph:       #9abcc8;
+      --header-grad: rgba(106,174,148,0.13);
+      --header-bd:   rgba(74,143,168,0.16);
+      --orn:      rgba(74,143,168,0.50);
+      --ok:       #4a9478;
+      --err:      #c1594a;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 300;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    .header {
+      width: 100%;
+      text-align: center;
+      padding: 44px 24px 30px;
+      background: linear-gradient(180deg, var(--header-grad) 0%, transparent 100%);
+      border-bottom: 1px solid var(--header-bd);
+    }
+
+    .header .eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(28px, 6vw, 40px);
+      font-weight: 400;
+      color: var(--primary2);
+    }
+
+    .header .subtitle {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      padding: 36px 24px 0;
+    }
+
+    form { display: flex; flex-direction: column; gap: 22px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .field-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    input[type="text"], input[type="date"], input[type="password"], input[type="tel"] {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      color: var(--text);
+      padding: 14px 16px;
+      outline: none;
+      box-shadow: 0 4px 20px var(--shadow);
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--primary); }
+    input::placeholder { color: var(--ph); font-style: italic; }
+    #pin, #pin-confirm { -webkit-text-security: disc; text-security: disc; letter-spacing: 4px; }
+
+    .slug-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .slug-row .slug-prefix { opacity: 0.7; }
+    .slug-row input { flex: 1; min-width: 160px; font-size: 16px; padding: 12px 14px; }
+
+    .slug-status {
+      font-size: 12px;
+      margin-top: 8px;
+      min-height: 16px;
+    }
+    .slug-status.ok  { color: var(--ok); }
+    .slug-status.err { color: var(--err); }
+
+    .pin-row { display: flex; gap: 12px; }
+    .pin-row > div { flex: 1; }
+
+    button[type="submit"] {
+      margin-top: 6px;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary2) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    button[type="submit"]:active { transform: scale(0.98); }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: default; }
+
+    .error-banner {
+      background: rgba(193,89,74,0.10);
+      border: 1px solid rgba(193,89,74,0.30);
+      color: var(--err);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      display: none;
+    }
+    .error-banner.show { display: block; }
+
+    .ornament {
+      text-align: center;
+      color: var(--orn);
+      font-size: 18px;
+      margin: 36px 0 0;
+      letter-spacing: 8px;
+    }
+
+    /* ── Success screen ── */
+    .success { display: none; text-align: center; }
+    .success.show { display: block; }
+    #create-form.hidden { display: none; }
+
+    .success h2 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 26px;
+      color: var(--primary2);
+      margin-bottom: 14px;
+    }
+    .success p { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+
+    .success a.btn {
+      display: block;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary2) 100%);
+      color: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 17px;
+      margin-bottom: 12px;
+    }
+    .success a.btn.secondary {
+      background: #fff;
+      color: var(--primary2);
+      border: 1.5px solid var(--border);
+    }
+    .success .guest-link {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 14px;
+      color: var(--primary2);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <p class="eyebrow">WeddingCloud</p>
+  <h1>Eure Wortwolke</h1>
+  <p class="subtitle">Gäste teilen live ein Wort für euch – auf dem Bildschirm wächst daraus eure Hochzeits-Wortwolke. Kostenlos, in 30 Sekunden eingerichtet.</p>
+</header>
+
+<main class="card">
+  <div class="error-banner" id="error-banner"></div>
+
+  <form id="create-form" autocomplete="off">
+    <div>
+      <label for="couple-name">Vornamen des Brautpaars</label>
+      <input id="couple-name" type="text" placeholder="Johanna &amp; Peter" maxlength="80" required />
+    </div>
+
+    <div>
+      <label for="event-title">Anlass</label>
+      <input id="event-title" type="text" placeholder="Hochzeit" maxlength="60" value="Hochzeit" />
+    </div>
+
+    <div>
+      <label for="wedding-date">Datum (optional)</label>
+      <input id="wedding-date" type="date" />
+    </div>
+
+    <div>
+      <label for="slug">Eure Adresse</label>
+      <div class="slug-row">
+        <span class="slug-prefix" id="slug-origin">…/e/</span>
+        <input id="slug" type="text" placeholder="johanna-und-peter" maxlength="80" required />
+      </div>
+      <div class="slug-status" id="slug-status"></div>
+      <p class="field-hint">Beim Erstellen hängen wir automatisch einen kurzen eindeutigen Code an (z. B. „johanna-und-peter-x7k2q") — so bekommt jedes Paar eine eigene Adresse, und Fremde können eure Wortwolke nicht einfach erraten und mitlesen.</p>
+    </div>
+
+    <div class="pin-row">
+      <div>
+        <label for="pin">Admin-PIN (4-6 Ziffern)</label>
+        <input id="pin" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••" autocomplete="off" required />
+        <p class="field-hint">Schützt „Neue Runde" auf dem Anzeige-Bildschirm.</p>
+      </div>
+      <div>
+        <label for="pin-confirm">PIN bestätigen</label>
+        <input id="pin-confirm" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••" autocomplete="off" required />
+      </div>
+    </div>
+
+    <button type="submit" id="submit-btn">Wortwolke erstellen</button>
+  </form>
+
+  <div class="success" id="success">
+    <h2>Fertig! ♡</h2>
+    <p>Öffnet die Anzeige-Seite auf dem großen Bildschirm bei der Feier. Gäste scannen dort den QR-Code und tippen ihr Wort auf dem Handy ein.</p>
+    <a class="btn" id="display-link" href="#">Zur Anzeige-Seite</a>
+    <a class="btn secondary" id="guest-link" href="#">Zur Gäste-Seite (Vorschau)</a>
+    <p class="field-hint">Merkt euch euren Admin-PIN — ihr braucht ihn, um auf dem Anzeige-Bildschirm eine neue Runde zu starten.</p>
+  </div>
+
+  <p class="ornament">· · ·</p>
+</main>
+
+<script>
+  const coupleNameInput = document.getElementById('couple-name');
+  const slugInput        = document.getElementById('slug');
+  const slugStatus       = document.getElementById('slug-status');
+  const slugOrigin       = document.getElementById('slug-origin');
+  const form              = document.getElementById('create-form');
+  const submitBtn         = document.getElementById('submit-btn');
+  const errorBanner       = document.getElementById('error-banner');
+  const success            = document.getElementById('success');
+
+  slugOrigin.textContent = `${location.origin}/e/`;
+
+  let slugTouchedByUser = false;
+  let slugCheckTimer = null;
+
+  slugInput.addEventListener('input', () => { slugTouchedByUser = true; scheduleSlugCheck(); });
+
+  coupleNameInput.addEventListener('input', () => {
+    if (slugTouchedByUser) return;
+    slugInput.value = slugify(coupleNameInput.value);
+    scheduleSlugCheck();
+  });
+
+  // Client-side mirror of src/slug.js's slugify() — good enough for live
+  // preview; the server re-derives and re-validates the authoritative slug
+  // on submit regardless, so a mismatch here is just a UX nit, not a bug.
+  function slugify(input) {
+    const umlauts = { 'ä':'ae','ö':'oe','ü':'ue','ß':'ss','Ä':'Ae','Ö':'Oe','Ü':'Ue' };
+    let s = String(input || '').replace(/[äöüßÄÖÜ]/g, (c) => umlauts[c] || c);
+    s = s.replace(/&/g, ' und ');
+    s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    s = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/-{2,}/g, '-');
+    return s;
+  }
+
+  // This only previews the name-derived *prefix* — the final slug always
+  // gets a random unique code appended at creation time (see the field-hint
+  // in the HTML above), so there's nothing meaningful to check "available"
+  // here anymore. We still round-trip through the server so the preview
+  // matches the server's own slugify() exactly (umlaut edge cases etc.)
+  // rather than trusting the client-side mirror above.
+  function scheduleSlugCheck() {
+    clearTimeout(slugCheckTimer);
+    const slug = slugInput.value.trim();
+    if (!slug) { slugStatus.textContent = ''; return; }
+    slugStatus.textContent = 'Wird geprüft…';
+    slugStatus.className = 'slug-status';
+    slugCheckTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/slug-availability?slug=${encodeURIComponent(slug)}`);
+        const data = await res.json();
+        if (data.valid) {
+          slugStatus.textContent = `…/e/${data.slug}-••••• (der Code wird beim Erstellen ergänzt)`;
+          slugStatus.className = 'slug-status ok';
+        } else {
+          slugStatus.textContent = 'Bitte andere Zeichen für die Adresse verwenden.';
+          slugStatus.className = 'slug-status err';
+        }
+      } catch {
+        slugStatus.textContent = '';
+      }
+    }, 350);
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.classList.add('show');
+  }
+  function clearError() {
+    errorBanner.classList.remove('show');
+    errorBanner.textContent = '';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const coupleName = coupleNameInput.value.trim();
+    const eventTitle = document.getElementById('event-title').value.trim() || 'Hochzeit';
+    const weddingDate = document.getElementById('wedding-date').value || null;
+    const slug = slugInput.value.trim();
+    const pin = document.getElementById('pin').value.trim();
+    const pinConfirm = document.getElementById('pin-confirm').value.trim();
+
+    if (!coupleName) return showError('Bitte gebt die Vornamen des Brautpaars ein.');
+    if (!slug) return showError('Bitte wählt eine Adresse.');
+    if (!/^\d{4,6}$/.test(pin)) return showError('Der PIN muss aus 4-6 Ziffern bestehen.');
+    if (pin !== pinConfirm) return showError('Die beiden PINs stimmen nicht überein.');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Wird erstellt…';
+
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coupleName, eventTitle, weddingDate, slug, pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // Note: a duplicate-slug conflict no longer happens here — every
+        // event gets a random unique code appended server-side, so the
+        // remaining failure modes are validation errors or (extremely
+        // rare) a server-side generation failure, both surfaced as-is.
+        showError(data.error || 'Etwas ist schiefgelaufen.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Wortwolke erstellen';
+        return;
+      }
+      form.classList.add('hidden');
+      success.classList.add('show');
+      document.getElementById('display-link').href = data.displayUrl;
+      document.getElementById('guest-link').href = data.guestUrl;
+    } catch {
+      showError('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Wortwolke erstellen';
+    }
+  });
+</script>
+</body>
+</html>
