@@ -109,7 +109,7 @@
 
     .preview-card,
     .controls {
-      background: rgba(255, 255, 255, 0.72);
+      background: rgba(255, 254, 252, .88);
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
@@ -119,9 +119,6 @@
       min-height: 690px;
       padding: 30px;
       border-radius: 28px;
-      background:
-        radial-gradient(ellipse at 50% 24%, rgba(239, 243, 244, .72), transparent 34%),
-        rgba(255, 253, 250, .86);
       overflow: hidden;
       position: sticky;
       top: 24px;
@@ -142,8 +139,8 @@
     }
     .mug-stage {
       min-height: 400px;
-      margin: 12px -30px 18px;
-      padding: 28px 38px 22px;
+      margin: 0 -30px 18px;
+      padding: 8px 38px 22px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -243,7 +240,6 @@
       gap: 16px;
     }
     .wrap-head strong { font-size: 13px; font-weight: 600; }
-    .wrap-head span { color: var(--muted); font-size: 11px; }
     .editor-toolbar {
       margin-bottom: 12px;
       display: flex;
@@ -414,7 +410,6 @@
       font-size: 10px;
       line-height: 1.45;
     }
-    .wrap-note { margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 
     .controls {
       border-radius: 28px;
@@ -752,7 +747,7 @@
       .intro-copy { font-size: 15px; }
       .preview-card, .controls { padding: 20px; border-radius: 21px; }
       .preview-head { align-items: center; }
-      .mug-stage { min-height: 310px; margin: 10px -20px 16px; padding: 20px 14px 18px; gap: 22px; }
+      .mug-stage { min-height: 310px; margin: 0 -20px 16px; padding: 6px 14px 18px; gap: 22px; }
       .mug-viewer { height: 270px; }
       .mug { width: min(35vw, 165px); }
       .mug-name { margin-top: 0; font-size: 11px; }
@@ -807,7 +802,6 @@
           <div class="wrap-preview">
             <div class="wrap-head">
               <strong>So liegt das Motiv auf der Druckfläche</strong>
-              <span id="print-spec">2700 × 1050 px · 300 DPI</span>
             </div>
             <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
               <div class="editor-tools">
@@ -854,7 +848,6 @@
               </div>
             </div>
             <p class="editor-help" id="editor-feedback" aria-live="polite">Wort auswählen und ziehen oder doppelklicken, um es direkt zu bearbeiten.</p>
-            <p class="wrap-note">Gedruckt werden ausschließlich die Wörter – ohne Rahmen, Hilfslinien und Hintergrund.</p>
           </div>
         </section>
 
@@ -935,8 +928,6 @@
 
           <div class="summary">
             <div class="summary-row"><span>Produkt</span><strong id="summary-product">2 Tassen</strong></div>
-            <div class="summary-row"><span>Wortwolke</span><strong id="word-summary">–</strong></div>
-            <div class="summary-row"><span>Druck</span><strong>Sublimation · 300 DPI</strong></div>
             <div class="summary-total"><span>Gesamtpreis</span><strong id="price">34,90 €</strong></div>
           </div>
 
@@ -1293,7 +1284,9 @@
 
         const mugGroup = new THREE.Group();
         // Start at a slight angle so the cylindrical print and handle are both
-        // visible immediately. Dragging still exposes the complete wrap.
+        // visible immediately. Lift the composition slightly so the mug sits
+        // closer to its heading without changing its scale or dimensions.
+        mugGroup.position.y = .5;
         mugGroup.rotation.y = .14;
         scene.add(mugGroup);
 
@@ -1711,13 +1704,9 @@
         document.getElementById('product-unit-price').textContent = `${formatPrice(product.unitPriceCents)} pro Tasse`;
         document.getElementById('mug-viewer-hint').textContent =
           `↔ ↕ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
-        document.getElementById('print-spec').textContent =
-          `${product.printFile.width} × ${product.printFile.height} px · ${product.printFile.dpi} DPI`;
         quantityInput.min = String(product.minQuantity);
         quantityInput.max = String(product.maxQuantity);
         updateQuantity(product.defaultQuantity, false);
-        const total = words.reduce((sum, item) => sum + item[1], 0);
-        document.getElementById('word-summary').textContent = `${words.length} Wörter · ${total} Stimmen`;
 
         loading.hidden = true;
         content.hidden = false;
