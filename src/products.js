@@ -44,7 +44,11 @@ const MUG_DUO = Object.freeze({
     printAreaLeft: 29,
   }),
   layoutGeometry: Object.freeze({
-    single: Object.freeze([{ x: 890, y: 65, side: 920 }]),
+    // The first and second side centres (587 px / 2112 px) sit 90° away
+    // from Printful file 43's edges. Those edges meet at the unprinted
+    // handle band, so a one-sided motif belongs at the first centre rather
+    // than in the file centre opposite the handle.
+    single: Object.freeze([{ x: 127, y: 65, side: 920 }]),
     'both-sides': Object.freeze([
       { x: 162, y: 100, side: 850 },
       { x: 1687, y: 100, side: 850 },

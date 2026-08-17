@@ -7,9 +7,10 @@ const { MUG_DUO } = require('./products');
 const measureCanvas = createCanvas(10, 10);
 const measureCtx = measureCanvas.getContext('2d');
 
-// Printful's template marks the center of the 2700px wrap at x=1350 and
-// the two visible faces at roughly x=587 and x=2112. The verified geometry
-// lives with the product so the browser preview and print file share it.
+// Printful file 43 ends on either side of the handle. Its two visible face
+// centres are roughly x=587 and x=2112; x=1350 is the back opposite the
+// handle. The verified geometry lives with the product so the browser
+// preview and print file share it.
 const CLOUD_LAYOUTS = MUG_DUO.layoutGeometry;
 const DESIGN_SAFE_MARGIN = 24;
 

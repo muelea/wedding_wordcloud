@@ -56,6 +56,7 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   );
   assert.ok(data.product.themes.every((theme) => theme.colors.length >= 6));
   assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap']);
+  assert.deepEqual(data.product.layoutGeometry.single, [{ x: 127, y: 65, side: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['full-wrap'], [{ x: 130, y: 65, width: 2440, height: 920 }]);
   assert.deepEqual(data.words, [['liebe', 1]]);
 

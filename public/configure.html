@@ -1115,6 +1115,11 @@
         const bottomRadius = radius * .985;
         const edgeRadius = .09;
         const shellHeight = height - edgeRadius * 2;
+        // Printful file 43 covers 22.86 cm of the 25.76 cm circumference.
+        // Its left and right edges therefore meet on either side of the
+        // unprinted handle band. The cylinder's UV seam must sit exactly on
+        // the handle axis (negative X), not 90 degrees behind it.
+        const handleSeamAngle = -Math.PI / 2;
         // Match the homepage mug's deliberately simple material response.
         // Standard shading preserves the printed colors and gives the white
         // body a clean light-to-dark falloff without filmic compression.
@@ -1130,7 +1135,16 @@
           metalness: .04,
         });
         const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(radius, bottomRadius, shellHeight, 160, 1, true, -Math.PI, Math.PI * 2),
+          new THREE.CylinderGeometry(
+            radius,
+            bottomRadius,
+            shellHeight,
+            160,
+            1,
+            true,
+            handleSeamAngle,
+            Math.PI * 2
+          ),
           ceramic
         );
         mugGroup.add(body);
