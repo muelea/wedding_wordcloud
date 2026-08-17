@@ -83,6 +83,7 @@ db.exec(`
     theme                TEXT NOT NULL,
     placement            TEXT NOT NULL,
     words_json           TEXT NOT NULL,
+    design_json          TEXT,
     print_width          INTEGER NOT NULL,
     print_height         INTEGER NOT NULL,
     created_at           TEXT NOT NULL DEFAULT (datetime('now'))
@@ -100,6 +101,9 @@ if (!configurationColumns.has('quantity')) {
 }
 if (!configurationColumns.has('unit_price_cents')) {
   db.exec('ALTER TABLE configurations ADD COLUMN unit_price_cents INTEGER NOT NULL DEFAULT 1745;');
+}
+if (!configurationColumns.has('design_json')) {
+  db.exec('ALTER TABLE configurations ADD COLUMN design_json TEXT;');
 }
 
 // ── Password hashing (admin PIN) ────────────────────────────────────────────
@@ -219,6 +223,7 @@ function createConfiguration({
   theme,
   placement,
   words,
+  design,
   printWidth,
   printHeight,
 }) {
@@ -226,8 +231,9 @@ function createConfiguration({
   db.prepare(`
     INSERT INTO configurations (
       id, event_id, product_key, printful_variant_id, quantity,
-      unit_price_cents, theme, placement, words_json, print_width, print_height
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      unit_price_cents, theme, placement, words_json, design_json,
+      print_width, print_height
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     eventId,
@@ -238,6 +244,7 @@ function createConfiguration({
     theme,
     placement,
     JSON.stringify(words),
+    design ? JSON.stringify(design) : null,
     printWidth,
     printHeight
   );

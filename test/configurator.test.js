@@ -63,6 +63,11 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(threeBrowserBuild.status, 200);
   assert.match(threeBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await threeBrowserBuild.text()).length > 600000, 'the local Three.js build should be served in full');
+
+  const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
+  assert.equal(fabricBrowserBuild.status, 200);
+  assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
+  assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 });
 
 test('confirmed configuration freezes the approved words in a permanent Printful-sized SVG', async (t) => {
@@ -159,4 +164,55 @@ test('two-sided placement prints each approved word exactly twice and rejects in
   assert.equal((fullWrapSvg.match(/<g data-cloud=/g) || []).length, 1);
   assert.match(fullWrapSvg, /fill="#173a4a"/);
   assert.doesNotMatch(fullWrapSvg, /<rect\b/);
+});
+
+test('custom editor design is frozen exactly and cannot leave the printable area', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { coupleName: 'Editor Ella & Finn' });
+  const words = [['ursprünglich', 2], ['liebe', 1]];
+  const design = [
+    { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456' },
+    { id: 'wort-2', text: 'für immer', x: 1550, y: 655, fontSize: 82, angle: -30, color: '#abcdef' },
+  ];
+
+  const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      productKey: 'white-glossy-mug-duo-11oz',
+      quantity: 2,
+      theme: 'pastel',
+      placement: 'full-wrap',
+      words,
+      design,
+    }),
+  });
+  assert.equal(save.status, 201);
+  const configuration = await save.json();
+  const svg = await fetch(baseUrl + configuration.printFileUrl).then((res) => res.text());
+  assert.match(svg, /data-cloud="full-wrap" data-custom="true"/);
+  assert.match(svg, /x="1280\.0"/);
+  assert.match(svg, /font-size="118\.0"/);
+  assert.match(svg, /transform="rotate\(15\.0 1280\.0 460\.0\)"/);
+  assert.match(svg, /fill="#123456"/);
+  assert.match(svg, />Unser Wort<\/text>/);
+  assert.match(svg, />für immer<\/text>/);
+  assert.doesNotMatch(svg, />ursprünglich<\/text>/, 'the edited design, not the original cloud, is printed');
+  assert.equal((svg.match(/<text /g) || []).length, 2);
+  assert.doesNotMatch(svg, /<rect\b/);
+
+  const outside = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      placement: 'single',
+      words,
+      design: [{ id: 'outside', text: 'zu weit', x: 10, y: 500, fontSize: 100, angle: 0, color: '#123456' }],
+    }),
+  });
+  assert.equal(outside.status, 400);
+  assert.equal((await outside.json()).error, 'invalid_design');
 });

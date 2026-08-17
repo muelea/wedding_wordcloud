@@ -7,13 +7,16 @@ const { slugify, makeUniqueSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
 const adminAuth = require('../adminAuth');
 const stripe = require('../stripe');
-const { normalizeWord } = require('../words');
+const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const { MUG_DUO, getProduct, getPublicProduct } = require('../products');
-const { buildMugPrintSvg } = require('../mugPrint');
+const { buildMugPrintSvg, isMugDesignWithinBounds } = require('../mugPrint');
 
 const PIN_RE = /^\d{4,6}$/;
 const MAX_NAME_LENGTH = 80;
 const MAX_SNAPSHOT_WORDS = 200;
+// Two-sided layouts duplicate every approved cloud word, with a little room
+// left for words the couple adds manually in the editor.
+const MAX_DESIGN_WORDS = 500;
 
 function normalizeSnapshotWords(rawWords) {
   if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
@@ -28,6 +31,53 @@ function normalizeSnapshotWords(rawWords) {
     merged.set(word, (merged.get(word) || 0) + count);
   }
   return Array.from(merged.entries());
+}
+
+function normalizeDesignText(rawText) {
+  if (typeof rawText !== 'string') return '';
+  const text = rawText.normalize('NFC').trim()
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .replace(/ {2,}/g, ' ')
+    .slice(0, MAX_WORD_LENGTH)
+    .trim();
+  // Reuse the guest-word sanitizer as the source of truth for unsupported
+  // characters, but preserve intentional capitalization in the editor.
+  return normalizeWord(text) === text.toLowerCase() ? text : '';
+}
+
+function normalizeDesign(rawDesign, width, height) {
+  if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_WORDS) {
+    return null;
+  }
+  const ids = new Set();
+  const normalized = [];
+  for (const [index, rawItem] of rawDesign.entries()) {
+    if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
+    const text = normalizeDesignText(rawItem.text);
+    const x = Number(rawItem.x);
+    const y = Number(rawItem.y);
+    const fontSize = Number(rawItem.fontSize);
+    const rawAngle = Number(rawItem.angle ?? 0);
+    const color = String(rawItem.color || '').toLowerCase();
+    const id = String(rawItem.id || `wort-${index + 1}`).slice(0, 64);
+    if (!id || ids.has(id) || !text || !Number.isFinite(x) || !Number.isFinite(y) ||
+        !Number.isFinite(fontSize) || !Number.isFinite(rawAngle) ||
+        fontSize < 12 || fontSize > height || !/^#[0-9a-f]{6}$/.test(color)) {
+      return null;
+    }
+    ids.add(id);
+    const angle = ((rawAngle + 180) % 360 + 360) % 360 - 180;
+    normalized.push({
+      id,
+      text,
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+      fontSize: Math.round(fontSize * 10) / 10,
+      angle: Math.round(angle * 10) / 10,
+      color,
+    });
+  }
+  return isMugDesignWithinBounds(normalized, width, height) ? normalized : null;
 }
 
 function makeRouter({ io, port }) {
@@ -203,6 +253,13 @@ function makeRouter({ io, port }) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
+    const design = Object.hasOwn(req.body || {}, 'design')
+      ? normalizeDesign(req.body.design, product.printFile.width, product.printFile.height)
+      : null;
+    if (Object.hasOwn(req.body || {}, 'design') && !design) {
+      return res.status(400).json({ error: 'invalid_design' });
+    }
+
     const configuration = db.createConfiguration({
       eventId: event.id,
       productKey: product.key,
@@ -212,6 +269,7 @@ function makeRouter({ io, port }) {
       theme,
       placement,
       words,
+      design,
       printWidth: product.printFile.width,
       printHeight: product.printFile.height,
     });
@@ -233,12 +291,14 @@ function makeRouter({ io, port }) {
     const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).send('configuration not found');
     let words;
+    let design = null;
     try {
       words = JSON.parse(configuration.words_json);
+      if (configuration.design_json) design = JSON.parse(configuration.design_json);
     } catch {
       return res.status(500).send('configuration is invalid');
     }
-    const svg = buildMugPrintSvg(words, configuration.theme, configuration.placement);
+    const svg = buildMugPrintSvg(words, configuration.theme, configuration.placement, design);
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(svg);

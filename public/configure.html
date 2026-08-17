@@ -292,13 +292,135 @@
     }
     .wrap-head strong { font-size: 13px; font-weight: 600; }
     .wrap-head span { color: var(--muted); font-size: 11px; }
-    #wrap-canvas {
-      display: block;
-      width: 100%;
-      aspect-ratio: 2700 / 1050;
+    .editor-toolbar {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .editor-tools { display: flex; align-items: center; gap: 6px; }
+    .editor-button {
+      min-height: 36px;
+      padding: 8px 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid rgba(123, 70, 82, .18);
       border-radius: 10px;
       background: #fff;
-      box-shadow: inset 0 0 0 1px rgba(40, 20, 28, .08);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      transition: border-color .2s, background .2s, opacity .2s;
+    }
+    .editor-button:hover { border-color: rgba(156, 28, 76, .45); background: #fff9f7; }
+    .editor-button:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .editor-button:disabled { cursor: not-allowed; opacity: .34; }
+    .editor-button-primary { border-color: rgba(156, 28, 76, .28); color: var(--berry); }
+    .editor-icon-button { width: 36px; padding: 7px; font-size: 15px; }
+    .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
+    .editor-scroll {
+      width: 100%;
+      overflow: auto;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(40, 20, 28, .09);
+      scrollbar-color: rgba(123,70,82,.28) transparent;
+    }
+    .editor-canvas-shell {
+      width: 100%;
+      min-width: 100%;
+      position: relative;
+      aspect-ratio: 2700 / 1050;
+      transition: width .2s ease;
+    }
+    .editor-canvas-shell .canvas-container {
+      width: 100% !important;
+      height: 100% !important;
+      position: absolute !important;
+      inset: 0;
+    }
+    .editor-canvas-shell canvas {
+      width: 100% !important;
+      height: 100% !important;
+      touch-action: none;
+    }
+    .print-safe-guide {
+      position: absolute;
+      z-index: 4;
+      inset: 2.2857% .8889%;
+      border: 1px dashed transparent;
+      border-radius: 6px;
+      pointer-events: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .editor-canvas-shell.has-selection .print-safe-guide {
+      border-color: rgba(156, 28, 76, .22);
+    }
+    .editor-canvas-shell.boundary-hit .print-safe-guide {
+      border-color: rgba(156, 28, 76, .74);
+      box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
+    }
+    .editor-selection {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(255,255,255,.82);
+    }
+    .editor-selection[hidden] { display: none; }
+    .editor-selection-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1fr) auto;
+      align-items: end;
+      gap: 12px;
+    }
+    .editor-field-label { display: block; color: var(--muted); font-size: 10px; }
+    .editor-text-input {
+      width: 100%;
+      height: 38px;
+      margin-top: 5px;
+      padding: 8px 10px;
+      border: 1px solid rgba(123,70,82,.2);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 12px;
+    }
+    .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
+    .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .editor-swatches { display: flex; align-items: center; gap: 5px; }
+    .editor-swatch {
+      width: 23px;
+      height: 23px;
+      padding: 0;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(62,35,45,.14);
+      cursor: pointer;
+    }
+    .editor-swatch:hover, .editor-swatch.is-selected { box-shadow: 0 0 0 2px var(--berry); }
+    .editor-color-input {
+      width: 28px;
+      height: 28px;
+      padding: 2px;
+      border: 1px solid rgba(123,70,82,.18);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .editor-actions { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .editor-delete { color: #9b2b42; }
+    .editor-help {
+      min-height: 17px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
     }
     .wrap-note { margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 
@@ -532,6 +654,12 @@
       .mug { width: min(35vw, 165px); }
       .mug-name { margin-top: 0; font-size: 11px; }
       .wrap-preview { padding: 15px; }
+      .wrap-head { align-items: flex-start; }
+      .editor-toolbar { align-items: flex-start; }
+      .editor-button { min-height: 40px; }
+      .editor-icon-button { width: 40px; }
+      .editor-selection-row { grid-template-columns: 1fr; }
+      .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
       .option-grid { grid-template-columns: 1fr; }
       .option-card { min-height: 76px; }
     }
@@ -580,8 +708,48 @@
               <strong>So liegt das Motiv auf der Druckfläche</strong>
               <span id="print-spec">2700 × 1050 px · 300 DPI</span>
             </div>
-            <canvas id="wrap-canvas" aria-label="Vorschau der vollständigen Druckfläche"></canvas>
-            <p class="wrap-note">Gedruckt werden ausschließlich die Wörter – ohne Rahmen und ohne Hintergrund.</p>
+            <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
+              <div class="editor-tools">
+                <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
+                <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Neu anordnen</button>
+              </div>
+              <div class="editor-tools">
+                <button class="editor-button editor-icon-button" id="editor-undo" type="button" aria-label="Rückgängig" title="Rückgängig">↶</button>
+                <button class="editor-button editor-icon-button" id="editor-redo" type="button" aria-label="Wiederholen" title="Wiederholen">↷</button>
+                <button class="editor-button editor-icon-button" id="editor-zoom-out" type="button" aria-label="Ansicht verkleinern" title="Ansicht verkleinern">−</button>
+                <span class="editor-zoom-label" id="editor-zoom-label">100 %</span>
+                <button class="editor-button editor-icon-button" id="editor-zoom-in" type="button" aria-label="Ansicht vergrößern" title="Ansicht vergrößern">＋</button>
+              </div>
+            </div>
+            <div class="editor-scroll" id="editor-scroll">
+              <div class="editor-canvas-shell" id="editor-canvas-shell">
+                <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
+                <span class="print-safe-guide" aria-hidden="true"></span>
+              </div>
+            </div>
+            <div class="editor-selection" id="editor-selection" hidden>
+              <div class="editor-selection-row">
+                <label class="editor-field-label">Ausgewähltes Wort
+                  <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" />
+                </label>
+                <div class="editor-field-label">Farbe
+                  <div class="editor-colors">
+                    <div class="editor-swatches" id="editor-swatches"></div>
+                    <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" />
+                  </div>
+                </div>
+              </div>
+              <div class="editor-actions">
+                <button class="editor-button" id="editor-smaller" type="button">− Kleiner</button>
+                <button class="editor-button" id="editor-larger" type="button">＋ Größer</button>
+                <button class="editor-button" id="editor-rotate-left" type="button">↶ Drehen</button>
+                <button class="editor-button" id="editor-rotate-right" type="button">↷ Drehen</button>
+                <button class="editor-button" id="editor-duplicate" type="button">Duplizieren</button>
+                <button class="editor-button editor-delete" id="editor-delete" type="button">Löschen</button>
+              </div>
+            </div>
+            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort auswählen und ziehen. Die Druckgrenze kann nicht überschritten werden.</p>
+            <p class="wrap-note">Gedruckt werden ausschließlich die Wörter – ohne Rahmen, Hilfslinien und Hintergrund.</p>
           </div>
         </section>
 
@@ -666,7 +834,9 @@
   </main>
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
+  <script src="/vendor/fabric.min.js?v=7.4.0"></script>
   <script src="/js/wordcloud-core.js?v=20260816-2"></script>
+  <script src="/js/mug-editor.js?v=20260816-1"></script>
   <script>
     'use strict';
 
@@ -690,6 +860,7 @@
     let renderFrame = null;
     let mug3D = null;
     let mug3DLoadPromise = null;
+    let mugEditor = null;
 
     document.getElementById('back-link').href = `/e/${encodeURIComponent(slug)}/display`;
 
@@ -763,6 +934,50 @@
       }
     }
 
+    function buildAutomaticDesign() {
+      const measurementCanvas = document.createElement('canvas');
+      const measurementContext = measurementCanvas.getContext('2d');
+      const design = [];
+      const slots = product.layoutGeometry[selectedPlacement];
+      slots.forEach((slot, slotIndex) => {
+        const slotHeight = slot.height || slot.side;
+        const slotWidth = slot.width || slot.side;
+        const xScale = slotWidth / slotHeight;
+        const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
+        const placed = WordCloudCore.layoutWords(words, slotHeight, measurementContext, colors);
+        placed.forEach((item, itemIndex) => {
+          design.push({
+            id: `${selectedPlacement}-${slotIndex + 1}-${itemIndex + 1}`,
+            text: item.word,
+            x: Math.round((slot.x + item.x * xScale) * 10) / 10,
+            y: Math.round((slot.y + item.y) * 10) / 10,
+            fontSize: Math.round(item.fontPx * 10) / 10,
+            angle: item.rotated ? -90 : 0,
+            color: item.color,
+          });
+        });
+      });
+      return design;
+    }
+
+    function getCurrentDesign() {
+      return mugEditor ? mugEditor.getDesign() : buildAutomaticDesign();
+    }
+
+    function drawDesign(ctx, offsetX = 0, offsetY = 0, scale = 1) {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      for (const item of getCurrentDesign()) {
+        ctx.save();
+        ctx.translate(offsetX + item.x * scale, offsetY + item.y * scale);
+        ctx.rotate((item.angle || 0) * Math.PI / 180);
+        ctx.font = `${item.fontSize * scale}px ${WordCloudCore.FONT_FAMILY}`;
+        ctx.fillStyle = item.color;
+        ctx.fillText(item.text, 0, item.fontSize * scale * .34);
+        ctx.restore();
+      }
+    }
+
     function renderMug3D() {
       if (!mug3D) return;
       mug3D.renderer.render(mug3D.scene, mug3D.camera);
@@ -801,16 +1016,7 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       const offsetX = (canvas.width - product.printFile.width) / 2;
       const offsetY = (canvas.height - product.printFile.height) / 2;
-      const slots = product.layoutGeometry[selectedPlacement];
-      for (const slot of slots) {
-        drawCloud(
-          ctx,
-          offsetX + slot.x,
-          offsetY + slot.y,
-          slot.width || slot.side,
-          slot.height || slot.side
-        );
-      }
+      drawDesign(ctx, offsetX, offsetY);
       mug3D.texture.needsUpdate = true;
       renderMug3D();
     }
@@ -1026,48 +1232,20 @@
       const width = mugCanvas.width;
       const height = mugCanvas.height;
       ctx.clearRect(0, 0, width, height);
-      if (selectedPlacement === 'full-wrap') {
-        const slot = product.layoutGeometry['full-wrap'][0];
-        const visibleHeight = Math.min(width, height) * .88;
-        const previewScale = visibleHeight / slot.height;
-        const wrapWidth = slot.width * previewScale;
-        drawCloud(ctx, (width - wrapWidth) / 2, (height - visibleHeight) / 2, wrapWidth, visibleHeight, true);
-        updateMug3DTexture();
-        return;
-      }
-      const sideRatio = selectedPlacement === 'both-sides' ? .71 : .88;
-      const side = Math.min(width, height) * sideRatio;
-      drawCloud(ctx, (width - side) / 2, (height - side) / 2, side);
+      const scale = Math.min(width / product.printFile.width, height / product.printFile.height) * .9;
+      drawDesign(
+        ctx,
+        (width - product.printFile.width * scale) / 2,
+        (height - product.printFile.height * scale) / 2,
+        scale
+      );
       updateMug3DTexture();
-    }
-
-    function renderWrap() {
-      const ctx = setupCanvas(wrapCanvas);
-      const width = wrapCanvas.width;
-      const height = wrapCanvas.height;
-      ctx.clearRect(0, 0, width, height);
-
-      const scaleX = width / product.printFile.width;
-      const scaleY = height / product.printFile.height;
-      const slots = product.layoutGeometry[selectedPlacement];
-      for (const slot of slots) {
-        const slotWidth = slot.width || slot.side;
-        const slotHeight = slot.height || slot.side;
-        drawCloud(
-          ctx,
-          slot.x * scaleX,
-          slot.y * scaleY,
-          slotWidth * scaleX,
-          slotHeight * scaleY
-        );
-      }
     }
 
     function renderAll() {
       cancelAnimationFrame(renderFrame);
       renderFrame = requestAnimationFrame(() => {
         renderMugs();
-        renderWrap();
       });
     }
 
@@ -1093,6 +1271,7 @@
         input.addEventListener('change', () => {
           selectedTheme = palette.key;
           markDirty();
+          if (mugEditor) mugEditor.applyPalette(palette.colors);
           renderAll();
         });
 
@@ -1142,9 +1321,52 @@
       input.addEventListener('change', () => {
         selectedPlacement = input.value;
         markDirty();
+        if (mugEditor) {
+          mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
+          mugEditor.setFeedback('Motiv passend neu angeordnet');
+        }
         renderAll();
       });
     });
+
+    function initEditor() {
+      mugEditor = new MugPrintEditor({
+        canvas: wrapCanvas,
+        shell: document.getElementById('editor-canvas-shell'),
+        scroll: document.getElementById('editor-scroll'),
+        selectionPanel: document.getElementById('editor-selection'),
+        textInput: document.getElementById('editor-text'),
+        swatches: document.getElementById('editor-swatches'),
+        colorInput: document.getElementById('editor-color'),
+        feedback: document.getElementById('editor-feedback'),
+        zoomLabel: document.getElementById('editor-zoom-label'),
+        addButton: document.getElementById('editor-add'),
+        resetButton: document.getElementById('editor-reset'),
+        undoButton: document.getElementById('editor-undo'),
+        redoButton: document.getElementById('editor-redo'),
+        zoomOutButton: document.getElementById('editor-zoom-out'),
+        zoomInButton: document.getElementById('editor-zoom-in'),
+        smallerButton: document.getElementById('editor-smaller'),
+        largerButton: document.getElementById('editor-larger'),
+        rotateLeftButton: document.getElementById('editor-rotate-left'),
+        rotateRightButton: document.getElementById('editor-rotate-right'),
+        duplicateButton: document.getElementById('editor-duplicate'),
+        deleteButton: document.getElementById('editor-delete'),
+        printWidth: product.printFile.width,
+        printHeight: product.printFile.height,
+        palette: getPalette(selectedTheme).colors,
+        onChange: () => {
+          markDirty();
+          renderAll();
+        },
+        onReset: () => {
+          mugEditor.setDesign(buildAutomaticDesign(), { record: true });
+          mugEditor.setFeedback('Automatische Wortwolke wiederhergestellt');
+          markDirty();
+        },
+      });
+      mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
+    }
 
     window.addEventListener('resize', () => {
       renderAll();
@@ -1165,6 +1387,7 @@
             theme: selectedTheme,
             placement: selectedPlacement,
             words,
+            design: mugEditor.getDesign(),
           }),
         });
         const data = await response.json();
@@ -1213,6 +1436,7 @@
 
         loading.hidden = true;
         content.hidden = false;
+        initEditor();
         renderAll();
         initMug3D();
       })

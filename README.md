@@ -20,7 +20,9 @@ finished word cloud after the event.
    (single, both sides or full wrap), and approves an immutable mug print
    file with a transparent background. A locally served Three.js preview
    maps that exact artwork onto a rotatable mug using Printful's physical
-   dimensions.
+   dimensions. The print area itself is a small Fabric.js editor: every word
+   can be moved, resized, rotated, recolored, edited, duplicated or removed,
+   while hard bounds keep the design printable.
 6. The approved configuration can then be purchased through Stripe Checkout
    and sent to Printful for fulfillment.
 
@@ -82,6 +84,7 @@ public/
   guest.html               Guest word-submission page, served at '/e/:slug'
   display.html             Live display + SVG export + mug CTA, served at '/e/:slug/display'
   configure.html           Mug configurator + interactive 3D preview, served at '/e/:slug/configure'
+  js/mug-editor.js         Bounded word-by-word print-area editor
   404.html                 Unknown-event page
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
 test/                      node:test suite — see "Testing" below
@@ -93,7 +96,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 33 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 34 tests covering multi-tenant
 isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, and Stripe/Printful stub behavior. Each test

@@ -37,6 +37,11 @@ app.get('/vendor/three.min.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'three', 'build', 'three.min.js'));
 });
 
+app.get('/vendor/fabric.min.js', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.sendFile(path.join(__dirname, 'node_modules', 'fabric', 'dist', 'index.min.js'));
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     // Vendored/shared libraries never change during an event — let phones
