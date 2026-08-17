@@ -273,7 +273,7 @@
 
         <div class="reel" aria-label="Animierte Vorschau einer Hochzeits-Wortwolke">
           <span class="reel-label"><span class="live-dot" aria-hidden="true"></span>Live-Vorschau</span>
-          <div class="demo-title">Johanna &amp; Peter</div>
+          <div class="demo-title">Lea &amp; Julian</div>
           <div class="demo-subtitle">Unsere Hochzeit · 2026</div>
           <div class="cloud">
             <span>Liebe</span><span>für immer</span><span>Freude</span><span>unvergesslich</span><span>Zusammen</span><span>Herzklopfen</span><span>Sommerabend</span><span>Gänsehaut</span><span>Vertrauen</span><span>goldenes Licht</span><span>Lachen</span><span>Geborgenheit</span><span>Hand in Hand</span>
@@ -491,7 +491,7 @@
         new THREE.Vector2(0.86, 0),
         new THREE.Vector2(0.90, 0.03),
         new THREE.Vector2(0.94, 0.18),
-        new THREE.Vector2(0.97, H * 0.55),
+        new THREE.Vector2(0.94, H * 0.55),
         new THREE.Vector2(0.93, H * 0.94),
         new THREE.Vector2(0.93, H),
         new THREE.Vector2(0.93 - wallT, H),
@@ -509,13 +509,13 @@
       // ── Handle: a real smooth tube along a curved 3D path, attached to
       // the +X side of the barrel. ──
       var handleCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0.90, H * 0.72, 0),
-        new THREE.Vector3(1.50, H * 0.68, 0),
-        new THREE.Vector3(1.66, H * 0.50, 0),
-        new THREE.Vector3(1.50, H * 0.32, 0),
-        new THREE.Vector3(0.90, H * 0.28, 0)
+        new THREE.Vector3(0.90, H * 0.84, 0),
+        new THREE.Vector3(1.42, H * 0.78, 0),
+        new THREE.Vector3(1.55, H * 0.50, 0),
+        new THREE.Vector3(1.42, H * 0.22, 0),
+        new THREE.Vector3(0.90, H * 0.16, 0)
       ]);
-      var handleGeo = new THREE.TubeGeometry(handleCurve, 64, 0.085, 20, false);
+      var handleGeo = new THREE.TubeGeometry(handleCurve, 64, 0.105, 20, false);
       var handleMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.38, metalness: 0.04 });
       pivot.add(new THREE.Mesh(handleGeo, handleMaterial));
 
@@ -541,6 +541,12 @@
       // the *camera* moving around them reads to the viewer as "the
       // lighting changes when I rotate it".
       var tiltLimit = THREE.MathUtils.degToRad(30);
+      // The handle sits at local +X (angle 0) — that landed right at the
+      // front-facing view by default, so the handle was the first thing
+      // visible at rest. Offset the resting orientation 30° to rotate it
+      // out of the initial view.
+      var restingRotationY = THREE.MathUtils.degToRad(360);
+      pivot.rotation.y = restingRotationY;
       var dragging = false, pointerId = null, startX = 0, startY = 0, startRotY = 0, startRotX = 0;
       var autoRotating = !reduceMotion, autoStart = null;
       var AUTO_ROTATE_MS = 9000;
@@ -641,7 +647,7 @@
           if (autoStart === null) autoStart = now;
           var t = Math.min(1, (now - autoStart) / AUTO_ROTATE_MS);
           var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-          pivot.rotation.y = -eased * Math.PI * 2;
+          pivot.rotation.y = restingRotationY + eased * Math.PI * 2;
           if (t >= 1) autoRotating = false;
         }
         renderer.render(scene, camera);
