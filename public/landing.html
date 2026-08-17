@@ -415,7 +415,6 @@
 
   <script type="module">
     import * as THREE from 'three';
-    import { OrbitControls } from '/js/vendor/three/examples/jsm/controls/OrbitControls.js';
 
     // A procedurally-built mug (LatheGeometry body + TubeGeometry handle),
     // shaped after a downloaded reference mesh's proportions rather than
@@ -436,19 +435,22 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-      // Ambient fill + a key light + a dimmer light from behind, so the
-      // far side of the mug is never unlit as it rotates into view.
-      scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-      var key = new THREE.DirectionalLight(0xfff3e6, 1.7);
+      // Softer, more neutral light: more of the illumination comes from
+      // ambient (even, shadowless) rather than the directional lights,
+      // and the directional lights themselves are near-neutral white
+      // instead of warm-tinted, so the ceramic reads as true white
+      // rather than a warm/creamy cast.
+      scene.add(new THREE.AmbientLight(0xffffff, 1.9));
+      var key = new THREE.DirectionalLight(0xfffaf5, 1.15);
       key.position.set(2.2, 1.8, 2.5);
       scene.add(key);
-      var fill = new THREE.DirectionalLight(0xffe9d6, 1.4);
+      var fill = new THREE.DirectionalLight(0xfffaf5, 0.85);
       fill.position.set(-2.4, 1, -2.2);
       scene.add(fill);
-      var rim = new THREE.DirectionalLight(0xffffff, 0.7);
+      var rim = new THREE.DirectionalLight(0xffffff, 0.45);
       rim.position.set(0, 2.2, -3);
       scene.add(rim);
-      var under = new THREE.DirectionalLight(0xffe9d6, 0.9);
+      var under = new THREE.DirectionalLight(0xfffaf5, 0.55);
       under.position.set(0.5, -2.2, 1.8);
       scene.add(under);
 
@@ -500,7 +502,7 @@
       var bodyGeo = new THREE.LatheGeometry(profile, 96);
 
       var texture = buildWordTexture();
-      var bodyMaterial = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.38, metalness: 0.04 });
+      var bodyMaterial = new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: 0.38, metalness: 0.04 });
       var body = new THREE.Mesh(bodyGeo, bodyMaterial);
       pivot.add(body);
 
@@ -526,35 +528,58 @@
       var vFov = THREE.MathUtils.degToRad(camera.fov);
       var distance = (sphere.radius / Math.sin(vFov / 2)) * 1.08;
       camera.position.set(0, sphere.radius * 0.1, distance);
-      camera.lookAt(0, 0, 0);
+      // Aim slightly above the mug's actual center so it sits a bit
+      // lower in the frame, closer to the caption below the canvas.
+      camera.lookAt(0, sphere.radius * 0.16, 0);
 
-      var controls = new OrbitControls(camera, canvas);
-      controls.target.set(0, 0, 0);
-      controls.enableZoom = false;
-      controls.enablePan = false;
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.08;
-      controls.rotateSpeed = 0.85;
-      controls.minDistance = distance * 0.6;
-      controls.maxDistance = distance * 1.6;
-      controls.addEventListener('start', function () { controls.autoRotate = false; });
-      controls.update();
+      // Rotate the mug itself rather than orbiting the camera around it
+      // (as OrbitControls did) — with a fixed camera, the lights (fixed
+      // in scene/world space, not attached to pivot) stay in a constant
+      // position relative to the viewer too, so the lit/shadowed sides
+      // no longer visibly shift as you drag. With a camera-orbit
+      // approach the object+lights are what's actually stationary, so
+      // the *camera* moving around them reads to the viewer as "the
+      // lighting changes when I rotate it".
+      var tiltLimit = THREE.MathUtils.degToRad(30);
+      var dragging = false, pointerId = null, startX = 0, startY = 0, startRotY = 0, startRotX = 0;
+      var autoRotating = !reduceMotion, autoStart = null;
+      var AUTO_ROTATE_MS = 9000;
 
-      // Vertical drag was unrestricted (a full 90° each way, to
-      // straight-down/straight-up) — clamp it to ±30° from the resting
-      // angle so it stays a comfortable look-around rather than a flip.
-      var basePolar = controls.getPolarAngle();
-      var tilt = THREE.MathUtils.degToRad(30);
-      controls.minPolarAngle = Math.max(0.05, basePolar - tilt);
-      controls.maxPolarAngle = Math.min(Math.PI - 0.05, basePolar + tilt);
+      function stopAutoRotate() { autoRotating = false; }
 
-      // One slow, elegant intro turn — stops the moment a real drag
-      // starts (see the 'start' listener above), never loops.
-      if (!reduceMotion) {
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 3.4; // ~ one full turn in ~9s
-        setTimeout(function () { controls.autoRotate = false; }, 9200);
+      canvas.addEventListener('pointerdown', function (e) {
+        dragging = true;
+        stopAutoRotate();
+        pointerId = e.pointerId;
+        canvas.setPointerCapture(pointerId);
+        canvas.classList.add('dragging');
+        startX = e.clientX;
+        startY = e.clientY;
+        startRotY = pivot.rotation.y;
+        startRotX = pivot.rotation.x;
+      });
+      canvas.addEventListener('pointermove', function (e) {
+        if (!dragging || e.pointerId !== pointerId) return;
+        pivot.rotation.y = startRotY + (e.clientX - startX) * 0.009;
+        var nextX = startRotX + (e.clientY - startY) * 0.009;
+        pivot.rotation.x = Math.max(-tiltLimit, Math.min(tiltLimit, nextX));
+      });
+      function stopDrag(e) {
+        if (pointerId !== null && e.pointerId !== pointerId) return;
+        dragging = false;
+        pointerId = null;
+        canvas.classList.remove('dragging');
       }
+      canvas.addEventListener('pointerup', stopDrag);
+      canvas.addEventListener('pointercancel', stopDrag);
+
+      canvas.addEventListener('keydown', function (e) {
+        var step = THREE.MathUtils.degToRad(15);
+        if (e.key === 'ArrowLeft') { stopAutoRotate(); pivot.rotation.y -= step; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { stopAutoRotate(); pivot.rotation.y += step; e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { stopAutoRotate(); pivot.rotation.x = Math.min(tiltLimit, pivot.rotation.x + step); e.preventDefault(); }
+        else if (e.key === 'ArrowDown') { stopAutoRotate(); pivot.rotation.x = Math.max(-tiltLimit, pivot.rotation.x - step); e.preventDefault(); }
+      });
 
       // Same 13 words as the hero "Live-Vorschau" cloud, drawn onto a
       // canvas and used as the body's texture map. U wraps the full 360°
@@ -602,14 +627,26 @@
       window.addEventListener('resize', resize);
       resize();
 
-      canvas.addEventListener('pointerdown', function () { canvas.classList.add('dragging'); });
-      window.addEventListener('pointerup', function () { canvas.classList.remove('dragging'); });
-
-      (function animate() {
+      // One slow, elegant intro turn — stops the instant a real drag or
+      // key press starts (see stopAutoRotate() above), never loops.
+      // animate() must only ever be invoked by requestAnimationFrame
+      // (which always passes a real timestamp) — an earlier version
+      // self-invoked it once with zero arguments to kick things off,
+      // leaving `now` undefined on that first call, which corrupted
+      // autoStart to undefined (not null) and made every subsequent
+      // frame's rotation compute to NaN, silently breaking the render.
+      function animate(now) {
         requestAnimationFrame(animate);
-        controls.update();
+        if (autoRotating) {
+          if (autoStart === null) autoStart = now;
+          var t = Math.min(1, (now - autoStart) / AUTO_ROTATE_MS);
+          var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+          pivot.rotation.y = -eased * Math.PI * 2;
+          if (t >= 1) autoRotating = false;
+        }
         renderer.render(scene, camera);
-      })();
+      }
+      requestAnimationFrame(animate);
     })();
   </script>
 </body>
