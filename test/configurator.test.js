@@ -55,9 +55,10 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
     ['pastel', 'sage-gold', 'ocean', 'custom']
   );
   assert.ok(data.product.themes.every((theme) => theme.colors.length >= 6));
-  assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap']);
+  assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap', 'fit-area']);
   assert.deepEqual(data.product.layoutGeometry.single, [{ x: 127, y: 65, side: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['full-wrap'], [{ x: 130, y: 65, width: 2440, height: 920 }]);
+  assert.deepEqual(data.product.layoutGeometry['fit-area'], [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }]);
   assert.deepEqual(data.words, [['liebe', 1]]);
 
   const threeBrowserBuild = await fetch(`${baseUrl}/vendor/three.min.js?v=0.160.1`);
@@ -165,6 +166,23 @@ test('two-sided placement prints each approved word exactly twice and rejects in
   assert.equal((fullWrapSvg.match(/<g data-cloud=/g) || []).length, 1);
   assert.match(fullWrapSvg, /fill="#003049"/);
   assert.doesNotMatch(fullWrapSvg, /<rect\b/);
+
+  const fitAreaSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      placement: 'fit-area',
+      words: [['liebe', 8], ['glück', 5], ['zusammen', 3], ['humor', 1]],
+    }),
+  });
+  assert.equal(fitAreaSave.status, 201);
+  const fitAreaConfiguration = await fitAreaSave.json();
+  const fitAreaSvg = await fetch(baseUrl + fitAreaConfiguration.printFileUrl).then((res) => res.text());
+  assert.match(fitAreaSvg, /data-cloud="fit-area"/);
+  assert.equal((fitAreaSvg.match(/<text /g) || []).length, 4);
+  assert.doesNotMatch(fitAreaSvg, /<rect\b/);
 });
 
 test('custom editor design is frozen exactly and cannot leave the printable area', async (t) => {

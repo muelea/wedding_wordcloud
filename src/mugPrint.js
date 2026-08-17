@@ -28,6 +28,9 @@ function textElements(placed, offsetX, offsetY) {
 function layoutSlot(words, slot, colors) {
   const layoutHeight = slot.height || slot.side;
   const layoutWidth = slot.width || slot.side;
+  if (slot.optimize) {
+    return WordCloudCore.layoutWordsInArea(words, layoutWidth, layoutHeight, measureCtx, colors);
+  }
   const xScale = layoutWidth / layoutHeight;
   return WordCloudCore.layoutWords(words, layoutHeight, measureCtx, colors)
     .map((item) => ({ ...item, x: item.x * xScale }));

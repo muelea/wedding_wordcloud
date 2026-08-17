@@ -114,6 +114,50 @@ test('layoutWords handles a dense word list without dropping words or creating o
   }
 });
 
+test('layoutWordsInArea fills a wide print area while preserving every relative font size', () => {
+  const words = wordList(18);
+  const width = 2628;
+  const height = 978;
+  const placed = WordCloudCore.layoutWordsInArea(
+    words,
+    width,
+    height,
+    makeFakeMeasureCtx(),
+    WordCloudCore.makeColorAssigner('pastel')
+  );
+
+  assert.equal(placed.length, words.length, 'the optimized layout must retain every word');
+  for (let i = 0; i < placed.length; i++) {
+    assert.ok(placed[i].x1 >= -0.01 && placed[i].x2 <= width + 0.01);
+    assert.ok(placed[i].y1 >= -0.01 && placed[i].y2 <= height + 0.01);
+    for (let j = i + 1; j < placed.length; j++) {
+      assert.equal(boxesOverlap(placed[i], placed[j]), false, `"${placed[i].word}" and "${placed[j].word}" overlap`);
+    }
+  }
+
+  const bounds = placed.reduce((result, item) => ({
+    x1: Math.min(result.x1, item.x1),
+    x2: Math.max(result.x2, item.x2),
+    y1: Math.min(result.y1, item.y1),
+    y2: Math.max(result.y2, item.y2),
+  }), { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
+  assert.ok((bounds.x2 - bounds.x1) / width > .98, 'the optimized cloud should reach both safe horizontal edges');
+  assert.ok((bounds.y2 - bounds.y1) / height > .95, 'the optimized cloud should use most of the available height');
+
+  const counts = words.map(([, count]) => count);
+  const minCount = Math.min(...counts);
+  const maxCount = Math.max(...counts);
+  const expectedWeights = new Map(words.map(([word, count]) => [
+    word,
+    WordCloudCore.sizeForCount(word, count, minCount, maxCount, .24, 1),
+  ]));
+  const commonScale = placed[0].fontPx / expectedWeights.get(placed[0].word);
+  placed.forEach((item) => {
+    const actualScale = item.fontPx / expectedWeights.get(item.word);
+    assert.ok(Math.abs(actualScale - commonScale) < 1e-7, `"${item.word}" must use the same global scale`);
+  });
+});
+
 test('buildSVG output contains every word, properly escaped, with no missing entries', () => {
   const words = [['liebe & treue', 3], ['<3', 1], ['abenteuer', 5]];
   const side = 1000;

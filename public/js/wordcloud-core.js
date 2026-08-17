@@ -177,6 +177,153 @@
     return placed;
   }
 
+  // Packs one copy of every word into a rectangular print area. Unlike the
+  // square cloud above, every font size is derived from one shared multiplier:
+  // if the whole arrangement grows or shrinks, the visual size hierarchy is
+  // preserved exactly. The final uniform fit expands the result without
+  // crossing the area. A second, horizontal-only distribution pass then
+  // moves the word centres towards both side edges. It does not stretch the
+  // letters or change their sizes; because horizontal distances only grow,
+  // it also cannot introduce new collisions.
+  function layoutWordsInArea(words, width, height, measureCtx, colorFn) {
+    if (!Array.isArray(words) || !words.length || width <= 0 || height <= 0) return [];
+    const getColor = colorFn || makeColorAssigner('pastel');
+    const counts = words.map(([, count]) => count);
+    const maxCount = Math.max(...counts);
+    const minCount = Math.min(...counts);
+    const sized = words
+      .map(([word, count]) => ({
+        word,
+        weight: sizeForCount(word, count, minCount, maxCount, .24, 1),
+      }))
+      .sort((a, b) => b.weight - a.weight);
+    sized.forEach((item, index) => {
+      item.rotated = index % ROTATE_EVERY_N === ROTATE_EVERY_N - 1;
+    });
+
+    const minSide = Math.min(width, height);
+    const collisionPadding = Math.max(4, minSide * .01);
+    const steps = Math.max(3200, Math.min(9000, 1200 + sized.length * 140));
+
+    function tryFontUnit(fontUnit) {
+      const placed = [];
+      const cx = width / 2;
+      const cy = height / 2;
+
+      for (const item of sized) {
+        const fontPx = item.weight * fontUnit;
+        measureCtx.font = `${fontPx}px ${FONT_FAMILY}`;
+        const textHalf = measureCtx.measureText(item.word).width / 2 + collisionPadding;
+        const fontHalf = fontPx / 2 + collisionPadding;
+        const halfW = item.rotated ? fontHalf : textHalf;
+        const halfH = item.rotated ? textHalf : fontHalf;
+        const maxX = width / 2 - halfW;
+        const maxY = height / 2 - halfH;
+        if (maxX < 0 || maxY < 0) return null;
+
+        let spot = null;
+        for (let step = 0; step < steps; step++) {
+          const progress = step / Math.max(1, steps - 1);
+          const radius = Math.sqrt(progress);
+          const angle = step * .37;
+          const x = cx + maxX * radius * Math.cos(angle);
+          const y = cy + maxY * radius * Math.sin(angle);
+          const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
+          const collides = placed.some((other) =>
+            !(box.x2 < other.x1 || box.x1 > other.x2 || box.y2 < other.y1 || box.y1 > other.y2));
+          if (!collides) {
+            spot = { x, y, halfW, halfH };
+            break;
+          }
+        }
+        if (!spot) return null;
+        placed.push({
+          word: item.word,
+          fontPx,
+          rotated: item.rotated,
+          x: spot.x,
+          y: spot.y,
+          x1: spot.x - spot.halfW,
+          x2: spot.x + spot.halfW,
+          y1: spot.y - spot.halfH,
+          y2: spot.y + spot.halfH,
+          color: getColor(item.word),
+        });
+      }
+      return placed;
+    }
+
+    let best = null;
+    let low = 2;
+    let high = height * .9;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const fontUnit = (low + high) / 2;
+      const candidate = tryFontUnit(fontUnit);
+      if (candidate) {
+        best = candidate;
+        low = fontUnit;
+      } else {
+        high = fontUnit;
+      }
+    }
+    if (!best) best = tryFontUnit(low);
+    if (!best) return [];
+
+    const bounds = best.reduce((result, item) => ({
+      x1: Math.min(result.x1, item.x1),
+      x2: Math.max(result.x2, item.x2),
+      y1: Math.min(result.y1, item.y1),
+      y2: Math.max(result.y2, item.y2),
+    }), { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
+    const inset = minSide * .012;
+    const contentWidth = Math.max(1, bounds.x2 - bounds.x1);
+    const contentHeight = Math.max(1, bounds.y2 - bounds.y1);
+    const fitScale = Math.min(
+      (width - inset * 2) / contentWidth,
+      (height - inset * 2) / contentHeight
+    );
+    const sourceCx = (bounds.x1 + bounds.x2) / 2;
+    const sourceCy = (bounds.y1 + bounds.y2) / 2;
+    const fitted = best.map((item) => {
+      const x = width / 2 + (item.x - sourceCx) * fitScale;
+      const y = height / 2 + (item.y - sourceCy) * fitScale;
+      return {
+        ...item,
+        x,
+        y,
+        fontPx: item.fontPx * fitScale,
+        x1: width / 2 + (item.x1 - sourceCx) * fitScale,
+        x2: width / 2 + (item.x2 - sourceCx) * fitScale,
+        y1: height / 2 + (item.y1 - sourceCy) * fitScale,
+        y2: height / 2 + (item.y2 - sourceCy) * fitScale,
+      };
+    });
+
+    const leftItem = fitted.reduce((left, item) => item.x1 < left.x1 ? item : left);
+    const rightItem = fitted.reduce((right, item) => item.x2 > right.x2 ? item : right);
+    const sourceSpan = rightItem.x - leftItem.x;
+    if (leftItem === rightItem || sourceSpan <= 0) return fitted;
+
+    const leftHalfWidth = (leftItem.x2 - leftItem.x1) / 2;
+    const rightHalfWidth = (rightItem.x2 - rightItem.x1) / 2;
+    const targetLeftX = inset + leftHalfWidth;
+    const targetRightX = width - inset - rightHalfWidth;
+    const horizontalScale = (targetRightX - targetLeftX) / sourceSpan;
+    if (horizontalScale <= 1) return fitted;
+
+    const horizontalOffset = targetLeftX - leftItem.x * horizontalScale;
+    return fitted.map((item) => {
+      const halfWidth = (item.x2 - item.x1) / 2;
+      const x = item.x * horizontalScale + horizontalOffset;
+      return {
+        ...item,
+        x,
+        x1: x - halfWidth,
+        x2: x + halfWidth,
+      };
+    });
+  }
+
   function escapeXML(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -212,6 +359,7 @@
     getFontSizeRange,
     sizeForCount,
     layoutWords,
+    layoutWordsInArea,
     buildSVG,
     escapeXML,
   };

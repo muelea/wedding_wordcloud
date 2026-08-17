@@ -56,6 +56,9 @@ const MUG_DUO = Object.freeze({
     'full-wrap': Object.freeze([
       { x: 130, y: 65, width: 2440, height: 920 },
     ]),
+    'fit-area': Object.freeze([
+      { x: 36, y: 36, width: 2628, height: 978, optimize: true },
+    ]),
   }),
   themes: Object.freeze([
     Object.freeze({
@@ -98,6 +101,11 @@ const MUG_DUO = Object.freeze({
       key: 'full-wrap',
       label: 'Rundum',
       description: 'Eine Wortwolke über die gesamte Tasse verteilt',
+    }),
+    Object.freeze({
+      key: 'fit-area',
+      label: 'Fläche optimal nutzen',
+      description: 'Automatisch großflächig angeordnet',
     }),
   ]),
 });

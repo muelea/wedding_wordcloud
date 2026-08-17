@@ -16,9 +16,9 @@ finished word cloud after the event.
 4. Words appear live on the display via Socket.io — font size scales with
    how many guests submitted the same word.
 5. After the event, the couple opens a product configurator, chooses any
-   quantity from 1–99, a color palette and one of three print layouts
-   (single, both sides or full wrap), and approves an immutable mug print
-   file with a transparent background. A locally served Three.js preview
+   quantity from 1–99, a color palette and one of four print layouts
+   (single, both sides, full wrap or optimized area), and approves an
+   immutable mug print file with a transparent background. A locally served Three.js preview
    maps that exact artwork onto a rotatable mug using Printful's physical
    dimensions. The print area itself is a small Fabric.js editor: every word
    can be moved, resized, rotated, recolored, edited, duplicated or removed,

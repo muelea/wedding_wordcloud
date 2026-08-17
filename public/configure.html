@@ -521,7 +521,7 @@
     .quantity-control input::-webkit-outer-spin-button { margin: 0; appearance: none; }
 
     .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .placement-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .placement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .option { cursor: pointer; }
     .option input { position: absolute; opacity: 0; pointer-events: none; }
     .option-card {
@@ -923,6 +923,13 @@
                   <small>Über die ganze Tasse verteilt</small>
                 </span>
               </label>
+              <label class="option">
+                <input type="radio" name="placement" value="fit-area" />
+                <span class="option-card">
+                  <strong>Fläche optimal nutzen</strong>
+                  <small>Automatisch großflächig angeordnet</small>
+                </span>
+              </label>
             </div>
           </section>
 
@@ -942,7 +949,7 @@
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
-  <script src="/js/wordcloud-core.js?v=20260816-2"></script>
+  <script src="/js/wordcloud-core.js?v=20260817-3"></script>
   <script src="/js/mug-editor.js?v=20260817-1"></script>
   <script>
     'use strict';
@@ -1138,9 +1145,11 @@
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
-        const xScale = slotWidth / slotHeight;
         const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
-        const placed = WordCloudCore.layoutWords(words, slotHeight, measurementContext, colors);
+        const placed = slot.optimize
+          ? WordCloudCore.layoutWordsInArea(words, slotWidth, slotHeight, measurementContext, colors)
+          : WordCloudCore.layoutWords(words, slotHeight, measurementContext, colors);
+        const xScale = slot.optimize ? 1 : slotWidth / slotHeight;
         placed.forEach((item, itemIndex) => {
           design.push({
             id: `${selectedPlacement}-${slotIndex + 1}-${itemIndex + 1}`,
@@ -1597,7 +1606,9 @@
         markDirty();
         if (mugEditor) {
           mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
-          mugEditor.setFeedback('Motiv passend neu angeordnet');
+          mugEditor.setFeedback(selectedPlacement === 'fit-area'
+            ? 'Druckfläche optimal genutzt'
+            : 'Motiv passend neu angeordnet');
         }
         renderAll();
       });
