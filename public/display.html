@@ -219,7 +219,7 @@
     }
     .footer-actions span:hover { opacity: 1; }
 
-    /* ── Mug-duo CTA ── */
+    /* ── Mug order CTA ── */
     #mug-cta {
       position: fixed;
       top: 96px;
@@ -288,8 +288,8 @@
   </div>
 </header>
 
-<button id="mug-cta" title="His &amp; Hers Tassen-Duo bestellen">
-  ☕ Bestellt euer His &amp; Hers Tassen-Duo <span class="price">34,90€</span>
+<button id="mug-cta" title="Wortwolke auf Tassen bestellen">
+  ☕ Jetzt bestellen <span class="price">ab 17,45 €</span>
 </button>
 
 <div id="cloud-container">
@@ -512,26 +512,9 @@
 
   document.getElementById('clear-hint').addEventListener('click', startNewSession);
 
-  // ── Mug-duo checkout ──────────────────────────────────────────────────────
-  mugCta.addEventListener('click', async () => {
-    mugCta.disabled = true;
-    try {
-      const res = await fetch(`/api/events/${encodeURIComponent(slug)}/checkout`, { method: 'POST' });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        location.href = data.url;
-        return;
-      }
-      if (data.error === 'checkout_not_configured') {
-        alert(data.message || 'Bestellungen sind noch nicht verfügbar.');
-      } else {
-        alert('Bestellung konnte nicht gestartet werden.');
-      }
-    } catch {
-      alert('Verbindung fehlgeschlagen.');
-    } finally {
-      mugCta.disabled = false;
-    }
+  // ── Mug configurator ──────────────────────────────────────────────────────
+  mugCta.addEventListener('click', () => {
+    location.href = `/e/${encodeURIComponent(slug)}/configure`;
   });
 
   (function handleCheckoutRedirect() {

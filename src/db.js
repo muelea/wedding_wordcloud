@@ -72,7 +72,35 @@ db.exec(`
     created_at         TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS configurations (
+    id                   TEXT PRIMARY KEY,
+    event_id             INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    product_key          TEXT NOT NULL,
+    printful_variant_id  INTEGER NOT NULL,
+    quantity             INTEGER NOT NULL DEFAULT 2,
+    unit_price_cents     INTEGER NOT NULL DEFAULT 1745,
+    theme                TEXT NOT NULL,
+    placement            TEXT NOT NULL,
+    words_json           TEXT NOT NULL,
+    print_width          INTEGER NOT NULL,
+    print_height         INTEGER NOT NULL,
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
+
+// Keep local databases created before the configurable-quantity feature
+// usable without a manual migration step. Existing duo drafts retain their
+// original quantity of two and the equivalent 17,45 € unit price.
+const configurationColumns = new Set(
+  db.prepare('PRAGMA table_info(configurations)').all().map((column) => column.name)
+);
+if (!configurationColumns.has('quantity')) {
+  db.exec('ALTER TABLE configurations ADD COLUMN quantity INTEGER NOT NULL DEFAULT 2;');
+}
+if (!configurationColumns.has('unit_price_cents')) {
+  db.exec('ALTER TABLE configurations ADD COLUMN unit_price_cents INTEGER NOT NULL DEFAULT 1745;');
+}
 
 // ── Password hashing (admin PIN) ────────────────────────────────────────────
 // scrypt from Node's built-in crypto — no bcrypt dependency needed for a
@@ -177,6 +205,58 @@ function getOrderBySessionId(stripeSessionId) {
   return db.prepare('SELECT * FROM orders WHERE stripe_session_id = ?').get(stripeSessionId) || null;
 }
 
+// ── Product configurations ──────────────────────────────────────────────
+// A configuration stores the exact word list the couple previewed. This is
+// intentionally separate from the live `words` table: guests may keep
+// submitting after the couple opens the configurator, but an approved print
+// file must remain immutable from preview through fulfillment.
+function createConfiguration({
+  eventId,
+  productKey,
+  printfulVariantId,
+  quantity,
+  unitPriceCents,
+  theme,
+  placement,
+  words,
+  printWidth,
+  printHeight,
+}) {
+  const id = crypto.randomBytes(12).toString('base64url');
+  db.prepare(`
+    INSERT INTO configurations (
+      id, event_id, product_key, printful_variant_id, quantity,
+      unit_price_cents, theme, placement, words_json, print_width, print_height
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    eventId,
+    productKey,
+    printfulVariantId,
+    quantity,
+    unitPriceCents,
+    theme,
+    placement,
+    JSON.stringify(words),
+    printWidth,
+    printHeight
+  );
+  return getConfiguration(id);
+}
+
+function getConfiguration(id) {
+  return db.prepare('SELECT * FROM configurations WHERE id = ?').get(id) || null;
+}
+
+function getEventConfiguration(slug, configurationId) {
+  return db.prepare(`
+    SELECT configurations.*
+    FROM configurations
+    JOIN events ON events.id = configurations.event_id
+    WHERE configurations.id = ? AND events.slug = ?
+  `).get(configurationId, slug) || null;
+}
+
 module.exports = {
   db,
   hashPin,
@@ -194,4 +274,7 @@ module.exports = {
   markOrderPaid,
   markOrderFulfilled,
   getOrderBySessionId,
+  createConfiguration,
+  getConfiguration,
+  getEventConfiguration,
 };

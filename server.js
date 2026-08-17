@@ -30,6 +30,13 @@ app.use(compression());
 // must be mounted BEFORE any express.json() body parser touches this path.
 app.use('/webhook', makeWebhookRouter({ port: PORT }));
 
+// Serve the pinned Three.js module locally so the configurator's 3D preview
+// never depends on a third-party CDN being reachable from a wedding venue.
+app.get('/vendor/three.min.js', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.sendFile(path.join(__dirname, 'node_modules', 'three', 'build', 'three.min.js'));
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     // Vendored/shared libraries never change during an event — let phones
@@ -66,6 +73,12 @@ app.get('/e/:slug/display', (req, res) => {
   const event = db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   res.sendFile(path.join(__dirname, 'public', 'display.html'));
+});
+
+app.get('/e/:slug/configure', (req, res) => {
+  const event = db.getEventBySlug(req.params.slug);
+  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  res.sendFile(path.join(__dirname, 'public', 'configure.html'));
 });
 
 // Server-side print-file export for the His & Hers mug-duo — the Printful

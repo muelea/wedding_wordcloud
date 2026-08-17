@@ -7,9 +7,28 @@ const { slugify, makeUniqueSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
 const adminAuth = require('../adminAuth');
 const stripe = require('../stripe');
+const { normalizeWord } = require('../words');
+const { MUG_DUO, getProduct, getPublicProduct } = require('../products');
+const { buildMugPrintSvg } = require('../mugPrint');
 
 const PIN_RE = /^\d{4,6}$/;
 const MAX_NAME_LENGTH = 80;
+const MAX_SNAPSHOT_WORDS = 200;
+
+function normalizeSnapshotWords(rawWords) {
+  if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
+    return null;
+  }
+  const merged = new Map();
+  for (const entry of rawWords) {
+    if (!Array.isArray(entry) || entry.length !== 2) return null;
+    const word = normalizeWord(entry[0]);
+    const count = Number(entry[1]);
+    if (!word || !Number.isSafeInteger(count) || count < 1 || count > 1000000) return null;
+    merged.set(word, (merged.get(word) || 0) + count);
+  }
+  return Array.from(merged.entries());
+}
 
 function makeRouter({ io, port }) {
   const router = express.Router();
@@ -135,6 +154,94 @@ function makeRouter({ io, port }) {
     db.clearWords(event.id);
     io.to(event.slug).emit('word-update', []);
     res.json({ ok: true });
+  });
+
+  // ── Product configurator ────────────────────────────────────────────────
+  router.get('/events/:slug/configurator', (req, res) => {
+    const event = db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'event not found' });
+    const words = db.getWords(event.id);
+    if (!words.length) return res.status(409).json({ error: 'no_words' });
+    res.json({
+      event: {
+        slug: event.slug,
+        coupleName: event.couple_name,
+        eventTitle: event.event_title,
+        theme: event.theme,
+      },
+      words,
+      product: getPublicProduct(),
+    });
+  });
+
+  router.post('/events/:slug/configurations', express.json({ limit: '64kb' }), (req, res) => {
+    const event = db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'event not found' });
+
+    const product = getProduct(req.body?.productKey || MUG_DUO.key);
+    if (!product) return res.status(400).json({ error: 'invalid_product' });
+
+    const theme = req.body?.theme;
+    const placement = req.body?.placement;
+    const quantity = Number(req.body?.quantity ?? product.defaultQuantity);
+    if (!Number.isSafeInteger(quantity) || quantity < product.minQuantity || quantity > product.maxQuantity) {
+      return res.status(400).json({ error: 'invalid_quantity' });
+    }
+    if (!product.themes.some((option) => option.key === theme)) {
+      return res.status(400).json({ error: 'invalid_theme' });
+    }
+    if (!product.layouts.some((option) => option.key === placement)) {
+      return res.status(400).json({ error: 'invalid_placement' });
+    }
+
+    // The browser sends the exact snapshot it previewed. Re-normalize it at
+    // this trust boundary, then store it independently from the live event.
+    const words = req.body && Object.hasOwn(req.body, 'words')
+      ? normalizeSnapshotWords(req.body.words)
+      : db.getWords(event.id);
+    if (!words || !words.length) {
+      return res.status(400).json({ error: 'invalid_words' });
+    }
+
+    const configuration = db.createConfiguration({
+      eventId: event.id,
+      productKey: product.key,
+      printfulVariantId: product.printful.variantId,
+      quantity,
+      unitPriceCents: product.unitPriceCents,
+      theme,
+      placement,
+      words,
+      printWidth: product.printFile.width,
+      printHeight: product.printFile.height,
+    });
+
+    res.status(201).json({
+      id: configuration.id,
+      productKey: configuration.product_key,
+      quantity: Number(configuration.quantity),
+      unitPriceCents: Number(configuration.unit_price_cents),
+      totalPriceCents: Number(configuration.quantity) * Number(configuration.unit_price_cents),
+      theme: configuration.theme,
+      placement: configuration.placement,
+      printFileUrl: `/api/events/${encodeURIComponent(event.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
+      createdAt: configuration.created_at,
+    });
+  });
+
+  router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
+    const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    if (!configuration) return res.status(404).send('configuration not found');
+    let words;
+    try {
+      words = JSON.parse(configuration.words_json);
+    } catch {
+      return res.status(500).send('configuration is invalid');
+    }
+    const svg = buildMugPrintSvg(words, configuration.theme, configuration.placement);
+    res.set('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(svg);
   });
 
   // ── Mug-duo checkout ─────────────────────────────────────────────────────

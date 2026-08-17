@@ -51,8 +51,8 @@
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
-  function makeColorAssigner(theme) {
-    const palette = (THEMES[theme] || THEMES.pastel).colors;
+  function makePaletteAssigner(colors) {
+    const palette = Array.isArray(colors) && colors.length ? colors : THEMES.pastel.colors;
     const assigned = new Map();
     return function getWordColor(word) {
       if (!assigned.has(word)) {
@@ -60,6 +60,10 @@
       }
       return assigned.get(word);
     };
+  }
+
+  function makeColorAssigner(theme) {
+    return makePaletteAssigner((THEMES[theme] || THEMES.pastel).colors);
   }
 
   // Scale font sizes to the available area per word so a crowded cloud
@@ -203,6 +207,7 @@
     FONT_FAMILY,
     SVG_FONT_FAMILY,
     THEMES,
+    makePaletteAssigner,
     makeColorAssigner,
     getFontSizeRange,
     sizeForCount,

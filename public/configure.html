@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="pastel">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Gestaltet eure persönlichen WeddingCloud Tassen." />
+  <title>Tassen gestalten – WeddingCloud</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
+
+    :root {
+      --ink: #400f26;
+      --berry: #9c1c4c;
+      --berry-dark: #731437;
+      --rose: #d1607e;
+      --gold: #c1922f;
+      --muted: #816d74;
+      --paper: #fffdfa;
+      --cream: #f8f0e5;
+      --line: rgba(123, 70, 82, 0.15);
+      --shadow: 0 26px 70px rgba(74, 25, 43, 0.09);
+      --success: #39735f;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--paper); }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(247, 226, 215, 0.58), transparent 30%),
+        radial-gradient(circle at 94% 96%, rgba(239, 220, 182, 0.32), transparent 28%),
+        var(--paper);
+      font-family: 'Jost', system-ui, sans-serif;
+    }
+
+    button, input { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; text-decoration: none; }
+
+    .topbar {
+      width: min(1280px, calc(100% - 48px));
+      height: 80px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 21px;
+      font-weight: 600;
+    }
+    .brand-heart { color: var(--rose); font-size: 24px; }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      transition: color .2s;
+    }
+    .back-link:hover { color: var(--berry); }
+
+    .page {
+      width: min(1280px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 54px 0 80px;
+    }
+
+    .intro { max-width: 720px; margin-bottom: 38px; }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(38px, 5vw, 62px);
+      font-weight: 500;
+      line-height: 1.06;
+      letter-spacing: -.045em;
+    }
+    .intro-copy {
+      max-width: 610px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(390px, .88fr);
+      gap: 34px;
+      align-items: start;
+    }
+
+    .preview-card,
+    .controls {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .preview-card {
+      min-height: 690px;
+      padding: 30px;
+      border-radius: 28px;
+      overflow: hidden;
+      position: sticky;
+      top: 24px;
+    }
+
+    .preview-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .preview-head h2,
+    .controls h2 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 25px;
+      font-weight: 500;
+    }
+    .preview-kicker { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+    .verified-badge {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(57, 115, 95, .08);
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .verified-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .mug-stage {
+      min-height: 400px;
+      margin: 12px -30px 0;
+      padding: 28px 38px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(20px, 4vw, 54px);
+      position: relative;
+      background:
+        radial-gradient(ellipse at center bottom, rgba(88, 51, 59, .13), transparent 56%),
+        linear-gradient(180deg, transparent, rgba(248, 240, 229, .72));
+    }
+    .mug-stage::after {
+      content: '';
+      position: absolute;
+      left: 12%; right: 12%; bottom: 37px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(74, 34, 43, .11);
+      filter: blur(13px);
+    }
+
+    .preview-quantity {
+      position: absolute;
+      z-index: 3;
+      top: 26px;
+      right: 30px;
+      min-width: 50px;
+      padding: 8px 12px;
+      border: 1px solid rgba(156, 28, 76, .12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .86);
+      color: var(--berry);
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: 0 8px 22px rgba(74, 34, 43, .08);
+    }
+
+    .mug-wrap {
+      width: min(100%, 560px);
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+    .mug-viewer {
+      width: 100%;
+      height: 350px;
+      position: relative;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    .mug-viewer:active { cursor: grabbing; }
+    .mug-viewer:focus-visible { outline: 3px solid rgba(156, 28, 76, .2); outline-offset: 3px; border-radius: 24px; }
+    .mug-viewer > canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      position: relative;
+      z-index: 1;
+    }
+    .mug-fallback {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      transition: opacity .2s;
+    }
+    .mug-viewer.is-ready .mug-fallback { opacity: 0; visibility: hidden; }
+    .mug {
+      width: clamp(180px, 19vw, 236px);
+      aspect-ratio: .88;
+      position: relative;
+      border: 1px solid rgba(77, 51, 54, .15);
+      border-radius: 16px 16px 44px 44px;
+      background: linear-gradient(100deg, #e8e5df 0%, #fff 22%, #fff 70%, #e7e1da 100%);
+      box-shadow: inset -18px 0 25px rgba(91, 58, 62, .05), 0 22px 30px rgba(74, 34, 43, .13);
+    }
+    .mug::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      width: 37%;
+      height: 45%;
+      top: 19%;
+      right: -29%;
+      border: clamp(14px, 1.7vw, 20px) solid #eeeae4;
+      border-left-width: 8px;
+      border-radius: 0 48% 48% 0;
+      box-shadow: inset 0 0 0 1px rgba(77, 51, 54, .12), 8px 8px 18px rgba(74, 34, 43, .08);
+    }
+    .mug-left::before { right: auto; left: -29%; transform: scaleX(-1); }
+    .mug::after {
+      content: '';
+      position: absolute;
+      left: 7%; right: 7%; top: 3px;
+      height: 9px;
+      border-radius: 50%;
+      border-top: 1px solid rgba(79, 49, 52, .2);
+      background: rgba(255, 255, 255, .75);
+    }
+    .mug-art {
+      position: absolute;
+      width: 78%;
+      aspect-ratio: 1;
+      left: 11%;
+      top: 13%;
+    }
+    .mug-name {
+      display: inline-block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+
+    .wrap-preview {
+      padding: 21px 22px 19px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 253, 250, .82);
+    }
+    .wrap-head {
+      margin-bottom: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .wrap-head strong { font-size: 13px; font-weight: 600; }
+    .wrap-head span { color: var(--muted); font-size: 11px; }
+    #wrap-canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 2700 / 1050;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(40, 20, 28, .08);
+    }
+    .wrap-note { margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+    .controls {
+      border-radius: 28px;
+      padding: 30px;
+    }
+    .controls > h2 { margin-bottom: 4px; }
+    .controls-sub { margin: 0 0 28px; color: var(--muted); font-size: 13px; }
+    .step { padding: 25px 0; border-top: 1px solid var(--line); }
+    .step:first-of-type { border-top: 0; padding-top: 4px; }
+    .step-title {
+      margin: 0 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .step-number {
+      width: 25px;
+      height: 25px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--cream);
+      color: var(--berry);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 12px;
+    }
+
+    .product-choice {
+      padding: 17px;
+      display: grid;
+      grid-template-columns: 58px 1fr auto;
+      align-items: center;
+      gap: 15px;
+      border: 1.5px solid var(--berry);
+      border-radius: 17px;
+      background: rgba(156, 28, 76, .035);
+    }
+    .product-icon {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 6px 18px rgba(73, 29, 44, .08);
+      font-size: 28px;
+    }
+    .product-copy strong { display: block; font-size: 14px; }
+    .product-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .checkmark {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--berry);
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .quantity-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(255,255,255,.68);
+    }
+    .quantity-copy strong { display: block; font-size: 13px; }
+    .quantity-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .quantity-control {
+      flex: none;
+      display: grid;
+      grid-template-columns: 38px 56px 38px;
+      align-items: stretch;
+      height: 42px;
+      border: 1px solid rgba(123, 70, 82, .2);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .quantity-control button {
+      border: 0;
+      background: var(--cream);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .quantity-control button:hover { background: #f1e4d4; }
+    .quantity-control button:disabled { cursor: not-allowed; opacity: .38; }
+    .quantity-control button:focus-visible,
+    .quantity-control input:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--berry); outline-offset: -2px; }
+    .quantity-control input {
+      width: 56px;
+      border: 0;
+      border-inline: 1px solid rgba(123, 70, 82, .14);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 600;
+      text-align: center;
+      appearance: textfield;
+    }
+    .quantity-control input::-webkit-inner-spin-button,
+    .quantity-control input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+
+    .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .placement-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .option { cursor: pointer; }
+    .option input { position: absolute; opacity: 0; pointer-events: none; }
+    .option-card {
+      min-height: 92px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(255,255,255,.68);
+      transition: border-color .2s, box-shadow .2s, transform .2s;
+    }
+    .option:hover .option-card { transform: translateY(-1px); border-color: rgba(156, 28, 76, .35); }
+    .option input:focus-visible + .option-card { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .option input:checked + .option-card {
+      border-color: var(--berry);
+      box-shadow: inset 0 0 0 1px var(--berry), 0 7px 18px rgba(108, 27, 57, .07);
+      background: rgba(156, 28, 76, .035);
+    }
+    .option-card strong { font-size: 13px; font-weight: 600; }
+    .option-card small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .swatches { display: flex; gap: 5px; margin-bottom: 12px; }
+    .swatches i { width: 15px; height: 15px; display: block; border-radius: 50%; }
+
+    .summary {
+      padding: 20px;
+      border-radius: 18px;
+      background: var(--cream);
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .summary-row + .summary-row { margin-top: 9px; }
+    .summary-row strong { color: var(--ink); font-weight: 500; text-align: right; }
+    .summary-total {
+      margin-top: 17px;
+      padding-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-top: 1px solid rgba(123,70,82,.14);
+    }
+    .summary-total span { font-size: 13px; }
+    .summary-total strong { font-family: 'Playfair Display', Georgia, serif; font-size: 25px; font-weight: 600; }
+
+    .save-button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 0;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--berry), var(--berry-dark));
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 12px 24px rgba(115, 20, 55, .19);
+      transition: transform .2s, box-shadow .2s, opacity .2s;
+    }
+    .save-button:hover { transform: translateY(-1px); box-shadow: 0 15px 28px rgba(115,20,55,.24); }
+    .save-button:disabled { cursor: wait; opacity: .6; transform: none; }
+    .checkout-note { margin: 11px 0 0; text-align: center; color: var(--muted); font-size: 11px; }
+
+    .success-box {
+      display: none;
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px solid rgba(57, 115, 95, .22);
+      border-radius: 14px;
+      background: rgba(57, 115, 95, .07);
+      color: var(--success);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .success-box.show { display: block; }
+    .success-box strong { display: block; margin-bottom: 3px; }
+    .success-box a { text-decoration: underline; text-underline-offset: 3px; }
+    .error-text { min-height: 18px; margin: 11px 0 0; color: #a12c43; text-align: center; font-size: 12px; }
+
+    .loading {
+      min-height: 58vh;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+    }
+    .config-content[hidden], .loading[hidden] { display: none; }
+
+    @media (max-width: 940px) {
+      .config-grid { grid-template-columns: 1fr; }
+      .preview-card { position: static; min-height: 0; }
+      .controls { max-width: none; }
+    }
+
+    @media (max-width: 620px) {
+      .topbar, .page { width: min(100% - 28px, 560px); }
+      .topbar { height: 68px; }
+      .back-link span { display: none; }
+      .page { padding: 38px 0 50px; }
+      .intro { margin-bottom: 25px; }
+      .intro-copy { font-size: 15px; }
+      .preview-card, .controls { padding: 20px; border-radius: 21px; }
+      .preview-head { align-items: center; }
+      .preview-kicker, .verified-badge { display: none; }
+      .mug-stage { min-height: 310px; margin: 10px -20px 0; padding: 20px 14px 18px; gap: 22px; }
+      .mug-viewer { height: 270px; }
+      .mug { width: min(35vw, 165px); }
+      .mug-name { margin-top: 0; font-size: 11px; }
+      .wrap-preview { padding: 15px; }
+      .option-grid { grid-template-columns: 1fr; }
+      .option-card { min-height: 76px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-heart">♡</span>WeddingCloud</a>
+    <a class="back-link" id="back-link" href="#"><span aria-hidden="true">←</span><span>Zurück zur Wortwolke</span></a>
+  </header>
+
+  <main class="page">
+    <div class="loading" id="loading">Eure Wortwolke wird vorbereitet&hellip;</div>
+
+    <div class="config-content" id="config-content" hidden>
+      <section class="intro">
+        <p class="eyebrow">Eure Worte. Eure Erinnerung.</p>
+        <h1>Gestaltet eure Tassen.</h1>
+        <p class="intro-copy">Wählt die Anzahl, eure Farbwelt und die Platzierung der Wortwolke. Den Rest bereiten wir druckfertig für euch vor.</p>
+      </section>
+
+      <div class="config-grid">
+        <section class="preview-card" aria-labelledby="preview-title">
+          <div class="preview-head">
+            <div>
+              <h2 id="preview-title">Eure Vorschau</h2>
+              <p class="preview-kicker" id="preview-subtitle"></p>
+            </div>
+            <span class="verified-badge">Printful-Maße geprüft</span>
+          </div>
+
+          <div class="mug-stage" aria-label="Vorschau der gestalteten Tasse">
+            <span class="preview-quantity" id="preview-quantity">2×</span>
+            <div class="mug-wrap">
+              <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.">
+                <div class="mug-fallback">
+                  <div class="mug"><canvas class="mug-art" id="mug-preview"></canvas></div>
+                </div>
+              </div>
+              <span class="mug-name" id="mug-viewer-hint">↔ Ziehen zum Drehen</span>
+            </div>
+          </div>
+
+          <div class="wrap-preview">
+            <div class="wrap-head">
+              <strong>So liegt das Motiv auf der Druckfläche</strong>
+              <span id="print-spec">2700 × 1050 px · 300 DPI</span>
+            </div>
+            <canvas id="wrap-canvas" aria-label="Vorschau der vollständigen Druckfläche"></canvas>
+            <p class="wrap-note">Gedruckt werden ausschließlich die Wörter – ohne Rahmen und ohne Hintergrund.</p>
+          </div>
+        </section>
+
+        <aside class="controls" aria-labelledby="controls-title">
+          <h2 id="controls-title">Euer Design</h2>
+          <p class="controls-sub">Vier kurze Schritte – mehr braucht es nicht.</p>
+
+          <section class="step">
+            <h3 class="step-title"><span class="step-number">1</span> Produkt</h3>
+            <div class="product-choice">
+              <span class="product-icon" aria-hidden="true">☕</span>
+              <div class="product-copy">
+                <strong id="product-name">Wortwolken-Tasse</strong>
+                <span id="product-size">11 oz · 325 ml · weiße Keramik</span>
+                <span id="product-unit-price">17,45 € pro Tasse</span>
+              </div>
+              <span class="checkmark" aria-hidden="true">✓</span>
+            </div>
+          </section>
+
+          <section class="step">
+            <h3 class="step-title"><span class="step-number">2</span> Anzahl</h3>
+            <div class="quantity-row">
+              <div class="quantity-copy">
+                <strong>Wie viele Tassen möchtet ihr?</strong>
+                <span>Alle Tassen erhalten dasselbe Design.</span>
+              </div>
+              <div class="quantity-control" aria-label="Anzahl der Tassen">
+                <button type="button" id="quantity-minus" aria-label="Eine Tasse weniger">−</button>
+                <input id="quantity" type="number" value="2" min="1" max="99" inputmode="numeric" aria-label="Anzahl" />
+                <button type="button" id="quantity-plus" aria-label="Eine Tasse mehr">+</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="step">
+            <h3 class="step-title"><span class="step-number">3</span> Farbwelt</h3>
+            <div class="option-grid" id="theme-options"></div>
+          </section>
+
+          <section class="step">
+            <h3 class="step-title"><span class="step-number">4</span> Platzierung</h3>
+            <div class="option-grid placement-grid">
+              <label class="option">
+                <input type="radio" name="placement" value="single" checked />
+                <span class="option-card">
+                  <strong>Ein großes Motiv</strong>
+                  <small>Groß auf einer Seite jeder Tasse</small>
+                </span>
+              </label>
+              <label class="option">
+                <input type="radio" name="placement" value="both-sides" />
+                <span class="option-card">
+                  <strong>Auf beiden Seiten</strong>
+                  <small>Von links und rechts sichtbar</small>
+                </span>
+              </label>
+              <label class="option">
+                <input type="radio" name="placement" value="full-wrap" />
+                <span class="option-card">
+                  <strong>Rundum</strong>
+                  <small>Über die ganze Tasse verteilt</small>
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <div class="summary">
+            <div class="summary-row"><span>Produkt</span><strong id="summary-product">2 Tassen</strong></div>
+            <div class="summary-row"><span>Wortwolke</span><strong id="word-summary">–</strong></div>
+            <div class="summary-row"><span>Druck</span><strong>Sublimation · 300 DPI</strong></div>
+            <div class="summary-total"><span>Gesamtpreis</span><strong id="price">34,90 €</strong></div>
+          </div>
+
+          <button class="save-button" id="save-button" type="button">Design bestätigen <span aria-hidden="true">→</span></button>
+          <p class="checkout-note">Heute noch ohne Zahlung – im nächsten Schritt verbinden wir Stripe.</p>
+          <div class="success-box" id="success-box" aria-live="polite"></div>
+          <p class="error-text" id="error-text" aria-live="polite"></p>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <script src="/vendor/three.min.js?v=0.160.1"></script>
+  <script src="/js/wordcloud-core.js?v=20260816-2"></script>
+  <script>
+    'use strict';
+
+    const slug = location.pathname.split('/').filter(Boolean)[1];
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('config-content');
+    const saveButton = document.getElementById('save-button');
+    const successBox = document.getElementById('success-box');
+    const errorText = document.getElementById('error-text');
+    const mugCanvas = document.getElementById('mug-preview');
+    const mugViewer = document.getElementById('mug-3d');
+    const wrapCanvas = document.getElementById('wrap-canvas');
+    const themeOptions = document.getElementById('theme-options');
+    const quantityInput = document.getElementById('quantity');
+
+    let words = [];
+    let product = null;
+    let selectedTheme = 'pastel';
+    let selectedPlacement = 'single';
+    let quantity = 2;
+    let renderFrame = null;
+    let mug3D = null;
+    let mug3DLoadPromise = null;
+
+    document.getElementById('back-link').href = `/e/${encodeURIComponent(slug)}/display`;
+
+    function formatPrice(cents) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+    }
+
+    function setupCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, Math.round(rect.width * ratio));
+      const height = Math.max(1, Math.round(rect.height * ratio));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      return canvas.getContext('2d');
+    }
+
+    function getPalette(themeKey) {
+      return product.themes.find((option) => option.key === themeKey) || product.themes[0];
+    }
+
+    // Keep drawing even if a browser still has the pre-palette version of
+    // wordcloud-core.js in its memory cache. The versioned script URL above
+    // prevents that mismatch on future loads; this fallback also repairs an
+    // already-open tab as soon as the page is refreshed.
+    function makePaletteAssigner(colors) {
+      if (typeof WordCloudCore.makePaletteAssigner === 'function') {
+        return WordCloudCore.makePaletteAssigner(colors);
+      }
+      const palette = Array.isArray(colors) && colors.length
+        ? colors
+        : WordCloudCore.THEMES.pastel.colors;
+      const assigned = new Map();
+      return (word) => {
+        if (!assigned.has(word)) {
+          assigned.set(word, palette[assigned.size % palette.length]);
+        }
+        return assigned.get(word);
+      };
+    }
+
+    function drawCloud(ctx, x, y, width, height = width, showOnlyFullyVisible = false) {
+      const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
+      const placed = WordCloudCore.layoutWords(words, height, ctx, colors);
+      const xScale = width / height;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      for (const item of placed) {
+        const itemX = x + item.x * xScale;
+        const itemY = y + item.y;
+        if (showOnlyFullyVisible) {
+          const left = x + item.x1 * xScale;
+          const right = x + item.x2 * xScale;
+          const top = y + item.y1;
+          const bottom = y + item.y2;
+          if (left < 0 || right > ctx.canvas.width || top < 0 || bottom > ctx.canvas.height) continue;
+        }
+        ctx.font = `${item.fontPx}px ${WordCloudCore.FONT_FAMILY}`;
+        ctx.fillStyle = item.color;
+        if (item.rotated) {
+          ctx.save();
+          ctx.translate(itemX, itemY);
+          ctx.rotate(-Math.PI / 2);
+          ctx.fillText(item.word, 0, item.fontPx * .34);
+          ctx.restore();
+        } else {
+          ctx.fillText(item.word, itemX, itemY + item.fontPx * .34);
+        }
+      }
+    }
+
+    function renderMug3D() {
+      if (!mug3D) return;
+      mug3D.renderer.render(mug3D.scene, mug3D.camera);
+    }
+
+    function resizeMug3D() {
+      if (!mug3D) return;
+      const rect = mugViewer.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      mug3D.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      mug3D.renderer.setSize(rect.width, rect.height, false);
+      mug3D.camera.aspect = rect.width / rect.height;
+      mug3D.camera.updateProjectionMatrix();
+      renderMug3D();
+    }
+
+    function updateMug3DTexture() {
+      if (!mug3D || !product || !words.length) return;
+      const printWidthCm = (product.printFile.width / product.printFile.dpi) * 2.54;
+      const printHeightCm = (product.printFile.height / product.printFile.dpi) * 2.54;
+      const circumferenceCm = Math.PI * product.size.diameterCm;
+      const textureWidth = Math.round(product.printFile.width * circumferenceCm / printWidthCm);
+      const textureHeight = Math.round(product.printFile.height * product.size.heightCm / printHeightCm);
+      const canvas = mug3D.textureCanvas;
+      if (canvas.width !== textureWidth || canvas.height !== textureHeight) {
+        canvas.width = textureWidth;
+        canvas.height = textureHeight;
+      }
+
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // White represents the ceramic surface, not printed ink. The extra
+      // margins map the 22.86 × 8.89 cm Printful area onto the mug's real
+      // 25.76 cm circumference and 9.6 cm height without stretching it.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const offsetX = (canvas.width - product.printFile.width) / 2;
+      const offsetY = (canvas.height - product.printFile.height) / 2;
+      const slots = product.layoutGeometry[selectedPlacement];
+      for (const slot of slots) {
+        drawCloud(
+          ctx,
+          offsetX + slot.x,
+          offsetY + slot.y,
+          slot.width || slot.side,
+          slot.height || slot.side
+        );
+      }
+      mug3D.texture.needsUpdate = true;
+      renderMug3D();
+    }
+
+    function attachMugInteraction(group) {
+      let activePointer = null;
+      let lastX = 0;
+
+      mugViewer.addEventListener('pointerdown', (event) => {
+        activePointer = event.pointerId;
+        lastX = event.clientX;
+        mugViewer.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      mugViewer.addEventListener('pointermove', (event) => {
+        if (event.pointerId !== activePointer) return;
+        const deltaX = event.clientX - lastX;
+        lastX = event.clientX;
+        group.rotation.y += deltaX * .012;
+        renderMug3D();
+      });
+      const finishPointer = (event) => {
+        if (event.pointerId !== activePointer) return;
+        activePointer = null;
+        if (mugViewer.hasPointerCapture(event.pointerId)) mugViewer.releasePointerCapture(event.pointerId);
+      };
+      mugViewer.addEventListener('pointerup', finishPointer);
+      mugViewer.addEventListener('pointercancel', finishPointer);
+      mugViewer.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        group.rotation.y += event.key === 'ArrowLeft' ? -.18 : .18;
+        renderMug3D();
+        event.preventDefault();
+      });
+    }
+
+    function initMug3D() {
+      if (mug3D || mug3DLoadPromise) return mug3DLoadPromise;
+      mug3DLoadPromise = Promise.resolve().then(() => {
+        const THREE = window.THREE;
+        if (!THREE) throw new Error('Three.js failed to load');
+        const renderer = new THREE.WebGLRenderer({
+          alpha: true,
+          antialias: true,
+          powerPreference: 'high-performance',
+        });
+        renderer.setClearColor(0x000000, 0);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        mugViewer.prepend(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(31, 1, .1, 100);
+        camera.position.set(0, 2.35, 27);
+        camera.lookAt(0, 0, 0);
+
+        const mugGroup = new THREE.Group();
+        // Start at a slight angle so the cylindrical print and handle are both
+        // visible immediately. Dragging still exposes the complete wrap.
+        mugGroup.rotation.y = .14;
+        scene.add(mugGroup);
+
+        const textureCanvas = document.createElement('canvas');
+        const printWidthCm = (product.printFile.width / product.printFile.dpi) * 2.54;
+        const printHeightCm = (product.printFile.height / product.printFile.dpi) * 2.54;
+        textureCanvas.width = Math.round(
+          product.printFile.width * (Math.PI * product.size.diameterCm) / printWidthCm
+        );
+        textureCanvas.height = Math.round(
+          product.printFile.height * product.size.heightCm / printHeightCm
+        );
+        const initialTextureContext = textureCanvas.getContext('2d');
+        initialTextureContext.fillStyle = '#ffffff';
+        initialTextureContext.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+        const texture = new THREE.CanvasTexture(textureCanvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+        const height = product.size.heightCm;
+        const radius = product.size.diameterCm / 2;
+        // Printful's 11 oz mug is almost cylindrical. Keep only the very
+        // subtle narrowing that is visible close to its rounded foot.
+        const bottomRadius = radius * .985;
+        const edgeRadius = .09;
+        const shellHeight = height - edgeRadius * 2;
+        const ceramic = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          map: texture,
+          roughness: .24,
+          metalness: 0,
+          clearcoat: .38,
+          clearcoatRoughness: .2,
+        });
+        const plainCeramic = new THREE.MeshPhysicalMaterial({
+          color: 0xfdfcf9,
+          roughness: .22,
+          metalness: 0,
+          clearcoat: .42,
+          clearcoatRoughness: .18,
+        });
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius, bottomRadius, shellHeight, 160, 1, true, -Math.PI, Math.PI * 2),
+          ceramic
+        );
+        body.castShadow = true;
+        body.receiveShadow = true;
+        mugGroup.add(body);
+
+        const inside = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius - .28, bottomRadius - .26, shellHeight - .12, 160, 1, true, -Math.PI, Math.PI * 2),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xeeeae5,
+            roughness: .38,
+            side: THREE.BackSide,
+          })
+        );
+        inside.position.y = -.01;
+        mugGroup.add(inside);
+
+        // These tiny toruses complete the real mug's rounded corners without
+        // extending beyond the straight body. The previous, larger top ring
+        // read as a separate raised lip that the Printful mug does not have.
+        const rim = new THREE.Mesh(
+          new THREE.TorusGeometry(radius - edgeRadius, edgeRadius, 24, 160),
+          plainCeramic
+        );
+        rim.rotation.x = Math.PI / 2;
+        rim.position.y = shellHeight / 2;
+        rim.castShadow = true;
+        mugGroup.add(rim);
+
+        const innerShadow = new THREE.Mesh(
+          new THREE.CircleGeometry(radius - .38, 160),
+          new THREE.MeshStandardMaterial({ color: 0xd7d2cc, roughness: .82, side: THREE.DoubleSide })
+        );
+        innerShadow.rotation.x = -Math.PI / 2;
+        innerShadow.position.y = height / 2 - .43;
+        mugGroup.add(innerShadow);
+
+        const bottom = new THREE.Mesh(
+          new THREE.CircleGeometry(bottomRadius - .03, 160),
+          plainCeramic
+        );
+        bottom.rotation.x = Math.PI / 2;
+        bottom.position.y = -height / 2 + .01;
+        bottom.receiveShadow = true;
+        mugGroup.add(bottom);
+
+        // A rounded D-shaped curve is much closer to Printful's real handle
+        // than a circular torus. The closing section runs inside the mug, so
+        // only the two natural attachment points remain visible.
+        const handlePath = new THREE.CatmullRomCurve3(
+          [
+            new THREE.Vector3(-radius + .24, 3.62, 0),
+            new THREE.Vector3(-radius - .95, 3.68, 0),
+            new THREE.Vector3(-radius - 2.34, 3.02, 0),
+            new THREE.Vector3(-radius - 3.02, 1.42, 0),
+            new THREE.Vector3(-radius - 3.12, 0, 0),
+            new THREE.Vector3(-radius - 3.02, -1.42, 0),
+            new THREE.Vector3(-radius - 2.34, -2.9, 0),
+            new THREE.Vector3(-radius - .95, -3.54, 0),
+            new THREE.Vector3(-radius + .24, -3.48, 0),
+            new THREE.Vector3(-radius + .72, -2.16, 0),
+            new THREE.Vector3(-radius + .74, 0, 0),
+            new THREE.Vector3(-radius + .72, 2.1, 0),
+          ],
+          true,
+          'centripetal',
+          .5
+        );
+        const handle = new THREE.Mesh(
+          new THREE.TubeGeometry(handlePath, 160, .4, 28, true),
+          plainCeramic
+        );
+        handle.castShadow = true;
+        handle.receiveShadow = true;
+        mugGroup.add(handle);
+
+        // The base uses the same integrated corner treatment as the top.
+        const baseRim = new THREE.Mesh(
+          new THREE.TorusGeometry(bottomRadius - edgeRadius, edgeRadius, 24, 160),
+          plainCeramic
+        );
+        baseRim.rotation.x = Math.PI / 2;
+        baseRim.position.y = -shellHeight / 2;
+        baseRim.castShadow = true;
+        baseRim.receiveShadow = true;
+        mugGroup.add(baseRim);
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xc8c5c1, 2.25));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+        keyLight.position.set(-8, 12, 10);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.set(1024, 1024);
+        keyLight.shadow.camera.left = -12;
+        keyLight.shadow.camera.right = 12;
+        keyLight.shadow.camera.top = 12;
+        keyLight.shadow.camera.bottom = -12;
+        scene.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0xfff7ef, 1.1);
+        fillLight.position.set(10, 3, 7);
+        scene.add(fillLight);
+
+        const floor = new THREE.Mesh(
+          new THREE.PlaneGeometry(24, 18),
+          new THREE.ShadowMaterial({ color: 0x55514f, opacity: .1 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -height / 2 - .22;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        mug3D = { THREE, renderer, scene, camera, group: mugGroup, textureCanvas, texture };
+        attachMugInteraction(mugGroup);
+        resizeMug3D();
+        updateMug3DTexture();
+        mugViewer.classList.add('is-ready');
+      }).catch((error) => {
+        console.warn('3D mug preview unavailable; using 2D fallback.', error);
+        mug3DLoadPromise = null;
+      });
+      return mug3DLoadPromise;
+    }
+
+    function renderMugs() {
+      const ctx = setupCanvas(mugCanvas);
+      const width = mugCanvas.width;
+      const height = mugCanvas.height;
+      ctx.clearRect(0, 0, width, height);
+      if (selectedPlacement === 'full-wrap') {
+        const slot = product.layoutGeometry['full-wrap'][0];
+        const visibleHeight = Math.min(width, height) * .88;
+        const previewScale = visibleHeight / slot.height;
+        const wrapWidth = slot.width * previewScale;
+        drawCloud(ctx, (width - wrapWidth) / 2, (height - visibleHeight) / 2, wrapWidth, visibleHeight, true);
+        updateMug3DTexture();
+        return;
+      }
+      const sideRatio = selectedPlacement === 'both-sides' ? .71 : .88;
+      const side = Math.min(width, height) * sideRatio;
+      drawCloud(ctx, (width - side) / 2, (height - side) / 2, side);
+      updateMug3DTexture();
+    }
+
+    function renderWrap() {
+      const ctx = setupCanvas(wrapCanvas);
+      const width = wrapCanvas.width;
+      const height = wrapCanvas.height;
+      ctx.clearRect(0, 0, width, height);
+
+      const scaleX = width / product.printFile.width;
+      const scaleY = height / product.printFile.height;
+      const slots = product.layoutGeometry[selectedPlacement];
+      for (const slot of slots) {
+        const slotWidth = slot.width || slot.side;
+        const slotHeight = slot.height || slot.side;
+        drawCloud(
+          ctx,
+          slot.x * scaleX,
+          slot.y * scaleY,
+          slotWidth * scaleX,
+          slotHeight * scaleY
+        );
+      }
+    }
+
+    function renderAll() {
+      cancelAnimationFrame(renderFrame);
+      renderFrame = requestAnimationFrame(() => {
+        renderMugs();
+        renderWrap();
+      });
+    }
+
+    function markDirty() {
+      successBox.classList.remove('show');
+      successBox.textContent = '';
+      errorText.textContent = '';
+      saveButton.disabled = false;
+      saveButton.innerHTML = 'Design bestätigen <span aria-hidden="true">→</span>';
+    }
+
+    function buildThemeOptions() {
+      themeOptions.replaceChildren();
+      for (const palette of product.themes) {
+        const label = document.createElement('label');
+        label.className = 'option';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'theme';
+        input.value = palette.key;
+        input.checked = palette.key === selectedTheme;
+        input.addEventListener('change', () => {
+          selectedTheme = palette.key;
+          markDirty();
+          renderAll();
+        });
+
+        const card = document.createElement('span');
+        card.className = 'option-card';
+        const swatches = document.createElement('span');
+        swatches.className = 'swatches';
+        for (const color of palette.colors.slice(0, 5)) {
+          const swatch = document.createElement('i');
+          swatch.style.backgroundColor = color;
+          swatches.appendChild(swatch);
+        }
+        const name = document.createElement('strong');
+        name.textContent = palette.label;
+        const description = document.createElement('small');
+        description.textContent = palette.description;
+        card.append(swatches, name, description);
+        label.append(input, card);
+        themeOptions.appendChild(label);
+      }
+    }
+
+    function updateQuantity(nextQuantity, shouldMarkDirty = true) {
+      if (!product) return;
+      const parsed = Number(nextQuantity);
+      const normalized = Number.isFinite(parsed)
+        ? Math.min(product.maxQuantity, Math.max(product.minQuantity, Math.round(parsed)))
+        : product.defaultQuantity;
+      quantity = normalized;
+      quantityInput.value = String(quantity);
+      document.getElementById('preview-quantity').textContent = `${quantity}×`;
+      document.getElementById('summary-product').textContent = quantity === 1 ? '1 Tasse' : `${quantity} Tassen`;
+      document.getElementById('price').textContent = formatPrice(product.unitPriceCents * quantity);
+      document.getElementById('quantity-minus').disabled = quantity <= product.minQuantity;
+      document.getElementById('quantity-plus').disabled = quantity >= product.maxQuantity;
+      if (shouldMarkDirty) markDirty();
+    }
+
+    document.getElementById('quantity-minus').addEventListener('click', () => updateQuantity(quantity - 1));
+    document.getElementById('quantity-plus').addEventListener('click', () => updateQuantity(quantity + 1));
+    quantityInput.addEventListener('input', () => {
+      if (quantityInput.value !== '') updateQuantity(quantityInput.value);
+    });
+    quantityInput.addEventListener('change', () => updateQuantity(quantityInput.value));
+
+    document.querySelectorAll('input[name="placement"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        selectedPlacement = input.value;
+        markDirty();
+        renderAll();
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      renderAll();
+      resizeMug3D();
+    });
+
+    saveButton.addEventListener('click', async () => {
+      saveButton.disabled = true;
+      saveButton.textContent = 'Design wird gespeichert…';
+      errorText.textContent = '';
+      try {
+        const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productKey: product.key,
+            quantity,
+            theme: selectedTheme,
+            placement: selectedPlacement,
+            words,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'save_failed');
+        saveButton.textContent = 'Design gespeichert ✓';
+        successBox.innerHTML = '<strong>Euer Entwurf ist sicher gespeichert.</strong>' +
+          `${data.quantity === 1 ? 'Eine Tasse' : `${data.quantity} Tassen`} mit diesem Design sind vorgemerkt. ` +
+          `<a href="${data.printFileUrl}" target="_blank" rel="noopener">Transparente Druckdatei ansehen</a>`;
+        successBox.classList.add('show');
+      } catch {
+        saveButton.disabled = false;
+        saveButton.innerHTML = 'Erneut versuchen <span aria-hidden="true">→</span>';
+        errorText.textContent = 'Der Entwurf konnte nicht gespeichert werden. Bitte versucht es noch einmal.';
+      }
+    });
+
+    fetch(`/api/events/${encodeURIComponent(slug)}/configurator`)
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'load_failed');
+        return data;
+      })
+      .then((data) => {
+        words = data.words;
+        product = data.product;
+        selectedTheme = product.themes.some((option) => option.key === data.event.theme)
+          ? data.event.theme
+          : product.themes[0].key;
+        buildThemeOptions();
+
+        document.title = `Tassen für ${data.event.coupleName} – WeddingCloud`;
+        document.getElementById('preview-subtitle').textContent = data.event.coupleName;
+        document.getElementById('product-name').textContent = product.name;
+        document.getElementById('product-size').textContent =
+          `${product.size.label} · ${product.size.volumeMl} ml · weiße Keramik`;
+        document.getElementById('product-unit-price').textContent = `${formatPrice(product.unitPriceCents)} pro Tasse`;
+        document.getElementById('mug-viewer-hint').textContent =
+          `↔ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
+        document.getElementById('print-spec').textContent =
+          `${product.printFile.width} × ${product.printFile.height} px · ${product.printFile.dpi} DPI`;
+        quantityInput.min = String(product.minQuantity);
+        quantityInput.max = String(product.maxQuantity);
+        updateQuantity(product.defaultQuantity, false);
+        const total = words.reduce((sum, item) => sum + item[1], 0);
+        document.getElementById('word-summary').textContent = `${words.length} Wörter · ${total} Stimmen`;
+
+        loading.hidden = true;
+        content.hidden = false;
+        renderAll();
+        initMug3D();
+      })
+      .catch((error) => {
+        loading.innerHTML = error.message === 'no_words'
+          ? 'Für diese Wortwolke wurden noch keine Wörter gesammelt.'
+          : 'Der Konfigurator konnte nicht geladen werden.';
+      });
+  </script>
+</body>
+</html>
