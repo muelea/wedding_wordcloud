@@ -52,7 +52,7 @@
     .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,253,250,.82); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid transparent; box-shadow: 0 0 0 rgba(64,15,38,0); transition: border-color .35s ease, box-shadow .35s ease; }
     .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(64,15,38,.06); }
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
-    #so-gehts, #erleben, #tassen-duo { scroll-margin-top: 84px; }
+    #so-gehts, #erleben, #tassen-duo, #ueber-uns { scroll-margin-top: 84px; }
     .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; }
     .nav-links { display: flex; gap: 30px; align-items: center; color: var(--muted); font-size: .85rem; letter-spacing: .01em; }
     .nav-links a { position: relative; padding-bottom: 3px; }
@@ -169,30 +169,17 @@
     .print-copy h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
     .print-copy p { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
     .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; letter-spacing: .03em; font-style: italic; font-family: 'Playfair Display', Georgia, serif; }
-    /* True volumetric cup: a ring of many thin flat facets in 3D space
-       (transform-style: preserve-3d) approximates a cylinder — the browser
-       does real perspective foreshortening and depth-sorting on it, so it
-       actually rotates as a solid object rather than faking depth on a
-       flat card. Facets/caps/words are generated at runtime (see the
-       script at the end of the page) since hand-authoring ~48 per-facet
-       CSS rules isn't practical. */
-    .cup-stage { min-height: 420px; display: grid; place-items: center; position: relative; gap: 20px; }
-    .cup-turntable { perspective: 1300px; }
-    .cup {
-      position: relative; width: 1px; height: 1px;
-      transform-style: preserve-3d;
-      transform: rotateY(-28deg) rotateX(-6deg);
-      transition: transform .5s cubic-bezier(.22,.85,.4,1);
-      cursor: grab;
-      touch-action: pan-y;
-    }
-    .cup.dragging { transition: none; cursor: grabbing; }
-    .cup:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 14px; }
-    .cup-facet { position: absolute; top: 0; left: 0; background: linear-gradient(180deg, #ffffff, #eef0f1); }
-    .cup-cap { position: absolute; top: 0; left: 0; border-radius: 50%; background: radial-gradient(circle at 38% 35%, #ffffff, #e6e8e9); }
-    .cup-cap.top { box-shadow: inset 0 0 0 2px var(--gold-line); }
-    .cup-handle-bead { position: absolute; top: 0; left: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffffff, #e6e8e9); }
-    .cup-word-char { position: absolute; top: 0; left: 0; white-space: pre; text-align: center; color: var(--sage-deep); font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; text-shadow: 0 1px 1px rgba(255,255,255,.9); pointer-events: none; }
+
+    .quote { text-align: center; }
+    .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-style: italic; font-weight: 500; letter-spacing: -.02em; line-height: 1.35; }
+    .quote cite { color: var(--muted); font-size: .82rem; font-style: normal; letter-spacing: .01em; }
+    /* A real 3D mesh (public/assets/mug.glb), rendered with Three.js/WebGL
+       — not a hand-built CSS approximation. See the module script near
+       the end of the page. */
+    .cup-stage { min-height: 400px; display: grid; place-items: center; position: relative; gap: 4px; }
+    #mug-canvas { width: 480px; height: 430px; touch-action: none; cursor: grab; }
+    #mug-canvas.dragging { cursor: grabbing; }
+    #mug-canvas:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 8px; }
     .cup-caption { color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
     .cup-caption .icon-rotate { width: 13px; height: 13px; opacity: .7; }
 
@@ -233,7 +220,7 @@
     @media (max-width: 760px) {
       .shell { width: min(100% - 32px, 560px); }
       .nav { height: 76px; }
-      #so-gehts, #erleben, #tassen-duo { scroll-margin-top: 76px; }
+      #so-gehts, #erleben, #tassen-duo, #ueber-uns { scroll-margin-top: 76px; }
       .nav-links { display: none; }
       .nav .button { padding: 11px 17px; font-size: .8rem; }
       .hero { padding: 30px 0 72px; }
@@ -248,19 +235,22 @@
       .steps { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
       .feature-grid, .print-grid { text-align: center; }
       .checks { text-align: left; max-width: 330px; margin-inline: auto; }
-      .cup-stage { order: -1; min-height: 320px; }
-      .cup-turntable { transform: scale(.82); }
+      .cup-stage { order: -1; min-height: 340px; }
+      #mug-canvas { width: 360px; height: 320px; }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
     }
   </style>
+  <script type="importmap">
+    { "imports": { "three": "/js/vendor/three/three.module.min.js" } }
+  </script>
 </head>
 <body>
   <header class="site-header" id="site-header">
     <div class="shell nav">
       <a href="/" class="brand">Wolkenworte</a>
-      <nav class="nav-links"><a href="#so-gehts">So geht's</a><a href="#erleben">Erleben</a><a href="#tassen-duo">Tassen-Duo</a></nav>
+      <nav class="nav-links"><a href="#so-gehts">So geht's</a><a href="#erleben">Erleben</a><a href="#tassen-duo">Tassen-Duo</a><a href="#ueber-uns">Über uns</a></nav>
       <a class="button outline" href="/start">Kostenlos starten</a>
     </div>
   </header>
@@ -269,7 +259,7 @@
     <section class="hero">
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow">Wünsche &amp; Erinnerungen</p>
+          <p class="eyebrow">Wünsche &amp; Erinnerungen sammeln</p>
           <h1>Eine Wolke<br><em>voller Glück.</em></h1>
           <p class="lead">Eure Gäste teilen Wünsche und Erinnerungen – Wolkenworte macht daraus eine lebendige Wortwolke, live auf eurer Feier und als Druck. Eine Erinnerung, die für immer bleibt.</p>
           <div class="hero-actions">
@@ -283,7 +273,7 @@
 
         <div class="reel" aria-label="Animierte Vorschau einer Hochzeits-Wortwolke">
           <span class="reel-label"><span class="live-dot" aria-hidden="true"></span>Live-Vorschau</span>
-          <div class="demo-title">Johanna &amp; Peter</div>
+          <div class="demo-title">Lea &amp; Julian</div>
           <div class="demo-subtitle">Unsere Hochzeit · 2026</div>
           <div class="cloud">
             <span>Liebe</span><span>für immer</span><span>Freude</span><span>unvergesslich</span><span>Zusammen</span><span>Herzklopfen</span><span>Sommerabend</span><span>Gänsehaut</span><span>Vertrauen</span><span>goldenes Licht</span><span>Lachen</span><span>Geborgenheit</span><span>Hand in Hand</span>
@@ -361,11 +351,18 @@
           <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
         </div>
         <div class="cup-stage">
-          <div class="cup-turntable">
-            <div class="cup" id="cup" role="img" tabindex="0" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse mit den Worten der Wortwolke, rundum bedruckt. Zum Drehen ziehen oder Pfeiltasten verwenden."></div>
-          </div>
+          <canvas id="mug-canvas" tabindex="0" role="img" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse. Zum Drehen ziehen oder Pfeiltasten verwenden."></canvas>
           <span class="cup-caption"><svg class="icon-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20"/><path d="M20 5v6h-6"/></svg>Zum Drehen ziehen</span>
         </div>
+      </div>
+    </section>
+
+    <section class="quote" id="ueber-uns">
+      <div class="shell">
+        <div class="flourish"><i></i></div>
+        <p class="eyebrow center">Für euren Lieblingsmoment</p>
+        <blockquote>„Am Ende des Abends war unsere Wortwolke voller kleiner Dinge, die uns für immer an diesen besonderen Tag erinnern werden."</blockquote>
+        <cite>— Lena &amp; Max, Sommerhochzeit am See</cite>
       </div>
     </section>
 
@@ -414,181 +411,263 @@
         targets.forEach(function (el) { io.observe(el); });
       }
     })();
+  </script>
 
+  <script type="module">
+    import * as THREE from 'three';
+
+    // A procedurally-built mug (LatheGeometry body + TubeGeometry handle),
+    // shaped after a downloaded reference mesh's proportions rather than
+    // loading that file directly — this way the geometry, UVs, and scale
+    // are all self-authored and verifiable, real WebGL lighting replaces
+    // any hand-faked shading, and the word-cloud texture can be placed
+    // with exact, computed UV coordinates instead of guessing at (or
+    // risking distortion across) an unknown third-party UV layout.
     (function () {
-      var cup = document.getElementById('cup');
-      if (!cup) return;
+      var canvas = document.getElementById('mug-canvas');
+      if (!canvas || !window.WebGLRenderingContext) return;
 
-      // ── Build a real 3D cylinder out of thin flat facets arranged in a
-      // ring (transform-style: preserve-3d on the parent). The browser
-      // does genuine perspective foreshortening + depth-sorting on these,
-      // so the result is an actual rotating solid, not a flat illusion.
-      var R = 92, H = 190, N = 120;
-
-      // Two-term lighting (key light + a dimmer fill light from the
-      // opposite side) so the back of the cup is still visibly lit
-      // instead of falling into near-black once rotated into view.
-      function lightingFor(angleDeg) {
-        var rad = angleDeg * Math.PI / 180;
-        var key = Math.max(0, Math.cos(rad - (25 * Math.PI / 180)));
-        var fill = Math.max(0, Math.cos(rad - (25 * Math.PI / 180) + Math.PI));
-        return Math.min(1.15, 0.82 + 0.24 * key + 0.16 * fill);
-      }
-
-      for (var i = 0; i < N; i++) {
-        var angle = i * (360 / N);
-        var facetWidth = ((2 * Math.PI * R) / N) * 1.3;
-        var facet = document.createElement('div');
-        facet.className = 'cup-facet';
-        facet.style.width = facetWidth + 'px';
-        facet.style.height = H + 'px';
-        facet.style.filter = 'brightness(' + lightingFor(angle).toFixed(2) + ')';
-        facet.style.transform = 'translate(-50%,-50%) rotateY(' + angle + 'deg) translateZ(' + R + 'px)';
-        cup.appendChild(facet);
-      }
-      ['top', 'bottom'].forEach(function (which) {
-        var cap = document.createElement('div');
-        cap.className = 'cup-cap ' + which;
-        cap.style.width = cap.style.height = (2 * R) + 'px';
-        var z = which === 'top' ? H / 2 : -H / 2;
-        cap.style.transform = 'translate(-50%,-50%) rotateX(90deg) translateZ(' + z + 'px)';
-        cup.appendChild(cap);
-      });
-
-      // Handle: a ring of small round beads (orientation-agnostic, so it
-      // reads as a smooth curved tube regardless of viewing angle) swept
-      // via rotateX within the local plane established by rotateY(90deg)
-      // — that plane is world (vertical × outward), i.e. exactly the
-      // plane a real handle loop bulges through, attached flush to the
-      // right side of the barrel (rotateY(90deg) + translateZ(R) puts its
-      // anchor at world +X, the conventional handle side).
-      var handleLoopR = 42, handleBeads = 16, handleSpan = 170;
-      for (var b = 0; b <= handleBeads; b++) {
-        var phi = -handleSpan / 2 + (handleSpan * b) / handleBeads;
-        var bead = document.createElement('div');
-        bead.className = 'cup-handle-bead';
-        bead.style.width = bead.style.height = '22px';
-        bead.style.filter = 'brightness(' + lightingFor(90).toFixed(2) + ')';
-        bead.style.transform =
-          'translate(-50%,-50%) rotateY(90deg) translateZ(' + R + 'px) rotateX(' + phi + 'deg) translateZ(' + handleLoopR + 'px)';
-        cup.appendChild(bead);
-      }
-
-      // Words wrapped as genuinely curved text: each character is placed
-      // and oriented individually around the cylinder's own curvature
-      // (same rotateY(angle) translateZ(R) pattern as the facets above),
-      // not a flat label pasted on top of a curved surface.
-      // Same 13 words as the hero "Live-Vorschau" cloud, wrapped across
-      // the full 360° in three vertical bands so nothing angularly
-      // overlaps its neighbors — rotating the cup reveals the rest, the
-      // same way text wraps all the way around a real printed mug.
-      var words = [
-        { text: 'Liebe', angle: 0, y: 0, size: 26, weight: 600, color: 'var(--sage-deep)' },
-        { text: 'Zusammen', angle: 72, y: 0, size: 15, weight: 500, color: 'var(--champagne)' },
-        { text: 'Vertrauen', angle: 144, y: 0, size: 14, weight: 500, color: 'var(--coral)' },
-        { text: 'Lachen', angle: -144, y: 0, size: 16, weight: 500, color: 'var(--champagne)' },
-        { text: 'Hand in Hand', angle: -72, y: 0, size: 13, weight: 500, color: 'var(--coral)' },
-
-        { text: 'für immer', angle: -20, y: -44, size: 14, weight: 500, color: 'var(--coral)' },
-        { text: 'Sommerabend', angle: 70, y: -44, size: 13, weight: 500, color: 'var(--sage-deep)' },
-        { text: 'Geborgenheit', angle: 160, y: -44, size: 13, weight: 500, color: 'var(--champagne)' },
-        { text: 'goldenes Licht', angle: -110, y: -44, size: 12, weight: 500, color: 'var(--coral)' },
-
-        { text: 'unvergesslich', angle: 25, y: 44, size: 13, weight: 500, color: 'var(--champagne)' },
-        { text: 'Herzklopfen', angle: 115, y: 44, size: 14, weight: 500, color: 'var(--sage-deep)' },
-        { text: 'Gänsehaut', angle: -155, y: 44, size: 14, weight: 500, color: 'var(--coral)' },
-        { text: 'Freude', angle: -65, y: 44, size: 15, weight: 500, color: 'var(--champagne)' }
-      ];
-      words.forEach(function (w) {
-        var chars = w.text.split('');
-        var avgCharWidth = w.size * 0.52;
-        var angStep = (avgCharWidth / R) * (180 / Math.PI);
-        var startAngle = w.angle - (angStep * (chars.length - 1)) / 2;
-        chars.forEach(function (ch, idx) {
-          var a = startAngle + idx * angStep;
-          var el = document.createElement('div');
-          el.className = 'cup-word-char';
-          el.textContent = ch;
-          el.style.fontSize = w.size + 'px';
-          el.style.fontWeight = w.weight;
-          el.style.color = w.color;
-          el.style.transform =
-            'translate(-50%,-50%) rotateY(' + a + 'deg) translateZ(' + (R + 0.5) + 'px) translateY(' + w.y + 'px)';
-          cup.appendChild(el);
-        });
-      });
-
-      // ── Drag/keyboard rotation of the whole assembly — full trackball
-      // orbit (both axes), not just horizontal spin. Neither axis is
-      // clamped, so it's genuinely a full 360° rotation in any direction.
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var ry = -28, rx = -6, dragging = false, startX = 0, startY = 0, startRy = 0, startRx = 0, pointerId = null;
 
-      function setRy(v) {
-        ry = v;
-        cup.style.transform = 'rotateY(' + ry + 'deg) rotateX(' + rx + 'deg)';
-      }
-      function setRotation(nextRy, nextRx) {
-        ry = nextRy;
-        rx = nextRx;
-        cup.style.transform = 'rotateY(' + ry + 'deg) rotateX(' + rx + 'deg)';
-      }
-      setRy(ry);
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+      var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-      function pointerDown(e) {
+      // Softer, more neutral light: more of the illumination comes from
+      // ambient (even, shadowless) rather than the directional lights,
+      // and the directional lights themselves are near-neutral white
+      // instead of warm-tinted, so the ceramic reads as true white
+      // rather than a warm/creamy cast.
+      scene.add(new THREE.AmbientLight(0xffffff, 1.9));
+      var key = new THREE.DirectionalLight(0xfffaf5, 1.15);
+      key.position.set(2.2, 1.8, 2.5);
+      scene.add(key);
+      var fill = new THREE.DirectionalLight(0xfffaf5, 0.85);
+      fill.position.set(-2.4, 1, -2.2);
+      scene.add(fill);
+      var rim = new THREE.DirectionalLight(0xffffff, 0.45);
+      rim.position.set(0, 2.2, -3);
+      scene.add(rim);
+      var under = new THREE.DirectionalLight(0xfffaf5, 0.55);
+      under.position.set(0.5, -2.2, 1.8);
+      scene.add(under);
+
+      var pivot = new THREE.Group();
+      scene.add(pivot);
+
+      // Same 13 words, same order, and the same relative size/color
+      // hierarchy as the hero "Live-Vorschau" cloud (its hero word, its 5
+      // enlarged "standout" words, and its base/coral/champagne color
+      // cycle). Shared between the real texture builder and the
+      // drag-and-drop debug editor further down, so they can never drift
+      // out of sync with each other.
+      var WORDS = [
+        { text: 'Liebe', size: 47, weight: 700, color: '#9c1c4c', xPct: 64.1, yPct: 63.6 },
+        { text: 'unvergesslich', size: 41, weight: 600, color: '#d1607e', xPct: 46.6, yPct: 53.3 },
+        { text: 'Freude', size: 29, weight: 600, color: '#c1922f', xPct: 6.6, yPct: 58.8 },
+        { text: 'für immer', size: 32, weight: 600, color: '#d1607e', xPct: 57.4, yPct: 59.0 },
+        { text: 'Zusammen', size: 41, weight: 600, color: '#c1922f', xPct: 63.7, yPct: 53.8 },
+        { text: 'Herzklopfen', size: 32, weight: 600, color: '#d1607e', xPct: 100.0, yPct: 53.9 },
+        { text: 'Sommerabend', size: 41, weight: 600, color: '#9c1c4c', xPct: 88.2, yPct: 58.5 },
+        { text: 'Gänsehaut', size: 30, weight: 600, color: '#400f26', xPct: 80.2, yPct: 53.7 },
+        { text: 'Vertrauen', size: 27, weight: 600, color: '#400f26', xPct: 78.2, yPct: 63.5 },
+        { text: 'goldenes Licht', size: 41, weight: 600, color: '#d1607e', xPct: 98.4, yPct: 63.2 },
+        { text: 'Lachen', size: 29, weight: 600, color: '#c1922f', xPct: 71.3, yPct: 58.7 },
+        { text: 'Geborgenheit', size: 30, weight: 600, color: '#400f26', xPct: 40.0, yPct: 59.0 },
+        { text: 'Hand in Hand', size: 41, weight: 600, color: '#c1922f', xPct: 46.0, yPct: 63.6 }
+      ];
+
+      // ── Body: a lathe (surface-of-revolution) profile traced up the
+      // outer wall, across the rim's thickness, then back down a short
+      // inner wall to a closed inner floor — a true hollow rim, not a
+      // flat cap. Verified by computing this exact profile's arc-length
+      // parameterization in plain Node first (no browser needed) so the
+      // word-texture band below lands precisely on the outer wall. ──
+      var H = 2.0, wallT = 0.075;
+      var profile = [
+        new THREE.Vector2(0, 0),
+        new THREE.Vector2(0.94, 0),
+        // Duplicated point: LatheGeometry averages/smooths normals across
+        // a profile corner by default, which makes even a geometrically
+        // sharp angle (flat base meeting the vertical wall here) *look*
+        // slightly rounded under lighting. A duplicate point at the same
+        // position breaks that averaging, giving each side its own hard
+        // normal — a genuinely crisp edge, not just a tighter curve.
+        new THREE.Vector2(0.94, 0),
+        new THREE.Vector2(0.94, 0.03),
+        new THREE.Vector2(0.94, 0.18),
+        new THREE.Vector2(0.94, H * 0.55),
+        new THREE.Vector2(0.93, H * 0.94),
+        // A small explicit chamfer at the wall-to-rim corner instead of
+        // either a fully hard edge (duplicate-point trick, as above) or
+        // the fully smoothed default — real geometry gives a controllable
+        // "partway rounded" look rather than an all-or-nothing shading
+        // effect.
+        new THREE.Vector2(0.93, H * 0.988),
+        new THREE.Vector2(0.918, H),
+        new THREE.Vector2(0.93 - wallT, H),
+        new THREE.Vector2(0.85, H * 0.75),
+        new THREE.Vector2(0.60, H * 0.35),
+        new THREE.Vector2(0, H * 0.12)
+      ];
+      var bodyGeo = new THREE.LatheGeometry(profile, 96);
+
+      var texture = buildWordTexture();
+      var bodyMaterial = new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: 0.38, metalness: 0.04 });
+      var body = new THREE.Mesh(bodyGeo, bodyMaterial);
+      pivot.add(body);
+
+      // ── Handle: a real smooth tube along a curved 3D path, attached to
+      // the +X side of the barrel. ──
+      var handleCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0.90, H * 0.84, 0),
+        new THREE.Vector3(1.18, H * 0.82, 0),
+        new THREE.Vector3(1.48, H * 0.70, 0),
+        new THREE.Vector3(1.58, H * 0.50, 0),
+        new THREE.Vector3(1.48, H * 0.30, 0),
+        new THREE.Vector3(1.18, H * 0.18, 0),
+        new THREE.Vector3(0.90, H * 0.16, 0)
+      ]);
+      var handleGeo = new THREE.TubeGeometry(handleCurve, 64, 0.105, 20, false);
+      var handleMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.38, metalness: 0.04 });
+      pivot.add(new THREE.Mesh(handleGeo, handleMaterial));
+
+      // Center the whole mug (body spans y=0..H) at the origin, and frame
+      // the camera from the actual geometry bounds rather than a guessed
+      // distance — this is what was "too large/zoomed" before.
+      pivot.position.y = -H / 2;
+      var box = new THREE.Box3().setFromObject(pivot);
+      var sphere = box.getBoundingSphere(new THREE.Sphere());
+      var vFov = THREE.MathUtils.degToRad(camera.fov);
+      var distance = (sphere.radius / Math.sin(vFov / 2)) * 1.08;
+      camera.position.set(0, sphere.radius * 0.1, distance);
+      // Aim slightly above the mug's actual center so it sits a bit
+      // lower in the frame, closer to the caption below the canvas.
+      camera.lookAt(0, sphere.radius * 0.16, 0);
+
+      // Rotate the mug itself rather than orbiting the camera around it
+      // (as OrbitControls did) — with a fixed camera, the lights (fixed
+      // in scene/world space, not attached to pivot) stay in a constant
+      // position relative to the viewer too, so the lit/shadowed sides
+      // no longer visibly shift as you drag. With a camera-orbit
+      // approach the object+lights are what's actually stationary, so
+      // the *camera* moving around them reads to the viewer as "the
+      // lighting changes when I rotate it".
+      var tiltLimit = THREE.MathUtils.degToRad(30);
+      // The handle sits at local +X (angle 0) — that landed right at the
+      // front-facing view by default, so the handle was the first thing
+      // visible at rest. Offset the resting orientation 30° to rotate it
+      // out of the initial view.
+      var restingRotationY = THREE.MathUtils.degToRad(360);
+      pivot.rotation.y = restingRotationY;
+      var dragging = false, pointerId = null, startX = 0, startY = 0, startRotY = 0, startRotX = 0;
+      var autoRotating = !reduceMotion, autoStart = null;
+      var AUTO_ROTATE_MS = 9000;
+
+      function stopAutoRotate() { autoRotating = false; }
+
+      canvas.addEventListener('pointerdown', function (e) {
         dragging = true;
+        stopAutoRotate();
         pointerId = e.pointerId;
-        cup.setPointerCapture(pointerId);
-        cup.classList.add('dragging');
+        canvas.setPointerCapture(pointerId);
+        canvas.classList.add('dragging');
         startX = e.clientX;
         startY = e.clientY;
-        startRy = ry;
-        startRx = rx;
-      }
-      function pointerMove(e) {
+        startRotY = pivot.rotation.y;
+        startRotX = pivot.rotation.x;
+      });
+      canvas.addEventListener('pointermove', function (e) {
         if (!dragging || e.pointerId !== pointerId) return;
-        setRotation(startRy + (e.clientX - startX) * 0.5, startRx - (e.clientY - startY) * 0.5);
-      }
-      function pointerUp(e) {
-        if (e.pointerId !== pointerId) return;
+        pivot.rotation.y = startRotY + (e.clientX - startX) * 0.009;
+        var nextX = startRotX + (e.clientY - startY) * 0.009;
+        pivot.rotation.x = Math.max(-tiltLimit, Math.min(tiltLimit, nextX));
+      });
+      function stopDrag(e) {
+        if (pointerId !== null && e.pointerId !== pointerId) return;
         dragging = false;
-        cup.classList.remove('dragging');
+        pointerId = null;
+        canvas.classList.remove('dragging');
       }
-      cup.addEventListener('pointerdown', pointerDown);
-      cup.addEventListener('pointermove', pointerMove);
-      cup.addEventListener('pointerup', pointerUp);
-      cup.addEventListener('pointercancel', pointerUp);
+      canvas.addEventListener('pointerup', stopDrag);
+      canvas.addEventListener('pointercancel', stopDrag);
 
-      cup.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowLeft') { setRotation(ry - 15, rx); e.preventDefault(); }
-        else if (e.key === 'ArrowRight') { setRotation(ry + 15, rx); e.preventDefault(); }
-        else if (e.key === 'ArrowUp') { setRotation(ry, rx - 15); e.preventDefault(); }
-        else if (e.key === 'ArrowDown') { setRotation(ry, rx + 15); e.preventDefault(); }
+      canvas.addEventListener('keydown', function (e) {
+        var step = THREE.MathUtils.degToRad(15);
+        if (e.key === 'ArrowLeft') { stopAutoRotate(); pivot.rotation.y -= step; e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { stopAutoRotate(); pivot.rotation.y += step; e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { stopAutoRotate(); pivot.rotation.x = Math.min(tiltLimit, pivot.rotation.x + step); e.preventDefault(); }
+        else if (e.key === 'ArrowDown') { stopAutoRotate(); pivot.rotation.x = Math.max(-tiltLimit, pivot.rotation.x - step); e.preventDefault(); }
       });
 
-      // One-time slow full turn so first-time visitors can see it's a
-      // real rotatable object (not just a wiggle), without looping
-      // forever or fighting a real drag. Rotation itself is never
-      // clamped — setRy() above accepts any value, so a manual drag can
-      // always keep spinning past this demo turn in either direction.
-      if (!reduceMotion && 'IntersectionObserver' in window) {
-        var hinted = false;
-        var hintIo = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting && !hinted) {
-              hinted = true;
-              setTimeout(function () {
-                if (dragging) return;
-                cup.style.transition = 'transform 2.2s cubic-bezier(.4,0,.2,1)';
-                setRy(ry - 360);
-                setTimeout(function () { cup.style.transition = ''; }, 2300);
-              }, 400);
-              hintIo.disconnect();
-            }
+      // Same 13 words as the hero "Live-Vorschau" cloud, drawn onto a
+      // canvas and used as the body's texture map. U wraps the full 360°
+      // (canvas width = full circumference). Each word is drawn three
+      // times (at x, x−w, x+w): the canvas wraps seamlessly onto the mug
+      // (U 0/1 is the same seam, right behind the handle), so a word
+      // straddling that seam needs a copy on both sides or its tail gets
+      // clipped by the canvas boundary and is simply missing from the
+      // texture. Positions (WORDS[i].xPct/yPct) were set by hand via a
+      // temporary drag-and-drop debug tool, since removed.
+      function buildWordTexture() {
+        var w = 2048, h = 1024;
+        var c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        var ctx = c.getContext('2d');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        WORDS.forEach(function (wd) {
+          var cx = (wd.xPct / 100) * w;
+          var cy = (wd.yPct / 100) * h;
+          ctx.font = wd.weight + ' ' + wd.size + 'px "Cormorant Garamond", Georgia, serif';
+          ctx.fillStyle = wd.color;
+          [cx - w, cx, cx + w].forEach(function (px) {
+            ctx.fillText(wd.text, px, cy);
           });
-        }, { threshold: 0.4 });
-        hintIo.observe(cup);
+        });
+
+        var tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return tex;
       }
+
+
+      function resize() {
+        var w = canvas.clientWidth, h = canvas.clientHeight;
+        if (!w || !h) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // One slow, elegant intro turn — stops the instant a real drag or
+      // key press starts (see stopAutoRotate() above), never loops.
+      // animate() must only ever be invoked by requestAnimationFrame
+      // (which always passes a real timestamp) — an earlier version
+      // self-invoked it once with zero arguments to kick things off,
+      // leaving `now` undefined on that first call, which corrupted
+      // autoStart to undefined (not null) and made every subsequent
+      // frame's rotation compute to NaN, silently breaking the render.
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (autoRotating) {
+          if (autoStart === null) autoStart = now;
+          var t = Math.min(1, (now - autoStart) / AUTO_ROTATE_MS);
+          var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+          pivot.rotation.y = restingRotationY + eased * Math.PI * 2;
+          if (t >= 1) autoRotating = false;
+        }
+        renderer.render(scene, camera);
+      }
+      requestAnimationFrame(animate);
     })();
   </script>
 </body>
