@@ -32,6 +32,16 @@
       this.swatches = options.swatches;
       this.zoomLabel = options.zoomLabel;
       this.feedback = options.feedback;
+      this.selectionStatus = options.selectionStatus;
+      this.selectionHint = options.selectionHint;
+      this.selectionActions = [
+        options.smallerButton,
+        options.largerButton,
+        options.rotateLeftButton,
+        options.rotateRightButton,
+        options.duplicateButton,
+        options.deleteButton,
+      ];
       this.history = [];
       this.historyIndex = -1;
       this.suspended = false;
@@ -56,7 +66,7 @@
     }
 
     makeObject(item) {
-      const text = new root.fabric.FabricText(item.text, {
+      const text = new root.fabric.IText(item.text, {
         left: item.x * EDITOR_SCALE,
         top: item.y * EDITOR_SCALE,
         originX: 'center',
@@ -76,6 +86,11 @@
         cornerSize: 14,
         touchCornerSize: 28,
         padding: 3,
+        cursorColor: '#9c1c4c',
+        cursorWidth: 2,
+        selectionColor: 'rgba(156, 28, 76, .14)',
+        hoverCursor: 'move',
+        moveCursor: 'grabbing',
       });
       text.editorId = item.id || this.nextId();
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
@@ -104,13 +119,53 @@
         this.updateSelectionPanel();
       });
 
-      this.canvas.on('mouse:dblclick', (event) => {
+      this.canvas.on('text:editing:entered', (event) => {
         if (!event.target) return;
-        this.canvas.setActiveObject(event.target);
+        event.target.editorTextBeforeEditing = event.target.text;
         this.updateSelectionPanel();
-        this.textInput.focus();
-        this.textInput.select();
       });
+      this.canvas.on('text:changed', (event) => {
+        const object = event.target;
+        if (!object) return;
+        const text = this.normalizeText(object.text);
+        if (text !== object.text) object.set({ text });
+        this.keepInside(object);
+        object.setCoords();
+        this.textInput.value = text;
+        this.canvas.requestRenderAll();
+        this.emitChange();
+      });
+      this.canvas.on('text:editing:exited', (event) => {
+        const object = event.target;
+        if (!object) return;
+        const text = this.normalizeText(object.text, true) || object.editorTextBeforeEditing || 'wort';
+        object.set({ text });
+        this.keepInside(object);
+        object.setCoords();
+        this.canvas.requestRenderAll();
+        this.recordHistory();
+        this.emitChange();
+        this.updateSelectionPanel();
+      });
+
+      this.canvas.on('mouse:dblclick', (event) => {
+        const object = event.target;
+        if (!object || typeof object.enterEditing !== 'function') return;
+        this.canvas.setActiveObject(object);
+        object.enterEditing();
+        object.selectAll();
+        if (object.hiddenTextarea) object.hiddenTextarea.focus();
+        this.updateSelectionPanel();
+        this.canvas.requestRenderAll();
+      });
+    }
+
+    normalizeText(rawText, finalize = false) {
+      let text = String(rawText || '').normalize('NFC')
+        .replace(/[\x00-\x1f\x7f]/g, '')
+        .slice(0, 30);
+      if (finalize) text = text.replace(/ {2,}/g, ' ').trim();
+      return text;
     }
 
     bindControls(options) {
@@ -129,9 +184,9 @@
 
       this.textInput.addEventListener('input', () => {
         const active = this.canvas.getActiveObject();
-        const text = this.textInput.value.normalize('NFC').replace(/[\x00-\x1f\x7f]/g, '').slice(0, 30);
+        const text = this.normalizeText(this.textInput.value);
         if (!active || !text.trim()) return;
-        active.set({ text: text.trim() });
+        active.set({ text });
         this.keepInside(active);
         active.setCoords();
         this.canvas.requestRenderAll();
@@ -140,8 +195,14 @@
       this.textInput.addEventListener('change', () => {
         const active = this.canvas.getActiveObject();
         if (!active) return;
-        this.textInput.value = active.text;
+        const text = this.normalizeText(this.textInput.value, true) || active.text;
+        active.set({ text });
+        this.textInput.value = text;
+        this.keepInside(active);
+        active.setCoords();
+        this.canvas.requestRenderAll();
         this.recordHistory();
+        this.emitChange();
       });
       this.textInput.addEventListener('blur', () => {
         const active = this.canvas.getActiveObject();
@@ -153,12 +214,12 @@
       document.addEventListener('keydown', (event) => {
         const editingField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
         const command = event.metaKey || event.ctrlKey;
-        if (command && event.key.toLowerCase() === 'z') {
+        if (!editingField && command && event.key.toLowerCase() === 'z') {
           event.shiftKey ? this.redo() : this.undo();
           event.preventDefault();
           return;
         }
-        if (command && event.key.toLowerCase() === 'y') {
+        if (!editingField && command && event.key.toLowerCase() === 'y') {
           this.redo();
           event.preventDefault();
           return;
@@ -171,6 +232,8 @@
 
       this.undoButton = options.undoButton;
       this.redoButton = options.redoButton;
+      this.zoomOutButton = options.zoomOutButton;
+      this.zoomInButton = options.zoomInButton;
     }
 
     setDesign(design, { resetHistory = false, record = false } = {}) {
@@ -413,6 +476,7 @@
 
     renderSwatches() {
       this.swatches.replaceChildren();
+      const hasSelection = Boolean(this.canvas.getActiveObject());
       for (const color of this.palette) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -421,6 +485,7 @@
         button.style.backgroundColor = color;
         button.title = `Farbe ${color}`;
         button.setAttribute('aria-label', `Farbe ${color}`);
+        button.disabled = !hasSelection;
         button.addEventListener('click', () => this.setActiveColor(color));
         this.swatches.appendChild(button);
       }
@@ -428,9 +493,27 @@
 
     updateSelectionPanel() {
       const active = this.canvas.getActiveObject();
-      this.selectionPanel.hidden = !active;
-      this.shell.classList.toggle('has-selection', Boolean(active));
-      if (!active) return;
+      const hasSelection = Boolean(active);
+      this.selectionPanel.classList.toggle('is-active', hasSelection);
+      this.selectionPanel.setAttribute('aria-disabled', String(!hasSelection));
+      this.shell.classList.toggle('has-selection', hasSelection);
+      this.textInput.disabled = !hasSelection;
+      this.colorInput.disabled = !hasSelection;
+      this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
+      this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
+        button.disabled = !hasSelection;
+      });
+      if (!active) {
+        this.selectionStatus.textContent = 'Wort auswählen';
+        this.selectionHint.textContent = 'Wort anklicken, um die Werkzeuge zu aktivieren';
+        this.textInput.value = '';
+        this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
+          button.classList.remove('is-selected');
+        });
+        return;
+      }
+      this.selectionStatus.textContent = `„${active.text}“ bearbeiten`;
+      this.selectionHint.textContent = 'Doppelklick: Text direkt im Motiv bearbeiten';
       this.textInput.value = active.text;
       this.colorInput.value = String(active.fill);
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
@@ -441,6 +524,13 @@
     setZoom(nextZoom) {
       this.zoom = Math.min(2, Math.max(1, Math.round(nextZoom * 4) / 4));
       this.shell.style.width = `${this.zoom * 100}%`;
+      this.scroll.classList.toggle('is-fit', this.zoom === 1);
+      if (this.zoom === 1) {
+        this.scroll.scrollLeft = 0;
+        this.scroll.scrollTop = 0;
+      }
+      this.zoomOutButton.disabled = this.zoom === 1;
+      this.zoomInButton.disabled = this.zoom === 2;
       this.zoomLabel.textContent = `${Math.round(this.zoom * 100)} %`;
     }
 

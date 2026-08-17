@@ -119,6 +119,9 @@
       min-height: 690px;
       padding: 30px;
       border-radius: 28px;
+      background:
+        radial-gradient(ellipse at 50% 24%, rgba(239, 243, 244, .72), transparent 34%),
+        rgba(255, 253, 250, .86);
       overflow: hidden;
       position: sticky;
       top: 24px;
@@ -137,66 +140,15 @@
       font-size: 25px;
       font-weight: 500;
     }
-    .preview-kicker { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
-    .verified-badge {
-      flex: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 7px 11px;
-      border-radius: 999px;
-      background: rgba(57, 115, 95, .08);
-      color: var(--success);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: .04em;
-    }
-    .verified-badge::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
     .mug-stage {
       min-height: 400px;
-      margin: 12px -30px 0;
+      margin: 12px -30px 18px;
       padding: 28px 38px 22px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: clamp(20px, 4vw, 54px);
       position: relative;
-      background:
-        radial-gradient(ellipse at center bottom, rgba(72, 76, 82, .1), transparent 56%),
-        linear-gradient(180deg, transparent, rgba(248, 249, 250, .82));
-    }
-    .mug-stage::after {
-      content: '';
-      position: absolute;
-      left: 12%; right: 12%; bottom: 37px;
-      height: 18px;
-      border-radius: 50%;
-      background: rgba(67, 72, 78, .09);
-      filter: blur(13px);
-    }
-
-    .preview-quantity {
-      position: absolute;
-      z-index: 3;
-      top: 26px;
-      right: 30px;
-      min-width: 50px;
-      padding: 8px 12px;
-      border: 1px solid rgba(156, 28, 76, .12);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .86);
-      color: var(--berry);
-      font-size: 13px;
-      font-weight: 600;
-      text-align: center;
-      box-shadow: 0 8px 22px rgba(74, 34, 43, .08);
     }
 
     .mug-wrap {
@@ -281,7 +233,7 @@
       padding: 21px 22px 19px;
       border: 1px solid var(--line);
       border-radius: 20px;
-      background: rgba(255, 253, 250, .82);
+      background: rgba(255, 255, 255, .48);
     }
     .wrap-head {
       margin-bottom: 13px;
@@ -325,12 +277,18 @@
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
     .editor-scroll {
       width: 100%;
+      aspect-ratio: 2700 / 1050;
       overflow: auto;
-      border-radius: 12px;
+      overscroll-behavior: contain;
+      border: 1px solid rgba(123, 70, 82, .18);
+      border-radius: 14px;
       background: #fff;
-      box-shadow: inset 0 0 0 1px rgba(40, 20, 28, .09);
+      box-shadow:
+        0 10px 28px rgba(64, 15, 38, .055),
+        inset 0 0 0 1px rgba(255, 255, 255, .82);
       scrollbar-color: rgba(123,70,82,.28) transparent;
     }
+    .editor-scroll.is-fit { overflow: hidden; }
     .editor-canvas-shell {
       width: 100%;
       min-width: 100%;
@@ -366,13 +324,44 @@
       box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
     }
     .editor-selection {
-      margin-top: 12px;
-      padding: 13px;
+      min-height: 132px;
+      margin-bottom: 12px;
+      padding: 12px;
       border: 1px solid var(--line);
       border-radius: 13px;
-      background: rgba(255,255,255,.82);
+      background: rgba(255,255,255,.72);
+      transition: border-color .2s, background .2s, box-shadow .2s;
     }
-    .editor-selection[hidden] { display: none; }
+    .editor-selection.is-active {
+      border-color: rgba(156,28,76,.24);
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 7px 20px rgba(73,29,44,.055);
+    }
+    .editor-selection-head {
+      min-height: 19px;
+      margin-bottom: 9px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .editor-selection-status {
+      max-width: 48%;
+      overflow: hidden;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .editor-selection-hint {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 9px;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .editor-selection-row {
       display: grid;
       grid-template-columns: minmax(150px, 1fr) auto;
@@ -392,6 +381,7 @@
       font-size: 12px;
     }
     .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
+    .editor-text-input:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
     .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
     .editor-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
     .editor-swatch {
@@ -404,6 +394,7 @@
       cursor: pointer;
     }
     .editor-swatch:hover, .editor-swatch.is-selected { box-shadow: 0 0 0 2px var(--berry); }
+    .editor-swatch:disabled { cursor: not-allowed; opacity: .38; box-shadow: 0 0 0 1px rgba(62,35,45,.1); }
     .editor-color-input {
       width: 28px;
       height: 28px;
@@ -413,6 +404,7 @@
       background: #fff;
       cursor: pointer;
     }
+    .editor-color-input:disabled { cursor: not-allowed; opacity: .38; }
     .editor-actions { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
     .editor-delete { color: #9b2b42; }
     .editor-help {
@@ -760,8 +752,7 @@
       .intro-copy { font-size: 15px; }
       .preview-card, .controls { padding: 20px; border-radius: 21px; }
       .preview-head { align-items: center; }
-      .preview-kicker, .verified-badge { display: none; }
-      .mug-stage { min-height: 310px; margin: 10px -20px 0; padding: 20px 14px 18px; gap: 22px; }
+      .mug-stage { min-height: 310px; margin: 10px -20px 16px; padding: 20px 14px 18px; gap: 22px; }
       .mug-viewer { height: 270px; }
       .mug { width: min(35vw, 165px); }
       .mug-name { margin-top: 0; font-size: 11px; }
@@ -771,6 +762,9 @@
       .editor-button { min-height: 40px; }
       .editor-icon-button { width: 40px; }
       .editor-selection-row { grid-template-columns: 1fr; }
+      .editor-selection-head { align-items: flex-start; flex-direction: column; gap: 2px; }
+      .editor-selection-status { max-width: 100%; }
+      .editor-selection-hint { max-width: 100%; text-align: left; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
       .option-grid { grid-template-columns: 1fr; }
       .option-card { min-height: 76px; }
@@ -796,15 +790,10 @@
       <div class="config-grid">
         <section class="preview-card" aria-labelledby="preview-title">
           <div class="preview-head">
-            <div>
-              <h2 id="preview-title">Eure Vorschau</h2>
-              <p class="preview-kicker" id="preview-subtitle"></p>
-            </div>
-            <span class="verified-badge">Printful-Maße geprüft</span>
+            <h2 id="preview-title">Eure Vorschau</h2>
           </div>
 
           <div class="mug-stage" aria-label="Vorschau der gestalteten Tasse">
-            <span class="preview-quantity" id="preview-quantity">2×</span>
             <div class="mug-wrap">
               <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen horizontal oder vertikal ziehen. Alternativ die Pfeiltasten verwenden.">
                 <div class="mug-fallback">
@@ -823,7 +812,7 @@
             <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
               <div class="editor-tools">
                 <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
-                <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Neu anordnen</button>
+                <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Zurücksetzen</button>
               </div>
               <div class="editor-tools">
                 <button class="editor-button editor-icon-button" id="editor-undo" type="button" aria-label="Rückgängig" title="Rückgängig">↶</button>
@@ -833,34 +822,38 @@
                 <button class="editor-button editor-icon-button" id="editor-zoom-in" type="button" aria-label="Ansicht vergrößern" title="Ansicht vergrößern">＋</button>
               </div>
             </div>
-            <div class="editor-scroll" id="editor-scroll">
+            <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Wort">
+              <div class="editor-selection-head">
+                <strong class="editor-selection-status" id="editor-selection-status">Wort auswählen</strong>
+                <span class="editor-selection-hint" id="editor-selection-hint">Wort anklicken, um die Werkzeuge zu aktivieren</span>
+              </div>
+              <div class="editor-selection-row">
+                <label class="editor-field-label">Ausgewähltes Wort
+                  <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
+                </label>
+                <div class="editor-field-label">Farbe
+                  <div class="editor-colors">
+                    <div class="editor-swatches" id="editor-swatches"></div>
+                    <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
+                  </div>
+                </div>
+              </div>
+              <div class="editor-actions">
+                <button class="editor-button" id="editor-smaller" type="button" disabled>− Kleiner</button>
+                <button class="editor-button" id="editor-larger" type="button" disabled>＋ Größer</button>
+                <button class="editor-button" id="editor-rotate-left" type="button" disabled>↶ Drehen</button>
+                <button class="editor-button" id="editor-rotate-right" type="button" disabled>↷ Drehen</button>
+                <button class="editor-button" id="editor-duplicate" type="button" disabled>Duplizieren</button>
+                <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
+              </div>
+            </div>
+            <div class="editor-scroll is-fit" id="editor-scroll">
               <div class="editor-canvas-shell" id="editor-canvas-shell">
                 <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
                 <span class="print-safe-guide" aria-hidden="true"></span>
               </div>
             </div>
-            <div class="editor-selection" id="editor-selection" hidden>
-              <div class="editor-selection-row">
-                <label class="editor-field-label">Ausgewähltes Wort
-                  <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" />
-                </label>
-                <div class="editor-field-label">Farbe
-                  <div class="editor-colors">
-                    <div class="editor-swatches" id="editor-swatches"></div>
-                    <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" />
-                  </div>
-                </div>
-              </div>
-              <div class="editor-actions">
-                <button class="editor-button" id="editor-smaller" type="button">− Kleiner</button>
-                <button class="editor-button" id="editor-larger" type="button">＋ Größer</button>
-                <button class="editor-button" id="editor-rotate-left" type="button">↶ Drehen</button>
-                <button class="editor-button" id="editor-rotate-right" type="button">↷ Drehen</button>
-                <button class="editor-button" id="editor-duplicate" type="button">Duplizieren</button>
-                <button class="editor-button editor-delete" id="editor-delete" type="button">Löschen</button>
-              </div>
-            </div>
-            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort auswählen und ziehen. Die Druckgrenze kann nicht überschritten werden.</p>
+            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort auswählen und ziehen oder doppelklicken, um es direkt zu bearbeiten.</p>
             <p class="wrap-note">Gedruckt werden ausschließlich die Wörter – ohne Rahmen, Hilfslinien und Hintergrund.</p>
           </div>
         </section>
@@ -959,7 +952,7 @@
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
   <script src="/js/wordcloud-core.js?v=20260816-2"></script>
-  <script src="/js/mug-editor.js?v=20260816-1"></script>
+  <script src="/js/mug-editor.js?v=20260817-1"></script>
   <script>
     'use strict';
 
@@ -1591,7 +1584,6 @@
         : product.defaultQuantity;
       quantity = normalized;
       quantityInput.value = String(quantity);
-      document.getElementById('preview-quantity').textContent = `${quantity}×`;
       document.getElementById('summary-product').textContent = quantity === 1 ? '1 Tasse' : `${quantity} Tassen`;
       document.getElementById('price').textContent = formatPrice(product.unitPriceCents * quantity);
       document.getElementById('quantity-minus').disabled = quantity <= product.minQuantity;
@@ -1624,6 +1616,8 @@
         shell: document.getElementById('editor-canvas-shell'),
         scroll: document.getElementById('editor-scroll'),
         selectionPanel: document.getElementById('editor-selection'),
+        selectionStatus: document.getElementById('editor-selection-status'),
+        selectionHint: document.getElementById('editor-selection-hint'),
         textInput: document.getElementById('editor-text'),
         swatches: document.getElementById('editor-swatches'),
         colorInput: document.getElementById('editor-color'),
@@ -1711,7 +1705,6 @@
         renderCustomColorControls();
 
         document.title = `Tassen für ${data.event.coupleName} – WeddingCloud`;
-        document.getElementById('preview-subtitle').textContent = data.event.coupleName;
         document.getElementById('product-name').textContent = product.name;
         document.getElementById('product-size').textContent =
           `${product.size.label} · ${product.size.volumeMl} ml · weiße Keramik`;

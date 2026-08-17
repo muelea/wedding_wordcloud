@@ -65,40 +65,16 @@ const MUG_DUO = Object.freeze({
       colors: Object.freeze(['#a40e4c', '#d90368', '#f45b69', '#ff7f3f', '#6a4c93', '#168f83']),
     }),
     Object.freeze({
-      key: 'rose-garden',
-      label: 'Beerenrausch',
-      description: 'Sattes Pink, Rubin und Pflaume',
-      colors: Object.freeze(['#570d33', '#8f124f', '#c2185b', '#e83e75', '#f45b8a', '#7027a0']),
-    }),
-    Object.freeze({
       key: 'sage-gold',
       label: 'Smaragd & Gold',
       description: 'Edle Juwelen- und Goldtöne',
       colors: Object.freeze(['#063e36', '#006d5b', '#14967f', '#8f6100', '#d0920f', '#654100']),
     }),
     Object.freeze({
-      key: 'terracotta',
-      label: 'Abendglut',
-      description: 'Feuriges Orange, Rost und Bordeaux',
-      colors: Object.freeze(['#6d1a36', '#9d2d22', '#c4451c', '#e85d04', '#f48c06', '#70401e']),
-    }),
-    Object.freeze({
       key: 'ocean',
       label: 'Ocean Electric',
       description: 'Tiefes Blau mit leuchtendem Türkis',
       colors: Object.freeze(['#003049', '#00509d', '#0077b6', '#0096c7', '#00a6a6', '#136f63']),
-    }),
-    Object.freeze({
-      key: 'classic',
-      label: 'Midnight Luxe',
-      description: 'Tiefes Schwarz, Pflaume und Gold',
-      colors: Object.freeze(['#151217', '#2d1b2e', '#4a1230', '#7a1e48', '#a66f00', '#4a4548']),
-    }),
-    Object.freeze({
-      key: 'neon',
-      label: 'Electric Pop',
-      description: 'Maximale Farbe: Pink, Violett und Türkis',
-      colors: Object.freeze(['#d5008f', '#7a00cc', '#0057d9', '#008f8c', '#2a961f', '#e65100']),
     }),
     Object.freeze({
       key: 'custom',

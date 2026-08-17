@@ -52,7 +52,7 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(data.product.unitPriceCents, 1745);
   assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
-    ['pastel', 'rose-garden', 'sage-gold', 'terracotta', 'ocean', 'classic', 'neon', 'custom']
+    ['pastel', 'sage-gold', 'ocean', 'custom']
   );
   assert.ok(data.product.themes.every((theme) => theme.colors.length >= 6));
   assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap']);
