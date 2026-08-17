@@ -464,19 +464,19 @@
       // drag-and-drop debug editor further down, so they can never drift
       // out of sync with each other.
       var WORDS = [
-        { text: 'Liebe', size: 47, weight: 700, color: '#9c1c4c', xPct: 64.1, yPct: 65.4 },
-        { text: 'unvergesslich', size: 41, weight: 600, color: '#d1607e', xPct: 46.6, yPct: 55.1 },
-        { text: 'Freude', size: 29, weight: 600, color: '#c1922f', xPct: 6.6, yPct: 60.6 },
-        { text: 'für immer', size: 32, weight: 600, color: '#d1607e', xPct: 57.4, yPct: 60.8 },
-        { text: 'Zusammen', size: 41, weight: 600, color: '#c1922f', xPct: 63.7, yPct: 55.6 },
-        { text: 'Herzklopfen', size: 32, weight: 600, color: '#d1607e', xPct: 100.0, yPct: 55.7 },
-        { text: 'Sommerabend', size: 41, weight: 600, color: '#9c1c4c', xPct: 88.2, yPct: 60.3 },
-        { text: 'Gänsehaut', size: 30, weight: 600, color: '#400f26', xPct: 80.2, yPct: 55.5 },
-        { text: 'Vertrauen', size: 27, weight: 600, color: '#400f26', xPct: 78.2, yPct: 65.3 },
-        { text: 'goldenes Licht', size: 41, weight: 600, color: '#d1607e', xPct: 98.4, yPct: 65.0 },
-        { text: 'Lachen', size: 29, weight: 600, color: '#c1922f', xPct: 71.3, yPct: 60.5 },
-        { text: 'Geborgenheit', size: 30, weight: 600, color: '#400f26', xPct: 40.0, yPct: 60.8 },
-        { text: 'Hand in Hand', size: 41, weight: 600, color: '#c1922f', xPct: 46.0, yPct: 65.4 }
+        { text: 'Liebe', size: 47, weight: 700, color: '#9c1c4c', xPct: 64.1, yPct: 63.6 },
+        { text: 'unvergesslich', size: 41, weight: 600, color: '#d1607e', xPct: 46.6, yPct: 53.3 },
+        { text: 'Freude', size: 29, weight: 600, color: '#c1922f', xPct: 6.6, yPct: 58.8 },
+        { text: 'für immer', size: 32, weight: 600, color: '#d1607e', xPct: 57.4, yPct: 59.0 },
+        { text: 'Zusammen', size: 41, weight: 600, color: '#c1922f', xPct: 63.7, yPct: 53.8 },
+        { text: 'Herzklopfen', size: 32, weight: 600, color: '#d1607e', xPct: 100.0, yPct: 53.9 },
+        { text: 'Sommerabend', size: 41, weight: 600, color: '#9c1c4c', xPct: 88.2, yPct: 58.5 },
+        { text: 'Gänsehaut', size: 30, weight: 600, color: '#400f26', xPct: 80.2, yPct: 53.7 },
+        { text: 'Vertrauen', size: 27, weight: 600, color: '#400f26', xPct: 78.2, yPct: 63.5 },
+        { text: 'goldenes Licht', size: 41, weight: 600, color: '#d1607e', xPct: 98.4, yPct: 63.2 },
+        { text: 'Lachen', size: 29, weight: 600, color: '#c1922f', xPct: 71.3, yPct: 58.7 },
+        { text: 'Geborgenheit', size: 30, weight: 600, color: '#400f26', xPct: 40.0, yPct: 59.0 },
+        { text: 'Hand in Hand', size: 41, weight: 600, color: '#c1922f', xPct: 46.0, yPct: 63.6 }
       ];
 
       // ── Body: a lathe (surface-of-revolution) profile traced up the
@@ -489,11 +489,24 @@
       var profile = [
         new THREE.Vector2(0, 0),
         new THREE.Vector2(0.94, 0),
+        // Duplicated point: LatheGeometry averages/smooths normals across
+        // a profile corner by default, which makes even a geometrically
+        // sharp angle (flat base meeting the vertical wall here) *look*
+        // slightly rounded under lighting. A duplicate point at the same
+        // position breaks that averaging, giving each side its own hard
+        // normal — a genuinely crisp edge, not just a tighter curve.
+        new THREE.Vector2(0.94, 0),
         new THREE.Vector2(0.94, 0.03),
         new THREE.Vector2(0.94, 0.18),
         new THREE.Vector2(0.94, H * 0.55),
         new THREE.Vector2(0.93, H * 0.94),
-        new THREE.Vector2(0.93, H),
+        // A small explicit chamfer at the wall-to-rim corner instead of
+        // either a fully hard edge (duplicate-point trick, as above) or
+        // the fully smoothed default — real geometry gives a controllable
+        // "partway rounded" look rather than an all-or-nothing shading
+        // effect.
+        new THREE.Vector2(0.93, H * 0.988),
+        new THREE.Vector2(0.918, H),
         new THREE.Vector2(0.93 - wallT, H),
         new THREE.Vector2(0.85, H * 0.75),
         new THREE.Vector2(0.60, H * 0.35),
