@@ -21,8 +21,9 @@ finished word cloud after the event.
    immutable mug print file with a transparent background. A locally served Three.js preview
    maps that exact artwork onto a rotatable mug using Printful's physical
    dimensions. The print area itself is a small Fabric.js editor: every word
-   can be moved, resized, rotated, recolored, edited, duplicated or removed,
-   while hard bounds keep the design printable.
+   and every curated wedding motif can be moved, resized, rotated, recolored,
+   duplicated or removed; words can also be edited directly. Hard bounds keep
+   the entire design printable.
 6. The approved configuration can then be purchased through Stripe Checkout
    and sent to Printful for fulfillment.
 
@@ -96,7 +97,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 34 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 35 tests covering multi-tenant
 isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, and Stripe/Printful stub behavior. Each test

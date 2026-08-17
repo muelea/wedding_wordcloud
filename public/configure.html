@@ -241,6 +241,7 @@
     }
     .wrap-head strong { font-size: 13px; font-weight: 600; }
     .editor-toolbar {
+      position: relative;
       margin-bottom: 12px;
       display: flex;
       align-items: center;
@@ -249,6 +250,72 @@
       flex-wrap: wrap;
     }
     .editor-tools { display: flex; align-items: center; gap: 6px; }
+    .editor-motif-picker { position: static; }
+    .editor-motif-menu {
+      position: absolute;
+      z-index: 30;
+      top: calc(100% + 7px);
+      left: 0;
+      width: min(380px, calc(100vw - 64px));
+      padding: 12px;
+      border: 1px solid rgba(123, 70, 82, .18);
+      border-radius: 15px;
+      background: rgba(255, 255, 255, .98);
+      box-shadow: 0 18px 46px rgba(64, 15, 38, .15);
+      backdrop-filter: blur(12px);
+    }
+    .editor-motif-menu[hidden] { display: none; }
+    .editor-motif-title {
+      display: block;
+      margin: 0 2px 9px;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .editor-motif-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .editor-motif-option {
+      min-width: 0;
+      padding: 8px 4px 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(123, 70, 82, .13);
+      border-radius: 11px;
+      background: #fffaf8;
+      color: var(--berry);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .editor-motif-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(156, 28, 76, .38);
+      box-shadow: 0 7px 16px rgba(64, 15, 38, .08);
+    }
+    .editor-motif-option:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .editor-motif-option svg {
+      width: 28px;
+      height: 28px;
+      overflow: visible;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.65;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .editor-motif-option span {
+      width: 100%;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 8px;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .editor-button {
       min-height: 36px;
       padding: 8px 11px;
@@ -392,14 +459,22 @@
     .editor-swatch:hover, .editor-swatch.is-selected { box-shadow: 0 0 0 2px var(--berry); }
     .editor-swatch:disabled { cursor: not-allowed; opacity: .38; box-shadow: 0 0 0 1px rgba(62,35,45,.1); }
     .editor-color-input {
+      -webkit-appearance: none;
+      appearance: none;
       width: 28px;
       height: 28px;
-      padding: 2px;
+      padding: 0;
       border: 1px solid rgba(123,70,82,.18);
       border-radius: 8px;
-      background: #fff;
+      background:
+        radial-gradient(circle, #fff 0 27%, transparent 31%) center / 19px 19px no-repeat,
+        conic-gradient(#f04464, #ffad38, #f4dd3f, #45b86b, #20a8b8, #5f61d8, #c348c7, #f04464) center / 19px 19px no-repeat,
+        #fff;
       cursor: pointer;
     }
+    .editor-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+    .editor-color-input::-webkit-color-swatch { border: 0; opacity: 0; }
+    .editor-color-input::-moz-color-swatch { border: 0; opacity: 0; }
     .editor-color-input:disabled { cursor: not-allowed; opacity: .38; }
     .editor-actions { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
     .editor-delete { color: #9b2b42; }
@@ -756,6 +831,8 @@
       .editor-toolbar { align-items: flex-start; }
       .editor-button { min-height: 40px; }
       .editor-icon-button { width: 40px; }
+      .editor-motif-menu { width: min(350px, calc(100vw - 70px)); }
+      .editor-motif-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
       .editor-selection-row { grid-template-columns: 1fr; }
       .editor-selection-head { align-items: flex-start; flex-direction: column; gap: 2px; }
       .editor-selection-status { max-width: 100%; }
@@ -806,6 +883,13 @@
             <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
               <div class="editor-tools">
                 <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
+                <div class="editor-motif-picker">
+                  <button class="editor-button editor-button-primary" id="editor-icon-toggle" type="button" aria-expanded="false" aria-controls="editor-icon-menu" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Motiv</button>
+                  <div class="editor-motif-menu" id="editor-icon-menu" role="dialog" aria-label="Motiv auswählen" hidden>
+                    <strong class="editor-motif-title">Welches Motiv möchtet ihr hinzufügen?</strong>
+                    <div class="editor-motif-grid" id="editor-icon-grid"></div>
+                  </div>
+                </div>
                 <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Zurücksetzen</button>
               </div>
               <div class="editor-tools">
@@ -816,13 +900,13 @@
                 <button class="editor-button editor-icon-button" id="editor-zoom-in" type="button" aria-label="Ansicht vergrößern" title="Ansicht vergrößern">＋</button>
               </div>
             </div>
-            <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Wort">
+            <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
               <div class="editor-selection-head">
-                <strong class="editor-selection-status" id="editor-selection-status">Wort auswählen</strong>
-                <span class="editor-selection-hint" id="editor-selection-hint">Wort anklicken, um die Werkzeuge zu aktivieren</span>
+                <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
+                <span class="editor-selection-hint" id="editor-selection-hint">Wort oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
               </div>
               <div class="editor-selection-row">
-                <label class="editor-field-label">Ausgewähltes Wort
+                <label class="editor-field-label"><span id="editor-text-label">Ausgewähltes Element</span>
                   <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
                 </label>
                 <div class="editor-field-label">Farbe
@@ -843,11 +927,11 @@
             </div>
             <div class="editor-scroll is-fit" id="editor-scroll">
               <div class="editor-canvas-shell" id="editor-canvas-shell">
-                <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
+                <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
                 <span class="print-safe-guide" aria-hidden="true"></span>
               </div>
             </div>
-            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort auswählen und ziehen oder doppelklicken, um es direkt zu bearbeiten.</p>
+            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort oder Motiv auswählen und direkt auf der Druckfläche bearbeiten.</p>
           </div>
         </section>
 
@@ -950,7 +1034,8 @@
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
   <script src="/js/wordcloud-core.js?v=20260817-3"></script>
-  <script src="/js/mug-editor.js?v=20260817-1"></script>
+  <script src="/js/mug-icons.js?v=20260817-1"></script>
+  <script src="/js/mug-editor.js?v=20260817-2"></script>
   <script>
     'use strict';
 
@@ -1176,9 +1261,23 @@
         ctx.save();
         ctx.translate(offsetX + item.x * scale, offsetY + item.y * scale);
         ctx.rotate((item.angle || 0) * Math.PI / 180);
-        ctx.font = `${item.fontSize * scale}px ${WordCloudCore.FONT_FAMILY}`;
-        ctx.fillStyle = item.color;
-        ctx.fillText(item.text, 0, item.fontSize * scale * .34);
+        if (item.type === 'icon') {
+          const icon = MugIcons.get(item.icon);
+          if (icon) {
+            const iconScale = item.size * scale / MugIcons.VIEWBOX_SIZE;
+            ctx.scale(iconScale, iconScale);
+            ctx.translate(-MugIcons.VIEWBOX_SIZE / 2, -MugIcons.VIEWBOX_SIZE / 2);
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = MugIcons.STROKE_WIDTH;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke(new Path2D(icon.path));
+          }
+        } else {
+          ctx.font = `${item.fontSize * scale}px ${WordCloudCore.FONT_FAMILY}`;
+          ctx.fillStyle = item.color;
+          ctx.fillText(item.text, 0, item.fontSize * scale * .34);
+        }
         ctx.restore();
       }
     }
@@ -1623,11 +1722,15 @@
         selectionStatus: document.getElementById('editor-selection-status'),
         selectionHint: document.getElementById('editor-selection-hint'),
         textInput: document.getElementById('editor-text'),
+        textLabel: document.getElementById('editor-text-label'),
         swatches: document.getElementById('editor-swatches'),
         colorInput: document.getElementById('editor-color'),
         feedback: document.getElementById('editor-feedback'),
         zoomLabel: document.getElementById('editor-zoom-label'),
         addButton: document.getElementById('editor-add'),
+        iconButton: document.getElementById('editor-icon-toggle'),
+        iconMenu: document.getElementById('editor-icon-menu'),
+        iconGrid: document.getElementById('editor-icon-grid'),
         resetButton: document.getElementById('editor-reset'),
         undoButton: document.getElementById('editor-undo'),
         redoButton: document.getElementById('editor-redo'),

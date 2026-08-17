@@ -10,13 +10,14 @@ const stripe = require('../stripe');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const { MUG_DUO, getProduct, getPublicProduct } = require('../products');
 const { buildMugPrintSvg, isMugDesignWithinBounds } = require('../mugPrint');
+const MugIcons = require('../../public/js/mug-icons.js');
 
 const PIN_RE = /^\d{4,6}$/;
 const MAX_NAME_LENGTH = 80;
 const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
 // left for words the couple adds manually in the editor.
-const MAX_DESIGN_WORDS = 500;
+const MAX_DESIGN_ELEMENTS = 500;
 
 function normalizeSnapshotWords(rawWords) {
   if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
@@ -46,37 +47,48 @@ function normalizeDesignText(rawText) {
 }
 
 function normalizeDesign(rawDesign, width, height) {
-  if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_WORDS) {
+  if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
   }
   const ids = new Set();
   const normalized = [];
   for (const [index, rawItem] of rawDesign.entries()) {
     if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
-    const text = normalizeDesignText(rawItem.text);
+    const type = rawItem.type == null || rawItem.type === 'text' ? 'text' : rawItem.type;
+    if (type !== 'text' && type !== 'icon') return null;
     const x = Number(rawItem.x);
     const y = Number(rawItem.y);
-    const fontSize = Number(rawItem.fontSize);
     const rawAngle = Number(rawItem.angle ?? 0);
     const color = String(rawItem.color || '').toLowerCase();
-    const id = String(rawItem.id || `wort-${index + 1}`).slice(0, 64);
-    if (!id || ids.has(id) || !text || !Number.isFinite(x) || !Number.isFinite(y) ||
-        !Number.isFinite(fontSize) || !Number.isFinite(rawAngle) ||
-        fontSize < 12 || fontSize > height || !/^#[0-9a-f]{6}$/.test(color)) {
+    const id = String(rawItem.id || `${type === 'icon' ? 'motiv' : 'wort'}-${index + 1}`).slice(0, 64);
+    if (!id || ids.has(id) || !Number.isFinite(x) || !Number.isFinite(y) ||
+        !Number.isFinite(rawAngle) || !/^#[0-9a-f]{6}$/.test(color)) {
       return null;
     }
     ids.add(id);
     const angle = ((rawAngle + 180) % 360 + 360) % 360 - 180;
-    normalized.push({
+    const common = {
       id,
-      text,
+      type,
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
-      fontSize: Math.round(fontSize * 10) / 10,
       angle: Math.round(angle * 10) / 10,
       color,
-    });
+    };
+    if (type === 'icon') {
+      const icon = String(rawItem.icon || '');
+      const size = Number(rawItem.size);
+      if (!MugIcons.has(icon) || !Number.isFinite(size) || size < 48 || size > height) return null;
+      normalized.push({ ...common, icon, size: Math.round(size * 10) / 10 });
+      continue;
+    }
+
+    const text = normalizeDesignText(rawItem.text);
+    const fontSize = Number(rawItem.fontSize);
+    if (!text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
+    normalized.push({ ...common, text, fontSize: Math.round(fontSize * 10) / 10 });
   }
+  if (!normalized.some((item) => item.type === 'text')) return null;
   return isMugDesignWithinBounds(normalized, width, height) ? normalized : null;
 }
 

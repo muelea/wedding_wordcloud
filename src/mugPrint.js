@@ -2,6 +2,7 @@
 
 const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
+const MugIcons = require('../public/js/mug-icons.js');
 const { MUG_DUO } = require('./products');
 
 const measureCanvas = createCanvas(10, 10);
@@ -37,22 +38,30 @@ function layoutSlot(words, slot, colors) {
 }
 
 function getDesignBounds(item) {
-  measureCtx.font = `${item.fontSize}px ${WordCloudCore.FONT_FAMILY}`;
-  const metrics = measureCtx.measureText(item.text);
-  const textWidth = Math.max(1, metrics.width);
-  const textHeight = Math.max(1, item.fontSize);
+  let itemWidth;
+  let itemHeight;
+  if (item.type === 'icon') {
+    itemWidth = item.size;
+    itemHeight = item.size;
+  } else {
+    measureCtx.font = `${item.fontSize}px ${WordCloudCore.FONT_FAMILY}`;
+    const metrics = measureCtx.measureText(item.text);
+    itemWidth = Math.max(1, metrics.width);
+    itemHeight = Math.max(1, item.fontSize);
+  }
   const radians = item.angle * Math.PI / 180;
   const cos = Math.abs(Math.cos(radians));
   const sin = Math.abs(Math.sin(radians));
   return {
-    width: textWidth * cos + textHeight * sin,
-    height: textWidth * sin + textHeight * cos,
+    width: itemWidth * cos + itemHeight * sin,
+    height: itemWidth * sin + itemHeight * cos,
   };
 }
 
 function isMugDesignWithinBounds(design, width = MUG_DUO.printFile.width, height = MUG_DUO.printFile.height) {
   if (!Array.isArray(design) || design.length === 0) return false;
   return design.every((item) => {
+    if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
     const bounds = getDesignBounds(item);
     const halfWidth = bounds.width / 2;
     const halfHeight = bounds.height / 2;
@@ -63,8 +72,18 @@ function isMugDesignWithinBounds(design, width = MUG_DUO.printFile.width, height
   });
 }
 
-function designTextElements(design) {
+function designElements(design) {
   return design.map((item) => {
+    if (item.type === 'icon') {
+      const icon = MugIcons.get(item.icon);
+      const scale = item.size / MugIcons.VIEWBOX_SIZE;
+      const transform = `translate(${item.x.toFixed(1)} ${item.y.toFixed(1)}) ` +
+        `rotate(${item.angle.toFixed(1)}) scale(${scale.toFixed(6)}) ` +
+        `translate(${-MugIcons.VIEWBOX_SIZE / 2} ${-MugIcons.VIEWBOX_SIZE / 2})`;
+      return `<path data-motif="${icon.id}" d="${icon.path}" fill="none" stroke="${item.color}" ` +
+        `stroke-width="${MugIcons.STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round" ` +
+        `transform="${transform}"/>`;
+    }
     const rotate = item.angle
       ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
       : '';
@@ -94,7 +113,7 @@ function buildMugPrintSvg(words, theme = 'pastel', layout = 'single', design = n
     return `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
       `viewBox="0 0 ${width} ${height}" data-background="transparent">\n` +
-      `  <g data-cloud="${layout}" data-custom="true">\n  ${designTextElements(design)}\n</g>\n` +
+      `  <g data-cloud="${layout}" data-custom="true">\n  ${designElements(design)}\n</g>\n` +
       `</svg>`;
   }
 

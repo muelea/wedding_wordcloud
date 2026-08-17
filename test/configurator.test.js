@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
+const MugIcons = require('../public/js/mug-icons.js');
 
 function connectSocket(baseUrl, slug) {
   return new Promise((resolve, reject) => {
@@ -70,6 +71,11 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(fabricBrowserBuild.status, 200);
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
+
+  const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260817-1`);
+  assert.equal(motifLibrary.status, 200);
+  assert.equal(MugIcons.ICONS.length, 10);
+  assert.ok(MugIcons.ICONS.every((icon) => icon.id && icon.label && icon.path));
 });
 
 test('confirmed configuration freezes the approved words in a permanent Printful-sized SVG', async (t) => {
@@ -193,6 +199,7 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   const design = [
     { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456' },
     { id: 'wort-2', text: 'für immer', x: 1550, y: 655, fontSize: 82, angle: -30, color: '#abcdef' },
+    { id: 'motiv-1', type: 'icon', icon: 'heart', x: 1880, y: 390, size: 170, angle: -12, color: '#d90368' },
   ];
 
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
@@ -217,8 +224,12 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.match(svg, /fill="#123456"/);
   assert.match(svg, />Unser Wort<\/text>/);
   assert.match(svg, />für immer<\/text>/);
+  assert.match(svg, /data-motif="heart"/);
+  assert.match(svg, /stroke="#d90368"/);
+  assert.match(svg, /translate\(1880\.0 390\.0\) rotate\(-12\.0\)/);
   assert.doesNotMatch(svg, />ursprünglich<\/text>/, 'the edited design, not the original cloud, is printed');
   assert.equal((svg.match(/<text /g) || []).length, 2);
+  assert.equal((svg.match(/<path data-motif=/g) || []).length, 1);
   assert.doesNotMatch(svg, /<rect\b/);
 
   const outside = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
@@ -234,4 +245,38 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   });
   assert.equal(outside.status, 400);
   assert.equal((await outside.json()).error, 'invalid_design');
+
+  const outsideMotif = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      placement: 'single',
+      words,
+      design: [
+        { id: 'wort-1', text: 'bleibt', x: 1200, y: 500, fontSize: 100, angle: 0, color: '#123456' },
+        { id: 'motiv-rand', type: 'icon', icon: 'heart', x: 30, y: 500, size: 160, angle: 0, color: '#d90368' },
+      ],
+    }),
+  });
+  assert.equal(outsideMotif.status, 400);
+  assert.equal((await outsideMotif.json()).error, 'invalid_design');
+
+  const unknownMotif = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      placement: 'single',
+      words,
+      design: [
+        { id: 'wort-1', text: 'bleibt', x: 1200, y: 500, fontSize: 100, angle: 0, color: '#123456' },
+        { id: 'motiv-fremd', type: 'icon', icon: 'uploaded-script', x: 1500, y: 500, size: 160, angle: 0, color: '#123456' },
+      ],
+    }),
+  });
+  assert.equal(unknownMotif.status, 400);
+  assert.equal((await unknownMotif.json()).error, 'invalid_design');
 });

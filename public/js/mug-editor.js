@@ -4,6 +4,7 @@
   const EDITOR_SCALE = .5;
   const PRINT_MARGIN = 24;
   const MIN_PRINT_FONT_SIZE = 12;
+  const MIN_PRINT_ICON_SIZE = 48;
   const MAX_HISTORY = 60;
 
   function round(value) {
@@ -17,6 +18,7 @@
   class MugPrintEditor {
     constructor(options) {
       if (!root.fabric) throw new Error('Fabric.js is required for the mug editor');
+      if (!root.MugIcons) throw new Error('MugIcons is required for the mug editor');
       this.width = options.printWidth;
       this.height = options.printHeight;
       this.canvasWidth = this.width * EDITOR_SCALE;
@@ -29,11 +31,15 @@
       this.scroll = options.scroll;
       this.selectionPanel = options.selectionPanel;
       this.textInput = options.textInput;
+      this.textLabel = options.textLabel;
       this.swatches = options.swatches;
       this.zoomLabel = options.zoomLabel;
       this.feedback = options.feedback;
       this.selectionStatus = options.selectionStatus;
       this.selectionHint = options.selectionHint;
+      this.iconButton = options.iconButton;
+      this.iconMenu = options.iconMenu;
+      this.iconGrid = options.iconGrid;
       this.selectionActions = [
         options.smallerButton,
         options.largerButton,
@@ -62,10 +68,12 @@
       this.bindCanvasEvents();
       this.bindControls(options);
       this.renderSwatches();
+      this.renderIconPicker();
       this.setZoom(1);
     }
 
     makeObject(item) {
+      if (item.type === 'icon') return this.makeIconObject(item);
       const text = new root.fabric.IText(item.text, {
         left: item.x * EDITOR_SCALE,
         top: item.y * EDITOR_SCALE,
@@ -92,15 +100,75 @@
         hoverCursor: 'move',
         moveCursor: 'grabbing',
       });
+      text.editorKind = 'text';
       text.editorId = item.id || this.nextId();
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
     }
 
-    nextId() {
+    makeIconObject(item) {
+      const definition = root.MugIcons.get(item.icon);
+      if (!definition) throw new Error(`Unknown mug icon: ${item.icon}`);
+      const viewBox = root.MugIcons.VIEWBOX_SIZE;
+      const color = item.color || this.palette[0];
+      const frame = new root.fabric.Rect({
+        left: 0,
+        top: 0,
+        originX: 'center',
+        originY: 'center',
+        width: viewBox,
+        height: viewBox,
+        fill: 'rgba(0,0,0,0)',
+        strokeWidth: 0,
+        evented: false,
+      });
+      const drawing = new root.fabric.Path(definition.path, {
+        left: 0,
+        top: 0,
+        originX: 'center',
+        originY: 'center',
+        fill: null,
+        stroke: color,
+        strokeWidth: root.MugIcons.STROKE_WIDTH,
+        strokeLineCap: 'round',
+        strokeLineJoin: 'round',
+        evented: false,
+      });
+      const icon = new root.fabric.Group([frame, drawing], {
+        left: item.x * EDITOR_SCALE,
+        top: item.y * EDITOR_SCALE,
+        originX: 'center',
+        originY: 'center',
+        angle: item.angle || 0,
+        lockScalingFlip: true,
+        centeredScaling: true,
+        centeredRotation: true,
+        transparentCorners: false,
+        cornerColor: '#ffffff',
+        cornerStrokeColor: '#9c1c4c',
+        borderColor: '#9c1c4c',
+        cornerStyle: 'circle',
+        cornerSize: 14,
+        touchCornerSize: 28,
+        padding: 3,
+        hoverCursor: 'move',
+        moveCursor: 'grabbing',
+      });
+      icon.editorKind = 'icon';
+      icon.editorIcon = definition.id;
+      icon.editorIconLabel = definition.label;
+      icon.editorDrawing = drawing;
+      icon.editorId = item.id || this.nextId('motiv');
+      this.setIconSize(icon, Math.max(MIN_PRINT_ICON_SIZE, item.size || 160));
+      icon.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+      icon.setCoords();
+      return icon;
+    }
+
+    nextId(prefix = 'wort') {
       this.idCounter += 1;
-      return `wort-${Date.now().toString(36)}-${this.idCounter}`;
+      return `${prefix}-${Date.now().toString(36)}-${this.idCounter}`;
     }
 
     bindCanvasEvents() {
@@ -120,13 +188,13 @@
       });
 
       this.canvas.on('text:editing:entered', (event) => {
-        if (!event.target) return;
+        if (!event.target || event.target.editorKind !== 'text') return;
         event.target.editorTextBeforeEditing = event.target.text;
         this.updateSelectionPanel();
       });
       this.canvas.on('text:changed', (event) => {
         const object = event.target;
-        if (!object) return;
+        if (!object || object.editorKind !== 'text') return;
         const text = this.normalizeText(object.text);
         if (text !== object.text) object.set({ text });
         this.keepInside(object);
@@ -137,7 +205,7 @@
       });
       this.canvas.on('text:editing:exited', (event) => {
         const object = event.target;
-        if (!object) return;
+        if (!object || object.editorKind !== 'text') return;
         const text = this.normalizeText(object.text, true) || object.editorTextBeforeEditing || 'wort';
         object.set({ text });
         this.keepInside(object);
@@ -170,6 +238,10 @@
 
     bindControls(options) {
       options.addButton.addEventListener('click', () => this.addWord());
+      options.iconButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.toggleIconPicker();
+      });
       options.undoButton.addEventListener('click', () => this.undo());
       options.redoButton.addEventListener('click', () => this.redo());
       options.resetButton.addEventListener('click', () => this.onReset());
@@ -185,7 +257,7 @@
       this.textInput.addEventListener('input', () => {
         const active = this.canvas.getActiveObject();
         const text = this.normalizeText(this.textInput.value);
-        if (!active || !text.trim()) return;
+        if (!active || active.editorKind !== 'text' || !text.trim()) return;
         active.set({ text });
         this.keepInside(active);
         active.setCoords();
@@ -194,7 +266,7 @@
       });
       this.textInput.addEventListener('change', () => {
         const active = this.canvas.getActiveObject();
-        if (!active) return;
+        if (!active || active.editorKind !== 'text') return;
         const text = this.normalizeText(this.textInput.value, true) || active.text;
         active.set({ text });
         this.textInput.value = text;
@@ -206,7 +278,7 @@
       });
       this.textInput.addEventListener('blur', () => {
         const active = this.canvas.getActiveObject();
-        if (active && !this.textInput.value.trim()) this.textInput.value = active.text;
+        if (active?.editorKind === 'text' && !this.textInput.value.trim()) this.textInput.value = active.text;
       });
       options.colorInput.addEventListener('input', () => this.setActiveColor(options.colorInput.value));
       this.colorInput = options.colorInput;
@@ -228,12 +300,53 @@
           this.deleteActive();
           event.preventDefault();
         }
+        if (event.key === 'Escape') this.closeIconPicker();
+      });
+      document.addEventListener('click', (event) => {
+        if (!this.iconMenu.hidden && !event.target.closest('.editor-motif-picker')) this.closeIconPicker();
       });
 
       this.undoButton = options.undoButton;
       this.redoButton = options.redoButton;
       this.zoomOutButton = options.zoomOutButton;
       this.zoomInButton = options.zoomInButton;
+    }
+
+    renderIconPicker() {
+      this.iconGrid.replaceChildren();
+      const svgNamespace = 'http://www.w3.org/2000/svg';
+      for (const icon of root.MugIcons.ICONS) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'editor-motif-option';
+        button.setAttribute('aria-label', `${icon.label} hinzufügen`);
+        button.title = icon.label;
+
+        const svg = document.createElementNS(svgNamespace, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${root.MugIcons.VIEWBOX_SIZE} ${root.MugIcons.VIEWBOX_SIZE}`);
+        svg.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS(svgNamespace, 'path');
+        path.setAttribute('d', icon.path);
+        svg.appendChild(path);
+
+        const label = document.createElement('span');
+        label.textContent = icon.label;
+        button.append(svg, label);
+        button.addEventListener('click', () => this.addIcon(icon.id));
+        this.iconGrid.appendChild(button);
+      }
+    }
+
+    toggleIconPicker() {
+      const shouldOpen = this.iconMenu.hidden;
+      this.iconMenu.hidden = !shouldOpen;
+      this.iconButton.setAttribute('aria-expanded', String(shouldOpen));
+      if (shouldOpen) this.iconGrid.querySelector('button')?.focus();
+    }
+
+    closeIconPicker() {
+      this.iconMenu.hidden = true;
+      this.iconButton.setAttribute('aria-expanded', 'false');
     }
 
     setDesign(design, { resetHistory = false, record = false } = {}) {
@@ -255,15 +368,17 @@
     }
 
     getDesign() {
-      return this.canvas.getObjects().map((object) => ({
-        id: object.editorId,
-        text: object.text,
-        x: round(object.left / EDITOR_SCALE),
-        y: round(object.top / EDITOR_SCALE),
-        fontSize: round(object.fontSize * object.scaleX / EDITOR_SCALE),
-        angle: round(object.angle || 0),
-        color: String(object.fill).toLowerCase(),
-      }));
+      return this.canvas.getObjects().map((object) => {
+        const item = this.serializeObject(object);
+        return {
+          ...item,
+          x: round(item.x),
+          y: round(item.y),
+          ...(item.type === 'icon' ? { size: round(item.size) } : { fontSize: round(item.fontSize) }),
+          angle: round(item.angle),
+          color: item.color.toLowerCase(),
+        };
+      });
     }
 
     handleTransform(object) {
@@ -274,9 +389,34 @@
 
     absorbScale(object) {
       if (!object) return;
+      if (object.editorKind === 'icon') {
+        const size = Math.max(object.width * object.scaleX, object.height * object.scaleY) / EDITOR_SCALE;
+        this.setIconSize(object, Math.max(MIN_PRINT_ICON_SIZE, size));
+        object.setCoords();
+        return;
+      }
       const nextSize = Math.max(MIN_PRINT_FONT_SIZE * EDITOR_SCALE, object.fontSize * object.scaleX);
       object.set({ fontSize: nextSize, scaleX: 1, scaleY: 1 });
       object.setCoords();
+    }
+
+    setIconSize(object, printSize) {
+      const baseSize = Math.max(object.width, object.height) || root.MugIcons.VIEWBOX_SIZE;
+      const scale = printSize * EDITOR_SCALE / baseSize;
+      object.set({ scaleX: scale, scaleY: scale });
+    }
+
+    getObjectColor(object) {
+      return String(object.editorKind === 'icon' ? object.editorDrawing.stroke : object.fill);
+    }
+
+    applyObjectColor(object, color) {
+      if (object.editorKind === 'icon') {
+        object.editorDrawing.set({ stroke: color });
+        object.dirty = true;
+      } else {
+        object.set({ fill: color });
+      }
     }
 
     keepInside(object) {
@@ -361,6 +501,7 @@
     }
 
     addWord() {
+      this.closeIconPicker();
       const color = this.palette[this.canvas.getObjects().length % this.palette.length];
       const object = this.makeObject({
         id: this.nextId(),
@@ -385,20 +526,50 @@
       this.setFeedback('Neues Wort hinzugefügt');
     }
 
+    addIcon(iconId) {
+      const definition = root.MugIcons.get(iconId);
+      if (!definition) return;
+      const color = this.palette[this.canvas.getObjects().length % this.palette.length];
+      const object = this.makeObject({
+        id: this.nextId('motiv'),
+        type: 'icon',
+        icon: definition.id,
+        x: this.width / 2,
+        y: this.height / 2,
+        size: 170,
+        angle: 0,
+        color,
+      });
+      const offset = (this.canvas.getObjects().length % 5) * 18;
+      object.set({ left: object.left + offset, top: object.top + offset });
+      this.keepInside(object);
+      this.canvas.add(object);
+      this.canvas.setActiveObject(object);
+      this.canvas.requestRenderAll();
+      this.closeIconPicker();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.setFeedback(`${definition.label} hinzugefügt`);
+    }
+
     deleteActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return;
-      if (this.canvas.getObjects().length <= 1) {
+      const isLastWord = active.editorKind === 'text' &&
+        this.canvas.getObjects().filter((object) => object.editorKind === 'text').length <= 1;
+      if (isLastWord) {
         this.setFeedback('Mindestens ein Wort muss bleiben.');
         return;
       }
+      const deletedLabel = active.editorKind === 'icon' ? 'Motiv' : 'Wort';
       this.canvas.remove(active);
       this.canvas.discardActiveObject();
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.setFeedback('Wort gelöscht');
+      this.setFeedback(`${deletedLabel} gelöscht`);
     }
 
     duplicateActive() {
@@ -416,18 +587,29 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.setFeedback('Wort dupliziert');
+      this.setFeedback(active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
     }
 
     serializeObject(object) {
-      return {
+      const common = {
         id: object.editorId,
-        text: object.text,
         x: object.left / EDITOR_SCALE,
         y: object.top / EDITOR_SCALE,
-        fontSize: object.fontSize * object.scaleX / EDITOR_SCALE,
         angle: object.angle || 0,
-        color: String(object.fill),
+        color: this.getObjectColor(object),
+      };
+      if (object.editorKind === 'icon') {
+        return {
+          ...common,
+          type: 'icon',
+          icon: object.editorIcon,
+          size: Math.max(object.width * object.scaleX, object.height * object.scaleY) / EDITOR_SCALE,
+        };
+      }
+      return {
+        ...common,
+        text: object.text,
+        fontSize: object.fontSize * object.scaleX / EDITOR_SCALE,
       };
     }
 
@@ -457,7 +639,7 @@
     setActiveColor(color) {
       const active = this.canvas.getActiveObject();
       if (!active || !/^#[0-9a-f]{6}$/i.test(color)) return;
-      active.set({ fill: color });
+      this.applyObjectColor(active, color);
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
@@ -466,7 +648,7 @@
 
     applyPalette(colors) {
       this.palette = colors;
-      this.canvas.getObjects().forEach((object, index) => object.set({ fill: colors[index % colors.length] }));
+      this.canvas.getObjects().forEach((object, index) => this.applyObjectColor(object, colors[index % colors.length]));
       this.canvas.requestRenderAll();
       this.renderSwatches();
       this.recordHistory();
@@ -494,30 +676,41 @@
     updateSelectionPanel() {
       const active = this.canvas.getActiveObject();
       const hasSelection = Boolean(active);
+      const isIcon = active?.editorKind === 'icon';
       this.selectionPanel.classList.toggle('is-active', hasSelection);
       this.selectionPanel.setAttribute('aria-disabled', String(!hasSelection));
       this.shell.classList.toggle('has-selection', hasSelection);
-      this.textInput.disabled = !hasSelection;
+      this.textInput.disabled = !hasSelection || isIcon;
       this.colorInput.disabled = !hasSelection;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
         button.disabled = !hasSelection;
       });
       if (!active) {
-        this.selectionStatus.textContent = 'Wort auswählen';
-        this.selectionHint.textContent = 'Wort anklicken, um die Werkzeuge zu aktivieren';
+        this.selectionStatus.textContent = 'Element auswählen';
+        this.selectionHint.textContent = 'Wort oder Motiv anklicken, um die Werkzeuge zu aktivieren';
+        this.textLabel.textContent = 'Ausgewähltes Element';
         this.textInput.value = '';
         this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
           button.classList.remove('is-selected');
         });
         return;
       }
-      this.selectionStatus.textContent = `„${active.text}“ bearbeiten`;
-      this.selectionHint.textContent = 'Doppelklick: Text direkt im Motiv bearbeiten';
-      this.textInput.value = active.text;
-      this.colorInput.value = String(active.fill);
+      if (isIcon) {
+        this.selectionStatus.textContent = `${active.editorIconLabel} bearbeiten`;
+        this.selectionHint.textContent = 'Motiv ziehen, drehen, färben oder skalieren';
+        this.textLabel.textContent = 'Ausgewähltes Motiv';
+        this.textInput.value = active.editorIconLabel;
+      } else {
+        this.selectionStatus.textContent = `„${active.text}“ bearbeiten`;
+        this.selectionHint.textContent = 'Doppelklick: Wort direkt bearbeiten';
+        this.textLabel.textContent = 'Ausgewähltes Wort';
+        this.textInput.value = active.text;
+      }
+      const activeColor = this.getObjectColor(active);
+      this.colorInput.value = activeColor;
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
-        button.classList.toggle('is-selected', button.dataset.color === String(active.fill).toLowerCase());
+        button.classList.toggle('is-selected', button.dataset.color === activeColor.toLowerCase());
       });
     }
 
