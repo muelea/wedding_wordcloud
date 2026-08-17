@@ -52,7 +52,7 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(data.product.unitPriceCents, 1745);
   assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
-    ['pastel', 'rose-garden', 'sage-gold', 'terracotta', 'ocean', 'classic', 'neon']
+    ['pastel', 'rose-garden', 'sage-gold', 'terracotta', 'ocean', 'classic', 'neon', 'custom']
   );
   assert.ok(data.product.themes.every((theme) => theme.colors.length >= 6));
   assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap']);
@@ -149,7 +149,7 @@ test('two-sided placement prints each approved word exactly twice and rejects in
   assert.equal((svg.match(/<text /g) || []).length, 4);
   assert.equal((svg.match(/liebe &amp; treue/g) || []).length, 2);
   assert.equal((svg.match(/>spaß<\/text>/g) || []).length, 2);
-  assert.match(svg, /fill="#425b4a"/);
+  assert.match(svg, /fill="#063e36"/);
   assert.doesNotMatch(svg, /<rect\b/);
 
   const fullWrapSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
@@ -163,7 +163,7 @@ test('two-sided placement prints each approved word exactly twice and rejects in
   assert.match(fullWrapSvg, /data-cloud="full-wrap"/);
   assert.equal((fullWrapSvg.match(/<text /g) || []).length, 2);
   assert.equal((fullWrapSvg.match(/<g data-cloud=/g) || []).length, 1);
-  assert.match(fullWrapSvg, /fill="#173a4a"/);
+  assert.match(fullWrapSvg, /fill="#003049"/);
   assert.doesNotMatch(fullWrapSvg, /<rect\b/);
 });
 
@@ -183,7 +183,7 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     body: JSON.stringify({
       productKey: 'white-glossy-mug-duo-11oz',
       quantity: 2,
-      theme: 'pastel',
+      theme: 'custom',
       placement: 'full-wrap',
       words,
       design,

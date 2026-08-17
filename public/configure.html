@@ -393,7 +393,7 @@
     }
     .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
     .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
-    .editor-swatches { display: flex; align-items: center; gap: 5px; }
+    .editor-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
     .editor-swatch {
       width: 23px;
       height: 23px;
@@ -557,8 +557,120 @@
     }
     .option-card strong { font-size: 13px; font-weight: 600; }
     .option-card small { color: var(--muted); font-size: 11px; line-height: 1.4; }
-    .swatches { display: flex; gap: 5px; margin-bottom: 12px; }
-    .swatches i { width: 15px; height: 15px; display: block; border-radius: 50%; }
+    .theme-option-card {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+    }
+    .theme-option-card::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      background: linear-gradient(135deg, var(--theme-soft), transparent 62%);
+      opacity: .78;
+      transition: opacity .2s;
+    }
+    .option:hover .theme-option-card::before,
+    .option input:checked + .theme-option-card::before { opacity: 1; }
+    .option input:checked + .theme-option-card {
+      border-color: var(--theme-accent);
+      box-shadow: inset 0 0 0 1px var(--theme-accent), 0 8px 22px var(--theme-shadow);
+    }
+    .swatches {
+      height: 16px;
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: repeat(var(--swatch-count, 6), 1fr);
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,.92);
+      border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(50, 20, 31, .16), 0 0 0 1px rgba(62,35,45,.08);
+    }
+    .swatches i { min-width: 0; height: 100%; display: block; }
+    .custom-palette-panel {
+      margin-top: 12px;
+      padding: 16px;
+      border: 1px solid rgba(156,28,76,.18);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(248,239,233,.72));
+      box-shadow: 0 8px 24px rgba(73,29,44,.06);
+    }
+    .custom-palette-panel[hidden] { display: none; }
+    .custom-palette-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .custom-palette-copy strong { display: block; font-size: 13px; }
+    .custom-palette-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .custom-color-add {
+      flex: none;
+      min-height: 36px;
+      padding: 8px 11px;
+      border: 1px solid rgba(156,28,76,.24);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--berry);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .custom-color-add:hover { border-color: var(--berry); background: rgba(156,28,76,.04); }
+    .custom-color-list {
+      margin-top: 13px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 8px;
+    }
+    .custom-color-item {
+      min-width: 0;
+      padding: 7px;
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) 28px;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(62,35,45,.1);
+      border-radius: 11px;
+      background: rgba(255,255,255,.9);
+    }
+    .custom-color-input {
+      width: 36px;
+      height: 36px;
+      padding: 3px;
+      border: 1px solid rgba(62,35,45,.12);
+      border-radius: 9px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .custom-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+    .custom-color-input::-webkit-color-swatch { border: 0; border-radius: 6px; }
+    .custom-color-input::-moz-color-swatch { border: 0; border-radius: 6px; }
+    .custom-color-value {
+      overflow: hidden;
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .custom-color-remove {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 17px;
+      line-height: 1;
+    }
+    .custom-color-remove:hover { background: rgba(156,28,76,.08); color: var(--berry); }
+    .custom-color-remove:disabled { cursor: not-allowed; opacity: .25; }
+    .custom-palette-note { margin: 11px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 
     .summary {
       padding: 20px;
@@ -788,6 +900,17 @@
           <section class="step">
             <h3 class="step-title"><span class="step-number">3</span> Farbwelt</h3>
             <div class="option-grid" id="theme-options"></div>
+            <div class="custom-palette-panel" id="custom-palette-panel" hidden>
+              <div class="custom-palette-head">
+                <div class="custom-palette-copy">
+                  <strong>Eure Farben</strong>
+                  <span>So viele oder wenige, wie ihr möchtet.</span>
+                </div>
+                <button class="custom-color-add" id="custom-color-add" type="button">＋ Farbe</button>
+              </div>
+              <div class="custom-color-list" id="custom-color-list"></div>
+              <p class="custom-palette-note">Die Farben werden gleichmäßig auf eure Wörter verteilt. Einzelne Wörter könnt ihr unten auf der Druckfläche weiterhin separat ändern.</p>
+            </div>
           </section>
 
           <section class="step">
@@ -850,11 +973,15 @@
     const mugViewer = document.getElementById('mug-3d');
     const wrapCanvas = document.getElementById('wrap-canvas');
     const themeOptions = document.getElementById('theme-options');
+    const customPalettePanel = document.getElementById('custom-palette-panel');
+    const customColorList = document.getElementById('custom-color-list');
+    const customColorAdd = document.getElementById('custom-color-add');
     const quantityInput = document.getElementById('quantity');
 
     let words = [];
     let product = null;
     let selectedTheme = 'pastel';
+    let customColors = [];
     let selectedPlacement = 'single';
     let quantity = 2;
     let renderFrame = null;
@@ -881,8 +1008,93 @@
     }
 
     function getPalette(themeKey) {
-      return product.themes.find((option) => option.key === themeKey) || product.themes[0];
+      const palette = product.themes.find((option) => option.key === themeKey) || product.themes[0];
+      return palette.key === 'custom' && customColors.length
+        ? { ...palette, colors: customColors }
+        : palette;
     }
+
+    function colorWithAlpha(hex, alpha) {
+      const value = hex.replace('#', '');
+      const red = Number.parseInt(value.slice(0, 2), 16);
+      const green = Number.parseInt(value.slice(2, 4), 16);
+      const blue = Number.parseInt(value.slice(4, 6), 16);
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
+    function renderPaletteStrip(swatches, colors) {
+      swatches.replaceChildren();
+      swatches.style.setProperty('--swatch-count', String(colors.length));
+      for (const color of colors) {
+        const swatch = document.createElement('i');
+        swatch.style.backgroundColor = color;
+        swatches.appendChild(swatch);
+      }
+    }
+
+    function updateCustomThemeCard() {
+      const card = themeOptions.querySelector('[data-theme-card="custom"]');
+      if (!card || !customColors.length) return;
+      card.style.setProperty('--theme-accent', customColors[0]);
+      card.style.setProperty('--theme-soft', colorWithAlpha(customColors[1] || customColors[0], .12));
+      card.style.setProperty('--theme-shadow', colorWithAlpha(customColors[0], .16));
+      renderPaletteStrip(card.querySelector('.swatches'), customColors);
+    }
+
+    function applyCustomPalette() {
+      updateCustomThemeCard();
+      markDirty();
+      if (mugEditor) mugEditor.applyPalette(customColors);
+      renderAll();
+    }
+
+    function renderCustomColorControls() {
+      customPalettePanel.hidden = selectedTheme !== 'custom';
+      customColorList.replaceChildren();
+      customColors.forEach((color, index) => {
+        const item = document.createElement('div');
+        item.className = 'custom-color-item';
+
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.className = 'custom-color-input';
+        input.value = color;
+        input.setAttribute('aria-label', `Farbe ${index + 1} wählen`);
+
+        const value = document.createElement('span');
+        value.className = 'custom-color-value';
+        value.textContent = color;
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'custom-color-remove';
+        remove.textContent = '×';
+        remove.disabled = customColors.length === 1;
+        remove.setAttribute('aria-label', `Farbe ${index + 1} entfernen`);
+
+        input.addEventListener('input', () => {
+          customColors[index] = input.value.toLowerCase();
+          value.textContent = customColors[index];
+          applyCustomPalette();
+        });
+        remove.addEventListener('click', () => {
+          if (customColors.length === 1) return;
+          customColors.splice(index, 1);
+          renderCustomColorControls();
+          applyCustomPalette();
+        });
+
+        item.append(input, value, remove);
+        customColorList.appendChild(item);
+      });
+    }
+
+    customColorAdd.addEventListener('click', () => {
+      const suggestions = ['#e6007e', '#ff6b00', '#f2b705', '#00a896', '#246bfd', '#7b2cbf', '#d7263d'];
+      customColors.push(suggestions[customColors.length % suggestions.length]);
+      renderCustomColorControls();
+      applyCustomPalette();
+    });
 
     // Keep drawing even if a browser still has the pre-palette version of
     // wordcloud-core.js in its memory cache. The versioned script URL above
@@ -1335,6 +1547,7 @@
     function buildThemeOptions() {
       themeOptions.replaceChildren();
       for (const palette of product.themes) {
+        const paletteColors = palette.key === 'custom' ? customColors : palette.colors;
         const label = document.createElement('label');
         label.className = 'option';
 
@@ -1346,19 +1559,20 @@
         input.addEventListener('change', () => {
           selectedTheme = palette.key;
           markDirty();
-          if (mugEditor) mugEditor.applyPalette(palette.colors);
+          renderCustomColorControls();
+          if (mugEditor) mugEditor.applyPalette(getPalette(selectedTheme).colors);
           renderAll();
         });
 
         const card = document.createElement('span');
-        card.className = 'option-card';
+        card.className = 'option-card theme-option-card';
+        card.dataset.themeCard = palette.key;
+        card.style.setProperty('--theme-accent', paletteColors[0]);
+        card.style.setProperty('--theme-soft', colorWithAlpha(paletteColors[1] || paletteColors[0], .12));
+        card.style.setProperty('--theme-shadow', colorWithAlpha(paletteColors[0], .16));
         const swatches = document.createElement('span');
         swatches.className = 'swatches';
-        for (const color of palette.colors.slice(0, 5)) {
-          const swatch = document.createElement('i');
-          swatch.style.backgroundColor = color;
-          swatches.appendChild(swatch);
-        }
+        renderPaletteStrip(swatches, paletteColors);
         const name = document.createElement('strong');
         name.textContent = palette.label;
         const description = document.createElement('small');
@@ -1488,10 +1702,13 @@
       .then((data) => {
         words = data.words;
         product = data.product;
+        const customPalette = product.themes.find((option) => option.key === 'custom');
+        customColors = customPalette ? [...customPalette.colors] : ['#c2185b'];
         selectedTheme = product.themes.some((option) => option.key === data.event.theme)
           ? data.event.theme
           : product.themes[0].key;
         buildThemeOptions();
+        renderCustomColorControls();
 
         document.title = `Tassen für ${data.event.coupleName} – WeddingCloud`;
         document.getElementById('preview-subtitle').textContent = data.event.coupleName;
