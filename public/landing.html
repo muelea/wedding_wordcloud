@@ -207,7 +207,6 @@
     html.js-reveal-ready .section-top, html.js-reveal-ready .step,
     html.js-reveal-ready .phone, html.js-reveal-ready .feature-copy,
     html.js-reveal-ready .print-copy, html.js-reveal-ready .cup-stage,
-    html.js-reveal-ready .quote blockquote, html.js-reveal-ready .quote cite,
     html.js-reveal-ready .cta-box {
       opacity: 0; transform: translateY(18px);
       transition: opacity .7s ease, transform .7s ease;
@@ -399,7 +398,7 @@
       if ('IntersectionObserver' in window && !reduceMotion) {
         document.documentElement.classList.add('js-reveal-ready');
         var targets = document.querySelectorAll(
-          '.section-top, .step, .phone, .feature-copy, .print-copy, .cup-stage, .quote blockquote, .quote cite, .cta-box'
+          '.section-top, .step, .phone, .feature-copy, .print-copy, .cup-stage, .cta-box'
         );
         var io = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {
