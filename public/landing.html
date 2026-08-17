@@ -488,8 +488,8 @@
       var H = 2.0, wallT = 0.075;
       var profile = [
         new THREE.Vector2(0, 0),
-        new THREE.Vector2(0.86, 0),
-        new THREE.Vector2(0.90, 0.03),
+        new THREE.Vector2(0.94, 0),
+        new THREE.Vector2(0.94, 0.03),
         new THREE.Vector2(0.94, 0.18),
         new THREE.Vector2(0.94, H * 0.55),
         new THREE.Vector2(0.93, H * 0.94),
@@ -510,9 +510,11 @@
       // the +X side of the barrel. ──
       var handleCurve = new THREE.CatmullRomCurve3([
         new THREE.Vector3(0.90, H * 0.84, 0),
-        new THREE.Vector3(1.42, H * 0.78, 0),
-        new THREE.Vector3(1.55, H * 0.50, 0),
-        new THREE.Vector3(1.42, H * 0.22, 0),
+        new THREE.Vector3(1.18, H * 0.82, 0),
+        new THREE.Vector3(1.48, H * 0.70, 0),
+        new THREE.Vector3(1.58, H * 0.50, 0),
+        new THREE.Vector3(1.48, H * 0.30, 0),
+        new THREE.Vector3(1.18, H * 0.18, 0),
         new THREE.Vector3(0.90, H * 0.16, 0)
       ]);
       var handleGeo = new THREE.TubeGeometry(handleCurve, 64, 0.105, 20, false);
