@@ -694,12 +694,12 @@
           <div class="mug-stage" aria-label="Vorschau der gestalteten Tasse">
             <span class="preview-quantity" id="preview-quantity">2×</span>
             <div class="mug-wrap">
-              <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.">
+              <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen horizontal oder vertikal ziehen. Alternativ die Pfeiltasten verwenden.">
                 <div class="mug-fallback">
                   <div class="mug"><canvas class="mug-art" id="mug-preview"></canvas></div>
                 </div>
               </div>
-              <span class="mug-name" id="mug-viewer-hint">↔ Ziehen zum Drehen</span>
+              <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
             </div>
           </div>
 
@@ -1022,20 +1022,29 @@
     }
 
     function attachMugInteraction(group) {
+      const maxVerticalRotation = Math.PI / 6;
       let activePointer = null;
       let lastX = 0;
+      let lastY = 0;
 
       mugViewer.addEventListener('pointerdown', (event) => {
         activePointer = event.pointerId;
         lastX = event.clientX;
+        lastY = event.clientY;
         mugViewer.setPointerCapture(event.pointerId);
         event.preventDefault();
       });
       mugViewer.addEventListener('pointermove', (event) => {
         if (event.pointerId !== activePointer) return;
         const deltaX = event.clientX - lastX;
+        const deltaY = event.clientY - lastY;
         lastX = event.clientX;
+        lastY = event.clientY;
         group.rotation.y += deltaX * .012;
+        group.rotation.x = Math.max(
+          -maxVerticalRotation,
+          Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
+        );
         renderMug3D();
       });
       const finishPointer = (event) => {
@@ -1046,8 +1055,13 @@
       mugViewer.addEventListener('pointerup', finishPointer);
       mugViewer.addEventListener('pointercancel', finishPointer);
       mugViewer.addEventListener('keydown', (event) => {
-        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-        group.rotation.y += event.key === 'ArrowLeft' ? -.18 : .18;
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          group.rotation.y += event.key === 'ArrowLeft' ? -.18 : .18;
+        } else {
+          const nextRotation = group.rotation.x + (event.key === 'ArrowUp' ? -.09 : .09);
+          group.rotation.x = Math.max(-maxVerticalRotation, Math.min(maxVerticalRotation, nextRotation));
+        }
         renderMug3D();
         event.preventDefault();
       });
@@ -1121,36 +1135,58 @@
         );
         mugGroup.add(body);
 
+        // Build a real, deep cavity instead of the old grey disc that sat
+        // directly below the opening. The inner wall begins exactly at the
+        // inner edge of the lip and narrows gently towards the ceramic base.
+        const innerRadius = radius - edgeRadius * 2;
+        const interiorBottomRadius = bottomRadius - .42;
+        const interiorTopY = shellHeight / 2;
+        const interiorBottomY = -height / 2 + .52;
+        const interiorHeight = interiorTopY - interiorBottomY;
         const inside = new THREE.Mesh(
-          new THREE.CylinderGeometry(radius - .28, bottomRadius - .26, shellHeight - .12, 160, 1, true, -Math.PI, Math.PI * 2),
+          new THREE.CylinderGeometry(
+            innerRadius,
+            interiorBottomRadius,
+            interiorHeight,
+            160,
+            1,
+            true,
+            -Math.PI,
+            Math.PI * 2
+          ),
           new THREE.MeshStandardMaterial({
-            color: 0xeeeeee,
-            roughness: .46,
-            metalness: .02,
+            color: 0xf3f3f3,
+            roughness: .52,
+            metalness: .01,
             side: THREE.BackSide,
           })
         );
-        inside.position.y = -.01;
+        inside.position.y = (interiorTopY + interiorBottomY) / 2;
         mugGroup.add(inside);
 
-        // These tiny toruses complete the real mug's rounded corners without
-        // extending beyond the straight body. The previous, larger top ring
-        // read as a separate raised lip that the Printful mug does not have.
+        // One continuous rounded piece connects the outer shell and inner
+        // wall. Both meet at the torus edges, removing the floating double
+        // border that appeared when the mug was tilted downwards.
         const rim = new THREE.Mesh(
-          new THREE.TorusGeometry(radius - edgeRadius, edgeRadius, 24, 160),
+          new THREE.TorusGeometry((radius + innerRadius) / 2, (radius - innerRadius) / 2, 24, 160),
           plainCeramic
         );
         rim.rotation.x = Math.PI / 2;
-        rim.position.y = shellHeight / 2;
+        rim.position.y = interiorTopY;
         mugGroup.add(rim);
 
-        const innerShadow = new THREE.Mesh(
-          new THREE.CircleGeometry(radius - .38, 160),
-          new THREE.MeshStandardMaterial({ color: 0xd8dadd, roughness: .82, side: THREE.DoubleSide })
+        const interiorBottom = new THREE.Mesh(
+          new THREE.CircleGeometry(interiorBottomRadius, 160),
+          new THREE.MeshStandardMaterial({
+            color: 0xe6e7e8,
+            roughness: .68,
+            metalness: 0,
+            side: THREE.DoubleSide,
+          })
         );
-        innerShadow.rotation.x = -Math.PI / 2;
-        innerShadow.position.y = height / 2 - .43;
-        mugGroup.add(innerShadow);
+        interiorBottom.rotation.x = -Math.PI / 2;
+        interiorBottom.position.y = interiorBottomY + .015;
+        mugGroup.add(interiorBottom);
 
         const bottom = new THREE.Mesh(
           new THREE.CircleGeometry(bottomRadius - .03, 160),
@@ -1161,9 +1197,10 @@
         bottom.receiveShadow = true;
         mugGroup.add(bottom);
 
-        // A rounded D-shaped curve is much closer to Printful's real handle
-        // than a circular torus. The closing section runs inside the mug, so
-        // only the two natural attachment points remain visible.
+        // A rounded, open D-shaped curve is much closer to Printful's real
+        // handle than a circular torus. It keeps one constant thickness all
+        // the way to the shell; only vertices that would cross the invisible
+        // inner cylinder are clipped back behind the ceramic wall.
         const handlePath = new THREE.CatmullRomCurve3(
           [
             new THREE.Vector3(-radius + .24, 3.62, 0),
@@ -1175,16 +1212,39 @@
             new THREE.Vector3(-radius - 2.34, -2.9, 0),
             new THREE.Vector3(-radius - .95, -3.54, 0),
             new THREE.Vector3(-radius + .24, -3.48, 0),
-            new THREE.Vector3(-radius + .72, -2.16, 0),
-            new THREE.Vector3(-radius + .74, 0, 0),
-            new THREE.Vector3(-radius + .72, 2.1, 0),
           ],
-          true,
+          false,
           'centripetal',
           .5
         );
+        const handleTubularSegments = 160;
+        const handleRadialSegments = 28;
+        const handleGeometry = new THREE.TubeGeometry(
+          handlePath,
+          handleTubularSegments,
+          .4,
+          handleRadialSegments,
+          false
+        );
+        const handlePositions = handleGeometry.getAttribute('position');
+        const cavityBoundary = innerRadius + .015;
+        for (let vertexIndex = 0; vertexIndex < handlePositions.count; vertexIndex++) {
+          const x = handlePositions.getX(vertexIndex);
+          const z = handlePositions.getZ(vertexIndex);
+          const radialDistance = Math.hypot(x, z);
+          if (radialDistance >= cavityBoundary) continue;
+          const radialScale = cavityBoundary / radialDistance;
+          handlePositions.setXYZ(
+            vertexIndex,
+            x * radialScale,
+            handlePositions.getY(vertexIndex),
+            z * radialScale
+          );
+        }
+        handlePositions.needsUpdate = true;
+        handleGeometry.computeVertexNormals();
         const handle = new THREE.Mesh(
-          new THREE.TubeGeometry(handlePath, 160, .4, 28, true),
+          handleGeometry,
           plainCeramic
         );
         mugGroup.add(handle);
@@ -1228,6 +1288,7 @@
     }
 
     function renderMugs() {
+      if (!product) return;
       const ctx = setupCanvas(mugCanvas);
       const width = mugCanvas.width;
       const height = mugCanvas.height;
@@ -1425,7 +1486,7 @@
           `${product.size.label} · ${product.size.volumeMl} ml · weiße Keramik`;
         document.getElementById('product-unit-price').textContent = `${formatPrice(product.unitPriceCents)} pro Tasse`;
         document.getElementById('mug-viewer-hint').textContent =
-          `↔ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
+          `↔ ↕ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
         document.getElementById('print-spec').textContent =
           `${product.printFile.width} × ${product.printFile.height} px · ${product.printFile.dpi} DPI`;
         quantityInput.min = String(product.minQuantity);
