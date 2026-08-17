@@ -169,8 +169,8 @@
       gap: clamp(20px, 4vw, 54px);
       position: relative;
       background:
-        radial-gradient(ellipse at center bottom, rgba(88, 51, 59, .13), transparent 56%),
-        linear-gradient(180deg, transparent, rgba(248, 240, 229, .72));
+        radial-gradient(ellipse at center bottom, rgba(72, 76, 82, .1), transparent 56%),
+        linear-gradient(180deg, transparent, rgba(248, 249, 250, .82));
     }
     .mug-stage::after {
       content: '';
@@ -178,7 +178,7 @@
       left: 12%; right: 12%; bottom: 37px;
       height: 18px;
       border-radius: 50%;
-      background: rgba(74, 34, 43, .11);
+      background: rgba(67, 72, 78, .09);
       filter: blur(13px);
     }
 
@@ -859,11 +859,47 @@
         });
         renderer.setClearColor(0x000000, 0);
         renderer.outputColorSpace = THREE.SRGBColorSpace;
+        // ACES gives the preview the smooth highlight roll-off of a studio
+        // product render instead of clipping glossy ceramic straight to white.
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.3;
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         mugViewer.prepend(renderer.domElement);
 
         const scene = new THREE.Scene();
+        // A neutral, softbox-like environment produces broad reflections on
+        // the glaze without adding the warm cast of the surrounding page.
+        const environmentCanvas = document.createElement('canvas');
+        environmentCanvas.width = 1024;
+        environmentCanvas.height = 512;
+        const environmentContext = environmentCanvas.getContext('2d');
+        const environmentBase = environmentContext.createLinearGradient(0, 0, 0, 512);
+        environmentBase.addColorStop(0, '#dce2e8');
+        environmentBase.addColorStop(.42, '#f5f7f9');
+        environmentBase.addColorStop(1, '#bfc6cd');
+        environmentContext.fillStyle = environmentBase;
+        environmentContext.fillRect(0, 0, 1024, 512);
+        const leftSoftbox = environmentContext.createRadialGradient(250, 180, 8, 250, 180, 245);
+        leftSoftbox.addColorStop(0, 'rgba(255,255,255,1)');
+        leftSoftbox.addColorStop(.48, 'rgba(255,255,255,.78)');
+        leftSoftbox.addColorStop(1, 'rgba(255,255,255,0)');
+        environmentContext.fillStyle = leftSoftbox;
+        environmentContext.fillRect(0, 0, 520, 440);
+        const rightSoftbox = environmentContext.createRadialGradient(820, 210, 10, 820, 210, 190);
+        rightSoftbox.addColorStop(0, 'rgba(255,255,255,.92)');
+        rightSoftbox.addColorStop(1, 'rgba(255,255,255,0)');
+        environmentContext.fillStyle = rightSoftbox;
+        environmentContext.fillRect(600, 20, 424, 420);
+        const environmentTexture = new THREE.CanvasTexture(environmentCanvas);
+        environmentTexture.colorSpace = THREE.SRGBColorSpace;
+        environmentTexture.mapping = THREE.EquirectangularReflectionMapping;
+        const environmentGenerator = new THREE.PMREMGenerator(renderer);
+        environmentGenerator.compileEquirectangularShader();
+        scene.environment = environmentGenerator.fromEquirectangular(environmentTexture).texture;
+        environmentTexture.dispose();
+        environmentGenerator.dispose();
+
         const camera = new THREE.PerspectiveCamera(31, 1, .1, 100);
         camera.position.set(0, 2.35, 27);
         camera.lookAt(0, 0, 0);
@@ -900,17 +936,21 @@
         const ceramic = new THREE.MeshPhysicalMaterial({
           color: 0xffffff,
           map: texture,
-          roughness: .24,
+          roughness: .19,
           metalness: 0,
-          clearcoat: .38,
-          clearcoatRoughness: .2,
+          ior: 1.46,
+          clearcoat: .62,
+          clearcoatRoughness: .13,
+          envMapIntensity: .72,
         });
         const plainCeramic = new THREE.MeshPhysicalMaterial({
-          color: 0xfdfcf9,
-          roughness: .22,
+          color: 0xffffff,
+          roughness: .18,
           metalness: 0,
-          clearcoat: .42,
-          clearcoatRoughness: .18,
+          ior: 1.46,
+          clearcoat: .66,
+          clearcoatRoughness: .12,
+          envMapIntensity: .76,
         });
         const body = new THREE.Mesh(
           new THREE.CylinderGeometry(radius, bottomRadius, shellHeight, 160, 1, true, -Math.PI, Math.PI * 2),
@@ -923,8 +963,11 @@
         const inside = new THREE.Mesh(
           new THREE.CylinderGeometry(radius - .28, bottomRadius - .26, shellHeight - .12, 160, 1, true, -Math.PI, Math.PI * 2),
           new THREE.MeshPhysicalMaterial({
-            color: 0xeeeae5,
-            roughness: .38,
+            color: 0xeeeeee,
+            roughness: .3,
+            clearcoat: .28,
+            clearcoatRoughness: .2,
+            envMapIntensity: .5,
             side: THREE.BackSide,
           })
         );
@@ -945,7 +988,7 @@
 
         const innerShadow = new THREE.Mesh(
           new THREE.CircleGeometry(radius - .38, 160),
-          new THREE.MeshStandardMaterial({ color: 0xd7d2cc, roughness: .82, side: THREE.DoubleSide })
+          new THREE.MeshStandardMaterial({ color: 0xd8dadd, roughness: .82, side: THREE.DoubleSide })
         );
         innerShadow.rotation.x = -Math.PI / 2;
         innerShadow.position.y = height / 2 - .43;
@@ -1001,26 +1044,35 @@
         baseRim.receiveShadow = true;
         mugGroup.add(baseRim);
 
-        scene.add(new THREE.HemisphereLight(0xffffff, 0xc8c5c1, 2.25));
-        const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd0d5, .76));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 3.75);
         keyLight.position.set(-8, 12, 10);
         keyLight.castShadow = true;
-        keyLight.shadow.mapSize.set(1024, 1024);
+        keyLight.shadow.mapSize.set(2048, 2048);
+        keyLight.shadow.radius = 4;
+        keyLight.shadow.bias = -.0002;
+        keyLight.shadow.normalBias = .018;
         keyLight.shadow.camera.left = -12;
         keyLight.shadow.camera.right = 12;
         keyLight.shadow.camera.top = 12;
         keyLight.shadow.camera.bottom = -12;
         scene.add(keyLight);
-        const fillLight = new THREE.DirectionalLight(0xfff7ef, 1.1);
+        const fillLight = new THREE.DirectionalLight(0xf4f8ff, .62);
         fillLight.position.set(10, 3, 7);
         scene.add(fillLight);
+        const rimLight = new THREE.DirectionalLight(0xffffff, .7);
+        rimLight.position.set(3, 7, -10);
+        scene.add(rimLight);
 
         const floor = new THREE.Mesh(
           new THREE.PlaneGeometry(24, 18),
-          new THREE.ShadowMaterial({ color: 0x55514f, opacity: .1 })
+          new THREE.ShadowMaterial({ color: 0x555a60, opacity: .1 })
         );
         floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -height / 2 - .22;
+        // Keep the receiver in direct contact with the mug. A visible gap
+        // here makes the base look like it has one shadow under the ceramic
+        // and a second shadow floating on the floor.
+        floor.position.y = -height / 2 - .002;
         floor.receiveShadow = true;
         scene.add(floor);
 
