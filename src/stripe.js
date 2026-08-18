@@ -1,18 +1,19 @@
 'use strict';
 
 /**
- * Stripe Checkout integration for the His & Hers mug-duo (34,90€, single
- * bundled product — see product scope in the project brief).
+ * Legacy Stripe Checkout stub. The next payment phase will replace its
+ * fixed Price ID with the trusted server-side Printful quote.
  *
  * Gated entirely on environment variables that are NOT set in this build
  * pass (no real Stripe account exists yet — that requires the business
  * owner's verified identity, which isn't done). The integration shape is
  * complete and correct; it will start working the moment real keys are
- * dropped into `.env`, with zero code changes.
+ * dropped into `.env`. It is intentionally not linked from the new shipping
+ * page until dynamic Stripe amounts are implemented.
  *
  * Required env vars (see .env.example):
  *   STRIPE_SECRET_KEY   - sk_test_... / sk_live_...
- *   STRIPE_PRICE_ID     - price_... for the 34,90€ mug-duo product
+ *   STRIPE_PRICE_ID     - legacy fixed Price ID used only by the old stub
  *   STRIPE_WEBHOOK_SECRET - whsec_... for verifying the webhook signature
  *   PUBLIC_URL          - used to build success/cancel redirect URLs
  */

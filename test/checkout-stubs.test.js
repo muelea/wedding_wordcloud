@@ -41,3 +41,18 @@ test('printful.createPrintfulOrder() returns a mocked order instead of throwing 
   assert.equal(result.mocked, true);
   assert.match(result.printfulOrderId, /^MOCK-/);
 });
+
+test('live Printful pricing fails clearly without exposing or requiring a token in the browser', async () => {
+  delete process.env.PRINTFUL_API_KEY;
+  delete require.cache[require.resolve('../src/printful')];
+  const printful = require('../src/printful');
+
+  await assert.rejects(
+    () => printful.estimateOrderCosts({
+      variantId: 1320,
+      quantity: 1,
+      recipient: { name: 'Test', address1: 'Test 1', city: 'Berlin', zip: '10115', country_code: 'DE' },
+    }),
+    (error) => error.code === 'PRINTFUL_NOT_CONFIGURED' && error.status === 501
+  );
+});

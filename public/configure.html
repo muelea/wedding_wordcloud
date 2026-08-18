@@ -734,31 +734,6 @@
     .custom-color-remove:disabled { cursor: not-allowed; opacity: .25; }
     .custom-palette-note { margin: 11px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 
-    .summary {
-      padding: 20px;
-      border-radius: 18px;
-      background: var(--cream);
-    }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .summary-row + .summary-row { margin-top: 9px; }
-    .summary-row strong { color: var(--ink); font-weight: 500; text-align: right; }
-    .summary-total {
-      margin-top: 17px;
-      padding-top: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      border-top: 1px solid rgba(123,70,82,.14);
-    }
-    .summary-total span { font-size: 13px; }
-    .summary-total strong { font-family: 'Playfair Display', Georgia, serif; font-size: 25px; font-weight: 600; }
-
     .save-button {
       width: 100%;
       margin-top: 16px;
@@ -856,7 +831,7 @@
       <section class="intro">
         <p class="eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1>Gestaltet eure Tassen.</h1>
-        <p class="intro-copy">Wählt die Anzahl, eure Farbwelt und die Platzierung der Wortwolke. Den Rest bereiten wir druckfertig für euch vor.</p>
+        <p class="intro-copy">Wählt eure Farbwelt, die Platzierung und zum Schluss die Anzahl. Den Rest bereiten wir druckfertig für euch vor.</p>
       </section>
 
       <div class="config-grid">
@@ -946,29 +921,14 @@
               <div class="product-copy">
                 <strong id="product-name">Wortwolken-Tasse</strong>
                 <span id="product-size">11 oz · 325 ml · weiße Keramik</span>
-                <span id="product-unit-price">17,45 € pro Tasse</span>
+                <span id="product-unit-price">Preis abhängig von der Lieferadresse</span>
               </div>
               <span class="checkmark" aria-hidden="true">✓</span>
             </div>
           </section>
 
           <section class="step">
-            <h3 class="step-title"><span class="step-number">2</span> Anzahl</h3>
-            <div class="quantity-row">
-              <div class="quantity-copy">
-                <strong>Wie viele Tassen möchtet ihr?</strong>
-                <span>Alle Tassen erhalten dasselbe Design.</span>
-              </div>
-              <div class="quantity-control" aria-label="Anzahl der Tassen">
-                <button type="button" id="quantity-minus" aria-label="Eine Tasse weniger">−</button>
-                <input id="quantity" type="number" value="2" min="1" max="99" inputmode="numeric" aria-label="Anzahl" />
-                <button type="button" id="quantity-plus" aria-label="Eine Tasse mehr">+</button>
-              </div>
-            </div>
-          </section>
-
-          <section class="step">
-            <h3 class="step-title"><span class="step-number">3</span> Farbwelt</h3>
+            <h3 class="step-title"><span class="step-number">2</span> Farbwelt</h3>
             <div class="option-grid" id="theme-options"></div>
             <div class="custom-palette-panel" id="custom-palette-panel" hidden>
               <div class="custom-palette-head">
@@ -984,7 +944,7 @@
           </section>
 
           <section class="step">
-            <h3 class="step-title"><span class="step-number">4</span> Platzierung</h3>
+            <h3 class="step-title"><span class="step-number">3</span> Platzierung</h3>
             <div class="option-grid placement-grid">
               <label class="option">
                 <input type="radio" name="placement" value="single" checked />
@@ -1017,13 +977,23 @@
             </div>
           </section>
 
-          <div class="summary">
-            <div class="summary-row"><span>Produkt</span><strong id="summary-product">2 Tassen</strong></div>
-            <div class="summary-total"><span>Gesamtpreis</span><strong id="price">34,90 €</strong></div>
-          </div>
+          <section class="step">
+            <h3 class="step-title"><span class="step-number">4</span> Anzahl</h3>
+            <div class="quantity-row">
+              <div class="quantity-copy">
+                <strong>Wie viele Tassen möchtet ihr?</strong>
+                <span>Alle Tassen erhalten dasselbe Design.</span>
+              </div>
+              <div class="quantity-control" aria-label="Anzahl der Tassen">
+                <button type="button" id="quantity-minus" aria-label="Eine Tasse weniger">−</button>
+                <input id="quantity" type="number" value="2" min="1" max="99" inputmode="numeric" aria-label="Anzahl" />
+                <button type="button" id="quantity-plus" aria-label="Eine Tasse mehr">+</button>
+              </div>
+            </div>
+          </section>
 
-          <button class="save-button" id="save-button" type="button">Design bestätigen <span aria-hidden="true">→</span></button>
-          <p class="checkout-note">Heute noch ohne Zahlung – im nächsten Schritt verbinden wir Stripe.</p>
+          <button class="save-button" id="save-button" type="button">Weiter zur Lieferadresse <span aria-hidden="true">→</span></button>
+          <p class="checkout-note">Dort berechnen wir den aktuellen Gesamtpreis für euer Lieferland.</p>
           <div class="success-box" id="success-box" aria-live="polite"></div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
         </aside>
@@ -1043,7 +1013,6 @@
     const loading = document.getElementById('loading');
     const content = document.getElementById('config-content');
     const saveButton = document.getElementById('save-button');
-    const successBox = document.getElementById('success-box');
     const errorText = document.getElementById('error-text');
     const mugCanvas = document.getElementById('mug-preview');
     const mugViewer = document.getElementById('mug-3d');
@@ -1066,10 +1035,6 @@
     let mugEditor = null;
 
     document.getElementById('back-link').href = `/e/${encodeURIComponent(slug)}/display`;
-
-    function formatPrice(cents) {
-      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
-    }
 
     function setupCanvas(canvas) {
       const rect = canvas.getBoundingClientRect();
@@ -1631,11 +1596,9 @@
     }
 
     function markDirty() {
-      successBox.classList.remove('show');
-      successBox.textContent = '';
       errorText.textContent = '';
       saveButton.disabled = false;
-      saveButton.innerHTML = 'Design bestätigen <span aria-hidden="true">→</span>';
+      saveButton.innerHTML = 'Weiter zur Lieferadresse <span aria-hidden="true">→</span>';
     }
 
     function buildThemeOptions() {
@@ -1685,8 +1648,6 @@
         : product.defaultQuantity;
       quantity = normalized;
       quantityInput.value = String(quantity);
-      document.getElementById('summary-product').textContent = quantity === 1 ? '1 Tasse' : `${quantity} Tassen`;
-      document.getElementById('price').textContent = formatPrice(product.unitPriceCents * quantity);
       document.getElementById('quantity-minus').disabled = quantity <= product.minQuantity;
       document.getElementById('quantity-plus').disabled = quantity >= product.maxQuantity;
       if (shouldMarkDirty) markDirty();
@@ -1782,11 +1743,8 @@
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'save_failed');
-        saveButton.textContent = 'Design gespeichert ✓';
-        successBox.innerHTML = '<strong>Euer Entwurf ist sicher gespeichert.</strong>' +
-          `${data.quantity === 1 ? 'Eine Tasse' : `${data.quantity} Tassen`} mit diesem Design sind vorgemerkt. ` +
-          `<a href="${data.printFileUrl}" target="_blank" rel="noopener">Transparente Druckdatei ansehen</a>`;
-        successBox.classList.add('show');
+        saveButton.textContent = 'Gespeichert ✓';
+        location.assign(`/e/${encodeURIComponent(slug)}/shipping?configuration=${encodeURIComponent(data.id)}`);
       } catch {
         saveButton.disabled = false;
         saveButton.innerHTML = 'Erneut versuchen <span aria-hidden="true">→</span>';
@@ -1815,7 +1773,6 @@
         document.getElementById('product-name').textContent = product.name;
         document.getElementById('product-size').textContent =
           `${product.size.label} · ${product.size.volumeMl} ml · weiße Keramik`;
-        document.getElementById('product-unit-price').textContent = `${formatPrice(product.unitPriceCents)} pro Tasse`;
         document.getElementById('mug-viewer-hint').textContent =
           `↔ ↕ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
         quantityInput.min = String(product.minQuantity);

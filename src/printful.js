@@ -4,14 +4,13 @@
  * Printful order creation for the His & Hers mug-duo.
  *
  * Called from the Stripe webhook handler once a `checkout.session.completed`
- * event confirms payment. Gated on PRINTFUL_API_KEY, which is NOT set in
- * this build pass (no Printful account exists yet). When the key is
- * missing, this function logs a clear mock-order message and returns a
- * fake order id instead of crashing the webhook handler — so the full
- * payment -> fulfillment data flow can be exercised end-to-end locally
- * (see test/checkout.test.js) without a live Printful sandbox.
+ * event confirms payment. Gated on PRINTFUL_API_KEY. When the key is
+ * missing, this function logs a clear mock-order message and returns a fake
+ * order id instead of crashing the webhook handler. Live country and price
+ * helpers in this file fail clearly when unconfigured because a customer
+ * quote must never be fabricated.
  *
- * Required env vars once a real account exists (see .env.example):
+ * Required env vars (see .env.example):
  *   PRINTFUL_API_KEY        - Bearer token for the Printful v2 API
  *   PRINTFUL_STORE_ID       - Printful store id (multi-store accounts)
  *   PRINTFUL_MUG_VARIANT_ID - the specific "His" / "Hers" mug variant ids.
@@ -45,6 +44,121 @@ function isConfigured() {
   return Boolean(process.env.PRINTFUL_API_KEY);
 }
 
+class PrintfulApiError extends Error {
+  constructor(code, message, status = 500) {
+    super(message);
+    this.name = 'PrintfulApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+function getPrintfulHeaders() {
+  return {
+    'Authorization': `Bearer ${process.env.PRINTFUL_API_KEY}`,
+    'Content-Type': 'application/json',
+    ...(process.env.PRINTFUL_STORE_ID ? { 'X-PF-Store-Id': process.env.PRINTFUL_STORE_ID } : {}),
+  };
+}
+
+async function printfulRequest(path, options = {}) {
+  if (!isConfigured()) {
+    throw new PrintfulApiError(
+      'PRINTFUL_NOT_CONFIGURED',
+      'Printful ist noch nicht eingerichtet.',
+      501
+    );
+  }
+
+  let response;
+  try {
+    response = await fetch(`https://api.printful.com${path}`, {
+      ...options,
+      headers: { ...getPrintfulHeaders(), ...(options.headers || {}) },
+      signal: options.signal || AbortSignal.timeout(12000),
+    });
+  } catch (error) {
+    throw new PrintfulApiError(
+      'PRINTFUL_UNAVAILABLE',
+      `Printful ist momentan nicht erreichbar: ${error.message}`,
+      502
+    );
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    // The status code below still gives callers a useful, sanitized error.
+  }
+
+  if (!response.ok || !data || data.code >= 400) {
+    const apiStatus = Number(data?.code) >= 400 ? Number(data.code) : response.status;
+    const message = typeof data?.error?.message === 'string'
+      ? data.error.message
+      : `Printful-Anfrage fehlgeschlagen (${response.status}).`;
+    const code = apiStatus === 401 || apiStatus === 403
+      ? 'PRINTFUL_AUTH_FAILED'
+      : apiStatus >= 400 && apiStatus < 500
+        ? 'PRINTFUL_ADDRESS_REJECTED'
+        : 'PRINTFUL_UNAVAILABLE';
+    throw new PrintfulApiError(code, message, apiStatus >= 500 ? 502 : apiStatus);
+  }
+
+  return data.result;
+}
+
+let countriesCache = null;
+let countriesCachedAt = 0;
+const COUNTRIES_CACHE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Printful is the source of truth for countries and state/province codes it
+ * can currently ship to. Keeping this server-side avoids maintaining a
+ * second, inevitably stale country list in the browser.
+ */
+async function getShippingCountries() {
+  if (countriesCache && Date.now() - countriesCachedAt < COUNTRIES_CACHE_MS) {
+    return countriesCache;
+  }
+  const result = await printfulRequest('/countries', { method: 'GET' });
+  if (!Array.isArray(result)) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine gültige Länderliste geliefert.', 502);
+  }
+  countriesCache = result.map((country) => ({
+    code: String(country.code || '').toUpperCase(),
+    name: String(country.name || ''),
+    region: String(country.region || ''),
+    states: Array.isArray(country.states)
+      ? country.states.map((state) => ({ code: String(state.code || ''), name: String(state.name || '') }))
+      : [],
+  })).filter((country) => /^[A-Z]{2}$/.test(country.code) && country.name);
+  countriesCachedAt = Date.now();
+  return countriesCache;
+}
+
+/**
+ * Ask Printful for the current fulfillment cost without creating an order.
+ * Artwork is deliberately omitted: for this curated mug, the chosen print
+ * file does not alter fulfillment cost, and Printful cannot fetch a local
+ * development URL. The immutable configuration still supplies the trusted
+ * variant and quantity used here and later supplies the artwork at checkout.
+ */
+async function estimateOrderCosts({ variantId, quantity, recipient }) {
+  const result = await printfulRequest('/orders/estimate-costs', {
+    method: 'POST',
+    body: JSON.stringify({
+      shipping: 'STANDARD',
+      recipient,
+      items: [{ variant_id: variantId, quantity }],
+    }),
+  });
+  if (!result?.costs || typeof result.costs.currency !== 'string') {
+    throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keinen gültigen Preis geliefert.', 502);
+  }
+  return result.costs;
+}
+
 /**
  * @param {object} opts
  * @param {object} opts.event - the event row (slug, couple_name, ...)
@@ -67,9 +181,9 @@ async function createPrintfulOrder({ event, svgUrl, shipping, stripeSessionId })
     return { printfulOrderId: mockId, mocked: true };
   }
 
-  // Real call — untested against a live Printful sandbox (no account yet).
-  // Shape follows Printful's Orders API; adjust field names against their
-  // current docs before first real use.
+  // Legacy order-creation call. Live estimates are verified; this paid-order
+  // path still needs to be adapted to the immutable configuration in the
+  // Stripe phase before it is linked from the shipping page.
   const variantHis = process.env.PRINTFUL_MUG_VARIANT_ID_HIS;
   const variantHers = process.env.PRINTFUL_MUG_VARIANT_ID_HERS;
   const printFileUrl = svgUrl; // see file-level note above
@@ -92,11 +206,7 @@ async function createPrintfulOrder({ event, svgUrl, shipping, stripeSessionId })
 
   const res = await fetch('https://api.printful.com/orders', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.PRINTFUL_API_KEY}`,
-      'Content-Type': 'application/json',
-      ...(process.env.PRINTFUL_STORE_ID ? { 'X-PF-Store-Id': process.env.PRINTFUL_STORE_ID } : {}),
-    },
+    headers: getPrintfulHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -109,4 +219,10 @@ async function createPrintfulOrder({ event, svgUrl, shipping, stripeSessionId })
   return { printfulOrderId: data?.result?.id ?? null, mocked: false };
 }
 
-module.exports = { isConfigured, createPrintfulOrder };
+module.exports = {
+  PrintfulApiError,
+  isConfigured,
+  getShippingCountries,
+  estimateOrderCosts,
+  createPrintfulOrder,
+};

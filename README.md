@@ -24,8 +24,14 @@ finished word cloud after the event.
    and every curated wedding motif can be moved, resized, rotated, recolored,
    duplicated or removed; words can also be edited directly. Hard bounds keep
    the entire design printable.
-6. The approved configuration can then be purchased through Stripe Checkout
-   and sent to Printful for fulfillment.
+6. The approved configuration continues to a dedicated, mobile-first
+   shipping-address page. Countries and state/province choices come directly
+   from Printful; the server uses the immutable variant and quantity to fetch
+   a live fulfillment, standard-shipping and tax/VAT estimate in the store's
+   currency. The shop surcharge is centrally configurable and defaults to 0.
+7. The quoted configuration can then be purchased through Stripe Checkout
+   and sent to Printful for fulfillment (the payment handoff is the next
+   implementation phase).
 
 ## Quick start
 
@@ -54,7 +60,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `ADMIN_TOKEN_SECRET` | **yes, in production** | signs the admin PIN session token — the default is intentionally insecure |
 | `DB_PATH` | no | SQLite file location (defaults `./data/weddingcloud.sqlite`) |
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | only for mug checkout | unset → checkout returns a clean 501, rest of the app works fine |
-| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID`, `PRINTFUL_MUG_VARIANT_ID_HIS/HERS` | only for the current fulfillment stub | unset → order creation is mocked (logs `[printful:mock]`, doesn't call the real API) |
+| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID`, `PRINTFUL_MUG_VARIANT_ID_HIS/HERS` | for live quotes and fulfillment | unset → quote returns a clear 501; legacy order creation remains safely mocked |
+| `SHOP_SURCHARGE_PER_MUG_CENTS` | no (defaults 0) | retail surcharge added to each mug after the live Printful estimate |
 
 **Never commit `.env`** — it's gitignored. Production secrets (Render, or
 wherever this is deployed) are set directly in the host's dashboard, not in
@@ -73,6 +80,7 @@ src/
   socket.js                Socket.io connection handling — room isolation lives here
   stripe.js                Stripe Checkout session creation + webhook verification
   printful.js              Printful order creation (mocked without PRINTFUL_API_KEY)
+  pricing.js               integer-cent customer quote + configurable mug surcharge
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
   mugPrint.js              Printful-sized 2700x1050 mug print-file renderer
   products.js              Curated, API-verified Printful product geometry
@@ -85,6 +93,7 @@ public/
   guest.html               Guest word-submission page, served at '/e/:slug'
   display.html             Live display + SVG export + mug CTA, served at '/e/:slug/display'
   configure.html           Mug configurator + interactive 3D preview, served at '/e/:slug/configure'
+  shipping.html            Mobile-first address + live Printful price estimate
   js/mug-editor.js         Bounded word-by-word print-area editor
   404.html                 Unknown-event page
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
@@ -97,7 +106,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 35 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 38 tests covering multi-tenant
 isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, and Stripe/Printful stub behavior. Each test
@@ -131,12 +140,11 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   signature verification, `metadata.eventSlug` round-trip) but no live
   Stripe account exists yet. Missing keys → checkout returns a 501 with a
   clear message instead of crashing.
-- **Printful fulfillment** — the 11 oz white glossy mug (catalog product 19,
-  variant 1320) and its 2700x1050 / 300 DPI print geometry have been verified
-  against the live API. Missing `PRINTFUL_API_KEY` →
-  `createPrintfulOrder()` logs `[printful:mock]` and returns a fake order id
-  so the full payment→fulfillment flow is still exercisable end-to-end
-  locally.
+- **Printful fulfillment** — live countries and cost estimates are connected
+  for the verified 11 oz mug (catalog product 19, variant 1320). Creating the
+  paid order is still behind the legacy Stripe webhook and is not linked from
+  the new shipping page yet. Missing `PRINTFUL_API_KEY` makes live quotes fail
+  clearly while `createPrintfulOrder()` remains safely mocked.
 
 ## Known gotchas
 
@@ -157,9 +165,10 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 ## Next steps
 
-1. Connect the saved configuration id, quantity and unit price to Stripe
+1. Connect the live server-side quote and saved configuration id to Stripe
    Checkout metadata and make the webhook fulfill that immutable
-   configuration rather than the live event export.
+   configuration rather than the live event export. Re-estimate once at
+   checkout so a stale client-side quote can never set the charged amount.
 2. Confirm whether Printful's mug print pipeline accepts the generated SVG
    directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
    is already available if so).

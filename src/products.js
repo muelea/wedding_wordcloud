@@ -15,7 +15,6 @@ const MUG_DUO = Object.freeze({
   defaultQuantity: 2,
   minQuantity: 1,
   maxQuantity: 99,
-  unitPriceCents: 1745,
   currency: 'EUR',
   printful: Object.freeze({
     productId: 19,
@@ -122,7 +121,6 @@ function getPublicProduct(product = MUG_DUO) {
     defaultQuantity: product.defaultQuantity,
     minQuantity: product.minQuantity,
     maxQuantity: product.maxQuantity,
-    unitPriceCents: product.unitPriceCents,
     currency: product.currency,
     size: product.size,
     printFile: product.printFile,

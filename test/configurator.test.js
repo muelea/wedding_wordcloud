@@ -50,7 +50,7 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(data.product.defaultQuantity, 2);
   assert.equal(data.product.minQuantity, 1);
   assert.equal(data.product.maxQuantity, 99);
-  assert.equal(data.product.unitPriceCents, 1745);
+  assert.equal(data.product.unitPriceCents, undefined, 'the configurator must not expose a stale fixed retail price');
   assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
     ['pastel', 'sage-gold', 'ocean', 'custom']
@@ -105,8 +105,8 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   const configuration = await save.json();
   assert.match(configuration.id, /^[A-Za-z0-9_-]{16}$/);
   assert.equal(configuration.quantity, 7);
-  assert.equal(configuration.unitPriceCents, 1745);
-  assert.equal(configuration.totalPriceCents, 12215);
+  assert.equal(configuration.unitPriceCents, undefined);
+  assert.equal(configuration.totalPriceCents, undefined);
 
   // The live event keeps changing after approval.
   await submitWord(socket, 'Später');

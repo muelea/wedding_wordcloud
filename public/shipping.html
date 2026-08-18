@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lieferadresse – WeddingCloud</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #fffaf5;
+      --surface: #fffefd;
+      --surface-soft: #fbf2e7;
+      --ink: #400f26;
+      --berry: #a40e4c;
+      --muted: #846e75;
+      --line: rgba(110, 61, 72, .16);
+      --line-strong: rgba(164, 14, 76, .38);
+      --success: #287a64;
+      --danger: #b33a4d;
+      --shadow: 0 20px 60px rgba(64, 15, 38, .08);
+    }
+    html { background: var(--bg); color: var(--ink); font-family: 'Jost', system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 18% 12%, rgba(247, 224, 203, .42), transparent 34%), var(--bg); }
+    button, input, select { font: inherit; }
+    .topbar {
+      min-height: 64px;
+      padding: 14px clamp(18px, 4vw, 52px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 253, 250, .88);
+      backdrop-filter: blur(14px);
+    }
+    .brand { color: var(--ink); text-decoration: none; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; }
+    .brand-heart { color: var(--berry); margin-right: 5px; }
+    .back-link { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .back-link:hover { color: var(--berry); }
+    main { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 72px; }
+    .intro { max-width: 680px; margin-bottom: 28px; }
+    .eyebrow { margin: 0 0 10px; color: var(--berry); font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px, 7vw, 54px); font-weight: 500; line-height: 1.04; }
+    .intro-copy { margin: 13px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+    .steps { display: flex; align-items: center; gap: 8px; margin: 24px 0 30px; overflow: hidden; }
+    .step { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .step-dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-soft); color: var(--berry); font-weight: 600; }
+    .step.done { color: var(--success); }
+    .step.done .step-dot { background: rgba(40, 122, 100, .11); color: var(--success); }
+    .step.active { color: var(--ink); font-weight: 600; }
+    .step.active .step-dot { background: var(--berry); color: #fff; }
+    .step-line { width: clamp(14px, 4vw, 48px); height: 1px; flex: 0 1 auto; background: var(--line); }
+    .checkout-grid { display: grid; gap: 20px; }
+    .card { background: rgba(255, 254, 253, .94); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
+    .address-card { padding: clamp(22px, 5vw, 38px); }
+    .card-title { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 25px; font-weight: 600; }
+    .card-copy { margin: 7px 0 25px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    form { display: grid; gap: 17px; }
+    .field-row { display: grid; grid-template-columns: minmax(105px, .72fr) minmax(0, 1.28fr); gap: 13px; }
+    label { display: grid; gap: 7px; color: var(--ink); font-size: 13px; font-weight: 500; }
+    .optional { color: var(--muted); font-weight: 400; }
+    input, select {
+      width: 100%; min-width: 0; height: 50px; padding: 0 14px;
+      border: 1px solid var(--line); border-radius: 12px; outline: none;
+      background: #fff; color: var(--ink); font-size: 16px;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    input::placeholder { color: #b9a8ad; }
+    input:focus, select:focus { border-color: var(--line-strong); box-shadow: 0 0 0 3px rgba(164, 14, 76, .08); }
+    input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--danger); }
+    .state-field[hidden] { display: none; }
+    .submit-button {
+      width: 100%; min-height: 54px; margin-top: 5px; padding: 14px 20px;
+      border: 0; border-radius: 999px; cursor: pointer;
+      background: var(--ink); color: #fff; font-size: 16px; font-weight: 600;
+      box-shadow: 0 10px 24px rgba(64, 15, 38, .16);
+      transition: transform .18s, opacity .18s, box-shadow .18s;
+    }
+    .submit-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 13px 28px rgba(64, 15, 38, .2); }
+    .submit-button:disabled { cursor: wait; opacity: .58; }
+    .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
+    .summary-card { padding: 22px; align-self: start; }
+    .design-summary { display: flex; gap: 14px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+    .design-preview { width: 92px; height: 72px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+    .design-preview img { width: 88%; height: 88%; object-fit: contain; }
+    .design-copy { min-width: 0; }
+    .design-copy strong { display: block; font-size: 15px; }
+    .design-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
+    .quote { padding-top: 20px; }
+    .quote-row { display: flex; justify-content: space-between; gap: 18px; margin: 0 0 11px; color: var(--muted); font-size: 14px; }
+    .quote-row strong { color: var(--ink); font-weight: 500; }
+    .quote-total { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--line); }
+    .quote-total span { font-size: 14px; font-weight: 500; }
+    .quote-total strong { font-family: 'Playfair Display', Georgia, serif; font-size: 29px; font-weight: 600; white-space: nowrap; }
+    .quote-placeholder { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .quote-ready { margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: rgba(40, 122, 100, .09); color: var(--success); font-size: 13px; line-height: 1.45; }
+    .fatal { margin-top: 20px; padding: 18px; border: 1px solid rgba(179, 58, 77, .24); border-radius: 16px; background: rgba(179, 58, 77, .07); color: var(--danger); line-height: 1.55; }
+    .loading { padding: 80px 16px; text-align: center; color: var(--muted); }
+    [hidden] { display: none !important; }
+    @media (min-width: 840px) {
+      main { padding-top: 50px; }
+      .checkout-grid { grid-template-columns: minmax(0, 1fr) 370px; gap: 28px; align-items: start; }
+      .summary-card { position: sticky; top: 26px; }
+    }
+    @media (max-width: 520px) {
+      .topbar { min-height: 58px; }
+      .brand { font-size: 18px; }
+      .back-link span:first-child { margin-right: 3px; }
+      main { width: min(100% - 20px, 1120px); padding-top: 26px; }
+      .intro-copy { font-size: 15px; }
+      .steps .step-label { display: none; }
+      .steps .step.active .step-label { display: inline; }
+      .field-row { grid-template-columns: 1fr; }
+      .design-preview { width: 78px; height: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-heart">♡</span>WeddingCloud</a>
+    <a class="back-link" id="back-link" href="#"><span aria-hidden="true">←</span> Zurück zum Design</a>
+  </header>
+
+  <main>
+    <div class="loading" id="loading">Euer Entwurf wird geladen&hellip;</div>
+    <div id="page-content" hidden>
+      <section class="intro">
+        <p class="eyebrow">Fast geschafft</p>
+        <h1>Wohin dürfen eure Tassen reisen?</h1>
+        <p class="intro-copy">Mit der Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.</p>
+      </section>
+
+      <div class="steps" aria-label="Bestellfortschritt">
+        <div class="step done"><span class="step-dot">✓</span><span class="step-label">Design</span></div>
+        <span class="step-line" aria-hidden="true"></span>
+        <div class="step active"><span class="step-dot">2</span><span class="step-label">Lieferadresse</span></div>
+        <span class="step-line" aria-hidden="true"></span>
+        <div class="step"><span class="step-dot">3</span><span class="step-label">Bezahlen</span></div>
+      </div>
+
+      <div class="checkout-grid">
+        <section class="card address-card" aria-labelledby="address-title">
+          <h2 class="card-title" id="address-title">Eure Lieferadresse</h2>
+          <p class="card-copy">Bitte gebt die Adresse so ein, wie sie später auf dem Paket stehen soll.</p>
+          <form id="address-form" novalidate>
+            <label>Vor- und Nachname
+              <input id="name" name="name" type="text" autocomplete="shipping name" maxlength="100" required placeholder="Lea Sommer" />
+            </label>
+            <label>Straße und Hausnummer
+              <input id="address1" name="address1" type="text" autocomplete="shipping address-line1" maxlength="120" required placeholder="Blumenstraße 12" />
+            </label>
+            <label>Adresszusatz <span class="optional">(optional)</span>
+              <input id="address2" name="address2" type="text" autocomplete="shipping address-line2" maxlength="120" placeholder="Wohnung, Etage oder c/o" />
+            </label>
+            <div class="field-row">
+              <label>Postleitzahl
+                <input id="zip" name="zip" type="text" autocomplete="shipping postal-code" maxlength="20" required inputmode="text" placeholder="10115" />
+              </label>
+              <label>Ort
+                <input id="city" name="city" type="text" autocomplete="shipping address-level2" maxlength="100" required placeholder="Berlin" />
+              </label>
+            </div>
+            <label>Land
+              <select id="country" name="country_code" autocomplete="shipping country" required disabled>
+                <option value="">Länder werden geladen&hellip;</option>
+              </select>
+            </label>
+            <label class="state-field" id="state-field" hidden>Bundesstaat oder Region
+              <select id="state" name="state_code" autocomplete="shipping address-level1"></select>
+            </label>
+            <button class="submit-button" id="submit-button" type="submit" disabled>Gesamtpreis berechnen <span aria-hidden="true">→</span></button>
+            <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <aside class="card summary-card" id="summary-card" aria-labelledby="summary-title">
+          <div class="design-summary">
+            <div class="design-preview"><img id="design-image" alt="Euer gespeichertes Tassendesign" /></div>
+            <div class="design-copy">
+              <strong id="summary-title">Wortwolken-Tasse</strong>
+              <span id="summary-quantity">Entwurf wird geladen</span>
+              <span id="summary-size"></span>
+            </div>
+          </div>
+          <div class="quote" id="quote-placeholder">
+            <p class="quote-placeholder">Der Gesamtpreis erscheint hier, sobald ihr eure Lieferadresse eingegeben habt.</p>
+          </div>
+          <div class="quote" id="quote-result" hidden aria-live="polite">
+            <div class="quote-row"><span id="items-label">Tassen</span><strong id="items-price"></strong></div>
+            <div class="quote-row"><span>Versand</span><strong id="shipping-price"></strong></div>
+            <div class="quote-row"><span>Steuern und MwSt.</span><strong id="tax-price"></strong></div>
+            <div class="quote-total"><span>Gesamtpreis</span><strong id="total-price"></strong></div>
+            <p class="quote-ready">Preis erfolgreich berechnet. Die Bezahlung verbinden wir im nächsten Schritt.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <div class="fatal" id="fatal-error" hidden></div>
+  </main>
+
+  <script>
+    'use strict';
+
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const slug = pathParts[1];
+    const configurationId = new URLSearchParams(location.search).get('configuration');
+    const loading = document.getElementById('loading');
+    const pageContent = document.getElementById('page-content');
+    const fatalError = document.getElementById('fatal-error');
+    const form = document.getElementById('address-form');
+    const countrySelect = document.getElementById('country');
+    const stateSelect = document.getElementById('state');
+    const stateField = document.getElementById('state-field');
+    const submitButton = document.getElementById('submit-button');
+    const formError = document.getElementById('form-error');
+    const quotePlaceholder = document.getElementById('quote-placeholder');
+    const quoteResult = document.getElementById('quote-result');
+    let countries = [];
+    let configuration = null;
+    let countryDisplayNames = null;
+
+    try {
+      countryDisplayNames = new Intl.DisplayNames(['de'], { type: 'region' });
+    } catch { /* Printful's country name remains the fallback. */ }
+
+    const backLink = document.getElementById('back-link');
+    backLink.href = `/e/${encodeURIComponent(slug)}/configure`;
+    backLink.addEventListener('click', (event) => {
+      try {
+        const previous = new URL(document.referrer);
+        if (previous.origin === location.origin && previous.pathname === backLink.pathname) {
+          event.preventDefault();
+          history.back();
+        }
+      } catch { /* A direct visit simply follows the normal link. */ }
+    });
+
+    function showFatal(message) {
+      loading.hidden = true;
+      pageContent.hidden = true;
+      fatalError.textContent = message;
+      fatalError.hidden = false;
+    }
+
+    function localizedCountryName(country) {
+      try {
+        return countryDisplayNames?.of(country.code) || country.name;
+      } catch {
+        return country.name;
+      }
+    }
+
+    function addCountryOption(group, country) {
+      const option = document.createElement('option');
+      option.value = country.code;
+      option.textContent = localizedCountryName(country);
+      group.appendChild(option);
+    }
+
+    function renderCountries() {
+      countrySelect.replaceChildren();
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'Land auswählen';
+      countrySelect.appendChild(empty);
+
+      const preferredCodes = ['DE', 'AT', 'CH'];
+      const preferredGroup = document.createElement('optgroup');
+      preferredGroup.label = 'Häufig gewählt';
+      preferredCodes.map((code) => countries.find((country) => country.code === code))
+        .filter(Boolean)
+        .forEach((country) => addCountryOption(preferredGroup, country));
+      countrySelect.appendChild(preferredGroup);
+
+      const allGroup = document.createElement('optgroup');
+      allGroup.label = 'Alle Länder';
+      countries.filter((country) => !preferredCodes.includes(country.code))
+        .sort((a, b) => localizedCountryName(a).localeCompare(localizedCountryName(b), 'de'))
+        .forEach((country) => addCountryOption(allGroup, country));
+      countrySelect.appendChild(allGroup);
+      countrySelect.value = countries.some((country) => country.code === 'DE') ? 'DE' : '';
+      countrySelect.disabled = false;
+      updateStates();
+    }
+
+    function updateStates() {
+      const country = countries.find((entry) => entry.code === countrySelect.value);
+      const states = country?.states || [];
+      stateSelect.replaceChildren();
+      if (!states.length) {
+        stateField.hidden = true;
+        stateSelect.required = false;
+        stateSelect.value = '';
+        return;
+      }
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Region auswählen';
+      stateSelect.appendChild(placeholder);
+      for (const state of states) {
+        const option = document.createElement('option');
+        option.value = state.code;
+        option.textContent = state.name;
+        stateSelect.appendChild(option);
+      }
+      stateField.hidden = false;
+      stateSelect.required = true;
+    }
+
+    function clearFieldErrors() {
+      form.querySelectorAll('[aria-invalid="true"]').forEach((field) => field.removeAttribute('aria-invalid'));
+      formError.textContent = '';
+    }
+
+    function clearQuote() {
+      quoteResult.hidden = true;
+      quotePlaceholder.hidden = false;
+    }
+
+    function formatMoney(cents, currency) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(cents / 100);
+    }
+
+    function showQuote(quote) {
+      document.getElementById('items-label').textContent = quote.quantity === 1 ? '1 Tasse' : `${quote.quantity} Tassen`;
+      document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
+      document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
+      document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
+      document.getElementById('total-price').textContent = formatMoney(quote.totalCents, quote.currency);
+      quotePlaceholder.hidden = true;
+      quoteResult.hidden = false;
+      if (window.matchMedia('(max-width: 839px)').matches) {
+        document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function markInvalidFields(fields) {
+      const fieldIds = { country_code: 'country', state_code: 'state' };
+      const first = fields.map((name) => document.getElementById(fieldIds[name] || name)).find(Boolean);
+      fields.forEach((name) => document.getElementById(fieldIds[name] || name)?.setAttribute('aria-invalid', 'true'));
+      first?.focus();
+    }
+
+    async function loadPage() {
+      if (!configurationId || !/^[A-Za-z0-9_-]{16}$/.test(configurationId)) {
+        showFatal('Dieser Entwurf ist nicht gültig. Bitte kehrt zum Konfigurator zurück und bestätigt euer Design erneut.');
+        return;
+      }
+      try {
+        const [configurationResponse, countriesResponse] = await Promise.all([
+          fetch(`/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}`),
+          fetch('/api/shipping/countries'),
+        ]);
+        const configurationData = await configurationResponse.json();
+        const countriesData = await countriesResponse.json();
+        if (!configurationResponse.ok) throw new Error('configuration');
+        if (!countriesResponse.ok) throw new Error(countriesData.message || 'countries');
+        configuration = configurationData;
+        countries = countriesData.countries || [];
+        if (!countries.length) throw new Error('countries');
+
+        document.getElementById('summary-title').textContent = configuration.product.name;
+        document.getElementById('summary-quantity').textContent = configuration.quantity === 1
+          ? '1 Tasse'
+          : `${configuration.quantity} Tassen`;
+        document.getElementById('summary-size').textContent =
+          `${configuration.product.size.label} · ${configuration.product.size.volumeMl} ml`;
+        document.getElementById('design-image').src = configuration.printFileUrl;
+        renderCountries();
+        submitButton.disabled = false;
+        loading.hidden = true;
+        pageContent.hidden = false;
+      } catch (error) {
+        showFatal(error.message === 'configuration'
+          ? 'Der gespeicherte Entwurf wurde nicht gefunden. Bitte bestätigt euer Design erneut.'
+          : 'Die Lieferländer konnten gerade nicht geladen werden. Bitte versucht es gleich noch einmal.');
+      }
+    }
+
+    countrySelect.addEventListener('change', () => {
+      updateStates();
+      clearQuote();
+    });
+    form.addEventListener('input', clearQuote);
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearFieldErrors();
+      if (!form.reportValidity()) return;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Preis wird berechnet…';
+      try {
+        const data = new FormData(form);
+        const recipient = Object.fromEntries(data.entries());
+        const response = await fetch(
+          `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/estimate-costs`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipient }),
+          }
+        );
+        const result = await response.json();
+        if (!response.ok) {
+          if (Array.isArray(result.fields)) markInvalidFields(result.fields);
+          throw new Error(result.message || 'Der Preis konnte nicht berechnet werden.');
+        }
+        showQuote(result.quote);
+        submitButton.textContent = 'Preis aktualisieren';
+      } catch (error) {
+        formError.textContent = error.message || 'Der Preis konnte nicht berechnet werden. Bitte versucht es erneut.';
+        submitButton.textContent = 'Erneut versuchen';
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    loadPage();
+  </script>
+</body>
+</html>

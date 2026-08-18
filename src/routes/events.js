@@ -7,6 +7,8 @@ const { slugify, makeUniqueSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
 const adminAuth = require('../adminAuth');
 const stripe = require('../stripe');
+const printful = require('../printful');
+const { buildCustomerQuote } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const { MUG_DUO, getProduct, getPublicProduct } = require('../products');
 const { buildMugPrintSvg, isMugDesignWithinBounds } = require('../mugPrint');
@@ -18,6 +20,72 @@ const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
 // left for words the couple adds manually in the editor.
 const MAX_DESIGN_ELEMENTS = 500;
+const ADDRESS_LIMITS = Object.freeze({
+  name: 100,
+  address1: 120,
+  address2: 120,
+  city: 100,
+  zip: 20,
+});
+
+function cleanAddressValue(value, maxLength) {
+  if (typeof value !== 'string') return '';
+  return value.normalize('NFC').trim().replace(/[\x00-\x1f\x7f]/g, '').slice(0, maxLength).trim();
+}
+
+function normalizeRecipient(rawRecipient, countries) {
+  const raw = rawRecipient && typeof rawRecipient === 'object' && !Array.isArray(rawRecipient)
+    ? rawRecipient
+    : {};
+  const recipient = {
+    name: cleanAddressValue(raw.name, ADDRESS_LIMITS.name),
+    address1: cleanAddressValue(raw.address1, ADDRESS_LIMITS.address1),
+    address2: cleanAddressValue(raw.address2, ADDRESS_LIMITS.address2),
+    city: cleanAddressValue(raw.city, ADDRESS_LIMITS.city),
+    zip: cleanAddressValue(raw.zip, ADDRESS_LIMITS.zip),
+    country_code: String(raw.country_code || '').trim().toUpperCase(),
+    state_code: String(raw.state_code || '').trim().toUpperCase(),
+  };
+  const invalidFields = [];
+  for (const field of ['name', 'address1', 'city', 'zip']) {
+    if (recipient[field].length < 2) invalidFields.push(field);
+  }
+  const country = countries.find((entry) => entry.code === recipient.country_code);
+  if (!country) {
+    invalidFields.push('country_code');
+  } else if (country.states.length) {
+    const state = country.states.find((entry) => entry.code.toUpperCase() === recipient.state_code);
+    if (!state) invalidFields.push('state_code');
+  } else {
+    delete recipient.state_code;
+  }
+  if (!recipient.address2) delete recipient.address2;
+  return { recipient, invalidFields: [...new Set(invalidFields)] };
+}
+
+function sendPrintfulError(res, error) {
+  if (error?.code === 'PRINTFUL_NOT_CONFIGURED') {
+    return res.status(501).json({
+      error: 'pricing_not_configured',
+      message: 'Die Preisberechnung ist noch nicht eingerichtet.',
+    });
+  }
+  if (error?.code === 'PRINTFUL_ADDRESS_REJECTED') {
+    return res.status(422).json({
+      error: 'address_not_accepted',
+      message: 'Printful konnte für diese Adresse keinen Preis berechnen. Bitte prüft eure Angaben.',
+    });
+  }
+  if (error?.code === 'PRINTFUL_AUTH_FAILED') {
+    console.error('Printful authentication failed while estimating costs.');
+  } else {
+    console.error('Printful cost estimate failed:', error?.message || error);
+  }
+  return res.status(502).json({
+    error: 'pricing_unavailable',
+    message: 'Die Preisberechnung ist gerade nicht erreichbar. Bitte versucht es gleich noch einmal.',
+  });
+}
 
 function normalizeSnapshotWords(rawWords) {
   if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
@@ -236,6 +304,18 @@ function makeRouter({ io, port }) {
     });
   });
 
+  // Printful's current shipping destinations are proxied through our server
+  // so the private API token never reaches the browser. The Printful module
+  // caches this slow-changing list for 24 hours.
+  router.get('/shipping/countries', async (req, res) => {
+    try {
+      const countries = await printful.getShippingCountries();
+      res.json({ countries });
+    } catch (error) {
+      sendPrintfulError(res, error);
+    }
+  });
+
   router.post('/events/:slug/configurations', express.json({ limit: '64kb' }), (req, res) => {
     const event = db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
@@ -277,7 +357,9 @@ function makeRouter({ io, port }) {
       productKey: product.key,
       printfulVariantId: product.printful.variantId,
       quantity,
-      unitPriceCents: product.unitPriceCents,
+      // Legacy SQLite column only. Retail pricing is calculated after the
+      // address is entered and never taken from the browser/configuration.
+      unitPriceCents: 0,
       theme,
       placement,
       words,
@@ -290,14 +372,69 @@ function makeRouter({ io, port }) {
       id: configuration.id,
       productKey: configuration.product_key,
       quantity: Number(configuration.quantity),
-      unitPriceCents: Number(configuration.unit_price_cents),
-      totalPriceCents: Number(configuration.quantity) * Number(configuration.unit_price_cents),
       theme: configuration.theme,
       placement: configuration.placement,
       printFileUrl: `/api/events/${encodeURIComponent(event.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
       createdAt: configuration.created_at,
     });
   });
+
+  router.get('/events/:slug/configurations/:configurationId', (req, res) => {
+    const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+    const product = getProduct(configuration.product_key);
+    if (!product) return res.status(500).json({ error: 'configuration_invalid' });
+    const placement = product.layouts.find((option) => option.key === configuration.placement);
+    res.json({
+      id: configuration.id,
+      quantity: Number(configuration.quantity),
+      product: {
+        key: product.key,
+        name: product.name,
+        description: product.description,
+        size: product.size,
+      },
+      placement: placement ? { key: placement.key, label: placement.label } : null,
+      printFileUrl: `/api/events/${encodeURIComponent(req.params.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
+      createdAt: configuration.created_at,
+    });
+  });
+
+  router.post(
+    '/events/:slug/configurations/:configurationId/estimate-costs',
+    express.json({ limit: '16kb' }),
+    async (req, res) => {
+      const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+      if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+      try {
+        const countries = await printful.getShippingCountries();
+        const { recipient, invalidFields } = normalizeRecipient(req.body?.recipient, countries);
+        if (invalidFields.length) {
+          return res.status(400).json({
+            error: 'invalid_address',
+            fields: invalidFields,
+            message: 'Bitte füllt alle benötigten Adressfelder vollständig aus.',
+          });
+        }
+        const costs = await printful.estimateOrderCosts({
+          variantId: Number(configuration.printful_variant_id),
+          quantity: Number(configuration.quantity),
+          recipient,
+        });
+        const quote = buildCustomerQuote(costs, Number(configuration.quantity));
+        res.json({ quote });
+      } catch (error) {
+        if (error?.message?.startsWith('invalid Printful') || error?.message?.startsWith('invalid negative')) {
+          console.error('Invalid Printful pricing response:', error.message);
+          return res.status(502).json({
+            error: 'pricing_unavailable',
+            message: 'Printful hat gerade keinen gültigen Preis geliefert. Bitte versucht es erneut.',
+          });
+        }
+        return sendPrintfulError(res, error);
+      }
+    }
+  );
 
   router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
     const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);

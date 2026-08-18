@@ -86,6 +86,12 @@ app.get('/e/:slug/configure', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'configure.html'));
 });
 
+app.get('/e/:slug/shipping', (req, res) => {
+  const event = db.getEventBySlug(req.params.slug);
+  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  res.sendFile(path.join(__dirname, 'public', 'shipping.html'));
+});
+
 // Server-side print-file export for the His & Hers mug-duo — the Printful
 // order-creation call (src/printful.js) needs a fetchable URL, not inline
 // SVG markup, so this is what that URL points at. Generated on demand
