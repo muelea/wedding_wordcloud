@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="726"
+   height="672"
+   viewBox="0 0 726 672"
+   role="img"
+   aria-labelledby="title desc"
+   version="1.1"
+   id="svg9"
+   sodipodi:docname="download.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.87546554"
+     inkscape:cx="358.09519"
+     inkscape:cy="331.82346"
+     inkscape:window-width="2157"
+     inkscape:window-height="1148"
+     inkscape:window-x="1563"
+     inkscape:window-y="98"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="g9" />
+  <title
+     id="title">Three overlapping speech bubbles with a heart</title>
+  <desc
+     id="desc">A rose circle behind two interlocking pink and burgundy speech bubbles. Their overlap forms a transparent heart.</desc>
+  <defs
+     id="defs9">
+    <radialGradient
+       id="rose-back"
+       gradientUnits="userSpaceOnUse"
+       cx="370"
+       cy="301"
+       r="248"
+       fx="373"
+       fy="321">
+      <stop
+         offset="0"
+         stop-color="#d43b68"
+         id="stop1" />
+      <stop
+         offset="0.58"
+         stop-color="#bd2055"
+         id="stop2" />
+      <stop
+         offset="1"
+         stop-color="#aa1243"
+         id="stop3" />
+    </radialGradient>
+    <radialGradient
+       id="rose-left"
+       gradientUnits="userSpaceOnUse"
+       cx="292"
+       cy="431"
+       r="321"
+       fx="307"
+       fy="451">
+      <stop
+         offset="0"
+         stop-color="#ed7898"
+         id="stop4" />
+      <stop
+         offset="0.58"
+         stop-color="#df597c"
+         id="stop5" />
+      <stop
+         offset="1"
+         stop-color="#d4426b"
+         id="stop6" />
+    </radialGradient>
+    <radialGradient
+       id="burgundy-right"
+       gradientUnits="userSpaceOnUse"
+       cx="501"
+       cy="421"
+       r="282"
+       fx="498"
+       fy="430">
+      <stop
+         offset="0"
+         stop-color="#750027"
+         id="stop7" />
+      <stop
+         offset="0.62"
+         stop-color="#61001f"
+         id="stop8" />
+      <stop
+         offset="1"
+         stop-color="#4b0018"
+         id="stop9" />
+    </radialGradient>
+    <!-- Black areas in this mask become transparent. -->
+    <mask
+       id="heart-cutout"
+       x="0"
+       y="0"
+       width="726"
+       height="672"
+       maskUnits="userSpaceOnUse">
+      <rect
+         width="726"
+         height="672"
+         fill="#fff"
+         id="rect9" />
+      <path
+         fill="#000"
+         d="         M 364 488         C 350 475, 315 450, 291 427         C 270 407, 259 385, 260 362         C 261 336, 278 316, 302 313         C 330 309, 351 323, 364 344         C 378 323, 399 309, 426 313         C 450 316, 467 336, 468 362         C 469 389, 455 414, 433 436         C 413 456, 389 475, 364 488         Z"
+         id="path9" />
+    </mask>
+  </defs>
+  <g
+     mask="url(#heart-cutout)"
+     id="g9">
+    <!-- Back bubble -->
+    <ellipse
+       id="back-bubble"
+       cx="369"
+       cy="244"
+       rx="184.5"
+       ry="186"
+       fill="url(#rose-back)" />
+    <!-- Right speech bubble and its pointed tail -->
+    <path
+       id="right-bubble"
+       fill="url(#burgundy-right)"
+       d="m 364,344 c 33,-66 94,-110 163,-110 101,0 179,76 179,173 0,76 -50,136 -129,150 l 30,54 c 3,6 -1,9 -8,6 -45,-16 -83,-36 -120,-54 l -286,9 c 51,-16 133,-52 171,-84 34,-28 74,-63 91,-92 22,-38 6,-76 -27,-83 -28,-6 -50,10 -64,31 z"
+       sodipodi:nodetypes="cssccccccccc" />
+    <!-- Left bubble sits above the lower-left edge of the right bubble. -->
+    <path
+       id="left-bubble"
+       fill="url(#rose-left)"
+       d="       M 364 344       C 335 282, 274 244, 204 244       C 104 244, 26 318, 26 410       C 26 503, 98 572, 193 572       C 253 572, 303 541, 364 488       C 331 463, 293 433, 276 408       C 249 369, 258 331, 301 314       C 328 308, 350 323, 364 344       Z" />
+  </g>
+</svg>

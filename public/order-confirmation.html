@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bestellung bestätigt – WeddingCloud</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #fffaf5; --surface: #fffefd; --ink: #400f26; --berry: #a40e4c;
+      --muted: #846e75; --line: rgba(110, 61, 72, .16); --success: #287a64;
+    }
+    html { min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Jost', system-ui, sans-serif; }
+    body {
+      min-height: 100vh; margin: 0; display: grid; grid-template-rows: auto 1fr;
+      background: radial-gradient(circle at 50% 20%, rgba(247, 224, 203, .5), transparent 38%), var(--bg);
+    }
+    .topbar {
+      min-height: 64px; padding: 14px clamp(18px, 4vw, 52px); display: flex; align-items: center;
+      border-bottom: 1px solid var(--line); background: rgba(255, 253, 250, .88); backdrop-filter: blur(14px);
+    }
+    .brand { color: var(--ink); text-decoration: none; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; }
+    .brand span { color: var(--berry); margin-right: 5px; }
+    main { width: min(620px, calc(100% - 28px)); margin: auto; padding: 42px 0 70px; }
+    .card {
+      padding: clamp(28px, 7vw, 54px); text-align: center; background: rgba(255, 254, 253, .96);
+      border: 1px solid var(--line); border-radius: 28px; box-shadow: 0 24px 70px rgba(64, 15, 38, .1);
+    }
+    .status-icon {
+      width: 76px; height: 76px; margin: 0 auto 24px; border-radius: 50%; display: grid; place-items: center;
+      background: rgba(40, 122, 100, .1); color: var(--success); font-size: 36px; font-weight: 600;
+    }
+    .status-icon.pending { color: var(--berry); background: rgba(164, 14, 76, .08); font-size: 25px; }
+    .eyebrow { margin: 0 0 10px; color: var(--berry); font-size: 11px; font-weight: 600; letter-spacing: .17em; text-transform: uppercase; }
+    h1 { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px, 8vw, 49px); font-weight: 500; line-height: 1.08; }
+    .copy { margin: 16px auto 0; max-width: 450px; color: var(--muted); font-size: 16px; line-height: 1.65; }
+    .summary { margin: 28px 0 0; padding: 18px 20px; border-radius: 16px; background: #fbf2e7; text-align: left; }
+    .summary-row { display: flex; justify-content: space-between; gap: 16px; margin: 7px 0; color: var(--muted); font-size: 14px; }
+    .summary-row strong { color: var(--ink); font-weight: 600; }
+    .test-note { margin: 18px 0 0; color: var(--success); font-size: 13px; line-height: 1.5; }
+    .home-link {
+      display: inline-flex; margin-top: 28px; min-height: 48px; padding: 12px 24px; align-items: center; justify-content: center;
+      border-radius: 999px; background: var(--ink); color: #fff; text-decoration: none; font-weight: 600;
+    }
+    .error { color: #b33a4d; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><span>♡</span>WeddingCloud</a></header>
+  <main>
+    <section class="card" aria-live="polite">
+      <div class="status-icon pending" id="status-icon" aria-hidden="true">•••</div>
+      <p class="eyebrow">Stripe-Testmodus</p>
+      <h1 id="title">Zahlung wird bestätigt</h1>
+      <p class="copy" id="copy">Wir warten noch kurz auf die sichere Zahlungsbestätigung von Stripe.</p>
+      <div class="summary" id="summary" hidden>
+        <div class="summary-row"><span>Bestellung</span><strong id="quantity"></strong></div>
+        <div class="summary-row"><span>Gesamtbetrag</span><strong id="total"></strong></div>
+      </div>
+      <p class="test-note" id="test-note" hidden>Dies war eine Testzahlung. Es wurde ausdrücklich keine Bestellung an Printful übermittelt.</p>
+      <a class="home-link" id="home-link" href="/">Zurück zu WeddingCloud</a>
+    </section>
+  </main>
+  <script>
+    'use strict';
+    const parts = location.pathname.split('/').filter(Boolean);
+    const slug = parts[1];
+    const sessionId = new URLSearchParams(location.search).get('session_id') || '';
+    const icon = document.getElementById('status-icon');
+    const title = document.getElementById('title');
+    const copy = document.getElementById('copy');
+    const summary = document.getElementById('summary');
+    const note = document.getElementById('test-note');
+    document.getElementById('home-link').href = `/e/${encodeURIComponent(slug)}/display`;
+
+    function money(cents, currency) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(cents / 100);
+    }
+
+    function showError(message) {
+      icon.textContent = '!';
+      icon.classList.remove('pending');
+      icon.classList.add('error');
+      title.textContent = 'Bestätigung nicht gefunden';
+      copy.textContent = message;
+    }
+
+    async function checkStatus(attempt = 0) {
+      if (!/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
+        showError('Der Zahlungslink ist unvollständig. Bitte öffnet die Bestätigungsseite erneut über Stripe.');
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/events/${encodeURIComponent(slug)}/orders/status?session_id=${encodeURIComponent(sessionId)}`,
+          { cache: 'no-store' }
+        );
+        const order = await response.json();
+        if (!response.ok) throw new Error('Die Bestellung konnte nicht geladen werden.');
+        if (order.paymentConfirmed) {
+          icon.textContent = '✓';
+          icon.classList.remove('pending');
+          title.textContent = 'Testzahlung erfolgreich';
+          copy.textContent = 'Stripe hat die Zahlung bestätigt und wir haben die Bestellung sicher gespeichert.';
+          document.getElementById('quantity').textContent = order.quantity === 1 ? '1 Tasse' : `${order.quantity} Tassen`;
+          document.getElementById('total').textContent = money(order.totalCents, order.currency);
+          summary.hidden = false;
+          note.hidden = false;
+          return;
+        }
+        if (attempt < 20) {
+          setTimeout(() => checkStatus(attempt + 1), 1000);
+          return;
+        }
+        title.textContent = 'Zahlung wird noch verarbeitet';
+        copy.textContent = 'Stripe hat uns noch keine Bestätigung geschickt. Ladet diese Seite bitte in einem Moment erneut.';
+      } catch (error) {
+        if (attempt < 4) {
+          setTimeout(() => checkStatus(attempt + 1), 1000);
+          return;
+        }
+        showError(error.message || 'Die Zahlungsbestätigung ist gerade nicht erreichbar.');
+      }
+    }
+
+    checkStatus();
+  </script>
+</body>
+</html>

@@ -66,9 +66,16 @@ db.exec(`
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id           INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     stripe_session_id  TEXT UNIQUE,
-    status             TEXT NOT NULL DEFAULT 'pending', -- pending | paid | fulfilled | failed
+    status             TEXT NOT NULL DEFAULT 'pending', -- payment / checkout state
     shipping_json      TEXT,
     printful_order_id  TEXT,
+    fulfillment_status TEXT NOT NULL DEFAULT 'not_started',
+    fulfillment_mode   TEXT,
+    fulfillment_attempts INTEGER NOT NULL DEFAULT 0,
+    fulfillment_error  TEXT,
+    fulfillment_payload_json TEXT,
+    printful_order_status TEXT,
+    fulfillment_updated_at TEXT,
     created_at         TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -90,6 +97,39 @@ db.exec(`
   );
 `);
 
+// Quotes deliberately live separately from orders: couples can calculate a
+// price more than once while correcting their address, but only the quote
+// they explicitly continue with becomes an order. The exact cent amounts and
+// address snapshot are immutable inputs to Stripe Checkout.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS checkout_quotes (
+    id                    TEXT PRIMARY KEY,
+    event_id              INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    configuration_id      TEXT NOT NULL REFERENCES configurations(id) ON DELETE CASCADE,
+    recipient_json        TEXT NOT NULL,
+    printful_costs_json    TEXT NOT NULL,
+    currency              TEXT NOT NULL,
+    quantity              INTEGER NOT NULL,
+    items_cents           INTEGER NOT NULL,
+    shipping_cents        INTEGER NOT NULL,
+    tax_cents             INTEGER NOT NULL,
+    total_cents           INTEGER NOT NULL,
+    expires_at            TEXT NOT NULL,
+    created_at            TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS checkout_quotes_event_configuration_idx
+    ON checkout_quotes(event_id, configuration_id);
+
+  CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+    stripe_event_id  TEXT PRIMARY KEY,
+    event_type       TEXT NOT NULL,
+    stripe_session_id TEXT,
+    processed_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 // Keep local databases created before the configurable-quantity feature
 // usable without a manual migration step. Existing duo drafts retain their
 // original quantity of two and the equivalent 17,45 € unit price.
@@ -105,6 +145,40 @@ if (!configurationColumns.has('unit_price_cents')) {
 if (!configurationColumns.has('design_json')) {
   db.exec('ALTER TABLE configurations ADD COLUMN design_json TEXT;');
 }
+
+// Forward-only, no-ops-on-new-databases migrations for the checkout state
+// stored in older local SQLite files. Keeping these additive makes `git pull`
+// + restart sufficient for local development.
+const orderColumns = new Set(
+  db.prepare('PRAGMA table_info(orders)').all().map((column) => column.name)
+);
+const orderMigrations = [
+  ['configuration_id', 'TEXT'],
+  ['quote_id', 'TEXT'],
+  ['currency', 'TEXT'],
+  ['items_cents', 'INTEGER'],
+  ['shipping_cents', 'INTEGER'],
+  ['tax_cents', 'INTEGER'],
+  ['total_cents', 'INTEGER'],
+  ['stripe_checkout_url', 'TEXT'],
+  ['stripe_payment_intent_id', 'TEXT'],
+  ['stripe_event_id', 'TEXT'],
+  ['mode', "TEXT NOT NULL DEFAULT 'test'"],
+  ['paid_at', 'TEXT'],
+  ['fulfillment_status', "TEXT NOT NULL DEFAULT 'not_started'"],
+  ['fulfillment_mode', 'TEXT'],
+  ['fulfillment_attempts', 'INTEGER NOT NULL DEFAULT 0'],
+  ['fulfillment_error', 'TEXT'],
+  ['fulfillment_payload_json', 'TEXT'],
+  ['printful_order_status', 'TEXT'],
+  ['fulfillment_updated_at', 'TEXT'],
+];
+for (const [name, declaration] of orderMigrations) {
+  if (!orderColumns.has(name)) {
+    db.exec(`ALTER TABLE orders ADD COLUMN ${name} ${declaration};`);
+  }
+}
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS orders_quote_id_unique ON orders(quote_id) WHERE quote_id IS NOT NULL;');
 
 // ── Password hashing (admin PIN) ────────────────────────────────────────────
 // scrypt from Node's built-in crypto — no bcrypt dependency needed for a
@@ -209,6 +283,299 @@ function getOrderBySessionId(stripeSessionId) {
   return db.prepare('SELECT * FROM orders WHERE stripe_session_id = ?').get(stripeSessionId) || null;
 }
 
+function getOrderById(id) {
+  return db.prepare('SELECT * FROM orders WHERE id = ?').get(id) || null;
+}
+
+function getOrderByQuoteId(quoteId) {
+  return db.prepare('SELECT * FROM orders WHERE quote_id = ?').get(quoteId) || null;
+}
+
+function getEventOrderBySessionId(slug, stripeSessionId) {
+  return db.prepare(`
+    SELECT orders.*
+    FROM orders
+    JOIN events ON events.id = orders.event_id
+    WHERE orders.stripe_session_id = ? AND events.slug = ?
+  `).get(stripeSessionId, slug) || null;
+}
+
+function createCheckoutOrder({ eventId, configurationId, quote, mode = 'test' }) {
+  if (!['test', 'live'].includes(mode)) throw new Error('invalid checkout mode');
+  const existing = getOrderByQuoteId(quote.id);
+  if (existing) return { order: existing, created: false };
+  try {
+    const info = db.prepare(`
+      INSERT INTO orders (
+        event_id, configuration_id, quote_id, status, shipping_json,
+        currency, items_cents, shipping_cents, tax_cents, total_cents, mode
+      ) VALUES (?, ?, ?, 'creating_checkout', ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      eventId,
+      configurationId,
+      quote.id,
+      quote.recipient_json,
+      quote.currency,
+      Number(quote.items_cents),
+      Number(quote.shipping_cents),
+      Number(quote.tax_cents),
+      Number(quote.total_cents),
+      mode
+    );
+    return { order: getOrderById(info.lastInsertRowid), created: true };
+  } catch (error) {
+    // A concurrent double-click can race the initial lookup. The unique
+    // quote index makes the database the final arbiter.
+    const racedOrder = getOrderByQuoteId(quote.id);
+    if (racedOrder) return { order: racedOrder, created: false };
+    throw error;
+  }
+}
+
+function attachStripeSession(orderId, { id, url }) {
+  db.prepare(`
+    UPDATE orders
+    SET stripe_session_id = ?, stripe_checkout_url = ?, status = 'checkout_pending',
+        updated_at = datetime('now')
+    WHERE id = ? AND status = 'creating_checkout'
+  `).run(id, url, orderId);
+  return getOrderById(orderId);
+}
+
+function markCheckoutCreationFailed(orderId) {
+  db.prepare(`
+    UPDATE orders SET status = 'checkout_failed', updated_at = datetime('now')
+    WHERE id = ? AND status = 'creating_checkout'
+  `).run(orderId);
+}
+
+function retryCheckoutOrder(orderId) {
+  db.prepare(`
+    UPDATE orders SET status = 'creating_checkout', updated_at = datetime('now')
+    WHERE id = ? AND status = 'checkout_failed'
+  `).run(orderId);
+  return getOrderById(orderId);
+}
+
+/**
+ * Record a successful payment and the Stripe event atomically. If
+ * Stripe retries the same webhook, the event insert changes zero rows and
+ * the order cannot be transitioned or queued for fulfillment twice. Stripe
+ * test payments are always queued for the local mock pipeline.
+ */
+function recordSuccessfulPayment({ stripeEventId, eventType, stripeSessionId, paymentIntentId, livemode }) {
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    const inserted = db.prepare(`
+      INSERT INTO stripe_webhook_events (stripe_event_id, event_type, stripe_session_id)
+      VALUES (?, ?, ?)
+      ON CONFLICT(stripe_event_id) DO NOTHING
+    `).run(stripeEventId, eventType, stripeSessionId);
+    if (Number(inserted.changes) === 0) {
+      db.exec('COMMIT;');
+      return { duplicate: true, order: getOrderBySessionId(stripeSessionId) };
+    }
+
+    const currentOrder = getOrderBySessionId(stripeSessionId);
+    if (currentOrder && ['paid_test', 'paid'].includes(currentOrder.status)) {
+      // Stripe can legitimately emit more than one successful event type for
+      // the same Session. Treat the Session itself as already processed even
+      // when the event id is new.
+      db.exec('COMMIT;');
+      return { duplicate: true, order: currentOrder };
+    }
+
+    const expectedMode = livemode ? 'live' : 'test';
+    if (!currentOrder || currentOrder.mode !== expectedMode) {
+      throw new Error('checkout mode does not match Stripe payment mode');
+    }
+    const paymentStatus = livemode ? 'paid' : 'paid_test';
+    const fulfillmentMode = livemode ? null : 'mock';
+    const updated = db.prepare(`
+      UPDATE orders
+      SET status = ?, stripe_payment_intent_id = ?, stripe_event_id = ?,
+          fulfillment_status = 'pending', fulfillment_mode = ?,
+          fulfillment_error = NULL, paid_at = datetime('now'),
+          fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
+      WHERE stripe_session_id = ? AND status = 'checkout_pending'
+    `).run(paymentStatus, paymentIntentId || null, stripeEventId, fulfillmentMode, stripeSessionId);
+    if (Number(updated.changes) === 0) {
+      throw new Error('checkout order not found or not payable');
+    }
+    db.exec('COMMIT;');
+    return { duplicate: false, order: getOrderBySessionId(stripeSessionId) };
+  } catch (error) {
+    db.exec('ROLLBACK;');
+    throw error;
+  }
+}
+
+function recordTestPayment(options) {
+  return recordSuccessfulPayment({ ...options, livemode: false });
+}
+
+/**
+ * Claiming is a single conditional UPDATE. Stripe retries, server restarts
+ * and two in-process workers therefore cannot run the same fulfillment at
+ * the same time. Completed draft/submitted/mock records are never claimable.
+ */
+function claimFulfillmentOrder(orderId) {
+  const updated = db.prepare(`
+    UPDATE orders
+    SET fulfillment_status = 'processing',
+        fulfillment_attempts = fulfillment_attempts + 1,
+        fulfillment_error = NULL,
+        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
+    WHERE id = ?
+      AND fulfillment_status IN ('pending', 'failed')
+      AND fulfillment_attempts < 3
+      AND status IN ('paid_test', 'paid')
+  `).run(orderId);
+  return Number(updated.changes) === 1 ? getOrderById(orderId) : null;
+}
+
+function completeFulfillment(orderId, { mode, payload, printfulOrderId, printfulStatus }) {
+  const status = mode === 'mock'
+    ? 'mocked'
+    : mode === 'draft'
+      ? 'draft'
+      : 'submitted';
+  db.prepare(`
+    UPDATE orders
+    SET fulfillment_status = ?, fulfillment_mode = ?, fulfillment_payload_json = ?,
+        printful_order_id = ?, printful_order_status = ?, fulfillment_error = NULL,
+        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
+    WHERE id = ? AND fulfillment_status = 'processing'
+  `).run(
+    status,
+    mode,
+    JSON.stringify(payload),
+    printfulOrderId || null,
+    printfulStatus || status,
+    orderId
+  );
+  return getOrderById(orderId);
+}
+
+function failFulfillment(orderId, error, { blocked = false } = {}) {
+  const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
+  db.prepare(`
+    UPDATE orders
+    SET fulfillment_status = ?, fulfillment_error = ?,
+        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
+    WHERE id = ? AND fulfillment_status = 'processing'
+  `).run(blocked ? 'blocked' : 'failed', safeError, orderId);
+  return getOrderById(orderId);
+}
+
+function getPendingFulfillmentOrders(limit = 20) {
+  const safeLimit = Number.isSafeInteger(limit) && limit > 0 && limit <= 100 ? limit : 20;
+  return db.prepare(`
+    SELECT * FROM orders
+    WHERE fulfillment_status IN ('pending', 'failed')
+      AND fulfillment_attempts < 3
+      AND status IN ('paid_test', 'paid')
+    ORDER BY id ASC
+    LIMIT ?
+  `).all(safeLimit);
+}
+
+function recoverStaleFulfillments() {
+  return db.prepare(`
+    UPDATE orders
+    SET fulfillment_status = 'failed',
+        fulfillment_error = 'Verarbeitung wurde durch einen Serverneustart unterbrochen.',
+        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
+    WHERE fulfillment_status = 'processing'
+      AND fulfillment_updated_at < datetime('now', '-15 minutes')
+  `).run();
+}
+
+// ── Expiring checkout quotes ────────────────────────────────────────────
+function checkoutQuoteTtlMs() {
+  const minutes = Number(process.env.CHECKOUT_QUOTE_TTL_MINUTES || 30);
+  const safeMinutes = Number.isFinite(minutes) && minutes >= 5 && minutes <= 120 ? minutes : 30;
+  return Math.round(safeMinutes * 60 * 1000);
+}
+
+function cleanupAbandonedQuotes() {
+  // Keep checkout/paid records for reconciliation, but remove personal
+  // address data from abandoned quotes one day after expiry.
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  db.prepare(`
+    DELETE FROM checkout_quotes
+    WHERE expires_at < ?
+      AND NOT EXISTS (SELECT 1 FROM orders WHERE orders.quote_id = checkout_quotes.id)
+  `).run(cutoff);
+}
+
+function createCheckoutQuote({ eventId, configurationId, recipient, printfulCosts, quote }) {
+  cleanupAbandonedQuotes();
+  const id = crypto.randomBytes(18).toString('base64url');
+  const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
+  db.prepare(`
+    INSERT INTO checkout_quotes (
+      id, event_id, configuration_id, recipient_json, printful_costs_json,
+      currency, quantity, items_cents, shipping_cents, tax_cents, total_cents, expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    eventId,
+    configurationId,
+    JSON.stringify(recipient),
+    JSON.stringify(printfulCosts),
+    quote.currency,
+    quote.quantity,
+    quote.itemsCents,
+    quote.shippingCents,
+    quote.taxCents,
+    quote.totalCents,
+    expiresAt
+  );
+  return getCheckoutQuote(id);
+}
+
+function getCheckoutQuote(id) {
+  return db.prepare('SELECT * FROM checkout_quotes WHERE id = ?').get(id) || null;
+}
+
+function getEventCheckoutQuote(slug, configurationId, quoteId) {
+  return db.prepare(`
+    SELECT checkout_quotes.*
+    FROM checkout_quotes
+    JOIN events ON events.id = checkout_quotes.event_id
+    WHERE checkout_quotes.id = ?
+      AND checkout_quotes.configuration_id = ?
+      AND events.slug = ?
+  `).get(quoteId, configurationId, slug) || null;
+}
+
+function updateCheckoutQuote(quoteId, { printfulCosts, quote }) {
+  const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
+  db.prepare(`
+    UPDATE checkout_quotes
+    SET printful_costs_json = ?, currency = ?, quantity = ?, items_cents = ?,
+        shipping_cents = ?, tax_cents = ?, total_cents = ?, expires_at = ?,
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(
+    JSON.stringify(printfulCosts),
+    quote.currency,
+    quote.quantity,
+    quote.itemsCents,
+    quote.shippingCents,
+    quote.taxCents,
+    quote.totalCents,
+    expiresAt,
+    quoteId
+  );
+  return getCheckoutQuote(quoteId);
+}
+
+function isCheckoutQuoteExpired(quote) {
+  return !quote || !Number.isFinite(Date.parse(quote.expires_at)) || Date.parse(quote.expires_at) <= Date.now();
+}
+
 // ── Product configurations ──────────────────────────────────────────────
 // A configuration stores the exact word list the couple previewed. This is
 // intentionally separate from the live `words` table: guests may keep
@@ -281,6 +648,25 @@ module.exports = {
   markOrderPaid,
   markOrderFulfilled,
   getOrderBySessionId,
+  getOrderById,
+  getOrderByQuoteId,
+  getEventOrderBySessionId,
+  createCheckoutOrder,
+  attachStripeSession,
+  markCheckoutCreationFailed,
+  retryCheckoutOrder,
+  recordSuccessfulPayment,
+  recordTestPayment,
+  claimFulfillmentOrder,
+  completeFulfillment,
+  failFulfillment,
+  getPendingFulfillmentOrders,
+  recoverStaleFulfillments,
+  createCheckoutQuote,
+  getCheckoutQuote,
+  getEventCheckoutQuote,
+  updateCheckoutQuote,
+  isCheckoutQuoteExpired,
   createConfiguration,
   getConfiguration,
   getEventConfiguration,

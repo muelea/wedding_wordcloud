@@ -79,6 +79,7 @@
     }
     .submit-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 13px 28px rgba(64, 15, 38, .2); }
     .submit-button:disabled { cursor: wait; opacity: .58; }
+    .checkout-button { background: var(--berry); margin-top: 16px; }
     .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .summary-card { padding: 22px; align-self: start; }
     .design-summary { display: flex; gap: 14px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
@@ -95,6 +96,7 @@
     .quote-total strong { font-family: 'Playfair Display', Georgia, serif; font-size: 29px; font-weight: 600; white-space: nowrap; }
     .quote-placeholder { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
     .quote-ready { margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: rgba(40, 122, 100, .09); color: var(--success); font-size: 13px; line-height: 1.45; }
+    .checkout-error { min-height: 18px; margin: 10px 2px 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .fatal { margin-top: 20px; padding: 18px; border: 1px solid rgba(179, 58, 77, .24); border-radius: 16px; background: rgba(179, 58, 77, .07); color: var(--danger); line-height: 1.55; }
     .loading { padding: 80px 16px; text-align: center; color: var(--muted); }
     [hidden] { display: none !important; }
@@ -191,7 +193,9 @@
             <div class="quote-row"><span>Versand</span><strong id="shipping-price"></strong></div>
             <div class="quote-row"><span>Steuern und MwSt.</span><strong id="tax-price"></strong></div>
             <div class="quote-total"><span>Gesamtpreis</span><strong id="total-price"></strong></div>
-            <p class="quote-ready">Preis erfolgreich berechnet. Die Bezahlung verbinden wir im nächsten Schritt.</p>
+            <p class="quote-ready">Der Preis ist kurzzeitig reserviert und wird direkt vor der Zahlung noch einmal geprüft.</p>
+            <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Testzahlung <span aria-hidden="true">→</span></button>
+            <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
           </div>
         </aside>
       </div>
@@ -204,7 +208,10 @@
 
     const pathParts = location.pathname.split('/').filter(Boolean);
     const slug = pathParts[1];
-    const configurationId = new URLSearchParams(location.search).get('configuration');
+    const query = new URLSearchParams(location.search);
+    const configurationId = query.get('configuration');
+    const savedQuoteId = query.get('quote');
+    const checkoutWasCancelled = query.get('checkout') === 'cancelled';
     const loading = document.getElementById('loading');
     const pageContent = document.getElementById('page-content');
     const fatalError = document.getElementById('fatal-error');
@@ -216,8 +223,11 @@
     const formError = document.getElementById('form-error');
     const quotePlaceholder = document.getElementById('quote-placeholder');
     const quoteResult = document.getElementById('quote-result');
+    const checkoutButton = document.getElementById('checkout-button');
+    const checkoutError = document.getElementById('checkout-error');
     let countries = [];
     let configuration = null;
+    let currentQuote = null;
     let countryDisplayNames = null;
 
     try {
@@ -314,8 +324,12 @@
     }
 
     function clearQuote() {
+      currentQuote = null;
       quoteResult.hidden = true;
       quotePlaceholder.hidden = false;
+      checkoutError.textContent = '';
+      checkoutButton.disabled = false;
+      checkoutButton.textContent = 'Weiter zur Testzahlung →';
     }
 
     function formatMoney(cents, currency) {
@@ -323,6 +337,7 @@
     }
 
     function showQuote(quote) {
+      currentQuote = quote;
       document.getElementById('items-label').textContent = quote.quantity === 1 ? '1 Tasse' : `${quote.quantity} Tassen`;
       document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
       document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
@@ -330,6 +345,9 @@
       document.getElementById('total-price').textContent = formatMoney(quote.totalCents, quote.currency);
       quotePlaceholder.hidden = true;
       quoteResult.hidden = false;
+      checkoutError.textContent = '';
+      checkoutButton.disabled = false;
+      checkoutButton.textContent = 'Weiter zur Testzahlung →';
       if (window.matchMedia('(max-width: 839px)').matches) {
         document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -340,6 +358,28 @@
       const first = fields.map((name) => document.getElementById(fieldIds[name] || name)).find(Boolean);
       fields.forEach((name) => document.getElementById(fieldIds[name] || name)?.setAttribute('aria-invalid', 'true'));
       first?.focus();
+    }
+
+    async function restoreSavedQuote() {
+      if (!savedQuoteId || !/^[A-Za-z0-9_-]{24}$/.test(savedQuoteId)) return;
+      const response = await fetch(
+        `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}` +
+        `/quotes/${encodeURIComponent(savedQuoteId)}`,
+        { cache: 'no-store' }
+      );
+      if (!response.ok) return;
+      const saved = await response.json();
+      for (const field of ['name', 'address1', 'address2', 'zip', 'city']) {
+        document.getElementById(field).value = saved.recipient?.[field] || '';
+      }
+      countrySelect.value = saved.recipient?.country_code || '';
+      updateStates();
+      if (saved.recipient?.state_code) stateSelect.value = saved.recipient.state_code;
+      showQuote(saved.quote);
+      submitButton.textContent = 'Preis aktualisieren';
+      if (checkoutWasCancelled) {
+        checkoutError.textContent = 'Die Testzahlung wurde abgebrochen. Ihr könnt sie hier erneut öffnen.';
+      }
     }
 
     async function loadPage() {
@@ -368,6 +408,7 @@
           `${configuration.product.size.label} · ${configuration.product.size.volumeMl} ml`;
         document.getElementById('design-image').src = configuration.printFileUrl;
         renderCountries();
+        await restoreSavedQuote();
         submitButton.disabled = false;
         loading.hidden = true;
         pageContent.hidden = false;
@@ -413,6 +454,49 @@
         submitButton.textContent = 'Erneut versuchen';
       } finally {
         submitButton.disabled = false;
+      }
+    });
+
+    checkoutButton.addEventListener('click', async () => {
+      if (!currentQuote?.id) return;
+      checkoutButton.disabled = true;
+      checkoutButton.textContent = 'Preis wird noch einmal geprüft…';
+      checkoutError.textContent = '';
+      try {
+        const response = await fetch(
+          `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/checkout`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quoteId: currentQuote.id }),
+          }
+        );
+        const result = await response.json();
+        if (result.quote) showQuote(result.quote);
+        if (!response.ok) {
+          if (result.error === 'quote_expired') {
+            clearQuote();
+            submitButton.textContent = 'Gesamtpreis neu berechnen →';
+            formError.textContent = result.message || 'Der Preis ist abgelaufen. Bitte berechnet ihn erneut.';
+            return;
+          }
+          if (result.error === 'quote_changed') {
+            checkoutButton.textContent = 'Aktualisierten Preis bestätigen →';
+          }
+          throw new Error(result.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.');
+        }
+        if (result.confirmationUrl) {
+          location.assign(result.confirmationUrl);
+          return;
+        }
+        if (!result.url) throw new Error('Stripe hat keine gültige Zahlungsseite geliefert.');
+        location.assign(result.url);
+      } catch (error) {
+        checkoutError.textContent = error.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.';
+        checkoutButton.disabled = false;
+        if (checkoutButton.textContent.includes('geprüft')) {
+          checkoutButton.textContent = 'Erneut zur Testzahlung →';
+        }
       }
     });
 

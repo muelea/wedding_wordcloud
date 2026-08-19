@@ -87,6 +87,28 @@ function sendPrintfulError(res, error) {
   });
 }
 
+function checkoutQuoteResponse(quote) {
+  return {
+    id: quote.id,
+    currency: quote.currency,
+    quantity: Number(quote.quantity),
+    itemsCents: Number(quote.items_cents),
+    shippingCents: Number(quote.shipping_cents),
+    taxCents: Number(quote.tax_cents),
+    totalCents: Number(quote.total_cents),
+    expiresAt: quote.expires_at,
+  };
+}
+
+function quoteAmountsDiffer(stored, fresh) {
+  return stored.currency !== fresh.currency ||
+    Number(stored.quantity) !== fresh.quantity ||
+    Number(stored.items_cents) !== fresh.itemsCents ||
+    Number(stored.shipping_cents) !== fresh.shippingCents ||
+    Number(stored.tax_cents) !== fresh.taxCents ||
+    Number(stored.total_cents) !== fresh.totalCents;
+}
+
 function normalizeSnapshotWords(rawWords) {
   if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
     return null;
@@ -421,8 +443,22 @@ function makeRouter({ io, port }) {
           quantity: Number(configuration.quantity),
           recipient,
         });
-        const quote = buildCustomerQuote(costs, Number(configuration.quantity));
-        res.json({ quote });
+        const calculatedQuote = buildCustomerQuote(costs, Number(configuration.quantity));
+        if (calculatedQuote.currency !== 'EUR') {
+          console.error(`Printful returned ${calculatedQuote.currency}; dynamic checkout requires EUR.`);
+          return res.status(502).json({
+            error: 'pricing_currency_mismatch',
+            message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
+          });
+        }
+        const savedQuote = db.createCheckoutQuote({
+          eventId: configuration.event_id,
+          configurationId: configuration.id,
+          recipient,
+          printfulCosts: costs,
+          quote: calculatedQuote,
+        });
+        res.json({ quote: checkoutQuoteResponse(savedQuote) });
       } catch (error) {
         if (error?.message?.startsWith('invalid Printful') || error?.message?.startsWith('invalid negative')) {
           console.error('Invalid Printful pricing response:', error.message);
@@ -435,6 +471,29 @@ function makeRouter({ io, port }) {
       }
     }
   );
+
+  // Restore an opaque saved quote after returning from Stripe's cancel URL.
+  // The response is no-store because it contains the normalized address.
+  router.get('/events/:slug/configurations/:configurationId/quotes/:quoteId', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const quote = db.getEventCheckoutQuote(
+      req.params.slug,
+      req.params.configurationId,
+      req.params.quoteId
+    );
+    if (!quote) return res.status(404).json({ error: 'quote_not_found' });
+    const order = db.getOrderByQuoteId(quote.id);
+    if (db.isCheckoutQuoteExpired(quote) && !order) {
+      return res.status(410).json({ error: 'quote_expired' });
+    }
+    let recipient;
+    try {
+      recipient = JSON.parse(quote.recipient_json);
+    } catch {
+      return res.status(500).json({ error: 'quote_invalid' });
+    }
+    return res.json({ quote: checkoutQuoteResponse(quote), recipient });
+  });
 
   router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
     const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
@@ -453,25 +512,172 @@ function makeRouter({ io, port }) {
     res.send(svg);
   });
 
-  // ── Mug-duo checkout ─────────────────────────────────────────────────────
-  router.post('/events/:slug/checkout', express.json(), async (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
-    if (!event) return res.status(404).json({ error: 'event not found' });
-    try {
-      const baseUrl = getBaseUrl(req, port);
-      const session = await stripe.createCheckoutSession({ slug: event.slug, baseUrl });
-      db.createOrder({ eventId: event.id, stripeSessionId: session.id });
-      res.json({ url: session.url });
-    } catch (err) {
-      if (err.code === 'STRIPE_NOT_CONFIGURED') {
-        return res.status(501).json({
-          error: 'checkout_not_configured',
-          message: 'Stripe ist noch nicht eingerichtet (fehlende API-Keys). Diese Funktion folgt in einer späteren Phase.',
+  // Re-estimate from the saved address immediately before Stripe. The client
+  // supplies only the opaque quote id; product, quantity, address and cents
+  // all come from the database.
+  router.post(
+    '/events/:slug/configurations/:configurationId/checkout',
+    express.json({ limit: '4kb' }),
+    async (req, res) => {
+      const event = db.getEventBySlug(req.params.slug);
+      if (!event) return res.status(404).json({ error: 'event_not_found' });
+      const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+      if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+      const product = getProduct(configuration.product_key);
+      if (!product) return res.status(500).json({ error: 'configuration_invalid' });
+      const quoteId = typeof req.body?.quoteId === 'string' ? req.body.quoteId : '';
+      const storedQuote = db.getEventCheckoutQuote(event.slug, configuration.id, quoteId);
+      if (!storedQuote) {
+        return res.status(404).json({
+          error: 'quote_not_found',
+          message: 'Die Preisberechnung wurde nicht gefunden. Bitte berechnet den Preis erneut.',
         });
       }
-      console.error('Checkout session creation failed:', err);
-      res.status(500).json({ error: 'checkout_failed' });
+
+      // A repeated click returns the same Stripe Session. No re-estimate is
+      // necessary because this exact quote was already revalidated before
+      // that Session was created.
+      let order = db.getOrderByQuoteId(storedQuote.id);
+      if (order?.status === 'checkout_pending' && order.stripe_checkout_url) {
+        return res.json({ url: order.stripe_checkout_url, reused: true });
+      }
+      if (order && ['paid_test', 'paid'].includes(order.status)) {
+        return res.json({
+          confirmationUrl: `/e/${encodeURIComponent(event.slug)}/order-confirmation?session_id=${encodeURIComponent(order.stripe_session_id)}`,
+          alreadyPaid: true,
+        });
+      }
+      if (order?.status === 'creating_checkout') {
+        return res.status(409).json({
+          error: 'checkout_in_progress',
+          message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+        });
+      }
+      if (db.isCheckoutQuoteExpired(storedQuote)) {
+        return res.status(409).json({
+          error: 'quote_expired',
+          message: 'Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.',
+        });
+      }
+
+      let recipient;
+      try {
+        recipient = JSON.parse(storedQuote.recipient_json);
+      } catch {
+        return res.status(500).json({ error: 'quote_invalid' });
+      }
+
+      try {
+        const costs = await printful.estimateOrderCosts({
+          variantId: Number(configuration.printful_variant_id),
+          quantity: Number(configuration.quantity),
+          recipient,
+        });
+        const freshQuote = buildCustomerQuote(costs, Number(configuration.quantity));
+        if (freshQuote.currency !== 'EUR') {
+          return res.status(502).json({
+            error: 'pricing_currency_mismatch',
+            message: 'Der Shoppreis konnte nicht in Euro berechnet werden.',
+          });
+        }
+
+        const changed = quoteAmountsDiffer(storedQuote, freshQuote);
+        const refreshedQuote = db.updateCheckoutQuote(storedQuote.id, {
+          printfulCosts: costs,
+          quote: freshQuote,
+        });
+        if (changed) {
+          return res.status(409).json({
+            error: 'quote_changed',
+            message: 'Printful hat den Preis aktualisiert. Bitte bestätigt den neuen Gesamtpreis.',
+            quote: checkoutQuoteResponse(refreshedQuote),
+          });
+        }
+
+        const orderResult = db.createCheckoutOrder({
+          eventId: event.id,
+          configurationId: configuration.id,
+          quote: refreshedQuote,
+          mode: stripe.getCheckoutMode(),
+        });
+        order = orderResult.order;
+        if (!orderResult.created && order.status === 'checkout_failed') {
+          order = db.retryCheckoutOrder(order.id);
+        }
+        if (!orderResult.created && order.status !== 'creating_checkout') {
+          if (order.status === 'checkout_pending' && order.stripe_checkout_url) {
+            return res.json({ url: order.stripe_checkout_url, reused: true });
+          }
+          return res.status(409).json({
+            error: 'checkout_in_progress',
+            message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+          });
+        }
+
+        const session = await stripe.createCheckoutSession({
+          order,
+          product,
+          slug: event.slug,
+          configurationId: configuration.id,
+          quoteId: refreshedQuote.id,
+          quantity: Number(configuration.quantity),
+          baseUrl: getBaseUrl(req, port),
+        });
+        db.attachStripeSession(order.id, session);
+        return res.json({ url: session.url });
+      } catch (error) {
+        if (order?.id) db.markCheckoutCreationFailed(order.id);
+        if (error?.code === 'STRIPE_NOT_CONFIGURED') {
+          return res.status(501).json({
+            error: 'checkout_not_configured',
+            message: 'Stripe ist noch nicht eingerichtet. Bitte ergänzt den Test-Key in der .env-Datei.',
+          });
+        }
+        if (error?.code === 'STRIPE_LIVE_MODE_BLOCKED') {
+          return res.status(503).json({ error: 'stripe_live_mode_blocked', message: error.message });
+        }
+        if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
+        console.error('Dynamic checkout creation failed:', error);
+        return res.status(500).json({
+          error: 'checkout_failed',
+          message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',
+        });
+      }
     }
+  );
+
+  router.get('/events/:slug/orders/status', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const sessionId = typeof req.query.session_id === 'string' ? req.query.session_id : '';
+    if (!/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
+      return res.status(400).json({ error: 'invalid_session' });
+    }
+    const order = db.getEventOrderBySessionId(req.params.slug, sessionId);
+    if (!order) return res.status(404).json({ error: 'order_not_found' });
+    const configuration = db.getConfiguration(order.configuration_id);
+    const paymentConfirmed = ['paid_test', 'paid'].includes(order.status);
+    const fulfillmentCreated = ['draft', 'submitted'].includes(order.fulfillment_status);
+    res.json({
+      status: order.status,
+      paymentConfirmed,
+      fulfillmentCreated,
+      fulfillmentStatus: order.fulfillment_status || 'not_started',
+      mode: order.mode || 'test',
+      currency: order.currency,
+      totalCents: Number(order.total_cents),
+      quantity: configuration ? Number(configuration.quantity) : null,
+      paidAt: order.paid_at,
+    });
+  });
+
+  // Retain a clear response for clients of the former fixed-Price endpoint.
+  router.post('/events/:slug/checkout', express.json(), (req, res) => {
+    const event = db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'event_not_found' });
+    return res.status(410).json({
+      error: 'quote_required',
+      message: 'Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.',
+    });
   });
 
   return router;

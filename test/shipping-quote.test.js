@@ -21,8 +21,12 @@ async function saveConfiguration(baseUrl, slug, quantity = 3) {
 }
 
 test('shipping page uses the immutable configuration and returns a server-side Printful quote', async (t) => {
-  process.env.SHOP_SURCHARGE_PER_MUG_CENTS = '250';
-  t.after(() => { delete process.env.SHOP_SURCHARGE_PER_MUG_CENTS; });
+  process.env.SHOP_TARGET_MARGIN_PERCENT = '45';
+  process.env.SHOP_MIN_PROFIT_PER_ORDER_CENTS = '500';
+  t.after(() => {
+    delete process.env.SHOP_TARGET_MARGIN_PERCENT;
+    delete process.env.SHOP_MIN_PROFIT_PER_ORDER_CENTS;
+  });
 
   const { baseUrl, close } = await startTestServer();
   t.after(close);
@@ -99,13 +103,17 @@ test('shipping page uses the immutable configuration and returns a server-side P
   );
   assert.equal(estimateResponse.status, 200);
   const { quote } = await estimateResponse.json();
-  assert.deepEqual(quote, {
+  assert.match(quote.id, /^[A-Za-z0-9_-]{24}$/);
+  assert.ok(Date.parse(quote.expiresAt) > Date.now());
+  assert.deepEqual({ ...quote, id: undefined, expiresAt: undefined }, {
+    id: undefined,
     currency: 'EUR',
     quantity: 3,
-    itemsCents: 1750,
+    itemsCents: 1819,
     shippingCents: 449,
     taxCents: 275,
-    totalCents: 2474,
+    totalCents: 2543,
+    expiresAt: undefined,
   });
   assert.equal(captured.variantId, 1320);
   assert.equal(captured.quantity, 3);

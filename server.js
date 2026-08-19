@@ -14,6 +14,7 @@ const { makeRouter: makeEventsRouter } = require('./src/routes/events');
 const { makeWebhookRouter } = require('./src/routes/webhook');
 const { getBaseUrl } = require('./src/baseUrl');
 const { layoutForExport } = require('./src/exportSvg');
+const fulfillment = require('./src/fulfillment');
 
 const PORT = process.env.PORT || 3000;
 
@@ -92,6 +93,13 @@ app.get('/e/:slug/shipping', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'shipping.html'));
 });
 
+app.get('/e/:slug/order-confirmation', (req, res) => {
+  const event = db.getEventBySlug(req.params.slug);
+  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'public', 'order-confirmation.html'));
+});
+
 // Server-side print-file export for the His & Hers mug-duo — the Printful
 // order-creation call (src/printful.js) needs a fetchable URL, not inline
 // SVG markup, so this is what that URL points at. Generated on demand
@@ -110,6 +118,14 @@ app.get('/e/:slug/export.svg', (req, res) => {
 });
 
 attachSocketHandlers(io);
+
+// Resume paid orders that were safely persisted before a restart. Claiming
+// in the database prevents duplicate processing when a Stripe retry arrives
+// at the same time.
+server.on('listening', () => {
+  const resumed = fulfillment.resumePendingOrders();
+  if (resumed) console.log(`[fulfillment] ${resumed} wartende Bestellung(en) wieder aufgenommen.`);
+});
 
 if (require.main === module) {
   server.listen(PORT, () => {

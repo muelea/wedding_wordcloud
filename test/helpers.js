@@ -19,12 +19,30 @@ function startTestServer() {
   process.env.DB_PATH = dbPath;
   process.env.ADMIN_TOKEN_SECRET = 'test-secret';
   delete require.cache[require.resolve('../src/db')];
+  // These modules close over the db export at require-time. Rebind them to
+  // the fresh scratch database whenever this test file starts another server.
+  delete require.cache[require.resolve('../src/routes/events')];
+  delete require.cache[require.resolve('../src/routes/webhook')];
+  delete require.cache[require.resolve('../src/fulfillment')];
+  delete require.cache[require.resolve('../src/socket')];
   delete require.cache[require.resolve('../server')];
 
   const { server, io } = require('../server');
 
-  return new Promise((resolve) => {
+  const cleanupFiles = () => {
+    for (const suffix of ['', '-journal', '-wal', '-shm']) {
+      try { fs.unlinkSync(dbPath + suffix); } catch { /* ignore */ }
+    }
+  };
+
+  return new Promise((resolve, reject) => {
+    const onListenError = (error) => {
+      cleanupFiles();
+      reject(error);
+    };
+    server.once('error', onListenError);
     server.listen(0, '127.0.0.1', () => {
+      server.off('error', onListenError);
       const { port } = server.address();
       resolve({
         port,
@@ -35,9 +53,7 @@ function startTestServer() {
         async close() {
           await new Promise((res) => io.close(() => res()));
           await new Promise((res) => server.close(() => res()));
-          for (const suffix of ['', '-journal', '-wal', '-shm']) {
-            try { fs.unlinkSync(dbPath + suffix); } catch { /* ignore */ }
-          }
+          cleanupFiles();
         },
       });
     });

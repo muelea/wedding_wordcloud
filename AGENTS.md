@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (33 tests, `node --test`). All must pass. Each test file
+- Run `npm test` (47 tests, `node --test`). All must pass. Each test file
   uses its own scratch SQLite file and ephemeral port, so it's safe to run
   repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not

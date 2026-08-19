@@ -3,8 +3,8 @@
 A live word cloud for weddings. Any couple creates their own event, guests
 scan a QR code and submit a word from their phone (no account, no app), and
 the word cloud grows in real time on a shared display. Free to use — the
-only paid product is an optional set of personalized mugs printed from the
-finished word cloud after the event.
+commercial product being prepared is an optional order of 1–99 personalized
+mugs printed from the finished word cloud after the event.
 
 ## How it works
 
@@ -27,11 +27,17 @@ finished word cloud after the event.
 6. The approved configuration continues to a dedicated, mobile-first
    shipping-address page. Countries and state/province choices come directly
    from Printful; the server uses the immutable variant and quantity to fetch
-   a live fulfillment, standard-shipping and tax/VAT estimate in the store's
-   currency. The shop surcharge is centrally configurable and defaults to 0.
-7. The quoted configuration can then be purchased through Stripe Checkout
-   and sent to Printful for fulfillment (the payment handoff is the next
-   implementation phase).
+   a live fulfillment, standard-shipping and provisional tax/VAT estimate in
+   EUR. The normalized address and exact cent amounts are stored in an opaque,
+   expiring quote; abandoned address quotes are automatically removed.
+7. "Weiter zur Testzahlung" re-estimates the same trusted configuration and
+   address immediately before creating a dynamic Stripe-hosted Checkout
+   Session. A changed price must be confirmed again. Signed Stripe webhooks
+   transition the order to `paid_test` exactly once and enqueue the persisted
+   fulfillment snapshot. Test payments are then completed by the local `mock`
+   worker without making any Printful order request; the confirmation page
+   clearly states that no real fulfillment was created. Live payments and real
+   Printful orders remain hard-disabled until the tax phase is signed off.
 
 ## Quick start
 
@@ -59,13 +65,56 @@ Everything in `.env.example` is documented inline. Summary:
 | `PUBLIC_URL` | only in production | overrides auto-detected base URL used in QR codes / links |
 | `ADMIN_TOKEN_SECRET` | **yes, in production** | signs the admin PIN session token — the default is intentionally insecure |
 | `DB_PATH` | no | SQLite file location (defaults `./data/weddingcloud.sqlite`) |
-| `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | only for mug checkout | unset → checkout returns a clean 501, rest of the app works fine |
-| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID`, `PRINTFUL_MUG_VARIANT_ID_HIS/HERS` | for live quotes and fulfillment | unset → quote returns a clear 501; legacy order creation remains safely mocked |
-| `SHOP_SURCHARGE_PER_MUG_CENTS` | no (defaults 0) | retail surcharge added to each mug after the live Printful estimate |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | only for test checkout | Stripe test secret and local/Dashboard webhook signing secret; unset → checkout/webhook return a clean 501 |
+| `STRIPE_ALLOW_LIVE_PAYMENTS` | no (must remain `false`) | rejects live Stripe keys and live webhook events during this test-only phase |
+| `CHECKOUT_QUOTE_TTL_MINUTES` | no (defaults 30) | lifetime of a saved address/price quote; accepted range 5–120 minutes |
+| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID` | for live quotes and later fulfillment | unset → quote returns a clear 501; direct order creation degrades safely to a mock |
+| `PRINTFUL_FULFILLMENT_MODE` | no (defaults `mock`) | `mock`, `draft` or `live`; Stripe test payments ignore this and always remain mocked |
+| `PRINTFUL_ALLOW_ORDER_WRITES` | no (must remain `false`) | second safety switch required before a live payment may create a Printful draft |
+| `PRINTFUL_CONFIRM_LIVE_ORDERS` | no (must remain `false`) | third safety switch required before a draft may be confirmed, charged and submitted |
+| `SHOP_TARGET_MARGIN_PERCENT` | no (defaults 45) | provisional catalog-wide target gross margin applied to Printful's current product costs |
+| `SHOP_MIN_PROFIT_PER_ORDER_CENTS` | no (defaults 500) | minimum product contribution for the complete order, in cents (500 = 5,00 €) |
 
 **Never commit `.env`** — it's gitignored. Production secrets (Render, or
 wherever this is deployed) are set directly in the host's dashboard, not in
 the repo.
+
+## Provisional test pricing
+
+The current checkout does not use a fixed price per mug. It calculates one
+customer price from Printful's live EUR estimate and the two catalog-wide
+settings above. All calculations use integer cents.
+
+Let `C` be Printful's product cost for the complete quantity after any
+Printful quantity discount, `m` the target margin (default `0.45`) and `D` the
+minimum contribution per order (default `500` cents). The customer product
+subtotal is:
+
+```text
+max(ceil(C / (1 - m)), C + D)
+```
+
+Printful's standard shipping and current provisional tax/VAT estimate are
+then added separately:
+
+```text
+customer total = customer product subtotal + shipping + provisional tax/VAT
+```
+
+Example with 10,98 € Printful product costs: the 45% rule produces 19,97 €,
+while the minimum-contribution rule produces 15,98 €. The product subtotal is
+therefore 19,97 €, before shipping and provisional tax/VAT.
+
+Because `C` is the actual product cost for the requested quantity, Printful
+quantity discounts automatically lower the customer unit price; there are no
+separate, manually maintained discount tiers. The 5,00 € floor currently
+applies once to the complete order, not once per mug. The server repeats the
+Printful estimate immediately before Stripe Checkout, and a changed total must
+be confirmed again.
+
+This is intentionally a test calculation. Printful's tax estimate is kept as
+a separate line so it can be replaced with the business's reviewed customer
+VAT/Stripe Tax treatment before live payments are enabled.
 
 ## Project layout
 
@@ -79,8 +128,9 @@ src/
   baseUrl.js               LAN-IP / PUBLIC_URL resolution
   socket.js                Socket.io connection handling — room isolation lives here
   stripe.js                Stripe Checkout session creation + webhook verification
-  printful.js              Printful order creation (mocked without PRINTFUL_API_KEY)
-  pricing.js               integer-cent customer quote + configurable mug surcharge
+  printful.js              Printful estimates plus draft/confirm API primitives
+  fulfillment.js           idempotent paid-order worker and mock/draft/live safety gates
+  pricing.js               integer-cent quote + catalog-wide margin/minimum rule
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
   mugPrint.js              Printful-sized 2700x1050 mug print-file renderer
   products.js              Curated, API-verified Printful product geometry
@@ -94,6 +144,7 @@ public/
   display.html             Live display + SVG export + mug CTA, served at '/e/:slug/display'
   configure.html           Mug configurator + interactive 3D preview, served at '/e/:slug/configure'
   shipping.html            Mobile-first address + live Printful price estimate
+  order-confirmation.html  Polling confirmation page for signed test payments
   js/mug-editor.js         Bounded word-by-word print-area editor
   404.html                 Unknown-event page
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
@@ -106,10 +157,12 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 38 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 47 tests covering multi-tenant
 isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
-creation/slug/admin-PIN flow, and Stripe/Printful stub behavior. Each test
+creation/slug/admin-PIN flow, expiring quotes, dynamic Stripe Checkout,
+price-change confirmation, webhook idempotency, immutable fulfillment
+payloads, live safety gates and Stripe/Printful stub behavior. Each test
 file uses its own scratch SQLite file and ephemeral port, so it's safe to run
 repeatedly / in parallel.
 
@@ -134,17 +187,62 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   "Gelasio") is bundled and registered via `canvas.registerFont()` at
   startup. Worth verifying before the first real mug order ships.
 
-## What's stubbed (by design, not by accident)
+## Test checkout setup
 
-- **Stripe Checkout / webhook** — code is fully wired (official SDK,
-  signature verification, `metadata.eventSlug` round-trip) but no live
-  Stripe account exists yet. Missing keys → checkout returns a 501 with a
-  clear message instead of crashing.
-- **Printful fulfillment** — live countries and cost estimates are connected
-  for the verified 11 oz mug (catalog product 19, variant 1320). Creating the
-  paid order is still behind the legacy Stripe webhook and is not linked from
-  the new shipping page yet. Missing `PRINTFUL_API_KEY` makes live quotes fail
-  clearly while `createPrintfulOrder()` remains safely mocked.
+The hosted Checkout page needs only Stripe's secret test key. There is no
+static Stripe Product/Price and no browser-side publishable key in this flow.
+
+1. Put `sk_test_...` into `STRIPE_SECRET_KEY` in `.env`.
+2. Install/login to the Stripe CLI once (`brew install stripe/stripe-cli/stripe`,
+   then `stripe login`).
+3. In a second terminal run `./run_stripe_webhook.sh`. Copy the printed
+   `whsec_...` into `STRIPE_WEBHOOK_SECRET` in `.env` and restart the app.
+4. Start WeddingCloud with `./run_local.sh` and complete Checkout with a
+   Stripe test card such as `4242 4242 4242 4242`, any future expiry date and
+   any three-digit CVC.
+
+The success page polls the local order record until the signed webhook has
+marked it `paid_test`. Replaying the same webhook or double-clicking the
+Checkout button is safe. The durable fulfillment worker records a local
+`mocked` result and the exact payload it would use later, but no code path in
+this test flow calls Printful's order endpoints — even if all Printful live
+switches were accidentally enabled.
+
+## Fulfillment safety modes
+
+The payment state and fulfillment state are stored separately. A successful
+payment atomically queues one immutable fulfillment snapshot; a conditional
+database claim makes retries, duplicate Stripe events and server restarts
+idempotent. A stable `external_id` derived from the internal order and opaque
+quote ids gives the same purchase one identity at Printful as an additional
+duplicate guard.
+
+| Stripe payment | Requested Printful mode | Result |
+|---|---|---|
+| test | any | local `mock`; zero Printful order requests |
+| live | `mock` | local `mock`; zero Printful order requests |
+| live | `draft` + order-write switch | unconfirmed Printful draft |
+| live | `live` + both write/confirm switches | draft creation followed by explicit confirmation |
+
+Draft and live writes additionally require `STRIPE_ALLOW_LIVE_PAYMENTS=true`,
+`PRINTFUL_ALLOW_ORDER_WRITES=true`, a configured token, and a public HTTPS
+`PUBLIC_URL`. `live` also requires `PRINTFUL_CONFIRM_LIVE_ORDERS=true`.
+Printful charges the account and starts fulfillment only when the separately
+created draft is confirmed. Keep every switch false while developing locally.
+
+## What's intentionally disabled
+
+- **Live Stripe payments** — `sk_live_...` keys and live webhook events are
+  rejected while `STRIPE_ALLOW_LIVE_PAYMENTS=false`.
+- **Real Printful fulfillment after test payments** — live countries and
+  estimates are connected for catalog product 19 / variant 1320, but a
+  successful test payment can only produce a local `mocked` fulfillment
+  record. Draft/live writes require a live Stripe payment plus the explicit
+  safety switches described above.
+- **Final retail VAT calculation** — the quote schema already separates
+  products, shipping and tax cents, but the current test display uses
+  Printful's estimate. Customer VAT/Stripe Tax must be finalized before live
+  mode is enabled.
 
 ## Known gotchas
 
@@ -165,14 +263,19 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 ## Next steps
 
-1. Connect the live server-side quote and saved configuration id to Stripe
-   Checkout metadata and make the webhook fulfill that immutable
-   configuration rather than the live event export. Re-estimate once at
-   checkout so a stale client-side quote can never set the charged amount.
+1. Decide the business's VAT status, customer-price tax behavior, EU/OSS
+   registrations and bookkeeping export; then replace the provisional tax
+   line with the reviewed Stripe Tax configuration.
 2. Confirm whether Printful's mug print pipeline accepts the generated SVG
    directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
    is already available if so).
-3. Move `data/*.sqlite` to a persistent volume, or migrate to Postgres
+3. Once a public HTTPS deployment exists, deliberately enable `draft` mode
+   for one controlled live-payment test, verify Printful can download the
+   immutable file and inspect the unconfirmed draft in the dashboard.
+4. Configure signed Printful v2 webhooks for production/shipment status once
+   the public callback URL exists; do not register a callback before its
+   signing secret can be stored in the production environment.
+5. Move `data/*.sqlite` to a persistent volume, or migrate to Postgres
    (schema is plain SQL, written to make that swap easy).
-4. Rate-limiting — no per-IP throttle yet on word submission or event
+6. Rate-limiting — no per-IP throttle yet on word submission or event
    creation.
