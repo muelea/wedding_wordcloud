@@ -67,6 +67,18 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.match(threeBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await threeBrowserBuild.text()).length > 600000, 'the local Three.js build should be served in full');
 
+  const sharedMugViewer = await fetch(`${baseUrl}/js/mug-3d-viewer.js?v=20260819-1`);
+  assert.equal(sharedMugViewer.status, 200);
+  assert.match(sharedMugViewer.headers.get('cache-control') || '', /immutable/);
+  assert.match(await sharedMugViewer.text(), /Mug3DViewer/);
+
+  const [landingPage, configurePage] = await Promise.all([
+    fetch(`${baseUrl}/`).then((response) => response.text()),
+    fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
+  ]);
+  assert.match(landingPage, /mug-3d-viewer\.js\?v=20260819-1/);
+  assert.match(configurePage, /mug-3d-viewer\.js\?v=20260819-1/);
+
   const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
   assert.equal(fabricBrowserBuild.status, 200);
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
@@ -76,6 +88,95 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(motifLibrary.status, 200);
   assert.equal(MugIcons.ICONS.length, 10);
   assert.ok(MugIcons.ICONS.every((icon) => icon.id && icon.label && icon.path));
+});
+
+test('a guest can create an isolated personal photo design without event words', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { coupleName: 'Persönliche Paula & Mika' });
+
+  const sharedConfigurator = await fetch(`${baseUrl}/api/events/${event.slug}/configurator`);
+  assert.equal(sharedConfigurator.status, 409, 'the empty shared cloud stays unavailable');
+
+  const personalConfigurator = await fetch(
+    `${baseUrl}/api/events/${event.slug}/configurator?mode=personal`
+  );
+  assert.equal(personalConfigurator.status, 200);
+  const personalData = await personalConfigurator.json();
+  assert.equal(personalData.configurationType, 'personal_memory');
+  assert.deepEqual(personalData.words, []);
+
+  const missingDesign = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      productKey: 'white-glossy-mug-duo-11oz',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'single',
+      words: [['must-not-leak', 1]],
+    }),
+  });
+  assert.equal(missingDesign.status, 400);
+  assert.equal((await missingDesign.json()).error, 'personal_design_required');
+
+  const onePixelPng =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ' +
+    'AAAADUlEQVR42mNk+M/wHwAF/gL+4N1xAAAAAElFTkSuQmCC';
+  const design = [{
+    id: 'foto-1',
+    type: 'image',
+    src: onePixelPng,
+    x: 1350,
+    y: 525,
+    width: 800,
+    height: 600,
+    angle: -4,
+  }];
+  const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      productKey: 'white-glossy-mug-duo-11oz',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'single',
+      words: [['must-not-leak', 1]],
+      design,
+    }),
+  });
+  assert.equal(save.status, 201);
+  const configuration = await save.json();
+  assert.equal(configuration.configurationType, 'personal_memory');
+
+  const savedInfo = await fetch(
+    `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}`
+  ).then((response) => response.json());
+  assert.equal(savedInfo.configurationType, 'personal_memory');
+
+  const printSvg = await fetch(baseUrl + configuration.printFileUrl).then((response) => response.text());
+  assert.match(printSvg, /data-custom="true"/);
+  assert.match(printSvg, /data-photo="true"/);
+  assert.match(printSvg, /href="data:image\/png;base64,/);
+  assert.match(printSvg, /width="800\.0" height="600\.0"/);
+  assert.doesNotMatch(printSvg, /must-not-leak/);
+  assert.doesNotMatch(printSvg, /<text /);
+
+  const unsafeImage = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'single',
+      design: [{ ...design[0], src: 'data:image/svg+xml;base64,PHN2Zy8+' }],
+    }),
+  });
+  assert.equal(unsafeImage.status, 400);
+  assert.equal((await unsafeImage.json()).error, 'invalid_design');
 });
 
 test('confirmed configuration freezes the approved words in a permanent Printful-sized SVG', async (t) => {

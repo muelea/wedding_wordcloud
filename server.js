@@ -69,6 +69,14 @@ app.get('/start', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'create.html'));
 });
 
+app.get('/impressum', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'impressum.html'));
+});
+
+app.get('/datenschutz', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'datenschutz.html'));
+});
+
 app.get('/e/:slug', (req, res) => {
   const event = db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));

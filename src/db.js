@@ -38,8 +38,6 @@ db.exec(`
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     slug            TEXT UNIQUE NOT NULL,
     couple_name     TEXT NOT NULL,
-    event_title     TEXT NOT NULL DEFAULT 'Hochzeit',
-    wedding_date    TEXT,
     admin_pin_hash  TEXT NOT NULL,
     admin_pin_salt  TEXT NOT NULL,
     theme           TEXT NOT NULL DEFAULT 'pastel',
@@ -54,6 +52,18 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(event_id, word)
   );
+
+  CREATE TABLE IF NOT EXISTS word_contributions (
+    receipt_id TEXT PRIMARY KEY,
+    event_id   INTEGER NOT NULL,
+    word       TEXT NOT NULL,
+    owner_id   TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(event_id, word) REFERENCES words(event_id, word) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS word_contributions_owner_idx
+    ON word_contributions(event_id, owner_id, created_at);
 
   CREATE TABLE IF NOT EXISTS archives (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,11 +101,24 @@ db.exec(`
     placement            TEXT NOT NULL,
     words_json           TEXT NOT NULL,
     design_json          TEXT,
+    configuration_type   TEXT NOT NULL DEFAULT 'event_wordcloud',
     print_width          INTEGER NOT NULL,
     print_height         INTEGER NOT NULL,
     created_at           TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+// These fields were part of the original setup form but are no longer
+// collected or shown anywhere. Drop them from existing local databases while
+// leaving every event's identity, access, words and order data untouched.
+const eventColumns = new Set(
+  db.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
+);
+for (const legacyColumn of ['event_title', 'wedding_date']) {
+  if (eventColumns.has(legacyColumn)) {
+    db.exec(`ALTER TABLE events DROP COLUMN ${legacyColumn};`);
+  }
+}
 
 // Quotes deliberately live separately from orders: couples can calculate a
 // price more than once while correcting their address, but only the quote
@@ -144,6 +167,9 @@ if (!configurationColumns.has('unit_price_cents')) {
 }
 if (!configurationColumns.has('design_json')) {
   db.exec('ALTER TABLE configurations ADD COLUMN design_json TEXT;');
+}
+if (!configurationColumns.has('configuration_type')) {
+  db.exec("ALTER TABLE configurations ADD COLUMN configuration_type TEXT NOT NULL DEFAULT 'event_wordcloud';");
 }
 
 // Forward-only, no-ops-on-new-databases migrations for the checkout state
@@ -198,13 +224,13 @@ function verifyPin(pin, hash, salt) {
 }
 
 // ── Events ───────────────────────────────────────────────────────────────
-function createEvent({ slug, coupleName, eventTitle, weddingDate, pin }) {
+function createEvent({ slug, coupleName, pin }) {
   const { hash, salt } = hashPin(pin);
   const stmt = db.prepare(`
-    INSERT INTO events (slug, couple_name, event_title, wedding_date, admin_pin_hash, admin_pin_salt)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt)
+    VALUES (?, ?, ?, ?)
   `);
-  const info = stmt.run(slug, coupleName, eventTitle || 'Hochzeit', weddingDate || null, hash, salt);
+  const info = stmt.run(slug, coupleName, hash, salt);
   return getEventById(info.lastInsertRowid);
 }
 
@@ -236,6 +262,82 @@ function upsertWord(eventId, word) {
       count = count + 1,
       updated_at = datetime('now')
   `).run(eventId, word);
+}
+
+// Each aggregate increment gets an unguessable receipt tied to one anonymous
+// browser session. The receipt is a capability for exactly that contribution,
+// while ownerId prevents a receipt copied from another guest from being used
+// in a different browser session. Keeping both writes in one transaction means
+// the visible count can never diverge from the removable contributions.
+function addWordContribution(eventId, word, ownerId) {
+  const receiptId = crypto.randomBytes(18).toString('base64url');
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    upsertWord(eventId, word);
+    db.prepare(`
+      INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
+      VALUES (?, ?, ?, ?)
+    `).run(receiptId, eventId, word, ownerId);
+    db.exec('COMMIT;');
+    return receiptId;
+  } catch (error) {
+    db.exec('ROLLBACK;');
+    throw error;
+  }
+}
+
+function getWordContributions(eventId, ownerId) {
+  return db.prepare(`
+    SELECT receipt_id, word
+    FROM word_contributions
+    WHERE event_id = ? AND owner_id = ?
+    ORDER BY created_at ASC, rowid ASC
+  `).all(eventId, ownerId).map((row) => ({ receipt: row.receipt_id, word: row.word }));
+}
+
+// Removes one—and only one—owned contribution. Aggregate words from older
+// databases that predate receipts remain valid: a new removable contribution
+// can increment such a row and later decrement it back to its legacy count.
+function removeWordContribution(eventId, receiptId, ownerId) {
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    const contribution = db.prepare(`
+      SELECT word
+      FROM word_contributions
+      WHERE receipt_id = ? AND event_id = ? AND owner_id = ?
+    `).get(receiptId, eventId, ownerId);
+
+    if (!contribution) {
+      db.exec('COMMIT;');
+      return null;
+    }
+
+    db.prepare(`
+      DELETE FROM word_contributions
+      WHERE receipt_id = ? AND event_id = ? AND owner_id = ?
+    `).run(receiptId, eventId, ownerId);
+
+    const aggregate = db.prepare(`
+      SELECT count FROM words WHERE event_id = ? AND word = ?
+    `).get(eventId, contribution.word);
+
+    if (!aggregate || Number(aggregate.count) <= 1) {
+      db.prepare('DELETE FROM words WHERE event_id = ? AND word = ?')
+        .run(eventId, contribution.word);
+    } else {
+      db.prepare(`
+        UPDATE words
+        SET count = count - 1, updated_at = datetime('now')
+        WHERE event_id = ? AND word = ?
+      `).run(eventId, contribution.word);
+    }
+
+    db.exec('COMMIT;');
+    return contribution.word;
+  } catch (error) {
+    db.exec('ROLLBACK;');
+    throw error;
+  }
 }
 
 function getWords(eventId) {
@@ -591,6 +693,7 @@ function createConfiguration({
   placement,
   words,
   design,
+  configurationType = 'event_wordcloud',
   printWidth,
   printHeight,
 }) {
@@ -599,8 +702,8 @@ function createConfiguration({
     INSERT INTO configurations (
       id, event_id, product_key, printful_variant_id, quantity,
       unit_price_cents, theme, placement, words_json, design_json,
-      print_width, print_height
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      configuration_type, print_width, print_height
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     eventId,
@@ -612,6 +715,7 @@ function createConfiguration({
     placement,
     JSON.stringify(words),
     design ? JSON.stringify(design) : null,
+    configurationType,
     printWidth,
     printHeight
   );
@@ -641,6 +745,9 @@ module.exports = {
   slugExists,
   setEventTheme,
   upsertWord,
+  addWordContribution,
+  getWordContributions,
+  removeWordContribution,
   getWords,
   clearWords,
   archiveWords,

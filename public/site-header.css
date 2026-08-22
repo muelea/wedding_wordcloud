@@ -1,0 +1,97 @@
+.ww-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid transparent !important;
+  background: rgba(255, 253, 250, .82) !important;
+  box-shadow: 0 0 0 rgba(64, 15, 38, 0);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  transition: border-color .35s ease, box-shadow .35s ease, background-color .35s ease;
+}
+
+.ww-site-header.scrolled {
+  border-bottom-color: var(--line, rgba(64, 15, 38, .1)) !important;
+  box-shadow: 0 6px 24px rgba(64, 15, 38, .06);
+}
+
+.ww-nav {
+  width: min(1120px, calc(100% - 48px)) !important;
+  height: 84px !important;
+  min-height: 84px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.ww-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink, var(--text, #400f26));
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.ww-brand-icon {
+  width: 32px;
+  height: 30px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.ww-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted, #8a7178);
+  font-size: .85rem;
+  font-weight: 400;
+  line-height: 1.3;
+  text-decoration: none;
+  transition: color .2s ease;
+}
+
+.ww-back-link:hover { color: var(--berry, var(--primary2, #9c1c4c)); }
+
+.ww-site-header a:focus-visible {
+  outline: 2px solid var(--berry, var(--primary2, #9c1c4c));
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+
+@supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
+  .ww-site-header { background: rgba(255, 253, 250, .96) !important; }
+}
+
+@media (max-width: 620px) {
+  .ww-nav {
+    width: min(1120px, calc(100% - 32px)) !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    gap: 16px !important;
+  }
+
+  .ww-brand { font-size: 1.18rem; }
+  .ww-brand-icon { width: 28px; height: 26px; }
+  .ww-back-link { font-size: .8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ww-site-header { transition: none; }
+}

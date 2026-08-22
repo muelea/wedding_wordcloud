@@ -27,6 +27,23 @@ test('event creation & slug-preview flow', async (t) => {
   assert.equal(match[1], 'anna-und-ben');
   assert.equal(event.guestUrl, `/e/${event.slug}`);
   assert.equal(event.displayUrl, `/e/${event.slug}/display`);
+  assert.equal(typeof event.adminToken, 'string');
+  assert.ok(event.adminToken.length > 20);
+
+  // Creating a cloud now hands the couple straight to the guest experience;
+  // the old intermediate success screen no longer adds an extra decision.
+  const startHtml = await fetch(`${baseUrl}/start`).then((r) => r.text());
+  assert.match(startHtml, /location\.assign\(data\.guestUrl\)/);
+  assert.doesNotMatch(startHtml, /id="success"/);
+
+  // The guest page doubles as the lightweight control point: everybody can
+  // preview the live cloud, while creator controls are revealed from the
+  // creation session and link out to the dedicated display.
+  const guestHtml = await fetch(`${baseUrl}${event.guestUrl}`).then((r) => r.text());
+  assert.match(guestHtml, /id="preview-trigger"/);
+  assert.match(guestHtml, /id="cloud-preview"/);
+  assert.match(guestHtml, /id="creator-tools"/);
+  assert.match(guestHtml, /socket\.on\('word-update', updatePreview\)/);
 
   // The prefix alone stays a valid preview after creation too -- previewing
   // it is not a "taken" check anymore, so it doesn't flip to invalid.
@@ -36,7 +53,8 @@ test('event creation & slug-preview flow', async (t) => {
   // Public event info is fetchable by the real (suffixed) slug.
   const info = await fetch(`${baseUrl}/api/events/${event.slug}`).then((r) => r.json());
   assert.equal(info.coupleName, 'Anna & Ben');
-  assert.equal(info.eventTitle, 'Hochzeit');
+  assert.equal('eventTitle' in info, false);
+  assert.equal('weddingDate' in info, false);
 
   // The bare prefix (without suffix) was never actually created, so it
   // 404s just like any other unknown slug.

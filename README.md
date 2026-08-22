@@ -4,7 +4,9 @@ A live word cloud for weddings. Any couple creates their own event, guests
 scan a QR code and submit a word from their phone (no account, no app), and
 the word cloud grows in real time on a shared display. Free to use — the
 commercial product being prepared is an optional order of 1–99 personalized
-mugs printed from the finished word cloud after the event.
+mugs printed from the finished word cloud after the event. Guests can also
+start a completely separate personal-memory design during the celebration,
+add their own photos, words and motifs, and purchase it independently.
 
 ## How it works
 
@@ -12,10 +14,17 @@ mugs printed from the finished word cloud after the event.
    `/e/<slug>` plus a 4-6 digit admin PIN.
 2. `/e/<slug>/display` goes on the big screen / projector.
 3. Guests open `/e/<slug>` on their phone (usually via QR code) and submit
-   one word at a time.
+   one word at a time. Their anonymous browser session can remove its own
+   contributions again; matching words are decremented rather than deleting
+   another guest's vote.
 4. Words appear live on the display via Socket.io — font size scales with
    how many guests submitted the same word.
-5. After the event, the couple opens a product configurator, chooses any
+5. From the guest page, any attendee can open the personal-memory flow. It
+   starts with an empty mug, locally reduces selected photos before upload,
+   and keeps that opaque design separate from the shared wedding word cloud.
+   A guest can add up to six photos plus personal words and motifs, then use
+   the normal address, quote and checkout flow for their own order.
+6. After the event, the couple opens a product configurator, chooses any
    quantity from 1–99, a color palette and one of four print layouts
    (single, both sides, full wrap or optimized area), and approves an
    immutable mug print file with a transparent background. A locally served Three.js preview
@@ -24,13 +33,13 @@ mugs printed from the finished word cloud after the event.
    and every curated wedding motif can be moved, resized, rotated, recolored,
    duplicated or removed; words can also be edited directly. Hard bounds keep
    the entire design printable.
-6. The approved configuration continues to a dedicated, mobile-first
+7. The approved configuration continues to a dedicated, mobile-first
    shipping-address page. Countries and state/province choices come directly
    from Printful; the server uses the immutable variant and quantity to fetch
    a live fulfillment, standard-shipping and provisional tax/VAT estimate in
    EUR. The normalized address and exact cent amounts are stored in an opaque,
    expiring quote; abandoned address quotes are automatically removed.
-7. "Weiter zur Testzahlung" re-estimates the same trusted configuration and
+8. "Weiter zur Testzahlung" re-estimates the same trusted configuration and
    address immediately before creating a dynamic Stripe-hosted Checkout
    Session. A changed price must be confirmed again. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted
@@ -140,9 +149,9 @@ src/
 public/
   landing.html             Marketing landing page, served at '/'
   create.html              Event creation form, served at '/start'
-  guest.html               Guest word-submission page, served at '/e/:slug'
+  guest.html               Guest word-submission + personal-memory entry page
   display.html             Live display + SVG export + mug CTA, served at '/e/:slug/display'
-  configure.html           Mug configurator + interactive 3D preview, served at '/e/:slug/configure'
+  configure.html           Shared/personal mug configurator with photo editor + 3D preview
   shipping.html            Mobile-first address + live Printful price estimate
   order-confirmation.html  Polling confirmation page for signed test payments
   js/mug-editor.js         Bounded word-by-word print-area editor
@@ -157,8 +166,8 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 47 tests covering multi-tenant
-isolation, word submission/live-update, SVG layout/export correctness, the
+Runs `node --test test/*.test.js` — 48 tests covering multi-tenant
+isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, dynamic Stripe Checkout,
 price-change confirmation, webhook idempotency, immutable fulfillment

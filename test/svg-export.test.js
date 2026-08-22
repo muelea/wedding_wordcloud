@@ -57,6 +57,9 @@ function wordList(n) {
 test('layoutWords places every word exactly once, with no overlapping boxes', () => {
   const words = wordList(24);
   const side = 900;
+  const once = WordCloudCore.sizeForCount('liebe', 1, 1, 2, 20, 100);
+  const twice = WordCloudCore.sizeForCount('liebe', 2, 1, 2, 20, 100);
+  assert.ok(twice > once, 'removing one matching contribution must make that word smaller');
   const placed = WordCloudCore.layoutWords(words, side, makeFakeMeasureCtx(), WordCloudCore.makeColorAssigner('pastel'));
 
   // No word dropped (the algorithm is designed to always place everything,

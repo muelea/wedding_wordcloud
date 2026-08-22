@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bestellung bestätigt – WeddingCloud</title>
+  <title>Bestellung bestätigt – Wolkenworte</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
     *, *::before, *::after { box-sizing: border-box; }
     :root {
-      --bg: #fffaf5; --surface: #fffefd; --ink: #400f26; --berry: #a40e4c;
-      --muted: #846e75; --line: rgba(110, 61, 72, .16); --success: #287a64;
+      --bg: #fffdfa; --surface: #fffefc; --ink: #400f26; --berry: #9c1c4c;
+      --muted: #8a7178; --line: rgba(64, 15, 38, .1); --success: #287a64;
     }
     html { min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'Jost', system-ui, sans-serif; }
     body {
       min-height: 100vh; margin: 0; display: grid; grid-template-rows: auto 1fr;
-      background: radial-gradient(circle at 50% 20%, rgba(247, 224, 203, .5), transparent 38%), var(--bg);
+      background: var(--bg);
     }
     .topbar {
-      min-height: 64px; padding: 14px clamp(18px, 4vw, 52px); display: flex; align-items: center;
+      width: min(1120px, calc(100% - 48px)); min-height: 84px; margin: 0 auto; padding: 0; display: flex; align-items: center;
       border-bottom: 1px solid var(--line); background: rgba(255, 253, 250, .88); backdrop-filter: blur(14px);
     }
-    .brand { color: var(--ink); text-decoration: none; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; }
-    .brand span { color: var(--berry); margin-right: 5px; }
+    .brand { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; }
+    .brand-icon { width: 32px; height: 30px; object-fit: contain; }
     main { width: min(620px, calc(100% - 28px)); margin: auto; padding: 42px 0 70px; }
     .card {
       padding: clamp(28px, 7vw, 54px); text-align: center; background: rgba(255, 254, 253, .96);
@@ -45,10 +45,21 @@
     }
     .error { color: #b33a4d; }
     [hidden] { display: none !important; }
+    @media (max-width: 620px) {
+      .topbar { width: min(100% - 32px, 560px); min-height: 72px; }
+      .brand { font-size: 18px; }
+      .brand-icon { width: 28px; height: 26px; }
+    }
   </style>
+  <link rel="stylesheet" href="/site-header.css" />
+  <script src="/js/site-header.js" defer></script>
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="/"><span>♡</span>WeddingCloud</a></header>
+  <header class="topbar ww-site-header">
+    <div class="ww-nav">
+      <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
+    </div>
+  </header>
   <main>
     <section class="card" aria-live="polite">
       <div class="status-icon pending" id="status-icon" aria-hidden="true">•••</div>
@@ -60,7 +71,7 @@
         <div class="summary-row"><span>Gesamtbetrag</span><strong id="total"></strong></div>
       </div>
       <p class="test-note" id="test-note" hidden>Dies war eine Testzahlung. Es wurde ausdrücklich keine Bestellung an Printful übermittelt.</p>
-      <a class="home-link" id="home-link" href="/">Zurück zu WeddingCloud</a>
+      <a class="home-link" id="home-link" href="/">Zurück zur Wortwolke</a>
     </section>
   </main>
   <script>
@@ -73,7 +84,8 @@
     const copy = document.getElementById('copy');
     const summary = document.getElementById('summary');
     const note = document.getElementById('test-note');
-    document.getElementById('home-link').href = `/e/${encodeURIComponent(slug)}/display`;
+    const homeLink = document.getElementById('home-link');
+    homeLink.href = `/e/${encodeURIComponent(slug)}/display`;
 
     function money(cents, currency) {
       return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(cents / 100);
@@ -99,6 +111,10 @@
         );
         const order = await response.json();
         if (!response.ok) throw new Error('Die Bestellung konnte nicht geladen werden.');
+        if (order.configurationType === 'personal_memory') {
+          homeLink.href = `/e/${encodeURIComponent(slug)}`;
+          homeLink.textContent = 'Zurück zur Gäste-Seite';
+        }
         if (order.paymentConfirmed) {
           icon.textContent = '✓';
           icon.classList.remove('pending');

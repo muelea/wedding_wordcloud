@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Gestaltet eure persönlichen WeddingCloud Tassen." />
-  <title>Tassen gestalten – WeddingCloud</title>
+  <meta name="description" content="Gestaltet eure persönlichen Wolkenworte-Tassen." />
+  <title>Tassen gestalten – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
 
@@ -14,11 +14,11 @@
       --berry-dark: #731437;
       --rose: #d1607e;
       --gold: #c1922f;
-      --muted: #816d74;
+      --muted: #8a7178;
       --paper: #fffdfa;
       --cream: #f8f0e5;
-      --line: rgba(123, 70, 82, 0.15);
-      --shadow: 0 26px 70px rgba(74, 25, 43, 0.09);
+      --line: rgba(64, 15, 38, .1);
+      --shadow: 0 24px 60px rgba(64, 15, 38, .08);
       --success: #39735f;
     }
 
@@ -28,10 +28,7 @@
       min-height: 100vh;
       margin: 0;
       color: var(--ink);
-      background:
-        radial-gradient(circle at 8% 0%, rgba(247, 226, 215, 0.58), transparent 30%),
-        radial-gradient(circle at 94% 96%, rgba(239, 220, 182, 0.32), transparent 28%),
-        var(--paper);
+      background: var(--paper);
       font-family: 'Jost', system-ui, sans-serif;
     }
 
@@ -40,8 +37,8 @@
     a { color: inherit; text-decoration: none; }
 
     .topbar {
-      width: min(1280px, calc(100% - 48px));
-      height: 80px;
+      width: min(1120px, calc(100% - 48px));
+      height: 84px;
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -57,7 +54,7 @@
       font-size: 21px;
       font-weight: 600;
     }
-    .brand-heart { color: var(--rose); font-size: 24px; }
+    .brand-icon { width: 32px; height: 30px; object-fit: contain; }
 
     .back-link {
       display: inline-flex;
@@ -336,6 +333,7 @@
     .editor-button:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
     .editor-button:disabled { cursor: not-allowed; opacity: .34; }
     .editor-button-primary { border-color: rgba(156, 28, 76, .28); color: var(--berry); }
+    .editor-photo-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .editor-icon-button { width: 36px; padding: 7px; font-size: 15px; }
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
     .editor-scroll {
@@ -400,6 +398,7 @@
       background: rgba(255,255,255,.94);
       box-shadow: 0 7px 20px rgba(73,29,44,.055);
     }
+    .editor-selection.is-photo .editor-field-label-color { opacity: .42; }
     .editor-selection-head {
       min-height: 19px;
       margin-bottom: 9px;
@@ -485,6 +484,13 @@
       font-size: 10px;
       line-height: 1.45;
     }
+    .editor-photo-note {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.45;
+    }
+    .editor-photo-note a { color: var(--berry); text-decoration: underline; text-underline-offset: 2px; }
 
     .controls {
       border-radius: 28px;
@@ -782,6 +788,16 @@
     }
     .config-content[hidden], .loading[hidden] { display: none; }
 
+    .config-footer {
+      padding: 0 24px 28px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .config-footer a:hover { color: var(--berry); }
+
     @media (max-width: 940px) {
       .config-grid { grid-template-columns: 1fr; }
       .preview-card { position: static; min-height: 0; }
@@ -790,8 +806,8 @@
 
     @media (max-width: 620px) {
       .topbar, .page { width: min(100% - 28px, 560px); }
-      .topbar { height: 68px; }
-      .back-link span { display: none; }
+      .topbar { height: 72px; }
+      .back-link span:last-child { display: none; }
       .page { padding: 38px 0 50px; }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
@@ -817,11 +833,15 @@
       .option-card { min-height: 76px; }
     }
   </style>
+  <link rel="stylesheet" href="/site-header.css" />
+  <script src="/js/site-header.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/"><span class="brand-heart">♡</span>WeddingCloud</a>
-    <a class="back-link" id="back-link" href="#"><span aria-hidden="true">←</span><span>Zurück zur Wortwolke</span></a>
+  <header class="topbar ww-site-header">
+    <div class="ww-nav">
+      <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
+      <a class="back-link ww-back-link" id="back-link" href="#" aria-label="Zurück zur Wortwolke"><span aria-hidden="true">←</span><span>Zurück zur Wortwolke</span></a>
+    </div>
   </header>
 
   <main class="page">
@@ -829,9 +849,9 @@
 
     <div class="config-content" id="config-content" hidden>
       <section class="intro">
-        <p class="eyebrow">Eure Worte. Eure Erinnerung.</p>
-        <h1>Gestaltet eure Tassen.</h1>
-        <p class="intro-copy">Wählt eure Farbwelt, die Platzierung und zum Schluss die Anzahl. Den Rest bereiten wir druckfertig für euch vor.</p>
+        <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
+        <h1 id="config-title">Gestaltet eure Tassen.</h1>
+        <p class="intro-copy" id="config-intro">Wählt eure Farbwelt, die Platzierung und zum Schluss die Anzahl. Den Rest bereiten wir druckfertig für euch vor.</p>
       </section>
 
       <div class="config-grid">
@@ -858,6 +878,8 @@
             <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
               <div class="editor-tools">
                 <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
+                <button class="editor-button editor-button-primary" id="editor-photo" type="button"><span aria-hidden="true">＋</span> Foto</button>
+                <input class="editor-photo-input" id="editor-photo-input" type="file" accept="image/*" multiple />
                 <div class="editor-motif-picker">
                   <button class="editor-button editor-button-primary" id="editor-icon-toggle" type="button" aria-expanded="false" aria-controls="editor-icon-menu" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Motiv</button>
                   <div class="editor-motif-menu" id="editor-icon-menu" role="dialog" aria-label="Motiv auswählen" hidden>
@@ -878,13 +900,13 @@
             <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
               <div class="editor-selection-head">
                 <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
-                <span class="editor-selection-hint" id="editor-selection-hint">Wort oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
+                <span class="editor-selection-hint" id="editor-selection-hint">Wort, Foto oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
               </div>
               <div class="editor-selection-row">
                 <label class="editor-field-label"><span id="editor-text-label">Ausgewähltes Element</span>
                   <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
                 </label>
-                <div class="editor-field-label">Farbe
+                <div class="editor-field-label editor-field-label-color">Farbe
                   <div class="editor-colors">
                     <div class="editor-swatches" id="editor-swatches"></div>
                     <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
@@ -902,17 +924,18 @@
             </div>
             <div class="editor-scroll is-fit" id="editor-scroll">
               <div class="editor-canvas-shell" id="editor-canvas-shell">
-                <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
+                <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter, Fotos und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
                 <span class="print-safe-guide" aria-hidden="true"></span>
               </div>
             </div>
-            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort oder Motiv auswählen und direkt auf der Druckfläche bearbeiten.</p>
+            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort, Foto oder Motiv auswählen und direkt auf der Druckfläche bearbeiten.</p>
+            <p class="editor-photo-note">Bitte verwendet nur Fotos, die ihr nutzen dürft. Details findet ihr im <a href="/datenschutz">Datenschutz</a>.</p>
           </div>
         </section>
 
         <aside class="controls" aria-labelledby="controls-title">
           <h2 id="controls-title">Euer Design</h2>
-          <p class="controls-sub">Vier kurze Schritte – mehr braucht es nicht.</p>
+          <p class="controls-sub" id="controls-subtitle">Vier kurze Schritte – mehr braucht es nicht.</p>
 
           <section class="step">
             <h3 class="step-title"><span class="step-number">1</span> Produkt</h3>
@@ -943,7 +966,7 @@
             </div>
           </section>
 
-          <section class="step">
+          <section class="step" id="placement-step">
             <h3 class="step-title"><span class="step-number">3</span> Platzierung</h3>
             <div class="option-grid placement-grid">
               <label class="option">
@@ -978,11 +1001,11 @@
           </section>
 
           <section class="step">
-            <h3 class="step-title"><span class="step-number">4</span> Anzahl</h3>
+            <h3 class="step-title"><span class="step-number" id="quantity-step-number">4</span> Anzahl</h3>
             <div class="quantity-row">
               <div class="quantity-copy">
-                <strong>Wie viele Tassen möchtet ihr?</strong>
-                <span>Alle Tassen erhalten dasselbe Design.</span>
+                <strong id="quantity-title">Wie viele Tassen möchtet ihr?</strong>
+                <span id="quantity-copy">Alle Tassen erhalten dasselbe Design.</span>
               </div>
               <div class="quantity-control" aria-label="Anzahl der Tassen">
                 <button type="button" id="quantity-minus" aria-label="Eine Tasse weniger">−</button>
@@ -1001,15 +1024,22 @@
     </div>
   </main>
 
+  <footer class="config-footer" aria-label="Rechtliche Hinweise">
+    <a href="/datenschutz">Datenschutz</a><span aria-hidden="true">·</span><a href="/impressum">Impressum</a>
+  </footer>
+
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
-  <script src="/js/wordcloud-core.js?v=20260817-3"></script>
+  <script src="/js/wordcloud-core.js?v=20260819-2"></script>
+  <script src="/js/mug-3d-viewer.js?v=20260819-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/mug-editor.js?v=20260817-2"></script>
+  <script src="/js/mug-editor.js?v=20260819-4"></script>
   <script>
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
+    const isPersonalMode = new URLSearchParams(location.search).get('mode') === 'personal';
+    const configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
     const loading = document.getElementById('loading');
     const content = document.getElementById('config-content');
     const saveButton = document.getElementById('save-button');
@@ -1022,19 +1052,41 @@
     const customColorList = document.getElementById('custom-color-list');
     const customColorAdd = document.getElementById('custom-color-add');
     const quantityInput = document.getElementById('quantity');
+    const photoButton = document.getElementById('editor-photo');
+    const photoInput = document.getElementById('editor-photo-input');
 
     let words = [];
     let product = null;
     let selectedTheme = 'pastel';
     let customColors = [];
     let selectedPlacement = 'single';
-    let quantity = 2;
+    let quantity = isPersonalMode ? 1 : 2;
     let renderFrame = null;
     let mug3D = null;
     let mug3DLoadPromise = null;
     let mugEditor = null;
 
-    document.getElementById('back-link').href = `/e/${encodeURIComponent(slug)}/display`;
+    const backLink = document.getElementById('back-link');
+    backLink.href = isPersonalMode
+      ? `/e/${encodeURIComponent(slug)}`
+      : `/e/${encodeURIComponent(slug)}/display`;
+    if (isPersonalMode) {
+      backLink.setAttribute('aria-label', 'Zurück zur Gäste-Seite');
+      backLink.querySelector('span:last-child').textContent = 'Zurück zur Gäste-Seite';
+      loading.textContent = 'Euer persönliches Design wird vorbereitet…';
+      document.getElementById('config-eyebrow').textContent = 'Euer Moment. Eure Erinnerung.';
+      document.getElementById('config-title').textContent = 'Gestaltet eure persönliche Erinnerung.';
+      document.getElementById('config-intro').textContent =
+        'Startet mit einer leeren Tasse und gestaltet euren Moment mit eigenen Fotos, Namen und persönlichen Worten.';
+      document.getElementById('controls-subtitle').textContent = 'Drei kurze Schritte bis zu eurem persönlichen Design.';
+      document.getElementById('placement-step').hidden = true;
+      document.getElementById('quantity-step-number').textContent = '3';
+      document.getElementById('quantity-title').textContent = 'Wie viele Tassen möchtet ihr?';
+      document.getElementById('quantity-copy').textContent = 'Jede Tasse erhält euer persönliches Design.';
+      const resetButton = document.getElementById('editor-reset');
+      resetButton.textContent = 'Alles entfernen';
+      resetButton.title = 'Druckfläche leeren';
+    }
 
     function setupCanvas(canvas) {
       const rect = canvas.getBoundingClientRect();
@@ -1047,6 +1099,71 @@
       }
       return canvas.getContext('2d');
     }
+
+    async function decodePhoto(file) {
+      if (typeof createImageBitmap === 'function') {
+        try {
+          return await createImageBitmap(file, { imageOrientation: 'from-image' });
+        } catch {}
+      }
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        return await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('photo_decode_failed'));
+          image.src = objectUrl;
+        });
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
+
+    async function preparePhoto(file) {
+      if (!file || !String(file.type || '').startsWith('image/') || file.size > 20 * 1024 * 1024) {
+        throw new Error('photo_invalid');
+      }
+      const source = await decodePhoto(file);
+      const sourceWidth = source.naturalWidth || source.width;
+      const sourceHeight = source.naturalHeight || source.height;
+      if (!sourceWidth || !sourceHeight) throw new Error('photo_invalid');
+      const scale = Math.min(1, 1600 / Math.max(sourceWidth, sourceHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+      const context = canvas.getContext('2d', { alpha: false });
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(source, 0, 0, canvas.width, canvas.height);
+      if (typeof source.close === 'function') source.close();
+      return canvas.toDataURL('image/jpeg', .84);
+    }
+
+    photoButton.addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', async () => {
+      const files = [...photoInput.files];
+      photoInput.value = '';
+      if (!files.length || !mugEditor) return;
+      const existingPhotos = mugEditor.getDesign().filter((item) => item.type === 'image').length;
+      const available = Math.max(0, 6 - existingPhotos);
+      if (!available) {
+        mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
+        return;
+      }
+      photoButton.disabled = true;
+      errorText.textContent = '';
+      try {
+        for (const file of files.slice(0, available)) {
+          mugEditor.setFeedback('Foto wird vorbereitet…');
+          await mugEditor.addImage(await preparePhoto(file));
+        }
+        if (files.length > available) mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
+      } catch {
+        errorText.textContent = 'Das Foto konnte nicht verarbeitet werden. Bitte verwendet ein anderes Bild.';
+      } finally {
+        photoButton.disabled = false;
+      }
+    });
 
     function getPalette(themeKey) {
       const palette = product.themes.find((option) => option.key === themeKey) || product.themes[0];
@@ -1188,6 +1305,7 @@
     }
 
     function buildAutomaticDesign() {
+      if (isPersonalMode) return [];
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
@@ -1226,7 +1344,18 @@
         ctx.save();
         ctx.translate(offsetX + item.x * scale, offsetY + item.y * scale);
         ctx.rotate((item.angle || 0) * Math.PI / 180);
-        if (item.type === 'icon') {
+        if (item.type === 'image') {
+          const image = mugEditor?.getImageElement(item.src);
+          if (image) {
+            ctx.drawImage(
+              image,
+              -item.width * scale / 2,
+              -item.height * scale / 2,
+              item.width * scale,
+              item.height * scale
+            );
+          }
+        } else if (item.type === 'icon') {
           const icon = MugIcons.get(item.icon);
           if (icon) {
             const iconScale = item.size * scale / MugIcons.VIEWBOX_SIZE;
@@ -1247,323 +1376,30 @@
       }
     }
 
-    function renderMug3D() {
-      if (!mug3D) return;
-      mug3D.renderer.render(mug3D.scene, mug3D.camera);
-    }
-
     function resizeMug3D() {
       if (!mug3D) return;
-      const rect = mugViewer.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      mug3D.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      mug3D.renderer.setSize(rect.width, rect.height, false);
-      mug3D.camera.aspect = rect.width / rect.height;
-      mug3D.camera.updateProjectionMatrix();
-      renderMug3D();
+      mug3D.resize();
     }
 
     function updateMug3DTexture() {
-      if (!mug3D || !product || !words.length) return;
-      const printWidthCm = (product.printFile.width / product.printFile.dpi) * 2.54;
-      const printHeightCm = (product.printFile.height / product.printFile.dpi) * 2.54;
-      const circumferenceCm = Math.PI * product.size.diameterCm;
-      const textureWidth = Math.round(product.printFile.width * circumferenceCm / printWidthCm);
-      const textureHeight = Math.round(product.printFile.height * product.size.heightCm / printHeightCm);
-      const canvas = mug3D.textureCanvas;
-      if (canvas.width !== textureWidth || canvas.height !== textureHeight) {
-        canvas.width = textureWidth;
-        canvas.height = textureHeight;
-      }
-
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // White represents the ceramic surface, not printed ink. The extra
-      // margins map the 22.86 × 8.89 cm Printful area onto the mug's real
-      // 25.76 cm circumference and 9.6 cm height without stretching it.
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const offsetX = (canvas.width - product.printFile.width) / 2;
-      const offsetY = (canvas.height - product.printFile.height) / 2;
-      drawDesign(ctx, offsetX, offsetY);
-      mug3D.texture.needsUpdate = true;
-      renderMug3D();
-    }
-
-    function attachMugInteraction(group) {
-      const maxVerticalRotation = Math.PI / 6;
-      let activePointer = null;
-      let lastX = 0;
-      let lastY = 0;
-
-      mugViewer.addEventListener('pointerdown', (event) => {
-        activePointer = event.pointerId;
-        lastX = event.clientX;
-        lastY = event.clientY;
-        mugViewer.setPointerCapture(event.pointerId);
-        event.preventDefault();
-      });
-      mugViewer.addEventListener('pointermove', (event) => {
-        if (event.pointerId !== activePointer) return;
-        const deltaX = event.clientX - lastX;
-        const deltaY = event.clientY - lastY;
-        lastX = event.clientX;
-        lastY = event.clientY;
-        group.rotation.y += deltaX * .012;
-        group.rotation.x = Math.max(
-          -maxVerticalRotation,
-          Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
-        );
-        renderMug3D();
-      });
-      const finishPointer = (event) => {
-        if (event.pointerId !== activePointer) return;
-        activePointer = null;
-        if (mugViewer.hasPointerCapture(event.pointerId)) mugViewer.releasePointerCapture(event.pointerId);
-      };
-      mugViewer.addEventListener('pointerup', finishPointer);
-      mugViewer.addEventListener('pointercancel', finishPointer);
-      mugViewer.addEventListener('keydown', (event) => {
-        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
-        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-          group.rotation.y += event.key === 'ArrowLeft' ? -.18 : .18;
-        } else {
-          const nextRotation = group.rotation.x + (event.key === 'ArrowUp' ? -.09 : .09);
-          group.rotation.x = Math.max(-maxVerticalRotation, Math.min(maxVerticalRotation, nextRotation));
-        }
-        renderMug3D();
-        event.preventDefault();
+      if (!mug3D || !product) return;
+      mug3D.updateTexture((ctx, { offsetX, offsetY }) => {
+        drawDesign(ctx, offsetX, offsetY);
       });
     }
 
     function initMug3D() {
       if (mug3D || mug3DLoadPromise) return mug3DLoadPromise;
       mug3DLoadPromise = Promise.resolve().then(() => {
-        const THREE = window.THREE;
-        if (!THREE) throw new Error('Three.js failed to load');
-        const renderer = new THREE.WebGLRenderer({
-          alpha: true,
-          antialias: true,
-          powerPreference: 'high-performance',
+        mug3D = Mug3DViewer.create({
+          THREE: window.THREE,
+          host: mugViewer,
+          interactionElement: mugViewer,
+          product,
+          drawTexture: (ctx, { offsetX, offsetY }) => {
+            drawDesign(ctx, offsetX, offsetY);
+          },
         });
-        renderer.setClearColor(0x000000, 0);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        mugViewer.prepend(renderer.domElement);
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(31, 1, .1, 100);
-        camera.position.set(0, 2.35, 27);
-        camera.lookAt(0, 0, 0);
-
-        const mugGroup = new THREE.Group();
-        // Start at a slight angle so the cylindrical print and handle are both
-        // visible immediately. Lift the composition slightly so the mug sits
-        // closer to its heading without changing its scale or dimensions.
-        mugGroup.position.y = .5;
-        mugGroup.rotation.y = .14;
-        scene.add(mugGroup);
-
-        const textureCanvas = document.createElement('canvas');
-        const printWidthCm = (product.printFile.width / product.printFile.dpi) * 2.54;
-        const printHeightCm = (product.printFile.height / product.printFile.dpi) * 2.54;
-        textureCanvas.width = Math.round(
-          product.printFile.width * (Math.PI * product.size.diameterCm) / printWidthCm
-        );
-        textureCanvas.height = Math.round(
-          product.printFile.height * product.size.heightCm / printHeightCm
-        );
-        const initialTextureContext = textureCanvas.getContext('2d');
-        initialTextureContext.fillStyle = '#ffffff';
-        initialTextureContext.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
-        const texture = new THREE.CanvasTexture(textureCanvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-
-        const height = product.size.heightCm;
-        const radius = product.size.diameterCm / 2;
-        // Printful's 11 oz mug is almost cylindrical. Keep only the very
-        // subtle narrowing that is visible close to its rounded foot.
-        const bottomRadius = radius * .985;
-        const edgeRadius = .09;
-        const shellHeight = height - edgeRadius * 2;
-        // Printful file 43 covers 22.86 cm of the 25.76 cm circumference.
-        // Its left and right edges therefore meet on either side of the
-        // unprinted handle band. The cylinder's UV seam must sit exactly on
-        // the handle axis (negative X), not 90 degrees behind it.
-        const handleSeamAngle = -Math.PI / 2;
-        // Match the homepage mug's deliberately simple material response.
-        // Standard shading preserves the printed colors and gives the white
-        // body a clean light-to-dark falloff without filmic compression.
-        const ceramic = new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          map: texture,
-          roughness: .38,
-          metalness: .04,
-        });
-        const plainCeramic = new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          roughness: .38,
-          metalness: .04,
-        });
-        const body = new THREE.Mesh(
-          new THREE.CylinderGeometry(
-            radius,
-            bottomRadius,
-            shellHeight,
-            160,
-            1,
-            true,
-            handleSeamAngle,
-            Math.PI * 2
-          ),
-          ceramic
-        );
-        mugGroup.add(body);
-
-        // Build a real, deep cavity instead of the old grey disc that sat
-        // directly below the opening. The inner wall begins exactly at the
-        // inner edge of the lip and narrows gently towards the ceramic base.
-        const innerRadius = radius - edgeRadius * 2;
-        const interiorBottomRadius = bottomRadius - .42;
-        const interiorTopY = shellHeight / 2;
-        const interiorBottomY = -height / 2 + .52;
-        const interiorHeight = interiorTopY - interiorBottomY;
-        const inside = new THREE.Mesh(
-          new THREE.CylinderGeometry(
-            innerRadius,
-            interiorBottomRadius,
-            interiorHeight,
-            160,
-            1,
-            true,
-            -Math.PI,
-            Math.PI * 2
-          ),
-          new THREE.MeshStandardMaterial({
-            color: 0xf3f3f3,
-            roughness: .52,
-            metalness: .01,
-            side: THREE.BackSide,
-          })
-        );
-        inside.position.y = (interiorTopY + interiorBottomY) / 2;
-        mugGroup.add(inside);
-
-        // One continuous rounded piece connects the outer shell and inner
-        // wall. Both meet at the torus edges, removing the floating double
-        // border that appeared when the mug was tilted downwards.
-        const rim = new THREE.Mesh(
-          new THREE.TorusGeometry((radius + innerRadius) / 2, (radius - innerRadius) / 2, 24, 160),
-          plainCeramic
-        );
-        rim.rotation.x = Math.PI / 2;
-        rim.position.y = interiorTopY;
-        mugGroup.add(rim);
-
-        const interiorBottom = new THREE.Mesh(
-          new THREE.CircleGeometry(interiorBottomRadius, 160),
-          new THREE.MeshStandardMaterial({
-            color: 0xe6e7e8,
-            roughness: .68,
-            metalness: 0,
-            side: THREE.DoubleSide,
-          })
-        );
-        interiorBottom.rotation.x = -Math.PI / 2;
-        interiorBottom.position.y = interiorBottomY + .015;
-        mugGroup.add(interiorBottom);
-
-        const bottom = new THREE.Mesh(
-          new THREE.CircleGeometry(bottomRadius - .03, 160),
-          plainCeramic
-        );
-        bottom.rotation.x = Math.PI / 2;
-        bottom.position.y = -height / 2 + .01;
-        bottom.receiveShadow = true;
-        mugGroup.add(bottom);
-
-        // A rounded, open D-shaped curve is much closer to Printful's real
-        // handle than a circular torus. It keeps one constant thickness all
-        // the way to the shell; only vertices that would cross the invisible
-        // inner cylinder are clipped back behind the ceramic wall.
-        const handlePath = new THREE.CatmullRomCurve3(
-          [
-            new THREE.Vector3(-radius + .24, 3.62, 0),
-            new THREE.Vector3(-radius - .95, 3.68, 0),
-            new THREE.Vector3(-radius - 2.34, 3.02, 0),
-            new THREE.Vector3(-radius - 3.02, 1.42, 0),
-            new THREE.Vector3(-radius - 3.12, 0, 0),
-            new THREE.Vector3(-radius - 3.02, -1.42, 0),
-            new THREE.Vector3(-radius - 2.34, -2.9, 0),
-            new THREE.Vector3(-radius - .95, -3.54, 0),
-            new THREE.Vector3(-radius + .24, -3.48, 0),
-          ],
-          false,
-          'centripetal',
-          .5
-        );
-        const handleTubularSegments = 160;
-        const handleRadialSegments = 28;
-        const handleGeometry = new THREE.TubeGeometry(
-          handlePath,
-          handleTubularSegments,
-          .4,
-          handleRadialSegments,
-          false
-        );
-        const handlePositions = handleGeometry.getAttribute('position');
-        const cavityBoundary = innerRadius + .015;
-        for (let vertexIndex = 0; vertexIndex < handlePositions.count; vertexIndex++) {
-          const x = handlePositions.getX(vertexIndex);
-          const z = handlePositions.getZ(vertexIndex);
-          const radialDistance = Math.hypot(x, z);
-          if (radialDistance >= cavityBoundary) continue;
-          const radialScale = cavityBoundary / radialDistance;
-          handlePositions.setXYZ(
-            vertexIndex,
-            x * radialScale,
-            handlePositions.getY(vertexIndex),
-            z * radialScale
-          );
-        }
-        handlePositions.needsUpdate = true;
-        handleGeometry.computeVertexNormals();
-        const handle = new THREE.Mesh(
-          handleGeometry,
-          plainCeramic
-        );
-        mugGroup.add(handle);
-
-        // The base uses the same integrated corner treatment as the top.
-        const baseRim = new THREE.Mesh(
-          new THREE.TorusGeometry(bottomRadius - edgeRadius, edgeRadius, 24, 160),
-          plainCeramic
-        );
-        baseRim.rotation.x = Math.PI / 2;
-        baseRim.position.y = -shellHeight / 2;
-        mugGroup.add(baseRim);
-
-        // Same fixed four-direction light rig as the homepage mug. The lights
-        // stay in world space while the mug rotates, so its bright and shaded
-        // sides remain stable and the artwork keeps its true palette.
-        scene.add(new THREE.AmbientLight(0xffffff, 1.9));
-        const keyLight = new THREE.DirectionalLight(0xfffaf5, 1.15);
-        keyLight.position.set(2.2, 1.8, 2.5);
-        scene.add(keyLight);
-        const fillLight = new THREE.DirectionalLight(0xfffaf5, .85);
-        fillLight.position.set(-2.4, 1, -2.2);
-        scene.add(fillLight);
-        const rimLight = new THREE.DirectionalLight(0xffffff, .45);
-        rimLight.position.set(0, 2.2, -3);
-        scene.add(rimLight);
-        const underLight = new THREE.DirectionalLight(0xfffaf5, .55);
-        underLight.position.set(.5, -2.2, 1.8);
-        scene.add(underLight);
-
-        mug3D = { THREE, renderer, scene, camera, group: mugGroup, textureCanvas, texture };
-        attachMugInteraction(mugGroup);
-        resizeMug3D();
-        updateMug3DTexture();
         mugViewer.classList.add('is-ready');
       }).catch((error) => {
         console.warn('3D mug preview unavailable; using 2D fallback.', error);
@@ -1675,6 +1511,7 @@
     });
 
     function initEditor() {
+      const defaultSlot = product.layoutGeometry.single[0];
       mugEditor = new MugPrintEditor({
         canvas: wrapCanvas,
         shell: document.getElementById('editor-canvas-shell'),
@@ -1705,6 +1542,8 @@
         deleteButton: document.getElementById('editor-delete'),
         printWidth: product.printFile.width,
         printHeight: product.printFile.height,
+        defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
+        defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         palette: getPalette(selectedTheme).colors,
         onChange: () => {
           markDirty();
@@ -1712,7 +1551,9 @@
         },
         onReset: () => {
           mugEditor.setDesign(buildAutomaticDesign(), { record: true });
-          mugEditor.setFeedback('Automatische Wortwolke wiederhergestellt');
+          mugEditor.setFeedback(isPersonalMode
+            ? 'Druckfläche geleert'
+            : 'Automatische Wortwolke wiederhergestellt');
           markDirty();
         },
       });
@@ -1725,6 +1566,12 @@
     });
 
     saveButton.addEventListener('click', async () => {
+      const design = mugEditor.getDesign();
+      if (!design.length) {
+        errorText.textContent = 'Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.';
+        mugEditor.setFeedback('Eure Tasse ist noch leer.');
+        return;
+      }
       saveButton.disabled = true;
       saveButton.textContent = 'Design wird gespeichert…';
       errorText.textContent = '';
@@ -1738,7 +1585,8 @@
             theme: selectedTheme,
             placement: selectedPlacement,
             words,
-            design: mugEditor.getDesign(),
+            design,
+            configurationType,
           }),
         });
         const data = await response.json();
@@ -1752,7 +1600,7 @@
       }
     });
 
-    fetch(`/api/events/${encodeURIComponent(slug)}/configurator`)
+    fetch(`/api/events/${encodeURIComponent(slug)}/configurator${isPersonalMode ? '?mode=personal' : ''}`)
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'load_failed');
@@ -1769,7 +1617,9 @@
         buildThemeOptions();
         renderCustomColorControls();
 
-        document.title = `Tassen für ${data.event.coupleName} – WeddingCloud`;
+        document.title = isPersonalMode
+          ? 'Persönliche Erinnerung gestalten – Wolkenworte'
+          : `Tassen für ${data.event.coupleName} – Wolkenworte`;
         document.getElementById('product-name').textContent = product.name;
         document.getElementById('product-size').textContent =
           `${product.size.label} · ${product.size.volumeMl} ml · weiße Keramik`;
@@ -1777,7 +1627,7 @@
           `↔ ↕ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
         quantityInput.min = String(product.minQuantity);
         quantityInput.max = String(product.maxQuantity);
-        updateQuantity(product.defaultQuantity, false);
+        updateQuantity(isPersonalMode ? 1 : product.defaultQuantity, false);
 
         loading.hidden = true;
         content.hidden = false;

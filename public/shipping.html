@@ -3,29 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lieferadresse – WeddingCloud</title>
+  <title>Lieferadresse – Wolkenworte</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
     *, *::before, *::after { box-sizing: border-box; }
     :root {
-      --bg: #fffaf5;
-      --surface: #fffefd;
-      --surface-soft: #fbf2e7;
+      --bg: #fffdfa;
+      --surface: #fffefc;
+      --surface-soft: #f7eee0;
       --ink: #400f26;
-      --berry: #a40e4c;
-      --muted: #846e75;
-      --line: rgba(110, 61, 72, .16);
-      --line-strong: rgba(164, 14, 76, .38);
+      --berry: #9c1c4c;
+      --muted: #8a7178;
+      --line: rgba(64, 15, 38, .1);
+      --line-strong: rgba(156, 28, 76, .38);
       --success: #287a64;
       --danger: #b33a4d;
       --shadow: 0 20px 60px rgba(64, 15, 38, .08);
     }
     html { background: var(--bg); color: var(--ink); font-family: 'Jost', system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 18% 12%, rgba(247, 224, 203, .42), transparent 34%), var(--bg); }
+    body { margin: 0; min-height: 100vh; background: var(--bg); }
     button, input, select { font: inherit; }
     .topbar {
-      min-height: 64px;
-      padding: 14px clamp(18px, 4vw, 52px);
+      width: min(1120px, calc(100% - 48px));
+      min-height: 84px;
+      margin: 0 auto;
+      padding: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -34,8 +36,8 @@
       background: rgba(255, 253, 250, .88);
       backdrop-filter: blur(14px);
     }
-    .brand { color: var(--ink); text-decoration: none; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; }
-    .brand-heart { color: var(--berry); margin-right: 5px; }
+    .brand { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 600; }
+    .brand-icon { width: 32px; height: 30px; object-fit: contain; }
     .back-link { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
     .back-link:hover { color: var(--berry); }
     main { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 72px; }
@@ -80,6 +82,8 @@
     .submit-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 13px 28px rgba(64, 15, 38, .2); }
     .submit-button:disabled { cursor: wait; opacity: .58; }
     .checkout-button { background: var(--berry); margin-top: 16px; }
+    .privacy-note { margin: -1px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
+    .privacy-note a { color: var(--berry); text-underline-offset: 2px; }
     .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .summary-card { padding: 22px; align-self: start; }
     .design-summary { display: flex; gap: 14px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
@@ -106,8 +110,9 @@
       .summary-card { position: sticky; top: 26px; }
     }
     @media (max-width: 520px) {
-      .topbar { min-height: 58px; }
+      .topbar { width: min(100% - 32px, 560px); min-height: 72px; }
       .brand { font-size: 18px; }
+      .brand-icon { width: 28px; height: 26px; }
       .back-link span:first-child { margin-right: 3px; }
       main { width: min(100% - 20px, 1120px); padding-top: 26px; }
       .intro-copy { font-size: 15px; }
@@ -117,11 +122,15 @@
       .design-preview { width: 78px; height: 64px; }
     }
   </style>
+  <link rel="stylesheet" href="/site-header.css" />
+  <script src="/js/site-header.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/"><span class="brand-heart">♡</span>WeddingCloud</a>
-    <a class="back-link" id="back-link" href="#"><span aria-hidden="true">←</span> Zurück zum Design</a>
+  <header class="topbar ww-site-header">
+    <div class="ww-nav">
+      <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
+      <a class="back-link ww-back-link" id="back-link" href="#"><span aria-hidden="true">←</span><span>Zurück zum Design</span></a>
+    </div>
   </header>
 
   <main>
@@ -129,8 +138,8 @@
     <div id="page-content" hidden>
       <section class="intro">
         <p class="eyebrow">Fast geschafft</p>
-        <h1>Wohin dürfen eure Tassen reisen?</h1>
-        <p class="intro-copy">Mit der Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.</p>
+        <h1 id="shipping-title">Wohin dürfen eure Tassen reisen?</h1>
+        <p class="intro-copy" id="shipping-intro">Mit der Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.</p>
       </section>
 
       <div class="steps" aria-label="Bestellfortschritt">
@@ -172,6 +181,7 @@
               <select id="state" name="state_code" autocomplete="shipping address-level1"></select>
             </label>
             <button class="submit-button" id="submit-button" type="submit" disabled>Gesamtpreis berechnen <span aria-hidden="true">→</span></button>
+            <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten durch Wolkenworte und Printful im <a href="/datenschutz">Datenschutz</a>.</p>
             <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
           </form>
         </section>
@@ -400,7 +410,17 @@
         countries = countriesData.countries || [];
         if (!countries.length) throw new Error('countries');
 
-        document.getElementById('summary-title').textContent = configuration.product.name;
+        if (configuration.configurationType === 'personal_memory') {
+          backLink.href = `/e/${encodeURIComponent(slug)}/configure?mode=personal`;
+          document.title = 'Persönliche Erinnerung bestellen – Wolkenworte';
+          document.getElementById('shipping-title').textContent = 'Wohin darf eure Erinnerung reisen?';
+          document.getElementById('shipping-intro').textContent =
+            'Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.';
+        }
+
+        document.getElementById('summary-title').textContent = configuration.configurationType === 'personal_memory'
+          ? 'Persönliche Erinnerungstasse'
+          : configuration.product.name;
         document.getElementById('summary-quantity').textContent = configuration.quantity === 1
           ? '1 Tasse'
           : `${configuration.quantity} Tassen`;

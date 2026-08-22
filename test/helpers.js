@@ -73,8 +73,6 @@ async function createEvent(baseUrl, overrides = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       coupleName,
-      eventTitle: overrides.eventTitle || 'Hochzeit',
-      weddingDate: overrides.weddingDate || null,
       slug: overrides.slug,
       pin: overrides.pin || '1234',
     }),

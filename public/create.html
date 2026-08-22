@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>WeddingCloud – Eure Wortwolke einrichten</title>
+  <title>Wortwolke erstellen – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,11 +15,10 @@
       --accent:   #9c1c4c;
       --text:     #400f26;
       --muted:    #8a7178;
-      --border:   rgba(193,146,47,0.35);
-      --shadow:   rgba(64,15,38,0.09);
+      --border:   rgba(64,15,38,0.14);
+      --shadow:   rgba(64,15,38,0.07);
       --ph:       #b99aa3;
-      --header-grad: rgba(247,238,223,0.7);
-      --header-bd:   rgba(193,146,47,0.2);
+      --header-bd:   rgba(64,15,38,0.1);
       --orn:      rgba(193,146,47,0.55);
       --ok:       #4a9478;
       --err:      #c1594a;
@@ -41,15 +40,52 @@
       padding: 0 0 60px;
     }
 
-    .header {
+    .topbar {
       width: 100%;
-      text-align: center;
-      padding: 44px 24px 30px;
-      background: linear-gradient(180deg, var(--header-grad) 0%, transparent 100%);
       border-bottom: 1px solid var(--header-bd);
+      background: rgba(255,253,250,.88);
+      backdrop-filter: blur(14px) saturate(1.4);
+      -webkit-backdrop-filter: blur(14px) saturate(1.4);
     }
 
-    .header .eyebrow {
+    .topbar-inner {
+      width: min(1120px, calc(100% - 48px));
+      height: 84px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--text);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .brand-icon { width: 32px; height: 30px; object-fit: contain; }
+
+    .back-link {
+      color: var(--muted);
+      font-size: .86rem;
+      text-decoration: none;
+      transition: color .2s;
+    }
+    .back-link:hover { color: var(--primary2); }
+
+    .page-intro {
+      width: 100%;
+      text-align: center;
+      padding: 54px 24px 22px;
+    }
+
+    .page-intro .eyebrow {
       font-size: 11px;
       letter-spacing: 3px;
       text-transform: uppercase;
@@ -57,7 +93,7 @@
       margin-bottom: 10px;
     }
 
-    .header h1 {
+    .page-intro h1 {
       font-family: 'Playfair Display', Georgia, serif;
       font-size: clamp(28px, 6vw, 40px);
       font-weight: 500;
@@ -65,7 +101,7 @@
       color: var(--primary2);
     }
 
-    .header .subtitle {
+    .page-intro .subtitle {
       margin-top: 10px;
       font-size: 14px;
       color: var(--muted);
@@ -78,7 +114,7 @@
     .card {
       width: 100%;
       max-width: 480px;
-      padding: 36px 24px 0;
+      padding: 28px 24px 0;
     }
 
     form { display: flex; flex-direction: column; gap: 22px; }
@@ -102,16 +138,16 @@
       width: 100%;
       border: 1.5px solid var(--border);
       border-radius: 12px;
-      background: #fff;
+      background: #fffefc;
       font-family: 'Jost', system-ui, sans-serif;
       font-size: 17px;
       color: var(--text);
       padding: 14px 16px;
       outline: none;
-      box-shadow: 0 4px 20px var(--shadow);
-      transition: border-color 0.2s;
+      box-shadow: 0 10px 28px var(--shadow);
+      transition: border-color 0.2s, box-shadow .2s;
     }
-    input:focus { border-color: var(--primary); }
+    input:focus { border-color: rgba(156,28,76,.55); box-shadow: 0 0 0 3px rgba(156,28,76,.06); }
     input::placeholder { color: var(--ph); font-style: italic; }
     #pin, #pin-confirm { -webkit-text-security: disc; text-security: disc; letter-spacing: 4px; }
 
@@ -157,6 +193,15 @@
     button[type="submit"]:active { transform: scale(0.98); }
     button[type="submit"]:disabled { opacity: 0.5; cursor: default; }
 
+    .privacy-note {
+      margin: -10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      text-align: center;
+    }
+    .privacy-note a { color: var(--primary2); text-underline-offset: 2px; }
+
     .error-banner {
       background: rgba(193,89,74,0.10);
       border: 1px solid rgba(193,89,74,0.30);
@@ -176,61 +221,32 @@
       letter-spacing: 8px;
     }
 
-    /* ── Success screen ── */
-    .success { display: none; text-align: center; }
-    .success.show { display: block; }
-    #create-form.hidden { display: none; }
-
-    .success h2 {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-weight: 500;
-      font-size: 26px;
-      color: var(--primary2);
-      margin-bottom: 14px;
-    }
-    .success h2 .heart-icon { display: inline-block; width: 22px; height: auto; vertical-align: -3px; color: #d1607e; }
-    .success p { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
-
-    .success a.btn {
-      display: block;
-      text-decoration: none;
-      background: var(--primary);
-      color: #fff;
-      border-radius: 999px;
-      padding: 16px;
-      font-family: 'Jost', system-ui, sans-serif;
-      font-weight: 500;
-      letter-spacing: 0.015em;
-      font-size: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 8px 22px var(--shadow);
-    }
-    .success a.btn.secondary {
-      background: #fff;
-      color: var(--primary2);
-      border: 1.5px solid var(--border);
-    }
-    .success .guest-link {
-      font-family: 'Jost', system-ui, sans-serif;
-      font-size: 14px;
-      color: var(--primary2);
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      margin-bottom: 20px;
-      word-break: break-all;
+    @media (max-width: 620px) {
+      .topbar-inner { width: min(100% - 32px, 560px); height: 72px; }
+      .brand { font-size: 1.18rem; }
+      .brand-icon { width: 28px; height: 26px; }
+      .back-link { font-size: .8rem; }
+      .page-intro { padding: 40px 20px 18px; }
+      .card { padding-top: 24px; }
     }
   </style>
+  <link rel="stylesheet" href="/site-header.css" />
+  <script src="/js/site-header.js" defer></script>
 </head>
 <body>
 
-<header class="header">
-  <p class="eyebrow">WeddingCloud</p>
-  <h1>Eure Wortwolke</h1>
-  <p class="subtitle">Gäste teilen live ein Wort für euch – auf dem Bildschirm wächst daraus eure Hochzeits-Wortwolke. Kostenlos, in 30 Sekunden eingerichtet.</p>
+<header class="topbar ww-site-header">
+  <div class="topbar-inner ww-nav">
+    <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
+    <a class="back-link ww-back-link" href="/"><span aria-hidden="true">←</span><span>Zurück zur Startseite</span></a>
+  </div>
 </header>
+
+<section class="page-intro" aria-labelledby="page-title">
+  <p class="eyebrow">Kostenlos starten</p>
+  <h1 id="page-title">Eure Wortwolke</h1>
+  <p class="subtitle">Gäste teilen live ein Wort für euch – auf dem Bildschirm wächst daraus eure Hochzeits-Wortwolke. Kostenlos, in 30 Sekunden eingerichtet.</p>
+</section>
 
 <main class="card">
   <div class="error-banner" id="error-banner"></div>
@@ -239,16 +255,6 @@
     <div>
       <label for="couple-name">Vornamen des Brautpaars</label>
       <input id="couple-name" type="text" placeholder="Lea &amp; Julian" maxlength="80" required />
-    </div>
-
-    <div>
-      <label for="event-title">Anlass</label>
-      <input id="event-title" type="text" placeholder="Hochzeit" maxlength="60" value="Hochzeit" />
-    </div>
-
-    <div>
-      <label for="wedding-date">Datum (optional)</label>
-      <input id="wedding-date" type="date" />
     </div>
 
     <div>
@@ -273,16 +279,9 @@
       </div>
     </div>
 
-    <button type="submit" id="submit-btn">Wortwolke erstellen</button>
+    <button type="submit" id="submit-btn">Wortwolke starten</button>
+    <p class="privacy-note">Wie wir eure Angaben verarbeiten, erfahrt ihr im <a href="/datenschutz">Datenschutz</a>.</p>
   </form>
-
-  <div class="success" id="success">
-    <h2>Fertig! <svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></h2>
-    <p>Öffnet die Anzeige-Seite auf dem großen Bildschirm bei der Feier. Gäste scannen dort den QR-Code und tippen ihr Wort auf dem Handy ein.</p>
-    <a class="btn" id="display-link" href="#">Zur Anzeige-Seite</a>
-    <a class="btn secondary" id="guest-link" href="#">Zur Gäste-Seite (Vorschau)</a>
-    <p class="field-hint">Merkt euch euren Admin-PIN — ihr braucht ihn, um auf dem Anzeige-Bildschirm eine neue Runde zu starten.</p>
-  </div>
 
   <p class="ornament">· · ·</p>
 </main>
@@ -295,7 +294,6 @@
   const form              = document.getElementById('create-form');
   const submitBtn         = document.getElementById('submit-btn');
   const errorBanner       = document.getElementById('error-banner');
-  const success            = document.getElementById('success');
 
   slugOrigin.textContent = `${location.origin}/e/`;
 
@@ -365,8 +363,6 @@
     clearError();
 
     const coupleName = coupleNameInput.value.trim();
-    const eventTitle = document.getElementById('event-title').value.trim() || 'Hochzeit';
-    const weddingDate = document.getElementById('wedding-date').value || null;
     const slug = slugInput.value.trim();
     const pin = document.getElementById('pin').value.trim();
     const pinConfirm = document.getElementById('pin-confirm').value.trim();
@@ -377,13 +373,13 @@
     if (pin !== pinConfirm) return showError('Die beiden PINs stimmen nicht überein.');
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Wird erstellt…';
+    submitBtn.textContent = 'Wird gestartet…';
 
     try {
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coupleName, eventTitle, weddingDate, slug, pin }),
+        body: JSON.stringify({ coupleName, slug, pin }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -393,17 +389,24 @@
         // rare) a server-side generation failure, both surfaced as-is.
         showError(data.error || 'Etwas ist schiefgelaufen.');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Wortwolke erstellen';
+        submitBtn.textContent = 'Wortwolke starten';
         return;
       }
-      form.classList.add('hidden');
-      success.classList.add('show');
-      document.getElementById('display-link').href = data.displayUrl;
-      document.getElementById('guest-link').href = data.guestUrl;
+      try {
+        sessionStorage.setItem(`creator-mode:${data.slug}`, '1');
+        sessionStorage.setItem(`creation-notice:${data.slug}`, '1');
+        if (data.adminToken) {
+          sessionStorage.setItem(`admin-token:${data.slug}`, data.adminToken);
+        }
+      } catch {
+        // Storage can be unavailable in strict privacy modes. The event is
+        // still valid, so continue to its guest page without creator extras.
+      }
+      location.assign(data.guestUrl);
     } catch {
       showError('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Wortwolke erstellen';
+      submitBtn.textContent = 'Wortwolke starten';
     }
   });
 </script>

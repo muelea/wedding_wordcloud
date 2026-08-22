@@ -24,8 +24,9 @@
       --tag-bd:   rgba(193,146,47,0.32);
       --tag-tx:   #9c1c4c;
       --ph:       #b99aa3;
-      --header-grad: rgba(247,238,223,0.7);
-      --header-bd:   rgba(193,146,47,0.2);
+      --input-bg: #fffefc;
+      --header-grad: transparent;
+      --header-bd:   rgba(64,15,38,0.1);
       --orn:      rgba(193,146,47,0.55);
     }
 
@@ -45,6 +46,7 @@
       --tag-bd:   rgba(255,16,240,0.40);
       --tag-tx:   #ff8cf5;
       --ph:       #7a6a99;
+      --input-bg: #0d0611;
       --header-grad: rgba(0,255,242,0.16);
       --header-bd:   rgba(255,16,240,0.28);
       --orn:      rgba(191,0,255,0.75);
@@ -97,13 +99,43 @@
       transition: color 0.5s;
     }
 
-    .header .subtitle {
-      margin-top: 6px;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      transition: color 0.5s;
+    .creator-tools {
+      width: min(720px, calc(100% - 48px));
+      margin: 22px auto 0;
+      padding: 14px 15px 14px 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      border: 1px solid var(--header-bd);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--input-bg) 92%, transparent);
+      box-shadow: 0 12px 34px var(--shadow);
+      transition: background .5s, border-color .5s, box-shadow .5s;
     }
+
+    .creator-status { min-width: 0; }
+    .creator-copy strong { display: block; font-size: 13px; font-weight: 600; }
+    .creator-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .creator-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .creator-action {
+      min-height: 38px;
+      padding: 9px 14px;
+      border: 1px solid var(--header-bd);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text);
+      font: 500 12px/1 'Jost', system-ui, sans-serif;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .18s, border-color .18s, color .18s, background .18s;
+    }
+    .creator-action:hover { transform: translateY(-1px); border-color: var(--primary2); color: var(--primary2); }
+    .creator-action.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .creator-action.primary:hover { color: #fff; }
 
     .card {
       width: 100%;
@@ -124,7 +156,7 @@
     .input-wrap {
       display: flex;
       align-items: center;
-      background: #fff;
+      background: var(--input-bg);
       border: 1.5px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
@@ -179,6 +211,79 @@
       transition: color 0.5s;
     }
 
+    .guest-actions {
+      margin-top: 22px;
+      display: flex;
+      justify-content: center;
+    }
+    .preview-trigger {
+      width: min(330px, 100%);
+      min-height: 64px;
+      padding: 9px 14px 9px 10px;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--header-bd);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--input-bg) 94%, transparent);
+      color: var(--text);
+      text-align: left;
+      font-family: 'Jost', system-ui, sans-serif;
+      box-shadow: 0 9px 28px color-mix(in srgb, var(--shadow) 70%, transparent);
+      cursor: pointer;
+      transition: transform .18s, background .18s, border-color .18s, box-shadow .18s;
+    }
+    .preview-trigger:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--primary2) 38%, transparent);
+      background: var(--input-bg);
+      box-shadow: 0 14px 32px var(--shadow);
+    }
+    .preview-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      border: 1px solid var(--tag-bd);
+      background: color-mix(in srgb, var(--tag-bg) 84%, var(--input-bg));
+      transition: background .5s, border-color .5s;
+    }
+    .preview-icon img {
+      width: 28px;
+      height: 26px;
+      display: block;
+      object-fit: contain;
+    }
+    .preview-copy { min-width: 0; }
+    .preview-copy strong {
+      display: block;
+      color: var(--primary2);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .preview-count {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 400;
+      line-height: 1.2;
+    }
+    .preview-chevron {
+      color: var(--muted);
+      font-size: 21px;
+      font-weight: 300;
+      line-height: 1;
+      transition: transform .18s, color .18s;
+    }
+    .preview-trigger:hover .preview-chevron {
+      color: var(--primary2);
+      transform: translateX(2px);
+    }
+
     .flash {
       text-align: center;
       margin-top: 20px;
@@ -201,23 +306,133 @@
       transition: color 0.5s;
     }
 
-    .tags { display: flex; flex-wrap: wrap; gap: 10px; }
+    .memory-cta {
+      margin-top: 26px;
+      padding: 20px;
+      border: 1px solid var(--header-bd);
+      border-radius: 22px;
+      background: color-mix(in srgb, var(--input-bg) 94%, transparent);
+      box-shadow: 0 14px 38px color-mix(in srgb, var(--shadow) 66%, transparent);
+    }
+    .memory-cta-head {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: center;
+      gap: 13px;
+    }
+    .memory-cta-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--tag-bd);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--tag-bg) 84%, var(--input-bg));
+    }
+    .memory-cta-icon img { width: 29px; height: 27px; object-fit: contain; }
+    .memory-cta-eyebrow {
+      margin: 0 0 3px;
+      color: var(--accent);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .memory-cta h2 {
+      margin: 0;
+      color: var(--primary2);
+      font: italic 500 20px/1.2 'Playfair Display', Georgia, serif;
+    }
+    .memory-cta-copy {
+      margin: 14px 0 17px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .memory-cta-link {
+      min-height: 46px;
+      padding: 12px 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform .18s, box-shadow .18s, background .5s;
+    }
+    .memory-cta-link:hover { transform: translateY(-1px); box-shadow: 0 10px 24px var(--shadow); }
+    .memory-cta-note {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 9.5px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 15px;
+      padding-top: 7px;
+    }
 
     .tag {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
       background: var(--tag-bg);
       border: 1px solid var(--tag-bd);
       color: var(--tag-tx);
-      padding: 7px 16px;
+      padding: 7px 18px;
       border-radius: 999px;
       font-family: 'Playfair Display', Georgia, serif;
       font-size: 15px;
       animation: tagIn 0.35s ease both;
-      transition: background 0.5s, border-color 0.5s, color 0.5s;
+      transition: background 0.5s, border-color 0.5s, color 0.5s, opacity .18s, transform .18s;
+    }
+
+    .tag-remove {
+      position: absolute;
+      top: -10px;
+      right: -9px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      padding: 0 0 1px;
+      border: 1px solid var(--tag-bd);
+      border-radius: 50%;
+      background: var(--input-bg);
+      color: var(--tag-tx);
+      box-shadow: 0 4px 12px var(--shadow);
+      font: 400 16px/1 'Jost', system-ui, sans-serif;
+      cursor: pointer;
+      transition: transform .16s, border-color .16s, background .5s, color .5s, opacity .16s;
+    }
+    .tag-remove:hover {
+      border-color: var(--primary2);
+      color: var(--primary2);
+      transform: scale(1.08);
+    }
+    .tag-remove:active { transform: scale(.94); }
+    .tag-remove:disabled { cursor: wait; opacity: .55; transform: rotate(45deg); }
+    .tag.remove-pending { opacity: .58; transform: scale(.97); }
+    .tag.removed {
+      pointer-events: none;
+      animation: tagOut .18s ease forwards;
     }
 
     @keyframes tagIn {
       from { opacity: 0; transform: scale(0.8) translateY(6px); }
       to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes tagOut {
+      to { opacity: 0; transform: scale(.82) translateY(-4px); }
     }
 
     .ornament {
@@ -229,12 +444,206 @@
       transition: color 0.5s;
     }
 
+    .guest-footer {
+      margin-top: auto;
+      padding: 46px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1;
+    }
+    .guest-footer a {
+      color: inherit;
+      text-decoration: none;
+      transition: color .18s;
+    }
+    .guest-footer a:hover { color: var(--primary2); }
+
     .error-state {
       text-align: center;
       margin-top: 60px;
       font-family: 'Playfair Display', Georgia, serif;
       font-style: italic;
       color: var(--muted);
+    }
+
+    .cloud-preview {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      padding: 24px;
+      display: grid;
+      place-items: center;
+    }
+    .cloud-preview-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(35, 10, 22, .46);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .cloud-preview-dialog {
+      position: relative;
+      width: min(860px, 100%);
+      height: min(760px, calc(100dvh - 48px));
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--header-bd);
+      border-radius: 28px;
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: 0 36px 100px rgba(35, 10, 22, .24);
+      transform: translateY(14px) scale(.985);
+      opacity: 0;
+      transition: transform .24s ease, opacity .24s ease, background .5s, color .5s;
+    }
+    .cloud-preview.open .cloud-preview-dialog { transform: translateY(0) scale(1); opacity: 1; }
+    .cloud-preview-head {
+      min-height: 88px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--header-bd);
+    }
+    .cloud-preview-eyebrow {
+      margin: 0 0 5px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+    .cloud-preview-title {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(24px, 4vw, 34px);
+      font-style: italic;
+      font-weight: 500;
+      color: var(--primary2);
+    }
+    .cloud-preview-meta { display: flex; align-items: center; gap: 13px; }
+    .cloud-preview-total { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .cloud-preview-total strong {
+      margin-right: 4px;
+      color: var(--primary2);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      font-weight: 500;
+    }
+    .cloud-preview-close {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--header-bd);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--text);
+      font: 300 25px/1 'Jost', system-ui, sans-serif;
+      cursor: pointer;
+      transition: border-color .18s, color .18s, transform .18s;
+    }
+    .cloud-preview-close:hover { border-color: var(--primary2); color: var(--primary2); transform: rotate(4deg); }
+    .cloud-preview-stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 22px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    #preview-canvas { display: block; max-width: 100%; max-height: 100%; opacity: 0; transition: opacity .25s; }
+    #preview-canvas.visible { opacity: 1; }
+    .cloud-preview-empty { text-align: center; color: var(--muted); }
+    .cloud-preview-empty .heart-icon { width: 35px; height: auto; color: var(--accent2); }
+    .cloud-preview-empty strong {
+      display: block;
+      margin-top: 14px;
+      color: var(--primary2);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      font-style: italic;
+      font-weight: 500;
+    }
+    .cloud-preview-empty span { display: block; margin-top: 7px; font-size: 12px; }
+    .cloud-preview-foot {
+      min-height: 62px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      border-top: 1px solid var(--header-bd);
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .preview-display-link { color: var(--primary2); font-weight: 500; text-decoration: none; white-space: nowrap; }
+    .preview-display-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    body.preview-open { overflow: hidden; }
+
+    .setup-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 260;
+      width: min(430px, calc(100% - 32px));
+      padding: 15px 15px 15px 17px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--header-bd);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--input-bg) 96%, transparent);
+      box-shadow: 0 22px 60px rgba(35, 10, 22, .18);
+      animation: setupToastIn .3s ease both;
+    }
+    .setup-toast-mark {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 14px;
+    }
+    .setup-toast-copy { min-width: 0; flex: 1; }
+    .setup-toast-copy strong { display: block; font-size: 13px; }
+    .setup-toast-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .setup-toast-close { border: 0; background: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+    @keyframes setupToastIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    [hidden] { display: none !important; }
+
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible {
+      outline: 2px solid var(--primary2);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 620px) {
+      .creator-tools { width: calc(100% - 32px); align-items: stretch; flex-direction: column; padding: 15px; }
+      .creator-actions { width: 100%; }
+      .creator-action { flex: 1; }
+      .cloud-preview { padding: 0; }
+      .cloud-preview-dialog { width: 100%; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
+      .cloud-preview-head { min-height: 78px; padding: 16px; }
+      .cloud-preview-meta { gap: 9px; }
+      .cloud-preview-total span { display: none; }
+      .cloud-preview-stage { padding: 14px; }
+      .cloud-preview-foot { min-height: 58px; padding: 11px 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cloud-preview-dialog, .setup-toast { animation: none; transition: none; }
     }
   </style>
 </head>
@@ -243,8 +652,20 @@
 <header class="header">
   <p class="eyebrow">Herzlich willkommen</p>
   <h1 id="couple-name">♡</h1>
-  <p class="subtitle" id="event-title">Hochzeit</p>
 </header>
+
+<section class="creator-tools" id="creator-tools" aria-label="Werkzeuge für das Brautpaar" hidden>
+  <div class="creator-status">
+    <div class="creator-copy">
+      <strong>Eure Wortwolke ist bereit</strong>
+      <span>Creator-Modus auf diesem Gerät</span>
+    </div>
+  </div>
+  <div class="creator-actions">
+    <button class="creator-action" id="share-link" type="button"><span id="share-label">Link teilen</span></button>
+    <a class="creator-action primary" id="display-link" href="#" target="_blank" rel="noopener">Anzeige öffnen&nbsp;↗</a>
+  </div>
+</section>
 
 <main class="card">
   <p class="prompt">Teile ein Wort für das Brautpaar&nbsp;✦</p>
@@ -265,6 +686,19 @@
   </div>
   <div class="char-counter"><span id="char-count">0</span> / 30</div>
 
+  <div class="guest-actions">
+    <button class="preview-trigger" id="preview-trigger" type="button" aria-controls="cloud-preview" aria-expanded="false">
+      <span class="preview-icon" aria-hidden="true">
+        <img src="/z_icons/icon.svg" alt="" />
+      </span>
+      <span class="preview-copy">
+        <strong>Wortwolke ansehen</strong>
+        <span class="preview-count" id="preview-count">Noch keine Wörter</span>
+      </span>
+      <span class="preview-chevron" aria-hidden="true">›</span>
+    </button>
+  </div>
+
   <div class="flash" id="flash"></div>
 
   <section class="submitted-section" id="submitted-section" hidden>
@@ -272,36 +706,337 @@
     <div class="tags" id="tags"></div>
   </section>
 
+  <section class="memory-cta" aria-labelledby="memory-cta-title">
+    <div class="memory-cta-head">
+      <span class="memory-cta-icon" aria-hidden="true"><img src="/z_icons/icon.svg" alt="" /></span>
+      <div>
+        <p class="memory-cta-eyebrow">Euer Moment. Eure Erinnerung.</p>
+        <h2 id="memory-cta-title">Haltet euren Moment fest.</h2>
+      </div>
+    </div>
+    <p class="memory-cta-copy">Gestaltet direkt eure persönliche Tasse – mit eigenen Fotos, Namen und Worten. Ganz unabhängig von der Hochzeits-Wortwolke.</p>
+    <a class="memory-cta-link" id="memory-cta-link" href="#"><span>Persönliche Tasse gestalten</span><span aria-hidden="true">→</span></a>
+    <small class="memory-cta-note">Euer Entwurf bleibt getrennt von den Beiträgen des Brautpaars.</small>
+  </section>
+
   <p class="ornament">· · ·</p>
 </main>
 
+<footer class="guest-footer" aria-label="Rechtliche Hinweise">
+  <a href="/datenschutz">Datenschutz</a>
+  <span aria-hidden="true">·</span>
+  <a href="/impressum">Impressum</a>
+</footer>
+
+<div class="cloud-preview" id="cloud-preview" hidden>
+  <div class="cloud-preview-backdrop" data-preview-close></div>
+  <section class="cloud-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="cloud-preview-title">
+    <header class="cloud-preview-head">
+      <div>
+        <p class="cloud-preview-eyebrow">Live-Vorschau</p>
+        <h2 class="cloud-preview-title" id="cloud-preview-title">Eure Wortwolke</h2>
+      </div>
+      <div class="cloud-preview-meta">
+        <p class="cloud-preview-total"><strong id="preview-total">0</strong><span>Wörter geteilt</span></p>
+        <button class="cloud-preview-close" id="preview-close" type="button" aria-label="Vorschau schließen">×</button>
+      </div>
+    </header>
+    <div class="cloud-preview-stage" id="preview-stage">
+      <canvas id="preview-canvas" aria-label="Live-Wortwolke"></canvas>
+      <div class="cloud-preview-empty" id="preview-empty">
+        <svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+        <strong>Noch ist die Wolke ganz leicht.</strong>
+        <span>Teilt das erste Wort – sie wächst sofort live mit.</span>
+      </div>
+    </div>
+    <footer class="cloud-preview-foot">
+      <span id="preview-live-copy">Noch keine Wörter geteilt</span>
+      <a class="preview-display-link" id="preview-display-link" href="#" target="_blank" rel="noopener" hidden>Auf der Anzeige öffnen&nbsp;↗</a>
+    </footer>
+  </section>
+</div>
+
+<div class="setup-toast" id="setup-toast" role="status" hidden>
+  <span class="setup-toast-mark" aria-hidden="true">✓</span>
+  <div class="setup-toast-copy">
+    <strong>Eure Wortwolke ist live.</strong>
+    <span>Bitte bewahrt euren Admin-PIN sicher auf.</span>
+  </div>
+  <button class="setup-toast-close" id="setup-toast-close" type="button" aria-label="Hinweis schließen">×</button>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/wordcloud-core.js?v=20260819-2"></script>
 <script>
   // Slug comes from the URL: /e/<slug>
   const slug = location.pathname.split('/').filter(Boolean)[1];
-
-  // Sync theme from URL param
   const urlTheme = new URLSearchParams(location.search).get('theme');
-  if (urlTheme === 'neon' || urlTheme === 'pastel') {
-    document.documentElement.dataset.theme = urlTheme;
-  }
-
-  const socket = io({ query: { slug } });
+  const displayUrl = `/e/${encodeURIComponent(slug)}/display`;
+  const guestUrl = `${location.origin}/e/${encodeURIComponent(slug)}`;
+  const guestId = getOrCreateGuestId();
+  const socket = io({ query: { slug, guestId } });
   const input   = document.getElementById('word-input');
   const btn     = document.getElementById('submit-btn');
   const flash   = document.getElementById('flash');
   const tags    = document.getElementById('tags');
   const section = document.getElementById('submitted-section');
   const charCount = document.getElementById('char-count');
+  const creatorTools = document.getElementById('creator-tools');
+  const shareButton = document.getElementById('share-link');
+  const shareLabel = document.getElementById('share-label');
+  const displayLink = document.getElementById('display-link');
+  const previewTrigger = document.getElementById('preview-trigger');
+  const previewCount = document.getElementById('preview-count');
+  const preview = document.getElementById('cloud-preview');
+  const previewDialog = preview.querySelector('.cloud-preview-dialog');
+  const previewClose = document.getElementById('preview-close');
+  const previewStage = document.getElementById('preview-stage');
+  const previewCanvas = document.getElementById('preview-canvas');
+  const previewEmpty = document.getElementById('preview-empty');
+  const previewTotal = document.getElementById('preview-total');
+  const previewLiveCopy = document.getElementById('preview-live-copy');
+  const previewDisplayLink = document.getElementById('preview-display-link');
+  const setupToast = document.getElementById('setup-toast');
+  const setupToastClose = document.getElementById('setup-toast-close');
+  const memoryCtaLink = document.getElementById('memory-cta-link');
+  const previewContext = previewCanvas.getContext('2d');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  let currentWords = [];
+  let previewOpen = false;
+  let previewRenderTimer = null;
+  let previewCloseTimer = null;
+  let previewReturnFocus = null;
+  let shareResetTimer = null;
+  let flashTimer = null;
+  let currentTheme = urlTheme === 'neon' || urlTheme === 'pastel' ? urlTheme : 'pastel';
+  let previewWordColor = WordCloudCore.makeColorAssigner(currentTheme);
+  const ownTags = new Map();
+
+  function getOrCreateGuestId() {
+    const storageKey = `guest-session:${slug}`;
+    try {
+      const existing = sessionStorage.getItem(storageKey);
+      if (/^[a-f0-9]{32}$/.test(existing || '')) return existing;
+    } catch {}
+
+    const bytes = new Uint8Array(16);
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      window.crypto.getRandomValues(bytes);
+    } else {
+      for (let index = 0; index < bytes.length; index += 1) {
+        bytes[index] = Math.floor(Math.random() * 256);
+      }
+    }
+    const created = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    try { sessionStorage.setItem(storageKey, created); } catch {}
+    return created;
+  }
+
+  function readSession(key) {
+    try { return sessionStorage.getItem(key); } catch { return null; }
+  }
+
+  function removeSession(key) {
+    try { sessionStorage.removeItem(key); } catch {}
+  }
+
+  function applyTheme(theme) {
+    if (theme !== 'neon' && theme !== 'pastel') return;
+    currentTheme = theme;
+    document.documentElement.dataset.theme = theme;
+    previewWordColor = WordCloudCore.makeColorAssigner(theme);
+    schedulePreviewRender();
+  }
+
+  applyTheme(currentTheme);
+
+  const isCreator = readSession(`creator-mode:${slug}`) === '1'
+    || Boolean(readSession(`admin-token:${slug}`));
+  creatorTools.hidden = !isCreator;
+  memoryCtaLink.href = `/e/${encodeURIComponent(slug)}/configure?mode=personal`;
+  displayLink.href = displayUrl;
+  previewDisplayLink.href = displayUrl;
+  previewDisplayLink.hidden = !isCreator;
+
+  if (readSession(`creation-notice:${slug}`) === '1') {
+    removeSession(`creation-notice:${slug}`);
+    setupToast.hidden = false;
+    window.setTimeout(hideSetupToast, 8000);
+  }
+
+  function hideSetupToast() {
+    setupToast.hidden = true;
+  }
+
+  setupToastClose.addEventListener('click', hideSetupToast);
+
+  shareButton.addEventListener('click', async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: document.title,
+          text: 'Teile ein Wort für unsere Wortwolke:',
+          url: guestUrl,
+        });
+        showShareConfirmation('Geteilt ✓');
+        return;
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(guestUrl);
+      } else if (!copyWithTemporaryInput(guestUrl)) {
+        window.prompt('Kopiert diesen Link:', guestUrl);
+        return;
+      }
+      showShareConfirmation('Link kopiert ✓');
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+      window.prompt('Kopiert diesen Link:', guestUrl);
+    }
+  });
+
+  function copyWithTemporaryInput(value) {
+    const temporaryInput = document.createElement('textarea');
+    temporaryInput.value = value;
+    temporaryInput.setAttribute('readonly', '');
+    temporaryInput.style.position = 'fixed';
+    temporaryInput.style.opacity = '0';
+    document.body.appendChild(temporaryInput);
+    temporaryInput.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch {}
+    temporaryInput.remove();
+    return copied;
+  }
+
+  function showShareConfirmation(message) {
+    clearTimeout(shareResetTimer);
+    shareLabel.textContent = message;
+    shareResetTimer = setTimeout(() => { shareLabel.textContent = 'Link teilen'; }, 1800);
+  }
+
+  function updatePreview(words) {
+    currentWords = Array.isArray(words) ? words : [];
+    const total = currentWords.reduce((sum, [, count]) => sum + Number(count || 0), 0);
+    previewTotal.textContent = String(total);
+    previewCount.textContent = total === 0
+      ? 'Noch keine Wörter'
+      : `${total} ${total === 1 ? 'Wort' : 'Wörter'} live`;
+    previewLiveCopy.textContent = total === 0
+      ? 'Noch keine Wörter geteilt'
+      : `${total} ${total === 1 ? 'Wort' : 'Wörter'} live geteilt`;
+    previewEmpty.hidden = currentWords.length > 0;
+    previewCanvas.hidden = currentWords.length === 0;
+    if (!currentWords.length) previewCanvas.classList.remove('visible');
+    schedulePreviewRender();
+  }
+
+  function schedulePreviewRender() {
+    if (!previewOpen || !currentWords.length) return;
+    clearTimeout(previewRenderTimer);
+    previewRenderTimer = setTimeout(renderPreview, 70);
+  }
+
+  function renderPreview() {
+    if (!previewOpen || !currentWords.length) return;
+    const bounds = previewStage.getBoundingClientRect();
+    const side = Math.floor(Math.max(220, Math.min(bounds.width - 40, bounds.height - 40)));
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+    previewCanvas.width = Math.round(side * pixelRatio);
+    previewCanvas.height = Math.round(side * pixelRatio);
+    previewCanvas.style.width = `${side}px`;
+    previewCanvas.style.height = `${side}px`;
+    previewContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    previewContext.clearRect(0, 0, side, side);
+
+    const placed = WordCloudCore.layoutWords(currentWords, side, previewContext, previewWordColor);
+    previewContext.textAlign = 'center';
+    previewContext.textBaseline = 'alphabetic';
+
+    for (const item of placed) {
+      previewContext.font = `${item.fontPx}px ${WordCloudCore.FONT_FAMILY}`;
+      previewContext.fillStyle = item.color;
+      if (item.rotated) {
+        previewContext.save();
+        previewContext.translate(item.x, item.y);
+        previewContext.rotate(-Math.PI / 2);
+        previewContext.fillText(item.word, 0, item.fontPx * .34);
+        previewContext.restore();
+      } else {
+        previewContext.fillText(item.word, item.x, item.y + item.fontPx * .34);
+      }
+    }
+
+    previewCanvas.classList.add('visible');
+  }
+
+  function openPreview() {
+    clearTimeout(previewCloseTimer);
+    previewReturnFocus = document.activeElement;
+    preview.hidden = false;
+    previewOpen = true;
+    previewTrigger.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('preview-open');
+    requestAnimationFrame(() => {
+      preview.classList.add('open');
+      previewClose.focus();
+      schedulePreviewRender();
+    });
+  }
+
+  function closePreview() {
+    if (!previewOpen) return;
+    previewOpen = false;
+    previewTrigger.setAttribute('aria-expanded', 'false');
+    preview.classList.remove('open');
+    document.body.classList.remove('preview-open');
+    clearTimeout(previewRenderTimer);
+    const finish = () => {
+      preview.hidden = true;
+      if (previewReturnFocus && typeof previewReturnFocus.focus === 'function') {
+        previewReturnFocus.focus();
+      }
+    };
+    if (reducedMotion.matches) finish();
+    else previewCloseTimer = setTimeout(finish, 180);
+  }
+
+  previewTrigger.addEventListener('click', openPreview);
+  previewClose.addEventListener('click', closePreview);
+  preview.addEventListener('click', (event) => {
+    if (event.target.hasAttribute('data-preview-close')) closePreview();
+  });
+  previewDialog.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closePreview();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...previewDialog.querySelectorAll('button:not([hidden]), a[href]:not([hidden])')];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  window.addEventListener('resize', schedulePreviewRender);
 
   fetch(`/api/events/${encodeURIComponent(slug)}`)
     .then(r => r.json())
-    .then(({ coupleName, eventTitle, theme }) => {
+    .then(({ coupleName, theme }) => {
       document.getElementById('couple-name').textContent = coupleName;
-      document.getElementById('event-title').textContent = eventTitle;
       document.title = coupleName + ' – Wortwolke';
       if (!urlTheme && (theme === 'neon' || theme === 'pastel')) {
-        document.documentElement.dataset.theme = theme;
+        applyTheme(theme);
       }
     })
     .catch(() => {});
@@ -319,21 +1054,120 @@
     charCount.textContent = '0';
   }
 
-  socket.on('word-accepted', (word) => {
-    btn.disabled = false;
-    input.focus();
-    flash.textContent = `„${word}" wurde hinzugefügt!`;
+  function showFlash(message) {
+    clearTimeout(flashTimer);
+    flash.textContent = message;
     flash.classList.add('show');
-    setTimeout(() => flash.classList.remove('show'), 2200);
+    flashTimer = setTimeout(() => flash.classList.remove('show'), 2200);
+  }
+
+  function addOwnWord(word, receipt) {
+    if (typeof word !== 'string' || !word || typeof receipt !== 'string' || !receipt) return;
+    if (ownTags.has(receipt)) return;
+
     section.hidden = false;
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.textContent = word;
+    tag.dataset.receipt = receipt;
+
+    const label = document.createElement('span');
+    label.className = 'tag-word';
+    label.textContent = word;
+
+    const removeButton = document.createElement('button');
+    removeButton.className = 'tag-remove';
+    removeButton.type = 'button';
+    removeButton.setAttribute('aria-label', `„${word}“ entfernen`);
+    removeButton.title = `„${word}“ entfernen`;
+    removeButton.textContent = '×';
+    removeButton.addEventListener('click', () => removeOwnWord(receipt));
+
+    tag.append(label, removeButton);
     tags.prepend(tag);
+    ownTags.set(receipt, { word, tag, removeButton });
+  }
+
+  function renderOwnWords(contributions) {
+    ownTags.clear();
+    tags.replaceChildren();
+    const safeContributions = Array.isArray(contributions) ? contributions : [];
+    for (const contribution of safeContributions) {
+      addOwnWord(contribution && contribution.word, contribution && contribution.receipt);
+    }
+    section.hidden = ownTags.size === 0;
+  }
+
+  function finishTagRemoval(receipt) {
+    const entry = ownTags.get(receipt);
+    if (!entry) return;
+    entry.tag.classList.remove('remove-pending');
+    entry.tag.classList.add('removed');
+    ownTags.delete(receipt);
+    setTimeout(() => {
+      entry.tag.remove();
+      section.hidden = ownTags.size === 0;
+    }, 180);
+    clearTimeout(flashTimer);
+    flash.classList.remove('show');
+  }
+
+  function removeOwnWord(receipt) {
+    const entry = ownTags.get(receipt);
+    if (!entry || entry.tag.classList.contains('remove-pending')) return;
+    entry.tag.classList.add('remove-pending');
+    entry.removeButton.disabled = true;
+
+    let settled = false;
+    const timeout = setTimeout(() => finish({ ok: false, error: 'timeout' }), 4000);
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (result && result.ok) {
+        finishTagRemoval(receipt);
+        return;
+      }
+      if (result && result.error === 'not_found') {
+        finishTagRemoval(receipt);
+        return;
+      }
+      entry.tag.classList.remove('remove-pending');
+      entry.removeButton.disabled = false;
+      showFlash('Das Wort konnte nicht entfernt werden. Bitte erneut versuchen.');
+    };
+
+    socket.emit('remove-word', { receipt }, finish);
+  }
+
+  function setRemoveControlsDisabled(disabled) {
+    for (const { tag, removeButton } of ownTags.values()) {
+      if (!tag.classList.contains('remove-pending')) removeButton.disabled = disabled;
+    }
+  }
+
+  socket.on('own-word-update', renderOwnWords);
+
+  socket.on('word-accepted', (word, receipt) => {
+    btn.disabled = false;
+    input.focus();
+    showFlash(`„${word}“ wurde hinzugefügt!`);
+    addOwnWord(word, receipt);
+  });
+
+  socket.on('word-error', () => {
+    btn.disabled = false;
+    showFlash('Das Wort konnte nicht gespeichert werden. Bitte erneut versuchen.');
   });
 
   socket.on('theme-change', (t) => {
-    document.documentElement.dataset.theme = t;
+    applyTheme(t);
+  });
+
+  socket.on('word-update', updatePreview);
+
+  socket.on('round-reset', () => {
+    renderOwnWords([]);
+    showFlash('Eine neue Runde hat begonnen.');
   });
 
   socket.on('fatal-error', (msg) => {
@@ -341,8 +1175,16 @@
       '<p class="error-state">Diese Wortwolke wurde nicht gefunden.</p>';
   });
 
-  socket.on('disconnect', () => { btn.disabled = true; });
-  socket.on('connect',    () => { btn.disabled = false; });
+  socket.on('disconnect', () => {
+    btn.disabled = true;
+    setRemoveControlsDisabled(true);
+    if (previewOpen) previewLiveCopy.textContent = 'Verbindung wird wiederhergestellt…';
+  });
+  socket.on('connect', () => {
+    btn.disabled = false;
+    setRemoveControlsDisabled(false);
+    updatePreview(currentWords);
+  });
 </script>
 </body>
 </html>

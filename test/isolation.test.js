@@ -37,6 +37,20 @@ function waitFor(socket, event, timeoutMs = 2000) {
   });
 }
 
+function waitForArgs(socket, event, timeoutMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out waiting for "${event}"`)), timeoutMs);
+    socket.once(event, (...args) => { clearTimeout(timer); resolve(args); });
+  });
+}
+
+function emitWithAck(socket, event, payload, timeoutMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out waiting for "${event}" acknowledgement`)), timeoutMs);
+    socket.emit(event, payload, (result) => { clearTimeout(timer); resolve(result); });
+  });
+}
+
 // Collects every emission of `event` for a window of time, instead of just
 // the first — used below to prove event B receives NOTHING at all while
 // event A is active, not just "not the first thing".
@@ -65,13 +79,20 @@ test('multi-tenant isolation: a word submitted to event A never reaches event B'
   const bUpdatesDuringA = collectFor(socketB, 'word-update', 800);
 
   const aGotUpdate = waitFor(socketA, 'word-update');
+  const aGotReceipt = waitForArgs(socketA, 'word-accepted');
   socketA.emit('submit-word', 'geheimnis-von-a');
   const aWords = await aGotUpdate;
+  const [, aReceipt] = await aGotReceipt;
 
   assert.deepEqual(aWords, [['geheimnis-von-a', 1]], 'event A should see its own submitted word');
 
+  const aGotRemoval = waitFor(socketA, 'word-update');
+  const removal = await emitWithAck(socketA, 'remove-word', { receipt: aReceipt });
+  assert.deepEqual(removal, { ok: true, word: 'geheimnis-von-a' });
+  assert.deepEqual(await aGotRemoval, [], 'event A should see its own contribution removal');
+
   const bUpdates = await bUpdatesDuringA;
-  assert.equal(bUpdates.length, 0, 'event B must receive zero word-update emissions while only event A had activity');
+  assert.equal(bUpdates.length, 0, 'event B must receive zero word-update emissions while event A adds or removes words');
 
   // Cross-check via the HTTP-visible state too: fetching event B's public
   // info + a fresh connect should show it never absorbed A's word.

@@ -83,25 +83,16 @@
     return clamp(1 - Math.max(0, word.length - 5) * 0.018, 0.6, 1);
   }
 
-  // Only 4 distinct sizes. Ratio is measured against a floored spread, not
-  // the raw max — otherwise a word jumped straight to the biggest tier the
-  // moment it equaled a still-tiny current max (e.g. after just its 2nd
-  // submission). Flooring the spread means a word needs a real lead over
-  // the rest, not just one extra vote early on, before it reads as "big".
-  const SIZE_TIERS = [0.3, 0.5, 0.72, 1];
-  const MIN_TIER_SPREAD = 6;
-
+  // Frequency affects size smoothly and absolutely rather than in relative
+  // tiers. This avoids two surprising behaviors: a second vote no longer
+  // jumps straight to the maximum merely because it is the current leader,
+  // and removing one contribution always makes that word measurably smaller
+  // without causing unrelated words to resize. The curve rises quickly at
+  // wedding-sized counts and then eases towards the maximum.
   function sizeForCount(word, count, minCount, maxCount, minPx, maxPx) {
-    let tierRatio;
-    if (maxCount === minCount) {
-      tierRatio = 0.6; // no variation yet — keep everything one pleasant size
-    } else {
-      const spread = Math.max(maxCount - minCount, MIN_TIER_SPREAD);
-      const ratio = clamp((count - minCount) / spread, 0, 1);
-      const tierIndex = Math.min(SIZE_TIERS.length - 1, Math.floor(ratio * SIZE_TIERS.length));
-      tierRatio = SIZE_TIERS[tierIndex];
-    }
-    const base = minPx + tierRatio * (maxPx - minPx);
+    const safeCount = Math.max(1, Number(count) || 1);
+    const frequencyRatio = 0.32 + 0.68 * (1 - Math.exp(-(safeCount - 1) / 8));
+    const base = minPx + frequencyRatio * (maxPx - minPx);
     return Math.max(minPx, base * lengthPenalty(word));
   }
 

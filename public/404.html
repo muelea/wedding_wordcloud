@@ -3,29 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nicht gefunden – WeddingCloud</title>
+  <title>Nicht gefunden – Wolkenworte</title>
   <style>
-    html, body {
-      height: 100%;
+    @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; }
+    :root { --paper: #fffdfa; --ink: #400f26; --muted: #8a7178; --berry: #9c1c4c; --line: rgba(64,15,38,.1); }
+    html { min-height: 100%; background: var(--paper); }
+    body {
+      min-height: 100vh;
       margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(160deg, #eef6f4 0%, #ddeee9 100%);
-      font-family: system-ui, -apple-system, sans-serif;
-      color: #1e3d4a;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Jost', system-ui, -apple-system, sans-serif;
     }
-    .box { text-align: center; padding: 24px; max-width: 420px; }
-    h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; color: #2e6e8a; margin-bottom: 12px; }
-    p { color: #6a8c96; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
-    a { color: #2e6e8a; }
+    .topbar { border-bottom: 1px solid var(--line); background: rgba(255,253,250,.88); }
+    .topbar-inner {
+      width: min(1120px, calc(100% - 48px)); height: 84px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-size: 1.4rem; font-weight: 600;
+    }
+    .brand-icon { width: 32px; height: 30px; object-fit: contain; }
+    main { display: grid; place-items: center; padding: 48px 24px 80px; }
+    .box { text-align: center; max-width: 470px; }
+    .eyebrow { margin: 0 0 12px; color: var(--berry); font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { margin: 0; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-size: clamp(34px, 7vw, 52px); font-weight: 500; line-height: 1.08; }
+    p { margin: 18px auto 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+    .button {
+      display: inline-flex; margin-top: 28px; padding: 13px 23px; border-radius: 999px;
+      background: var(--ink); color: #fff; text-decoration: none; font-size: 14px; font-weight: 600;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .button:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(64,15,38,.14); }
+    @media (max-width: 620px) {
+      .topbar-inner { width: min(100% - 32px, 560px); height: 72px; }
+      .brand { font-size: 1.18rem; }
+      .brand-icon { width: 28px; height: 26px; }
+    }
   </style>
+  <link rel="stylesheet" href="/site-header.css" />
+  <script src="/js/site-header.js" defer></script>
 </head>
 <body>
-  <div class="box">
-    <h1>♡ Diese Wortwolke gibt es nicht</h1>
+  <header class="topbar ww-site-header">
+    <div class="topbar-inner ww-nav">
+      <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
+    </div>
+  </header>
+  <main>
+    <div class="box">
+    <p class="eyebrow">Nicht gefunden</p>
+    <h1>Diese Wortwolke gibt es nicht.</h1>
     <p>Der Link ist ungültig oder das Event wurde noch nicht angelegt.</p>
-    <p><a href="/">Neue Wortwolke erstellen</a></p>
-  </div>
+    <a class="button" href="/">Zurück zur Startseite</a>
+    </div>
+  </main>
 </body>
 </html>

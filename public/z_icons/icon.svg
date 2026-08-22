@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="726" height="672" viewBox="0 0 726 672">
+  <title>Three overlapping speech bubbles with a heart</title>
+  <desc>A rose circle behind two interlocking pink and burgundy speech bubbles. Their overlap forms a transparent heart.</desc>
+  <defs>
+    <radialGradient id="rose-back" gradientUnits="userSpaceOnUse" cx="370" cy="301" r="248" fx="373" fy="321">
+      <stop offset="0" stop-color="#d43b68"/>
+      <stop offset=".58" stop-color="#bd2055"/>
+      <stop offset="1" stop-color="#aa1243"/>
+    </radialGradient>
+    <radialGradient id="rose-left" gradientUnits="userSpaceOnUse" cx="292" cy="431" r="321" fx="307" fy="451">
+      <stop offset="0" stop-color="#ed7898"/>
+      <stop offset=".58" stop-color="#df597c"/>
+      <stop offset="1" stop-color="#d4426b"/>
+    </radialGradient>
+    <radialGradient id="burgundy-right" gradientUnits="userSpaceOnUse" cx="501" cy="421" r="282" fx="498" fy="430">
+      <stop offset="0" stop-color="#750027"/>
+      <stop offset=".62" stop-color="#61001f"/>
+      <stop offset="1" stop-color="#4b0018"/>
+    </radialGradient>
+    <mask id="heart-cutout" x="0" y="0" width="726" height="672" maskUnits="userSpaceOnUse">
+      <rect width="726" height="672" fill="#fff"/>
+      <path fill="#000" d="M364 488c-14-13-49-38-73-61-21-20-32-42-31-65 1-26 18-46 42-49 28-4 49 10 62 31 14-21 35-35 62-31 24 3 41 23 42 49 1 27-13 52-35 74-20 20-44 39-69 52Z"/>
+    </mask>
+  </defs>
+  <g mask="url(#heart-cutout)">
+    <ellipse cx="369" cy="244" rx="184.5" ry="186" fill="url(#rose-back)"/>
+    <path fill="url(#burgundy-right)" d="m364 344c33-66 94-110 163-110 101 0 179 76 179 173 0 76-50 136-129 150l30 54c3 6-1 9-8 6-45-16-83-36-120-54l-286 9c51-16 133-52 171-84 34-28 74-63 91-92 22-38 6-76-27-83-28-6-50 10-64 31Z"/>
+    <path fill="url(#rose-left)" d="M364 344c-29-62-90-100-160-100-100 0-178 74-178 166 0 93 72 162 167 162 60 0 110-31 171-84-33-25-71-55-88-80-27-39-18-77 25-94 27-6 49 9 63 30Z"/>
+  </g>
+</svg>

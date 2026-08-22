@@ -24,7 +24,7 @@
 
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Jost', 'DM Sans', Arial, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Jost', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
     h1, h2, h3, p { margin-top: 0; }
     .shell { width: min(1120px, calc(100% - 48px)); margin: auto; }
@@ -54,6 +54,7 @@
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
     #so-gehts, #erleben, #tassen-duo, #ueber-uns { scroll-margin-top: 84px; }
     .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; }
+    .brand-icon { width: 32px; height: 30px; flex: 0 0 auto; object-fit: contain; }
     .nav-links { display: flex; gap: 30px; align-items: center; color: var(--muted); font-size: .85rem; letter-spacing: .01em; }
     .nav-links a { position: relative; padding-bottom: 3px; }
     .nav-links a::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--sage-deep); transform: scaleX(0); transition: transform .25s ease; }
@@ -242,14 +243,12 @@
       .flourish::before, .flourish::after { width: 32px; }
     }
   </style>
-  <script type="importmap">
-    { "imports": { "three": "/js/vendor/three/three.module.min.js" } }
-  </script>
+  <link rel="stylesheet" href="/site-header.css" />
 </head>
 <body>
-  <header class="site-header" id="site-header">
-    <div class="shell nav">
-      <a href="/" class="brand">Wolkenworte</a>
+  <header class="site-header ww-site-header" id="site-header">
+    <div class="shell nav ww-nav">
+      <a href="/" class="brand ww-brand"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true">Wolkenworte</a>
       <nav class="nav-links"><a href="#so-gehts">So geht's</a><a href="#erleben">Erleben</a><a href="#tassen-duo">Tassen-Duo</a><a href="#ueber-uns">Über uns</a></nav>
       <a class="button outline" href="/start">Kostenlos starten</a>
     </div>
@@ -382,18 +381,14 @@
 
   <footer>
     <div class="shell footer-inner">
-      <span>© 2026 Wolkenworte</span>
-      <span class="footer-links"><a href="/start">Jetzt starten</a><a href="#so-gehts">So geht's</a></span>
+      <span>© 2026 Wolkenworte · Ein Produkt der JUSA Engineering UG (haftungsbeschränkt)</span>
+      <span class="footer-links"><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a></span>
     </div>
   </footer>
 
+  <script src="/js/site-header.js"></script>
   <script>
     (function () {
-      var header = document.getElementById('site-header');
-      function onScroll() { header.classList.toggle('scrolled', window.scrollY > 4); }
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if ('IntersectionObserver' in window && !reduceMotion) {
         document.documentElement.classList.add('js-reveal-ready');
@@ -413,261 +408,98 @@
     })();
   </script>
 
-  <script type="module">
-    import * as THREE from 'three';
-
-    // A procedurally-built mug (LatheGeometry body + TubeGeometry handle),
-    // shaped after a downloaded reference mesh's proportions rather than
-    // loading that file directly — this way the geometry, UVs, and scale
-    // are all self-authored and verifiable, real WebGL lighting replaces
-    // any hand-faked shading, and the word-cloud texture can be placed
-    // with exact, computed UV coordinates instead of guessing at (or
-    // risking distortion across) an unknown third-party UV layout.
+  <script src="/vendor/three.min.js?v=0.160.1"></script>
+  <script src="/js/wordcloud-core.js?v=20260819-2"></script>
+  <script src="/js/mug-3d-viewer.js?v=20260819-1"></script>
+  <script>
+    // The homepage and configurator intentionally instantiate the same mug
+    // renderer. Only the artwork supplied to its print texture differs.
     (function () {
       var canvas = document.getElementById('mug-canvas');
       if (!canvas || !window.WebGLRenderingContext) return;
 
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      var scene = new THREE.Scene();
-      var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-      var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-      // Softer, more neutral light: more of the illumination comes from
-      // ambient (even, shadowless) rather than the directional lights,
-      // and the directional lights themselves are near-neutral white
-      // instead of warm-tinted, so the ceramic reads as true white
-      // rather than a warm/creamy cast.
-      scene.add(new THREE.AmbientLight(0xffffff, 1.9));
-      var key = new THREE.DirectionalLight(0xfffaf5, 1.15);
-      key.position.set(2.2, 1.8, 2.5);
-      scene.add(key);
-      var fill = new THREE.DirectionalLight(0xfffaf5, 0.85);
-      fill.position.set(-2.4, 1, -2.2);
-      scene.add(fill);
-      var rim = new THREE.DirectionalLight(0xffffff, 0.45);
-      rim.position.set(0, 2.2, -3);
-      scene.add(rim);
-      var under = new THREE.DirectionalLight(0xfffaf5, 0.55);
-      under.position.set(0.5, -2.2, 1.8);
-      scene.add(under);
-
-      var pivot = new THREE.Group();
-      scene.add(pivot);
-
-      // Same 13 words, same order, and the same relative size/color
-      // hierarchy as the hero "Live-Vorschau" cloud (its hero word, its 5
-      // enlarged "standout" words, and its base/coral/champagne color
-      // cycle). Shared between the real texture builder and the
-      // drag-and-drop debug editor further down, so they can never drift
-      // out of sync with each other.
+      // The hero words plus complementary wedding terms, laid out through
+      // the configurator's real print engine with the same color hierarchy.
       var WORDS = [
-        { text: 'Liebe', size: 47, weight: 700, color: '#9c1c4c', xPct: 64.1, yPct: 63.6 },
-        { text: 'unvergesslich', size: 41, weight: 600, color: '#d1607e', xPct: 46.6, yPct: 53.3 },
-        { text: 'Freude', size: 29, weight: 600, color: '#c1922f', xPct: 6.6, yPct: 58.8 },
-        { text: 'für immer', size: 32, weight: 600, color: '#d1607e', xPct: 57.4, yPct: 59.0 },
-        { text: 'Zusammen', size: 41, weight: 600, color: '#c1922f', xPct: 63.7, yPct: 53.8 },
-        { text: 'Herzklopfen', size: 32, weight: 600, color: '#d1607e', xPct: 100.0, yPct: 53.9 },
-        { text: 'Sommerabend', size: 41, weight: 600, color: '#9c1c4c', xPct: 88.2, yPct: 58.5 },
-        { text: 'Gänsehaut', size: 30, weight: 600, color: '#400f26', xPct: 80.2, yPct: 53.7 },
-        { text: 'Vertrauen', size: 27, weight: 600, color: '#400f26', xPct: 78.2, yPct: 63.5 },
-        { text: 'goldenes Licht', size: 41, weight: 600, color: '#d1607e', xPct: 98.4, yPct: 63.2 },
-        { text: 'Lachen', size: 29, weight: 600, color: '#c1922f', xPct: 71.3, yPct: 58.7 },
-        { text: 'Geborgenheit', size: 30, weight: 600, color: '#400f26', xPct: 40.0, yPct: 59.0 },
-        { text: 'Hand in Hand', size: 41, weight: 600, color: '#c1922f', xPct: 46.0, yPct: 63.6 }
+        { text: 'Liebe', count: 47, color: '#9c1c4c' },
+        { text: 'unvergesslich', count: 41, color: '#d1607e' },
+        { text: 'Freude', count: 29, color: '#c1922f' },
+        { text: 'für immer', count: 32, color: '#d1607e' },
+        { text: 'Zusammen', count: 41, color: '#c1922f' },
+        { text: 'Herzklopfen', count: 32, color: '#d1607e' },
+        { text: 'Sommerabend', count: 41, color: '#9c1c4c' },
+        { text: 'Gänsehaut', count: 30, color: '#400f26' },
+        { text: 'Vertrauen', count: 27, color: '#400f26' },
+        { text: 'goldenes Licht', count: 41, color: '#d1607e' },
+        { text: 'Lachen', count: 29, color: '#c1922f' },
+        { text: 'Geborgenheit', count: 30, color: '#400f26' },
+        { text: 'Hand in Hand', count: 41, color: '#c1922f' },
+        { text: 'Lieblingsmensch', count: 38, color: '#9c1c4c' },
+        { text: 'Verbundenheit', count: 35, color: '#400f26' },
+        { text: 'Leichtigkeit', count: 34, color: '#d1607e' },
+        { text: 'Herzenswärme', count: 37, color: '#c1922f' },
+        { text: 'Lieblingsmoment', count: 32, color: '#d1607e' },
+        { text: 'Seelenverwandt', count: 31, color: '#9c1c4c' },
+        { text: 'Abenteuer', count: 30, color: '#c1922f' },
+        { text: 'Dankbarkeit', count: 29, color: '#400f26' },
+        { text: 'Ewigkeit', count: 36, color: '#d1607e' },
+        { text: 'Zuhause', count: 39, color: '#9c1c4c' },
+        { text: 'Zukunft', count: 33, color: '#c1922f' },
+        { text: 'Gemeinsam', count: 40, color: '#400f26' },
+        { text: 'Tanzen', count: 28, color: '#d1607e' },
+        { text: 'Glück', count: 42, color: '#9c1c4c' },
+        { text: 'Nähe', count: 30, color: '#400f26' },
+        { text: 'Küsse', count: 29, color: '#d1607e' },
+        { text: 'Wir', count: 44, color: '#9c1c4c' },
+        { text: 'Ja-Wort', count: 34, color: '#c1922f' }
       ];
 
-      // ── Body: a lathe (surface-of-revolution) profile traced up the
-      // outer wall, across the rim's thickness, then back down a short
-      // inner wall to a closed inner floor — a true hollow rim, not a
-      // flat cap. Verified by computing this exact profile's arc-length
-      // parameterization in plain Node first (no browser needed) so the
-      // word-texture band below lands precisely on the outer wall. ──
-      var H = 2.0, wallT = 0.075;
-      var profile = [
-        new THREE.Vector2(0, 0),
-        new THREE.Vector2(0.94, 0),
-        // Duplicated point: LatheGeometry averages/smooths normals across
-        // a profile corner by default, which makes even a geometrically
-        // sharp angle (flat base meeting the vertical wall here) *look*
-        // slightly rounded under lighting. A duplicate point at the same
-        // position breaks that averaging, giving each side its own hard
-        // normal — a genuinely crisp edge, not just a tighter curve.
-        new THREE.Vector2(0.94, 0),
-        new THREE.Vector2(0.94, 0.03),
-        new THREE.Vector2(0.94, 0.18),
-        new THREE.Vector2(0.94, H * 0.55),
-        new THREE.Vector2(0.93, H * 0.94),
-        // A small explicit chamfer at the wall-to-rim corner instead of
-        // either a fully hard edge (duplicate-point trick, as above) or
-        // the fully smoothed default — real geometry gives a controllable
-        // "partway rounded" look rather than an all-or-nothing shading
-        // effect.
-        new THREE.Vector2(0.93, H * 0.988),
-        new THREE.Vector2(0.918, H),
-        new THREE.Vector2(0.93 - wallT, H),
-        new THREE.Vector2(0.85, H * 0.75),
-        new THREE.Vector2(0.60, H * 0.35),
-        new THREE.Vector2(0, H * 0.12)
-      ];
-      var bodyGeo = new THREE.LatheGeometry(profile, 96);
+      // This is the configurator's "Fläche optimal nutzen" print geometry.
+      var printArea = { x: 36, y: 36, width: 2628, height: 978 };
+      var measurementCanvas = document.createElement('canvas');
+      var measurementContext = measurementCanvas.getContext('2d');
+      var colors = new Map(WORDS.map(function (item) { return [item.text, item.color]; }));
+      var placed = WordCloudCore.layoutWordsInArea(
+        WORDS.map(function (item) { return [item.text, item.count]; }),
+        printArea.width,
+        printArea.height,
+        measurementContext,
+        function (word) { return colors.get(word); }
+      );
 
-      var texture = buildWordTexture();
-      var bodyMaterial = new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: 0.38, metalness: 0.04 });
-      var body = new THREE.Mesh(bodyGeo, bodyMaterial);
-      pivot.add(body);
-
-      // ── Handle: a real smooth tube along a curved 3D path, attached to
-      // the +X side of the barrel. ──
-      var handleCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0.90, H * 0.84, 0),
-        new THREE.Vector3(1.18, H * 0.82, 0),
-        new THREE.Vector3(1.48, H * 0.70, 0),
-        new THREE.Vector3(1.58, H * 0.50, 0),
-        new THREE.Vector3(1.48, H * 0.30, 0),
-        new THREE.Vector3(1.18, H * 0.18, 0),
-        new THREE.Vector3(0.90, H * 0.16, 0)
-      ]);
-      var handleGeo = new THREE.TubeGeometry(handleCurve, 64, 0.105, 20, false);
-      var handleMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.38, metalness: 0.04 });
-      pivot.add(new THREE.Mesh(handleGeo, handleMaterial));
-
-      // Center the whole mug (body spans y=0..H) at the origin, and frame
-      // the camera from the actual geometry bounds rather than a guessed
-      // distance — this is what was "too large/zoomed" before.
-      pivot.position.y = -H / 2;
-      var box = new THREE.Box3().setFromObject(pivot);
-      var sphere = box.getBoundingSphere(new THREE.Sphere());
-      var vFov = THREE.MathUtils.degToRad(camera.fov);
-      var distance = (sphere.radius / Math.sin(vFov / 2)) * 1.08;
-      camera.position.set(0, sphere.radius * 0.1, distance);
-      // Aim slightly above the mug's actual center so it sits a bit
-      // lower in the frame, closer to the caption below the canvas.
-      camera.lookAt(0, sphere.radius * 0.16, 0);
-
-      // Rotate the mug itself rather than orbiting the camera around it
-      // (as OrbitControls did) — with a fixed camera, the lights (fixed
-      // in scene/world space, not attached to pivot) stay in a constant
-      // position relative to the viewer too, so the lit/shadowed sides
-      // no longer visibly shift as you drag. With a camera-orbit
-      // approach the object+lights are what's actually stationary, so
-      // the *camera* moving around them reads to the viewer as "the
-      // lighting changes when I rotate it".
-      var tiltLimit = THREE.MathUtils.degToRad(30);
-      // The handle sits at local +X (angle 0) — that landed right at the
-      // front-facing view by default, so the handle was the first thing
-      // visible at rest. Offset the resting orientation 30° to rotate it
-      // out of the initial view.
-      var restingRotationY = THREE.MathUtils.degToRad(360);
-      pivot.rotation.y = restingRotationY;
-      var dragging = false, pointerId = null, startX = 0, startY = 0, startRotY = 0, startRotX = 0;
-      var autoRotating = !reduceMotion, autoStart = null;
-      var AUTO_ROTATE_MS = 9000;
-
-      function stopAutoRotate() { autoRotating = false; }
-
-      canvas.addEventListener('pointerdown', function (e) {
-        dragging = true;
-        stopAutoRotate();
-        pointerId = e.pointerId;
-        canvas.setPointerCapture(pointerId);
-        canvas.classList.add('dragging');
-        startX = e.clientX;
-        startY = e.clientY;
-        startRotY = pivot.rotation.y;
-        startRotX = pivot.rotation.x;
-      });
-      canvas.addEventListener('pointermove', function (e) {
-        if (!dragging || e.pointerId !== pointerId) return;
-        pivot.rotation.y = startRotY + (e.clientX - startX) * 0.009;
-        var nextX = startRotX + (e.clientY - startY) * 0.009;
-        pivot.rotation.x = Math.max(-tiltLimit, Math.min(tiltLimit, nextX));
-      });
-      function stopDrag(e) {
-        if (pointerId !== null && e.pointerId !== pointerId) return;
-        dragging = false;
-        pointerId = null;
-        canvas.classList.remove('dragging');
-      }
-      canvas.addEventListener('pointerup', stopDrag);
-      canvas.addEventListener('pointercancel', stopDrag);
-
-      canvas.addEventListener('keydown', function (e) {
-        var step = THREE.MathUtils.degToRad(15);
-        if (e.key === 'ArrowLeft') { stopAutoRotate(); pivot.rotation.y -= step; e.preventDefault(); }
-        else if (e.key === 'ArrowRight') { stopAutoRotate(); pivot.rotation.y += step; e.preventDefault(); }
-        else if (e.key === 'ArrowUp') { stopAutoRotate(); pivot.rotation.x = Math.min(tiltLimit, pivot.rotation.x + step); e.preventDefault(); }
-        else if (e.key === 'ArrowDown') { stopAutoRotate(); pivot.rotation.x = Math.max(-tiltLimit, pivot.rotation.x - step); e.preventDefault(); }
-      });
-
-      // Same 13 words as the hero "Live-Vorschau" cloud, drawn onto a
-      // canvas and used as the body's texture map. U wraps the full 360°
-      // (canvas width = full circumference). Each word is drawn three
-      // times (at x, x−w, x+w): the canvas wraps seamlessly onto the mug
-      // (U 0/1 is the same seam, right behind the handle), so a word
-      // straddling that seam needs a copy on both sides or its tail gets
-      // clipped by the canvas boundary and is simply missing from the
-      // texture. Positions (WORDS[i].xPct/yPct) were set by hand via a
-      // temporary drag-and-drop debug tool, since removed.
-      function buildWordTexture() {
-        var w = 2048, h = 1024;
-        var c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        var ctx = c.getContext('2d');
+      function drawHomepageWords(ctx, metrics) {
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
-        WORDS.forEach(function (wd) {
-          var cx = (wd.xPct / 100) * w;
-          var cy = (wd.yPct / 100) * h;
-          ctx.font = wd.weight + ' ' + wd.size + 'px "Cormorant Garamond", Georgia, serif';
-          ctx.fillStyle = wd.color;
-          [cx - w, cx, cx + w].forEach(function (px) {
-            ctx.fillText(wd.text, px, cy);
-          });
+        ctx.textBaseline = 'alphabetic';
+        placed.forEach(function (item) {
+          var x = metrics.offsetX + printArea.x + item.x;
+          var y = metrics.offsetY + printArea.y + item.y;
+          ctx.font = item.fontPx + 'px ' + WordCloudCore.FONT_FAMILY;
+          ctx.fillStyle = item.color;
+          if (item.rotated) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(item.word, 0, item.fontPx * .34);
+            ctx.restore();
+          } else {
+            ctx.fillText(item.word, x, y + item.fontPx * .34);
+          }
         });
-
-        var tex = new THREE.CanvasTexture(c);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-        return tex;
       }
 
-
-      function resize() {
-        var w = canvas.clientWidth, h = canvas.clientHeight;
-        if (!w || !h) return;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h, false);
-      }
-      window.addEventListener('resize', resize);
-      resize();
-
-      // One slow, elegant intro turn — stops the instant a real drag or
-      // key press starts (see stopAutoRotate() above), never loops.
-      // animate() must only ever be invoked by requestAnimationFrame
-      // (which always passes a real timestamp) — an earlier version
-      // self-invoked it once with zero arguments to kick things off,
-      // leaving `now` undefined on that first call, which corrupted
-      // autoStart to undefined (not null) and made every subsequent
-      // frame's rotation compute to NaN, silently breaking the render.
-      function animate(now) {
-        requestAnimationFrame(animate);
-        if (autoRotating) {
-          if (autoStart === null) autoStart = now;
-          var t = Math.min(1, (now - autoStart) / AUTO_ROTATE_MS);
-          var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-          pivot.rotation.y = restingRotationY + eased * Math.PI * 2;
-          if (t >= 1) autoRotating = false;
-        }
-        renderer.render(scene, camera);
-      }
-      requestAnimationFrame(animate);
+      var mug = Mug3DViewer.create({
+        THREE: window.THREE,
+        host: canvas,
+        canvas: canvas,
+        interactionElement: canvas,
+        product: Mug3DViewer.DEFAULT_PRODUCT,
+        drawTexture: drawHomepageWords,
+        autoRotate: !reduceMotion,
+        autoRotateDurationMs: 9000
+      });
+      window.addEventListener('resize', mug.resize);
     })();
   </script>
 </body>

@@ -20,6 +20,10 @@ const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
 // left for words the couple adds manually in the editor.
 const MAX_DESIGN_ELEMENTS = 500;
+const MAX_DESIGN_IMAGES = 6;
+const MAX_DESIGN_IMAGE_BYTES = 6 * 1024 * 1024;
+const MAX_IMAGE_DATA_URL_LENGTH = Math.ceil(MAX_DESIGN_IMAGE_BYTES * 4 / 3) + 128;
+const CONFIGURATION_TYPES = new Set(['event_wordcloud', 'personal_memory']);
 const ADDRESS_LIMITS = Object.freeze({
   name: 100,
   address1: 120,
@@ -136,23 +140,47 @@ function normalizeDesignText(rawText) {
   return normalizeWord(text) === text.toLowerCase() ? text : '';
 }
 
+function normalizeDesignImage(rawSource) {
+  if (typeof rawSource !== 'string' || rawSource.length > MAX_IMAGE_DATA_URL_LENGTH) return null;
+  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(rawSource);
+  if (!match) return null;
+  let bytes;
+  try {
+    bytes = Buffer.from(match[2], 'base64');
+  } catch {
+    return null;
+  }
+  if (!bytes.length || bytes.length > MAX_DESIGN_IMAGE_BYTES) return null;
+  const mime = match[1];
+  const isJpeg = mime === 'jpeg' && bytes.length >= 3 &&
+    bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = mime === 'png' && bytes.length >= 8 &&
+    bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isWebp = mime === 'webp' && bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+  if (!isJpeg && !isPng && !isWebp) return null;
+  return { source: `data:image/${mime};base64,${match[2]}`, byteLength: bytes.length };
+}
+
 function normalizeDesign(rawDesign, width, height) {
   if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
   }
   const ids = new Set();
   const normalized = [];
+  let imageCount = 0;
+  let imageBytes = 0;
   for (const [index, rawItem] of rawDesign.entries()) {
     if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
     const type = rawItem.type == null || rawItem.type === 'text' ? 'text' : rawItem.type;
-    if (type !== 'text' && type !== 'icon') return null;
+    if (type !== 'text' && type !== 'icon' && type !== 'image') return null;
     const x = Number(rawItem.x);
     const y = Number(rawItem.y);
     const rawAngle = Number(rawItem.angle ?? 0);
-    const color = String(rawItem.color || '').toLowerCase();
-    const id = String(rawItem.id || `${type === 'icon' ? 'motiv' : 'wort'}-${index + 1}`).slice(0, 64);
-    if (!id || ids.has(id) || !Number.isFinite(x) || !Number.isFinite(y) ||
-        !Number.isFinite(rawAngle) || !/^#[0-9a-f]{6}$/.test(color)) {
+    const idPrefix = type === 'image' ? 'foto' : type === 'icon' ? 'motiv' : 'wort';
+    const id = String(rawItem.id || `${idPrefix}-${index + 1}`).slice(0, 64);
+    if (!id || ids.has(id) || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(rawAngle)) {
       return null;
     }
     ids.add(id);
@@ -163,22 +191,41 @@ function normalizeDesign(rawDesign, width, height) {
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
       angle: Math.round(angle * 10) / 10,
-      color,
     };
+    if (type === 'image') {
+      const image = normalizeDesignImage(rawItem.src);
+      const imageWidth = Number(rawItem.width);
+      const imageHeight = Number(rawItem.height);
+      imageCount += 1;
+      imageBytes += image?.byteLength || 0;
+      if (!image || imageCount > MAX_DESIGN_IMAGES || imageBytes > MAX_DESIGN_IMAGE_BYTES ||
+          !Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) ||
+          imageWidth < 48 || imageHeight < 48 || imageWidth > width || imageHeight > height) {
+        return null;
+      }
+      normalized.push({
+        ...common,
+        src: image.source,
+        width: Math.round(imageWidth * 10) / 10,
+        height: Math.round(imageHeight * 10) / 10,
+      });
+      continue;
+    }
+    const color = String(rawItem.color || '').toLowerCase();
+    if (!/^#[0-9a-f]{6}$/.test(color)) return null;
     if (type === 'icon') {
       const icon = String(rawItem.icon || '');
       const size = Number(rawItem.size);
       if (!MugIcons.has(icon) || !Number.isFinite(size) || size < 48 || size > height) return null;
-      normalized.push({ ...common, icon, size: Math.round(size * 10) / 10 });
+      normalized.push({ ...common, color, icon, size: Math.round(size * 10) / 10 });
       continue;
     }
 
     const text = normalizeDesignText(rawItem.text);
     const fontSize = Number(rawItem.fontSize);
     if (!text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
-    normalized.push({ ...common, text, fontSize: Math.round(fontSize * 10) / 10 });
+    normalized.push({ ...common, color, text, fontSize: Math.round(fontSize * 10) / 10 });
   }
-  if (!normalized.some((item) => item.type === 'text')) return null;
   return isMugDesignWithinBounds(normalized, width, height) ? normalized : null;
 }
 
@@ -203,7 +250,7 @@ function makeRouter({ io, port }) {
 
   // ── Create event ──────────────────────────────────────────────────────
   router.post('/events', express.json(), (req, res) => {
-    const { coupleName, eventTitle, weddingDate, pin } = req.body || {};
+    const { coupleName, pin } = req.body || {};
     let { slug } = req.body || {};
 
     if (!coupleName || typeof coupleName !== 'string' || !coupleName.trim()) {
@@ -237,8 +284,6 @@ function makeRouter({ io, port }) {
     const event = db.createEvent({
       slug: finalSlug,
       coupleName: coupleName.trim(),
-      eventTitle: (eventTitle && String(eventTitle).trim()) || 'Hochzeit',
-      weddingDate: weddingDate ? String(weddingDate).slice(0, 10) : null,
       pin,
     });
 
@@ -246,6 +291,7 @@ function makeRouter({ io, port }) {
       slug: event.slug,
       guestUrl: `/e/${event.slug}`,
       displayUrl: `/e/${event.slug}/display`,
+      adminToken: adminAuth.issueToken(event.slug),
     });
   });
 
@@ -256,7 +302,6 @@ function makeRouter({ io, port }) {
     res.json({
       slug: event.slug,
       coupleName: event.couple_name,
-      eventTitle: event.event_title,
       theme: event.theme,
     });
   });
@@ -305,6 +350,7 @@ function makeRouter({ io, port }) {
     db.archiveWords(event.id);
     db.clearWords(event.id);
     io.to(event.slug).emit('word-update', []);
+    io.to(event.slug).emit('round-reset');
     res.json({ ok: true });
   });
 
@@ -312,16 +358,17 @@ function makeRouter({ io, port }) {
   router.get('/events/:slug/configurator', (req, res) => {
     const event = db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const words = db.getWords(event.id);
-    if (!words.length) return res.status(409).json({ error: 'no_words' });
+    const personalMemory = req.query.mode === 'personal';
+    const words = personalMemory ? [] : db.getWords(event.id);
+    if (!personalMemory && !words.length) return res.status(409).json({ error: 'no_words' });
     res.json({
       event: {
         slug: event.slug,
         coupleName: event.couple_name,
-        eventTitle: event.event_title,
         theme: event.theme,
       },
       words,
+      configurationType: personalMemory ? 'personal_memory' : 'event_wordcloud',
       product: getPublicProduct(),
     });
   });
@@ -338,7 +385,7 @@ function makeRouter({ io, port }) {
     }
   });
 
-  router.post('/events/:slug/configurations', express.json({ limit: '64kb' }), (req, res) => {
+  router.post('/events/:slug/configurations', express.json({ limit: '9mb' }), (req, res) => {
     const event = db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
 
@@ -347,6 +394,10 @@ function makeRouter({ io, port }) {
 
     const theme = req.body?.theme;
     const placement = req.body?.placement;
+    const configurationType = String(req.body?.configurationType || 'event_wordcloud');
+    if (!CONFIGURATION_TYPES.has(configurationType)) {
+      return res.status(400).json({ error: 'invalid_configuration_type' });
+    }
     const quantity = Number(req.body?.quantity ?? product.defaultQuantity);
     if (!Number.isSafeInteger(quantity) || quantity < product.minQuantity || quantity > product.maxQuantity) {
       return res.status(400).json({ error: 'invalid_quantity' });
@@ -360,10 +411,12 @@ function makeRouter({ io, port }) {
 
     // The browser sends the exact snapshot it previewed. Re-normalize it at
     // this trust boundary, then store it independently from the live event.
-    const words = req.body && Object.hasOwn(req.body, 'words')
-      ? normalizeSnapshotWords(req.body.words)
-      : db.getWords(event.id);
-    if (!words || !words.length) {
+    const words = configurationType === 'personal_memory'
+      ? []
+      : req.body && Object.hasOwn(req.body, 'words')
+        ? normalizeSnapshotWords(req.body.words)
+        : db.getWords(event.id);
+    if (configurationType === 'event_wordcloud' && (!words || !words.length)) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
@@ -372,6 +425,9 @@ function makeRouter({ io, port }) {
       : null;
     if (Object.hasOwn(req.body || {}, 'design') && !design) {
       return res.status(400).json({ error: 'invalid_design' });
+    }
+    if (configurationType === 'personal_memory' && !design) {
+      return res.status(400).json({ error: 'personal_design_required' });
     }
 
     const configuration = db.createConfiguration({
@@ -386,6 +442,7 @@ function makeRouter({ io, port }) {
       placement,
       words,
       design,
+      configurationType,
       printWidth: product.printFile.width,
       printHeight: product.printFile.height,
     });
@@ -396,6 +453,7 @@ function makeRouter({ io, port }) {
       quantity: Number(configuration.quantity),
       theme: configuration.theme,
       placement: configuration.placement,
+      configurationType: configuration.configuration_type,
       printFileUrl: `/api/events/${encodeURIComponent(event.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
       createdAt: configuration.created_at,
     });
@@ -417,6 +475,7 @@ function makeRouter({ io, port }) {
         size: product.size,
       },
       placement: placement ? { key: placement.key, label: placement.label } : null,
+      configurationType: configuration.configuration_type,
       printFileUrl: `/api/events/${encodeURIComponent(req.params.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
       createdAt: configuration.created_at,
     });
@@ -666,6 +725,7 @@ function makeRouter({ io, port }) {
       currency: order.currency,
       totalCents: Number(order.total_cents),
       quantity: configuration ? Number(configuration.quantity) : null,
+      configurationType: configuration?.configuration_type || 'event_wordcloud',
       paidAt: order.paid_at,
     });
   });

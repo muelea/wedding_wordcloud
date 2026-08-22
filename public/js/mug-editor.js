@@ -24,6 +24,8 @@
       this.canvasWidth = this.width * EDITOR_SCALE;
       this.canvasHeight = this.height * EDITOR_SCALE;
       this.margin = PRINT_MARGIN * EDITOR_SCALE;
+      this.defaultX = Number.isFinite(options.defaultX) ? options.defaultX : this.width / 2;
+      this.defaultY = Number.isFinite(options.defaultY) ? options.defaultY : this.height / 2;
       this.palette = options.palette || ['#8f3a58'];
       this.onChange = options.onChange || (() => {});
       this.onReset = options.onReset || (() => {});
@@ -54,6 +56,9 @@
       this.changeFrame = null;
       this.zoom = 1;
       this.idCounter = 0;
+      this.photoElements = new Map();
+      this.photoSourceIds = new Map();
+      this.photoSources = new Map();
 
       this.canvas = new root.fabric.Canvas(options.canvas, {
         width: this.canvasWidth,
@@ -73,6 +78,7 @@
     }
 
     makeObject(item) {
+      if (item.type === 'image') return this.makeImageObject(item);
       if (item.type === 'icon') return this.makeIconObject(item);
       const text = new root.fabric.IText(item.text, {
         left: item.x * EDITOR_SCALE,
@@ -105,6 +111,38 @@
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
+    }
+
+    makeImageObject(item) {
+      const element = this.photoElements.get(item.src);
+      if (!element) throw new Error('Photo must be loaded before it can be placed');
+      const photo = new root.fabric.Image(element, {
+        left: item.x * EDITOR_SCALE,
+        top: item.y * EDITOR_SCALE,
+        originX: 'center',
+        originY: 'center',
+        angle: item.angle || 0,
+        lockScalingFlip: true,
+        centeredScaling: true,
+        centeredRotation: true,
+        transparentCorners: false,
+        cornerColor: '#ffffff',
+        cornerStrokeColor: '#9c1c4c',
+        borderColor: '#9c1c4c',
+        cornerStyle: 'circle',
+        cornerSize: 14,
+        touchCornerSize: 28,
+        padding: 3,
+        hoverCursor: 'move',
+        moveCursor: 'grabbing',
+      });
+      photo.editorKind = 'image';
+      photo.editorSrc = item.src;
+      photo.editorId = item.id || this.nextId('foto');
+      this.setImageSize(photo, item.width, item.height);
+      photo.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+      photo.setCoords();
+      return photo;
     }
 
     makeIconObject(item) {
@@ -169,6 +207,32 @@
     nextId(prefix = 'wort') {
       this.idCounter += 1;
       return `${prefix}-${Date.now().toString(36)}-${this.idCounter}`;
+    }
+
+    rememberPhotoSource(src) {
+      let id = this.photoSourceIds.get(src);
+      if (id) return id;
+      id = this.nextId('fotoquelle');
+      this.photoSourceIds.set(src, id);
+      this.photoSources.set(id, src);
+      return id;
+    }
+
+    historySnapshot() {
+      const compact = this.getDesign().map((item) => {
+        if (item.type !== 'image') return item;
+        const { src, ...rest } = item;
+        return { ...rest, photoSourceId: this.rememberPhotoSource(src) };
+      });
+      return JSON.stringify(compact);
+    }
+
+    designFromHistory(snapshot) {
+      return JSON.parse(snapshot).map((item) => {
+        if (item.type !== 'image') return item;
+        const { photoSourceId, ...rest } = item;
+        return { ...rest, src: this.photoSources.get(photoSourceId) };
+      });
     }
 
     bindCanvasEvents() {
@@ -358,7 +422,7 @@
       this.suspended = false;
       this.updateSelectionPanel();
       if (resetHistory) {
-        this.history = [JSON.stringify(this.getDesign())];
+        this.history = [this.historySnapshot()];
         this.historyIndex = 0;
         this.updateHistoryButtons();
       } else if (record) {
@@ -374,9 +438,13 @@
           ...item,
           x: round(item.x),
           y: round(item.y),
-          ...(item.type === 'icon' ? { size: round(item.size) } : { fontSize: round(item.fontSize) }),
+          ...(item.type === 'image'
+            ? { width: round(item.width), height: round(item.height) }
+            : item.type === 'icon'
+              ? { size: round(item.size) }
+              : { fontSize: round(item.fontSize) }),
           angle: round(item.angle),
-          color: item.color.toLowerCase(),
+          ...(item.color ? { color: item.color.toLowerCase() } : {}),
         };
       });
     }
@@ -389,6 +457,13 @@
 
     absorbScale(object) {
       if (!object) return;
+      if (object.editorKind === 'image') {
+        const width = object.width * object.scaleX / EDITOR_SCALE;
+        const height = object.height * object.scaleY / EDITOR_SCALE;
+        this.setImageSize(object, width, height);
+        object.setCoords();
+        return;
+      }
       if (object.editorKind === 'icon') {
         const size = Math.max(object.width * object.scaleX, object.height * object.scaleY) / EDITOR_SCALE;
         this.setIconSize(object, Math.max(MIN_PRINT_ICON_SIZE, size));
@@ -406,11 +481,22 @@
       object.set({ scaleX: scale, scaleY: scale });
     }
 
+    setImageSize(object, printWidth, printHeight) {
+      const sourceWidth = Math.max(1, object.width || 1);
+      const sourceHeight = Math.max(1, object.height || 1);
+      object.set({
+        scaleX: Math.max(48, printWidth) * EDITOR_SCALE / sourceWidth,
+        scaleY: Math.max(48, printHeight) * EDITOR_SCALE / sourceHeight,
+      });
+    }
+
     getObjectColor(object) {
+      if (object.editorKind === 'image') return null;
       return String(object.editorKind === 'icon' ? object.editorDrawing.stroke : object.fill);
     }
 
     applyObjectColor(object, color) {
+      if (object.editorKind === 'image') return;
       if (object.editorKind === 'icon') {
         object.editorDrawing.set({ stroke: color });
         object.dirty = true;
@@ -469,7 +555,7 @@
 
     recordHistory() {
       if (this.suspended) return;
-      const snapshot = JSON.stringify(this.getDesign());
+      const snapshot = this.historySnapshot();
       if (this.history[this.historyIndex] === snapshot) return;
       this.history.splice(this.historyIndex + 1);
       this.history.push(snapshot);
@@ -481,7 +567,7 @@
     restoreHistory(index) {
       if (index < 0 || index >= this.history.length) return;
       this.historyIndex = index;
-      this.setDesign(JSON.parse(this.history[index]));
+      this.setDesign(this.designFromHistory(this.history[index]));
       this.updateHistoryButtons();
       this.setFeedback('Änderung übernommen');
     }
@@ -506,8 +592,8 @@
       const object = this.makeObject({
         id: this.nextId(),
         text: 'neues wort',
-        x: this.width / 2,
-        y: this.height / 2,
+        x: this.defaultX,
+        y: this.defaultY,
         fontSize: 96,
         angle: 0,
         color,
@@ -534,8 +620,8 @@
         id: this.nextId('motiv'),
         type: 'icon',
         icon: definition.id,
-        x: this.width / 2,
-        y: this.height / 2,
+        x: this.defaultX,
+        y: this.defaultY,
         size: 170,
         angle: 0,
         color,
@@ -553,16 +639,62 @@
       this.setFeedback(`${definition.label} hinzugefügt`);
     }
 
+    async addImage(src) {
+      if (typeof src !== 'string' || !src.startsWith('data:image/')) {
+        throw new Error('invalid_photo');
+      }
+      let element = this.photoElements.get(src);
+      if (!element) {
+        element = await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('photo_decode_failed'));
+          image.src = src;
+        });
+        this.photoElements.set(src, element);
+      }
+      this.rememberPhotoSource(src);
+      const availableWidth = this.width - PRINT_MARGIN * 2;
+      const availableHeight = this.height - PRINT_MARGIN * 2;
+      const initialScale = Math.min(900 / element.naturalWidth, 760 / element.naturalHeight, 1);
+      const width = Math.min(availableWidth, element.naturalWidth * initialScale);
+      const height = Math.min(availableHeight, element.naturalHeight * initialScale);
+      const object = this.makeObject({
+        id: this.nextId('foto'),
+        type: 'image',
+        src,
+        x: this.defaultX,
+        y: this.defaultY,
+        width,
+        height,
+        angle: 0,
+      });
+      const offset = (this.canvas.getObjects().length % 5) * 18;
+      object.set({ left: object.left + offset, top: object.top + offset });
+      this.keepInside(object);
+      this.canvas.add(object);
+      this.canvas.setActiveObject(object);
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.setFeedback('Foto hinzugefügt');
+    }
+
+    getImageElement(src) {
+      return this.photoElements.get(src) || null;
+    }
+
     deleteActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return;
-      const isLastWord = active.editorKind === 'text' &&
-        this.canvas.getObjects().filter((object) => object.editorKind === 'text').length <= 1;
-      if (isLastWord) {
-        this.setFeedback('Mindestens ein Wort muss bleiben.');
+      if (this.canvas.getObjects().length <= 1) {
+        this.setFeedback('Mindestens ein Element muss bleiben.');
         return;
       }
-      const deletedLabel = active.editorKind === 'icon' ? 'Motiv' : 'Wort';
+      const deletedLabel = active.editorKind === 'image'
+        ? 'Foto'
+        : active.editorKind === 'icon' ? 'Motiv' : 'Wort';
       this.canvas.remove(active);
       this.canvas.discardActiveObject();
       this.canvas.requestRenderAll();
@@ -576,7 +708,7 @@
       const active = this.canvas.getActiveObject();
       if (!active) return;
       const design = this.serializeObject(active);
-      design.id = this.nextId();
+      design.id = this.nextId(active.editorKind === 'image' ? 'foto' : active.editorKind === 'icon' ? 'motiv' : 'wort');
       design.x += 48;
       design.y += 48;
       const copy = this.makeObject(design);
@@ -587,7 +719,9 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.setFeedback(active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
+      this.setFeedback(active.editorKind === 'image'
+        ? 'Foto dupliziert'
+        : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
     }
 
     serializeObject(object) {
@@ -596,8 +730,17 @@
         x: object.left / EDITOR_SCALE,
         y: object.top / EDITOR_SCALE,
         angle: object.angle || 0,
-        color: this.getObjectColor(object),
       };
+      if (object.editorKind === 'image') {
+        return {
+          ...common,
+          type: 'image',
+          src: object.editorSrc,
+          width: object.width * object.scaleX / EDITOR_SCALE,
+          height: object.height * object.scaleY / EDITOR_SCALE,
+        };
+      }
+      common.color = this.getObjectColor(object);
       if (object.editorKind === 'icon') {
         return {
           ...common,
@@ -677,18 +820,20 @@
       const active = this.canvas.getActiveObject();
       const hasSelection = Boolean(active);
       const isIcon = active?.editorKind === 'icon';
+      const isImage = active?.editorKind === 'image';
       this.selectionPanel.classList.toggle('is-active', hasSelection);
+      this.selectionPanel.classList.toggle('is-photo', Boolean(isImage));
       this.selectionPanel.setAttribute('aria-disabled', String(!hasSelection));
       this.shell.classList.toggle('has-selection', hasSelection);
-      this.textInput.disabled = !hasSelection || isIcon;
-      this.colorInput.disabled = !hasSelection;
+      this.textInput.disabled = !hasSelection || isIcon || isImage;
+      this.colorInput.disabled = !hasSelection || isImage;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
-        button.disabled = !hasSelection;
+        button.disabled = !hasSelection || isImage;
       });
       if (!active) {
         this.selectionStatus.textContent = 'Element auswählen';
-        this.selectionHint.textContent = 'Wort oder Motiv anklicken, um die Werkzeuge zu aktivieren';
+        this.selectionHint.textContent = 'Wort, Foto oder Motiv anklicken, um die Werkzeuge zu aktivieren';
         this.textLabel.textContent = 'Ausgewähltes Element';
         this.textInput.value = '';
         this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
@@ -696,7 +841,12 @@
         });
         return;
       }
-      if (isIcon) {
+      if (isImage) {
+        this.selectionStatus.textContent = 'Foto bearbeiten';
+        this.selectionHint.textContent = 'Foto ziehen, drehen oder skalieren';
+        this.textLabel.textContent = 'Ausgewähltes Foto';
+        this.textInput.value = 'Eigenes Foto';
+      } else if (isIcon) {
         this.selectionStatus.textContent = `${active.editorIconLabel} bearbeiten`;
         this.selectionHint.textContent = 'Motiv ziehen, drehen, färben oder skalieren';
         this.textLabel.textContent = 'Ausgewähltes Motiv';
@@ -708,6 +858,7 @@
         this.textInput.value = active.text;
       }
       const activeColor = this.getObjectColor(active);
+      if (!activeColor) return;
       this.colorInput.value = activeColor;
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
         button.classList.toggle('is-selected', button.dataset.color === activeColor.toLowerCase());

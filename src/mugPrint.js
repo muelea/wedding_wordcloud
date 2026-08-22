@@ -40,7 +40,10 @@ function layoutSlot(words, slot, colors) {
 function getDesignBounds(item) {
   let itemWidth;
   let itemHeight;
-  if (item.type === 'icon') {
+  if (item.type === 'image') {
+    itemWidth = item.width;
+    itemHeight = item.height;
+  } else if (item.type === 'icon') {
     itemWidth = item.size;
     itemHeight = item.size;
   } else {
@@ -62,6 +65,10 @@ function isMugDesignWithinBounds(design, width = MUG_DUO.printFile.width, height
   if (!Array.isArray(design) || design.length === 0) return false;
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
+    if (item.type === 'image' &&
+        (!Number.isFinite(item.width) || !Number.isFinite(item.height) || typeof item.src !== 'string')) {
+      return false;
+    }
     const bounds = getDesignBounds(item);
     const halfWidth = bounds.width / 2;
     const halfHeight = bounds.height / 2;
@@ -74,6 +81,16 @@ function isMugDesignWithinBounds(design, width = MUG_DUO.printFile.width, height
 
 function designElements(design) {
   return design.map((item) => {
+    if (item.type === 'image') {
+      const x = item.x - item.width / 2;
+      const y = item.y - item.height / 2;
+      const rotate = item.angle
+        ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
+        : '';
+      return `<image data-photo="true" x="${x.toFixed(1)}" y="${y.toFixed(1)}" ` +
+        `width="${item.width.toFixed(1)}" height="${item.height.toFixed(1)}" ` +
+        `href="${item.src}" preserveAspectRatio="none"${rotate}/>`;
+    }
     if (item.type === 'icon') {
       const icon = MugIcons.get(item.icon);
       const scale = item.size / MugIcons.VIEWBOX_SIZE;
@@ -99,7 +116,7 @@ function designElements(design) {
  * event state, so a paid design cannot change while fulfillment is running.
  */
 function buildMugPrintSvg(words, theme = 'pastel', layout = 'single', design = null) {
-  if (!Array.isArray(words) || words.length === 0) {
+  if ((!Array.isArray(words) || words.length === 0) && !design) {
     throw new Error('Cannot build a mug print without words');
   }
   const selectedTheme = MUG_DUO.themes.find((option) => option.key === theme) || MUG_DUO.themes[0];

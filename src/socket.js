@@ -18,7 +18,11 @@
  */
 
 const db = require('./db');
+const crypto = require('crypto');
 const { normalizeWord } = require('./words');
+
+const GUEST_ID_RE = /^[a-f0-9]{32}$/;
+const RECEIPT_RE = /^[A-Za-z0-9_-]{24}$/;
 
 function attachSocketHandlers(io) {
   io.on('connection', (socket) => {
@@ -42,19 +46,64 @@ function attachSocketHandlers(io) {
     socket.join(event.slug);
     socket.data.eventId = event.id;
     socket.data.slug = event.slug;
+    const requestedGuestId = socket.handshake.query && socket.handshake.query.guestId;
+    socket.data.guestId = typeof requestedGuestId === 'string' && GUEST_ID_RE.test(requestedGuestId)
+      ? requestedGuestId
+      : crypto.randomBytes(16).toString('hex');
 
     // Send current state to the newly connected client only (not the room —
     // no need to re-broadcast to everyone else just because one client joined).
     socket.emit('word-update', db.getWords(event.id));
+    socket.emit('own-word-update', db.getWordContributions(event.id, socket.data.guestId));
 
     socket.on('submit-word', (rawWord) => {
       const word = normalizeWord(rawWord);
       if (!word) return;
 
-      db.upsertWord(event.id, word);
+      let receipt;
+      try {
+        receipt = db.addWordContribution(event.id, word, socket.data.guestId);
+      } catch (error) {
+        console.error(`[socket:${event.slug}] Could not save word contribution:`, error);
+        socket.emit('word-error');
+        return;
+      }
 
       io.to(event.slug).emit('word-update', db.getWords(event.id));
-      socket.emit('word-accepted', word);
+      // Keep the normalized word as the first argument for backwards
+      // compatibility; the private receipt is only sent to its submitter.
+      socket.emit('word-accepted', word, receipt);
+    });
+
+    socket.on('remove-word', (payload, acknowledge) => {
+      const respond = typeof acknowledge === 'function' ? acknowledge : () => {};
+      const receipt = payload && typeof payload === 'object' ? payload.receipt : payload;
+      if (typeof receipt !== 'string' || !RECEIPT_RE.test(receipt)) {
+        respond({ ok: false, error: 'not_found' });
+        return;
+      }
+
+      let removedWord;
+      try {
+        removedWord = db.removeWordContribution(
+          event.id,
+          receipt,
+          socket.data.guestId
+        );
+      } catch (error) {
+        console.error(`[socket:${event.slug}] Could not remove word contribution:`, error);
+        respond({ ok: false, error: 'server_error' });
+        return;
+      }
+      if (!removedWord) {
+        // Do not reveal whether the receipt exists for a different guest or
+        // event; both cases intentionally look identical to the caller.
+        respond({ ok: false, error: 'not_found' });
+        return;
+      }
+
+      io.to(event.slug).emit('word-update', db.getWords(event.id));
+      respond({ ok: true, word: removedWord });
     });
 
     // Relay theme changes to all connected clients FOR THIS EVENT ONLY.

@@ -152,6 +152,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     currency: 'EUR',
     totalCents: quote.totalCents,
     quantity: 2,
+    configurationType: 'event_wordcloud',
     paidAt: paidOrder.paid_at,
   });
 });
