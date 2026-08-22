@@ -121,4 +121,63 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
         `/configurations/${configuration.id}/print.svg`,
     }],
   }]);
+
+  const notebookPayload = fulfillment.buildPrintfulPayload({
+    mode: 'draft',
+    order: {
+      id: 42,
+      quote_id: 'notebook-quote',
+      shipping_json: JSON.stringify({
+        name: 'Nora Notiz',
+        address1: 'Papierweg 5',
+        city: 'Berlin',
+        zip: '10115',
+        country_code: 'DE',
+      }),
+    },
+    event: { slug: createdEvent.slug },
+    configuration: {
+      id: 'notebook-configuration',
+      product_key: 'spiral-notebook-dotted',
+      printful_variant_id: 12141,
+      quantity: 2,
+    },
+  });
+  const notebookPrintUrl = `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
+    '/configurations/notebook-configuration/print.svg';
+  assert.deepEqual(notebookPayload.items[0].files, [
+    { type: 'front', url: `${notebookPrintUrl}?surface=front` },
+    { type: 'back', url: `${notebookPrintUrl}?surface=back` },
+  ], 'the EU notebook sends each immutable cover design to its matching placement');
+
+  const pillowPayload = fulfillment.buildPrintfulPayload({
+    mode: 'draft',
+    order: {
+      id: 43,
+      quote_id: 'pillow-quote',
+      shipping_json: JSON.stringify({
+        name: 'Karla Kissen',
+        address1: 'Wolkenweg 8',
+        city: 'Berlin',
+        zip: '10115',
+        country_code: 'DE',
+      }),
+    },
+    event: { slug: createdEvent.slug },
+    configuration: {
+      id: 'pillow-configuration',
+      product_key: 'all-over-basic-pillow-18in',
+      printful_variant_id: 4532,
+      quantity: 1,
+    },
+  });
+  const pillowPrintUrl = `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
+    '/configurations/pillow-configuration/print.svg';
+  assert.deepEqual(pillowPayload.items[0].files, [
+    { type: 'front', url: `${pillowPrintUrl}?surface=front` },
+    { type: 'back', url: `${pillowPrintUrl}?surface=back` },
+  ]);
+  assert.deepEqual(pillowPayload.items[0].options, [
+    { id: 'stitch_color', value: 'white' },
+  ], 'the pillow keeps its curated white zipper and stitch color without a storefront selector');
 });

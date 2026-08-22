@@ -1,8 +1,9 @@
 (function (root) {
   'use strict';
 
-  const EDITOR_SCALE = .5;
-  const PRINT_MARGIN = 24;
+  const MAX_EDITOR_SCALE = .5;
+  const MAX_EDITOR_DIMENSION = 1536;
+  const DEFAULT_PRINT_MARGIN = 24;
   const MIN_PRINT_FONT_SIZE = 12;
   const MIN_PRINT_ICON_SIZE = 48;
   const MAX_HISTORY = 60;
@@ -15,15 +16,21 @@
     return design.map((item) => ({ ...item }));
   }
 
+  function editorScaleFor(width, height) {
+    return Math.min(MAX_EDITOR_SCALE, MAX_EDITOR_DIMENSION / Math.max(width, height));
+  }
+
   class MugPrintEditor {
     constructor(options) {
       if (!root.fabric) throw new Error('Fabric.js is required for the mug editor');
       if (!root.MugIcons) throw new Error('MugIcons is required for the mug editor');
       this.width = options.printWidth;
       this.height = options.printHeight;
-      this.canvasWidth = this.width * EDITOR_SCALE;
-      this.canvasHeight = this.height * EDITOR_SCALE;
-      this.margin = PRINT_MARGIN * EDITOR_SCALE;
+      this.printMargin = Number.isFinite(options.safeMargin) ? options.safeMargin : DEFAULT_PRINT_MARGIN;
+      this.editorScale = editorScaleFor(this.width, this.height);
+      this.canvasWidth = this.width * this.editorScale;
+      this.canvasHeight = this.height * this.editorScale;
+      this.margin = this.printMargin * this.editorScale;
       this.defaultX = Number.isFinite(options.defaultX) ? options.defaultX : this.width / 2;
       this.defaultY = Number.isFinite(options.defaultY) ? options.defaultY : this.height / 2;
       this.palette = options.palette || ['#8f3a58'];
@@ -31,6 +38,7 @@
       this.onReset = options.onReset || (() => {});
       this.shell = options.shell;
       this.scroll = options.scroll;
+      this.updatePrintAreaPresentation();
       this.selectionPanel = options.selectionPanel;
       this.textInput = options.textInput;
       this.textLabel = options.textLabel;
@@ -64,6 +72,7 @@
         width: this.canvasWidth,
         height: this.canvasHeight,
         selection: false,
+        enableRetinaScaling: false,
         preserveObjectStacking: true,
         stopContextMenu: true,
         fireRightClick: false,
@@ -81,12 +90,12 @@
       if (item.type === 'image') return this.makeImageObject(item);
       if (item.type === 'icon') return this.makeIconObject(item);
       const text = new root.fabric.IText(item.text, {
-        left: item.x * EDITOR_SCALE,
-        top: item.y * EDITOR_SCALE,
+        left: item.x * this.editorScale,
+        top: item.y * this.editorScale,
         originX: 'center',
         originY: 'center',
         fontFamily: 'Georgia',
-        fontSize: Math.max(MIN_PRINT_FONT_SIZE * EDITOR_SCALE, item.fontSize * EDITOR_SCALE),
+        fontSize: Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, item.fontSize * this.editorScale),
         fill: item.color,
         angle: item.angle || 0,
         lockScalingFlip: true,
@@ -117,8 +126,8 @@
       const element = this.photoElements.get(item.src);
       if (!element) throw new Error('Photo must be loaded before it can be placed');
       const photo = new root.fabric.Image(element, {
-        left: item.x * EDITOR_SCALE,
-        top: item.y * EDITOR_SCALE,
+        left: item.x * this.editorScale,
+        top: item.y * this.editorScale,
         originX: 'center',
         originY: 'center',
         angle: item.angle || 0,
@@ -174,8 +183,8 @@
         evented: false,
       });
       const icon = new root.fabric.Group([frame, drawing], {
-        left: item.x * EDITOR_SCALE,
-        top: item.y * EDITOR_SCALE,
+        left: item.x * this.editorScale,
+        top: item.y * this.editorScale,
         originX: 'center',
         originY: 'center',
         angle: item.angle || 0,
@@ -431,6 +440,84 @@
       this.emitChange();
     }
 
+    getState() {
+      return {
+        design: cloneDesign(this.getDesign()),
+        history: [...this.history],
+        historyIndex: this.historyIndex,
+      };
+    }
+
+    setState(state) {
+      const design = Array.isArray(state?.design) ? cloneDesign(state.design) : [];
+      this.setDesign(design);
+      if (Array.isArray(state?.history) && state.history.length &&
+          Number.isSafeInteger(state.historyIndex) &&
+          state.historyIndex >= 0 && state.historyIndex < state.history.length) {
+        this.history = [...state.history];
+        this.historyIndex = state.historyIndex;
+      } else {
+        this.history = [this.historySnapshot()];
+        this.historyIndex = 0;
+      }
+      this.updateHistoryButtons();
+    }
+
+    updatePrintAreaPresentation() {
+      if (!this.shell) return;
+      for (const element of [this.shell, this.scroll]) {
+        element?.style.setProperty('--print-aspect', `${this.width} / ${this.height}`);
+      }
+      this.shell.style.setProperty('--print-safe-x', `${this.printMargin / this.width * 100}%`);
+      this.shell.style.setProperty('--print-safe-y', `${this.printMargin / this.height * 100}%`);
+    }
+
+    resizePrintArea({ printWidth, printHeight, defaultX, defaultY, safeMargin }) {
+      const nextWidth = Number(printWidth);
+      const nextHeight = Number(printHeight);
+      if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight) || nextWidth < 1 || nextHeight < 1) {
+        throw new Error('Invalid print area dimensions');
+      }
+
+      const design = this.getDesign();
+      const nextPrintMargin = Number.isFinite(safeMargin) ? safeMargin : DEFAULT_PRINT_MARGIN;
+      const oldUsableWidth = Math.max(1, this.width - this.printMargin * 2);
+      const oldUsableHeight = Math.max(1, this.height - this.printMargin * 2);
+      const nextUsableWidth = Math.max(1, nextWidth - nextPrintMargin * 2);
+      const nextUsableHeight = Math.max(1, nextHeight - nextPrintMargin * 2);
+      const xScale = nextUsableWidth / oldUsableWidth;
+      const yScale = nextUsableHeight / oldUsableHeight;
+      const sizeScale = Math.min(xScale, yScale);
+      const scaledDesign = design.map((item) => ({
+        ...item,
+        x: nextPrintMargin + (item.x - this.printMargin) * xScale,
+        y: nextPrintMargin + (item.y - this.printMargin) * yScale,
+        ...(item.type === 'image'
+          ? {
+              width: Math.max(48, item.width * sizeScale),
+              height: Math.max(48, item.height * sizeScale),
+            }
+          : item.type === 'icon'
+            ? { size: Math.max(MIN_PRINT_ICON_SIZE, item.size * sizeScale) }
+            : { fontSize: Math.max(MIN_PRINT_FONT_SIZE, item.fontSize * sizeScale) }),
+      }));
+
+      this.width = nextWidth;
+      this.height = nextHeight;
+      this.printMargin = nextPrintMargin;
+      this.editorScale = editorScaleFor(nextWidth, nextHeight);
+      this.canvasWidth = nextWidth * this.editorScale;
+      this.canvasHeight = nextHeight * this.editorScale;
+      this.margin = this.printMargin * this.editorScale;
+      this.defaultX = Number.isFinite(defaultX) ? defaultX : nextWidth / 2;
+      this.defaultY = Number.isFinite(defaultY) ? defaultY : nextHeight / 2;
+      this.canvas.setDimensions({ width: this.canvasWidth, height: this.canvasHeight });
+      this.canvas.calcOffset();
+      this.updatePrintAreaPresentation();
+      this.setZoom(1);
+      this.setDesign(scaledDesign, { resetHistory: true });
+    }
+
     getDesign() {
       return this.canvas.getObjects().map((object) => {
         const item = this.serializeObject(object);
@@ -458,26 +545,26 @@
     absorbScale(object) {
       if (!object) return;
       if (object.editorKind === 'image') {
-        const width = object.width * object.scaleX / EDITOR_SCALE;
-        const height = object.height * object.scaleY / EDITOR_SCALE;
+        const width = object.width * object.scaleX / this.editorScale;
+        const height = object.height * object.scaleY / this.editorScale;
         this.setImageSize(object, width, height);
         object.setCoords();
         return;
       }
       if (object.editorKind === 'icon') {
-        const size = Math.max(object.width * object.scaleX, object.height * object.scaleY) / EDITOR_SCALE;
+        const size = Math.max(object.width * object.scaleX, object.height * object.scaleY) / this.editorScale;
         this.setIconSize(object, Math.max(MIN_PRINT_ICON_SIZE, size));
         object.setCoords();
         return;
       }
-      const nextSize = Math.max(MIN_PRINT_FONT_SIZE * EDITOR_SCALE, object.fontSize * object.scaleX);
+      const nextSize = Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, object.fontSize * object.scaleX);
       object.set({ fontSize: nextSize, scaleX: 1, scaleY: 1 });
       object.setCoords();
     }
 
     setIconSize(object, printSize) {
       const baseSize = Math.max(object.width, object.height) || root.MugIcons.VIEWBOX_SIZE;
-      const scale = printSize * EDITOR_SCALE / baseSize;
+      const scale = printSize * this.editorScale / baseSize;
       object.set({ scaleX: scale, scaleY: scale });
     }
 
@@ -485,8 +572,8 @@
       const sourceWidth = Math.max(1, object.width || 1);
       const sourceHeight = Math.max(1, object.height || 1);
       object.set({
-        scaleX: Math.max(48, printWidth) * EDITOR_SCALE / sourceWidth,
-        scaleY: Math.max(48, printHeight) * EDITOR_SCALE / sourceHeight,
+        scaleX: Math.max(48, printWidth) * this.editorScale / sourceWidth,
+        scaleY: Math.max(48, printHeight) * this.editorScale / sourceHeight,
       });
     }
 
@@ -654,8 +741,8 @@
         this.photoElements.set(src, element);
       }
       this.rememberPhotoSource(src);
-      const availableWidth = this.width - PRINT_MARGIN * 2;
-      const availableHeight = this.height - PRINT_MARGIN * 2;
+      const availableWidth = this.width - this.printMargin * 2;
+      const availableHeight = this.height - this.printMargin * 2;
       const initialScale = Math.min(900 / element.naturalWidth, 760 / element.naturalHeight, 1);
       const width = Math.min(availableWidth, element.naturalWidth * initialScale);
       const height = Math.min(availableHeight, element.naturalHeight * initialScale);
@@ -727,8 +814,8 @@
     serializeObject(object) {
       const common = {
         id: object.editorId,
-        x: object.left / EDITOR_SCALE,
-        y: object.top / EDITOR_SCALE,
+        x: object.left / this.editorScale,
+        y: object.top / this.editorScale,
         angle: object.angle || 0,
       };
       if (object.editorKind === 'image') {
@@ -736,8 +823,8 @@
           ...common,
           type: 'image',
           src: object.editorSrc,
-          width: object.width * object.scaleX / EDITOR_SCALE,
-          height: object.height * object.scaleY / EDITOR_SCALE,
+          width: object.width * object.scaleX / this.editorScale,
+          height: object.height * object.scaleY / this.editorScale,
         };
       }
       common.color = this.getObjectColor(object);
@@ -746,13 +833,13 @@
           ...common,
           type: 'icon',
           icon: object.editorIcon,
-          size: Math.max(object.width * object.scaleX, object.height * object.scaleY) / EDITOR_SCALE,
+          size: Math.max(object.width * object.scaleX, object.height * object.scaleY) / this.editorScale,
         };
       }
       return {
         ...common,
         text: object.text,
-        fontSize: object.fontSize * object.scaleX / EDITOR_SCALE,
+        fontSize: object.fontSize * object.scaleX / this.editorScale,
       };
     }
 

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" role="img" aria-label="Tragetasche">
+  <defs><linearGradient id="bag" y1="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#eee7de"/></linearGradient><filter id="s" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#56313d" flood-opacity=".18"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M42 28V17c0-10 7-15 18-15s18 5 18 15v11" fill="none" stroke="#302b29" stroke-width="6"/>
+    <path d="M26 24h68l-6 60H32z" fill="url(#bag)" stroke="#d2c8be"/>
+    <path d="M40 43c9-9 30-9 39 0-11 8-28 8-39 0Z" fill="#9c1c4c"/>
+    <path d="M42 62h36" stroke="#6f9f92" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

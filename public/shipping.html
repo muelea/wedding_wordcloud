@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg" />
   <title>Lieferadresse – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
@@ -138,7 +139,7 @@
     <div id="page-content" hidden>
       <section class="intro">
         <p class="eyebrow">Fast geschafft</p>
-        <h1 id="shipping-title">Wohin dürfen eure Tassen reisen?</h1>
+        <h1 id="shipping-title">Wohin darf eure Erinnerung reisen?</h1>
         <p class="intro-copy" id="shipping-intro">Mit der Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.</p>
       </section>
 
@@ -188,9 +189,9 @@
 
         <aside class="card summary-card" id="summary-card" aria-labelledby="summary-title">
           <div class="design-summary">
-            <div class="design-preview"><img id="design-image" alt="Euer gespeichertes Tassendesign" /></div>
+            <div class="design-preview"><img id="design-image" alt="Euer gespeichertes Design" /></div>
             <div class="design-copy">
-              <strong id="summary-title">Wortwolken-Tasse</strong>
+              <strong id="summary-title">Persönliche Erinnerung</strong>
               <span id="summary-quantity">Entwurf wird geladen</span>
               <span id="summary-size"></span>
             </div>
@@ -199,7 +200,7 @@
             <p class="quote-placeholder">Der Gesamtpreis erscheint hier, sobald ihr eure Lieferadresse eingegeben habt.</p>
           </div>
           <div class="quote" id="quote-result" hidden aria-live="polite">
-            <div class="quote-row"><span id="items-label">Tassen</span><strong id="items-price"></strong></div>
+            <div class="quote-row"><span id="items-label">Produkte</span><strong id="items-price"></strong></div>
             <div class="quote-row"><span>Versand</span><strong id="shipping-price"></strong></div>
             <div class="quote-row"><span>Steuern und MwSt.</span><strong id="tax-price"></strong></div>
             <div class="quote-total"><span>Gesamtpreis</span><strong id="total-price"></strong></div>
@@ -348,7 +349,9 @@
 
     function showQuote(quote) {
       currentQuote = quote;
-      document.getElementById('items-label').textContent = quote.quantity === 1 ? '1 Tasse' : `${quote.quantity} Tassen`;
+      const unit = configuration.product.unit;
+      document.getElementById('items-label').textContent =
+        `${quote.quantity} ${quote.quantity === 1 ? unit.singular : unit.plural}`;
       document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
       document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
       document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
@@ -418,14 +421,13 @@
             'Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.';
         }
 
-        document.getElementById('summary-title').textContent = configuration.configurationType === 'personal_memory'
-          ? 'Persönliche Erinnerungstasse'
-          : configuration.product.name;
-        document.getElementById('summary-quantity').textContent = configuration.quantity === 1
-          ? '1 Tasse'
-          : `${configuration.quantity} Tassen`;
-        document.getElementById('summary-size').textContent =
-          `${configuration.product.size.label} · ${configuration.product.size.volumeMl} ml`;
+        const unit = configuration.product.unit;
+        document.getElementById('summary-title').textContent = configuration.product.displayName;
+        document.getElementById('summary-quantity').textContent =
+          `${configuration.quantity} ${configuration.quantity === 1 ? unit.singular : unit.plural}`;
+        document.getElementById('summary-size').textContent = configuration.product.size.volumeMl
+          ? `${configuration.product.size.label} · ${configuration.product.size.volumeMl} ml`
+          : `${configuration.product.size.label} · ${configuration.product.size.detail}`;
         document.getElementById('design-image').src = configuration.printFileUrl;
         renderCountries();
         await restoreSavedQuote();

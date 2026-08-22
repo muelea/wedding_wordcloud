@@ -26,6 +26,7 @@
     if (!THREE) throw new Error('Three.js failed to load');
     if (!host) throw new Error('A mug viewer host is required');
 
+    const ownsCanvas = !options.canvas;
     const canvas = options.canvas || document.createElement('canvas');
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -280,7 +281,7 @@
       autoFrame = root.requestAnimationFrame(animateAutoRotate);
     }
 
-    interactionElement.addEventListener('pointerdown', (event) => {
+    const handlePointerDown = (event) => {
       stopAutoRotate();
       activePointer = event.pointerId;
       lastX = event.clientX;
@@ -288,8 +289,8 @@
       interactionElement.setPointerCapture(event.pointerId);
       interactionElement.classList.add('dragging');
       event.preventDefault();
-    });
-    interactionElement.addEventListener('pointermove', (event) => {
+    };
+    const handlePointerMove = (event) => {
       if (event.pointerId !== activePointer) return;
       const deltaX = event.clientX - lastX;
       const deltaY = event.clientY - lastY;
@@ -301,7 +302,7 @@
         Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
       );
       render();
-    });
+    };
     const finishPointer = (event) => {
       if (event.pointerId !== activePointer) return;
       activePointer = null;
@@ -310,9 +311,7 @@
         interactionElement.releasePointerCapture(event.pointerId);
       }
     };
-    interactionElement.addEventListener('pointerup', finishPointer);
-    interactionElement.addEventListener('pointercancel', finishPointer);
-    interactionElement.addEventListener('keydown', (event) => {
+    const handleKeydown = (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
       stopAutoRotate();
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -323,7 +322,30 @@
       }
       render();
       event.preventDefault();
-    });
+    };
+    interactionElement.addEventListener('pointerdown', handlePointerDown);
+    interactionElement.addEventListener('pointermove', handlePointerMove);
+    interactionElement.addEventListener('pointerup', finishPointer);
+    interactionElement.addEventListener('pointercancel', finishPointer);
+    interactionElement.addEventListener('keydown', handleKeydown);
+
+    function destroy() {
+      stopAutoRotate();
+      interactionElement.removeEventListener('pointerdown', handlePointerDown);
+      interactionElement.removeEventListener('pointermove', handlePointerMove);
+      interactionElement.removeEventListener('pointerup', finishPointer);
+      interactionElement.removeEventListener('pointercancel', finishPointer);
+      interactionElement.removeEventListener('keydown', handleKeydown);
+      interactionElement.classList.remove('dragging');
+      group.traverse((object) => {
+        object.geometry?.dispose?.();
+        if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
+        else object.material?.dispose?.();
+      });
+      texture.dispose();
+      renderer.dispose();
+      if (ownsCanvas) canvas.remove();
+    }
 
     resize();
     updateTexture();
@@ -343,6 +365,7 @@
       updateTexture,
       startAutoRotate,
       stopAutoRotate,
+      destroy,
     };
   }
 

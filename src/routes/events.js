@@ -10,8 +10,14 @@ const stripe = require('../stripe');
 const printful = require('../printful');
 const { buildCustomerQuote } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
-const { MUG_DUO, getProduct, getPublicProduct } = require('../products');
-const { buildMugPrintSvg, isMugDesignWithinBounds } = require('../mugPrint');
+const {
+  DEFAULT_PRODUCT,
+  getProduct,
+  getPublicProduct,
+  getPublicProducts,
+  getPublicProductFamilies,
+} = require('../products');
+const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
 const MugIcons = require('../../public/js/mug-icons.js');
 
 const PIN_RE = /^\d{4,6}$/;
@@ -163,14 +169,12 @@ function normalizeDesignImage(rawSource) {
   return { source: `data:image/${mime};base64,${match[2]}`, byteLength: bytes.length };
 }
 
-function normalizeDesign(rawDesign, width, height) {
+function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { count: 0, bytes: 0 }) {
   if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
   }
   const ids = new Set();
   const normalized = [];
-  let imageCount = 0;
-  let imageBytes = 0;
   for (const [index, rawItem] of rawDesign.entries()) {
     if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
     const type = rawItem.type == null || rawItem.type === 'text' ? 'text' : rawItem.type;
@@ -196,9 +200,9 @@ function normalizeDesign(rawDesign, width, height) {
       const image = normalizeDesignImage(rawItem.src);
       const imageWidth = Number(rawItem.width);
       const imageHeight = Number(rawItem.height);
-      imageCount += 1;
-      imageBytes += image?.byteLength || 0;
-      if (!image || imageCount > MAX_DESIGN_IMAGES || imageBytes > MAX_DESIGN_IMAGE_BYTES ||
+      imageBudget.count += 1;
+      imageBudget.bytes += image?.byteLength || 0;
+      if (!image || imageBudget.count > MAX_DESIGN_IMAGES || imageBudget.bytes > MAX_DESIGN_IMAGE_BYTES ||
           !Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) ||
           imageWidth < 48 || imageHeight < 48 || imageWidth > width || imageHeight > height) {
         return null;
@@ -226,7 +230,59 @@ function normalizeDesign(rawDesign, width, height) {
     if (!text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
     normalized.push({ ...common, color, text, fontSize: Math.round(fontSize * 10) / 10 });
   }
-  return isMugDesignWithinBounds(normalized, width, height) ? normalized : null;
+  return isPrintDesignWithinBounds(normalized, width, height, safeMargin) ? normalized : null;
+}
+
+function normalizeProductDesigns(rawBody, product) {
+  if (!rawBody || typeof rawBody !== 'object') return null;
+  const imageBudget = { count: 0, bytes: 0 };
+  const normalizeOne = (rawDesign) => normalizeDesign(
+    rawDesign,
+    product.printFile.width,
+    product.printFile.height,
+    product.designSafeMargin,
+    imageBudget
+  );
+
+  if (Object.hasOwn(rawBody, 'designs')) {
+    const rawDesigns = rawBody.designs;
+    if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
+    const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
+    if (Object.keys(rawDesigns).some((surfaceKey) => !allowedSurfaces.has(surfaceKey))) return null;
+    const surfaces = {};
+    for (const surface of product.printSurfaces) {
+      const design = normalizeOne(rawDesigns[surface.key]);
+      if (!design) return null;
+      surfaces[surface.key] = design;
+    }
+    return { version: 2, surfaces };
+  }
+
+  if (!Object.hasOwn(rawBody, 'design')) return null;
+  const design = normalizeOne(rawBody.design);
+  if (!design) return null;
+  if (product.printSurfaces.length === 1) return design;
+  return {
+    version: 2,
+    surfaces: Object.fromEntries(product.printSurfaces.map((surface) => [
+      surface.key,
+      design.map((item) => ({ ...item })),
+    ])),
+  };
+}
+
+function configurationPrintFileUrls(slug, configurationId, product) {
+  const base = `/api/events/${encodeURIComponent(slug)}/configurations/` +
+    `${encodeURIComponent(configurationId)}/print.svg`;
+  const multipleSurfaces = product.printSurfaces.length > 1;
+  const printFileUrls = Object.fromEntries(product.printSurfaces.map((surface) => [
+    surface.key,
+    multipleSurfaces ? `${base}?surface=${encodeURIComponent(surface.key)}` : base,
+  ]));
+  return {
+    printFileUrl: printFileUrls[product.printSurfaces[0].key],
+    printFileUrls,
+  };
 }
 
 function makeRouter({ io, port }) {
@@ -369,7 +425,11 @@ function makeRouter({ io, port }) {
       },
       words,
       configurationType: personalMemory ? 'personal_memory' : 'event_wordcloud',
-      product: getPublicProduct(),
+      // Keep `product` for older/open browser tabs while the current UI uses
+      // the complete curated list to render the size selector.
+      product: getPublicProduct(DEFAULT_PRODUCT),
+      products: getPublicProducts(),
+      productFamilies: getPublicProductFamilies(),
     });
   });
 
@@ -389,7 +449,7 @@ function makeRouter({ io, port }) {
     const event = db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
 
-    const product = getProduct(req.body?.productKey || MUG_DUO.key);
+    const product = getProduct(req.body?.productKey || DEFAULT_PRODUCT.key);
     if (!product) return res.status(400).json({ error: 'invalid_product' });
 
     const theme = req.body?.theme;
@@ -420,10 +480,10 @@ function makeRouter({ io, port }) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
-    const design = Object.hasOwn(req.body || {}, 'design')
-      ? normalizeDesign(req.body.design, product.printFile.width, product.printFile.height)
-      : null;
-    if (Object.hasOwn(req.body || {}, 'design') && !design) {
+    const hasDesignPayload = Object.hasOwn(req.body || {}, 'design') ||
+      Object.hasOwn(req.body || {}, 'designs');
+    const design = hasDesignPayload ? normalizeProductDesigns(req.body, product) : null;
+    if (hasDesignPayload && !design) {
       return res.status(400).json({ error: 'invalid_design' });
     }
     if (configurationType === 'personal_memory' && !design) {
@@ -447,6 +507,7 @@ function makeRouter({ io, port }) {
       printHeight: product.printFile.height,
     });
 
+    const printFiles = configurationPrintFileUrls(event.slug, configuration.id, product);
     res.status(201).json({
       id: configuration.id,
       productKey: configuration.product_key,
@@ -454,7 +515,7 @@ function makeRouter({ io, port }) {
       theme: configuration.theme,
       placement: configuration.placement,
       configurationType: configuration.configuration_type,
-      printFileUrl: `/api/events/${encodeURIComponent(event.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
+      ...printFiles,
       createdAt: configuration.created_at,
     });
   });
@@ -465,18 +526,14 @@ function makeRouter({ io, port }) {
     const product = getProduct(configuration.product_key);
     if (!product) return res.status(500).json({ error: 'configuration_invalid' });
     const placement = product.layouts.find((option) => option.key === configuration.placement);
+    const printFiles = configurationPrintFileUrls(req.params.slug, configuration.id, product);
     res.json({
       id: configuration.id,
       quantity: Number(configuration.quantity),
-      product: {
-        key: product.key,
-        name: product.name,
-        description: product.description,
-        size: product.size,
-      },
+      product: getPublicProduct(product),
       placement: placement ? { key: placement.key, label: placement.label } : null,
       configurationType: configuration.configuration_type,
-      printFileUrl: `/api/events/${encodeURIComponent(req.params.slug)}/configurations/${encodeURIComponent(configuration.id)}/print.svg`,
+      ...printFiles,
       createdAt: configuration.created_at,
     });
   });
@@ -557,15 +614,34 @@ function makeRouter({ io, port }) {
   router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
     const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).send('configuration not found');
+    const product = getProduct(configuration.product_key);
+    if (!product) return res.status(500).send('configuration is invalid');
+    const surfaceKey = String(req.query.surface || product.printSurfaces[0].key);
+    if (!product.printSurfaces.some((surface) => surface.key === surfaceKey)) {
+      return res.status(400).send('print surface is invalid');
+    }
     let words;
     let design = null;
     try {
       words = JSON.parse(configuration.words_json);
-      if (configuration.design_json) design = JSON.parse(configuration.design_json);
+      if (configuration.design_json) {
+        const storedDesign = JSON.parse(configuration.design_json);
+        if (Array.isArray(storedDesign)) {
+          // Configurations created before independent print surfaces used one
+          // immutable design for every Printful placement.
+          design = storedDesign;
+        } else if (storedDesign?.version === 2 &&
+                   storedDesign.surfaces &&
+                   Array.isArray(storedDesign.surfaces[surfaceKey])) {
+          design = storedDesign.surfaces[surfaceKey];
+        } else {
+          return res.status(500).send('configuration is invalid');
+        }
+      }
     } catch {
       return res.status(500).send('configuration is invalid');
     }
-    const svg = buildMugPrintSvg(words, configuration.theme, configuration.placement, design);
+    const svg = buildProductPrintSvg(product, words, configuration.theme, configuration.placement, design);
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(svg);
@@ -714,6 +790,7 @@ function makeRouter({ io, port }) {
     const order = db.getEventOrderBySessionId(req.params.slug, sessionId);
     if (!order) return res.status(404).json({ error: 'order_not_found' });
     const configuration = db.getConfiguration(order.configuration_id);
+    const product = configuration ? getProduct(configuration.product_key) : null;
     const paymentConfirmed = ['paid_test', 'paid'].includes(order.status);
     const fulfillmentCreated = ['draft', 'submitted'].includes(order.fulfillment_status);
     res.json({
@@ -725,6 +802,10 @@ function makeRouter({ io, port }) {
       currency: order.currency,
       totalCents: Number(order.total_cents),
       quantity: configuration ? Number(configuration.quantity) : null,
+      product: product ? {
+        name: product.name,
+        unit: product.unit,
+      } : null,
       configurationType: configuration?.configuration_type || 'event_wordcloud',
       paidAt: order.paid_at,
     });

@@ -11,6 +11,7 @@
 
 const db = require('./db');
 const printful = require('./printful');
+const { getProduct } = require('./products');
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [5_000, 30_000];
@@ -71,7 +72,7 @@ function parseRecipient(order) {
   return recipient;
 }
 
-function publicPrintFileUrl(event, configuration, mode) {
+function publicPrintFileUrl(event, configuration, mode, surfaceKey = null) {
   const configuredBase = String(process.env.PUBLIC_URL || '').trim();
   const fallbackBase = `http://localhost:${process.env.PORT || 3000}`;
   let url;
@@ -92,15 +93,21 @@ function publicPrintFileUrl(event, configuration, mode) {
 
   const slug = encodeURIComponent(event.slug);
   const configurationId = encodeURIComponent(configuration.id);
-  return new URL(
+  const printFileUrl = new URL(
     `/api/events/${slug}/configurations/${configurationId}/print.svg`,
     url
-  ).toString();
+  );
+  if (surfaceKey) printFileUrl.searchParams.set('surface', surfaceKey);
+  return printFileUrl.toString();
 }
 
 function buildPrintfulPayload({ order, event, configuration, mode }) {
+  const product = getProduct(configuration.product_key);
   const variantId = Number(configuration.printful_variant_id);
   const quantity = Number(configuration.quantity);
+  if (!product || product.printful.variantId !== variantId) {
+    throw new Error('Das gespeicherte Printful-Produkt ist ungültig.');
+  }
   if (!Number.isSafeInteger(variantId) || variantId < 1) {
     throw new Error('Die gespeicherte Printful-Variante ist ungültig.');
   }
@@ -112,19 +119,23 @@ function buildPrintfulPayload({ order, event, configuration, mode }) {
   const externalId = order.quote_id
     ? `weddingcloud-${order.id}-${order.quote_id}`
     : `weddingcloud-${order.id}`;
+  const multipleSurfaces = product.printful.placements.length > 1;
+  const files = product.printful.placements.map((type) => ({
+    type,
+    url: publicPrintFileUrl(event, configuration, mode, multipleSurfaces ? type : null),
+  }));
+  const item = {
+    external_id: `${externalId}-item-1`,
+    variant_id: variantId,
+    quantity,
+    files,
+    ...(product.printful.options.length ? { options: product.printful.options } : {}),
+  };
   return {
     external_id: externalId,
     shipping: 'STANDARD',
     recipient: parseRecipient(order),
-    items: [{
-      external_id: `${externalId}-item-1`,
-      variant_id: variantId,
-      quantity,
-      files: [{
-        type: 'default',
-        url: publicPrintFileUrl(event, configuration, mode),
-      }],
-    }],
+    items: [item],
   };
 }
 

@@ -56,7 +56,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.use('/api', makeEventsRouter({ io, port: PORT }));
 
 // ── Public pages ─────────────────────────────────────────────────────────
-// '/' is the marketing landing page (hero, how-it-works, FAQ, mug-duo
+// '/' is the marketing landing page (hero, how-it-works, FAQ, mug preview
 // showcase, live demo) — event creation itself lives at '/start' so the
 // landing page's CTAs have a real, working flow to link into rather than
 // being a dead-end mockup. See README "Public landing page" for the full
@@ -108,9 +108,10 @@ app.get('/e/:slug/order-confirmation', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'order-confirmation.html'));
 });
 
-// Server-side print-file export for the His & Hers mug-duo — the Printful
-// order-creation call (src/printful.js) needs a fetchable URL, not inline
-// SVG markup, so this is what that URL points at. Generated on demand
+// Legacy live-event SVG export used by the display/download flow. Paid mug
+// orders use the immutable configuration-specific route under /api instead,
+// so later guest submissions can never change an approved print file.
+// Generated on demand
 // (measured ~10-25ms for a realistic 10-60 word cloud, ~110ms even at 100
 // words — see src/exportSvg.js) rather than cached to disk: the word list
 // can keep growing right up to checkout, and regenerating per-request means

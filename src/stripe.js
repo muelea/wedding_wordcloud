@@ -90,7 +90,8 @@ async function createCheckoutSession({
     orderId: String(order.id),
     checkoutMode,
   };
-  const quantityLabel = quantity === 1 ? '1 personalisierte Tasse' : `${quantity} personalisierte Tassen`;
+  const unitLabel = quantity === 1 ? product.unit.singular : product.unit.plural;
+  const quantityLabel = `${quantity} ${unitLabel} · ${product.size.label}`;
 
   const session = await client.checkout.sessions.create({
     mode: 'payment',
@@ -104,7 +105,7 @@ async function createCheckoutSession({
         unit_amount: totalCents,
         product_data: {
           name: quantityLabel,
-          description: `${product.name} inklusive Standardversand`,
+          description: `${product.name} mit persönlichem Design inklusive Standardversand`,
           metadata: { productKey: product.key, configurationId },
         },
       },

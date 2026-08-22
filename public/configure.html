@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Gestaltet eure persönlichen Wolkenworte-Tassen." />
-  <title>Tassen gestalten – Wolkenworte</title>
+  <meta name="description" content="Gestaltet eure persönlichen Wolkenworte-Erinnerungen." />
+  <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg" />
+  <title>Erinnerung gestalten – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
 
@@ -176,6 +177,112 @@
       transition: opacity .2s;
     }
     .mug-viewer.is-ready .mug-fallback { opacity: 0; visibility: hidden; }
+    .flat-product-preview {
+      display: none;
+      position: relative;
+      width: min(var(--flat-preview-width, 292px), 84%);
+      height: auto;
+      max-width: 84%;
+      aspect-ratio: var(--flat-preview-aspect, 1);
+      overflow: hidden;
+      border: 1px solid rgba(77, 51, 54, .16);
+      border-radius: 5px;
+      background: #fff;
+      box-shadow: 0 24px 42px rgba(74, 34, 43, .16), 0 5px 12px rgba(74, 34, 43, .08);
+    }
+    .mug-viewer.is-flat {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      touch-action: auto;
+    }
+    .mug-viewer.is-flat .mug-fallback { display: none; }
+    .mug-viewer.is-flat .flat-product-preview { display: block; }
+    .flat-product-preview.is-coaster {
+      width: min(76%, 292px);
+      border-radius: 18px;
+      box-shadow: 0 18px 34px rgba(74, 34, 43, .15), 7px 9px 0 #b99064;
+    }
+    .flat-product-preview.is-framed {
+      border-radius: 2px;
+      box-shadow:
+        0 0 0 12px #201d1d,
+        0 25px 45px rgba(36, 24, 27, .22),
+        0 5px 12px rgba(36, 24, 27, .14);
+    }
+    .flat-product-preview.is-tote {
+      margin-top: 28px;
+      overflow: visible;
+      border-radius: 5px 5px 22px 22px;
+      box-shadow: 0 22px 38px rgba(74, 34, 43, .17);
+    }
+    .flat-product-preview.is-tote::before {
+      content: '';
+      position: absolute;
+      z-index: 0;
+      width: 38%;
+      height: 30%;
+      left: 31%;
+      top: -22%;
+      box-sizing: border-box;
+      border: 9px solid #2b2725;
+      border-bottom: 0;
+      border-radius: 48% 48% 0 0;
+    }
+    .flat-product-preview.is-blanket {
+      border-radius: 14px;
+      background: #f8f5f0;
+      box-shadow: 0 22px 38px rgba(74, 34, 43, .17), inset 0 0 18px rgba(87, 63, 58, .08);
+    }
+    .flat-product-preview.is-blanket::after {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      right: -1px;
+      bottom: -1px;
+      width: 17%;
+      aspect-ratio: 1;
+      border-radius: 100% 0 12px 0;
+      background: linear-gradient(135deg, rgba(226, 218, 207, .2), #e6ded3 64%, #f8f5f0 65%);
+      box-shadow: -4px -4px 9px rgba(80, 58, 55, .08);
+    }
+    .flat-product-preview.is-notebook {
+      overflow: visible;
+      border-radius: 3px 10px 10px 3px;
+      box-shadow: 9px 12px 0 #e7e2db, 0 24px 38px rgba(74, 34, 43, .17);
+    }
+    .flat-product-preview.is-notebook::before {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      left: -8px;
+      top: 5%;
+      width: 15px;
+      height: 90%;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0 7px,
+        #575450 7px 10px,
+        transparent 10px 16px
+      );
+      filter: drop-shadow(1px 1px 1px rgba(49, 42, 39, .18));
+    }
+    .flat-product-preview.is-pillow {
+      border-radius: 22%;
+      background: radial-gradient(circle, #fff 0 58%, #eee7df 100%);
+      box-shadow: inset 0 0 20px rgba(88, 62, 57, .12), 0 23px 39px rgba(74, 34, 43, .2);
+    }
+    .flat-product-preview.is-pillow::after {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      inset: 5px;
+      border: 1px solid rgba(91, 66, 61, .14);
+      border-radius: 21%;
+      pointer-events: none;
+    }
+    .flat-product-preview canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; border-radius: inherit; }
     .mug {
       width: clamp(180px, 19vw, 236px);
       aspect-ratio: .88;
@@ -237,6 +344,46 @@
       gap: 16px;
     }
     .wrap-head strong { font-size: 13px; font-weight: 600; }
+    .surface-editor {
+      margin: 0 0 12px;
+      padding: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid rgba(123, 70, 82, .14);
+      border-radius: 13px;
+      background: #fbf6f1;
+    }
+    .surface-editor[hidden] { display: none; }
+    .surface-tabs { display: inline-flex; gap: 4px; }
+    .surface-tab {
+      min-height: 35px;
+      padding: 7px 13px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .surface-tab[aria-selected="true"] { background: #fff; color: var(--berry); box-shadow: 0 3px 10px rgba(64, 15, 38, .09); }
+    .surface-tab:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 1px; }
+    .surface-copy {
+      min-height: 35px;
+      padding: 7px 11px;
+      border: 1px solid rgba(156, 28, 76, .24);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--berry);
+      cursor: pointer;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .surface-copy[hidden] { display: none; }
     .editor-toolbar {
       position: relative;
       margin-bottom: 12px;
@@ -338,7 +485,7 @@
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
     .editor-scroll {
       width: 100%;
-      aspect-ratio: 2700 / 1050;
+      aspect-ratio: var(--print-aspect, 2700 / 1050);
       overflow: auto;
       overscroll-behavior: contain;
       border: 1px solid rgba(123, 70, 82, .18);
@@ -354,7 +501,7 @@
       width: 100%;
       min-width: 100%;
       position: relative;
-      aspect-ratio: 2700 / 1050;
+      aspect-ratio: var(--print-aspect, 2700 / 1050);
       transition: width .2s ease;
     }
     .editor-canvas-shell .canvas-container {
@@ -371,7 +518,7 @@
     .print-safe-guide {
       position: absolute;
       z-index: 4;
-      inset: 2.2857% .8889%;
+      inset: var(--print-safe-y, 2.2857%) var(--print-safe-x, .8889%);
       border: 1px dashed transparent;
       border-radius: 6px;
       pointer-events: none;
@@ -520,29 +667,54 @@
       font-size: 12px;
     }
 
+    .product-options { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .product-option {
+      position: relative;
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
     .product-choice {
-      padding: 17px;
+      min-height: 92px;
+      padding: 12px;
       display: grid;
-      grid-template-columns: 58px 1fr auto;
+      grid-template-columns: 62px minmax(0, 1fr);
       align-items: center;
-      gap: 15px;
-      border: 1.5px solid var(--berry);
+      gap: 11px;
+      position: relative;
+      border: 1px solid var(--line);
       border-radius: 17px;
+      background: rgba(255,255,255,.68);
+      transition: border-color .2s, box-shadow .2s, transform .2s, background .2s;
+    }
+    .product-option:hover .product-choice { transform: translateY(-1px); border-color: rgba(156, 28, 76, .35); }
+    .product-option:focus-visible .product-choice { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .product-option[aria-checked="true"] .product-choice {
+      border-color: var(--berry);
+      box-shadow: inset 0 0 0 1px var(--berry), 0 7px 18px rgba(108, 27, 57, .07);
       background: rgba(156, 28, 76, .035);
     }
-    .product-icon {
-      width: 58px;
-      height: 58px;
-      display: grid;
-      place-items: center;
+    .product-thumbnail {
+      width: 62px;
+      height: 62px;
+      padding: 4px;
+      object-fit: contain;
       border-radius: 15px;
       background: #fff;
       box-shadow: 0 6px 18px rgba(73, 29, 44, .08);
-      font-size: 28px;
     }
     .product-copy strong { display: block; font-size: 14px; }
     .product-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
     .checkmark {
+      position: absolute;
+      top: 9px;
+      right: 9px;
       width: 22px;
       height: 22px;
       display: grid;
@@ -551,7 +723,41 @@
       background: var(--berry);
       color: #fff;
       font-size: 12px;
+      opacity: 0;
+      transform: scale(.78);
+      transition: opacity .2s, transform .2s;
     }
+    .product-option[aria-checked="true"] .product-choice .checkmark { opacity: 1; transform: scale(1); }
+    .variant-panel {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid rgba(123, 70, 82, .14);
+      border-radius: 15px;
+      background: rgba(251, 246, 241, .76);
+    }
+    .variant-panel[hidden] { display: none; }
+    .variant-head { margin: 0 0 9px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .variant-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .variant-option {
+      min-width: 0;
+      padding: 9px;
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+    }
+    .variant-option[aria-checked="true"] { border-color: var(--berry); box-shadow: inset 0 0 0 1px var(--berry); }
+    .variant-option:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 1px; }
+    .variant-option img { width: 44px; height: 44px; object-fit: contain; }
+    .variant-option strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .variant-option span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 
     .quantity-row {
       display: flex;
@@ -819,6 +1025,10 @@
       .mug-name { margin-top: 0; font-size: 11px; }
       .wrap-preview { padding: 15px; }
       .wrap-head { align-items: flex-start; }
+      .surface-editor { align-items: stretch; flex-direction: column; }
+      .surface-tabs { width: 100%; }
+      .surface-tab { flex: 1; }
+      .surface-copy { width: 100%; }
       .editor-toolbar { align-items: flex-start; }
       .editor-button { min-height: 40px; }
       .editor-icon-button { width: 40px; }
@@ -829,6 +1039,7 @@
       .editor-selection-status { max-width: 100%; }
       .editor-selection-hint { max-width: 100%; text-align: left; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
+      .product-options, .variant-options { grid-template-columns: 1fr; }
       .option-grid { grid-template-columns: 1fr; }
       .option-card { min-height: 76px; }
     }
@@ -850,7 +1061,7 @@
     <div class="config-content" id="config-content" hidden>
       <section class="intro">
         <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
-        <h1 id="config-title">Gestaltet eure Tassen.</h1>
+        <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
         <p class="intro-copy" id="config-intro">Wählt eure Farbwelt, die Platzierung und zum Schluss die Anzahl. Den Rest bereiten wir druckfertig für euch vor.</p>
       </section>
 
@@ -860,11 +1071,14 @@
             <h2 id="preview-title">Eure Vorschau</h2>
           </div>
 
-          <div class="mug-stage" aria-label="Vorschau der gestalteten Tasse">
+          <div class="mug-stage" id="product-stage" aria-label="Vorschau des gestalteten Produkts">
             <div class="mug-wrap">
               <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen horizontal oder vertikal ziehen. Alternativ die Pfeiltasten verwenden.">
                 <div class="mug-fallback">
                   <div class="mug"><canvas class="mug-art" id="mug-preview"></canvas></div>
+                </div>
+                <div class="flat-product-preview" id="flat-product-preview" aria-hidden="true">
+                  <canvas id="flat-preview"></canvas>
                 </div>
               </div>
               <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
@@ -874,6 +1088,10 @@
           <div class="wrap-preview">
             <div class="wrap-head">
               <strong>So liegt das Motiv auf der Druckfläche</strong>
+            </div>
+            <div class="surface-editor" id="surface-editor" hidden>
+              <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
+              <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
             </div>
             <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
               <div class="editor-tools">
@@ -939,14 +1157,10 @@
 
           <section class="step">
             <h3 class="step-title"><span class="step-number">1</span> Produkt</h3>
-            <div class="product-choice">
-              <span class="product-icon" aria-hidden="true">☕</span>
-              <div class="product-copy">
-                <strong id="product-name">Wortwolken-Tasse</strong>
-                <span id="product-size">11 oz · 325 ml · weiße Keramik</span>
-                <span id="product-unit-price">Preis abhängig von der Lieferadresse</span>
-              </div>
-              <span class="checkmark" aria-hidden="true">✓</span>
+            <div class="product-options" id="product-options" role="radiogroup" aria-label="Produktgruppe wählen"></div>
+            <div class="variant-panel" id="variant-panel" hidden>
+              <p class="variant-head" id="variant-title">Ausführung wählen</p>
+              <div class="variant-options" id="variant-options" role="radiogroup" aria-labelledby="variant-title"></div>
             </div>
           </section>
 
@@ -968,49 +1182,20 @@
 
           <section class="step" id="placement-step">
             <h3 class="step-title"><span class="step-number">3</span> Platzierung</h3>
-            <div class="option-grid placement-grid">
-              <label class="option">
-                <input type="radio" name="placement" value="single" checked />
-                <span class="option-card">
-                  <strong>Ein großes Motiv</strong>
-                  <small>Groß auf einer Seite jeder Tasse</small>
-                </span>
-              </label>
-              <label class="option">
-                <input type="radio" name="placement" value="both-sides" />
-                <span class="option-card">
-                  <strong>Auf beiden Seiten</strong>
-                  <small>Von links und rechts sichtbar</small>
-                </span>
-              </label>
-              <label class="option">
-                <input type="radio" name="placement" value="full-wrap" />
-                <span class="option-card">
-                  <strong>Rundum</strong>
-                  <small>Über die ganze Tasse verteilt</small>
-                </span>
-              </label>
-              <label class="option">
-                <input type="radio" name="placement" value="fit-area" />
-                <span class="option-card">
-                  <strong>Fläche optimal nutzen</strong>
-                  <small>Automatisch großflächig angeordnet</small>
-                </span>
-              </label>
-            </div>
+            <div class="option-grid placement-grid" id="placement-options"></div>
           </section>
 
           <section class="step">
             <h3 class="step-title"><span class="step-number" id="quantity-step-number">4</span> Anzahl</h3>
             <div class="quantity-row">
               <div class="quantity-copy">
-                <strong id="quantity-title">Wie viele Tassen möchtet ihr?</strong>
-                <span id="quantity-copy">Alle Tassen erhalten dasselbe Design.</span>
+                <strong id="quantity-title">Wie viele Produkte möchtet ihr?</strong>
+                <span id="quantity-copy">Alle Produkte erhalten dasselbe Design.</span>
               </div>
-              <div class="quantity-control" aria-label="Anzahl der Tassen">
-                <button type="button" id="quantity-minus" aria-label="Eine Tasse weniger">−</button>
+              <div class="quantity-control" aria-label="Anzahl der Produkte">
+                <button type="button" id="quantity-minus" aria-label="Ein Produkt weniger">−</button>
                 <input id="quantity" type="number" value="2" min="1" max="99" inputmode="numeric" aria-label="Anzahl" />
-                <button type="button" id="quantity-plus" aria-label="Eine Tasse mehr">+</button>
+                <button type="button" id="quantity-plus" aria-label="Ein Produkt mehr">+</button>
               </div>
             </div>
           </section>
@@ -1031,9 +1216,9 @@
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
   <script src="/js/wordcloud-core.js?v=20260819-2"></script>
-  <script src="/js/mug-3d-viewer.js?v=20260819-1"></script>
+  <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/mug-editor.js?v=20260819-4"></script>
+  <script src="/js/mug-editor.js?v=20260821-5"></script>
   <script>
     'use strict';
 
@@ -1046,8 +1231,17 @@
     const errorText = document.getElementById('error-text');
     const mugCanvas = document.getElementById('mug-preview');
     const mugViewer = document.getElementById('mug-3d');
+    const flatPreview = document.getElementById('flat-product-preview');
+    const flatCanvas = document.getElementById('flat-preview');
     const wrapCanvas = document.getElementById('wrap-canvas');
     const themeOptions = document.getElementById('theme-options');
+    const productOptions = document.getElementById('product-options');
+    const variantPanel = document.getElementById('variant-panel');
+    const variantOptions = document.getElementById('variant-options');
+    const placementOptions = document.getElementById('placement-options');
+    const surfaceEditor = document.getElementById('surface-editor');
+    const surfaceTabs = document.getElementById('surface-tabs');
+    const surfaceCopy = document.getElementById('surface-copy');
     const customPalettePanel = document.getElementById('custom-palette-panel');
     const customColorList = document.getElementById('custom-color-list');
     const customColorAdd = document.getElementById('custom-color-add');
@@ -1056,7 +1250,10 @@
     const photoInput = document.getElementById('editor-photo-input');
 
     let words = [];
+    let products = [];
+    let productFamilies = [];
     let product = null;
+    let selectedFamilyKey = null;
     let selectedTheme = 'pastel';
     let customColors = [];
     let selectedPlacement = 'single';
@@ -1065,6 +1262,8 @@
     let mug3D = null;
     let mug3DLoadPromise = null;
     let mugEditor = null;
+    let activeSurface = 'default';
+    let surfaceStates = new Map();
 
     const backLink = document.getElementById('back-link');
     backLink.href = isPersonalMode
@@ -1077,15 +1276,13 @@
       document.getElementById('config-eyebrow').textContent = 'Euer Moment. Eure Erinnerung.';
       document.getElementById('config-title').textContent = 'Gestaltet eure persönliche Erinnerung.';
       document.getElementById('config-intro').textContent =
-        'Startet mit einer leeren Tasse und gestaltet euren Moment mit eigenen Fotos, Namen und persönlichen Worten.';
+        'Startet mit einer leeren Fläche und gestaltet euren Moment mit eigenen Fotos, Namen und persönlichen Worten.';
       document.getElementById('controls-subtitle').textContent = 'Drei kurze Schritte bis zu eurem persönlichen Design.';
       document.getElementById('placement-step').hidden = true;
       document.getElementById('quantity-step-number').textContent = '3';
-      document.getElementById('quantity-title').textContent = 'Wie viele Tassen möchtet ihr?';
-      document.getElementById('quantity-copy').textContent = 'Jede Tasse erhält euer persönliches Design.';
       const resetButton = document.getElementById('editor-reset');
-      resetButton.textContent = 'Alles entfernen';
-      resetButton.title = 'Druckfläche leeren';
+      resetButton.textContent = 'Seite leeren';
+      resetButton.title = 'Aktuelle Druckseite leeren';
     }
 
     function setupCanvas(canvas) {
@@ -1144,7 +1341,9 @@
       const files = [...photoInput.files];
       photoInput.value = '';
       if (!files.length || !mugEditor) return;
-      const existingPhotos = mugEditor.getDesign().filter((item) => item.type === 'image').length;
+      const existingPhotos = Object.values(getAllSurfaceDesigns())
+        .flat()
+        .filter((item) => item.type === 'image').length;
       const available = Math.max(0, 6 - existingPhotos);
       if (!available) {
         mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
@@ -1202,7 +1401,7 @@
     function applyCustomPalette() {
       updateCustomThemeCard();
       markDirty();
-      if (mugEditor) mugEditor.applyPalette(customColors);
+      if (mugEditor) applyPaletteAcrossSurfaces(customColors);
       renderAll();
     }
 
@@ -1333,6 +1532,132 @@
       return design;
     }
 
+    function cloneDesign(design) {
+      return design.map((item) => ({ ...item }));
+    }
+
+    function cloneEditorState(state, includeHistory = true) {
+      return {
+        design: cloneDesign(state?.design || []),
+        history: includeHistory && Array.isArray(state?.history) ? [...state.history] : [],
+        historyIndex: includeHistory && Number.isSafeInteger(state?.historyIndex)
+          ? state.historyIndex
+          : -1,
+      };
+    }
+
+    function productSurfaces() {
+      return Array.isArray(product?.printSurfaces) && product.printSurfaces.length
+        ? product.printSurfaces
+        : [{ key: product?.printFile?.placement || 'default', label: 'Druckfläche' }];
+    }
+
+    function storeActiveSurfaceState() {
+      if (mugEditor && activeSurface) surfaceStates.set(activeSurface, mugEditor.getState());
+    }
+
+    function resetSurfaceStates(initialState) {
+      const surfaces = productSurfaces();
+      activeSurface = surfaces[0].key;
+      surfaceStates = new Map(surfaces.map((surface, index) => [
+        surface.key,
+        cloneEditorState(initialState, index === 0),
+      ]));
+      buildSurfaceControls();
+    }
+
+    function getAllSurfaceDesigns() {
+      storeActiveSurfaceState();
+      return Object.fromEntries(productSurfaces().map((surface) => [
+        surface.key,
+        cloneDesign(surfaceStates.get(surface.key)?.design || []),
+      ]));
+    }
+
+    function updateSurfaceControlSelection() {
+      surfaceTabs.querySelectorAll('.surface-tab').forEach((tab) => {
+        const selected = tab.dataset.surfaceKey === activeSurface;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      surfaceCopy.hidden = productSurfaces().length < 2 || activeSurface !== 'back';
+    }
+
+    function selectSurface(surfaceKey, { announce = true } = {}) {
+      if (!mugEditor || surfaceKey === activeSurface ||
+          !productSurfaces().some((surface) => surface.key === surfaceKey)) return;
+      storeActiveSurfaceState();
+      activeSurface = surfaceKey;
+      mugEditor.setState(surfaceStates.get(surfaceKey));
+      updateSurfaceControlSelection();
+      updateProductPresentation();
+      if (announce) {
+        const surface = productSurfaces().find((candidate) => candidate.key === surfaceKey);
+        mugEditor.setFeedback(`${surface.label} wird bearbeitet`);
+      }
+      renderAll();
+    }
+
+    function buildSurfaceControls() {
+      const surfaces = productSurfaces();
+      surfaceEditor.hidden = surfaces.length < 2;
+      surfaceTabs.replaceChildren();
+      surfaces.forEach((surface, surfaceIndex) => {
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'surface-tab';
+        tab.dataset.surfaceKey = surface.key;
+        tab.setAttribute('role', 'tab');
+        tab.textContent = surface.label;
+        tab.addEventListener('click', () => selectSurface(surface.key));
+        tab.addEventListener('keydown', (event) => {
+          if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+          const direction = event.key === 'ArrowLeft' ? -1 : 1;
+          const nextIndex = (surfaceIndex + direction + surfaces.length) % surfaces.length;
+          selectSurface(surfaces[nextIndex].key);
+          surfaceTabs.querySelectorAll('.surface-tab')[nextIndex]?.focus();
+          event.preventDefault();
+        });
+        surfaceTabs.appendChild(tab);
+      });
+      updateSurfaceControlSelection();
+    }
+
+    function applyPaletteAcrossSurfaces(colors) {
+      if (!mugEditor) return;
+      mugEditor.applyPalette(colors);
+      surfaceStates.set(activeSurface, mugEditor.getState());
+      for (const surface of productSurfaces()) {
+        if (surface.key === activeSurface) continue;
+        const state = surfaceStates.get(surface.key);
+        const design = (state?.design || []).map((item, index) => item.type === 'image'
+          ? { ...item }
+          : { ...item, color: colors[index % colors.length] });
+        surfaceStates.set(surface.key, cloneEditorState({ design }, false));
+      }
+    }
+
+    surfaceCopy.addEventListener('click', () => {
+      storeActiveSurfaceState();
+      const front = surfaceStates.get('front');
+      if (!front) return;
+      const otherPhotoCount = productSurfaces()
+        .filter((surface) => surface.key !== 'back')
+        .flatMap((surface) => surfaceStates.get(surface.key)?.design || [])
+        .filter((item) => item.type === 'image').length;
+      const copiedPhotoCount = front.design.filter((item) => item.type === 'image').length;
+      if (otherPhotoCount + copiedPhotoCount > 6) {
+        mugEditor.setFeedback('Für beide Seiten sind zusammen maximal sechs Fotos möglich.');
+        return;
+      }
+      const copied = cloneEditorState(front, false);
+      surfaceStates.set('back', copied);
+      if (activeSurface === 'back') mugEditor.setState(copied);
+      mugEditor.setFeedback('Vorderseite auf die Rückseite übernommen');
+      markDirty();
+      renderAll();
+    });
+
     function getCurrentDesign() {
       return mugEditor ? mugEditor.getDesign() : buildAutomaticDesign();
     }
@@ -1389,6 +1714,7 @@
     }
 
     function initMug3D() {
+      if (product?.previewType !== 'mug') return Promise.resolve();
       if (mug3D || mug3DLoadPromise) return mug3DLoadPromise;
       mug3DLoadPromise = Promise.resolve().then(() => {
         mug3D = Mug3DViewer.create({
@@ -1408,12 +1734,17 @@
       return mug3DLoadPromise;
     }
 
-    function renderMugs() {
+    function renderProductPreview() {
       if (!product) return;
-      const ctx = setupCanvas(mugCanvas);
-      const width = mugCanvas.width;
-      const height = mugCanvas.height;
+      const canvas = product.previewType === 'flat' ? flatCanvas : mugCanvas;
+      const ctx = setupCanvas(canvas);
+      const width = canvas.width;
+      const height = canvas.height;
       ctx.clearRect(0, 0, width, height);
+      if (product.previewType === 'flat') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
       const scale = Math.min(width / product.printFile.width, height / product.printFile.height) * .9;
       drawDesign(
         ctx,
@@ -1421,13 +1752,13 @@
         (height - product.printFile.height * scale) / 2,
         scale
       );
-      updateMug3DTexture();
+      if (product.previewType === 'mug') updateMug3DTexture();
     }
 
     function renderAll() {
       cancelAnimationFrame(renderFrame);
       renderFrame = requestAnimationFrame(() => {
-        renderMugs();
+        renderProductPreview();
       });
     }
 
@@ -1435,6 +1766,264 @@
       errorText.textContent = '';
       saveButton.disabled = false;
       saveButton.innerHTML = 'Weiter zur Lieferadresse <span aria-hidden="true">→</span>';
+    }
+
+    function germanDecimal(value) {
+      return String(value).replace('.', ',');
+    }
+
+    function updateProductPresentation() {
+      if (!product) return;
+      const isMug = product.previewType === 'mug';
+      mugViewer.classList.toggle('is-flat', !isMug);
+      flatPreview.classList.toggle('is-coaster', product.previewShape === 'coaster');
+      flatPreview.classList.toggle('is-framed', product.previewShape === 'framed-poster');
+      flatPreview.classList.toggle('is-tote', product.previewShape === 'tote');
+      flatPreview.classList.toggle('is-blanket', product.previewShape === 'blanket');
+      flatPreview.classList.toggle('is-notebook', product.previewShape === 'notebook');
+      flatPreview.classList.toggle('is-pillow', product.previewShape === 'pillow');
+      flatPreview.style.setProperty(
+        '--flat-preview-aspect',
+        `${product.printFile.width} / ${product.printFile.height}`
+      );
+      const flatPreviewHeight = product.previewShape === 'coaster'
+        ? 292
+        : product.previewShape === 'tote'
+          ? 286
+          : product.previewShape === 'blanket'
+            ? 250
+            : product.previewShape === 'pillow' ? 292 : 330;
+      flatPreview.style.setProperty(
+        '--flat-preview-width',
+        `${Math.round(flatPreviewHeight * product.printFile.width / product.printFile.height)}px`
+      );
+      mugViewer.tabIndex = isMug ? 0 : -1;
+      mugViewer.setAttribute('aria-label', isMug
+        ? 'Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.'
+        : `Vorschau: ${product.displayName}, ${product.size.label}`);
+      const activeSurfaceLabel = productSurfaces().length > 1
+        ? ` · ${productSurfaces().find((surface) => surface.key === activeSurface)?.label || ''}`
+        : '';
+      document.getElementById('mug-viewer-hint').textContent = isMug
+        ? `↔ ↕ Ziehen zum Drehen · ${germanDecimal(product.size.heightCm)} cm × Ø ${germanDecimal(product.size.diameterCm)} cm`
+        : `${product.displayName} · ${product.size.label}${activeSurfaceLabel}`;
+      document.getElementById('product-stage').setAttribute(
+        'aria-label',
+        `Vorschau: ${product.displayName}, ${product.size.label}`
+      );
+      quantityInput.min = String(product.minQuantity);
+      quantityInput.max = String(product.maxQuantity);
+      document.getElementById('quantity-title').textContent = `Wie viele ${product.unit.plural} möchtet ihr?`;
+      document.getElementById('quantity-copy').textContent = productSurfaces().length > 1
+        ? 'Vorder- und Rückseite können unterschiedlich gestaltet werden.'
+        : isPersonalMode
+          ? `Jedes Produkt erhält euer persönliches Design.`
+          : `Alle ${product.unit.plural} erhalten dasselbe Design.`;
+      document.querySelector('.quantity-control').setAttribute('aria-label', `Anzahl der ${product.unit.plural}`);
+      document.getElementById('quantity-minus').setAttribute('aria-label', `${product.unit.singular}: eines weniger`);
+      document.getElementById('quantity-plus').setAttribute('aria-label', `${product.unit.singular}: eines mehr`);
+      updateQuantity(quantity, false);
+    }
+
+    function destroyMug3D() {
+      if (mug3D) mug3D.destroy?.();
+      mug3D = null;
+      mug3DLoadPromise = null;
+      mugViewer.classList.remove('is-ready');
+    }
+
+    function updateProductOptionSelection() {
+      productOptions.querySelectorAll('.product-option').forEach((option) => {
+        const selected = option.dataset.familyKey === selectedFamilyKey;
+        option.setAttribute('aria-checked', String(selected));
+        option.tabIndex = selected ? 0 : -1;
+      });
+      variantOptions.querySelectorAll('.variant-option').forEach((option) => {
+        const selected = option.dataset.productKey === product?.key;
+        option.setAttribute('aria-checked', String(selected));
+        option.tabIndex = selected ? 0 : -1;
+      });
+    }
+
+    function productsInFamily(familyKey) {
+      return products.filter((candidate) => candidate.familyKey === familyKey);
+    }
+
+    function productDetail(candidate) {
+      return candidate.size.volumeMl
+        ? `${candidate.size.volumeMl} ml · ${germanDecimal(candidate.size.heightCm)} cm hoch`
+        : candidate.size.detail;
+    }
+
+    function selectedProductSlot() {
+      const layoutKey = product.layouts.some((layout) => layout.key === selectedPlacement)
+        ? selectedPlacement
+        : product.layouts[0].key;
+      return product.layoutGeometry[layoutKey][0];
+    }
+
+    function selectProduct(nextProduct) {
+      if (!nextProduct || nextProduct.key === product?.key) return;
+      product = nextProduct;
+      selectedFamilyKey = product.familyKey;
+      if (!product.layouts.some((layout) => layout.key === selectedPlacement)) {
+        selectedPlacement = product.layouts[0].key;
+      }
+      buildPlacementOptions();
+      if (mugEditor) {
+        const defaultSlot = selectedProductSlot();
+        mugEditor.resizePrintArea({
+          printWidth: product.printFile.width,
+          printHeight: product.printFile.height,
+          safeMargin: product.designSafeMargin,
+          defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
+          defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
+        });
+        resetSurfaceStates(mugEditor.getState());
+        mugEditor.setFeedback(`Druckfläche für ${product.size.label} angepasst`);
+      } else {
+        activeSurface = productSurfaces()[0].key;
+        buildSurfaceControls();
+      }
+      buildVariantOptions();
+      updateProductOptionSelection();
+      updateProductPresentation();
+      destroyMug3D();
+      markDirty();
+      renderAll();
+      initMug3D();
+    }
+
+    function selectFamily(family) {
+      if (!family) return;
+      selectedFamilyKey = family.key;
+      const candidates = productsInFamily(family.key);
+      const nextProduct = candidates.find((candidate) => candidate.key === product?.key) || candidates[0];
+      if (nextProduct?.key !== product?.key) selectProduct(nextProduct);
+      buildVariantOptions();
+      updateProductOptionSelection();
+    }
+
+    function buildVariantOptions() {
+      const family = productFamilies.find((candidate) => candidate.key === selectedFamilyKey);
+      const candidates = productsInFamily(selectedFamilyKey);
+      variantPanel.hidden = candidates.length < 2;
+      variantOptions.replaceChildren();
+      if (candidates.length < 2) return;
+      document.getElementById('variant-title').textContent = `${family?.label || 'Ausführung'} wählen`;
+      candidates.forEach((candidate, candidateIndex) => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'variant-option';
+        option.dataset.productKey = candidate.key;
+        option.setAttribute('role', 'radio');
+        option.setAttribute('aria-label', `${candidate.displayName}, ${candidate.size.label}`);
+        option.addEventListener('click', () => selectProduct(candidate));
+        option.addEventListener('keydown', (event) => {
+          if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+          const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
+          const nextIndex = (candidateIndex + direction + candidates.length) % candidates.length;
+          selectProduct(candidates[nextIndex]);
+          variantOptions.querySelectorAll('.variant-option')[nextIndex]?.focus();
+          event.preventDefault();
+        });
+        const thumbnail = document.createElement('img');
+        thumbnail.src = candidate.thumbnail;
+        thumbnail.alt = '';
+        thumbnail.loading = 'lazy';
+        const copy = document.createElement('span');
+        const name = document.createElement('strong');
+        name.textContent = `${candidate.displayName} · ${candidate.size.label}`;
+        const detail = document.createElement('span');
+        detail.textContent = productDetail(candidate);
+        copy.append(name, detail);
+        option.append(thumbnail, copy);
+        variantOptions.appendChild(option);
+      });
+      updateProductOptionSelection();
+    }
+
+    function buildProductOptions() {
+      productOptions.replaceChildren();
+      productFamilies.forEach((family, familyIndex) => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'product-option';
+        option.dataset.familyKey = family.key;
+        option.setAttribute('role', 'radio');
+        option.setAttribute('aria-label', family.label);
+        option.addEventListener('click', () => selectFamily(family));
+        option.addEventListener('keydown', (event) => {
+          if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+          const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
+          const nextIndex = (familyIndex + direction + productFamilies.length) % productFamilies.length;
+          const nextOption = productOptions.querySelectorAll('.product-option')[nextIndex];
+          selectFamily(productFamilies[nextIndex]);
+          nextOption?.focus();
+          event.preventDefault();
+        });
+
+        const card = document.createElement('span');
+        card.className = 'product-choice';
+        const thumbnail = document.createElement('img');
+        thumbnail.className = 'product-thumbnail';
+        thumbnail.src = family.thumbnail;
+        thumbnail.alt = '';
+        thumbnail.loading = 'lazy';
+        const copy = document.createElement('span');
+        copy.className = 'product-copy';
+        const name = document.createElement('strong');
+        name.textContent = family.label;
+        const description = document.createElement('span');
+        description.textContent = family.description;
+        const checkmark = document.createElement('span');
+        checkmark.className = 'checkmark';
+        checkmark.setAttribute('aria-hidden', 'true');
+        checkmark.textContent = '✓';
+        copy.append(name, description);
+        card.append(thumbnail, copy, checkmark);
+        option.append(card);
+        productOptions.appendChild(option);
+      });
+      buildVariantOptions();
+      updateProductOptionSelection();
+    }
+
+    function buildPlacementOptions() {
+      placementOptions.replaceChildren();
+      if (!product.layouts.some((layout) => layout.key === selectedPlacement)) {
+        selectedPlacement = product.layouts[0].key;
+      }
+      for (const layout of product.layouts) {
+        const label = document.createElement('label');
+        label.className = 'option';
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'placement';
+        input.value = layout.key;
+        input.checked = layout.key === selectedPlacement;
+        input.addEventListener('change', () => {
+          selectedPlacement = layout.key;
+          markDirty();
+          if (mugEditor) {
+            mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
+            resetSurfaceStates(mugEditor.getState());
+            mugEditor.setFeedback(selectedPlacement === 'fit-area'
+              ? 'Druckfläche optimal genutzt'
+              : 'Motiv passend neu angeordnet');
+          }
+          renderAll();
+        });
+        const card = document.createElement('span');
+        card.className = 'option-card';
+        const name = document.createElement('strong');
+        name.textContent = layout.label;
+        const description = document.createElement('small');
+        description.textContent = layout.description;
+        card.append(name, description);
+        label.append(input, card);
+        placementOptions.appendChild(label);
+      }
     }
 
     function buildThemeOptions() {
@@ -1453,7 +2042,7 @@
           selectedTheme = palette.key;
           markDirty();
           renderCustomColorControls();
-          if (mugEditor) mugEditor.applyPalette(getPalette(selectedTheme).colors);
+          if (mugEditor) applyPaletteAcrossSurfaces(getPalette(selectedTheme).colors);
           renderAll();
         });
 
@@ -1496,22 +2085,8 @@
     });
     quantityInput.addEventListener('change', () => updateQuantity(quantityInput.value));
 
-    document.querySelectorAll('input[name="placement"]').forEach((input) => {
-      input.addEventListener('change', () => {
-        selectedPlacement = input.value;
-        markDirty();
-        if (mugEditor) {
-          mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
-          mugEditor.setFeedback(selectedPlacement === 'fit-area'
-            ? 'Druckfläche optimal genutzt'
-            : 'Motiv passend neu angeordnet');
-        }
-        renderAll();
-      });
-    });
-
     function initEditor() {
-      const defaultSlot = product.layoutGeometry.single[0];
+      const defaultSlot = selectedProductSlot();
       mugEditor = new MugPrintEditor({
         canvas: wrapCanvas,
         shell: document.getElementById('editor-canvas-shell'),
@@ -1542,6 +2117,7 @@
         deleteButton: document.getElementById('editor-delete'),
         printWidth: product.printFile.width,
         printHeight: product.printFile.height,
+        safeMargin: product.designSafeMargin,
         defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         palette: getPalette(selectedTheme).colors,
@@ -1552,12 +2128,13 @@
         onReset: () => {
           mugEditor.setDesign(buildAutomaticDesign(), { record: true });
           mugEditor.setFeedback(isPersonalMode
-            ? 'Druckfläche geleert'
+            ? 'Druckseite geleert'
             : 'Automatische Wortwolke wiederhergestellt');
           markDirty();
         },
       });
       mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
+      resetSurfaceStates(mugEditor.getState());
     }
 
     window.addEventListener('resize', () => {
@@ -1566,10 +2143,13 @@
     });
 
     saveButton.addEventListener('click', async () => {
-      const design = mugEditor.getDesign();
-      if (!design.length) {
-        errorText.textContent = 'Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.';
-        mugEditor.setFeedback('Eure Tasse ist noch leer.');
+      const designs = getAllSurfaceDesigns();
+      const missingSurface = productSurfaces().find((surface) => !designs[surface.key]?.length);
+      if (missingSurface) {
+        errorText.textContent = productSurfaces().length > 1
+          ? `Gestaltet bitte auch die ${missingSurface.label}.`
+          : 'Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.';
+        mugEditor.setFeedback(`${missingSurface.label} ist noch leer.`);
         return;
       }
       saveButton.disabled = true;
@@ -1585,7 +2165,7 @@
             theme: selectedTheme,
             placement: selectedPlacement,
             words,
-            design,
+            designs,
             configurationType,
           }),
         });
@@ -1608,26 +2188,35 @@
       })
       .then((data) => {
         words = data.words;
-        product = data.product;
+        products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
+        product = products.find((candidate) => candidate.key === data.product?.key) || products[0];
+        productFamilies = Array.isArray(data.productFamilies) && data.productFamilies.length
+          ? data.productFamilies.filter((family) => products.some((candidate) => candidate.familyKey === family.key))
+          : [...new Set(products.map((candidate) => candidate.familyKey))].map((familyKey) => {
+              const candidate = products.find((item) => item.familyKey === familyKey);
+              return {
+                key: familyKey,
+                label: candidate.displayName,
+                description: candidate.description,
+                thumbnail: candidate.thumbnail,
+              };
+            });
+        selectedFamilyKey = product.familyKey;
         const customPalette = product.themes.find((option) => option.key === 'custom');
         customColors = customPalette ? [...customPalette.colors] : ['#c2185b'];
         selectedTheme = product.themes.some((option) => option.key === data.event.theme)
           ? data.event.theme
           : product.themes[0].key;
+        buildProductOptions();
+        buildPlacementOptions();
         buildThemeOptions();
         renderCustomColorControls();
 
         document.title = isPersonalMode
           ? 'Persönliche Erinnerung gestalten – Wolkenworte'
-          : `Tassen für ${data.event.coupleName} – Wolkenworte`;
-        document.getElementById('product-name').textContent = product.name;
-        document.getElementById('product-size').textContent =
-          `${product.size.label} · ${product.size.volumeMl} ml · weiße Keramik`;
-        document.getElementById('mug-viewer-hint').textContent =
-          `↔ ↕ Ziehen zum Drehen · ${String(product.size.heightCm).replace('.', ',')} cm × Ø ${String(product.size.diameterCm).replace('.', ',')} cm`;
-        quantityInput.min = String(product.minQuantity);
-        quantityInput.max = String(product.maxQuantity);
+          : `Erinnerung für ${data.event.coupleName} – Wolkenworte`;
         updateQuantity(isPersonalMode ? 1 : product.defaultQuantity, false);
+        updateProductPresentation();
 
         loading.hidden = true;
         content.hidden = false;

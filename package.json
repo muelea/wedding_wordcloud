@@ -1,7 +1,7 @@
 {
   "name": "weddingcloud-business",
   "version": "0.1.0",
-  "description": "Multi-tenant wedding word cloud with His & Hers mug-duo checkout",
+  "description": "Multi-tenant wedding word cloud with personal photo designs and safe print-on-demand checkout",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

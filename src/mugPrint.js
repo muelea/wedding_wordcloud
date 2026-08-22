@@ -3,7 +3,7 @@
 const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 const MugIcons = require('../public/js/mug-icons.js');
-const { MUG_DUO } = require('./products');
+const { DEFAULT_PRODUCT } = require('./products');
 
 const measureCanvas = createCanvas(10, 10);
 const measureCtx = measureCanvas.getContext('2d');
@@ -12,7 +12,7 @@ const measureCtx = measureCanvas.getContext('2d');
 // centres are roughly x=587 and x=2112; x=1350 is the back opposite the
 // handle. The verified geometry lives with the product so the browser
 // preview and print file share it.
-const CLOUD_LAYOUTS = MUG_DUO.layoutGeometry;
+const CLOUD_LAYOUTS = DEFAULT_PRODUCT.layoutGeometry;
 const DESIGN_SAFE_MARGIN = 24;
 
 function textElements(placed, offsetX, offsetY) {
@@ -61,7 +61,12 @@ function getDesignBounds(item) {
   };
 }
 
-function isMugDesignWithinBounds(design, width = MUG_DUO.printFile.width, height = MUG_DUO.printFile.height) {
+function isPrintDesignWithinBounds(
+  design,
+  width = DEFAULT_PRODUCT.printFile.width,
+  height = DEFAULT_PRODUCT.printFile.height,
+  safeMargin = DESIGN_SAFE_MARGIN
+) {
   if (!Array.isArray(design) || design.length === 0) return false;
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
@@ -72,12 +77,14 @@ function isMugDesignWithinBounds(design, width = MUG_DUO.printFile.width, height
     const bounds = getDesignBounds(item);
     const halfWidth = bounds.width / 2;
     const halfHeight = bounds.height / 2;
-    return item.x - halfWidth >= DESIGN_SAFE_MARGIN &&
-      item.x + halfWidth <= width - DESIGN_SAFE_MARGIN &&
-      item.y - halfHeight >= DESIGN_SAFE_MARGIN &&
-      item.y + halfHeight <= height - DESIGN_SAFE_MARGIN;
+    return item.x - halfWidth >= safeMargin &&
+      item.x + halfWidth <= width - safeMargin &&
+      item.y - halfHeight >= safeMargin &&
+      item.y + halfHeight <= height - safeMargin;
   });
 }
+
+const isMugDesignWithinBounds = isPrintDesignWithinBounds;
 
 function designElements(design) {
   return design.map((item) => {
@@ -111,20 +118,24 @@ function designElements(design) {
 }
 
 /**
- * Builds the exact 2700x1050 Printful print file for the verified 11oz mug.
+ * Builds the exact Printful print file for one curated product.
  * The input words are an immutable configuration snapshot, never the live
  * event state, so a paid design cannot change while fulfillment is running.
  */
-function buildMugPrintSvg(words, theme = 'pastel', layout = 'single', design = null) {
+function buildProductPrintSvg(product, words, theme = 'pastel', layout = 'single', design = null) {
   if ((!Array.isArray(words) || words.length === 0) && !design) {
     throw new Error('Cannot build a mug print without words');
   }
-  const selectedTheme = MUG_DUO.themes.find((option) => option.key === theme) || MUG_DUO.themes[0];
-  const slots = CLOUD_LAYOUTS[layout] || CLOUD_LAYOUTS.single;
-  const { width, height } = MUG_DUO.printFile;
+  if (!product?.printFile || !product?.layoutGeometry || !Array.isArray(product?.themes)) {
+    throw new Error('Cannot build a mug print for an invalid product');
+  }
+  const selectedTheme = product.themes.find((option) => option.key === theme) || product.themes[0];
+  const fallbackLayout = product.layouts?.[0]?.key;
+  const slots = product.layoutGeometry[layout] || product.layoutGeometry[fallbackLayout];
+  const { width, height } = product.printFile;
 
   if (design) {
-    if (!isMugDesignWithinBounds(design, width, height)) {
+    if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
       throw new Error('Cannot build a mug print with an invalid design');
     }
     return `<?xml version="1.0" encoding="UTF-8"?>\n` +
@@ -146,4 +157,13 @@ function buildMugPrintSvg(words, theme = 'pastel', layout = 'single', design = n
     `  ${groups}\n</svg>`;
 }
 
-module.exports = { buildMugPrintSvg, isMugDesignWithinBounds, CLOUD_LAYOUTS, DESIGN_SAFE_MARGIN };
+const buildMugPrintSvg = buildProductPrintSvg;
+
+module.exports = {
+  buildProductPrintSvg,
+  buildMugPrintSvg,
+  isPrintDesignWithinBounds,
+  isMugDesignWithinBounds,
+  CLOUD_LAYOUTS,
+  DESIGN_SAFE_MARGIN,
+};

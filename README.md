@@ -4,7 +4,9 @@ A live word cloud for weddings. Any couple creates their own event, guests
 scan a QR code and submit a word from their phone (no account, no app), and
 the word cloud grows in real time on a shared display. Free to use — the
 commercial product being prepared is an optional order of 1–99 personalized
-mugs printed from the finished word cloud after the event. Guests can also
+white mugs, cork-backed coasters, matte or framed posters, tote bags, throw
+blankets, spiral notebooks and decorative pillows, printed from the finished
+word cloud after the event. Guests can also
 start a completely separate personal-memory design during the celebration,
 add their own photos, words and motifs, and purchase it independently.
 
@@ -20,16 +22,21 @@ add their own photos, words and motifs, and purchase it independently.
 4. Words appear live on the display via Socket.io — font size scales with
    how many guests submitted the same word.
 5. From the guest page, any attendee can open the personal-memory flow. It
-   starts with an empty mug, locally reduces selected photos before upload,
+   starts with an empty product design, locally reduces selected photos before upload,
    and keeps that opaque design separate from the shared wedding word cloud.
    A guest can add up to six photos plus personal words and motifs, then use
    the normal address, quote and checkout flow for their own order.
-6. After the event, the couple opens a product configurator, chooses any
-   quantity from 1–99, a color palette and one of four print layouts
-   (single, both sides, full wrap or optimized area), and approves an
-   immutable mug print file with a transparent background. A locally served Three.js preview
-   maps that exact artwork onto a rotatable mug using Printful's physical
-   dimensions. The print area itself is a small Fabric.js editor: every word
+6. After the event, the couple opens a product configurator, chooses a white
+   mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
+   spiral notebook or decorative pillow from grouped product families, any
+   quantity from 1–99, a color palette and a product-specific print layout, and
+   approves an immutable Printful-sized file with a transparent background.
+   Local illustrated thumbnails make the catalog scannable. A locally served
+   Three.js preview maps mug artwork onto a rotatable model; flat products use
+   the same design in a proportional print preview. Products with two printable
+   faces expose separate front/back editors plus a copy-to-back shortcut and
+   store one immutable print file per side. The print area itself is a small
+   Fabric.js editor: every word
    and every curated wedding motif can be moved, resized, rotated, recolored,
    duplicated or removed; words can also be edited directly. Hard bounds keep
    the entire design printable.
@@ -47,6 +54,45 @@ add their own photos, words and motifs, and purchase it independently.
    worker without making any Printful order request; the confirmation page
    clearly states that no real fulfillment was created. Live payments and real
    Printful orders remain hard-disabled until the tax phase is signed off.
+
+## Current development status
+
+- The full product currently runs locally with SQLite. There is no active
+  public production deployment.
+- Stripe Checkout and signed Stripe webhooks run in test mode. Printful is
+  already used for countries and live cost estimates when configured, but a
+  Stripe test payment can only create a local `mocked` fulfillment record.
+- Fly.io staging with a temporary `*.fly.dev` HTTPS address and one persistent
+  SQLite volume is the next discussed hosting step, but no Fly configuration
+  exists in the repository yet.
+- Supabase/Postgres is a possible later database migration before live
+  operation. The current data layer remains deliberately synchronous
+  `node:sqlite`; adding Supabase credentials alone would not switch it.
+- Customer VAT/Stripe Tax treatment, public hosting details, retention rules,
+  signed Printful status webhooks and the first controlled Printful draft are
+  intentionally still pending before live sales.
+
+## Guest ownership and personal photo designs
+
+Every guest contribution gets an unguessable receipt tied to the event and an
+anonymous browser-session id. Removing a contribution requires all three, so a
+guest can decrement only a word that this same browser session submitted. The
+API deliberately gives the same `not_found` response for an unknown receipt
+and another guest's receipt.
+
+The personal-memory configurator is a separate configuration type. It always
+starts empty, never imports words from the shared wedding cloud and requires
+its own non-empty design. Before transmission, the browser accepts source
+files up to 20 MiB, applies image orientation, scales the longest side to at
+most 1600 px and encodes the result as JPEG at quality `0.84`. The server then
+validates actual JPEG/PNG/WebP signatures and enforces at most six photos and
+at most 6 MiB decoded image data across the complete design.
+
+Photos are stored as data URLs inside the immutable configuration's
+`design_json`; there is no separate public upload directory. Consequently the
+SQLite database contains the personal photos and needs the same persistence,
+backup, access-control and future deletion treatment as order data. The
+configuration-specific print route is addressed only by its opaque random id.
 
 ## Quick start
 
@@ -84,13 +130,13 @@ Everything in `.env.example` is documented inline. Summary:
 | `SHOP_TARGET_MARGIN_PERCENT` | no (defaults 45) | provisional catalog-wide target gross margin applied to Printful's current product costs |
 | `SHOP_MIN_PROFIT_PER_ORDER_CENTS` | no (defaults 500) | minimum product contribution for the complete order, in cents (500 = 5,00 €) |
 
-**Never commit `.env`** — it's gitignored. Production secrets (Render, or
-wherever this is deployed) are set directly in the host's dashboard, not in
-the repo.
+**Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
+future hosted secrets must be set in the provider's encrypted secret store,
+not copied into the repository or a deployment manifest.
 
 ## Provisional test pricing
 
-The current checkout does not use a fixed price per mug. It calculates one
+The current checkout does not use a fixed price per product. It calculates one
 customer price from Printful's live EUR estimate and the two catalog-wide
 settings above. All calculations use integer cents.
 
@@ -117,7 +163,7 @@ therefore 19,97 €, before shipping and provisional tax/VAT.
 Because `C` is the actual product cost for the requested quantity, Printful
 quantity discounts automatically lower the customer unit price; there are no
 separate, manually maintained discount tiers. The 5,00 € floor currently
-applies once to the complete order, not once per mug. The server repeats the
+applies once to the complete order, not once per item. The server repeats the
 Printful estimate immediately before Stripe Checkout, and a changed total must
 be confirmed again.
 
@@ -130,7 +176,7 @@ VAT/Stripe Tax treatment before live payments are enabled.
 ```
 server.js                  Express + Socket.io bootstrap, route mounting
 src/
-  db.js                    SQLite schema + queries (events/words/orders/archives)
+  db.js                    SQLite schema + queries (events/contributions/configurations/quotes/orders)
   slug.js                  German-aware slugify + unique random-suffix generation
   words.js                 Word normalization (trim/case-fold/emoji-strip)
   adminAuth.js             PIN → HMAC session token issue/verify
@@ -141,20 +187,24 @@ src/
   fulfillment.js           idempotent paid-order worker and mock/draft/live safety gates
   pricing.js               integer-cent quote + catalog-wide margin/minimum rule
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
-  mugPrint.js              Printful-sized 2700x1050 mug print-file renderer
-  products.js              Curated, API-verified Printful product geometry
+  mugPrint.js              Product-sized SVG print-file renderer
+  products.js              Curated, API-verified Printful variants and geometry
   routes/
-    events.js              Event CRUD, slug availability, QR, admin verify/reset, checkout
+    events.js              Event/configuration CRUD, personal photos, pricing and checkout
     webhook.js             POST /webhook/stripe (raw body, signature-verified)
 public/
   landing.html             Marketing landing page, served at '/'
   create.html              Event creation form, served at '/start'
   guest.html               Guest word-submission + personal-memory entry page
   display.html             Live display + SVG export + mug CTA, served at '/e/:slug/display'
-  configure.html           Shared/personal mug configurator with photo editor + 3D preview
+  configure.html           Shared/personal product configurator with photo editor + 3D/flat previews
   shipping.html            Mobile-first address + live Printful price estimate
   order-confirmation.html  Polling confirmation page for signed test payments
-  js/mug-editor.js         Bounded word-by-word print-area editor
+  impressum.html           Current legal notice
+  datenschutz.html         Current local-development privacy disclosure
+  js/mug-3d-viewer.js      Shared rotatable Three.js mug preview
+  js/mug-editor.js         Bounded, dynamically scaled text/motif/photo print-area editor
+  js/mug-icons.js          Curated code-native wedding motif library
   404.html                 Unknown-event page
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
 test/                      node:test suite — see "Testing" below
@@ -181,12 +231,19 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 ## Deployment notes
 
-- Deployed via GitHub → Render (`muelea/wedding_wordcloud`, `main` branch).
-  Push to `main` to ship.
-- Set `ADMIN_TOKEN_SECRET` and (once real accounts exist) the Stripe/Printful
-  vars directly in Render's environment settings — they are not in the repo.
-- `data/*.sqlite*` needs a persistent volume on Render (or a migration to
-  managed Postgres) — otherwise the database resets on every redeploy.
+- Repository: GitHub `muelea/wedding_wordcloud`, `main`. The app is currently
+  local-only; pushing `main` does not represent an approved production deploy.
+- The next discussed staging target is Fly.io in an EU region, using one
+  Machine and a persistent volume mounted at `/data` with
+  `DB_PATH=/data/weddingcloud.sqlite`. This has not been scaffolded yet.
+- Fly Volumes are local to one Machine, so the SQLite staging setup must not be
+  scaled horizontally. A later managed Supabase/Postgres migration is a
+  separate code change because the current DB API is synchronous.
+- `PUBLIC_URL` will initially use the Fly-provided HTTPS hostname. A later
+  custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
+- Hosted credentials (`ADMIN_TOKEN_SECRET`, Stripe and Printful) belong in Fly
+  secrets or the eventual host's equivalent. Keep every live-payment and
+  Printful order-write switch disabled in staging.
 - `node-canvas` (used for the print-file export) ships prebuilt binaries for
   glibc Linux; if the host image is Alpine (musl), install will fall back to
   a slow source build requiring `cairo`/`pango`/`libjpeg`/`giflib` headers.
@@ -244,7 +301,11 @@ created draft is confirmed. Keep every switch false while developing locally.
 - **Live Stripe payments** — `sk_live_...` keys and live webhook events are
   rejected while `STRIPE_ALLOW_LIVE_PAYMENTS=false`.
 - **Real Printful fulfillment after test payments** — live countries and
-  estimates are connected for catalog product 19 / variant 1320, but a
+  estimates are connected for the curated mug variants 1320, 4830 and 16586,
+  coaster variant 15662, unframed poster variants 8948 and 8952, framed
+  poster variants 9357 and 9358, tote variant 4533, throw blanket variant
+  10986, spiral notebook variant 12141 and decorative pillow variant 4532,
+  but a
   successful test payment can only produce a local `mocked` fulfillment
   record. Draft/live writes require a live Stripe payment plus the explicit
   safety switches described above.
@@ -272,19 +333,25 @@ created draft is confirmed. Keep every switch false while developing locally.
 
 ## Next steps
 
-1. Decide the business's VAT status, customer-price tax behavior, EU/OSS
+1. Verify the separate front/back SVG URLs in one controlled Printful draft
+   and inspect the resulting notebook and pillow mockups before enabling sales.
+2. Create the Fly.io staging app, persistent SQLite volume and hosted test
+   secrets; then verify the complete Stripe test flow over public HTTPS.
+3. Decide the business's VAT status, customer-price tax behavior, EU/OSS
    registrations and bookkeeping export; then replace the provisional tax
    line with the reviewed Stripe Tax configuration.
-2. Confirm whether Printful's mug print pipeline accepts the generated SVG
+4. Confirm whether Printful's product print pipeline accepts the generated SVG
    directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
    is already available if so).
-3. Once a public HTTPS deployment exists, deliberately enable `draft` mode
+5. Once a public HTTPS deployment exists, deliberately enable `draft` mode
    for one controlled live-payment test, verify Printful can download the
    immutable file and inspect the unconfirmed draft in the dashboard.
-4. Configure signed Printful v2 webhooks for production/shipment status once
+6. Configure signed Printful v2 webhooks for production/shipment status once
    the public callback URL exists; do not register a callback before its
    signing secret can be stored in the production environment.
-5. Move `data/*.sqlite` to a persistent volume, or migrate to Postgres
-   (schema is plain SQL, written to make that swap easy).
-6. Rate-limiting — no per-IP throttle yet on word submission or event
+7. Before live operation, decide whether to keep a single persistent SQLite
+   instance or migrate the synchronous data layer to Supabase/Postgres.
+8. Define and implement retention/deletion for events, immutable designs,
+   embedded personal photos, addresses and completed orders.
+9. Rate-limiting — no per-IP throttle yet on word submission or event
    creation.

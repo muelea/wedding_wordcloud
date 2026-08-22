@@ -154,7 +154,7 @@ db.exec(`
 `);
 
 // Keep local databases created before the configurable-quantity feature
-// usable without a manual migration step. Existing duo drafts retain their
+// usable without a manual migration step. Existing two-mug drafts retain their
 // original quantity of two and the equivalent 17,45 € unit price.
 const configurationColumns = new Set(
   db.prepare('PRAGMA table_info(configurations)').all().map((column) => column.name)

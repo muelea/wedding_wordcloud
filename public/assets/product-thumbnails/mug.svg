@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" role="img" aria-label="Weiße Tasse">
+  <defs>
+    <linearGradient id="cup" x1="0" x2="1"><stop stop-color="#eee8e1"/><stop offset=".28" stop-color="#fff"/><stop offset=".78" stop-color="#fff"/><stop offset="1" stop-color="#ddd4ca"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#56313d" flood-opacity=".18"/></filter>
+  </defs>
+  <ellipse cx="57" cy="76" rx="36" ry="6" fill="#754557" opacity=".12"/>
+  <g filter="url(#shadow)">
+    <path d="M25 20h58v43c0 11-9 18-25 18S31 74 29 63z" fill="url(#cup)" stroke="#cfc4ba"/>
+    <path d="M83 31h8c12 0 16 8 14 18-2 9-9 14-21 13" fill="none" stroke="#d6cec5" stroke-width="8"/>
+    <path d="M83 34h7c7 0 10 5 9 12-1 6-5 10-15 10" fill="none" stroke="#fff" stroke-width="4"/>
+    <ellipse cx="54" cy="20" rx="29" ry="7" fill="#e8e1da" stroke="#cfc4ba"/>
+    <ellipse cx="54" cy="20" rx="23" ry="4" fill="#9c1c4c" opacity=".16"/>
+    <path d="M38 45c8-8 24-8 32 0-9 8-23 8-32 0Z" fill="#9c1c4c" opacity=".9"/>
+    <circle cx="54" cy="45" r="5" fill="#fff2e7"/>
+  </g>
+</svg>

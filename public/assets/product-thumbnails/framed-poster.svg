@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" role="img" aria-label="Gerahmtes Poster">
+  <defs><filter id="s" x="-30%" y="-20%" width="170%" height="170%"><feDropShadow dx="1" dy="6" stdDeviation="4" flood-color="#35272a" flood-opacity=".24"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M29 4h62v80H29z" fill="#262222"/>
+    <path d="M35 10h50v68H35z" fill="#fffdf9"/>
+    <path d="M42 21c9-8 27-8 36 0-11 7-26 7-36 0Z" fill="#9c1c4c"/>
+    <circle cx="48" cy="39" r="7" fill="#e5a747"/>
+    <circle cx="69" cy="40" r="10" fill="#6f9f92"/>
+    <path d="M43 57h34M46 65h28" stroke="#6f384d" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

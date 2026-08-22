@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg" />
   <title>Bestellung bestätigt – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
@@ -120,7 +121,9 @@
           icon.classList.remove('pending');
           title.textContent = 'Testzahlung erfolgreich';
           copy.textContent = 'Stripe hat die Zahlung bestätigt und wir haben die Bestellung sicher gespeichert.';
-          document.getElementById('quantity').textContent = order.quantity === 1 ? '1 Tasse' : `${order.quantity} Tassen`;
+          const unit = order.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
+          document.getElementById('quantity').textContent =
+            `${order.quantity} ${order.quantity === 1 ? unit.singular : unit.plural}`;
           document.getElementById('total').textContent = money(order.totalCents, order.currency);
           summary.hidden = false;
           note.hidden = false;

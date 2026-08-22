@@ -17,7 +17,7 @@
  * *operations* (support, marketing automation, no headcount watching a
  * server) — it doesn't mean avoiding a one-time build-step dependency for
  * a *correctness*-critical path. `export.svg` is what actually gets
- * printed on the one physical product this business sells; an approximate
+ * printed on the physical products this business sells; an approximate
  * glyph width there means word positions in the mug print can visibly
  * differ from what the customer previewed and approved in their browser.
  * That risk to the paying product outweighs a native dependency that (see

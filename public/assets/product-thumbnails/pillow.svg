@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" role="img" aria-label="Dekokissen">
+  <defs><radialGradient id="pillow"><stop stop-color="#fff"/><stop offset=".72" stop-color="#f8f3ed"/><stop offset="1" stop-color="#ded3c8"/></radialGradient><filter id="s" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#56313d" flood-opacity=".22"/></filter></defs>
+  <g filter="url(#s)">
+    <path d="M16 13C31 18 87 5 104 14c-7 16 8 46 0 63-19-7-70 7-88-1 7-17-7-46 0-63Z" fill="url(#pillow)" stroke="#d4c9bf"/>
+    <path d="M36 34c11-11 34-11 45 0-13 10-32 10-45 0Z" fill="#9c1c4c"/>
+    <circle cx="46" cy="55" r="8" fill="#e5a747"/>
+    <circle cx="72" cy="56" r="11" fill="#6f9f92"/>
+    <path d="M20 17c10 8 72 1 80 1M20 73c16-5 68 2 80 0" fill="none" stroke="#fff" stroke-opacity=".75"/>
+  </g>
+</svg>

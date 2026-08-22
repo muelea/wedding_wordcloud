@@ -29,7 +29,7 @@ function submitWord(socket, word) {
   });
 }
 
-test('configurator exposes the verified Printful 11oz mug geometry for an event with words', async (t) => {
+test('configurator exposes every curated product with verified Printful geometry', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
   const event = await createEvent(baseUrl, { coupleName: 'Mara & Theo' });
@@ -52,6 +52,99 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.equal(data.product.maxQuantity, 99);
   assert.equal(data.product.unitPriceCents, undefined, 'the configurator must not expose a stale fixed retail price');
   assert.deepEqual(
+    data.products.map((product) => ({ key: product.key, label: product.size.label, printFile: product.printFile })),
+    [
+      {
+        key: 'white-glossy-mug-duo-11oz',
+        label: '11 oz',
+        printFile: { width: 2700, height: 1050, dpi: 300, placement: 'default' },
+      },
+      {
+        key: 'white-glossy-mug-15oz',
+        label: '15 oz',
+        printFile: { width: 2700, height: 1140, dpi: 300, placement: 'default' },
+      },
+      {
+        key: 'white-glossy-mug-20oz',
+        label: '20 oz',
+        printFile: { width: 3071, height: 1205, dpi: 300, placement: 'default' },
+      },
+      {
+        key: 'cork-back-coaster',
+        label: '95 × 95 mm',
+        printFile: {
+          width: 1181, height: 1181, dpi: 300, fillMode: 'cover', placement: 'default',
+        },
+      },
+      {
+        key: 'matte-poster-30x40cm',
+        label: '30 × 40 cm',
+        printFile: {
+          width: 3544, height: 4724, dpi: 300, fillMode: 'cover', canRotate: true, placement: 'default',
+        },
+      },
+      {
+        key: 'matte-poster-50x70cm',
+        label: '50 × 70 cm',
+        printFile: {
+          width: 5906, height: 8268, dpi: 300, fillMode: 'cover', canRotate: true, placement: 'default',
+        },
+      },
+      {
+        key: 'framed-matte-poster-black-30x40cm',
+        label: '30 × 40 cm',
+        printFile: {
+          width: 3600, height: 4800, dpi: 300, fillMode: 'cover', canRotate: true, placement: 'default',
+        },
+      },
+      {
+        key: 'framed-matte-poster-black-50x70cm',
+        label: '50 × 70 cm',
+        printFile: {
+          width: 5906, height: 8268, dpi: 300, fillMode: 'cover', canRotate: true, placement: 'default',
+        },
+      },
+      {
+        key: 'all-over-tote-black-handles',
+        label: '39 × 39 cm',
+        printFile: {
+          width: 2550, height: 2475, dpi: 150, fillMode: 'cover', placement: 'default',
+        },
+      },
+      {
+        key: 'throw-blanket-50x60in',
+        label: '127 × 153 cm',
+        printFile: {
+          width: 9450, height: 7950, dpi: 150, fillMode: 'cover', canRotate: true, placement: 'default',
+        },
+      },
+      {
+        key: 'all-over-basic-pillow-18in',
+        label: '46 × 46 cm',
+        printFile: {
+          width: 2850, height: 2850, dpi: 150, fillMode: 'cover', placement: 'front',
+        },
+      },
+      {
+        key: 'spiral-notebook-dotted',
+        label: '14,5 × 21 cm',
+        printFile: {
+          width: 1725, height: 2625, dpi: 300, fillMode: 'cover', placement: 'front',
+        },
+      },
+    ]
+  );
+  assert.deepEqual(
+    data.productFamilies.map((family) => family.key),
+    ['mugs', 'posters', 'home', 'bags', 'notebooks']
+  );
+  assert.ok(data.productFamilies.every((family) => family.thumbnail.startsWith('/assets/product-thumbnails/')));
+  const pillow = data.products.find((candidate) => candidate.key === 'all-over-basic-pillow-18in');
+  assert.deepEqual(pillow.printSurfaces, [
+    { key: 'front', label: 'Vorderseite' },
+    { key: 'back', label: 'Rückseite' },
+  ]);
+  assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
     ['pastel', 'sage-gold', 'ocean', 'custom']
   );
@@ -62,12 +155,48 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
   assert.deepEqual(data.product.layoutGeometry['fit-area'], [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }]);
   assert.deepEqual(data.words, [['liebe', 1]]);
 
+  const db = require('../src/db');
+  for (const expected of [
+    { key: 'white-glossy-mug-15oz', variantId: 4830, width: 2700, height: 1140, placement: 'single' },
+    { key: 'white-glossy-mug-20oz', variantId: 16586, width: 3071, height: 1205, placement: 'single' },
+    { key: 'cork-back-coaster', variantId: 15662, width: 1181, height: 1181, placement: 'fit-area' },
+    { key: 'matte-poster-30x40cm', variantId: 8948, width: 3544, height: 4724, placement: 'fit-area' },
+    { key: 'matte-poster-50x70cm', variantId: 8952, width: 5906, height: 8268, placement: 'fit-area' },
+    { key: 'framed-matte-poster-black-30x40cm', variantId: 9357, width: 3600, height: 4800, placement: 'fit-area' },
+    { key: 'framed-matte-poster-black-50x70cm', variantId: 9358, width: 5906, height: 8268, placement: 'fit-area' },
+    { key: 'all-over-tote-black-handles', variantId: 4533, width: 2550, height: 2475, placement: 'fit-area' },
+    { key: 'throw-blanket-50x60in', variantId: 10986, width: 9450, height: 7950, placement: 'fit-area' },
+    { key: 'all-over-basic-pillow-18in', variantId: 4532, width: 2850, height: 2850, placement: 'fit-area' },
+    { key: 'spiral-notebook-dotted', variantId: 12141, width: 1725, height: 2625, placement: 'fit-area' },
+  ]) {
+    const saveResponse = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productKey: expected.key,
+        quantity: 1,
+        theme: 'pastel',
+        placement: expected.placement,
+        words: [['liebe', 1]],
+      }),
+    });
+    assert.equal(saveResponse.status, 201);
+    const saved = await saveResponse.json();
+    const stored = db.getConfiguration(saved.id);
+    assert.equal(stored.product_key, expected.key);
+    assert.equal(Number(stored.printful_variant_id), expected.variantId);
+    assert.equal(Number(stored.print_width), expected.width);
+    assert.equal(Number(stored.print_height), expected.height);
+    const svg = await fetch(baseUrl + saved.printFileUrl).then((response) => response.text());
+    assert.match(svg, new RegExp(`width="${expected.width}" height="${expected.height}"`));
+  }
+
   const threeBrowserBuild = await fetch(`${baseUrl}/vendor/three.min.js?v=0.160.1`);
   assert.equal(threeBrowserBuild.status, 200);
   assert.match(threeBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await threeBrowserBuild.text()).length > 600000, 'the local Three.js build should be served in full');
 
-  const sharedMugViewer = await fetch(`${baseUrl}/js/mug-3d-viewer.js?v=20260819-1`);
+  const sharedMugViewer = await fetch(`${baseUrl}/js/mug-3d-viewer.js?v=20260821-1`);
   assert.equal(sharedMugViewer.status, 200);
   assert.match(sharedMugViewer.headers.get('cache-control') || '', /immutable/);
   assert.match(await sharedMugViewer.text(), /Mug3DViewer/);
@@ -76,13 +205,23 @@ test('configurator exposes the verified Printful 11oz mug geometry for an event 
     fetch(`${baseUrl}/`).then((response) => response.text()),
     fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
   ]);
-  assert.match(landingPage, /mug-3d-viewer\.js\?v=20260819-1/);
-  assert.match(configurePage, /mug-3d-viewer\.js\?v=20260819-1/);
+  assert.match(landingPage, /mug-3d-viewer\.js\?v=20260821-1/);
+  assert.match(configurePage, /mug-3d-viewer\.js\?v=20260821-1/);
+  assert.match(configurePage, /id="product-options"/);
+  assert.match(configurePage, /id="variant-options"/);
+  assert.match(configurePage, /id="flat-product-preview"/);
+  assert.match(configurePage, /id="placement-options"/);
+  assert.match(configurePage, /id="surface-tabs"/);
 
   const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
   assert.equal(fabricBrowserBuild.status, 200);
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
+
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260821-5`);
+  assert.equal(mugEditor.status, 200);
+  assert.match(await mugEditor.text(), /resizePrintArea/);
+  assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
 
   const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260817-1`);
   assert.equal(motifLibrary.status, 200);
@@ -163,6 +302,110 @@ test('a guest can create an isolated personal photo design without event words',
   assert.match(printSvg, /width="800\.0" height="600\.0"/);
   assert.doesNotMatch(printSvg, /must-not-leak/);
   assert.doesNotMatch(printSvg, /<text /);
+
+  const posterSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      productKey: 'matte-poster-30x40cm',
+      quantity: 1,
+      theme: 'sage-gold',
+      placement: 'fit-area',
+      design: [{
+        id: 'wort-poster',
+        type: 'text',
+        text: 'Paula Mika',
+        x: 1772,
+        y: 2362,
+        fontSize: 220,
+        angle: 0,
+        color: '#063e36',
+      }],
+    }),
+  });
+  assert.equal(posterSave.status, 201, 'personal mode accepts the shared flat-product catalog');
+  const posterConfiguration = await posterSave.json();
+  const posterSvg = await fetch(baseUrl + posterConfiguration.printFileUrl).then((response) => response.text());
+  assert.match(posterSvg, /width="3544" height="4724"/);
+  assert.match(posterSvg, />Paula Mika<\/text>/);
+
+  const pillowSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      productKey: 'all-over-basic-pillow-18in',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'fit-area',
+      designs: {
+        front: [{
+          id: 'wort-vorne', type: 'text', text: 'Vorne', x: 1425, y: 1425,
+          fontSize: 240, angle: 0, color: '#a40e4c',
+        }],
+        back: [{
+          id: 'wort-hinten', type: 'text', text: 'Hinten', x: 1425, y: 1425,
+          fontSize: 240, angle: 0, color: '#168f83',
+        }],
+      },
+    }),
+  });
+  assert.equal(pillowSave.status, 201);
+  const pillowConfiguration = await pillowSave.json();
+  assert.equal(pillowConfiguration.printFileUrl, pillowConfiguration.printFileUrls.front);
+  assert.match(pillowConfiguration.printFileUrls.front, /print\.svg\?surface=front$/);
+  assert.match(pillowConfiguration.printFileUrls.back, /print\.svg\?surface=back$/);
+  const [pillowFrontSvg, pillowBackSvg] = await Promise.all([
+    fetch(baseUrl + pillowConfiguration.printFileUrls.front).then((response) => response.text()),
+    fetch(baseUrl + pillowConfiguration.printFileUrls.back).then((response) => response.text()),
+  ]);
+  assert.match(pillowFrontSvg, />Vorne<\/text>/);
+  assert.doesNotMatch(pillowFrontSvg, />Hinten<\/text>/);
+  assert.match(pillowBackSvg, />Hinten<\/text>/);
+  assert.doesNotMatch(pillowBackSvg, />Vorne<\/text>/);
+
+  const missingPillowBack = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      productKey: 'all-over-basic-pillow-18in',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'fit-area',
+      designs: { front: [{
+        id: 'nur-vorne', type: 'text', text: 'Nur vorne', x: 1425, y: 1425,
+        fontSize: 180, angle: 0, color: '#a40e4c',
+      }] },
+    }),
+  });
+  assert.equal(missingPillowBack.status, 400);
+  assert.equal((await missingPillowBack.json()).error, 'invalid_design');
+
+  const tooManySurfacePhotos = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationType: 'personal_memory',
+      productKey: 'all-over-basic-pillow-18in',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'fit-area',
+      designs: {
+        front: Array.from({ length: 4 }, (_, index) => ({
+          id: `foto-vorne-${index}`, type: 'image', src: onePixelPng,
+          x: 1425, y: 1425, width: 100, height: 100, angle: 0,
+        })),
+        back: Array.from({ length: 3 }, (_, index) => ({
+          id: `foto-hinten-${index}`, type: 'image', src: onePixelPng,
+          x: 1425, y: 1425, width: 100, height: 100, angle: 0,
+        })),
+      },
+    }),
+  });
+  assert.equal(tooManySurfacePhotos.status, 400);
+  assert.equal((await tooManySurfacePhotos.json()).error, 'invalid_design');
 
   const unsafeImage = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',

@@ -35,7 +35,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
 
   const shippingPage = await fetch(`${baseUrl}/e/${event.slug}/shipping?configuration=${configuration.id}`);
   assert.equal(shippingPage.status, 200);
-  assert.match(await shippingPage.text(), /Wohin dürfen eure Tassen reisen\?/);
+  assert.match(await shippingPage.text(), /Wohin darf eure Erinnerung reisen\?/);
 
   const printful = require('../src/printful');
   const originalCountries = printful.getShippingCountries;

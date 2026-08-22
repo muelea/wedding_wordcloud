@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90" role="img" aria-label="Kuscheldecke">
+  <defs><linearGradient id="cloth" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#e8dfd5"/></linearGradient><filter id="s" x="-30%" y="-30%" width="170%" height="180%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#56313d" flood-opacity=".2"/></filter></defs>
+  <g filter="url(#s)">
+    <rect x="12" y="14" width="96" height="62" rx="10" fill="url(#cloth)" stroke="#d6ccc2"/>
+    <path d="M24 31c13-12 35-12 48 0-14 10-34 10-48 0Z" fill="#9c1c4c"/>
+    <path d="M25 51h53" stroke="#6f9f92" stroke-width="8" stroke-linecap="round"/>
+    <path d="M84 76c13-1 22-8 24-20v20Z" fill="#d9cdc1"/>
+    <path d="M19 76v6M27 76v7M35 76v6M43 76v7M51 76v6M59 76v7M67 76v6M75 76v7" stroke="#c3b4a5" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

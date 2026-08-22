@@ -152,6 +152,10 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     currency: 'EUR',
     totalCents: quote.totalCents,
     quantity: 2,
+    product: {
+      name: 'Wortwolken-Tasse',
+      unit: { singular: 'Tasse', plural: 'Tassen' },
+    },
     configurationType: 'event_wordcloud',
     paidAt: paidOrder.paid_at,
   });
