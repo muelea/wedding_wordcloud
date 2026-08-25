@@ -212,7 +212,7 @@ function makeMugProduct(options) {
     previewType: 'mug',
     previewShape: 'mug',
     productId: 19,
-    defaultQuantity: 2,
+    defaultQuantity: 1,
     unit: { singular: 'Tasse', plural: 'Tassen' },
     designSafeMargin: 24,
     layouts: MUG_LAYOUTS,
@@ -332,7 +332,7 @@ const COASTER = makeProduct({
   variantId: 15662,
   printfileId: 358,
   templateId: 133922,
-  defaultQuantity: 4,
+  defaultQuantity: 1,
   unit: { singular: 'Untersetzer', plural: 'Untersetzer' },
   designSafeMargin: 60,
   size: {

@@ -41,7 +41,7 @@
     .brand-icon { width: 32px; height: 30px; object-fit: contain; }
     .back-link { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
     .back-link:hover { color: var(--berry); }
-    main { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 72px; }
+    main { width: min(820px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 72px; }
     .intro { max-width: 680px; margin-bottom: 28px; }
     .eyebrow { margin: 0 0 10px; color: var(--berry); font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
     h1 { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px, 7vw, 54px); font-weight: 500; line-height: 1.04; }
@@ -54,7 +54,7 @@
     .step.active { color: var(--ink); font-weight: 600; }
     .step.active .step-dot { background: var(--berry); color: #fff; }
     .step-line { width: clamp(14px, 4vw, 48px); height: 1px; flex: 0 1 auto; background: var(--line); }
-    .checkout-grid { display: grid; gap: 20px; }
+    .checkout-grid { display: grid; gap: 18px; }
     .card { background: rgba(255, 254, 253, .94); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
     .address-card { padding: clamp(22px, 5vw, 38px); }
     .card-title { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 25px; font-weight: 600; }
@@ -138,8 +138,10 @@
       font-weight: 600;
     }
     .add-shipment-button:hover:not(:disabled) { background: rgba(156, 28, 76, .07); }
-    .field-row { display: grid; grid-template-columns: minmax(105px, .72fr) minmax(0, 1.28fr); gap: 13px; }
-    label { display: grid; gap: 7px; color: var(--ink); font-size: 13px; font-weight: 500; }
+    .address-fields { display: grid; gap: 13px; }
+    .field-row { display: grid; grid-template-columns: minmax(105px, .72fr) minmax(0, 1.28fr); gap: 13px; align-items: start; }
+    label { display: grid; gap: 5px; color: var(--ink); font-size: 13px; font-weight: 500; line-height: 1.2; }
+    .field-label { display: inline-flex; align-items: baseline; gap: 4px; }
     .optional { color: var(--muted); font-weight: 400; }
     input, select {
       width: 100%; min-width: 0; height: 50px; padding: 0 14px;
@@ -164,7 +166,7 @@
     .privacy-note { margin: -1px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
     .privacy-note a { color: var(--berry); text-underline-offset: 2px; }
     .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
-    .summary-card { padding: 22px; align-self: start; }
+    .summary-card { padding: clamp(20px, 4vw, 28px); }
     .design-summary { display: flex; gap: 14px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
     .design-preview { width: 92px; height: 72px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
     .design-preview img { width: 88%; height: 88%; object-fit: contain; }
@@ -185,8 +187,6 @@
     [hidden] { display: none !important; }
     @media (min-width: 840px) {
       main { padding-top: 50px; }
-      .checkout-grid { grid-template-columns: minmax(0, 1fr) 370px; gap: 28px; align-items: start; }
-      .summary-card { position: sticky; top: 26px; }
     }
     @media (max-width: 520px) {
       .topbar { width: min(100% - 32px, 560px); min-height: 72px; }
@@ -246,7 +246,7 @@
           </form>
         </section>
 
-        <aside class="card summary-card" id="summary-card" aria-labelledby="summary-title">
+        <section class="card summary-card" id="summary-card" aria-labelledby="summary-title">
           <div class="design-summary">
             <div class="design-preview"><img id="design-image" alt="Euer gespeichertes Design" /></div>
             <div class="design-copy">
@@ -267,7 +267,7 @@
             <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Testzahlung <span aria-hidden="true">→</span></button>
             <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
           </div>
-        </aside>
+        </section>
       </div>
     </div>
     <div class="fatal" id="fatal-error" hidden></div>
@@ -411,13 +411,16 @@
 
     function makeInput(index, field, labelText, options = {}) {
       const label = document.createElement('label');
-      label.textContent = labelText;
+      const labelCopy = document.createElement('span');
+      labelCopy.className = 'field-label';
+      labelCopy.textContent = labelText;
       if (options.optional) {
         const optional = document.createElement('span');
         optional.className = 'optional';
-        optional.textContent = ' (optional)';
-        label.append(optional);
+        optional.textContent = '(optional)';
+        labelCopy.append(optional);
       }
+      label.append(labelCopy);
       const input = document.createElement('input');
       input.type = options.type || 'text';
       input.maxLength = options.maxLength || 120;
@@ -493,6 +496,7 @@
 
       const recipient = shipment.recipient || {};
       const fields = document.createElement('div');
+      fields.className = 'address-fields';
       fields.append(
         makeInput(index, 'name', 'Vor- und Nachname', {
           required: true,
@@ -649,9 +653,7 @@
       checkoutError.textContent = '';
       checkoutButton.disabled = false;
       checkoutButton.textContent = 'Weiter zur Testzahlung →';
-      if (window.matchMedia('(max-width: 839px)').matches) {
-        document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function markInvalidFields(fields) {

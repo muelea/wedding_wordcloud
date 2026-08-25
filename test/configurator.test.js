@@ -47,7 +47,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.equal(data.product.key, 'white-glossy-mug-duo-11oz');
   assert.deepEqual(data.product.printFile, { width: 2700, height: 1050, dpi: 300, placement: 'default' });
   assert.equal(data.product.size.volumeMl, 325);
-  assert.equal(data.product.defaultQuantity, 2);
+  assert.equal(data.product.defaultQuantity, 1);
   assert.equal(data.product.minQuantity, 1);
   assert.equal(data.product.maxQuantity, 99);
   assert.equal(data.product.unitPriceCents, undefined, 'the configurator must not expose a stale fixed retail price');
@@ -488,6 +488,14 @@ test('two-sided placement prints each approved word exactly twice and rejects in
   });
   assert.equal(invalidQuantity.status, 400);
   assert.equal((await invalidQuantity.json()).error, 'invalid_quantity');
+
+  const defaultQuantity = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ theme: 'pastel', placement: 'single', words: [['liebe', 1]] }),
+  });
+  assert.equal(defaultQuantity.status, 201);
+  assert.equal((await defaultQuantity.json()).quantity, 1);
 
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',

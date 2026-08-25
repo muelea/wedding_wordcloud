@@ -547,9 +547,7 @@ function makeRouter({ io, port }) {
     if (!CONFIGURATION_TYPES.has(configurationType)) {
       return res.status(400).json({ error: 'invalid_configuration_type' });
     }
-    const defaultQuantity = configurationType === 'personal_memory'
-      ? product.minQuantity
-      : product.defaultQuantity;
+    const defaultQuantity = product.minQuantity;
     const quantity = Number(req.body?.quantity ?? defaultQuantity);
     if (!Number.isSafeInteger(quantity) || quantity < product.minQuantity || quantity > product.maxQuantity) {
       return res.status(400).json({ error: 'invalid_quantity' });
