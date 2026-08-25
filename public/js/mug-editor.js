@@ -768,6 +768,24 @@
       this.setFeedback('Foto hinzugefügt');
     }
 
+    async preloadImage(src) {
+      if (typeof src !== 'string' || !src.startsWith('data:image/')) {
+        throw new Error('invalid_photo');
+      }
+      if (this.photoElements.has(src)) {
+        this.rememberPhotoSource(src);
+        return;
+      }
+      const element = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('photo_decode_failed'));
+        image.src = src;
+      });
+      this.photoElements.set(src, element);
+      this.rememberPhotoSource(src);
+    }
+
     getImageElement(src) {
       return this.photoElements.get(src) || null;
     }

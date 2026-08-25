@@ -4,12 +4,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent } = require('./helpers');
 
-async function saveConfiguration(baseUrl, slug, quantity = 2) {
+async function saveConfiguration(baseUrl, slug, quantityOrOptions = 2) {
+  const options = typeof quantityOrOptions === 'object'
+    ? quantityOrOptions
+    : { quantity: quantityOrOptions };
   const response = await fetch(`${baseUrl}/api/events/${slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      productKey: 'white-glossy-mug-duo-11oz', quantity, theme: 'pastel', placement: 'single',
+      productKey: options.productKey || 'white-glossy-mug-duo-11oz',
+      quantity: options.quantity,
+      theme: options.theme || 'pastel',
+      placement: options.placement || 'single',
       words: [['liebe', 3], ['glück', 2]],
     }),
   });
@@ -190,6 +196,98 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   assert.equal(confirmed.status, 200);
   assert.equal((await confirmed.json()).url, 'https://checkout.stripe.test/cs_test_updated_1');
   assert.equal(checkoutCalls, 1);
+});
+
+test('cart checkout revalidates mixed products and creates one Stripe Session', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { coupleName: 'Warenkorb Wanda & Stripe Sven' });
+  const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
+  const coaster = await saveConfiguration(baseUrl, event.slug, {
+    productKey: 'cork-back-coaster',
+    placement: 'fit-area',
+  });
+
+  const printful = require('../src/printful');
+  const stripe = require('../src/stripe');
+  const originalCountries = printful.getShippingCountries;
+  const originalEstimate = printful.estimateOrderCosts;
+  const originalCheckout = stripe.createCheckoutSession;
+  const estimates = [];
+  let capturedCheckout = null;
+  printful.getShippingCountries = async () => [
+    { code: 'DE', name: 'Germany', region: 'europe', states: [] },
+  ];
+  printful.estimateOrderCosts = async (options) => {
+    estimates.push(options);
+    return { currency: 'EUR', subtotal: 12, shipping: 5, tax: 0, vat: 3.23, total: 20.23 };
+  };
+  stripe.createCheckoutSession = async (options) => {
+    capturedCheckout = options;
+    return { id: 'cs_test_cart_1', url: 'https://checkout.stripe.test/cs_test_cart_1' };
+  };
+  t.after(() => {
+    printful.getShippingCountries = originalCountries;
+    printful.estimateOrderCosts = originalEstimate;
+    stripe.createCheckoutSession = originalCheckout;
+  });
+
+  const shipment = {
+    items: [
+      { configurationId: mug.id, quantity: 1 },
+      { configurationId: coaster.id, quantity: 1 },
+    ],
+    recipient: {
+      name: 'Wanda Warenkorb',
+      address1: 'Blumenstraße 12',
+      city: 'Berlin',
+      zip: '10115',
+      country_code: 'DE',
+    },
+  };
+  const estimate = await fetch(`${baseUrl}/api/events/${event.slug}/cart/estimate-costs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configurationIds: [mug.id, coaster.id], shipments: [shipment] }),
+  });
+  assert.equal(estimate.status, 200);
+  const quote = (await estimate.json()).quote;
+
+  const checkout = await fetch(`${baseUrl}/api/events/${event.slug}/cart/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configurationIds: [mug.id, coaster.id], quoteId: quote.id }),
+  });
+  assert.equal(checkout.status, 200);
+  assert.deepEqual(await checkout.json(), { url: 'https://checkout.stripe.test/cs_test_cart_1' });
+  assert.equal(estimates.length, 2, 'one estimate for display and one revalidation before Stripe');
+  assert.deepEqual(estimates.map((entry) => entry.items.map((item) => item.variantId)), [
+    [1320, 15662],
+    [1320, 15662],
+  ]);
+  assert.equal(capturedCheckout.products.length, 2);
+  assert.deepEqual(capturedCheckout.configurationIds, [mug.id, coaster.id]);
+  assert.equal(capturedCheckout.quantity, 2);
+  assert.equal(capturedCheckout.shipmentCount, 1);
+
+  const db = require('../src/db');
+  const order = db.getOrderBySessionId('cs_test_cart_1');
+  assert.deepEqual(JSON.parse(order.configuration_ids_json), [mug.id, coaster.id]);
+  const storedShipments = db.getOrderShipments(order.id);
+  assert.equal(storedShipments.length, 1);
+  assert.deepEqual(JSON.parse(storedShipments[0].items_json), [
+    { configurationId: mug.id, quantity: 1 },
+    { configurationId: coaster.id, quantity: 1 },
+  ]);
+
+  const restored = await fetch(
+    `${baseUrl}/api/events/${event.slug}/cart/quotes/${quote.id}?ids=${encodeURIComponent([mug.id, coaster.id].join(','))}`
+  );
+  assert.equal(restored.status, 200);
+  assert.deepEqual((await restored.json()).shipments[0].items, [
+    { configurationId: mug.id, quantity: 1 },
+    { configurationId: coaster.id, quantity: 1 },
+  ]);
 });
 
 test('expired quotes cannot start a Stripe Checkout Session', async (t) => {

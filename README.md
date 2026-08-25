@@ -29,8 +29,12 @@ add their own photos, words and motifs, and purchase it independently.
 6. After the event, the couple opens a product configurator, chooses a white
    mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
    spiral notebook or decorative pillow from grouped product families, any
-   quantity from 1–99, a color palette and a product-specific print layout, and
-   approves an immutable Printful-sized file with a transparent background.
+   color palette and a product-specific print layout, and approves an
+   immutable Printful-sized file with a transparent background. Each approved
+   design is added to the local order basket, so the customer can design a mug,
+   a coaster, another mug size, etc. before moving to delivery. Basket designs
+   can be opened again for inspection or edits; saving an opened design creates
+   a new immutable configuration and replaces the previous basket entry.
    Local illustrated thumbnails make the catalog scannable. A locally served
    Three.js preview maps mug artwork onto a rotatable model; flat products use
    the same design in a proportional print preview. Products with two printable
@@ -40,17 +44,18 @@ add their own photos, words and motifs, and purchase it independently.
    and every curated wedding motif can be moved, resized, rotated, recolored,
    duplicated or removed; words can also be edited directly. Hard bounds keep
    the entire design printable.
-7. The approved configuration continues to a dedicated, mobile-first
-   shipping-address page. Countries and state/province choices come directly
-   from Printful; the server uses the immutable variant and shipment
-   quantities to fetch live fulfillment, standard-shipping and supplier
-   tax/VAT estimates in EUR. Customer tax/VAT is recalculated on the
+7. The saved designs continue to a dedicated, mobile-first shipping-address
+   page. There the customer chooses the quantity of each design per delivery
+   address. Countries and state/province choices come directly from Printful;
+   the server sends one Printful estimate per recipient address containing all
+   positive-quantity items for that address, so Printful can apply its mixed
+   product shipping rules. Customer tax/VAT is recalculated on the
    customer-facing product subtotal plus shipping, using the destination rate
    implied by Printful's estimate. The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
-8. "Weiter zur Testzahlung" re-estimates the same trusted configuration and
-   address immediately before creating a dynamic Stripe-hosted Checkout
+8. "Weiter zur Testzahlung" re-estimates the same trusted design basket and
+   address split immediately before creating a dynamic Stripe-hosted Checkout
    Session. A changed price must be confirmed again. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted
    fulfillment snapshot. Test payments are then completed by the local `mock`
@@ -141,11 +146,13 @@ not copied into the repository or a deployment manifest.
 ## Provisional test pricing
 
 The current checkout does not use a fixed price per product. It calculates one
-customer price from Printful's live EUR estimate and the catalog-wide markup
-setting above. All calculations use integer cents.
+customer price from Printful's live EUR estimate(s) and the catalog-wide markup
+setting above. For multiple delivery addresses, each address is estimated as
+one Printful shipment containing all products assigned to that address. All
+calculations use integer cents.
 
-Let `C` be Printful's product cost for the complete quantity after any
-Printful quantity discount, `u` the markup (default `0.50`) and `R` the
+Let `C` be Printful's product cost for the complete order after any Printful
+quantity or mixed-order discount, `u` the markup (default `0.50`) and `R` the
 internal payment-cost reserve. The customer product subtotal is:
 
 ```text
@@ -226,11 +233,11 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 51 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 53 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
-creation/slug/admin-PIN flow, expiring quotes, dynamic Stripe Checkout,
-price-change confirmation, webhook idempotency, immutable fulfillment
+creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
+dynamic Stripe Checkout, price-change confirmation, webhook idempotency, immutable fulfillment
 payloads, live safety gates and Stripe/Printful stub behavior. Each test
 file uses its own scratch SQLite file and ephemeral port, so it's safe to run
 repeatedly / in parallel.

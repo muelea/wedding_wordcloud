@@ -934,6 +934,101 @@
     .success-box.show { display: block; }
     .success-box strong { display: block; margin-bottom: 3px; }
     .success-box a { text-decoration: underline; text-underline-offset: 3px; }
+    .order-box {
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid rgba(123, 70, 82, .14);
+      border-radius: 16px;
+      background: rgba(251, 246, 241, .76);
+    }
+    .order-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .order-head strong { font-size: 13px; }
+    .order-head span { color: var(--muted); font-size: 11px; }
+    .order-list { display: grid; gap: 8px; }
+    .order-item {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      padding: 8px;
+      border: 1px solid rgba(123, 70, 82, .12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .82);
+    }
+    .order-item.is-editing { border-color: rgba(156, 28, 76, .36); background: rgba(156, 28, 76, .045); }
+    .order-item img {
+      width: 46px;
+      height: 38px;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+    }
+    .order-copy { min-width: 0; }
+    .order-copy strong {
+      display: block;
+      overflow: hidden;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .order-copy span {
+      display: block;
+      margin-top: 2px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .order-item-actions { display: flex; align-items: center; gap: 6px; }
+    .order-edit,
+    .order-remove {
+      min-height: 32px;
+      padding: 0;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .order-edit {
+      padding: 0 9px;
+      border: 1px solid rgba(156, 28, 76, .18);
+      color: var(--berry);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .order-edit:hover { background: rgba(156, 28, 76, .06); border-color: rgba(156, 28, 76, .36); }
+    .order-remove { width: 32px; }
+    .order-remove:hover { background: rgba(156, 28, 76, .08); color: var(--berry); }
+    .order-actions {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .secondary-button {
+      width: 100%;
+      min-height: 44px;
+      padding: 11px 14px;
+      border: 1px solid rgba(156, 28, 76, .24);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--berry);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .secondary-button:hover { border-color: var(--berry); background: rgba(156, 28, 76, .04); }
     .error-text { min-height: 18px; margin: 11px 0 0; color: #a12c43; text-align: center; font-size: 12px; }
 
     .loading {
@@ -1137,9 +1232,20 @@
             <div class="option-grid placement-grid" id="placement-options"></div>
           </section>
 
-          <button class="save-button" id="save-button" type="button">Weiter zur Lieferadresse <span aria-hidden="true">→</span></button>
-          <p class="checkout-note">Dort wählt ihr Menge und Lieferadressen und seht den aktuellen Gesamtpreis.</p>
+          <button class="save-button" id="save-button" type="button">Design zur Bestellung hinzufügen <span aria-hidden="true">→</span></button>
+          <p class="checkout-note">Danach könnt ihr weitere Produkte gestalten oder zur Lieferadresse wechseln.</p>
           <div class="success-box" id="success-box" aria-live="polite"></div>
+          <div class="order-box" id="order-box" hidden>
+            <div class="order-head">
+              <strong>Eure Bestellung</strong>
+              <span id="order-count"></span>
+            </div>
+            <div class="order-list" id="order-list"></div>
+            <div class="order-actions">
+              <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
+              <button class="save-button" id="continue-order" type="button">Zur Lieferadresse <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
         </aside>
       </div>
@@ -1155,7 +1261,7 @@
   <script src="/js/wordcloud-core.js?v=20260819-2"></script>
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/mug-editor.js?v=20260821-5"></script>
+  <script src="/js/mug-editor.js?v=20260825-1"></script>
   <script>
     'use strict';
 
@@ -1184,6 +1290,12 @@
     const customColorAdd = document.getElementById('custom-color-add');
     const photoButton = document.getElementById('editor-photo');
     const photoInput = document.getElementById('editor-photo-input');
+    const successBox = document.getElementById('success-box');
+    const orderBox = document.getElementById('order-box');
+    const orderList = document.getElementById('order-list');
+    const orderCount = document.getElementById('order-count');
+    const designAnotherButton = document.getElementById('design-another');
+    const continueOrderButton = document.getElementById('continue-order');
 
     let words = [];
     let products = [];
@@ -1199,6 +1311,10 @@
     let mugEditor = null;
     let activeSurface = 'default';
     let surfaceStates = new Map();
+    let fallbackOrderItems = [];
+    let editingOrderItemId = null;
+    let suppressDirty = false;
+    let hasUnsavedOpenedDesign = false;
 
     const backLink = document.getElementById('back-link');
     backLink.href = isPersonalMode
@@ -1218,6 +1334,194 @@
       resetButton.textContent = 'Seite leeren';
       resetButton.title = 'Aktuelle Druckseite leeren';
     }
+
+    function orderStorageKey() {
+      return `wolkenworte-order:${slug}:${configurationType}`;
+    }
+
+    function loadOrderItems() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(orderStorageKey()) || '[]');
+        if (!Array.isArray(parsed)) return [];
+        const seen = new Set();
+        return parsed
+          .filter((item) => item && /^[A-Za-z0-9_-]{16}$/.test(String(item.id || '')))
+          .filter((item) => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          })
+          .slice(0, 20);
+      } catch {
+        return fallbackOrderItems;
+      }
+    }
+
+    function saveOrderItems(items) {
+      fallbackOrderItems = items.slice(-20);
+      try {
+        localStorage.setItem(orderStorageKey(), JSON.stringify(fallbackOrderItems));
+      } catch {
+        // A private browsing storage failure should not block the current save.
+      }
+    }
+
+    function productSizeText(candidate) {
+      const size = candidate?.size || {};
+      if (size.volumeMl) return `${size.label} · ${size.volumeMl} ml`;
+      if (size.detail) return `${size.label} · ${size.detail}`;
+      return size.label || '';
+    }
+
+    function orderItemFromConfiguration(configuration) {
+      return {
+        id: configuration.id,
+        productKey: configuration.productKey,
+        displayName: product.displayName,
+        sizeText: productSizeText(product),
+        printFileUrl: configuration.printFileUrl,
+        createdAt: configuration.createdAt || new Date().toISOString(),
+      };
+    }
+
+    function addOrderItem(configuration, { replaceId = null } = {}) {
+      const nextItem = orderItemFromConfiguration(configuration);
+      const existing = loadOrderItems();
+      const replaceIndex = replaceId
+        ? existing.findIndex((item) => item.id === replaceId)
+        : -1;
+      const items = existing.filter((item) => item.id !== nextItem.id && item.id !== replaceId);
+      if (replaceIndex >= 0) {
+        items.splice(Math.min(replaceIndex, items.length), 0, nextItem);
+      } else {
+        items.push(nextItem);
+      }
+      saveOrderItems(items);
+      return items;
+    }
+
+    function showSuccess(title, copy) {
+      const strong = document.createElement('strong');
+      strong.textContent = title;
+      const span = document.createElement('span');
+      span.textContent = copy;
+      successBox.replaceChildren(strong, span);
+      successBox.classList.add('show');
+    }
+
+    async function openOrderItem(configurationId) {
+      const item = loadOrderItems().find((candidate) => candidate.id === configurationId);
+      if (!item) {
+        errorText.textContent = 'Dieses Design ist nicht mehr in eurer Bestellung.';
+        renderOrderBox();
+        return;
+      }
+      saveButton.disabled = true;
+      saveButton.textContent = 'Design wird geöffnet…';
+      errorText.textContent = '';
+      successBox.classList.remove('show');
+      try {
+        const response = await fetch(
+          `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/edit`,
+          { cache: 'no-store' }
+        );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'load_failed');
+        await applySavedConfiguration(data);
+        editingOrderItemId = data.id;
+        hasUnsavedOpenedDesign = false;
+        renderOrderBox();
+        saveButton.disabled = false;
+        saveButton.innerHTML = 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>';
+        showSuccess('Design geöffnet.', 'Ihr könnt es prüfen, bearbeiten oder direkt mit eurer Bestellung fortfahren.');
+        document.getElementById('preview-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        mugEditor?.setFeedback('Design aus eurer Bestellung geöffnet');
+      } catch {
+        saveButton.disabled = false;
+        saveButton.innerHTML = editingOrderItemId
+          ? 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>'
+          : 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
+        errorText.textContent = 'Dieses Design konnte nicht geöffnet werden. Bitte versucht es noch einmal.';
+      }
+    }
+
+    function renderOrderBox() {
+      const items = loadOrderItems();
+      orderBox.hidden = items.length === 0;
+      orderList.replaceChildren();
+      orderCount.textContent = items.length === 1 ? '1 Design' : `${items.length} Designs`;
+      items.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'order-item';
+        row.classList.toggle('is-editing', item.id === editingOrderItemId);
+        const image = document.createElement('img');
+        image.src = item.printFileUrl;
+        image.alt = '';
+        const copy = document.createElement('div');
+        copy.className = 'order-copy';
+        const title = document.createElement('strong');
+        title.textContent = item.displayName || 'Wolkenworte Design';
+        const size = document.createElement('span');
+        size.textContent = item.sizeText || 'Persönliches Design';
+        copy.append(title, size);
+        const actions = document.createElement('div');
+        actions.className = 'order-item-actions';
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'order-edit';
+        edit.textContent = 'Öffnen';
+        edit.setAttribute('aria-label', `${title.textContent} öffnen und bearbeiten`);
+        edit.addEventListener('click', () => openOrderItem(item.id));
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'order-remove';
+        remove.setAttribute('aria-label', `${title.textContent} aus der Bestellung entfernen`);
+        remove.textContent = '×';
+        remove.addEventListener('click', () => {
+          if (editingOrderItemId === item.id) {
+            editingOrderItemId = null;
+            hasUnsavedOpenedDesign = false;
+          }
+          saveOrderItems(loadOrderItems().filter((candidate) => candidate.id !== item.id));
+          renderOrderBox();
+          markDirty();
+        });
+        actions.append(edit, remove);
+        row.append(image, copy, actions);
+        orderList.appendChild(row);
+      });
+    }
+
+    function continueToShipping() {
+      const ids = loadOrderItems().map((item) => item.id);
+      if (!ids.length) {
+        errorText.textContent = 'Speichert zuerst mindestens ein Design für eure Bestellung.';
+        return;
+      }
+      if (editingOrderItemId && hasUnsavedOpenedDesign) {
+        errorText.textContent = 'Speichert zuerst eure Änderungen an diesem Design.';
+        saveButton.focus();
+        return;
+      }
+      const query = ids.length === 1
+        ? `configuration=${encodeURIComponent(ids[0])}`
+        : `configurations=${encodeURIComponent(ids.join(','))}`;
+      location.assign(`/e/${encodeURIComponent(slug)}/shipping?${query}`);
+    }
+
+    designAnotherButton.addEventListener('click', () => {
+      editingOrderItemId = null;
+      hasUnsavedOpenedDesign = false;
+      successBox.classList.remove('show');
+      errorText.textContent = '';
+      saveButton.disabled = false;
+      saveButton.innerHTML = 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
+      document.getElementById('controls-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      mugEditor?.setFeedback('Wählt ein Produkt oder passt das Design weiter an.');
+      renderOrderBox();
+    });
+
+    continueOrderButton.addEventListener('click', continueToShipping);
 
     function setupCanvas(canvas) {
       const rect = canvas.getBoundingClientRect();
@@ -1480,6 +1784,18 @@
       };
     }
 
+    function allDesignItems(designs) {
+      return Object.values(designs || {}).flat().filter(Boolean);
+    }
+
+    async function preloadDesignImages(designs) {
+      if (!mugEditor) return;
+      const sources = [...new Set(allDesignItems(designs)
+        .filter((item) => item.type === 'image' && typeof item.src === 'string')
+        .map((item) => item.src))];
+      await Promise.all(sources.map((source) => mugEditor.preloadImage(source)));
+    }
+
     function productSurfaces() {
       return Array.isArray(product?.printSurfaces) && product.printSurfaces.length
         ? product.printSurfaces
@@ -1506,6 +1822,70 @@
         surface.key,
         cloneDesign(surfaceStates.get(surface.key)?.design || []),
       ]));
+    }
+
+    function designsForProductSurfaces(rawDesigns) {
+      const surfaces = productSurfaces();
+      if (rawDesigns && typeof rawDesigns === 'object' && !Array.isArray(rawDesigns)) {
+        return Object.fromEntries(surfaces.map((surface) => [
+          surface.key,
+          Array.isArray(rawDesigns[surface.key]) ? cloneDesign(rawDesigns[surface.key]) : [],
+        ]));
+      }
+      const automatic = buildAutomaticDesign();
+      return Object.fromEntries(surfaces.map((surface) => [surface.key, cloneDesign(automatic)]));
+    }
+
+    async function applySavedConfiguration(configurationData) {
+      const nextProduct = products.find((candidate) => candidate.key === configurationData.productKey);
+      if (!nextProduct) throw new Error('invalid_product');
+      if (configurationData.configurationType !== configurationType) throw new Error('wrong_configuration_type');
+
+      suppressDirty = true;
+      try {
+        product = nextProduct;
+        selectedFamilyKey = product.familyKey;
+        selectedTheme = product.themes.some((option) => option.key === configurationData.theme)
+          ? configurationData.theme
+          : product.themes[0].key;
+        selectedPlacement = product.layouts.some((layout) => layout.key === configurationData.placementKey)
+          ? configurationData.placementKey
+          : product.layouts[0].key;
+        words = Array.isArray(configurationData.words) ? configurationData.words : words;
+
+        buildProductOptions();
+        buildPlacementOptions();
+        buildThemeOptions();
+        renderCustomColorControls();
+
+        const defaultSlot = selectedProductSlot();
+        mugEditor.resizePrintArea({
+          printWidth: product.printFile.width,
+          printHeight: product.printFile.height,
+          safeMargin: product.designSafeMargin,
+          defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
+          defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
+        });
+
+        const loadedDesigns = designsForProductSurfaces(configurationData.designs);
+        await preloadDesignImages(loadedDesigns);
+        const surfaces = productSurfaces();
+        activeSurface = surfaces[0].key;
+        surfaceStates = new Map(surfaces.map((surface, index) => [
+          surface.key,
+          cloneEditorState({ design: loadedDesigns[surface.key] || [] }, index === 0),
+        ]));
+        buildSurfaceControls();
+        mugEditor.setState(surfaceStates.get(activeSurface));
+        updateSurfaceControlSelection();
+        updateProductOptionSelection();
+        updateProductPresentation();
+        destroyMug3D();
+        renderAll();
+        await initMug3D();
+      } finally {
+        suppressDirty = false;
+      }
     }
 
     function updateSurfaceControlSelection() {
@@ -1697,9 +2077,14 @@
     }
 
     function markDirty() {
+      if (suppressDirty) return;
       errorText.textContent = '';
+      successBox.classList.remove('show');
+      if (editingOrderItemId) hasUnsavedOpenedDesign = true;
       saveButton.disabled = false;
-      saveButton.innerHTML = 'Weiter zur Lieferadresse <span aria-hidden="true">→</span>';
+      saveButton.innerHTML = editingOrderItemId
+        ? 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>'
+        : 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
     }
 
     function germanDecimal(value) {
@@ -2072,8 +2457,21 @@
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'save_failed');
-        saveButton.textContent = 'Gespeichert ✓';
-        location.assign(`/e/${encodeURIComponent(slug)}/shipping?configuration=${encodeURIComponent(data.id)}`);
+        const replacedDesign = editingOrderItemId && editingOrderItemId !== data.id;
+        const items = addOrderItem(data, { replaceId: editingOrderItemId });
+        editingOrderItemId = data.id;
+        hasUnsavedOpenedDesign = false;
+        renderOrderBox();
+        showSuccess(
+          replacedDesign ? 'Änderungen gespeichert.' : 'Design gespeichert.',
+          replacedDesign
+            ? 'Der Eintrag in eurer Bestellung wurde aktualisiert.'
+            : items.length === 1
+            ? 'Ihr könnt jetzt zur Lieferadresse wechseln oder ein weiteres Produkt gestalten.'
+            : 'Das neue Design liegt in eurer Bestellung.'
+        );
+        saveButton.disabled = false;
+        saveButton.innerHTML = 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>';
       } catch {
         saveButton.disabled = false;
         saveButton.innerHTML = 'Erneut versuchen <span aria-hidden="true">→</span>';
@@ -2121,6 +2519,7 @@
         loading.hidden = true;
         content.hidden = false;
         initEditor();
+        renderOrderBox();
         renderAll();
         initMug3D();
       })

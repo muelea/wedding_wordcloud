@@ -189,6 +189,87 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   assert.deepEqual(splitCalls.map((call) => call.payload.recipient.name), ['Adresse A', 'Adresse B']);
   assert.deepEqual(db.getOrderShipments(splitOrder.id).map((shipment) => shipment.fulfillment_status), ['draft', 'draft']);
 
+  const coasterConfiguration = db.createConfiguration({
+    eventId: event.id,
+    productKey: 'cork-back-coaster',
+    printfulVariantId: 15662,
+    quantity: 1,
+    unitPriceCents: 0,
+    theme: 'pastel',
+    placement: 'fit-area',
+    words: [['liebe', 3]],
+    design: null,
+    printWidth: 1500,
+    printHeight: 1500,
+  });
+  const mixedQuote = db.createCheckoutQuote({
+    eventId: event.id,
+    configurationId: configuration.id,
+    configurationIds: [configuration.id, coasterConfiguration.id],
+    shipments: [{
+      quantity: 3,
+      items: [
+        { configurationId: configuration.id, quantity: 2 },
+        { configurationId: coasterConfiguration.id, quantity: 1 },
+      ],
+      recipient: {
+        name: 'Gemischte Adresse',
+        address1: 'Mixweg 3',
+        city: 'Berlin',
+        zip: '10115',
+        country_code: 'DE',
+      },
+      printfulCosts: { currency: 'EUR', subtotal: 18, shipping: 6, vat: 4.56, total: 28.56 },
+    }],
+    quote: {
+      currency: 'EUR', quantity: 3, itemsCents: 3350,
+      shippingCents: 600, taxCents: 751, totalCents: 4701,
+    },
+  });
+  const { order: mixedOrder } = db.createCheckoutOrder({
+    eventId: event.id,
+    configurationId: configuration.id,
+    quote: mixedQuote,
+    mode: 'live',
+  });
+  db.attachStripeSession(mixedOrder.id, {
+    id: 'cs_live_mixed_fulfillment_test',
+    url: 'https://checkout.stripe.example/mixed-session',
+  });
+  db.recordSuccessfulPayment({
+    stripeEventId: 'evt_live_mixed_fulfillment_test',
+    eventType: 'checkout.session.completed',
+    stripeSessionId: 'cs_live_mixed_fulfillment_test',
+    paymentIntentId: 'pi_live_mixed_fulfillment_test',
+    livemode: true,
+  });
+
+  const mixedCalls = [];
+  printful.createPrintfulOrder = async (options) => {
+    mixedCalls.push(options);
+    return { printfulOrderId: 'draft-mixed', status: 'draft', mocked: false, confirmed: false };
+  };
+  const completedMixed = await fulfillment.processOrder(mixedOrder.id);
+  assert.equal(mixedCalls.length, 1, 'one Printful draft is created for one mixed-product delivery address');
+  assert.equal(completedMixed.fulfillment_status, 'draft');
+  assert.deepEqual(mixedCalls[0].payload.recipient.name, 'Gemischte Adresse');
+  assert.deepEqual(mixedCalls[0].payload.items.map((item) => ({
+    variant_id: item.variant_id,
+    quantity: item.quantity,
+    external_id: item.external_id,
+  })), [
+    {
+      variant_id: 1320,
+      quantity: 2,
+      external_id: `weddingcloud-${mixedOrder.id}-${mixedQuote.id}-item-1`,
+    },
+    {
+      variant_id: 15662,
+      quantity: 1,
+      external_id: `weddingcloud-${mixedOrder.id}-${mixedQuote.id}-item-2`,
+    },
+  ]);
+
   const notebookPayload = fulfillment.buildPrintfulPayload({
     mode: 'draft',
     order: {

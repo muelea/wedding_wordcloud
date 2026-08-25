@@ -86,6 +86,23 @@ function parseShipmentRecipient(shipment) {
   return recipient;
 }
 
+function parseShipmentItems(shipment) {
+  if (!shipment?.items_json) return [];
+  let items;
+  try {
+    items = JSON.parse(shipment.items_json);
+  } catch {
+    throw new Error('Die gespeicherten Lieferartikel sind ungültig.');
+  }
+  if (!Array.isArray(items)) {
+    throw new Error('Die gespeicherten Lieferartikel sind ungültig.');
+  }
+  return items.map((item) => ({
+    configurationId: String(item.configurationId || item.configuration_id || ''),
+    quantity: Number(item.quantity),
+  })).filter((item) => item.configurationId && item.quantity > 0);
+}
+
 function publicPrintFileUrl(event, configuration, mode, surfaceKey = null) {
   const configuredBase = String(process.env.PUBLIC_URL || '').trim();
   const fallbackBase = `http://localhost:${process.env.PORT || 3000}`;
@@ -115,10 +132,9 @@ function publicPrintFileUrl(event, configuration, mode, surfaceKey = null) {
   return printFileUrl.toString();
 }
 
-function buildPrintfulPayload({ order, event, configuration, mode, shipment = null, useShipmentSuffix = true }) {
+function buildPrintfulItem({ order, event, configuration, mode, quantity, externalId, index }) {
   const product = getProduct(configuration.product_key);
   const variantId = Number(configuration.printful_variant_id);
-  const quantity = shipment ? Number(shipment.quantity) : Number(configuration.quantity);
   if (!product || product.printful.variantId !== variantId) {
     throw new Error('Das gespeicherte Printful-Produkt ist ungültig.');
   }
@@ -128,6 +144,29 @@ function buildPrintfulPayload({ order, event, configuration, mode, shipment = nu
   if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99) {
     throw new Error('Die gespeicherte Bestellmenge ist ungültig.');
   }
+  const multipleSurfaces = product.printful.placements.length > 1;
+  const files = product.printful.placements.map((type) => ({
+    type,
+    url: publicPrintFileUrl(event, configuration, mode, multipleSurfaces ? type : null),
+  }));
+  return {
+    external_id: `${externalId}-item-${index + 1}`,
+    variant_id: variantId,
+    quantity,
+    files,
+    ...(product.printful.options.length ? { options: product.printful.options } : {}),
+  };
+}
+
+function buildPrintfulPayload({
+  order,
+  event,
+  configuration,
+  configurations = [],
+  mode,
+  shipment = null,
+  useShipmentSuffix = true,
+}) {
   // The opaque quote id keeps this reference unique even if a local/staging
   // database is ever rebuilt and starts its integer order ids at 1 again.
   const baseExternalId = order.quote_id
@@ -136,23 +175,39 @@ function buildPrintfulPayload({ order, event, configuration, mode, shipment = nu
   const externalId = shipment && useShipmentSuffix
     ? `${baseExternalId}-shipment-${Number(shipment.shipment_index) + 1}`
     : baseExternalId;
-  const multipleSurfaces = product.printful.placements.length > 1;
-  const files = product.printful.placements.map((type) => ({
-    type,
-    url: publicPrintFileUrl(event, configuration, mode, multipleSurfaces ? type : null),
-  }));
-  const item = {
-    external_id: `${externalId}-item-1`,
-    variant_id: variantId,
-    quantity,
-    files,
-    ...(product.printful.options.length ? { options: product.printful.options } : {}),
-  };
+  const shipmentItems = parseShipmentItems(shipment);
+  const configurationById = new Map(
+    [configuration, ...configurations].filter(Boolean).map((entry) => [entry.id, entry])
+  );
+  const items = shipmentItems.length
+    ? shipmentItems.map((item, index) => {
+        const itemConfiguration = configurationById.get(item.configurationId) ||
+          db.getConfiguration(item.configurationId);
+        if (!itemConfiguration) throw new Error('Eine gespeicherte Bestellkonfiguration wurde nicht gefunden.');
+        return buildPrintfulItem({
+          order,
+          event,
+          configuration: itemConfiguration,
+          mode,
+          quantity: item.quantity,
+          externalId,
+          index,
+        });
+      })
+    : [buildPrintfulItem({
+        order,
+        event,
+        configuration,
+        mode,
+        quantity: shipment ? Number(shipment.quantity) : Number(configuration.quantity),
+        externalId,
+        index: 0,
+      })];
   return {
     external_id: externalId,
     shipping: 'STANDARD',
     recipient: shipment ? parseShipmentRecipient(shipment) : parseRecipient(order),
-    items: [item],
+    items,
   };
 }
 
@@ -173,8 +228,11 @@ async function processOrder(orderId) {
 
   try {
     const event = db.getEventById(order.event_id);
-    const configuration = db.getConfiguration(order.configuration_id);
-    if (!event || !configuration) throw new Error('Bestellkonfiguration wurde nicht gefunden.');
+    const configurations = db.getOrderConfigurationIds(order).map((id) => db.getConfiguration(id));
+    const configuration = configurations[0] || db.getConfiguration(order.configuration_id);
+    if (!event || !configuration || configurations.some((entry) => !entry)) {
+      throw new Error('Bestellkonfiguration wurde nicht gefunden.');
+    }
 
     const mode = resolveMode(order);
     const orderShipments = db.getOrderShipments(order.id);
@@ -192,6 +250,7 @@ async function processOrder(orderId) {
           order,
           event,
           configuration,
+          configurations,
           mode,
           shipment,
           useShipmentSuffix: orderShipments.length > 1,

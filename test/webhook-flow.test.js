@@ -153,6 +153,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     totalCents: quote.totalCents,
     quantity: 2,
     shipmentCount: 1,
+    configurationCount: 1,
     product: {
       name: 'Wortwolken-Tasse',
       unit: { singular: 'Tasse', plural: 'Tassen' },

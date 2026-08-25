@@ -584,6 +584,26 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.equal((svg.match(/<path data-motif=/g) || []).length, 1);
   assert.doesNotMatch(svg, /<rect\b/);
 
+  const editable = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`);
+  assert.equal(editable.status, 200);
+  assert.match(editable.headers.get('cache-control'), /no-store/);
+  const editableBody = await editable.json();
+  assert.equal(editableBody.productKey, 'white-glossy-mug-duo-11oz');
+  assert.equal(editableBody.theme, 'custom');
+  assert.equal(editableBody.placementKey, 'full-wrap');
+  assert.deepEqual(editableBody.words, words);
+  assert.deepEqual(editableBody.designs.default.map((item) => ({
+    id: item.id,
+    type: item.type || 'text',
+    text: item.text,
+    icon: item.icon,
+    color: item.color,
+  })), [
+    { id: 'wort-1', type: 'text', text: 'Unser Wort', icon: undefined, color: '#123456' },
+    { id: 'wort-2', type: 'text', text: 'für immer', icon: undefined, color: '#abcdef' },
+    { id: 'motiv-1', type: 'icon', text: undefined, icon: 'heart', color: '#d90368' },
+  ]);
+
   const outside = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

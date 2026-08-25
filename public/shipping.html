@@ -85,19 +85,37 @@
     }
     .shipment-remove:hover:not(:disabled) { color: var(--danger); }
     .shipment-remove:disabled { cursor: default; opacity: .36; }
-    .shipment-quantity {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+    .shipment-products {
+      display: grid;
+      gap: 10px;
       margin-bottom: 15px;
-      padding: 13px 14px;
+    }
+    .shipment-products-title {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .shipment-product {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: #fff;
     }
-    .shipment-quantity-copy strong { display: block; font-size: 13px; }
-    .shipment-quantity-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .shipment-product img {
+      width: 48px;
+      height: 42px;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .shipment-product-copy { min-width: 0; }
+    .shipment-product-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .shipment-product-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
     .quantity-control {
       flex: 0 0 auto;
       display: grid;
@@ -167,7 +185,9 @@
     .privacy-note a { color: var(--berry); text-underline-offset: 2px; }
     .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .summary-card { padding: clamp(20px, 4vw, 28px); }
+    .design-summary-list { display: grid; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
     .design-summary { display: flex; gap: 14px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+    .design-summary-list .design-summary { padding-bottom: 0; border-bottom: 0; }
     .design-preview { width: 92px; height: 72px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
     .design-preview img { width: 88%; height: 88%; object-fit: contain; }
     .design-copy { min-width: 0; }
@@ -199,7 +219,8 @@
       .steps .step.active .step-label { display: inline; }
       .field-row { grid-template-columns: 1fr; }
       .shipment-card { padding: 15px; }
-      .shipment-quantity { align-items: stretch; flex-direction: column; gap: 11px; }
+      .shipment-product { grid-template-columns: 44px minmax(0, 1fr); }
+      .shipment-product .quantity-control { grid-column: 1 / -1; }
       .quantity-control { width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; }
       .quantity-control input { width: 100%; }
       .design-preview { width: 78px; height: 64px; }
@@ -247,14 +268,7 @@
         </section>
 
         <section class="card summary-card" id="summary-card" aria-labelledby="summary-title">
-          <div class="design-summary">
-            <div class="design-preview"><img id="design-image" alt="Euer gespeichertes Design" /></div>
-            <div class="design-copy">
-              <strong id="summary-title">Persönliche Erinnerung</strong>
-              <span id="summary-quantity">Entwurf wird geladen</span>
-              <span id="summary-size"></span>
-            </div>
-          </div>
+          <div class="design-summary-list" id="design-summary-list"></div>
           <div class="quote" id="quote-placeholder">
             <p class="quote-placeholder">Der Gesamtpreis erscheint hier, sobald ihr eure Lieferadresse eingegeben habt.</p>
           </div>
@@ -280,6 +294,10 @@
     const slug = pathParts[1];
     const query = new URLSearchParams(location.search);
     const configurationId = query.get('configuration');
+    const configurationIds = [
+      ...(query.get('configurations') || '').split(','),
+      configurationId || '',
+    ].map((id) => id.trim()).filter((id, index, list) => id && list.indexOf(id) === index);
     const savedQuoteId = query.get('quote');
     const checkoutWasCancelled = query.get('checkout') === 'cancelled';
     const loading = document.getElementById('loading');
@@ -295,6 +313,7 @@
     const checkoutButton = document.getElementById('checkout-button');
     const checkoutError = document.getElementById('checkout-error');
     let countries = [];
+    let configurations = [];
     let configuration = null;
     let currentQuote = null;
     let countryDisplayNames = null;
@@ -393,14 +412,45 @@
       stateSelect.value = selectedState;
     }
 
-    function quantityLabel(quantity) {
-      const unit = configuration.product.unit;
+    function configurationSizeText(itemConfiguration) {
+      const size = itemConfiguration?.product?.size || {};
+      if (size.volumeMl) return `${size.label} · ${size.volumeMl} ml`;
+      if (size.detail) return `${size.label} · ${size.detail}`;
+      return size.label || '';
+    }
+
+    function totalUnitLabel(quantity) {
+      if (configurations.length === 1 && configuration?.product?.unit) {
+        return quantity === 1 ? configuration.product.unit.singular : configuration.product.unit.plural;
+      }
+      return quantity === 1 ? 'Produkt' : 'Produkte';
+    }
+
+    function totalProductLabel(quantity) {
+      return `${quantity} ${totalUnitLabel(quantity)}`;
+    }
+
+    function quantityLabel(quantity, itemConfiguration = configuration) {
+      const unit = itemConfiguration?.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
       return `${quantity} ${quantity === 1 ? unit.singular : unit.plural}`;
     }
 
-    function defaultShipment() {
+    function defaultQuantityForConfiguration(itemConfiguration) {
+      return Math.max(
+        1,
+        Math.min(
+          itemConfiguration.product?.maxQuantity || 99,
+          Number(itemConfiguration.quantity) || itemConfiguration.product?.defaultQuantity || 1
+        )
+      );
+    }
+
+    function defaultShipment({ emptyItems = false } = {}) {
       return {
-        quantity: Number(configuration?.quantity) || configuration?.product?.defaultQuantity || 1,
+        items: configurations.map((itemConfiguration) => ({
+          configurationId: itemConfiguration.id,
+          quantity: emptyItems ? 0 : defaultQuantityForConfiguration(itemConfiguration),
+        })),
         recipient: { country_code: defaultCountryCode() },
       };
     }
@@ -434,12 +484,115 @@
       return label;
     }
 
+    function findConfiguration(id) {
+      return configurations.find((candidate) => candidate.id === id) || configuration;
+    }
+
+    function itemFieldPath(index, configurationId) {
+      return `shipments.${index}.items.${configurationId}`;
+    }
+
+    function shipmentItemsById(shipment) {
+      const items = new Map();
+      if (Array.isArray(shipment?.items)) {
+        shipment.items.forEach((item) => {
+          const configurationId = String(item.configurationId || item.configuration_id || '').trim();
+          if (!configurationId) return;
+          items.set(configurationId, Math.max(0, Number(item.quantity) || 0));
+        });
+      } else if (configuration && Number(shipment?.quantity) > 0) {
+        items.set(configuration.id, Number(shipment.quantity));
+      }
+      return items;
+    }
+
+    function shipmentTotalQuantity(shipment) {
+      if (Array.isArray(shipment?.items)) {
+        return shipment.items.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0);
+      }
+      return Math.max(0, Number(shipment?.quantity) || 0);
+    }
+
     function updateQuantityButtons(card) {
-      const input = card.querySelector('[data-quantity]');
-      const value = Number(input.value || 0);
-      card.querySelector('[data-quantity-minus]').disabled = value <= 1;
-      card.querySelector('[data-quantity-plus]').disabled = value >= configuration.product.maxQuantity;
-      card.querySelector('[data-quantity-copy]').textContent = quantityLabel(Math.max(1, value || 1));
+      card.querySelectorAll('[data-item-quantity]').forEach((input) => {
+        const value = Number(input.value || 0);
+        const itemConfiguration = findConfiguration(input.dataset.configurationId);
+        const row = input.closest('.shipment-product');
+        row.querySelector('[data-quantity-minus]').disabled = value <= 0;
+        row.querySelector('[data-quantity-plus]').disabled = value >= itemConfiguration.product.maxQuantity;
+        row.querySelector('[data-quantity-copy]').textContent = quantityLabel(Math.max(0, value || 0), itemConfiguration);
+      });
+    }
+
+    function createShipmentProductRow(itemConfiguration, shipment, index) {
+      const itemQuantities = shipmentItemsById(shipment);
+      const row = document.createElement('div');
+      row.className = 'shipment-product';
+
+      const image = document.createElement('img');
+      image.src = itemConfiguration.printFileUrl;
+      image.alt = '';
+      image.loading = 'lazy';
+
+      const copy = document.createElement('div');
+      copy.className = 'shipment-product-copy';
+      const title = document.createElement('strong');
+      title.textContent = itemConfiguration.product.displayName;
+      const size = document.createElement('span');
+      size.textContent = configurationSizeText(itemConfiguration);
+      const quantityCopy = document.createElement('span');
+      quantityCopy.dataset.quantityCopy = '';
+      copy.append(title, size, quantityCopy);
+
+      const control = document.createElement('div');
+      control.className = 'quantity-control';
+      control.setAttribute('aria-label', `${itemConfiguration.product.displayName} für Lieferung ${index + 1}`);
+
+      const minus = document.createElement('button');
+      minus.type = 'button';
+      minus.dataset.quantityMinus = '';
+      minus.setAttribute('aria-label', `${itemConfiguration.product.displayName} einmal weniger`);
+      minus.textContent = '−';
+
+      const input = document.createElement('input');
+      input.dataset.itemQuantity = '';
+      input.dataset.configurationId = itemConfiguration.id;
+      input.dataset.fieldPath = itemFieldPath(index, itemConfiguration.id);
+      input.type = 'number';
+      input.min = '0';
+      input.max = String(itemConfiguration.product.maxQuantity);
+      input.inputMode = 'numeric';
+      input.required = true;
+      input.value = String(Math.min(
+        itemConfiguration.product.maxQuantity,
+        Math.max(0, itemQuantities.get(itemConfiguration.id) || 0)
+      ));
+
+      const plus = document.createElement('button');
+      plus.type = 'button';
+      plus.dataset.quantityPlus = '';
+      plus.setAttribute('aria-label', `${itemConfiguration.product.displayName} einmal mehr`);
+      plus.textContent = '+';
+
+      minus.addEventListener('click', () => {
+        input.value = String(Math.max(0, Number(input.value || 0) - 1));
+        updateQuantityButtons(row);
+        clearQuote();
+      });
+      plus.addEventListener('click', () => {
+        input.value = String(Math.min(itemConfiguration.product.maxQuantity, Number(input.value || 0) + 1));
+        updateQuantityButtons(row);
+        clearQuote();
+      });
+      input.addEventListener('input', () => {
+        updateQuantityButtons(row);
+        clearQuote();
+      });
+
+      control.append(minus, input, plus);
+      row.append(image, copy, control);
+      updateQuantityButtons(row);
+      return row;
     }
 
     function createShipmentCard(shipment, index, totalCards) {
@@ -465,33 +618,14 @@
       });
       head.append(title, remove);
 
-      const quantity = document.createElement('div');
-      quantity.className = 'shipment-quantity';
-      quantity.innerHTML = `
-        <div class="shipment-quantity-copy">
-          <strong>Anzahl an diese Adresse</strong>
-          <span data-quantity-copy></span>
-        </div>
-        <div class="quantity-control" aria-label="Anzahl für Lieferung ${index + 1}">
-          <button type="button" data-quantity-minus aria-label="Ein Produkt weniger">−</button>
-          <input data-quantity data-field-path="${shipmentFieldPath(index, 'quantity')}" type="number" min="1" max="${configuration.product.maxQuantity}" inputmode="numeric" required />
-          <button type="button" data-quantity-plus aria-label="Ein Produkt mehr">+</button>
-        </div>
-      `;
-      const quantityInput = quantity.querySelector('[data-quantity]');
-      quantityInput.value = String(Math.min(
-        configuration.product.maxQuantity,
-        Math.max(1, Number(shipment.quantity) || 1)
-      ));
-      quantity.querySelector('[data-quantity-minus]').addEventListener('click', () => {
-        quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1) - 1));
-        updateQuantityButtons(card);
-        clearQuote();
-      });
-      quantity.querySelector('[data-quantity-plus]').addEventListener('click', () => {
-        quantityInput.value = String(Math.min(configuration.product.maxQuantity, Number(quantityInput.value || 1) + 1));
-        updateQuantityButtons(card);
-        clearQuote();
+      const productsBlock = document.createElement('div');
+      productsBlock.className = 'shipment-products';
+      const productsTitle = document.createElement('strong');
+      productsTitle.className = 'shipment-products-title';
+      productsTitle.textContent = 'Produkte an diese Adresse';
+      productsBlock.append(productsTitle);
+      configurations.forEach((itemConfiguration) => {
+        productsBlock.appendChild(createShipmentProductRow(itemConfiguration, shipment, index));
       });
 
       const recipient = shipment.recipient || {};
@@ -559,15 +693,11 @@
       stateField.append(stateSelect);
       fields.append(stateField);
 
-      card.append(head, quantity, fields);
+      card.append(head, productsBlock, fields);
       addCountryOptions(countrySelect, String(recipient.country_code || '').toUpperCase());
       updateStates(countrySelect, stateField, stateSelect, String(recipient.state_code || '').toUpperCase());
       countrySelect.addEventListener('change', () => {
         updateStates(countrySelect, stateField, stateSelect);
-        clearQuote();
-      });
-      quantityInput.addEventListener('input', () => {
-        updateQuantityButtons(card);
         clearQuote();
       });
       updateQuantityButtons(card);
@@ -592,8 +722,16 @@
       const cards = [...shipmentList.querySelectorAll('.shipment-card')];
       const shipments = cards.map((card) => {
         const valueFor = (field) => findShipmentField(card, field)?.value || '';
+        const items = configurations.map((itemConfiguration) => {
+          const input = card.querySelector(`[data-item-quantity][data-configuration-id="${itemConfiguration.id}"]`);
+          return {
+            configurationId: itemConfiguration.id,
+            quantity: Math.max(0, Math.round(Number(input?.value || 0))),
+          };
+        });
         return {
-          quantity: Number(findShipmentField(card, 'quantity')?.value || 0),
+          quantity: items.reduce((sum, item) => sum + item.quantity, 0),
+          items,
           recipient: {
             name: valueFor('name'),
             address1: valueFor('address1'),
@@ -606,11 +744,18 @@
         };
       });
       const totalQuantity = shipments.reduce((sum, shipment) => sum + Math.max(0, Number(shipment.quantity) || 0), 0);
-      if (validate && (totalQuantity < configuration.product.minQuantity || totalQuantity > configuration.product.maxQuantity)) {
-        formError.textContent = `Bitte wählt insgesamt 1-${configuration.product.maxQuantity} ${configuration.product.unit.plural}.`;
-        shipmentList.querySelector('[data-quantity]')?.focus();
+      const emptyShipmentIndex = shipments.findIndex((shipment) => shipment.quantity < 1);
+      if (validate && emptyShipmentIndex >= 0) {
+        formError.textContent = 'Bitte wählt pro Lieferadresse mindestens ein Produkt.';
+        shipmentList.querySelectorAll('.shipment-card')[emptyShipmentIndex]?.querySelector('[data-item-quantity]')?.focus();
+        return { shipments, totalQuantity, quantityError: true };
       }
-      return { shipments, totalQuantity };
+      if (validate && (totalQuantity < 1 || totalQuantity > 99)) {
+        formError.textContent = 'Bitte wählt insgesamt 1-99 Produkte.';
+        shipmentList.querySelector('[data-item-quantity]')?.focus();
+        return { shipments, totalQuantity, quantityError: true };
+      }
+      return { shipments, totalQuantity, quantityError: false };
     }
 
     function clearFieldErrors() {
@@ -625,9 +770,8 @@
       checkoutError.textContent = '';
       checkoutButton.disabled = false;
       checkoutButton.textContent = 'Weiter zur Testzahlung →';
-      if (configuration) {
-        document.getElementById('summary-quantity').textContent =
-          'Menge und Lieferadressen wählt ihr hier';
+      if (configurations.length) {
+        renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
       }
     }
 
@@ -635,15 +779,59 @@
       return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(cents / 100);
     }
 
+    function shipmentTotalsByConfiguration(shipments) {
+      const totals = new Map(configurations.map((itemConfiguration) => [itemConfiguration.id, 0]));
+      shipments.forEach((shipment) => {
+        if (Array.isArray(shipment.items)) {
+          shipment.items.forEach((item) => {
+            const configurationId = String(item.configurationId || item.configuration_id || '').trim();
+            totals.set(configurationId, (totals.get(configurationId) || 0) + Math.max(0, Number(item.quantity) || 0));
+          });
+        } else if (configuration && Number(shipment.quantity) > 0) {
+          totals.set(configuration.id, (totals.get(configuration.id) || 0) + Number(shipment.quantity));
+        }
+      });
+      return totals;
+    }
+
+    function renderSummaryProducts(totals = null) {
+      const list = document.getElementById('design-summary-list');
+      list.replaceChildren();
+      configurations.forEach((itemConfiguration, index) => {
+        const row = document.createElement('div');
+        row.className = 'design-summary';
+        const preview = document.createElement('div');
+        preview.className = 'design-preview';
+        const image = document.createElement('img');
+        image.src = itemConfiguration.printFileUrl;
+        image.alt = '';
+        preview.appendChild(image);
+
+        const copy = document.createElement('div');
+        copy.className = 'design-copy';
+        const title = document.createElement('strong');
+        if (index === 0) title.id = 'summary-title';
+        title.textContent = itemConfiguration.product.displayName;
+        const quantity = Number(totals?.get(itemConfiguration.id) || 0);
+        const quantityText = totals
+          ? quantityLabel(quantity, itemConfiguration)
+          : 'Menge wählt ihr unten';
+        const size = document.createElement('span');
+        size.textContent = `${quantityText} · ${configurationSizeText(itemConfiguration)}`;
+        copy.append(title, size);
+        row.append(preview, copy);
+        list.appendChild(row);
+      });
+    }
+
     function showQuote(quote) {
       currentQuote = quote;
-      const unit = configuration.product.unit;
       const shipmentCount = Number(quote.shipmentCount || 1);
       const deliveryLabel = shipmentCount === 1 ? '1 Lieferadresse' : `${shipmentCount} Lieferadressen`;
-      const productLabel = `${quote.quantity} ${quote.quantity === 1 ? unit.singular : unit.plural}`;
+      const productLabel = totalProductLabel(Number(quote.quantity || 0));
       document.getElementById('items-label').textContent =
         `${productLabel} · ${deliveryLabel}`;
-      document.getElementById('summary-quantity').textContent = `${productLabel} an ${deliveryLabel}`;
+      renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
       document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
       document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
       document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
@@ -659,7 +847,17 @@
     function markInvalidFields(fields) {
       const fieldIds = { country_code: 'country', state_code: 'state' };
       const resolve = (name) => {
-        if (name === 'shipments.quantity') return shipmentList.querySelector('[data-quantity]');
+        if (name === 'shipments.quantity') return shipmentList.querySelector('[data-item-quantity]');
+        const itemMatch = /^shipments\.(\d+)\.items(?:\.([A-Za-z0-9_-]{16}))?$/.exec(name);
+        if (itemMatch) {
+          const card = shipmentList.querySelectorAll('.shipment-card')[Number(itemMatch[1])];
+          if (!card) return null;
+          if (itemMatch[2]) {
+            return card.querySelector(`[data-field-path="${name}"]`) ||
+              card.querySelector(`[data-item-quantity][data-configuration-id="${itemMatch[2]}"]`);
+          }
+          return card.querySelector('[data-item-quantity]');
+        }
         const direct = [...shipmentList.querySelectorAll('[data-field-path]')]
           .find((field) => field.dataset.fieldPath === name);
         if (direct) return direct;
@@ -673,15 +871,15 @@
     async function restoreSavedQuote() {
       if (!savedQuoteId || !/^[A-Za-z0-9_-]{24}$/.test(savedQuoteId)) return;
       const response = await fetch(
-        `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}` +
-        `/quotes/${encodeURIComponent(savedQuoteId)}`,
+        `/api/events/${encodeURIComponent(slug)}/cart/quotes/${encodeURIComponent(savedQuoteId)}` +
+        `?ids=${encodeURIComponent(configurationIds.join(','))}`,
         { cache: 'no-store' }
       );
       if (!response.ok) return;
       const saved = await response.json();
       renderShipments(Array.isArray(saved.shipments) && saved.shipments.length
         ? saved.shipments
-        : [{ quantity: saved.quote?.quantity || configuration.quantity, recipient: saved.recipient || {} }]);
+        : [defaultShipment()]);
       showQuote(saved.quote);
       submitButton.textContent = 'Preis aktualisieren';
       if (checkoutWasCancelled) {
@@ -690,20 +888,27 @@
     }
 
     async function loadPage() {
-      if (!configurationId || !/^[A-Za-z0-9_-]{16}$/.test(configurationId)) {
+      if (!configurationIds.length || configurationIds.some((id) => !/^[A-Za-z0-9_-]{16}$/.test(id))) {
         showFatal('Dieser Entwurf ist nicht gültig. Bitte kehrt zum Konfigurator zurück und bestätigt euer Design erneut.');
         return;
       }
       try {
+        const configurationUrl = configurationIds.length === 1
+          ? `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationIds[0])}`
+          : `/api/events/${encodeURIComponent(slug)}/configurations?ids=${encodeURIComponent(configurationIds.join(','))}`;
         const [configurationResponse, countriesResponse] = await Promise.all([
-          fetch(`/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}`),
+          fetch(configurationUrl),
           fetch('/api/shipping/countries'),
         ]);
         const configurationData = await configurationResponse.json();
         const countriesData = await countriesResponse.json();
         if (!configurationResponse.ok) throw new Error('configuration');
         if (!countriesResponse.ok) throw new Error(countriesData.message || 'countries');
-        configuration = configurationData;
+        configurations = Array.isArray(configurationData.configurations)
+          ? configurationData.configurations
+          : [configurationData];
+        if (!configurations.length) throw new Error('configuration');
+        configuration = configurations[0];
         countries = countriesData.countries || [];
         if (!countries.length) throw new Error('countries');
 
@@ -715,14 +920,8 @@
             'Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.';
         }
 
-        document.getElementById('summary-title').textContent = configuration.product.displayName;
-        document.getElementById('summary-quantity').textContent =
-          `Menge und Lieferadressen wählt ihr hier`;
-        document.getElementById('summary-size').textContent = configuration.product.size.volumeMl
-          ? `${configuration.product.size.label} · ${configuration.product.size.volumeMl} ml`
-          : `${configuration.product.size.label} · ${configuration.product.size.detail}`;
-        document.getElementById('design-image').src = configuration.printFileUrl;
         renderShipments([defaultShipment()]);
+        renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
         await restoreSavedQuote();
         submitButton.disabled = false;
         loading.hidden = true;
@@ -738,7 +937,7 @@
     form.addEventListener('change', clearQuote);
     addShipmentButton.addEventListener('click', () => {
       const current = collectShipments({ validate: false }).shipments;
-      current.push({ quantity: 1, recipient: { country_code: defaultCountryCode() } });
+      current.push(defaultShipment({ emptyItems: true }));
       renderShipments(current);
       clearQuote();
       shipmentList.lastElementChild?.querySelector('input')?.focus();
@@ -748,17 +947,17 @@
       event.preventDefault();
       clearFieldErrors();
       if (!form.reportValidity()) return;
-      const { shipments, totalQuantity } = collectShipments();
-      if (totalQuantity < configuration.product.minQuantity || totalQuantity > configuration.product.maxQuantity) return;
+      const { shipments, totalQuantity, quantityError } = collectShipments();
+      if (quantityError || totalQuantity < 1 || totalQuantity > 99) return;
       submitButton.disabled = true;
       submitButton.textContent = 'Preis wird berechnet…';
       try {
         const response = await fetch(
-          `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/estimate-costs`,
+          `/api/events/${encodeURIComponent(slug)}/cart/estimate-costs`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shipments }),
+            body: JSON.stringify({ configurationIds, shipments }),
           }
         );
         const result = await response.json();
@@ -783,11 +982,11 @@
       checkoutError.textContent = '';
       try {
         const response = await fetch(
-          `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/checkout`,
+          `/api/events/${encodeURIComponent(slug)}/cart/checkout`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quoteId: currentQuote.id }),
+            body: JSON.stringify({ configurationIds, quoteId: currentQuote.id }),
           }
         );
         const result = await response.json();

@@ -86,6 +86,7 @@ db.exec(`
     fulfillment_payload_json TEXT,
     printful_order_status TEXT,
     fulfillment_updated_at TEXT,
+    configuration_ids_json TEXT,
     created_at         TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -129,6 +130,7 @@ db.exec(`
     id                    TEXT PRIMARY KEY,
     event_id              INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     configuration_id      TEXT NOT NULL REFERENCES configurations(id) ON DELETE CASCADE,
+    configuration_ids_json TEXT,
     recipient_json        TEXT NOT NULL,
     shipments_json        TEXT,
     printful_costs_json    TEXT NOT NULL,
@@ -152,6 +154,7 @@ db.exec(`
     order_id              INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     shipment_index        INTEGER NOT NULL,
     quantity              INTEGER NOT NULL,
+    items_json            TEXT,
     recipient_json        TEXT NOT NULL,
     printful_costs_json    TEXT NOT NULL,
     currency              TEXT NOT NULL,
@@ -222,6 +225,7 @@ const orderMigrations = [
   ['fulfillment_payload_json', 'TEXT'],
   ['printful_order_status', 'TEXT'],
   ['fulfillment_updated_at', 'TEXT'],
+  ['configuration_ids_json', 'TEXT'],
 ];
 for (const [name, declaration] of orderMigrations) {
   if (!orderColumns.has(name)) {
@@ -238,6 +242,16 @@ if (!checkoutQuoteColumns.has('shipments_json')) {
 }
 if (!checkoutQuoteColumns.has('payment_reserve_cents')) {
   db.exec('ALTER TABLE checkout_quotes ADD COLUMN payment_reserve_cents INTEGER NOT NULL DEFAULT 0;');
+}
+if (!checkoutQuoteColumns.has('configuration_ids_json')) {
+  db.exec('ALTER TABLE checkout_quotes ADD COLUMN configuration_ids_json TEXT;');
+}
+
+const checkoutOrderShipmentColumns = new Set(
+  db.prepare('PRAGMA table_info(checkout_order_shipments)').all().map((column) => column.name)
+);
+if (!checkoutOrderShipmentColumns.has('items_json')) {
+  db.exec('ALTER TABLE checkout_order_shipments ADD COLUMN items_json TEXT;');
 }
 
 // ── Password hashing (admin PIN) ────────────────────────────────────────────
@@ -436,12 +450,53 @@ function getEventOrderBySessionId(slug, stripeSessionId) {
   `).get(stripeSessionId, slug) || null;
 }
 
+function parseJsonArray(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function uniqueConfigurationIds(ids) {
+  return [...new Set((Array.isArray(ids) ? ids : [])
+    .map((id) => String(id || '').trim())
+    .filter((id) => /^[A-Za-z0-9_-]{16}$/.test(id)))];
+}
+
+function getCheckoutQuoteConfigurationIds(quote) {
+  const ids = uniqueConfigurationIds(parseJsonArray(quote?.configuration_ids_json));
+  return ids.length ? ids : uniqueConfigurationIds([quote?.configuration_id]);
+}
+
+function getOrderConfigurationIds(order) {
+  const ids = uniqueConfigurationIds(parseJsonArray(order?.configuration_ids_json));
+  return ids.length ? ids : uniqueConfigurationIds([order?.configuration_id]);
+}
+
+function shipmentQuantity(shipment) {
+  if (Number.isSafeInteger(Number(shipment?.quantity)) && Number(shipment.quantity) > 0) {
+    return Number(shipment.quantity);
+  }
+  if (Array.isArray(shipment?.items)) {
+    return shipment.items.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0);
+  }
+  return 0;
+}
+
 function getCheckoutQuoteShipments(quote) {
   if (!quote) return [];
   if (quote.shipments_json) {
     try {
       const shipments = JSON.parse(quote.shipments_json);
-      if (Array.isArray(shipments)) return shipments;
+      if (Array.isArray(shipments)) {
+        return shipments.map((shipment) => ({
+          ...shipment,
+          quantity: shipmentQuantity(shipment),
+        }));
+      }
     } catch {
       return [];
     }
@@ -464,13 +519,19 @@ function insertOrderShipments(orderId, quote) {
   const shipments = getCheckoutQuoteShipments(quote);
   const stmt = db.prepare(`
     INSERT INTO checkout_order_shipments (
-      order_id, shipment_index, quantity, recipient_json, printful_costs_json,
+      order_id, shipment_index, quantity, items_json, recipient_json, printful_costs_json,
       currency, shipping_cents, tax_cents
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   shipments.forEach((shipment, index) => {
     const printfulCosts = shipment.printfulCosts || shipment.costs || {};
     const customerCosts = shipment.customerCosts || {};
+    const items = Array.isArray(shipment.items) && shipment.items.length
+      ? shipment.items.map((item) => ({
+          configurationId: String(item.configurationId || item.configuration_id || ''),
+          quantity: Number(item.quantity),
+        }))
+      : null;
     const shippingCents = Number.isSafeInteger(Number(customerCosts.shippingCents))
       ? Number(customerCosts.shippingCents)
       : Math.round(Number(printfulCosts.shipping || 0) * 100);
@@ -481,7 +542,8 @@ function insertOrderShipments(orderId, quote) {
     stmt.run(
       orderId,
       index,
-      Number(shipment.quantity),
+      shipmentQuantity(shipment),
+      items ? JSON.stringify(items) : null,
       JSON.stringify(shipment.recipient),
       JSON.stringify(printfulCosts),
       String(printfulCosts.currency || quote.currency || '').toUpperCase(),
@@ -495,16 +557,18 @@ function createCheckoutOrder({ eventId, configurationId, quote, mode = 'test' })
   if (!['test', 'live'].includes(mode)) throw new Error('invalid checkout mode');
   const existing = getOrderByQuoteId(quote.id);
   if (existing) return { order: existing, created: false };
+  const configurationIds = getCheckoutQuoteConfigurationIds(quote);
   db.exec('BEGIN IMMEDIATE;');
   try {
     const info = db.prepare(`
       INSERT INTO orders (
-        event_id, configuration_id, quote_id, status, shipping_json,
+        event_id, configuration_id, configuration_ids_json, quote_id, status, shipping_json,
         currency, items_cents, payment_reserve_cents, shipping_cents, tax_cents, total_cents, mode
-      ) VALUES (?, ?, ?, 'creating_checkout', ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, 'creating_checkout', ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       eventId,
-      configurationId,
+      configurationId || configurationIds[0],
+      JSON.stringify(configurationIds.length ? configurationIds : [configurationId]),
       quote.id,
       quote.shipments_json || quote.recipient_json,
       quote.currency,
@@ -748,10 +812,12 @@ function cleanupAbandonedQuotes() {
   `).run(cutoff);
 }
 
-function createCheckoutQuote({ eventId, configurationId, recipient, shipments, printfulCosts, quote }) {
+function createCheckoutQuote({ eventId, configurationId, configurationIds, recipient, shipments, printfulCosts, quote }) {
   cleanupAbandonedQuotes();
   const id = crypto.randomBytes(18).toString('base64url');
   const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
+  const storedConfigurationIds = uniqueConfigurationIds(configurationIds || [configurationId]);
+  const primaryConfigurationId = configurationId || storedConfigurationIds[0];
   const normalizedShipments = Array.isArray(shipments) && shipments.length ? shipments : null;
   const primaryRecipient = recipient || normalizedShipments?.[0]?.recipient;
   const storedPrintfulCosts = printfulCosts ||
@@ -760,13 +826,14 @@ function createCheckoutQuote({ eventId, configurationId, recipient, shipments, p
       : null);
   db.prepare(`
     INSERT INTO checkout_quotes (
-      id, event_id, configuration_id, recipient_json, shipments_json, printful_costs_json,
+      id, event_id, configuration_id, configuration_ids_json, recipient_json, shipments_json, printful_costs_json,
       currency, quantity, items_cents, payment_reserve_cents, shipping_cents, tax_cents, total_cents, expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     eventId,
-    configurationId,
+    primaryConfigurationId,
+    JSON.stringify(storedConfigurationIds.length ? storedConfigurationIds : [primaryConfigurationId]),
     JSON.stringify(primaryRecipient),
     normalizedShipments ? JSON.stringify(normalizedShipments) : null,
     JSON.stringify(storedPrintfulCosts),
@@ -795,6 +862,24 @@ function getEventCheckoutQuote(slug, configurationId, quoteId) {
       AND checkout_quotes.configuration_id = ?
       AND events.slug = ?
   `).get(quoteId, configurationId, slug) || null;
+}
+
+function getEventCartCheckoutQuote(slug, configurationIds, quoteId) {
+  const quote = db.prepare(`
+    SELECT checkout_quotes.*
+    FROM checkout_quotes
+    JOIN events ON events.id = checkout_quotes.event_id
+    WHERE checkout_quotes.id = ?
+      AND events.slug = ?
+  `).get(quoteId, slug) || null;
+  if (!quote) return null;
+  const expectedIds = uniqueConfigurationIds(configurationIds).sort();
+  const storedIds = getCheckoutQuoteConfigurationIds(quote).sort();
+  if (expectedIds.length !== storedIds.length ||
+      expectedIds.some((id, index) => id !== storedIds[index])) {
+    return null;
+  }
+  return quote;
 }
 
 function updateCheckoutQuote(quoteId, { recipient, shipments, printfulCosts, quote }) {
@@ -911,6 +996,17 @@ function getEventConfiguration(slug, configurationId) {
   `).get(configurationId, slug) || null;
 }
 
+function getEventConfigurations(slug, configurationIds) {
+  const ids = uniqueConfigurationIds(configurationIds);
+  if (!ids.length) return [];
+  const rows = ids
+    .map((id) => getEventConfiguration(slug, id))
+    .filter(Boolean);
+  if (rows.length !== ids.length) return [];
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return ids.map((id) => byId.get(id));
+}
+
 module.exports = {
   db,
   hashPin,
@@ -935,6 +1031,8 @@ module.exports = {
   getOrderByQuoteId,
   getEventOrderBySessionId,
   getCheckoutQuoteShipments,
+  getCheckoutQuoteConfigurationIds,
+  getOrderConfigurationIds,
   createCheckoutOrder,
   attachStripeSession,
   markCheckoutCreationFailed,
@@ -952,9 +1050,11 @@ module.exports = {
   createCheckoutQuote,
   getCheckoutQuote,
   getEventCheckoutQuote,
+  getEventCartCheckoutQuote,
   updateCheckoutQuote,
   isCheckoutQuoteExpired,
   createConfiguration,
   getConfiguration,
   getEventConfiguration,
+  getEventConfigurations,
 };

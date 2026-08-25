@@ -4,15 +4,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent } = require('./helpers');
 
-async function saveConfiguration(baseUrl, slug, quantity = 3) {
+async function saveConfiguration(baseUrl, slug, quantityOrOptions = 3) {
+  const options = typeof quantityOrOptions === 'object'
+    ? quantityOrOptions
+    : { quantity: quantityOrOptions };
   const response = await fetch(`${baseUrl}/api/events/${slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      productKey: 'white-glossy-mug-duo-11oz',
-      quantity,
-      theme: 'pastel',
-      placement: 'single',
+      productKey: options.productKey || 'white-glossy-mug-duo-11oz',
+      quantity: options.quantity,
+      theme: options.theme || 'pastel',
+      placement: options.placement || 'single',
       words: [['liebe', 3], ['glück', 2]],
     }),
   });
@@ -140,6 +143,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
     id: undefined,
     currency: 'EUR',
     quantity: 3,
+    configurationCount: 1,
     shipmentCount: 2,
     itemsCents: 2561,
     paymentReserveCents: 161,
@@ -182,6 +186,89 @@ test('shipping page uses the immutable configuration and returns a server-side P
   assert.equal(missingState.status, 400);
   assert.deepEqual((await missingState.json()).fields, ['shipments.0.state_code']);
   assert.equal(captured.length, 0, 'invalid addresses must not reach Printful');
+});
+
+test('cart quote estimates mixed products for one address as one Printful shipment', async (t) => {
+  process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.15';
+  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '25';
+  t.after(() => {
+    delete process.env.SHOP_PRODUCT_MARKUP_PERCENT;
+    delete process.env.SHOP_PAYMENT_RESERVE_PERCENT;
+    delete process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS;
+  });
+
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { coupleName: 'Cart Carla & Mix Max' });
+  const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
+  const coaster = await saveConfiguration(baseUrl, event.slug, {
+    productKey: 'cork-back-coaster',
+    placement: 'fit-area',
+  });
+
+  const printful = require('../src/printful');
+  const originalCountries = printful.getShippingCountries;
+  const originalEstimate = printful.estimateOrderCosts;
+  const captured = [];
+  printful.getShippingCountries = async () => [
+    { code: 'DE', name: 'Germany', region: 'europe', states: [] },
+  ];
+  printful.estimateOrderCosts = async (options) => {
+    captured.push(options);
+    return {
+      currency: 'EUR',
+      subtotal: 20,
+      shipping: 6,
+      tax: 0,
+      vat: 4.94,
+      total: 30.94,
+    };
+  };
+  t.after(() => {
+    printful.getShippingCountries = originalCountries;
+    printful.estimateOrderCosts = originalEstimate;
+  });
+
+  const response = await fetch(`${baseUrl}/api/events/${event.slug}/cart/estimate-costs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      configurationIds: [mug.id, coaster.id],
+      shipments: [{
+        items: [
+          { configurationId: mug.id, quantity: 2 },
+          { configurationId: coaster.id, quantity: 3 },
+        ],
+        recipient: {
+          name: 'Mix Max',
+          address1: 'Blumenstraße 12',
+          city: 'Berlin',
+          zip: '10115',
+          country_code: 'DE',
+        },
+      }],
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const { quote } = await response.json();
+  assert.equal(quote.quantity, 5);
+  assert.equal(quote.shipmentCount, 1);
+  assert.equal(quote.configurationCount, 2);
+  assert.equal(quote.productCount, 2);
+  assert.equal(quote.itemsCents, 3167);
+  assert.equal(quote.paymentReserveCents, 167);
+  assert.equal(quote.shippingCents, 600);
+  assert.equal(quote.taxCents, 716);
+  assert.equal(quote.totalCents, 4483);
+  assert.equal(captured.length, 1, 'mixed items for one address must use one Printful estimate');
+  assert.deepEqual(captured[0].items, [
+    { configurationId: mug.id, variantId: 1320, quantity: 2 },
+    { configurationId: coaster.id, variantId: 15662, quantity: 3 },
+  ]);
+  assert.equal(captured[0].variantId, undefined);
+  assert.equal(captured[0].quantity, undefined);
 });
 
 test('a configuration can never be quoted through another event slug', async (t) => {

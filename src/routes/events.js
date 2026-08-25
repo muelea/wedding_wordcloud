@@ -38,6 +38,17 @@ const ADDRESS_LIMITS = Object.freeze({
   zip: 20,
 });
 const MAX_CHECKOUT_SHIPMENTS = 10;
+const MAX_CART_CONFIGURATIONS = 20;
+const MAX_CART_ITEMS = 99;
+
+function normalizeConfigurationIdList(value) {
+  const rawIds = Array.isArray(value)
+    ? value
+    : String(value || '').split(',');
+  return [...new Set(rawIds
+    .map((id) => String(id || '').trim())
+    .filter((id) => /^[A-Za-z0-9_-]{16}$/.test(id)))].slice(0, MAX_CART_CONFIGURATIONS);
+}
 
 function cleanAddressValue(value, maxLength) {
   if (typeof value !== 'string') return '';
@@ -158,6 +169,61 @@ function normalizeCheckoutShipments(rawBody, countries, product, fallbackQuantit
   };
 }
 
+function normalizeCartShipments(rawBody, countries, configurations) {
+  const configurationById = new Map(configurations.map((configuration) => [configuration.id, configuration]));
+  const rawShipments = Array.isArray(rawBody?.shipments) ? rawBody.shipments : [];
+  const invalidFields = [];
+
+  if (!rawShipments.length || rawShipments.length > MAX_CHECKOUT_SHIPMENTS) {
+    return { shipments: [], invalidFields: ['shipments'], totalQuantity: 0 };
+  }
+
+  const shipments = rawShipments.map((rawShipment, index) => {
+    const raw = rawShipment && typeof rawShipment === 'object' && !Array.isArray(rawShipment)
+      ? rawShipment
+      : {};
+    const fieldPrefix = `shipments.${index}.`;
+    const { recipient, invalidFields: recipientInvalidFields } = normalizeRecipient(raw.recipient || raw, countries);
+    recipientInvalidFields.forEach((field) => invalidFields.push(`${fieldPrefix}${field}`));
+
+    const rawItems = Array.isArray(raw.items) ? raw.items : [];
+    const items = [];
+    for (const rawItem of rawItems) {
+      const configurationId = String(rawItem?.configurationId || rawItem?.configuration_id || '').trim();
+      const configuration = configurationById.get(configurationId);
+      const product = configuration ? getProduct(configuration.product_key) : null;
+      const rawQuantity = Number(rawItem?.quantity);
+      const quantity = Number.isFinite(rawQuantity) ? Math.round(rawQuantity) : 0;
+      if (!configuration || !product) {
+        invalidFields.push(`${fieldPrefix}items`);
+        continue;
+      }
+      if (!Number.isSafeInteger(quantity) || quantity < 0 || quantity > product.maxQuantity) {
+        invalidFields.push(`${fieldPrefix}items.${configurationId}`);
+        continue;
+      }
+      if (quantity > 0) items.push({ configurationId, quantity });
+    }
+    if (!items.length) invalidFields.push(`${fieldPrefix}items`);
+    return {
+      quantity: items.reduce((sum, item) => sum + item.quantity, 0),
+      recipient,
+      items,
+    };
+  });
+
+  const totalQuantity = shipments.reduce((sum, shipment) => sum + shipment.quantity, 0);
+  if (totalQuantity < 1 || totalQuantity > MAX_CART_ITEMS) {
+    invalidFields.push('shipments.quantity');
+  }
+
+  return {
+    shipments,
+    invalidFields: [...new Set(invalidFields)],
+    totalQuantity,
+  };
+}
+
 function sendPrintfulError(res, error) {
   if (error?.code === 'PRINTFUL_NOT_CONFIGURED') {
     return res.status(501).json({
@@ -184,10 +250,12 @@ function sendPrintfulError(res, error) {
 
 function checkoutQuoteResponse(quote) {
   const shipments = db.getCheckoutQuoteShipments(quote);
+  const configurationIds = db.getCheckoutQuoteConfigurationIds(quote);
   return {
     id: quote.id,
     currency: quote.currency,
     quantity: Number(quote.quantity),
+    configurationCount: configurationIds.length || 1,
     shipmentCount: shipments.length || 1,
     itemsCents: Number(quote.items_cents),
     paymentReserveCents: Number(quote.payment_reserve_cents || 0),
@@ -371,6 +439,112 @@ function configurationPrintFileUrls(slug, configurationId, product) {
   return {
     printFileUrl: printFileUrls[product.printSurfaces[0].key],
     printFileUrls,
+  };
+}
+
+function configurationResponse(slug, configuration) {
+  const product = getProduct(configuration.product_key);
+  if (!product) return null;
+  const placement = product.layouts.find((option) => option.key === configuration.placement);
+  const printFiles = configurationPrintFileUrls(slug, configuration.id, product);
+  return {
+    id: configuration.id,
+    quantity: Number(configuration.quantity),
+    product: getPublicProduct(product),
+    placement: placement ? { key: placement.key, label: placement.label } : null,
+    configurationType: configuration.configuration_type,
+    ...printFiles,
+    createdAt: configuration.created_at,
+  };
+}
+
+function configurationDesignSurfaces(product, design) {
+  if (!design) return null;
+  if (Array.isArray(design)) {
+    return Object.fromEntries(product.printSurfaces.map((surface) => [
+      surface.key,
+      design.map((item) => ({ ...item })),
+    ]));
+  }
+  if (design.version === 2 && design.surfaces && typeof design.surfaces === 'object') {
+    return Object.fromEntries(product.printSurfaces.map((surface) => [
+      surface.key,
+      Array.isArray(design.surfaces[surface.key])
+        ? design.surfaces[surface.key].map((item) => ({ ...item }))
+        : [],
+    ]));
+  }
+  return null;
+}
+
+function editableConfigurationResponse(slug, configuration) {
+  const summary = configurationResponse(slug, configuration);
+  if (!summary) return null;
+  const product = getProduct(configuration.product_key);
+  let words;
+  let design = null;
+  try {
+    words = JSON.parse(configuration.words_json);
+    if (configuration.design_json) design = JSON.parse(configuration.design_json);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(words)) return null;
+  return {
+    ...summary,
+    productKey: configuration.product_key,
+    theme: configuration.theme,
+    placementKey: configuration.placement,
+    words,
+    designs: configurationDesignSurfaces(product, design),
+  };
+}
+
+function cartSummary(configurations) {
+  return {
+    configurationCount: configurations.length,
+    productCount: configurations.length,
+  };
+}
+
+function printfulEstimateItemsForShipment(shipment, configurationById) {
+  return shipment.items.map((item) => {
+    const configuration = configurationById.get(item.configurationId);
+    const product = configuration ? getProduct(configuration.product_key) : null;
+    if (!configuration || !product) throw new Error('configuration_invalid');
+    return {
+      configurationId: configuration.id,
+      variantId: Number(configuration.printful_variant_id),
+      quantity: item.quantity,
+    };
+  });
+}
+
+async function estimateCartShipments({ body, countries, configurations }) {
+  const { shipments, invalidFields } = normalizeCartShipments(body, countries, configurations);
+  if (invalidFields.length) return { invalidFields };
+  const configurationById = new Map(configurations.map((configuration) => [configuration.id, configuration]));
+  const pricedShipments = await Promise.all(shipments.map(async (shipment) => {
+    const items = printfulEstimateItemsForShipment(shipment, configurationById);
+    const printfulCosts = await printful.estimateOrderCosts({
+      recipient: shipment.recipient,
+      items,
+    });
+    return {
+      ...shipment,
+      items: shipment.items,
+      printfulCosts,
+    };
+  }));
+  const calculatedQuote = buildCustomerQuoteForShipments(
+    pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
+  );
+  return {
+    pricedShipments: pricedShipments.map((shipment, index) => ({
+      ...shipment,
+      customerCosts: calculatedQuote.shipmentQuotes[index],
+    })),
+    calculatedQuote,
   };
 }
 
@@ -610,22 +784,35 @@ function makeRouter({ io, port }) {
     });
   });
 
+  router.get('/events/:slug/configurations', (req, res) => {
+    const ids = normalizeConfigurationIdList(req.query.ids);
+    if (!ids.length) return res.status(400).json({ error: 'invalid_configurations' });
+    const configurations = db.getEventConfigurations(req.params.slug, ids);
+    if (configurations.length !== ids.length) {
+      return res.status(404).json({ error: 'configuration_not_found' });
+    }
+    const response = configurations.map((configuration) => configurationResponse(req.params.slug, configuration));
+    if (response.some((configuration) => !configuration)) {
+      return res.status(500).json({ error: 'configuration_invalid' });
+    }
+    res.json({ configurations: response });
+  });
+
   router.get('/events/:slug/configurations/:configurationId', (req, res) => {
     const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
-    const product = getProduct(configuration.product_key);
-    if (!product) return res.status(500).json({ error: 'configuration_invalid' });
-    const placement = product.layouts.find((option) => option.key === configuration.placement);
-    const printFiles = configurationPrintFileUrls(req.params.slug, configuration.id, product);
-    res.json({
-      id: configuration.id,
-      quantity: Number(configuration.quantity),
-      product: getPublicProduct(product),
-      placement: placement ? { key: placement.key, label: placement.label } : null,
-      configurationType: configuration.configuration_type,
-      ...printFiles,
-      createdAt: configuration.created_at,
-    });
+    const response = configurationResponse(req.params.slug, configuration);
+    if (!response) return res.status(500).json({ error: 'configuration_invalid' });
+    res.json(response);
+  });
+
+  router.get('/events/:slug/configurations/:configurationId/edit', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+    const response = editableConfigurationResponse(req.params.slug, configuration);
+    if (!response) return res.status(500).json({ error: 'configuration_invalid' });
+    res.json(response);
   });
 
   router.post(
@@ -693,6 +880,53 @@ function makeRouter({ io, port }) {
     }
   );
 
+  router.post('/events/:slug/cart/estimate-costs', express.json({ limit: '32kb' }), async (req, res) => {
+    const ids = normalizeConfigurationIdList(req.body?.configurationIds || req.body?.configuration_ids);
+    const configurations = db.getEventConfigurations(req.params.slug, ids);
+    if (!ids.length || configurations.length !== ids.length) {
+      return res.status(404).json({ error: 'configuration_not_found' });
+    }
+    try {
+      const countries = await printful.getShippingCountries();
+      const { invalidFields, pricedShipments, calculatedQuote } = await estimateCartShipments({
+        body: req.body,
+        countries,
+        configurations,
+      });
+      if (invalidFields?.length) {
+        return res.status(400).json({
+          error: 'invalid_address',
+          fields: invalidFields,
+          message: 'Bitte fülle alle benötigten Adressfelder vollständig aus.',
+        });
+      }
+      if (calculatedQuote.currency !== 'EUR') {
+        console.error(`Printful returned ${calculatedQuote.currency}; dynamic checkout requires EUR.`);
+        return res.status(502).json({
+          error: 'pricing_currency_mismatch',
+          message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
+        });
+      }
+      const savedQuote = db.createCheckoutQuote({
+        eventId: configurations[0].event_id,
+        configurationId: configurations[0].id,
+        configurationIds: configurations.map((configuration) => configuration.id),
+        shipments: pricedShipments,
+        quote: calculatedQuote,
+      });
+      res.json({ quote: { ...checkoutQuoteResponse(savedQuote), ...cartSummary(configurations) } });
+    } catch (error) {
+      if (error?.message?.startsWith('invalid Printful') || error?.message?.startsWith('invalid negative')) {
+        console.error('Invalid Printful pricing response:', error.message);
+        return res.status(502).json({
+          error: 'pricing_unavailable',
+          message: 'Printful hat gerade keinen gültigen Preis geliefert. Bitte versucht es erneut.',
+        });
+      }
+      return sendPrintfulError(res, error);
+    }
+  });
+
   // Restore an opaque saved quote after returning from Stripe's cancel URL.
   // The response is no-store because it contains the normalized address.
   router.get('/events/:slug/configurations/:configurationId/quotes/:quoteId', (req, res) => {
@@ -716,6 +950,28 @@ function makeRouter({ io, port }) {
     const shipments = db.getCheckoutQuoteShipments(quote)
       .map((shipment) => ({ quantity: Number(shipment.quantity), recipient: shipment.recipient }));
     return res.json({ quote: checkoutQuoteResponse(quote), recipient, shipments });
+  });
+
+  router.get('/events/:slug/cart/quotes/:quoteId', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const ids = normalizeConfigurationIdList(req.query.ids);
+    const quote = db.getEventCartCheckoutQuote(req.params.slug, ids, req.params.quoteId);
+    if (!quote) return res.status(404).json({ error: 'quote_not_found' });
+    const order = db.getOrderByQuoteId(quote.id);
+    if (db.isCheckoutQuoteExpired(quote) && !order) {
+      return res.status(410).json({ error: 'quote_expired' });
+    }
+    const configurations = db.getEventConfigurations(req.params.slug, ids);
+    const shipments = db.getCheckoutQuoteShipments(quote)
+      .map((shipment) => ({
+        quantity: Number(shipment.quantity),
+        recipient: shipment.recipient,
+        items: Array.isArray(shipment.items) ? shipment.items : [],
+      }));
+    return res.json({
+      quote: { ...checkoutQuoteResponse(quote), ...cartSummary(configurations) },
+      shipments,
+    });
   });
 
   router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
@@ -752,6 +1008,137 @@ function makeRouter({ io, port }) {
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(svg);
+  });
+
+  router.post('/events/:slug/cart/checkout', express.json({ limit: '32kb' }), async (req, res) => {
+    const event = db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'event_not_found' });
+    const ids = normalizeConfigurationIdList(req.body?.configurationIds || req.body?.configuration_ids);
+    const configurations = db.getEventConfigurations(event.slug, ids);
+    if (!ids.length || configurations.length !== ids.length) {
+      return res.status(404).json({ error: 'configuration_not_found' });
+    }
+    const quoteId = typeof req.body?.quoteId === 'string' ? req.body.quoteId : '';
+    const storedQuote = db.getEventCartCheckoutQuote(event.slug, ids, quoteId);
+    if (!storedQuote) {
+      return res.status(404).json({
+        error: 'quote_not_found',
+        message: 'Die Preisberechnung wurde nicht gefunden. Bitte berechnet den Preis erneut.',
+      });
+    }
+
+    let order = db.getOrderByQuoteId(storedQuote.id);
+    if (order?.status === 'checkout_pending' && order.stripe_checkout_url) {
+      return res.json({ url: order.stripe_checkout_url, reused: true });
+    }
+    if (order && ['paid_test', 'paid'].includes(order.status)) {
+      return res.json({
+        confirmationUrl: `/e/${encodeURIComponent(event.slug)}/order-confirmation?session_id=${encodeURIComponent(order.stripe_session_id)}`,
+        alreadyPaid: true,
+      });
+    }
+    if (order?.status === 'creating_checkout') {
+      return res.status(409).json({
+        error: 'checkout_in_progress',
+        message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+      });
+    }
+    if (db.isCheckoutQuoteExpired(storedQuote)) {
+      return res.status(409).json({
+        error: 'quote_expired',
+        message: 'Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.',
+      });
+    }
+
+    const storedShipments = db.getCheckoutQuoteShipments(storedQuote);
+    if (!storedShipments.length) {
+      return res.status(500).json({ error: 'quote_invalid' });
+    }
+
+    try {
+      const countries = await printful.getShippingCountries();
+      const { invalidFields, pricedShipments, calculatedQuote: freshQuote } = await estimateCartShipments({
+        body: { shipments: storedShipments },
+        countries,
+        configurations,
+      });
+      if (invalidFields?.length) {
+        return res.status(400).json({
+          error: 'invalid_address',
+          fields: invalidFields,
+          message: 'Bitte fülle alle benötigten Adressfelder vollständig aus.',
+        });
+      }
+      if (freshQuote.currency !== 'EUR') {
+        return res.status(502).json({
+          error: 'pricing_currency_mismatch',
+          message: 'Der Shoppreis konnte nicht in Euro berechnet werden.',
+        });
+      }
+
+      const changed = quoteAmountsDiffer(storedQuote, freshQuote);
+      const refreshedQuote = db.updateCheckoutQuote(storedQuote.id, {
+        shipments: pricedShipments,
+        quote: freshQuote,
+      });
+      if (changed) {
+        return res.status(409).json({
+          error: 'quote_changed',
+          message: 'Printful hat den Preis aktualisiert. Bitte bestätigt den neuen Gesamtpreis.',
+          quote: { ...checkoutQuoteResponse(refreshedQuote), ...cartSummary(configurations) },
+        });
+      }
+
+      const orderResult = db.createCheckoutOrder({
+        eventId: event.id,
+        configurationId: configurations[0].id,
+        quote: refreshedQuote,
+        mode: stripe.getCheckoutMode(),
+      });
+      order = orderResult.order;
+      if (!orderResult.created && order.status === 'checkout_failed') {
+        order = db.retryCheckoutOrder(order.id);
+      }
+      if (!orderResult.created && order.status !== 'creating_checkout') {
+        if (order.status === 'checkout_pending' && order.stripe_checkout_url) {
+          return res.json({ url: order.stripe_checkout_url, reused: true });
+        }
+        return res.status(409).json({
+          error: 'checkout_in_progress',
+          message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+        });
+      }
+
+      const session = await stripe.createCheckoutSession({
+        order,
+        products: configurations.map((configuration) => getProduct(configuration.product_key)).filter(Boolean),
+        slug: event.slug,
+        configurationIds: configurations.map((configuration) => configuration.id),
+        quoteId: refreshedQuote.id,
+        quantity: freshQuote.quantity,
+        shipmentCount: pricedShipments.length,
+        baseUrl: getBaseUrl(req, port),
+      });
+      db.attachStripeSession(order.id, session);
+      return res.json({ url: session.url });
+    } catch (error) {
+      if (order?.id) db.markCheckoutCreationFailed(order.id);
+      if (error?.code === 'STRIPE_NOT_CONFIGURED') {
+        return res.status(501).json({
+          error: 'checkout_not_configured',
+          message: 'Stripe ist noch nicht eingerichtet. Bitte ergänzt den Test-Key in der .env-Datei.',
+        });
+      }
+      if (error?.code === 'STRIPE_LIVE_MODE_BLOCKED') {
+        return res.status(503).json({ error: 'stripe_live_mode_blocked', message: error.message });
+      }
+      if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
+      console.error('Cart checkout creation failed:', error);
+      return res.status(500).json({
+        error: 'checkout_failed',
+        message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',
+      });
+    }
   });
 
   // Re-estimate from the saved address immediately before Stripe. The client
@@ -908,8 +1295,11 @@ function makeRouter({ io, port }) {
     }
     const order = db.getEventOrderBySessionId(req.params.slug, sessionId);
     if (!order) return res.status(404).json({ error: 'order_not_found' });
-    const configuration = db.getConfiguration(order.configuration_id);
-    const product = configuration ? getProduct(configuration.product_key) : null;
+    const configurationIds = db.getOrderConfigurationIds(order);
+    const configurations = configurationIds.map((id) => db.getConfiguration(id)).filter(Boolean);
+    const configuration = configurations[0] || db.getConfiguration(order.configuration_id);
+    const products = configurations.map((entry) => getProduct(entry.product_key)).filter(Boolean);
+    const product = products.length === 1 ? products[0] : null;
     const paymentConfirmed = ['paid_test', 'paid'].includes(order.status);
     const fulfillmentCreated = ['draft', 'submitted'].includes(order.fulfillment_status);
     const orderShipments = db.getOrderShipments(order.id);
@@ -925,10 +1315,11 @@ function makeRouter({ io, port }) {
         ? orderShipments.reduce((sum, shipment) => sum + Number(shipment.quantity || 0), 0)
         : configuration ? Number(configuration.quantity) : null,
       shipmentCount: orderShipments.length || 1,
+      configurationCount: configurations.length || 1,
       product: product ? {
         name: product.name,
         unit: product.unit,
-      } : null,
+      } : { name: 'Wolkenworte Bestellung', unit: { singular: 'Produkt', plural: 'Produkte' } },
       configurationType: configuration?.configuration_type || 'event_wordcloud',
       paidAt: order.paid_at,
     });

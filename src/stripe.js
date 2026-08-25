@@ -63,8 +63,10 @@ function notConfiguredError() {
 async function createCheckoutSession({
   order,
   product,
+  products = null,
   slug,
   configurationId,
+  configurationIds = null,
   quoteId,
   quantity,
   shipmentCount = 1,
@@ -82,20 +84,38 @@ async function createCheckoutSession({
   }
 
   const encodedSlug = encodeURIComponent(slug);
-  const encodedConfiguration = encodeURIComponent(configurationId);
+  const cartConfigurationIds = Array.isArray(configurationIds) && configurationIds.length
+    ? configurationIds.map((id) => String(id))
+    : configurationId ? [String(configurationId)] : [];
+  const encodedConfiguration = encodeURIComponent(cartConfigurationIds[0] || configurationId);
   const checkoutMode = order.mode === 'live' ? 'live' : 'test';
   const metadata = {
     eventSlug: slug,
-    configurationId,
+    configurationId: cartConfigurationIds[0] || configurationId || '',
+    configurationIds: cartConfigurationIds.join(','),
     quoteId,
     orderId: String(order.id),
     checkoutMode,
   };
-  const unitLabel = quantity === 1 ? product.unit.singular : product.unit.plural;
+  const cartProducts = Array.isArray(products) && products.length ? products : product ? [product] : [];
+  const singleProduct = cartProducts.length === 1 ? cartProducts[0] : null;
+  const unitLabel = singleProduct
+    ? quantity === 1 ? singleProduct.unit.singular : singleProduct.unit.plural
+    : quantity === 1 ? 'Produkt' : 'Produkte';
   const shipmentLabel = shipmentCount > 1
     ? ` · ${shipmentCount} Lieferadressen`
     : '';
-  const quantityLabel = `${quantity} ${unitLabel}${shipmentLabel} · ${product.size.label}`;
+  const quantityLabel = singleProduct
+    ? `${quantity} ${unitLabel}${shipmentLabel} · ${singleProduct.size.label}`
+    : `Wolkenworte Bestellung · ${quantity} ${unitLabel}${shipmentLabel}`;
+  const description = singleProduct
+    ? `${singleProduct.name} mit persönlichem Design inklusive Standardversand`
+    : `${cartProducts.length} persönliche Designs inklusive Standardversand`;
+  const cancelUrl = cartConfigurationIds.length > 1
+    ? `${baseUrl}/e/${encodedSlug}/shipping?configurations=${encodeURIComponent(cartConfigurationIds.join(','))}` +
+      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`
+    : `${baseUrl}/e/${encodedSlug}/shipping?configuration=${encodedConfiguration}` +
+      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`;
 
   const session = await client.checkout.sessions.create({
     mode: 'payment',
@@ -109,16 +129,19 @@ async function createCheckoutSession({
         unit_amount: totalCents,
         product_data: {
           name: quantityLabel,
-          description: `${product.name} mit persönlichem Design inklusive Standardversand`,
-          metadata: { productKey: product.key, configurationId },
+          description,
+          metadata: {
+            productKey: singleProduct?.key || 'mixed',
+            configurationId: cartConfigurationIds[0] || configurationId || '',
+            configurationIds: cartConfigurationIds.join(','),
+          },
         },
       },
     }],
     metadata,
     payment_intent_data: { metadata },
     success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/e/${encodedSlug}/shipping?configuration=${encodedConfiguration}` +
-      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`,
+    cancel_url: cancelUrl,
   }, {
     idempotencyKey: `weddingcloud-${checkoutMode}-order-${order.id}`,
   });

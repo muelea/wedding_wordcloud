@@ -122,18 +122,31 @@ async function getShippingCountries() {
 
 /**
  * Ask Printful for the current fulfillment cost without creating an order.
- * Artwork is deliberately omitted: for this curated mug, the chosen print
- * file does not alter fulfillment cost, and Printful cannot fetch a local
- * development URL. The immutable configuration still supplies the trusted
- * variant and quantity used here and later supplies the artwork at checkout.
+ * Artwork is deliberately omitted: the curated product variant(s) and
+ * quantities determine the cost estimate, while Printful cannot fetch a local
+ * development artwork URL. The immutable configuration still supplies the
+ * trusted variant and later supplies the artwork during fulfillment.
  */
-async function estimateOrderCosts({ variantId, quantity, recipient }) {
+async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
+  const orderItems = Array.isArray(items) && items.length
+    ? items.map((item) => ({
+        variant_id: Number(item.variantId || item.variant_id),
+        quantity: Number(item.quantity),
+      }))
+    : [{ variant_id: Number(variantId), quantity: Number(quantity) }];
+  if (!orderItems.length ||
+      orderItems.some((item) => !Number.isSafeInteger(item.variant_id) ||
+        item.variant_id < 1 ||
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity < 1)) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_ORDER', 'Die Printful-Artikel sind ungültig.', 500);
+  }
   const result = await printfulRequest('/orders/estimate-costs', {
     method: 'POST',
     body: JSON.stringify({
       shipping: 'STANDARD',
       recipient,
-      items: [{ variant_id: variantId, quantity }],
+      items: orderItems,
     }),
   });
   if (!result?.costs || typeof result.costs.currency !== 'string') {
