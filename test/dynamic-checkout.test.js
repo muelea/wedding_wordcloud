@@ -68,7 +68,8 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   });
 
   const quote = await calculateQuote(baseUrl, event.slug, configuration.id);
-  assert.equal(quote.totalCents, 2740);
+  assert.equal(quote.paymentReserveCents, 108);
+  assert.equal(quote.totalCents, 2623);
 
   const checkoutUrl = `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/checkout`;
   const first = await fetch(checkoutUrl, {
@@ -79,8 +80,10 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   assert.equal(estimateCalls, 2, 'one estimate for display and one immediately before Stripe');
   assert.equal(checkoutCalls, 1);
   assert.equal(capturedCheckout.order.total_cents, quote.totalCents);
+  assert.equal(capturedCheckout.order.payment_reserve_cents, quote.paymentReserveCents);
   assert.equal(capturedCheckout.order.currency, 'EUR');
   assert.equal(capturedCheckout.quantity, 2);
+  assert.equal(capturedCheckout.shipmentCount, 1);
   assert.equal(capturedCheckout.quoteId, quote.id);
 
   const second = await fetch(checkoutUrl, {
@@ -98,10 +101,17 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   const order = db.getOrderBySessionId('cs_test_dynamic_1');
   assert.equal(order.status, 'checkout_pending');
   assert.equal(order.quote_id, quote.id);
-  assert.deepEqual(JSON.parse(order.shipping_json), {
-    name: 'Checkout Clara', address1: 'Blumenstraße 12', address2: '2. OG',
-    city: 'Berlin', zip: '10115', country_code: 'DE',
-  });
+  assert.equal(order.payment_reserve_cents, quote.paymentReserveCents);
+  assert.deepEqual(JSON.parse(order.shipping_json).map((shipment) => ({
+    quantity: shipment.quantity,
+    recipient: shipment.recipient,
+  })), [{
+    quantity: 2,
+    recipient: {
+      name: 'Checkout Clara', address1: 'Blumenstraße 12', address2: '2. OG',
+      city: 'Berlin', zip: '10115', country_code: 'DE',
+    },
+  }]);
 
   const restoredResponse = await fetch(
     `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/quotes/${quote.id}`
@@ -110,10 +120,21 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   assert.match(restoredResponse.headers.get('cache-control'), /no-store/);
   const restored = await restoredResponse.json();
   assert.equal(restored.quote.id, quote.id);
+  assert.equal(restored.quote.shipmentCount, 1);
   assert.deepEqual(restored.recipient, {
     name: 'Checkout Clara', address1: 'Blumenstraße 12', address2: '2. OG',
     city: 'Berlin', zip: '10115', country_code: 'DE',
   });
+  assert.deepEqual(restored.shipments.map((shipment) => ({
+    quantity: shipment.quantity,
+    recipient: shipment.recipient,
+  })), [{
+    quantity: 2,
+    recipient: {
+      name: 'Checkout Clara', address1: 'Blumenstraße 12', address2: '2. OG',
+      city: 'Berlin', zip: '10115', country_code: 'DE',
+    },
+  }]);
 });
 
 test('a changed Printful price must be shown and confirmed before Stripe is created', async (t) => {
@@ -132,10 +153,13 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   printful.getShippingCountries = async () => [
     { code: 'DE', name: 'Germany', region: 'europe', states: [] },
   ];
-  printful.estimateOrderCosts = async () => ({
-    currency: 'EUR', subtotal: productSubtotal, shipping: 4.49, tax: 0, vat: 2.94,
-    total: productSubtotal + 4.49 + 2.94,
-  });
+  printful.estimateOrderCosts = async () => {
+    const vat = Math.round((productSubtotal + 4.49) * 0.19 * 100) / 100;
+    return {
+      currency: 'EUR', subtotal: productSubtotal, shipping: 4.49, tax: 0, vat,
+      total: productSubtotal + 4.49 + vat,
+    };
+  };
   stripe.createCheckoutSession = async () => {
     checkoutCalls += 1;
     return { id: 'cs_test_updated_1', url: 'https://checkout.stripe.test/cs_test_updated_1' };
@@ -156,7 +180,8 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   const changedBody = await changed.json();
   assert.equal(changedBody.error, 'quote_changed');
   assert.equal(changedBody.quote.id, quote.id);
-  assert.equal(changedBody.quote.totalCents, 2925);
+  assert.equal(changedBody.quote.paymentReserveCents, 114);
+  assert.equal(changedBody.quote.totalCents, 2812);
   assert.equal(checkoutCalls, 0);
 
   const confirmed = await fetch(checkoutUrl, {

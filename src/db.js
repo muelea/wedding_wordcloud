@@ -130,10 +130,12 @@ db.exec(`
     event_id              INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     configuration_id      TEXT NOT NULL REFERENCES configurations(id) ON DELETE CASCADE,
     recipient_json        TEXT NOT NULL,
+    shipments_json        TEXT,
     printful_costs_json    TEXT NOT NULL,
     currency              TEXT NOT NULL,
     quantity              INTEGER NOT NULL,
     items_cents           INTEGER NOT NULL,
+    payment_reserve_cents INTEGER NOT NULL DEFAULT 0,
     shipping_cents        INTEGER NOT NULL,
     tax_cents             INTEGER NOT NULL,
     total_cents           INTEGER NOT NULL,
@@ -144,6 +146,27 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS checkout_quotes_event_configuration_idx
     ON checkout_quotes(event_id, configuration_id);
+
+  CREATE TABLE IF NOT EXISTS checkout_order_shipments (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id              INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    shipment_index        INTEGER NOT NULL,
+    quantity              INTEGER NOT NULL,
+    recipient_json        TEXT NOT NULL,
+    printful_costs_json    TEXT NOT NULL,
+    currency              TEXT NOT NULL,
+    shipping_cents        INTEGER NOT NULL,
+    tax_cents             INTEGER NOT NULL,
+    fulfillment_status    TEXT NOT NULL DEFAULT 'pending',
+    fulfillment_mode      TEXT,
+    fulfillment_attempts  INTEGER NOT NULL DEFAULT 0,
+    fulfillment_error     TEXT,
+    fulfillment_payload_json TEXT,
+    printful_order_id     TEXT,
+    printful_order_status TEXT,
+    updated_at            TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(order_id, shipment_index)
+  );
 
   CREATE TABLE IF NOT EXISTS stripe_webhook_events (
     stripe_event_id  TEXT PRIMARY KEY,
@@ -183,6 +206,7 @@ const orderMigrations = [
   ['quote_id', 'TEXT'],
   ['currency', 'TEXT'],
   ['items_cents', 'INTEGER'],
+  ['payment_reserve_cents', 'INTEGER NOT NULL DEFAULT 0'],
   ['shipping_cents', 'INTEGER'],
   ['tax_cents', 'INTEGER'],
   ['total_cents', 'INTEGER'],
@@ -205,6 +229,16 @@ for (const [name, declaration] of orderMigrations) {
   }
 }
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS orders_quote_id_unique ON orders(quote_id) WHERE quote_id IS NOT NULL;');
+
+const checkoutQuoteColumns = new Set(
+  db.prepare('PRAGMA table_info(checkout_quotes)').all().map((column) => column.name)
+);
+if (!checkoutQuoteColumns.has('shipments_json')) {
+  db.exec('ALTER TABLE checkout_quotes ADD COLUMN shipments_json TEXT;');
+}
+if (!checkoutQuoteColumns.has('payment_reserve_cents')) {
+  db.exec('ALTER TABLE checkout_quotes ADD COLUMN payment_reserve_cents INTEGER NOT NULL DEFAULT 0;');
+}
 
 // ── Password hashing (admin PIN) ────────────────────────────────────────────
 // scrypt from Node's built-in crypto — no bcrypt dependency needed for a
@@ -402,30 +436,90 @@ function getEventOrderBySessionId(slug, stripeSessionId) {
   `).get(stripeSessionId, slug) || null;
 }
 
+function getCheckoutQuoteShipments(quote) {
+  if (!quote) return [];
+  if (quote.shipments_json) {
+    try {
+      const shipments = JSON.parse(quote.shipments_json);
+      if (Array.isArray(shipments)) return shipments;
+    } catch {
+      return [];
+    }
+  }
+
+  let recipient;
+  let printfulCosts;
+  try {
+    recipient = JSON.parse(quote.recipient_json);
+    printfulCosts = JSON.parse(quote.printful_costs_json);
+  } catch {
+    return [];
+  }
+  const quantity = Number(quote.quantity);
+  if (!recipient || !Number.isSafeInteger(quantity) || quantity < 1) return [];
+  return [{ quantity, recipient, printfulCosts }];
+}
+
+function insertOrderShipments(orderId, quote) {
+  const shipments = getCheckoutQuoteShipments(quote);
+  const stmt = db.prepare(`
+    INSERT INTO checkout_order_shipments (
+      order_id, shipment_index, quantity, recipient_json, printful_costs_json,
+      currency, shipping_cents, tax_cents
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  shipments.forEach((shipment, index) => {
+    const printfulCosts = shipment.printfulCosts || shipment.costs || {};
+    const customerCosts = shipment.customerCosts || {};
+    const shippingCents = Number.isSafeInteger(Number(customerCosts.shippingCents))
+      ? Number(customerCosts.shippingCents)
+      : Math.round(Number(printfulCosts.shipping || 0) * 100);
+    const taxCents = Number.isSafeInteger(Number(customerCosts.taxCents))
+      ? Number(customerCosts.taxCents)
+      : Math.round(Number(printfulCosts.tax || 0) * 100) +
+        Math.round(Number(printfulCosts.vat || 0) * 100);
+    stmt.run(
+      orderId,
+      index,
+      Number(shipment.quantity),
+      JSON.stringify(shipment.recipient),
+      JSON.stringify(printfulCosts),
+      String(printfulCosts.currency || quote.currency || '').toUpperCase(),
+      shippingCents,
+      taxCents
+    );
+  });
+}
+
 function createCheckoutOrder({ eventId, configurationId, quote, mode = 'test' }) {
   if (!['test', 'live'].includes(mode)) throw new Error('invalid checkout mode');
   const existing = getOrderByQuoteId(quote.id);
   if (existing) return { order: existing, created: false };
+  db.exec('BEGIN IMMEDIATE;');
   try {
     const info = db.prepare(`
       INSERT INTO orders (
         event_id, configuration_id, quote_id, status, shipping_json,
-        currency, items_cents, shipping_cents, tax_cents, total_cents, mode
-      ) VALUES (?, ?, ?, 'creating_checkout', ?, ?, ?, ?, ?, ?, ?)
+        currency, items_cents, payment_reserve_cents, shipping_cents, tax_cents, total_cents, mode
+      ) VALUES (?, ?, ?, 'creating_checkout', ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       eventId,
       configurationId,
       quote.id,
-      quote.recipient_json,
+      quote.shipments_json || quote.recipient_json,
       quote.currency,
       Number(quote.items_cents),
+      Number(quote.payment_reserve_cents || 0),
       Number(quote.shipping_cents),
       Number(quote.tax_cents),
       Number(quote.total_cents),
       mode
     );
+    insertOrderShipments(info.lastInsertRowid, quote);
+    db.exec('COMMIT;');
     return { order: getOrderById(info.lastInsertRowid), created: true };
   } catch (error) {
+    db.exec('ROLLBACK;');
     // A concurrent double-click can race the initial lookup. The unique
     // quote index makes the database the final arbiter.
     const racedOrder = getOrderByQuoteId(quote.id);
@@ -559,6 +653,49 @@ function completeFulfillment(orderId, { mode, payload, printfulOrderId, printful
   return getOrderById(orderId);
 }
 
+function getOrderShipments(orderId) {
+  return db.prepare(`
+    SELECT *
+    FROM checkout_order_shipments
+    WHERE order_id = ?
+    ORDER BY shipment_index ASC
+  `).all(orderId);
+}
+
+function completeOrderShipment(shipmentId, { mode, payload, printfulOrderId, printfulStatus }) {
+  const status = mode === 'mock'
+    ? 'mocked'
+    : mode === 'draft'
+      ? 'draft'
+      : 'submitted';
+  db.prepare(`
+    UPDATE checkout_order_shipments
+    SET fulfillment_status = ?, fulfillment_mode = ?, fulfillment_payload_json = ?,
+        printful_order_id = ?, printful_order_status = ?, fulfillment_error = NULL,
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(
+    status,
+    mode,
+    JSON.stringify(payload),
+    printfulOrderId || null,
+    printfulStatus || status,
+    shipmentId
+  );
+}
+
+function failOrderShipment(shipmentId, error) {
+  const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
+  db.prepare(`
+    UPDATE checkout_order_shipments
+    SET fulfillment_status = 'failed',
+        fulfillment_attempts = fulfillment_attempts + 1,
+        fulfillment_error = ?,
+        updated_at = datetime('now')
+    WHERE id = ?
+  `).run(safeError, shipmentId);
+}
+
 function failFulfillment(orderId, error, { blocked = false } = {}) {
   const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
   db.prepare(`
@@ -611,24 +748,32 @@ function cleanupAbandonedQuotes() {
   `).run(cutoff);
 }
 
-function createCheckoutQuote({ eventId, configurationId, recipient, printfulCosts, quote }) {
+function createCheckoutQuote({ eventId, configurationId, recipient, shipments, printfulCosts, quote }) {
   cleanupAbandonedQuotes();
   const id = crypto.randomBytes(18).toString('base64url');
   const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
+  const normalizedShipments = Array.isArray(shipments) && shipments.length ? shipments : null;
+  const primaryRecipient = recipient || normalizedShipments?.[0]?.recipient;
+  const storedPrintfulCosts = printfulCosts ||
+    (normalizedShipments
+      ? { shipments: normalizedShipments.map((shipment) => shipment.printfulCosts || shipment.costs || {}) }
+      : null);
   db.prepare(`
     INSERT INTO checkout_quotes (
-      id, event_id, configuration_id, recipient_json, printful_costs_json,
-      currency, quantity, items_cents, shipping_cents, tax_cents, total_cents, expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, event_id, configuration_id, recipient_json, shipments_json, printful_costs_json,
+      currency, quantity, items_cents, payment_reserve_cents, shipping_cents, tax_cents, total_cents, expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     eventId,
     configurationId,
-    JSON.stringify(recipient),
-    JSON.stringify(printfulCosts),
+    JSON.stringify(primaryRecipient),
+    normalizedShipments ? JSON.stringify(normalizedShipments) : null,
+    JSON.stringify(storedPrintfulCosts),
     quote.currency,
     quote.quantity,
     quote.itemsCents,
+    quote.paymentReserveCents || 0,
     quote.shippingCents,
     quote.taxCents,
     quote.totalCents,
@@ -652,19 +797,50 @@ function getEventCheckoutQuote(slug, configurationId, quoteId) {
   `).get(quoteId, configurationId, slug) || null;
 }
 
-function updateCheckoutQuote(quoteId, { printfulCosts, quote }) {
+function updateCheckoutQuote(quoteId, { recipient, shipments, printfulCosts, quote }) {
   const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
+  const normalizedShipments = Array.isArray(shipments) && shipments.length ? shipments : null;
+  const primaryRecipient = recipient || normalizedShipments?.[0]?.recipient || null;
+  const storedPrintfulCosts = printfulCosts ||
+    (normalizedShipments
+      ? { shipments: normalizedShipments.map((shipment) => shipment.printfulCosts || shipment.costs || {}) }
+      : null);
+  if (normalizedShipments) {
+    db.prepare(`
+      UPDATE checkout_quotes
+      SET recipient_json = ?, shipments_json = ?, printful_costs_json = ?,
+          currency = ?, quantity = ?, items_cents = ?, payment_reserve_cents = ?,
+          shipping_cents = ?, tax_cents = ?, total_cents = ?, expires_at = ?,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(
+      JSON.stringify(primaryRecipient),
+      JSON.stringify(normalizedShipments),
+      JSON.stringify(storedPrintfulCosts),
+      quote.currency,
+      quote.quantity,
+      quote.itemsCents,
+      quote.paymentReserveCents || 0,
+      quote.shippingCents,
+      quote.taxCents,
+      quote.totalCents,
+      expiresAt,
+      quoteId
+    );
+    return getCheckoutQuote(quoteId);
+  }
   db.prepare(`
     UPDATE checkout_quotes
-    SET printful_costs_json = ?, currency = ?, quantity = ?, items_cents = ?,
+    SET printful_costs_json = ?, currency = ?, quantity = ?, items_cents = ?, payment_reserve_cents = ?,
         shipping_cents = ?, tax_cents = ?, total_cents = ?, expires_at = ?,
         updated_at = datetime('now')
     WHERE id = ?
   `).run(
-    JSON.stringify(printfulCosts),
+    JSON.stringify(storedPrintfulCosts),
     quote.currency,
     quote.quantity,
     quote.itemsCents,
+    quote.paymentReserveCents || 0,
     quote.shippingCents,
     quote.taxCents,
     quote.totalCents,
@@ -758,6 +934,7 @@ module.exports = {
   getOrderById,
   getOrderByQuoteId,
   getEventOrderBySessionId,
+  getCheckoutQuoteShipments,
   createCheckoutOrder,
   attachStripeSession,
   markCheckoutCreationFailed,
@@ -766,6 +943,9 @@ module.exports = {
   recordTestPayment,
   claimFulfillmentOrder,
   completeFulfillment,
+  getOrderShipments,
+  completeOrderShipment,
+  failOrderShipment,
   failFulfillment,
   getPendingFulfillmentOrders,
   recoverStaleFulfillments,

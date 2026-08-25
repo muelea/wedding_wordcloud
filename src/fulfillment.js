@@ -72,6 +72,20 @@ function parseRecipient(order) {
   return recipient;
 }
 
+function parseShipmentRecipient(shipment) {
+  let recipient;
+  try {
+    recipient = JSON.parse(shipment.recipient_json);
+  } catch {
+    throw new Error('Eine gespeicherte Lieferadresse ist ungültig.');
+  }
+  const required = ['name', 'address1', 'city', 'zip', 'country_code'];
+  if (!recipient || required.some((field) => !recipient[field])) {
+    throw new Error('Eine gespeicherte Lieferadresse ist unvollständig.');
+  }
+  return recipient;
+}
+
 function publicPrintFileUrl(event, configuration, mode, surfaceKey = null) {
   const configuredBase = String(process.env.PUBLIC_URL || '').trim();
   const fallbackBase = `http://localhost:${process.env.PORT || 3000}`;
@@ -101,10 +115,10 @@ function publicPrintFileUrl(event, configuration, mode, surfaceKey = null) {
   return printFileUrl.toString();
 }
 
-function buildPrintfulPayload({ order, event, configuration, mode }) {
+function buildPrintfulPayload({ order, event, configuration, mode, shipment = null, useShipmentSuffix = true }) {
   const product = getProduct(configuration.product_key);
   const variantId = Number(configuration.printful_variant_id);
-  const quantity = Number(configuration.quantity);
+  const quantity = shipment ? Number(shipment.quantity) : Number(configuration.quantity);
   if (!product || product.printful.variantId !== variantId) {
     throw new Error('Das gespeicherte Printful-Produkt ist ungültig.');
   }
@@ -116,9 +130,12 @@ function buildPrintfulPayload({ order, event, configuration, mode }) {
   }
   // The opaque quote id keeps this reference unique even if a local/staging
   // database is ever rebuilt and starts its integer order ids at 1 again.
-  const externalId = order.quote_id
+  const baseExternalId = order.quote_id
     ? `weddingcloud-${order.id}-${order.quote_id}`
     : `weddingcloud-${order.id}`;
+  const externalId = shipment && useShipmentSuffix
+    ? `${baseExternalId}-shipment-${Number(shipment.shipment_index) + 1}`
+    : baseExternalId;
   const multipleSurfaces = product.printful.placements.length > 1;
   const files = product.printful.placements.map((type) => ({
     type,
@@ -134,9 +151,18 @@ function buildPrintfulPayload({ order, event, configuration, mode }) {
   return {
     external_id: externalId,
     shipping: 'STANDARD',
-    recipient: parseRecipient(order),
+    recipient: shipment ? parseShipmentRecipient(shipment) : parseRecipient(order),
     items: [item],
   };
+}
+
+function parseStoredPayload(value) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 async function processOrder(orderId) {
@@ -151,6 +177,78 @@ async function processOrder(orderId) {
     if (!event || !configuration) throw new Error('Bestellkonfiguration wurde nicht gefunden.');
 
     const mode = resolveMode(order);
+    const orderShipments = db.getOrderShipments(order.id);
+    if (orderShipments.length > 0) {
+      const completedStatuses = new Set(['mocked', 'draft', 'submitted']);
+      const completedModes = [];
+
+      for (const shipment of orderShipments) {
+        if (completedStatuses.has(shipment.fulfillment_status)) {
+          if (shipment.fulfillment_mode) completedModes.push(shipment.fulfillment_mode);
+          continue;
+        }
+
+        const payload = buildPrintfulPayload({
+          order,
+          event,
+          configuration,
+          mode,
+          shipment,
+          useShipmentSuffix: orderShipments.length > 1,
+        });
+        try {
+          if (mode === 'mock') {
+            db.completeOrderShipment(shipment.id, {
+              mode,
+              payload,
+              printfulOrderId: orderShipments.length > 1
+                ? `MOCK-WC-${order.id}-${Number(shipment.shipment_index) + 1}`
+                : `MOCK-WC-${order.id}`,
+              printfulStatus: 'mocked',
+            });
+            completedModes.push('mock');
+            continue;
+          }
+
+          const result = await printful.createPrintfulOrder({
+            payload,
+            confirm: mode === 'live',
+          });
+          const completedMode = result.mocked ? 'mock' : mode;
+          db.completeOrderShipment(shipment.id, {
+            mode: completedMode,
+            payload,
+            printfulOrderId: result.printfulOrderId,
+            printfulStatus: result.status,
+          });
+          completedModes.push(completedMode);
+        } catch (error) {
+          db.failOrderShipment(shipment.id, error);
+          throw error;
+        }
+      }
+
+      const finalShipments = db.getOrderShipments(order.id);
+      const payload = {
+        shipments: finalShipments
+          .map((shipment) => parseStoredPayload(shipment.fulfillment_payload_json))
+          .filter(Boolean),
+      };
+      const printfulOrderId = finalShipments
+        .map((shipment) => shipment.printful_order_id)
+        .filter(Boolean)
+        .join(',');
+      const completedMode = completedModes.some((shipmentMode) => shipmentMode !== 'mock')
+        ? mode
+        : 'mock';
+      return db.completeFulfillment(order.id, {
+        mode: completedMode,
+        payload,
+        printfulOrderId,
+        printfulStatus: completedMode === 'mock' ? 'mocked' : completedMode,
+      });
+    }
+
     const payload = buildPrintfulPayload({ order, event, configuration, mode });
 
     if (mode === 'mock') {

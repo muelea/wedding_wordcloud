@@ -60,6 +60,84 @@
     .card-title { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 25px; font-weight: 600; }
     .card-copy { margin: 7px 0 25px; color: var(--muted); font-size: 14px; line-height: 1.55; }
     form { display: grid; gap: 17px; }
+    .shipment-list { display: grid; gap: 16px; }
+    .shipment-card {
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 253, 250, .72);
+    }
+    .shipment-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 15px;
+    }
+    .shipment-title { margin: 0; font-size: 14px; font-weight: 600; }
+    .shipment-remove {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .shipment-remove:hover:not(:disabled) { color: var(--danger); }
+    .shipment-remove:disabled { cursor: default; opacity: .36; }
+    .shipment-quantity {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 15px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .shipment-quantity-copy strong { display: block; font-size: 13px; }
+    .shipment-quantity-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .quantity-control {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 38px 56px 38px;
+      height: 42px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .quantity-control button {
+      border: 0;
+      background: var(--surface-soft);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .quantity-control input {
+      height: 40px;
+      padding: 0;
+      border: 0;
+      border-inline: 1px solid var(--line);
+      border-radius: 0;
+      text-align: center;
+      font-weight: 600;
+      appearance: textfield;
+    }
+    .quantity-control input::-webkit-inner-spin-button,
+    .quantity-control input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+    .add-shipment-button {
+      min-height: 48px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 15px;
+      background: rgba(156, 28, 76, .04);
+      color: var(--berry);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .add-shipment-button:hover:not(:disabled) { background: rgba(156, 28, 76, .07); }
     .field-row { display: grid; grid-template-columns: minmax(105px, .72fr) minmax(0, 1.28fr); gap: 13px; }
     label { display: grid; gap: 7px; color: var(--ink); font-size: 13px; font-weight: 500; }
     .optional { color: var(--muted); font-weight: 400; }
@@ -120,6 +198,10 @@
       .steps .step-label { display: none; }
       .steps .step.active .step-label { display: inline; }
       .field-row { grid-template-columns: 1fr; }
+      .shipment-card { padding: 15px; }
+      .shipment-quantity { align-items: stretch; flex-direction: column; gap: 11px; }
+      .quantity-control { width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; }
+      .quantity-control input { width: 100%; }
       .design-preview { width: 78px; height: 64px; }
     }
   </style>
@@ -153,34 +235,11 @@
 
       <div class="checkout-grid">
         <section class="card address-card" aria-labelledby="address-title">
-          <h2 class="card-title" id="address-title">Eure Lieferadresse</h2>
-          <p class="card-copy">Bitte gebt die Adresse so ein, wie sie später auf dem Paket stehen soll.</p>
+          <h2 class="card-title" id="address-title">Lieferadresse</h2>
+          <p class="card-copy">Wählt, wie viele Produkte an welche Adresse gehen sollen. Für eine einzelne Lieferung bleibt einfach diese eine Adresse stehen.</p>
           <form id="address-form" novalidate>
-            <label>Vor- und Nachname
-              <input id="name" name="name" type="text" autocomplete="shipping name" maxlength="100" required placeholder="Lea Sommer" />
-            </label>
-            <label>Straße und Hausnummer
-              <input id="address1" name="address1" type="text" autocomplete="shipping address-line1" maxlength="120" required placeholder="Blumenstraße 12" />
-            </label>
-            <label>Adresszusatz <span class="optional">(optional)</span>
-              <input id="address2" name="address2" type="text" autocomplete="shipping address-line2" maxlength="120" placeholder="Wohnung, Etage oder c/o" />
-            </label>
-            <div class="field-row">
-              <label>Postleitzahl
-                <input id="zip" name="zip" type="text" autocomplete="shipping postal-code" maxlength="20" required inputmode="text" placeholder="10115" />
-              </label>
-              <label>Ort
-                <input id="city" name="city" type="text" autocomplete="shipping address-level2" maxlength="100" required placeholder="Berlin" />
-              </label>
-            </div>
-            <label>Land
-              <select id="country" name="country_code" autocomplete="shipping country" required disabled>
-                <option value="">Länder werden geladen&hellip;</option>
-              </select>
-            </label>
-            <label class="state-field" id="state-field" hidden>Bundesstaat oder Region
-              <select id="state" name="state_code" autocomplete="shipping address-level1"></select>
-            </label>
+            <div class="shipment-list" id="shipment-list"></div>
+            <button class="add-shipment-button" id="add-shipment" type="button">Weitere Lieferadresse hinzufügen</button>
             <button class="submit-button" id="submit-button" type="submit" disabled>Gesamtpreis berechnen <span aria-hidden="true">→</span></button>
             <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten durch Wolkenworte und Printful im <a href="/datenschutz">Datenschutz</a>.</p>
             <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
@@ -227,9 +286,8 @@
     const pageContent = document.getElementById('page-content');
     const fatalError = document.getElementById('fatal-error');
     const form = document.getElementById('address-form');
-    const countrySelect = document.getElementById('country');
-    const stateSelect = document.getElementById('state');
-    const stateField = document.getElementById('state-field');
+    const shipmentList = document.getElementById('shipment-list');
+    const addShipmentButton = document.getElementById('add-shipment');
     const submitButton = document.getElementById('submit-button');
     const formError = document.getElementById('form-error');
     const quotePlaceholder = document.getElementById('quote-placeholder');
@@ -279,12 +337,12 @@
       group.appendChild(option);
     }
 
-    function renderCountries() {
-      countrySelect.replaceChildren();
+    function addCountryOptions(select, selectedCode = '') {
+      select.replaceChildren();
       const empty = document.createElement('option');
       empty.value = '';
       empty.textContent = 'Land auswählen';
-      countrySelect.appendChild(empty);
+      select.appendChild(empty);
 
       const preferredCodes = ['DE', 'AT', 'CH'];
       const preferredGroup = document.createElement('optgroup');
@@ -292,20 +350,25 @@
       preferredCodes.map((code) => countries.find((country) => country.code === code))
         .filter(Boolean)
         .forEach((country) => addCountryOption(preferredGroup, country));
-      countrySelect.appendChild(preferredGroup);
+      select.appendChild(preferredGroup);
 
       const allGroup = document.createElement('optgroup');
       allGroup.label = 'Alle Länder';
       countries.filter((country) => !preferredCodes.includes(country.code))
         .sort((a, b) => localizedCountryName(a).localeCompare(localizedCountryName(b), 'de'))
         .forEach((country) => addCountryOption(allGroup, country));
-      countrySelect.appendChild(allGroup);
-      countrySelect.value = countries.some((country) => country.code === 'DE') ? 'DE' : '';
-      countrySelect.disabled = false;
-      updateStates();
+      select.appendChild(allGroup);
+      select.value = selectedCode || defaultCountryCode();
+      select.disabled = false;
     }
 
-    function updateStates() {
+    function defaultCountryCode() {
+      return countries.some((country) => country.code === 'DE')
+        ? 'DE'
+        : countries[0]?.code || '';
+    }
+
+    function updateStates(countrySelect, stateField, stateSelect, selectedState = '') {
       const country = countries.find((entry) => entry.code === countrySelect.value);
       const states = country?.states || [];
       stateSelect.replaceChildren();
@@ -327,6 +390,223 @@
       }
       stateField.hidden = false;
       stateSelect.required = true;
+      stateSelect.value = selectedState;
+    }
+
+    function quantityLabel(quantity) {
+      const unit = configuration.product.unit;
+      return `${quantity} ${quantity === 1 ? unit.singular : unit.plural}`;
+    }
+
+    function defaultShipment() {
+      return {
+        quantity: Number(configuration?.quantity) || configuration?.product?.defaultQuantity || 1,
+        recipient: { country_code: defaultCountryCode() },
+      };
+    }
+
+    function shipmentFieldPath(index, field) {
+      return `shipments.${index}.${field}`;
+    }
+
+    function makeInput(index, field, labelText, options = {}) {
+      const label = document.createElement('label');
+      label.textContent = labelText;
+      if (options.optional) {
+        const optional = document.createElement('span');
+        optional.className = 'optional';
+        optional.textContent = ' (optional)';
+        label.append(optional);
+      }
+      const input = document.createElement('input');
+      input.type = options.type || 'text';
+      input.maxLength = options.maxLength || 120;
+      input.required = Boolean(options.required);
+      input.placeholder = options.placeholder || '';
+      input.autocomplete = options.autocomplete || '';
+      if (options.inputMode) input.inputMode = options.inputMode;
+      input.value = options.value || '';
+      input.dataset.fieldPath = shipmentFieldPath(index, field);
+      label.append(input);
+      return label;
+    }
+
+    function updateQuantityButtons(card) {
+      const input = card.querySelector('[data-quantity]');
+      const value = Number(input.value || 0);
+      card.querySelector('[data-quantity-minus]').disabled = value <= 1;
+      card.querySelector('[data-quantity-plus]').disabled = value >= configuration.product.maxQuantity;
+      card.querySelector('[data-quantity-copy]').textContent = quantityLabel(Math.max(1, value || 1));
+    }
+
+    function createShipmentCard(shipment, index, totalCards) {
+      const card = document.createElement('section');
+      card.className = 'shipment-card';
+      card.dataset.shipmentCard = String(index);
+
+      const head = document.createElement('div');
+      head.className = 'shipment-head';
+      const title = document.createElement('h3');
+      title.className = 'shipment-title';
+      title.textContent = `Lieferung ${index + 1}`;
+      const remove = document.createElement('button');
+      remove.className = 'shipment-remove';
+      remove.type = 'button';
+      remove.textContent = 'Entfernen';
+      remove.disabled = totalCards <= 1;
+      remove.addEventListener('click', () => {
+        const current = collectShipments({ validate: false }).shipments;
+        current.splice(index, 1);
+        renderShipments(current.length ? current : [defaultShipment()]);
+        clearQuote();
+      });
+      head.append(title, remove);
+
+      const quantity = document.createElement('div');
+      quantity.className = 'shipment-quantity';
+      quantity.innerHTML = `
+        <div class="shipment-quantity-copy">
+          <strong>Anzahl an diese Adresse</strong>
+          <span data-quantity-copy></span>
+        </div>
+        <div class="quantity-control" aria-label="Anzahl für Lieferung ${index + 1}">
+          <button type="button" data-quantity-minus aria-label="Ein Produkt weniger">−</button>
+          <input data-quantity data-field-path="${shipmentFieldPath(index, 'quantity')}" type="number" min="1" max="${configuration.product.maxQuantity}" inputmode="numeric" required />
+          <button type="button" data-quantity-plus aria-label="Ein Produkt mehr">+</button>
+        </div>
+      `;
+      const quantityInput = quantity.querySelector('[data-quantity]');
+      quantityInput.value = String(Math.min(
+        configuration.product.maxQuantity,
+        Math.max(1, Number(shipment.quantity) || 1)
+      ));
+      quantity.querySelector('[data-quantity-minus]').addEventListener('click', () => {
+        quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1) - 1));
+        updateQuantityButtons(card);
+        clearQuote();
+      });
+      quantity.querySelector('[data-quantity-plus]').addEventListener('click', () => {
+        quantityInput.value = String(Math.min(configuration.product.maxQuantity, Number(quantityInput.value || 1) + 1));
+        updateQuantityButtons(card);
+        clearQuote();
+      });
+
+      const recipient = shipment.recipient || {};
+      const fields = document.createElement('div');
+      fields.append(
+        makeInput(index, 'name', 'Vor- und Nachname', {
+          required: true,
+          maxLength: 100,
+          placeholder: 'Lea Sommer',
+          autocomplete: index === 0 ? 'shipping name' : '',
+          value: recipient.name,
+        }),
+        makeInput(index, 'address1', 'Straße und Hausnummer', {
+          required: true,
+          placeholder: 'Blumenstraße 12',
+          autocomplete: index === 0 ? 'shipping address-line1' : '',
+          value: recipient.address1,
+        }),
+        makeInput(index, 'address2', 'Adresszusatz', {
+          optional: true,
+          placeholder: 'Wohnung, Etage oder c/o',
+          autocomplete: index === 0 ? 'shipping address-line2' : '',
+          value: recipient.address2,
+        })
+      );
+
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.append(
+        makeInput(index, 'zip', 'Postleitzahl', {
+          required: true,
+          maxLength: 20,
+          inputMode: 'text',
+          placeholder: '10115',
+          autocomplete: index === 0 ? 'shipping postal-code' : '',
+          value: recipient.zip,
+        }),
+        makeInput(index, 'city', 'Ort', {
+          required: true,
+          maxLength: 100,
+          placeholder: 'Berlin',
+          autocomplete: index === 0 ? 'shipping address-level2' : '',
+          value: recipient.city,
+        })
+      );
+      fields.append(row);
+
+      const countryLabel = document.createElement('label');
+      countryLabel.textContent = 'Land';
+      const countrySelect = document.createElement('select');
+      countrySelect.required = true;
+      countrySelect.autocomplete = index === 0 ? 'shipping country' : '';
+      countrySelect.dataset.fieldPath = shipmentFieldPath(index, 'country_code');
+      countryLabel.append(countrySelect);
+      fields.append(countryLabel);
+
+      const stateField = document.createElement('label');
+      stateField.className = 'state-field';
+      stateField.hidden = true;
+      stateField.textContent = 'Bundesstaat oder Region';
+      const stateSelect = document.createElement('select');
+      stateSelect.autocomplete = index === 0 ? 'shipping address-level1' : '';
+      stateSelect.dataset.fieldPath = shipmentFieldPath(index, 'state_code');
+      stateField.append(stateSelect);
+      fields.append(stateField);
+
+      card.append(head, quantity, fields);
+      addCountryOptions(countrySelect, String(recipient.country_code || '').toUpperCase());
+      updateStates(countrySelect, stateField, stateSelect, String(recipient.state_code || '').toUpperCase());
+      countrySelect.addEventListener('change', () => {
+        updateStates(countrySelect, stateField, stateSelect);
+        clearQuote();
+      });
+      quantityInput.addEventListener('input', () => {
+        updateQuantityButtons(card);
+        clearQuote();
+      });
+      updateQuantityButtons(card);
+      return card;
+    }
+
+    function renderShipments(shipments) {
+      const safeShipments = Array.isArray(shipments) && shipments.length ? shipments : [defaultShipment()];
+      shipmentList.replaceChildren();
+      safeShipments.slice(0, 10).forEach((shipment, index, list) => {
+        shipmentList.appendChild(createShipmentCard(shipment, index, list.length));
+      });
+      addShipmentButton.disabled = safeShipments.length >= 10;
+    }
+
+    function findShipmentField(card, field) {
+      return [...card.querySelectorAll('[data-field-path]')]
+        .find((input) => (input.dataset.fieldPath || '').split('.').pop() === field) || null;
+    }
+
+    function collectShipments({ validate = true } = {}) {
+      const cards = [...shipmentList.querySelectorAll('.shipment-card')];
+      const shipments = cards.map((card) => {
+        const valueFor = (field) => findShipmentField(card, field)?.value || '';
+        return {
+          quantity: Number(findShipmentField(card, 'quantity')?.value || 0),
+          recipient: {
+            name: valueFor('name'),
+            address1: valueFor('address1'),
+            address2: valueFor('address2'),
+            zip: valueFor('zip'),
+            city: valueFor('city'),
+            country_code: valueFor('country_code'),
+            state_code: valueFor('state_code'),
+          },
+        };
+      });
+      const totalQuantity = shipments.reduce((sum, shipment) => sum + Math.max(0, Number(shipment.quantity) || 0), 0);
+      if (validate && (totalQuantity < configuration.product.minQuantity || totalQuantity > configuration.product.maxQuantity)) {
+        formError.textContent = `Bitte wählt insgesamt 1-${configuration.product.maxQuantity} ${configuration.product.unit.plural}.`;
+        shipmentList.querySelector('[data-quantity]')?.focus();
+      }
+      return { shipments, totalQuantity };
     }
 
     function clearFieldErrors() {
@@ -341,6 +621,10 @@
       checkoutError.textContent = '';
       checkoutButton.disabled = false;
       checkoutButton.textContent = 'Weiter zur Testzahlung →';
+      if (configuration) {
+        document.getElementById('summary-quantity').textContent =
+          'Menge und Lieferadressen wählt ihr hier';
+      }
     }
 
     function formatMoney(cents, currency) {
@@ -350,8 +634,12 @@
     function showQuote(quote) {
       currentQuote = quote;
       const unit = configuration.product.unit;
+      const shipmentCount = Number(quote.shipmentCount || 1);
+      const deliveryLabel = shipmentCount === 1 ? '1 Lieferadresse' : `${shipmentCount} Lieferadressen`;
+      const productLabel = `${quote.quantity} ${quote.quantity === 1 ? unit.singular : unit.plural}`;
       document.getElementById('items-label').textContent =
-        `${quote.quantity} ${quote.quantity === 1 ? unit.singular : unit.plural}`;
+        `${productLabel} · ${deliveryLabel}`;
+      document.getElementById('summary-quantity').textContent = `${productLabel} an ${deliveryLabel}`;
       document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
       document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
       document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
@@ -368,8 +656,15 @@
 
     function markInvalidFields(fields) {
       const fieldIds = { country_code: 'country', state_code: 'state' };
-      const first = fields.map((name) => document.getElementById(fieldIds[name] || name)).find(Boolean);
-      fields.forEach((name) => document.getElementById(fieldIds[name] || name)?.setAttribute('aria-invalid', 'true'));
+      const resolve = (name) => {
+        if (name === 'shipments.quantity') return shipmentList.querySelector('[data-quantity]');
+        const direct = [...shipmentList.querySelectorAll('[data-field-path]')]
+          .find((field) => field.dataset.fieldPath === name);
+        if (direct) return direct;
+        return document.getElementById(fieldIds[name] || name);
+      };
+      const first = fields.map(resolve).find(Boolean);
+      fields.forEach((name) => resolve(name)?.setAttribute('aria-invalid', 'true'));
       first?.focus();
     }
 
@@ -382,12 +677,9 @@
       );
       if (!response.ok) return;
       const saved = await response.json();
-      for (const field of ['name', 'address1', 'address2', 'zip', 'city']) {
-        document.getElementById(field).value = saved.recipient?.[field] || '';
-      }
-      countrySelect.value = saved.recipient?.country_code || '';
-      updateStates();
-      if (saved.recipient?.state_code) stateSelect.value = saved.recipient.state_code;
+      renderShipments(Array.isArray(saved.shipments) && saved.shipments.length
+        ? saved.shipments
+        : [{ quantity: saved.quote?.quantity || configuration.quantity, recipient: saved.recipient || {} }]);
       showQuote(saved.quote);
       submitButton.textContent = 'Preis aktualisieren';
       if (checkoutWasCancelled) {
@@ -421,15 +713,14 @@
             'Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.';
         }
 
-        const unit = configuration.product.unit;
         document.getElementById('summary-title').textContent = configuration.product.displayName;
         document.getElementById('summary-quantity').textContent =
-          `${configuration.quantity} ${configuration.quantity === 1 ? unit.singular : unit.plural}`;
+          `Menge und Lieferadressen wählt ihr hier`;
         document.getElementById('summary-size').textContent = configuration.product.size.volumeMl
           ? `${configuration.product.size.label} · ${configuration.product.size.volumeMl} ml`
           : `${configuration.product.size.label} · ${configuration.product.size.detail}`;
         document.getElementById('design-image').src = configuration.printFileUrl;
-        renderCountries();
+        renderShipments([defaultShipment()]);
         await restoreSavedQuote();
         submitButton.disabled = false;
         loading.hidden = true;
@@ -441,38 +732,42 @@
       }
     }
 
-    countrySelect.addEventListener('change', () => {
-      updateStates();
-      clearQuote();
-    });
     form.addEventListener('input', clearQuote);
+    form.addEventListener('change', clearQuote);
+    addShipmentButton.addEventListener('click', () => {
+      const current = collectShipments({ validate: false }).shipments;
+      current.push({ quantity: 1, recipient: { country_code: defaultCountryCode() } });
+      renderShipments(current);
+      clearQuote();
+      shipmentList.lastElementChild?.querySelector('input')?.focus();
+    });
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       clearFieldErrors();
       if (!form.reportValidity()) return;
+      const { shipments, totalQuantity } = collectShipments();
+      if (totalQuantity < configuration.product.minQuantity || totalQuantity > configuration.product.maxQuantity) return;
       submitButton.disabled = true;
       submitButton.textContent = 'Preis wird berechnet…';
       try {
-        const data = new FormData(form);
-        const recipient = Object.fromEntries(data.entries());
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/estimate-costs`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ recipient }),
+            body: JSON.stringify({ shipments }),
           }
         );
         const result = await response.json();
         if (!response.ok) {
           if (Array.isArray(result.fields)) markInvalidFields(result.fields);
-          throw new Error(result.message || 'Der Preis konnte nicht berechnet werden.');
+          throw new Error(result.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.');
         }
         showQuote(result.quote);
         submitButton.textContent = 'Preis aktualisieren';
       } catch (error) {
-        formError.textContent = error.message || 'Der Preis konnte nicht berechnet werden. Bitte versucht es erneut.';
+        formError.textContent = error.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.';
         submitButton.textContent = 'Erneut versuchen';
       } finally {
         submitButton.disabled = false;

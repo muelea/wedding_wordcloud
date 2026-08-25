@@ -37,12 +37,19 @@ test('event creation & slug-preview flow', async (t) => {
   assert.doesNotMatch(startHtml, /id="success"/);
 
   // The guest page doubles as the lightweight control point: everybody can
-  // preview the live cloud, while creator controls are revealed from the
-  // creation session and link out to the dedicated display.
+  // preview the live cloud, share the guest link and open the dedicated
+  // display from the same page.
   const guestHtml = await fetch(`${baseUrl}${event.guestUrl}`).then((r) => r.text());
   assert.match(guestHtml, /id="preview-trigger"/);
   assert.match(guestHtml, /id="cloud-preview"/);
-  assert.match(guestHtml, /id="creator-tools"/);
+  assert.match(guestHtml, /id="creator-tools" aria-label="Wortwolke teilen und Anzeige öffnen">/);
+  assert.match(guestHtml, /id="preview-qr"/);
+  assert.match(guestHtml, /id="preview-qr-img"/);
+  assert.match(guestHtml, /Scannen &amp; mitmachen/);
+  assert.match(guestHtml, /\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
+  assert.doesNotMatch(guestHtml, /Creator-Modus/);
+  assert.doesNotMatch(guestHtml, /creatorTools\.hidden = !isCreator/);
+  assert.doesNotMatch(guestHtml, /previewDisplayLink\.hidden = !isCreator/);
   assert.match(guestHtml, /socket\.on\('word-update', updatePreview\)/);
 
   // The prefix alone stays a valid preview after creation too -- previewing

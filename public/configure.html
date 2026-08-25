@@ -759,54 +759,6 @@
     .variant-option strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
     .variant-option span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 
-    .quantity-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 17px;
-      background: rgba(255,255,255,.68);
-    }
-    .quantity-copy strong { display: block; font-size: 13px; }
-    .quantity-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
-    .quantity-control {
-      flex: none;
-      display: grid;
-      grid-template-columns: 38px 56px 38px;
-      align-items: stretch;
-      height: 42px;
-      border: 1px solid rgba(123, 70, 82, .2);
-      border-radius: 12px;
-      overflow: hidden;
-      background: #fff;
-    }
-    .quantity-control button {
-      border: 0;
-      background: var(--cream);
-      color: var(--ink);
-      cursor: pointer;
-      font-size: 20px;
-      line-height: 1;
-    }
-    .quantity-control button:hover { background: #f1e4d4; }
-    .quantity-control button:disabled { cursor: not-allowed; opacity: .38; }
-    .quantity-control button:focus-visible,
-    .quantity-control input:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--berry); outline-offset: -2px; }
-    .quantity-control input {
-      width: 56px;
-      border: 0;
-      border-inline: 1px solid rgba(123, 70, 82, .14);
-      background: #fff;
-      color: var(--ink);
-      font-weight: 600;
-      text-align: center;
-      appearance: textfield;
-    }
-    .quantity-control input::-webkit-inner-spin-button,
-    .quantity-control input::-webkit-outer-spin-button { margin: 0; appearance: none; }
-
     .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .placement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .option { cursor: pointer; }
@@ -1062,7 +1014,7 @@
       <section class="intro">
         <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
-        <p class="intro-copy" id="config-intro">Wählt eure Farbwelt, die Platzierung und zum Schluss die Anzahl. Den Rest bereiten wir druckfertig für euch vor.</p>
+        <p class="intro-copy" id="config-intro">Wählt Produkt, Farbwelt und Platzierung. Menge und Lieferadressen entscheidet ihr im nächsten Schritt.</p>
       </section>
 
       <div class="config-grid">
@@ -1153,7 +1105,7 @@
 
         <aside class="controls" aria-labelledby="controls-title">
           <h2 id="controls-title">Euer Design</h2>
-          <p class="controls-sub" id="controls-subtitle">Vier kurze Schritte – mehr braucht es nicht.</p>
+          <p class="controls-sub" id="controls-subtitle">Drei kurze Schritte – mehr braucht es nicht.</p>
 
           <section class="step">
             <h3 class="step-title"><span class="step-number">1</span> Produkt</h3>
@@ -1185,23 +1137,8 @@
             <div class="option-grid placement-grid" id="placement-options"></div>
           </section>
 
-          <section class="step">
-            <h3 class="step-title"><span class="step-number" id="quantity-step-number">4</span> Anzahl</h3>
-            <div class="quantity-row">
-              <div class="quantity-copy">
-                <strong id="quantity-title">Wie viele Produkte möchtet ihr?</strong>
-                <span id="quantity-copy">Alle Produkte erhalten dasselbe Design.</span>
-              </div>
-              <div class="quantity-control" aria-label="Anzahl der Produkte">
-                <button type="button" id="quantity-minus" aria-label="Ein Produkt weniger">−</button>
-                <input id="quantity" type="number" value="2" min="1" max="99" inputmode="numeric" aria-label="Anzahl" />
-                <button type="button" id="quantity-plus" aria-label="Ein Produkt mehr">+</button>
-              </div>
-            </div>
-          </section>
-
           <button class="save-button" id="save-button" type="button">Weiter zur Lieferadresse <span aria-hidden="true">→</span></button>
-          <p class="checkout-note">Dort berechnen wir den aktuellen Gesamtpreis für euer Lieferland.</p>
+          <p class="checkout-note">Dort wählt ihr Menge und Lieferadressen und seht den aktuellen Gesamtpreis.</p>
           <div class="success-box" id="success-box" aria-live="polite"></div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
         </aside>
@@ -1245,7 +1182,6 @@
     const customPalettePanel = document.getElementById('custom-palette-panel');
     const customColorList = document.getElementById('custom-color-list');
     const customColorAdd = document.getElementById('custom-color-add');
-    const quantityInput = document.getElementById('quantity');
     const photoButton = document.getElementById('editor-photo');
     const photoInput = document.getElementById('editor-photo-input');
 
@@ -1257,7 +1193,6 @@
     let selectedTheme = 'pastel';
     let customColors = [];
     let selectedPlacement = 'single';
-    let quantity = isPersonalMode ? 1 : 2;
     let renderFrame = null;
     let mug3D = null;
     let mug3DLoadPromise = null;
@@ -1277,9 +1212,8 @@
       document.getElementById('config-title').textContent = 'Gestaltet eure persönliche Erinnerung.';
       document.getElementById('config-intro').textContent =
         'Startet mit einer leeren Fläche und gestaltet euren Moment mit eigenen Fotos, Namen und persönlichen Worten.';
-      document.getElementById('controls-subtitle').textContent = 'Drei kurze Schritte bis zu eurem persönlichen Design.';
+      document.getElementById('controls-subtitle').textContent = 'Produkt und Farbwelt – den Rest gestaltet ihr direkt auf der Druckfläche.';
       document.getElementById('placement-step').hidden = true;
-      document.getElementById('quantity-step-number').textContent = '3';
       const resetButton = document.getElementById('editor-reset');
       resetButton.textContent = 'Seite leeren';
       resetButton.title = 'Aktuelle Druckseite leeren';
@@ -1811,18 +1745,6 @@
         'aria-label',
         `Vorschau: ${product.displayName}, ${product.size.label}`
       );
-      quantityInput.min = String(product.minQuantity);
-      quantityInput.max = String(product.maxQuantity);
-      document.getElementById('quantity-title').textContent = `Wie viele ${product.unit.plural} möchtet ihr?`;
-      document.getElementById('quantity-copy').textContent = productSurfaces().length > 1
-        ? 'Vorder- und Rückseite können unterschiedlich gestaltet werden.'
-        : isPersonalMode
-          ? `Jedes Produkt erhält euer persönliches Design.`
-          : `Alle ${product.unit.plural} erhalten dasselbe Design.`;
-      document.querySelector('.quantity-control').setAttribute('aria-label', `Anzahl der ${product.unit.plural}`);
-      document.getElementById('quantity-minus').setAttribute('aria-label', `${product.unit.singular}: eines weniger`);
-      document.getElementById('quantity-plus').setAttribute('aria-label', `${product.unit.singular}: eines mehr`);
-      updateQuantity(quantity, false);
     }
 
     function destroyMug3D() {
@@ -2065,26 +1987,6 @@
       }
     }
 
-    function updateQuantity(nextQuantity, shouldMarkDirty = true) {
-      if (!product) return;
-      const parsed = Number(nextQuantity);
-      const normalized = Number.isFinite(parsed)
-        ? Math.min(product.maxQuantity, Math.max(product.minQuantity, Math.round(parsed)))
-        : product.defaultQuantity;
-      quantity = normalized;
-      quantityInput.value = String(quantity);
-      document.getElementById('quantity-minus').disabled = quantity <= product.minQuantity;
-      document.getElementById('quantity-plus').disabled = quantity >= product.maxQuantity;
-      if (shouldMarkDirty) markDirty();
-    }
-
-    document.getElementById('quantity-minus').addEventListener('click', () => updateQuantity(quantity - 1));
-    document.getElementById('quantity-plus').addEventListener('click', () => updateQuantity(quantity + 1));
-    quantityInput.addEventListener('input', () => {
-      if (quantityInput.value !== '') updateQuantity(quantityInput.value);
-    });
-    quantityInput.addEventListener('change', () => updateQuantity(quantityInput.value));
-
     function initEditor() {
       const defaultSlot = selectedProductSlot();
       mugEditor = new MugPrintEditor({
@@ -2161,7 +2063,6 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             productKey: product.key,
-            quantity,
             theme: selectedTheme,
             placement: selectedPlacement,
             words,
@@ -2215,7 +2116,6 @@
         document.title = isPersonalMode
           ? 'Persönliche Erinnerung gestalten – Wolkenworte'
           : `Erinnerung für ${data.event.coupleName} – Wolkenworte`;
-        updateQuantity(isPersonalMode ? 1 : product.defaultQuantity, false);
         updateProductPresentation();
 
         loading.hidden = true;

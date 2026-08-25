@@ -574,7 +574,7 @@
     }
     .cloud-preview-empty span { display: block; margin-top: 7px; font-size: 12px; }
     .cloud-preview-foot {
-      min-height: 62px;
+      min-height: 78px;
       padding: 12px 24px;
       display: flex;
       align-items: center;
@@ -586,6 +586,47 @@
     }
     .preview-display-link { color: var(--primary2); font-weight: 500; text-decoration: none; white-space: nowrap; }
     .preview-display-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .preview-foot-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 18px;
+      min-width: 0;
+    }
+    .preview-qr-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .preview-qr-label { text-align: right; min-width: 0; }
+    .preview-qr-label .line1 {
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .preview-qr-label .line2 {
+      margin-top: 2px;
+      max-width: 190px;
+      overflow: hidden;
+      color: var(--primary2);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preview-qr-code {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 auto;
+      padding: 3px;
+      border: 1px solid var(--tag-bd);
+      border-radius: 10px;
+      background: var(--bg);
+      object-fit: contain;
+    }
     body.preview-open { overflow: hidden; }
 
     .setup-toast {
@@ -640,7 +681,11 @@
       .cloud-preview-meta { gap: 9px; }
       .cloud-preview-total span { display: none; }
       .cloud-preview-stage { padding: 14px; }
-      .cloud-preview-foot { min-height: 58px; padding: 11px 16px; }
+      .cloud-preview-foot { min-height: 76px; padding: 10px 16px; gap: 10px; }
+      #preview-live-copy { display: none; }
+      .preview-foot-actions { flex: 1; gap: 12px; justify-content: space-between; }
+      .preview-qr-label .line2 { display: none; }
+      .preview-qr-code { width: 52px; height: 52px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -655,11 +700,11 @@
   <h1 id="couple-name">♡</h1>
 </header>
 
-<section class="creator-tools" id="creator-tools" aria-label="Werkzeuge für das Brautpaar" hidden>
+<section class="creator-tools" id="creator-tools" aria-label="Wortwolke teilen und Anzeige öffnen">
   <div class="creator-status">
     <div class="creator-copy">
-      <strong>Eure Wortwolke ist bereit</strong>
-      <span>Creator-Modus auf diesem Gerät</span>
+      <strong>Wortwolke weitergeben</strong>
+      <span>Link teilen oder Anzeige öffnen</span>
     </div>
   </div>
   <div class="creator-actions">
@@ -752,7 +797,16 @@
     </div>
     <footer class="cloud-preview-foot">
       <span id="preview-live-copy">Noch keine Wörter geteilt</span>
-      <a class="preview-display-link" id="preview-display-link" href="#" target="_blank" rel="noopener" hidden>Auf der Anzeige öffnen&nbsp;↗</a>
+      <div class="preview-foot-actions">
+        <a class="preview-display-link" id="preview-display-link" href="#" target="_blank" rel="noopener">Auf der Anzeige öffnen&nbsp;↗</a>
+        <div class="preview-qr-wrap" id="preview-qr" hidden>
+          <div class="preview-qr-label">
+            <div class="line1">Scannen &amp; mitmachen</div>
+            <div class="line2" id="preview-qr-url"></div>
+          </div>
+          <img class="preview-qr-code" id="preview-qr-img" src="" alt="QR-Code zum Mitmachen" />
+        </div>
+      </div>
     </footer>
   </section>
 </div>
@@ -782,7 +836,6 @@
   const tags    = document.getElementById('tags');
   const section = document.getElementById('submitted-section');
   const charCount = document.getElementById('char-count');
-  const creatorTools = document.getElementById('creator-tools');
   const shareButton = document.getElementById('share-link');
   const shareLabel = document.getElementById('share-label');
   const displayLink = document.getElementById('display-link');
@@ -797,6 +850,9 @@
   const previewTotal = document.getElementById('preview-total');
   const previewLiveCopy = document.getElementById('preview-live-copy');
   const previewDisplayLink = document.getElementById('preview-display-link');
+  const previewQr = document.getElementById('preview-qr');
+  const previewQrImg = document.getElementById('preview-qr-img');
+  const previewQrUrl = document.getElementById('preview-qr-url');
   const setupToast = document.getElementById('setup-toast');
   const setupToastClose = document.getElementById('setup-toast-close');
   const memoryCtaLink = document.getElementById('memory-cta-link');
@@ -852,13 +908,18 @@
 
   applyTheme(currentTheme);
 
-  const isCreator = readSession(`creator-mode:${slug}`) === '1'
-    || Boolean(readSession(`admin-token:${slug}`));
-  creatorTools.hidden = !isCreator;
   memoryCtaLink.href = `/e/${encodeURIComponent(slug)}/configure?mode=personal`;
   displayLink.href = displayUrl;
   previewDisplayLink.href = displayUrl;
-  previewDisplayLink.hidden = !isCreator;
+
+  fetch(`/api/events/${encodeURIComponent(slug)}/qr`)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(({ dataUrl, url }) => {
+      previewQrImg.src = dataUrl;
+      previewQrUrl.textContent = String(url || '').replace('http://', '').replace('https://', '');
+      previewQr.hidden = false;
+    })
+    .catch(() => {});
 
   if (readSession(`creation-notice:${slug}`) === '1') {
     removeSession(`creation-notice:${slug}`);

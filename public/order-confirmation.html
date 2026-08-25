@@ -122,8 +122,11 @@
           title.textContent = 'Testzahlung erfolgreich';
           copy.textContent = 'Stripe hat die Zahlung bestätigt und wir haben die Bestellung sicher gespeichert.';
           const unit = order.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
-          document.getElementById('quantity').textContent =
-            `${order.quantity} ${order.quantity === 1 ? unit.singular : unit.plural}`;
+          const productLabel = `${order.quantity} ${order.quantity === 1 ? unit.singular : unit.plural}`;
+          const shipmentCount = Number(order.shipmentCount || 1);
+          document.getElementById('quantity').textContent = shipmentCount > 1
+            ? `${productLabel} an ${shipmentCount} Lieferadressen`
+            : productLabel;
           document.getElementById('total').textContent = money(order.totalCents, order.currency);
           summary.hidden = false;
           note.hidden = false;

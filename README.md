@@ -42,10 +42,13 @@ add their own photos, words and motifs, and purchase it independently.
    the entire design printable.
 7. The approved configuration continues to a dedicated, mobile-first
    shipping-address page. Countries and state/province choices come directly
-   from Printful; the server uses the immutable variant and quantity to fetch
-   a live fulfillment, standard-shipping and provisional tax/VAT estimate in
-   EUR. The normalized address and exact cent amounts are stored in an opaque,
-   expiring quote; abandoned address quotes are automatically removed.
+   from Printful; the server uses the immutable variant and shipment
+   quantities to fetch live fulfillment, standard-shipping and supplier
+   tax/VAT estimates in EUR. Customer tax/VAT is recalculated on the
+   customer-facing product subtotal plus shipping, using the destination rate
+   implied by Printful's estimate. The normalized address and exact cent
+   amounts are stored in an opaque, expiring quote; abandoned address quotes
+   are automatically removed.
 8. "Weiter zur Testzahlung" re-estimates the same trusted configuration and
    address immediately before creating a dynamic Stripe-hosted Checkout
    Session. A changed price must be confirmed again. Signed Stripe webhooks
@@ -127,8 +130,9 @@ Everything in `.env.example` is documented inline. Summary:
 | `PRINTFUL_FULFILLMENT_MODE` | no (defaults `mock`) | `mock`, `draft` or `live`; Stripe test payments ignore this and always remain mocked |
 | `PRINTFUL_ALLOW_ORDER_WRITES` | no (must remain `false`) | second safety switch required before a live payment may create a Printful draft |
 | `PRINTFUL_CONFIRM_LIVE_ORDERS` | no (must remain `false`) | third safety switch required before a draft may be confirmed, charged and submitted |
-| `SHOP_TARGET_MARGIN_PERCENT` | no (defaults 45) | provisional catalog-wide target gross margin applied to Printful's current product costs |
-| `SHOP_MIN_PROFIT_PER_ORDER_CENTS` | no (defaults 500) | minimum product contribution for the complete order, in cents (500 = 5,00 €) |
+| `SHOP_PRODUCT_MARKUP_PERCENT` | no (defaults 50) | provisional catalog-wide markup added to Printful's current product costs |
+| `SHOP_PAYMENT_RESERVE_PERCENT` | no (defaults 3.15) | internal payment-cost reserve percentage folded into the product subtotal |
+| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | no (defaults 25) | internal fixed payment-cost reserve in cents, also folded into the product subtotal |
 
 **Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
 future hosted secrets must be set in the provider's encrypted secret store,
@@ -137,39 +141,45 @@ not copied into the repository or a deployment manifest.
 ## Provisional test pricing
 
 The current checkout does not use a fixed price per product. It calculates one
-customer price from Printful's live EUR estimate and the two catalog-wide
-settings above. All calculations use integer cents.
+customer price from Printful's live EUR estimate and the catalog-wide markup
+setting above. All calculations use integer cents.
 
 Let `C` be Printful's product cost for the complete quantity after any
-Printful quantity discount, `m` the target margin (default `0.45`) and `D` the
-minimum contribution per order (default `500` cents). The customer product
-subtotal is:
+Printful quantity discount, `u` the markup (default `0.50`) and `R` the
+internal payment-cost reserve. The customer product subtotal is:
 
 ```text
-max(ceil(C / (1 - m)), C + D)
+ceil(C * (1 + u)) + R
 ```
 
-Printful's standard shipping and current provisional tax/VAT estimate are
-then added separately:
+Printful's standard shipping is added separately. Customer tax/VAT is then
+calculated on the marked-up product subtotal plus shipping, using the
+destination rate implied by Printful's product+shipping tax estimate:
 
 ```text
-customer total = customer product subtotal + shipping + provisional tax/VAT
+customer tax = round((customer product subtotal + shipping) * destination tax rate)
+customer total = customer product subtotal + shipping + customer tax
 ```
 
-Example with 10,98 € Printful product costs: the 45% rule produces 19,97 €,
-while the minimum-contribution rule produces 15,98 €. The product subtotal is
-therefore 19,97 €, before shipping and provisional tax/VAT.
+The payment reserve is folded into the product subtotal, not displayed as a
+separate card/payment surcharge. By default it is grossed up from a
+conservative `3.15% + 0,25 €` estimate so the expected Stripe processing cost
+does not reduce the intended product-margin profit.
+
+Example with 10,98 € Printful product costs, 6,24 € shipping and 19% German
+VAT: the 50% rule produces a 16,47 € marked-up product subtotal, the internal
+payment reserve is 1,15 €, customer VAT is 4,53 € and the customer total is
+28,39 €.
 
 Because `C` is the actual product cost for the requested quantity, Printful
 quantity discounts automatically lower the customer unit price; there are no
-separate, manually maintained discount tiers. The 5,00 € floor currently
-applies once to the complete order, not once per item. The server repeats the
-Printful estimate immediately before Stripe Checkout, and a changed total must
-be confirmed again.
+separate, manually maintained discount tiers. The server repeats the Printful
+estimate immediately before Stripe Checkout, and a changed total must be
+confirmed again.
 
-This is intentionally a test calculation. Printful's tax estimate is kept as
-a separate line so it can be replaced with the business's reviewed customer
-VAT/Stripe Tax treatment before live payments are enabled.
+This is intentionally a test calculation. The tax line is customer-facing now,
+but the business's VAT status, OSS obligations and Stripe Tax configuration
+still need professional review before live payments are enabled.
 
 ## Project layout
 
@@ -185,7 +195,7 @@ src/
   stripe.js                Stripe Checkout session creation + webhook verification
   printful.js              Printful estimates plus draft/confirm API primitives
   fulfillment.js           idempotent paid-order worker and mock/draft/live safety gates
-  pricing.js               integer-cent quote + catalog-wide margin/minimum rule
+  pricing.js               integer-cent quote + catalog-wide markup rule
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
   mugPrint.js              Product-sized SVG print-file renderer
   products.js              Curated, API-verified Printful variants and geometry
@@ -216,7 +226,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 48 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 51 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, dynamic Stripe Checkout,
@@ -309,10 +319,11 @@ created draft is confirmed. Keep every switch false while developing locally.
   successful test payment can only produce a local `mocked` fulfillment
   record. Draft/live writes require a live Stripe payment plus the explicit
   safety switches described above.
-- **Final retail VAT calculation** — the quote schema already separates
-  products, shipping and tax cents, but the current test display uses
-  Printful's estimate. Customer VAT/Stripe Tax must be finalized before live
-  mode is enabled.
+- **Final retail VAT configuration** — the quote schema separates products,
+  internal reserve, shipping and customer tax cents, and the current test
+  display recalculates customer tax from the destination rate implied by
+  Printful's estimate. Customer VAT/Stripe Tax must still be professionally
+  reviewed before live mode is enabled.
 
 ## Known gotchas
 
@@ -337,9 +348,9 @@ created draft is confirmed. Keep every switch false while developing locally.
    and inspect the resulting notebook and pillow mockups before enabling sales.
 2. Create the Fly.io staging app, persistent SQLite volume and hosted test
    secrets; then verify the complete Stripe test flow over public HTTPS.
-3. Decide the business's VAT status, customer-price tax behavior, EU/OSS
-   registrations and bookkeeping export; then replace the provisional tax
-   line with the reviewed Stripe Tax configuration.
+3. Decide the business's VAT status, EU/OSS registrations and bookkeeping
+   export; then verify or replace the current customer-tax estimate with the
+   reviewed Stripe Tax configuration.
 4. Confirm whether Printful's product print pipeline accepts the generated SVG
    directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
    is already available if so).

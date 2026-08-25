@@ -8,7 +8,7 @@ const { getBaseUrl } = require('../baseUrl');
 const adminAuth = require('../adminAuth');
 const stripe = require('../stripe');
 const printful = require('../printful');
-const { buildCustomerQuote } = require('../pricing');
+const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const {
   DEFAULT_PRODUCT,
@@ -37,10 +37,50 @@ const ADDRESS_LIMITS = Object.freeze({
   city: 100,
   zip: 20,
 });
+const MAX_CHECKOUT_SHIPMENTS = 10;
 
 function cleanAddressValue(value, maxLength) {
   if (typeof value !== 'string') return '';
   return value.normalize('NFC').trim().replace(/[\x00-\x1f\x7f]/g, '').slice(0, maxLength).trim();
+}
+
+function normalizeAddressLookupValue(value) {
+  return String(value || '').normalize('NFKC').trim().toLocaleLowerCase('de');
+}
+
+const germanRegionNames = typeof Intl.DisplayNames === 'function'
+  ? new Intl.DisplayNames(['de'], { type: 'region' })
+  : null;
+
+function localizedCountryNameForCode(code) {
+  try {
+    return germanRegionNames?.of(code) || '';
+  } catch {
+    return '';
+  }
+}
+
+function findShippingCountry(value, countries) {
+  const raw = String(value || '').trim();
+  const code = raw.toUpperCase();
+  const byCode = countries.find((entry) => entry.code === code);
+  if (byCode) return byCode;
+  const lookup = normalizeAddressLookupValue(raw);
+  if (!lookup) return null;
+  return countries.find((entry) => (
+    normalizeAddressLookupValue(entry.name) === lookup ||
+    normalizeAddressLookupValue(localizedCountryNameForCode(entry.code)) === lookup
+  )) || null;
+}
+
+function findShippingState(value, country) {
+  const raw = String(value || '').trim();
+  const code = raw.toUpperCase();
+  const byCode = country.states.find((entry) => String(entry.code || '').toUpperCase() === code);
+  if (byCode) return byCode;
+  const lookup = normalizeAddressLookupValue(raw);
+  if (!lookup) return null;
+  return country.states.find((entry) => normalizeAddressLookupValue(entry.name) === lookup) || null;
 }
 
 function normalizeRecipient(rawRecipient, countries) {
@@ -60,17 +100,62 @@ function normalizeRecipient(rawRecipient, countries) {
   for (const field of ['name', 'address1', 'city', 'zip']) {
     if (recipient[field].length < 2) invalidFields.push(field);
   }
-  const country = countries.find((entry) => entry.code === recipient.country_code);
+  const country = findShippingCountry(raw.country_code, countries);
   if (!country) {
     invalidFields.push('country_code');
   } else if (country.states.length) {
-    const state = country.states.find((entry) => entry.code.toUpperCase() === recipient.state_code);
-    if (!state) invalidFields.push('state_code');
+    recipient.country_code = country.code;
+    const state = findShippingState(raw.state_code, country);
+    if (!state) {
+      invalidFields.push('state_code');
+    } else {
+      recipient.state_code = String(state.code || '').toUpperCase();
+    }
   } else {
+    recipient.country_code = country.code;
     delete recipient.state_code;
   }
   if (!recipient.address2) delete recipient.address2;
   return { recipient, invalidFields: [...new Set(invalidFields)] };
+}
+
+function normalizeCheckoutShipments(rawBody, countries, product, fallbackQuantity) {
+  const usesShipmentList = Array.isArray(rawBody?.shipments);
+  const rawShipments = usesShipmentList
+    ? rawBody.shipments
+    : [{ quantity: rawBody?.quantity ?? fallbackQuantity, recipient: rawBody?.recipient }];
+  const invalidFields = [];
+
+  if (!Array.isArray(rawShipments) || rawShipments.length < 1 || rawShipments.length > MAX_CHECKOUT_SHIPMENTS) {
+    return { shipments: [], invalidFields: ['shipments'], totalQuantity: 0, usesShipmentList };
+  }
+
+  const shipments = rawShipments.map((rawShipment, index) => {
+    const raw = rawShipment && typeof rawShipment === 'object' && !Array.isArray(rawShipment)
+      ? rawShipment
+      : {};
+    const rawQuantity = Number(raw.quantity);
+    const quantity = Number.isFinite(rawQuantity) ? Math.round(rawQuantity) : 0;
+    const fieldPrefix = usesShipmentList ? `shipments.${index}.` : '';
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > product.maxQuantity) {
+      invalidFields.push(`${fieldPrefix}quantity`);
+    }
+    const { recipient, invalidFields: recipientInvalidFields } = normalizeRecipient(raw.recipient || raw, countries);
+    recipientInvalidFields.forEach((field) => invalidFields.push(`${fieldPrefix}${field}`));
+    return { quantity, recipient };
+  });
+
+  const totalQuantity = shipments.reduce((sum, shipment) => sum + Math.max(0, Number(shipment.quantity) || 0), 0);
+  if (totalQuantity < product.minQuantity || totalQuantity > product.maxQuantity) {
+    invalidFields.push(usesShipmentList ? 'shipments.quantity' : 'quantity');
+  }
+
+  return {
+    shipments,
+    invalidFields: [...new Set(invalidFields)],
+    totalQuantity,
+    usesShipmentList,
+  };
 }
 
 function sendPrintfulError(res, error) {
@@ -98,11 +183,14 @@ function sendPrintfulError(res, error) {
 }
 
 function checkoutQuoteResponse(quote) {
+  const shipments = db.getCheckoutQuoteShipments(quote);
   return {
     id: quote.id,
     currency: quote.currency,
     quantity: Number(quote.quantity),
+    shipmentCount: shipments.length || 1,
     itemsCents: Number(quote.items_cents),
+    paymentReserveCents: Number(quote.payment_reserve_cents || 0),
     shippingCents: Number(quote.shipping_cents),
     taxCents: Number(quote.tax_cents),
     totalCents: Number(quote.total_cents),
@@ -114,6 +202,7 @@ function quoteAmountsDiffer(stored, fresh) {
   return stored.currency !== fresh.currency ||
     Number(stored.quantity) !== fresh.quantity ||
     Number(stored.items_cents) !== fresh.itemsCents ||
+    Number(stored.payment_reserve_cents || 0) !== (fresh.paymentReserveCents || 0) ||
     Number(stored.shipping_cents) !== fresh.shippingCents ||
     Number(stored.tax_cents) !== fresh.taxCents ||
     Number(stored.total_cents) !== fresh.totalCents;
@@ -458,7 +547,10 @@ function makeRouter({ io, port }) {
     if (!CONFIGURATION_TYPES.has(configurationType)) {
       return res.status(400).json({ error: 'invalid_configuration_type' });
     }
-    const quantity = Number(req.body?.quantity ?? product.defaultQuantity);
+    const defaultQuantity = configurationType === 'personal_memory'
+      ? product.minQuantity
+      : product.defaultQuantity;
+    const quantity = Number(req.body?.quantity ?? defaultQuantity);
     if (!Number.isSafeInteger(quantity) || quantity < product.minQuantity || quantity > product.maxQuantity) {
       return res.status(400).json({ error: 'invalid_quantity' });
     }
@@ -545,21 +637,37 @@ function makeRouter({ io, port }) {
       const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
       try {
+        const product = getProduct(configuration.product_key);
+        if (!product) return res.status(500).json({ error: 'configuration_invalid' });
         const countries = await printful.getShippingCountries();
-        const { recipient, invalidFields } = normalizeRecipient(req.body?.recipient, countries);
+        const { shipments, invalidFields } = normalizeCheckoutShipments(
+          req.body,
+          countries,
+          product,
+          Number(configuration.quantity)
+        );
         if (invalidFields.length) {
           return res.status(400).json({
             error: 'invalid_address',
             fields: invalidFields,
-            message: 'Bitte füllt alle benötigten Adressfelder vollständig aus.',
+            message: 'Bitte fülle alle benötigten Adressfelder vollständig aus.',
           });
         }
-        const costs = await printful.estimateOrderCosts({
-          variantId: Number(configuration.printful_variant_id),
-          quantity: Number(configuration.quantity),
-          recipient,
-        });
-        const calculatedQuote = buildCustomerQuote(costs, Number(configuration.quantity));
+        const pricedShipments = await Promise.all(shipments.map(async (shipment) => {
+          const printfulCosts = await printful.estimateOrderCosts({
+            variantId: Number(configuration.printful_variant_id),
+            quantity: shipment.quantity,
+            recipient: shipment.recipient,
+          });
+          return { ...shipment, printfulCosts };
+        }));
+        const calculatedQuote = buildCustomerQuoteForShipments(
+          pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
+        );
+        const quotedShipments = pricedShipments.map((shipment, index) => ({
+          ...shipment,
+          customerCosts: calculatedQuote.shipmentQuotes[index],
+        }));
         if (calculatedQuote.currency !== 'EUR') {
           console.error(`Printful returned ${calculatedQuote.currency}; dynamic checkout requires EUR.`);
           return res.status(502).json({
@@ -570,8 +678,7 @@ function makeRouter({ io, port }) {
         const savedQuote = db.createCheckoutQuote({
           eventId: configuration.event_id,
           configurationId: configuration.id,
-          recipient,
-          printfulCosts: costs,
+          shipments: quotedShipments,
           quote: calculatedQuote,
         });
         res.json({ quote: checkoutQuoteResponse(savedQuote) });
@@ -608,7 +715,9 @@ function makeRouter({ io, port }) {
     } catch {
       return res.status(500).json({ error: 'quote_invalid' });
     }
-    return res.json({ quote: checkoutQuoteResponse(quote), recipient });
+    const shipments = db.getCheckoutQuoteShipments(quote)
+      .map((shipment) => ({ quantity: Number(shipment.quantity), recipient: shipment.recipient }));
+    return res.json({ quote: checkoutQuoteResponse(quote), recipient, shipments });
   });
 
   router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
@@ -695,20 +804,31 @@ function makeRouter({ io, port }) {
         });
       }
 
-      let recipient;
-      try {
-        recipient = JSON.parse(storedQuote.recipient_json);
-      } catch {
+      const storedShipments = db.getCheckoutQuoteShipments(storedQuote);
+      if (!storedShipments.length) {
         return res.status(500).json({ error: 'quote_invalid' });
       }
 
       try {
-        const costs = await printful.estimateOrderCosts({
-          variantId: Number(configuration.printful_variant_id),
-          quantity: Number(configuration.quantity),
-          recipient,
-        });
-        const freshQuote = buildCustomerQuote(costs, Number(configuration.quantity));
+        const refreshedShipments = await Promise.all(storedShipments.map(async (shipment) => {
+          const costs = await printful.estimateOrderCosts({
+            variantId: Number(configuration.printful_variant_id),
+            quantity: Number(shipment.quantity),
+            recipient: shipment.recipient,
+          });
+          return {
+            quantity: Number(shipment.quantity),
+            recipient: shipment.recipient,
+            printfulCosts: costs,
+          };
+        }));
+        const freshQuote = buildCustomerQuoteForShipments(
+          refreshedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
+        );
+        const quotedShipments = refreshedShipments.map((shipment, index) => ({
+          ...shipment,
+          customerCosts: freshQuote.shipmentQuotes[index],
+        }));
         if (freshQuote.currency !== 'EUR') {
           return res.status(502).json({
             error: 'pricing_currency_mismatch',
@@ -718,7 +838,7 @@ function makeRouter({ io, port }) {
 
         const changed = quoteAmountsDiffer(storedQuote, freshQuote);
         const refreshedQuote = db.updateCheckoutQuote(storedQuote.id, {
-          printfulCosts: costs,
+          shipments: quotedShipments,
           quote: freshQuote,
         });
         if (changed) {
@@ -755,7 +875,8 @@ function makeRouter({ io, port }) {
           slug: event.slug,
           configurationId: configuration.id,
           quoteId: refreshedQuote.id,
-          quantity: Number(configuration.quantity),
+          quantity: freshQuote.quantity,
+          shipmentCount: refreshedShipments.length,
           baseUrl: getBaseUrl(req, port),
         });
         db.attachStripeSession(order.id, session);
@@ -793,6 +914,7 @@ function makeRouter({ io, port }) {
     const product = configuration ? getProduct(configuration.product_key) : null;
     const paymentConfirmed = ['paid_test', 'paid'].includes(order.status);
     const fulfillmentCreated = ['draft', 'submitted'].includes(order.fulfillment_status);
+    const orderShipments = db.getOrderShipments(order.id);
     res.json({
       status: order.status,
       paymentConfirmed,
@@ -801,7 +923,10 @@ function makeRouter({ io, port }) {
       mode: order.mode || 'test',
       currency: order.currency,
       totalCents: Number(order.total_cents),
-      quantity: configuration ? Number(configuration.quantity) : null,
+      quantity: orderShipments.length
+        ? orderShipments.reduce((sum, shipment) => sum + Number(shipment.quantity || 0), 0)
+        : configuration ? Number(configuration.quantity) : null,
+      shipmentCount: orderShipments.length || 1,
       product: product ? {
         name: product.name,
         unit: product.unit,

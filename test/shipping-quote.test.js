@@ -21,11 +21,13 @@ async function saveConfiguration(baseUrl, slug, quantity = 3) {
 }
 
 test('shipping page uses the immutable configuration and returns a server-side Printful quote', async (t) => {
-  process.env.SHOP_TARGET_MARGIN_PERCENT = '45';
-  process.env.SHOP_MIN_PROFIT_PER_ORDER_CENTS = '500';
+  process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.15';
+  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '25';
   t.after(() => {
-    delete process.env.SHOP_TARGET_MARGIN_PERCENT;
-    delete process.env.SHOP_MIN_PROFIT_PER_ORDER_CENTS;
+    delete process.env.SHOP_PRODUCT_MARKUP_PERCENT;
+    delete process.env.SHOP_PAYMENT_RESERVE_PERCENT;
+    delete process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS;
   });
 
   const { baseUrl, close } = await startTestServer();
@@ -40,25 +42,39 @@ test('shipping page uses the immutable configuration and returns a server-side P
   const printful = require('../src/printful');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
-  let captured = null;
+  const captured = [];
   printful.getShippingCountries = async () => [
     { code: 'DE', name: 'Germany', region: 'europe', states: [] },
-    { code: 'US', name: 'United States', region: 'americas', states: [{ code: 'NY', name: 'New York' }] },
+    {
+      code: 'US',
+      name: 'United States',
+      region: 'americas',
+      states: [{ code: 'CA', name: 'California' }, { code: 'NY', name: 'New York' }],
+    },
   ];
   printful.estimateOrderCosts = async (options) => {
-    captured = options;
-    return {
-      currency: 'EUR',
-      subtotal: 10,
-      shipping: 4.49,
-      tax: 0,
-      vat: 2.75,
-      digitization: 0,
-      additional_fee: 0,
-      fulfillment_fee: 0,
-      retail_delivery_fee: 0,
-      total: 17.24,
-    };
+    captured.push(options);
+    return options.recipient.country_code === 'US'
+      ? {
+          currency: 'EUR',
+          subtotal: 6,
+          shipping: 6,
+          tax: 0,
+          vat: 2.28,
+          total: 14.28,
+        }
+      : {
+          currency: 'EUR',
+          subtotal: 10,
+          shipping: 4.49,
+          tax: 0,
+          vat: 2.75,
+          digitization: 0,
+          additional_fee: 0,
+          fulfillment_fee: 0,
+          retail_delivery_fee: 0,
+          total: 17.24,
+        };
   };
   t.after(() => {
     printful.getShippingCountries = originalCountries;
@@ -87,17 +103,32 @@ test('shipping page uses the immutable configuration and returns a server-side P
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         // Deliberately include untrusted product fields. The route must ignore
-        // them and use the immutable configuration instead.
-        quantity: 99,
+        // them and use the immutable configuration plus shipment quantities.
         variantId: 999999,
-        recipient: {
-          name: 'Paula Beispiel',
-          address1: 'Alexanderplatz 1',
-          address2: '',
-          city: 'Berlin',
-          zip: '10178',
-          country_code: 'de',
-        },
+        shipments: [
+          {
+            quantity: 2,
+            recipient: {
+              name: 'Max Mustermann',
+              address1: 'Münzerstraße 6',
+              address2: '',
+              city: 'Heilbronn',
+              zip: '74080',
+              country_code: 'Deutschland',
+            },
+          },
+          {
+            quantity: 1,
+            recipient: {
+              name: 'Elke Musterfrau',
+              address1: '702 Clara Dr',
+              city: 'Palo Alto',
+              zip: '94303',
+              country_code: 'Vereinigte Staaten',
+              state_code: 'California',
+            },
+          },
+        ],
       }),
     }
   );
@@ -109,39 +140,48 @@ test('shipping page uses the immutable configuration and returns a server-side P
     id: undefined,
     currency: 'EUR',
     quantity: 3,
-    itemsCents: 1819,
-    shippingCents: 449,
-    taxCents: 275,
-    totalCents: 2543,
+    shipmentCount: 2,
+    itemsCents: 2561,
+    paymentReserveCents: 161,
+    shippingCents: 1049,
+    taxCents: 686,
+    totalCents: 4296,
     expiresAt: undefined,
   });
-  assert.equal(captured.variantId, 1320);
-  assert.equal(captured.quantity, 3);
-  assert.deepEqual(captured.recipient, {
-    name: 'Paula Beispiel',
-    address1: 'Alexanderplatz 1',
-    city: 'Berlin',
-    zip: '10178',
+  assert.equal(captured.length, 2);
+  assert.equal(captured[0].variantId, 1320);
+  assert.equal(captured[0].quantity, 2);
+  assert.deepEqual(captured[0].recipient, {
+    name: 'Max Mustermann',
+    address1: 'Münzerstraße 6',
+    city: 'Heilbronn',
+    zip: '74080',
     country_code: 'DE',
   });
+  assert.equal(captured[1].quantity, 1);
+  assert.equal(captured[1].recipient.country_code, 'US');
+  assert.equal(captured[1].recipient.state_code, 'CA');
 
-  captured = null;
+  captured.length = 0;
   const missingState = await fetch(
     `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/estimate-costs`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recipient: {
-          name: 'New York Nora', address1: '350 Fifth Avenue', city: 'New York',
-          zip: '10118', country_code: 'US',
-        },
+        shipments: [{
+          quantity: 1,
+          recipient: {
+            name: 'New York Nora', address1: '350 Fifth Avenue', city: 'New York',
+            zip: '10118', country_code: 'US',
+          },
+        }],
       }),
     }
   );
   assert.equal(missingState.status, 400);
-  assert.deepEqual((await missingState.json()).fields, ['state_code']);
-  assert.equal(captured, null, 'invalid addresses must not reach Printful');
+  assert.deepEqual((await missingState.json()).fields, ['shipments.0.state_code']);
+  assert.equal(captured.length, 0, 'invalid addresses must not reach Printful');
 });
 
 test('a configuration can never be quoted through another event slug', async (t) => {

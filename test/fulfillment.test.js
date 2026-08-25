@@ -122,6 +122,73 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     }],
   }]);
 
+  const splitQuote = db.createCheckoutQuote({
+    eventId: event.id,
+    configurationId: configuration.id,
+    shipments: [
+      {
+        quantity: 2,
+        recipient: {
+          name: 'Adresse A',
+          address1: 'Rosenweg 1',
+          city: 'Berlin',
+          zip: '10115',
+          country_code: 'DE',
+        },
+        printfulCosts: { currency: 'EUR', subtotal: 12, shipping: 5, vat: 3, total: 20 },
+      },
+      {
+        quantity: 1,
+        recipient: {
+          name: 'Adresse B',
+          address1: 'Tulpenweg 2',
+          city: 'Wien',
+          zip: '1010',
+          country_code: 'AT',
+        },
+        printfulCosts: { currency: 'EUR', subtotal: 7, shipping: 6, vat: 2.6, total: 15.6 },
+      },
+    ],
+    quote: {
+      currency: 'EUR', quantity: 3, itemsCents: 3455,
+      shippingCents: 1100, taxCents: 560, totalCents: 5115,
+    },
+  });
+  const { order: splitOrder } = db.createCheckoutOrder({
+    eventId: event.id,
+    configurationId: configuration.id,
+    quote: splitQuote,
+    mode: 'live',
+  });
+  db.attachStripeSession(splitOrder.id, {
+    id: 'cs_live_split_fulfillment_test',
+    url: 'https://checkout.stripe.example/split-session',
+  });
+  db.recordSuccessfulPayment({
+    stripeEventId: 'evt_live_split_fulfillment_test',
+    eventType: 'checkout.session.completed',
+    stripeSessionId: 'cs_live_split_fulfillment_test',
+    paymentIntentId: 'pi_live_split_fulfillment_test',
+    livemode: true,
+  });
+
+  const splitCalls = [];
+  printful.createPrintfulOrder = async (options) => {
+    splitCalls.push(options);
+    return { printfulOrderId: `draft-${splitCalls.length}`, status: 'draft', mocked: false, confirmed: false };
+  };
+  const completedSplit = await fulfillment.processOrder(splitOrder.id);
+  assert.equal(splitCalls.length, 2, 'one Printful draft is created per delivery address');
+  assert.equal(completedSplit.fulfillment_status, 'draft');
+  assert.equal(completedSplit.printful_order_id, 'draft-1,draft-2');
+  assert.deepEqual(splitCalls.map((call) => call.payload.external_id), [
+    `weddingcloud-${splitOrder.id}-${splitQuote.id}-shipment-1`,
+    `weddingcloud-${splitOrder.id}-${splitQuote.id}-shipment-2`,
+  ]);
+  assert.deepEqual(splitCalls.map((call) => call.payload.items[0].quantity), [2, 1]);
+  assert.deepEqual(splitCalls.map((call) => call.payload.recipient.name), ['Adresse A', 'Adresse B']);
+  assert.deepEqual(db.getOrderShipments(splitOrder.id).map((shipment) => shipment.fulfillment_status), ['draft', 'draft']);
+
   const notebookPayload = fulfillment.buildPrintfulPayload({
     mode: 'draft',
     order: {

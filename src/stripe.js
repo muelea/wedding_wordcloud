@@ -67,6 +67,7 @@ async function createCheckoutSession({
   configurationId,
   quoteId,
   quantity,
+  shipmentCount = 1,
   baseUrl,
 }) {
   const client = getClient();
@@ -91,7 +92,10 @@ async function createCheckoutSession({
     checkoutMode,
   };
   const unitLabel = quantity === 1 ? product.unit.singular : product.unit.plural;
-  const quantityLabel = `${quantity} ${unitLabel} · ${product.size.label}`;
+  const shipmentLabel = shipmentCount > 1
+    ? ` · ${shipmentCount} Lieferadressen`
+    : '';
+  const quantityLabel = `${quantity} ${unitLabel}${shipmentLabel} · ${product.size.label}`;
 
   const session = await client.checkout.sessions.create({
     mode: 'payment',

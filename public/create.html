@@ -394,14 +394,13 @@
         return;
       }
       try {
-        sessionStorage.setItem(`creator-mode:${data.slug}`, '1');
         sessionStorage.setItem(`creation-notice:${data.slug}`, '1');
         if (data.adminToken) {
           sessionStorage.setItem(`admin-token:${data.slug}`, data.adminToken);
         }
       } catch {
         // Storage can be unavailable in strict privacy modes. The event is
-        // still valid, so continue to its guest page without creator extras.
+        // still valid, so continue to its guest page without the setup notice.
       }
       location.assign(data.guestUrl);
     } catch {
