@@ -212,6 +212,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /id="placement-options"/);
   assert.match(configurePage, /id="surface-tabs"/);
+  assert.match(configurePage, /id="selected-theme-swatches"/);
+  assert.doesNotMatch(configurePage, /id="selected-theme-detail"/);
+  assert.match(configurePage, /class="save-button design-save-button" id="save-button"/);
+  assert.match(configurePage, /class="secondary-button" id="design-another" type="button" hidden/);
+  assert.match(configurePage, /class="save-button continue-button" id="continue-order" type="button" hidden/);
 
   const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
   assert.equal(fabricBrowserBuild.status, 200);

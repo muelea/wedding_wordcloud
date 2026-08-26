@@ -73,7 +73,7 @@
       padding: 54px 0 80px;
     }
 
-    .intro { max-width: 720px; margin-bottom: 38px; }
+    .intro { margin-bottom: 38px; }
     .eyebrow {
       margin: 0 0 12px;
       color: var(--gold);
@@ -90,8 +90,8 @@
       line-height: 1.06;
       letter-spacing: -.045em;
     }
+    .intro h1 { max-width: 720px; }
     .intro-copy {
-      max-width: 610px;
       margin: 18px 0 0;
       color: var(--muted);
       font-size: 17px;
@@ -111,8 +111,7 @@
     }
 
     .preview-card,
-    .editor-card,
-    .checkout-panel {
+    .editor-card {
       background: rgba(255, 254, 252, .88);
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
@@ -134,10 +133,8 @@
     }
 
     .checkout-panel {
-      padding: 24px;
       display: grid;
-      gap: 14px;
-      border-radius: 24px;
+      gap: 12px;
     }
 
     .preview-head {
@@ -665,6 +662,7 @@
     }
     .toolbar-menu[hidden] { display: none; }
     .toolbar-summary {
+      height: 100%;
       min-height: 82px;
       padding: 13px 15px;
       display: grid;
@@ -734,6 +732,11 @@
       text-align: left;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .toolbar-theme-swatches {
+      grid-row: 2;
+      height: 12px;
+      margin: 2px 0 0;
     }
     .toolbar-panel {
       position: absolute;
@@ -1095,29 +1098,32 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      border: 0;
+      border: 1px solid transparent;
       border-radius: 12px;
-      background: linear-gradient(135deg, var(--berry), var(--berry-dark));
+      background: var(--ink);
       color: #fff;
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
-      box-shadow: 0 9px 18px rgba(115, 20, 55, .14);
-      transition: transform .2s, box-shadow .2s, opacity .2s;
+      box-shadow: 0 7px 16px rgba(64, 15, 38, .12);
+      transition: transform .2s, border-color .2s, background .2s, box-shadow .2s, opacity .2s;
     }
-    .save-button:hover { transform: translateY(-1px); box-shadow: 0 12px 22px rgba(115,20,55,.19); }
+    .save-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(64,15,38,.17); }
     .save-button:disabled { cursor: wait; opacity: .6; transform: none; }
-    .checkout-panel > .save-button {
-      justify-self: end;
-      min-width: min(100%, 300px);
+    .design-save-button {
+      border-color: rgba(156, 28, 76, .2);
+      background: rgba(156, 28, 76, .055);
+      color: var(--berry-dark);
+      box-shadow: none;
     }
+    .design-save-button:hover { border-color: rgba(156, 28, 76, .34); background: rgba(156, 28, 76, .09); box-shadow: none; }
 
     .order-box {
       margin-top: 0;
-      padding: 14px;
-      border: 1px solid rgba(123, 70, 82, .14);
-      border-radius: 16px;
-      background: rgba(251, 246, 241, .76);
+      padding: 16px 18px;
+      border: 1px solid rgba(123, 70, 82, .12);
+      border-radius: 18px;
+      background: rgba(255, 254, 252, .88);
     }
     .order-head {
       display: flex;
@@ -1128,19 +1134,21 @@
     }
     .order-head strong { font-size: 13px; }
     .order-head span { color: var(--muted); font-size: 11px; }
-    .order-list { display: grid; gap: 8px; }
+    .order-list { display: grid; }
     .order-item {
       min-width: 0;
       display: grid;
       grid-template-columns: 46px minmax(0, 1fr) auto;
       align-items: center;
       gap: 9px;
-      padding: 8px;
-      border: 1px solid rgba(123, 70, 82, .12);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, .82);
+      padding: 10px 0;
+      border: 0;
+      background: transparent;
     }
-    .order-item.is-editing { border-color: rgba(156, 28, 76, .36); background: rgba(156, 28, 76, .045); }
+    .order-item.is-editing {
+      border-radius: 10px;
+      background: rgba(156, 28, 76, .045);
+    }
     .order-item img {
       width: 46px;
       height: 38px;
@@ -1190,28 +1198,34 @@
     .order-remove { width: 32px; }
     .order-remove:hover { background: rgba(156, 28, 76, .08); color: var(--berry); }
     .order-actions {
-      margin-top: 12px;
       display: flex;
       justify-content: flex-end;
       gap: 10px;
       flex-wrap: wrap;
     }
+    .order-actions [hidden] { display: none; }
     .secondary-button {
       width: auto;
       min-width: 210px;
-      min-height: 40px;
+      min-height: 44px;
       padding: 10px 14px;
-      border: 1px solid rgba(156, 28, 76, .24);
+      border: 1px solid transparent;
       border-radius: 12px;
-      background: #fff;
-      color: var(--berry);
+      background: transparent;
+      color: var(--muted);
       cursor: pointer;
       font-size: 12px;
       font-weight: 600;
+      transition: border-color .2s, background .2s, color .2s;
     }
-    .secondary-button:hover { border-color: var(--berry); background: rgba(156, 28, 76, .04); }
-    .order-actions .save-button { min-width: 190px; }
-    .error-text { min-height: 18px; margin: 11px 0 0; color: #a12c43; text-align: center; font-size: 12px; }
+    .secondary-button:hover { border-color: rgba(123, 70, 82, .12); background: rgba(123, 70, 82, .055); color: var(--ink); }
+    .order-actions .design-save-button { min-width: 300px; }
+    .order-actions .continue-button {
+      min-width: 190px;
+      background: linear-gradient(135deg, var(--berry), var(--berry-dark));
+    }
+    .error-text { margin: 0; color: #a12c43; text-align: center; font-size: 12px; }
+    .error-text:empty { display: none; }
 
     .loading {
       min-height: 58vh;
@@ -1266,8 +1280,7 @@
       .page { padding: 38px 0 50px; }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
-      .preview-card, .editor-card, .checkout-panel { padding: 20px; border-radius: 21px; }
-      .checkout-panel > .save-button,
+      .preview-card, .editor-card { padding: 20px; border-radius: 21px; }
       .order-actions .save-button,
       .secondary-button {
         width: 100%;
@@ -1350,7 +1363,7 @@
                   <span class="toolbar-kicker">Farbwelt</span>
                   <strong id="selected-theme-name">Farbwelt wählen</strong>
                 </span>
-                <span class="toolbar-summary-detail" id="selected-theme-detail">Auswählen</span>
+                <span class="swatches toolbar-theme-swatches" id="selected-theme-swatches" aria-hidden="true"></span>
               </summary>
               <div class="toolbar-panel">
                 <div class="option-grid" id="theme-options"></div>
@@ -1470,17 +1483,17 @@
         </div>
 
         <section class="checkout-panel" aria-label="Bestellung speichern">
-          <button class="save-button" id="save-button" type="button">Design zur Bestellung hinzufügen <span aria-hidden="true">→</span></button>
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
               <strong>Eure Bestellung</strong>
               <span id="order-count"></span>
             </div>
             <div class="order-list" id="order-list"></div>
-            <div class="order-actions">
-              <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
-              <button class="save-button" id="continue-order" type="button">Zur Lieferadresse <span aria-hidden="true">→</span></button>
-            </div>
+          </div>
+          <div class="order-actions">
+            <button class="save-button design-save-button" id="save-button" type="button">Design zur Bestellung hinzufügen <span aria-hidden="true">→</span></button>
+            <button class="secondary-button" id="design-another" type="button" hidden>Weiteres Produkt gestalten</button>
+            <button class="save-button continue-button" id="continue-order" type="button" hidden>Zur Lieferadresse <span aria-hidden="true">→</span></button>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
         </section>
@@ -1538,7 +1551,7 @@
     const selectedProductName = document.getElementById('selected-product-name');
     const selectedProductDetail = document.getElementById('selected-product-detail');
     const selectedThemeName = document.getElementById('selected-theme-name');
-    const selectedThemeDetail = document.getElementById('selected-theme-detail');
+    const selectedThemeSwatches = document.getElementById('selected-theme-swatches');
     const selectedPlacementName = document.getElementById('selected-placement-name');
     const selectedPlacementDetail = document.getElementById('selected-placement-detail');
     const changeProductButton = document.getElementById('change-product');
@@ -1708,7 +1721,10 @@
 
     function renderOrderBox() {
       const items = loadOrderItems();
-      orderBox.hidden = items.length === 0;
+      const hasItems = items.length > 0;
+      orderBox.hidden = !hasItems;
+      designAnotherButton.hidden = !hasItems;
+      continueOrderButton.hidden = !hasItems;
       orderList.replaceChildren();
       orderCount.textContent = items.length === 1 ? '1 Design' : `${items.length} Designs`;
       items.forEach((item) => {
@@ -1881,9 +1897,7 @@
       const palette = selectedThemeOption();
       if (palette) {
         selectedThemeName.textContent = palette.label;
-        selectedThemeDetail.textContent = palette.key === 'custom'
-          ? `${customColors.length} Farben`
-          : palette.description;
+        renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
       }
       const placement = selectedPlacementOption();
       if (placement) {
