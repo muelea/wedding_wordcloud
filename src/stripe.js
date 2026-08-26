@@ -1,5 +1,7 @@
 'use strict';
 
+const I18n = require('./i18n');
+
 /**
  * Stripe-hosted Checkout for trusted, server-side EUR quotes.
  *
@@ -71,6 +73,7 @@ async function createCheckoutSession({
   quantity,
   shipmentCount = 1,
   baseUrl,
+  locale = I18n.DEFAULT_LOCALE,
 }) {
   const client = getClient();
   if (!client) throw notConfiguredError();
@@ -99,18 +102,23 @@ async function createCheckoutSession({
   };
   const cartProducts = Array.isArray(products) && products.length ? products : product ? [product] : [];
   const singleProduct = cartProducts.length === 1 ? cartProducts[0] : null;
+  const checkoutLocale = I18n.normalizeLocale(locale);
   const unitLabel = singleProduct
-    ? quantity === 1 ? singleProduct.unit.singular : singleProduct.unit.plural
-    : quantity === 1 ? 'Produkt' : 'Produkte';
+    ? I18n.translate(quantity === 1 ? singleProduct.unit.singular : singleProduct.unit.plural, checkoutLocale)
+    : I18n.translate(quantity === 1 ? 'Produkt' : 'Produkte', checkoutLocale);
   const shipmentLabel = shipmentCount > 1
-    ? ` · ${shipmentCount} Lieferadressen`
+    ? ` · ${shipmentCount} ${I18n.translate('Lieferadressen', checkoutLocale)}`
     : '';
   const quantityLabel = singleProduct
-    ? `${quantity} ${unitLabel}${shipmentLabel} · ${singleProduct.size.label}`
-    : `Wolkenworte Bestellung · ${quantity} ${unitLabel}${shipmentLabel}`;
+    ? `${quantity} ${unitLabel}${shipmentLabel} · ${I18n.translate(singleProduct.size.label, checkoutLocale)}`
+    : `${I18n.translate('Wolkenworte Bestellung', checkoutLocale)} · ${quantity} ${unitLabel}${shipmentLabel}`;
   const description = singleProduct
-    ? `${singleProduct.name} mit persönlichem Design inklusive Standardversand`
-    : `${cartProducts.length} persönliche Designs inklusive Standardversand`;
+    ? I18n.translate('{{product}} mit persönlichem Design inklusive Standardversand', checkoutLocale, {
+        product: I18n.translate(singleProduct.name, checkoutLocale),
+      })
+    : I18n.translate('{{count}} persönliche Designs inklusive Standardversand', checkoutLocale, {
+        count: cartProducts.length,
+      });
   const cancelUrl = cartConfigurationIds.length > 1
     ? `${baseUrl}/e/${encodedSlug}/shipping?configurations=${encodeURIComponent(cartConfigurationIds.join(','))}` +
       `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`
@@ -119,7 +127,7 @@ async function createCheckoutSession({
 
   const session = await client.checkout.sessions.create({
     mode: 'payment',
-    locale: 'de',
+    locale: checkoutLocale,
     payment_method_types: ['card'],
     client_reference_id: String(order.id),
     line_items: [{

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Gestaltet eure persönlichen Wolkenworte-Erinnerungen." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg" />
+  <link rel="stylesheet" href="/i18n.css?v=20260826-1" />
+  <script src="/js/i18n.js?v=20260826-3"></script>
   <title>Erinnerung gestalten – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
@@ -1833,6 +1835,7 @@
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
     const isPersonalMode = new URLSearchParams(location.search).get('mode') === 'personal';
+    const t = (source, params) => WolkenworteI18n.t(source, params);
     let configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
     const loading = document.getElementById('loading');
     const content = document.getElementById('config-content');
@@ -1933,24 +1936,21 @@
           seen.add(item.id);
           return true;
         })
+        .map((item) => ({
+          id: String(item.id),
+          productKey: String(item.productKey || ''),
+          orientation: String(item.orientation || 'default'),
+          printFileUrl: String(item.printFileUrl || ''),
+          configurationType: String(item.configurationType || ''),
+          createdAt: String(item.createdAt || ''),
+        }))
         .slice(-20);
     }
 
     function loadOrderItems() {
       try {
         const stored = localStorage.getItem(orderStorageKey());
-        if (stored) return normalizeOrderItems(JSON.parse(stored));
-
-        const legacyItems = ['event_wordcloud', 'personal_memory'].flatMap((type) => {
-          try {
-            return JSON.parse(localStorage.getItem(`wolkenworte-order:${slug}:${type}`) || '[]');
-          } catch {
-            return [];
-          }
-        });
-        const migrated = normalizeOrderItems(legacyItems);
-        if (migrated.length) localStorage.setItem(orderStorageKey(), JSON.stringify(migrated));
-        return migrated;
+        return stored ? normalizeOrderItems(JSON.parse(stored)) : [];
       } catch {
         return fallbackOrderItems;
       }
@@ -1991,20 +1991,17 @@
 
     function productSizeText(candidate, orientation = null) {
       const size = productView(candidate, orientation)?.size || {};
-      if (size.volumeMl) return `${size.label} · ${size.volumeMl} ml`;
-      if (size.detail) return `${size.label} · ${size.detail}`;
-      return size.label || '';
+      const label = t(size.label || '');
+      if (size.volumeMl) return `${label} · ${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
+      if (size.detail) return `${label} · ${t(size.detail)}`;
+      return label;
     }
 
     function orderItemFromConfiguration(configuration) {
-      const view = productView(product, configuration.orientation);
-      const orientation = selectedOrientationOption(product, view.orientation);
       return {
         id: configuration.id,
         productKey: configuration.productKey,
-        displayName: product.displayName,
-        sizeText: `${productSizeText(product, view.orientation)}${orientation ? ` · ${orientation.label}` : ''}`,
-        orientation: view.orientation,
+        orientation: configuration.orientation || 'default',
         printFileUrl: configuration.printFileUrl,
         configurationType: configuration.configurationType,
         createdAt: configuration.createdAt || new Date().toISOString(),
@@ -2032,11 +2029,16 @@
       continueOrderButton.disabled = isBusy;
       checkoutPanel.setAttribute('aria-busy', String(isBusy));
       designAnotherButton.textContent = isBusy && activeButton === designAnotherButton
-        ? busyLabel
-        : 'Weiteres Produkt gestalten';
-      continueOrderButton.innerHTML = isBusy && activeButton === continueOrderButton
-        ? busyLabel
-        : 'Zur Lieferadresse <span aria-hidden="true">→</span>';
+        ? t(busyLabel)
+        : t('Weiteres Produkt gestalten');
+      if (isBusy && activeButton === continueOrderButton) {
+        continueOrderButton.textContent = t(busyLabel);
+      } else {
+        const arrow = document.createElement('span');
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.textContent = '→';
+        continueOrderButton.replaceChildren(document.createTextNode(`${t('Zur Lieferadresse')} `), arrow);
+      }
     }
 
     async function loadOrderItem(configurationId) {
@@ -2089,8 +2091,16 @@
       const hasItems = items.length > 0;
       orderBox.hidden = !hasItems;
       orderList.replaceChildren();
-      orderCount.textContent = items.length === 1 ? '1 Design' : `${items.length} Designs`;
+      orderCount.textContent = t(items.length === 1 ? '{{count}} Design' : '{{count}} Designs', {
+        count: items.length,
+      });
       items.forEach((item) => {
+        const itemProduct = products.find((candidate) => candidate.key === item.productKey);
+        const orientation = selectedOrientationOption(itemProduct, item.orientation);
+        const productName = t(itemProduct?.displayName || 'Wolkenworte Design');
+        const itemSize = itemProduct
+          ? `${productSizeText(itemProduct, item.orientation)}${orientation ? ` · ${t(orientation.label)}` : ''}`
+          : t('Persönliches Design');
         const isEditing = item.id === editingOrderItemId;
         const row = document.createElement('div');
         row.className = 'order-item';
@@ -2101,20 +2111,20 @@
         const copy = document.createElement('div');
         copy.className = 'order-copy';
         const title = document.createElement('strong');
-        title.textContent = item.displayName || 'Wolkenworte Design';
+        title.textContent = productName;
         const size = document.createElement('span');
-        size.textContent = item.sizeText || 'Persönliches Design';
+        size.textContent = itemSize;
         copy.append(title, size);
         const actions = document.createElement('div');
         actions.className = 'order-item-actions';
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.className = 'order-edit';
-        edit.textContent = isEditing ? 'Geöffnet' : 'Öffnen';
+        edit.textContent = t(isEditing ? 'Geöffnet' : 'Öffnen');
         edit.disabled = isEditing;
-        edit.setAttribute('aria-label', isEditing
-          ? `${title.textContent} ist zur Bearbeitung geöffnet`
-          : `${title.textContent} öffnen und bearbeiten`);
+        edit.setAttribute('aria-label', t(isEditing
+          ? '{{item}} ist zur Bearbeitung geöffnet'
+          : '{{item}} öffnen und bearbeiten', { item: productName }));
         if (isEditing) {
           edit.setAttribute('aria-current', 'true');
         } else {
@@ -2123,7 +2133,7 @@
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'order-remove';
-        remove.setAttribute('aria-label', `${title.textContent} aus der Bestellung entfernen`);
+        remove.setAttribute('aria-label', t('{{item}} aus der Bestellung entfernen', { item: productName }));
         remove.textContent = '×';
         remove.addEventListener('click', () => {
           if (editingOrderItemId === item.id) {
@@ -2244,16 +2254,16 @@
     function updateToolbarSummaries() {
       const orientation = selectedOrientationOption();
       if (orientation) {
-        selectedOrientationName.textContent = orientation.label;
-        selectedOrientationDetail.textContent = orientation.description;
+        selectedOrientationName.textContent = t(orientation.label);
+        selectedOrientationDetail.textContent = t(orientation.description);
       }
       const palette = selectedThemeOption();
       if (palette) {
-        selectedThemeName.textContent = palette.label;
+        selectedThemeName.textContent = t(palette.label);
         renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
       }
-      placementSummaryName.textContent = 'Design anordnen';
-      placementSummaryDetail.textContent = 'Wählt eine Anordnung für euer aktuelles Design.';
+      placementSummaryName.textContent = t('Design anordnen');
+      placementSummaryDetail.textContent = t('Wählt eine Anordnung für euer aktuelles Design.');
     }
 
     function closeToolbarMenus(except = null) {
@@ -2318,7 +2328,7 @@
         input.type = 'color';
         input.className = 'custom-color-input';
         input.value = color;
-        input.setAttribute('aria-label', `Farbe ${index + 1} wählen`);
+        input.setAttribute('aria-label', t('Farbe {{count}} wählen', { count: index + 1 }));
 
         const value = document.createElement('span');
         value.className = 'custom-color-value';
@@ -2329,7 +2339,7 @@
         remove.className = 'custom-color-remove';
         remove.textContent = '×';
         remove.disabled = customColors.length === 1;
-        remove.setAttribute('aria-label', `Farbe ${index + 1} entfernen`);
+        remove.setAttribute('aria-label', t('Farbe {{count}} entfernen', { count: index + 1 }));
 
         input.addEventListener('input', () => {
           customColors[index] = input.value.toLowerCase();
@@ -2579,7 +2589,7 @@
       updateProductPresentation();
       if (announce) {
         const surface = productSurfaces().find((candidate) => candidate.key === surfaceKey);
-        mugEditor.setFeedback(`${surface.label} wird bearbeitet`);
+        mugEditor.setFeedback('{{item}} wird bearbeitet', { item: t(surface.label) });
       }
       renderAll();
     }
@@ -2594,7 +2604,7 @@
         tab.className = 'surface-tab';
         tab.dataset.surfaceKey = surface.key;
         tab.setAttribute('role', 'tab');
-        tab.textContent = surface.label;
+        tab.textContent = t(surface.label);
         tab.addEventListener('click', () => selectSurface(surface.key));
         tab.addEventListener('keydown', (event) => {
           if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -2847,8 +2857,8 @@
       }
     }
 
-    function germanDecimal(value) {
-      return String(value).replace('.', ',');
+    function localizedNumber(value) {
+      return WolkenworteI18n.formatNumber(value);
     }
 
     function updateProductPresentation() {
@@ -2873,17 +2883,26 @@
       requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;
       mugViewer.setAttribute('aria-label', isMug
-        ? 'Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.'
-        : `Vorschau: ${product.displayName}, ${view.size.label}`);
+        ? t('Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.')
+        : t('Vorschau: {{product}}, {{size}}', {
+          product: t(product.displayName),
+          size: t(view.size.label),
+        }));
       const activeSurfaceLabel = productSurfaces().length > 1
-        ? ` · ${productSurfaces().find((surface) => surface.key === activeSurface)?.label || ''}`
+        ? ` · ${t(productSurfaces().find((surface) => surface.key === activeSurface)?.label || '')}`
         : '';
       document.getElementById('mug-viewer-hint').textContent = isMug
-        ? `↔ ↕ Ziehen zum Drehen · ${germanDecimal(product.size.heightCm)} cm × Ø ${germanDecimal(product.size.diameterCm)} cm`
-        : `${product.displayName} · ${view.size.label}${activeSurfaceLabel}`;
+        ? t('↔ ↕ Ziehen zum Drehen · {{height}} cm × Ø {{diameter}} cm', {
+          height: localizedNumber(product.size.heightCm),
+          diameter: localizedNumber(product.size.diameterCm),
+        })
+        : `${t(product.displayName)} · ${t(view.size.label)}${activeSurfaceLabel}`;
       productStage.setAttribute(
         'aria-label',
-        `Vorschau: ${product.displayName}, ${view.size.label}`
+        t('Vorschau: {{product}}, {{size}}', {
+          product: t(product.displayName),
+          size: t(view.size.label),
+        })
       );
     }
 
@@ -2924,8 +2943,11 @@
 
     function productDetail(candidate) {
       return candidate.size.volumeMl
-        ? `${candidate.size.volumeMl} ml · ${germanDecimal(candidate.size.heightCm)} cm hoch`
-        : candidate.size.detail;
+        ? t('{{volume}} ml · {{height}} cm hoch', {
+          volume: WolkenworteI18n.formatNumber(candidate.size.volumeMl),
+          height: localizedNumber(candidate.size.heightCm),
+        })
+        : t(candidate.size.detail);
     }
 
     function selectedProductSummary(candidate = product) {
@@ -2937,7 +2959,7 @@
       if (!product) return;
       selectedProductThumb.src = product.thumbnail;
       selectedProductThumb.alt = '';
-      selectedProductName.textContent = product.displayName;
+      selectedProductName.textContent = t(product.displayName);
       selectedProductDetail.textContent = selectedProductSummary(product);
       updateToolbarSummaries();
     }
@@ -3014,7 +3036,7 @@
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
         resetSurfaceStates(mugEditor.getState());
-        mugEditor.setFeedback(`Druckfläche für ${view.size.label} angepasst`);
+        mugEditor.setFeedback('Druckfläche für {{size}} angepasst', { size: t(view.size.label) });
       } else {
         activeSurface = productSurfaces()[0].key;
         buildSurfaceControls();
@@ -3053,14 +3075,16 @@
       variantPanel.hidden = candidates.length < 2;
       variantOptions.replaceChildren();
       if (candidates.length < 2) return;
-      document.getElementById('variant-title').textContent = `${family?.label || 'Ausführung'} wählen`;
+      document.getElementById('variant-title').textContent = t('{{item}} wählen', {
+        item: t(family?.label || 'Ausführung'),
+      });
       candidates.forEach((candidate, candidateIndex) => {
         const option = document.createElement('button');
         option.type = 'button';
         option.className = 'variant-option';
         option.dataset.productKey = candidate.key;
         option.setAttribute('role', 'radio');
-        option.setAttribute('aria-label', `${candidate.displayName}, ${candidate.size.label}`);
+        option.setAttribute('aria-label', `${t(candidate.displayName)}, ${t(candidate.size.label)}`);
         option.addEventListener('click', () => selectDialogProduct(candidate));
         option.addEventListener('keydown', (event) => {
           if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -3076,7 +3100,7 @@
         thumbnail.loading = 'lazy';
         const copy = document.createElement('span');
         const name = document.createElement('strong');
-        name.textContent = `${candidate.displayName} · ${candidate.size.label}`;
+        name.textContent = `${t(candidate.displayName)} · ${t(candidate.size.label)}`;
         const detail = document.createElement('span');
         detail.textContent = productDetail(candidate);
         copy.append(name, detail);
@@ -3094,7 +3118,7 @@
         option.className = 'product-option';
         option.dataset.familyKey = family.key;
         option.setAttribute('role', 'radio');
-        option.setAttribute('aria-label', family.label);
+        option.setAttribute('aria-label', t(family.label));
         option.addEventListener('click', () => selectDialogFamily(family));
         option.addEventListener('keydown', (event) => {
           if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -3116,9 +3140,9 @@
         const copy = document.createElement('span');
         copy.className = 'product-copy';
         const name = document.createElement('strong');
-        name.textContent = family.label;
+        name.textContent = t(family.label);
         const description = document.createElement('span');
-        description.textContent = family.description;
+        description.textContent = t(family.description);
         const checkmark = document.createElement('span');
         checkmark.className = 'checkmark';
         checkmark.setAttribute('aria-hidden', 'true');
@@ -3169,7 +3193,9 @@
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
         resetSurfaceStates(mugEditor.getState());
-        mugEditor.setFeedback(`Poster auf ${orientation.label} umgestellt`);
+        mugEditor.setFeedback('Poster auf {{orientation}} umgestellt', {
+          orientation: t(orientation.label),
+        });
       }
       buildOrientationOptions();
       renderSelectedProduct();
@@ -3208,9 +3234,9 @@
         const card = document.createElement('span');
         card.className = 'option-card';
         const name = document.createElement('strong');
-        name.textContent = orientation.label;
+        name.textContent = t(orientation.label);
         const description = document.createElement('small');
-        description.textContent = `${orientation.size.label} · ${orientation.description}`;
+        description.textContent = `${t(orientation.size.label)} · ${t(orientation.description)}`;
         card.append(name, description);
         label.append(input, card);
         orientationOptions.appendChild(label);
@@ -3236,9 +3262,9 @@
         const card = document.createElement('span');
         card.className = 'option-card';
         const name = document.createElement('strong');
-        name.textContent = layout.label;
+        name.textContent = t(layout.label);
         const description = document.createElement('small');
-        description.textContent = layout.description;
+        description.textContent = t(layout.description);
         card.append(name, description);
         button.append(card);
         placementOptions.appendChild(button);
@@ -3278,9 +3304,9 @@
         swatches.className = 'swatches';
         renderPaletteStrip(swatches, paletteColors);
         const name = document.createElement('strong');
-        name.textContent = palette.label;
+        name.textContent = t(palette.label);
         const description = document.createElement('small');
-        description.textContent = palette.description;
+        description.textContent = t(palette.description);
         card.append(swatches, name, description);
         label.append(input, card);
         themeOptions.appendChild(label);
@@ -3361,9 +3387,9 @@
         const isCompletelyEmpty = Object.values(designs).every((design) => !design.length);
         if (allowEmptyDraft && !editingOrderItemId && isCompletelyEmpty) return true;
         errorText.textContent = productSurfaces().length > 1
-          ? `Gestaltet bitte auch die ${missingSurface.label}.`
-          : 'Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.';
-        mugEditor.setFeedback(`${missingSurface.label} ist noch leer.`);
+          ? t('Gestaltet bitte auch die {{item}}.', { item: t(missingSurface.label) })
+          : t('Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.');
+        mugEditor.setFeedback('{{item}} ist noch leer.', { item: t(missingSurface.label) });
         return false;
       }
       orderActionPending = true;
@@ -3390,7 +3416,7 @@
         renderOrderBox();
         return true;
       } catch {
-        errorText.textContent = 'Der Entwurf konnte nicht gespeichert werden. Bitte versucht es noch einmal.';
+        errorText.textContent = t('Der Entwurf konnte nicht gespeichert werden. Bitte versucht es noch einmal.');
         return false;
       } finally {
         orderActionPending = false;
@@ -3430,7 +3456,8 @@
         if (!response.ok) throw new Error(data.error || 'load_failed');
         return data;
       })
-      .then((data) => {
+      .then(async (data) => {
+        await WolkenworteI18n.useEventLocale(data.event.locale);
         configurationType = data.configurationType;
         words = data.words;
         products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
@@ -3459,7 +3486,9 @@
         buildThemeOptions();
         renderCustomColorControls();
 
-        document.title = `Erinnerung für ${data.event.coupleName} gestalten – Wolkenworte`;
+        document.title = WolkenworteI18n.t('Erinnerung für {{name}} gestalten – Wolkenworte', {
+          name: data.event.coupleName,
+        });
         updateProductPresentation();
 
         loading.hidden = true;
@@ -3470,9 +3499,9 @@
         initMug3D();
       })
       .catch((error) => {
-        loading.innerHTML = error.message === 'no_words'
+        loading.textContent = t(error.message === 'no_words'
           ? 'Für diese Wortwolke wurden noch keine Wörter gesammelt.'
-          : 'Der Konfigurator konnte nicht geladen werden.';
+          : 'Der Konfigurator konnte nicht geladen werden.');
       });
   </script>
 </body>

@@ -75,6 +75,7 @@ async function createEvent(baseUrl, overrides = {}) {
       coupleName,
       slug: overrides.slug,
       pin: overrides.pin || '1234',
+      locale: overrides.locale,
     }),
   });
   const body = await res.json();

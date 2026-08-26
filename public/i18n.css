@@ -1,0 +1,47 @@
+.ww-language-picker {
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  border: 1px solid rgba(64, 15, 38, .14);
+  border-radius: 999px;
+  background: rgba(255, 253, 250, .94);
+  box-shadow: 0 5px 18px rgba(64, 15, 38, .08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.ww-language-picker:not(.ww-language-inline) {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+}
+
+.ww-language-inline {
+  position: static;
+  flex: 0 0 auto;
+}
+
+.ww-language-picker select {
+  max-width: 108px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #400f26;
+  font: 600 12px/1.2 system-ui, -apple-system, sans-serif;
+  cursor: pointer;
+}
+
+@media (max-width: 620px) {
+  .ww-site-header .ww-language-inline {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 16px;
+  }
+  .ww-site-header:has(.ww-language-inline) + main,
+  .ww-site-header:has(.ww-language-inline) + .page-intro {
+    margin-top: 38px !important;
+  }
+  .ww-language-picker:not(.ww-language-inline) { top: 10px; right: 10px; }
+  .ww-language-picker select { max-width: 88px; font-size: 11px; }
+}

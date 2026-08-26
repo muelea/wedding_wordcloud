@@ -21,6 +21,7 @@ const {
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
 const DesignFonts = require('../designFonts');
 const MugIcons = require('../../public/js/mug-icons.js');
+const I18n = require('../i18n');
 
 const PIN_RE = /^\d{4,6}$/;
 const MAX_NAME_LENGTH = 80;
@@ -58,19 +59,21 @@ function cleanAddressValue(value, maxLength) {
 }
 
 function normalizeAddressLookupValue(value) {
-  return String(value || '').normalize('NFKC').trim().toLocaleLowerCase('de');
+  return String(value || '')
+    .normalize('NFKD')
+    .trim()
+    .toLowerCase()
+    .replace(/\p{M}/gu, '');
 }
 
-const germanRegionNames = typeof Intl.DisplayNames === 'function'
-  ? new Intl.DisplayNames(['de'], { type: 'region' })
-  : null;
+const regionNameFormatters = typeof Intl.DisplayNames === 'function'
+  ? I18n.SUPPORTED_LOCALES.map((locale) => new Intl.DisplayNames([locale], { type: 'region' }))
+  : [];
 
-function localizedCountryNameForCode(code) {
-  try {
-    return germanRegionNames?.of(code) || '';
-  } catch {
-    return '';
-  }
+function localizedCountryNamesForCode(code) {
+  return regionNameFormatters.map((formatter) => {
+    try { return formatter.of(code) || ''; } catch { return ''; }
+  }).filter(Boolean);
 }
 
 function findShippingCountry(value, countries) {
@@ -82,7 +85,8 @@ function findShippingCountry(value, countries) {
   if (!lookup) return null;
   return countries.find((entry) => (
     normalizeAddressLookupValue(entry.name) === lookup ||
-    normalizeAddressLookupValue(localizedCountryNameForCode(entry.code)) === lookup
+    localizedCountryNamesForCode(entry.code)
+      .some((name) => normalizeAddressLookupValue(name) === lookup)
   )) || null;
 }
 
@@ -278,14 +282,14 @@ function quoteAmountsDiffer(stored, fresh) {
     Number(stored.total_cents) !== fresh.totalCents;
 }
 
-function normalizeSnapshotWords(rawWords) {
+function normalizeSnapshotWords(rawWords, locale = I18n.DEFAULT_LOCALE) {
   if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
     return null;
   }
   const merged = new Map();
   for (const entry of rawWords) {
     if (!Array.isArray(entry) || entry.length !== 2) return null;
-    const word = normalizeWord(entry[0]);
+    const word = normalizeWord(entry[0], locale);
     const count = Number(entry[1]);
     if (!word || !Number.isSafeInteger(count) || count < 1 || count > 1000000) return null;
     merged.set(word, (merged.get(word) || 0) + count);
@@ -293,7 +297,7 @@ function normalizeSnapshotWords(rawWords) {
   return Array.from(merged.entries());
 }
 
-function normalizeDesignText(rawText) {
+function normalizeDesignText(rawText, locale = I18n.DEFAULT_LOCALE) {
   if (typeof rawText !== 'string') return '';
   const text = rawText.normalize('NFC').trim()
     .replace(/[\x00-\x1f\x7f]/g, '')
@@ -302,7 +306,7 @@ function normalizeDesignText(rawText) {
     .trim();
   // Reuse the guest-word sanitizer as the source of truth for unsupported
   // characters, but preserve intentional capitalization in the editor.
-  return normalizeWord(text) === text.toLowerCase() ? text : '';
+  return normalizeWord(text, locale) === text.toLocaleLowerCase(locale) ? text : '';
 }
 
 function normalizeDesignImage(rawSource) {
@@ -328,7 +332,7 @@ function normalizeDesignImage(rawSource) {
   return { source: `data:image/${mime};base64,${match[2]}`, byteLength: bytes.length };
 }
 
-function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { count: 0, bytes: 0 }) {
+function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { count: 0, bytes: 0 }, locale = I18n.DEFAULT_LOCALE) {
   if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
   }
@@ -384,7 +388,7 @@ function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { c
       continue;
     }
 
-    const text = normalizeDesignText(rawItem.text);
+    const text = normalizeDesignText(rawItem.text, locale);
     const fontSize = Number(rawItem.fontSize);
     const rawFontFamily = rawItem.fontFamily;
     if ((rawFontFamily != null && !DesignFonts.has(rawFontFamily)) ||
@@ -400,7 +404,7 @@ function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { c
   return isPrintDesignWithinBounds(normalized, width, height, safeMargin) ? normalized : null;
 }
 
-function normalizeProductDesigns(rawBody, product) {
+function normalizeProductDesigns(rawBody, product, locale = I18n.DEFAULT_LOCALE) {
   if (!rawBody || typeof rawBody !== 'object') return null;
   const rawDesigns = rawBody.designs;
   if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
@@ -410,7 +414,8 @@ function normalizeProductDesigns(rawBody, product) {
     product.printFile.width,
     product.printFile.height,
     product.designSafeMargin,
-    imageBudget
+    imageBudget,
+    locale
   );
 
   const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
@@ -563,20 +568,24 @@ function makeRouter({ io, port }) {
   // ── Create event ──────────────────────────────────────────────────────
   router.post('/events', express.json(), (req, res) => {
     const { coupleName, pin } = req.body || {};
+    if (req.body?.locale != null && !I18n.isSupportedLocale(req.body.locale)) {
+      return res.status(400).json({ error: 'invalid_locale' });
+    }
+    const locale = I18n.normalizeLocale(req.body?.locale);
     let { slug } = req.body || {};
 
     if (!coupleName || typeof coupleName !== 'string' || !coupleName.trim()) {
-      return res.status(400).json({ error: 'coupleName is required' });
+      return res.status(400).json({ error: 'invalid_couple_name' });
     }
     if (coupleName.length > MAX_NAME_LENGTH) {
-      return res.status(400).json({ error: 'coupleName is too long' });
+      return res.status(400).json({ error: 'couple_name_too_long' });
     }
     if (!pin || !PIN_RE.test(String(pin))) {
-      return res.status(400).json({ error: 'pin must be 4-6 digits' });
+      return res.status(400).json({ error: 'invalid_pin' });
     }
 
     slug = slugify(slug || coupleName);
-    if (!slug) return res.status(400).json({ error: 'could not derive a valid slug' });
+    if (!slug) return res.status(400).json({ error: 'invalid_slug' });
 
     // Always append a random suffix -- no more 409/manual-retry dance for
     // the common "same names as an earlier couple" case, and it closes the
@@ -590,17 +599,19 @@ function makeRouter({ io, port }) {
       finalSlug = makeUniqueSlug(slug, (candidate) => db.slugExists(candidate));
     } catch (err) {
       console.error('Slug generation failed:', err);
-      return res.status(500).json({ error: 'could not generate a unique slug, please try again' });
+      return res.status(500).json({ error: 'slug_generation_failed' });
     }
 
     const event = db.createEvent({
       slug: finalSlug,
       coupleName: coupleName.trim(),
       pin,
+      locale,
     });
 
     res.status(201).json({
       slug: event.slug,
+      locale: event.locale,
       guestUrl: `/e/${event.slug}`,
       displayUrl: `/e/${event.slug}/display`,
       adminToken: adminAuth.issueToken(event.slug),
@@ -615,6 +626,7 @@ function makeRouter({ io, port }) {
       slug: event.slug,
       coupleName: event.couple_name,
       theme: event.theme,
+      locale: event.locale,
     });
   });
 
@@ -678,6 +690,7 @@ function makeRouter({ io, port }) {
         slug: event.slug,
         coupleName: event.couple_name,
         theme: event.theme,
+        locale: event.locale,
       },
       words,
       configurationType: personalMemory ? 'personal_memory' : 'event_wordcloud',
@@ -728,13 +741,13 @@ function makeRouter({ io, port }) {
     const words = configurationType === 'personal_memory'
       ? []
       : req.body && Object.hasOwn(req.body, 'words')
-        ? normalizeSnapshotWords(req.body.words)
+        ? normalizeSnapshotWords(req.body.words, event.locale)
         : db.getWords(event.id);
     if (configurationType === 'event_wordcloud' && (!words || !words.length)) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
-    const design = normalizeProductDesigns(req.body, product);
+    const design = normalizeProductDesigns(req.body, product, event.locale);
     if (!design) {
       return res.status(400).json({ error: 'invalid_design' });
     }
@@ -1110,6 +1123,7 @@ function makeRouter({ io, port }) {
         quantity: freshQuote.quantity,
         shipmentCount: pricedShipments.length,
         baseUrl: getBaseUrl(req, port),
+        locale: I18n.normalizeLocale(req.body?.locale || event.locale),
       });
       db.attachStripeSession(order.id, session);
       return res.json({ url: session.url });
@@ -1258,6 +1272,7 @@ function makeRouter({ io, port }) {
           quantity: freshQuote.quantity,
           shipmentCount: refreshedShipments.length,
           baseUrl: getBaseUrl(req, port),
+          locale: I18n.normalizeLocale(req.body?.locale || event.locale),
         });
         db.attachStripeSession(order.id, session);
         return res.json({ url: session.url });

@@ -44,7 +44,7 @@ async function calculateQuote(baseUrl, slug, configurationId) {
 test('checkout revalidates Printful, creates one dynamic Stripe Session and reuses it on double click', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Checkout Clara & Cent Carl' });
+  const event = await createEvent(baseUrl, { coupleName: 'Checkout Clara & Cent Carl', locale: 'tr' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
 
   const printful = require('../src/printful');
@@ -90,6 +90,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   assert.equal(capturedCheckout.order.currency, 'EUR');
   assert.equal(capturedCheckout.quantity, 2);
   assert.equal(capturedCheckout.shipmentCount, 1);
+  assert.equal(capturedCheckout.locale, 'tr');
   assert.equal(capturedCheckout.quoteId, quote.id);
 
   const second = await fetch(checkoutUrl, {

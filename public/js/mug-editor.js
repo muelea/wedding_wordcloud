@@ -8,6 +8,13 @@
   const MIN_PRINT_ICON_SIZE = 48;
   const MAX_HISTORY = 60;
 
+  function translate(source, params = {}) {
+    if (root.WolkenworteI18n) return root.WolkenworteI18n.t(source, params);
+    return String(source).replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, key) => (
+      Object.prototype.hasOwnProperty.call(params, key) ? String(params[key]) : ''
+    ));
+  }
+
   function round(value) {
     return Math.round(value * 10) / 10;
   }
@@ -526,7 +533,9 @@
       this.setActiveObjects(objects);
       this.canvas.requestRenderAll();
       this.updateSelectionPanel();
-      this.setFeedback(objects.length === 1 ? 'Element ausgewählt' : `${objects.length} Elemente ausgewählt`);
+      this.setFeedback(objects.length === 1 ? 'Element ausgewählt' : '{{count}} Elemente ausgewählt', {
+        count: objects.length,
+      });
       return true;
     }
 
@@ -534,11 +543,12 @@
       this.iconGrid.replaceChildren();
       const svgNamespace = 'http://www.w3.org/2000/svg';
       for (const icon of root.MugIcons.ICONS) {
+        const iconLabel = translate(icon.label);
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'editor-motif-option';
-        button.setAttribute('aria-label', `${icon.label} hinzufügen`);
-        button.title = icon.label;
+        button.setAttribute('aria-label', translate('{{item}} hinzufügen', { item: iconLabel }));
+        button.title = iconLabel;
 
         const svg = document.createElementNS(svgNamespace, 'svg');
         svg.setAttribute('viewBox', `0 0 ${root.MugIcons.VIEWBOX_SIZE} ${root.MugIcons.VIEWBOX_SIZE}`);
@@ -549,7 +559,7 @@
         svg.appendChild(path);
 
         const label = document.createElement('span');
-        label.textContent = icon.label;
+        label.textContent = iconLabel;
         button.append(svg, label);
         button.addEventListener('click', () => this.addIcon(icon.id));
         this.iconGrid.appendChild(button);
@@ -561,14 +571,16 @@
       this.fontMenu.replaceChildren();
       const placeholder = document.createElement('option');
       placeholder.value = '';
-      placeholder.textContent = 'Schrift wählen';
+      placeholder.textContent = translate('Schrift wählen');
       placeholder.disabled = true;
       this.fontSelect.appendChild(placeholder);
       this.fontPlaceholder = placeholder;
       for (const font of root.DesignFonts.FONTS) {
+        const fontLabel = translate(font.label);
+        const fontDescription = translate(font.description);
         const option = document.createElement('option');
         option.value = font.key;
-        option.textContent = `${font.label} – ${font.description}`;
+        option.textContent = `${fontLabel} – ${fontDescription}`;
         option.style.fontFamily = font.cssFamily;
         this.fontSelect.appendChild(option);
 
@@ -582,11 +594,11 @@
         const name = document.createElement('span');
         name.className = 'editor-font-option-name';
         name.style.fontFamily = font.cssFamily;
-        name.textContent = font.label;
+        name.textContent = fontLabel;
 
         const description = document.createElement('span');
         description.className = 'editor-font-option-description';
-        description.textContent = font.description;
+        description.textContent = fontDescription;
 
         button.append(name, description);
         button.addEventListener('click', () => {
@@ -598,15 +610,17 @@
       }
       this.fontOptionButtons = [...this.fontMenu.querySelectorAll('.editor-font-option')];
       this.fontSelect.value = '';
-      this.syncFontPicker('', 'Schrift wählen', true);
+      this.syncFontPicker('', translate('Schrift wählen'), true);
     }
 
     syncFontPicker(fontKey, placeholder, disabled) {
       const font = fontKey ? root.DesignFonts.get(fontKey) : null;
+      const fontLabel = font ? translate(font.label) : '';
+      const fontDescription = font ? translate(font.description) : '';
       this.fontButton.disabled = disabled;
-      this.fontCurrent.textContent = font ? font.label : placeholder;
+      this.fontCurrent.textContent = font ? fontLabel : placeholder;
       this.fontCurrent.style.fontFamily = font ? font.cssFamily : '';
-      this.fontButton.title = font ? `${font.label} – ${font.description}` : placeholder;
+      this.fontButton.title = font ? `${fontLabel} – ${fontDescription}` : placeholder;
       this.fontOptionButtons.forEach((button) => {
         button.setAttribute('aria-selected', String(button.dataset.fontKey === fontKey));
       });
@@ -942,7 +956,7 @@
       const color = this.palette[this.canvas.getObjects().length % this.palette.length];
       const object = this.makeObject({
         id: this.nextId(),
-        text: 'neues wort',
+        text: translate('neues wort'),
         x: this.defaultX,
         y: this.defaultY,
         fontSize: 96,
@@ -987,7 +1001,7 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.setFeedback(`${definition.label} hinzugefügt`);
+      this.setFeedback('{{item}} hinzugefügt', { item: translate(definition.label) });
     }
 
     async addImage(src) {
@@ -1059,17 +1073,17 @@
       if (!active) return;
       const selected = this.selectedObjects(active);
       const deletedLabel = selected.length > 1
-        ? `${selected.length} Elemente`
+        ? translate('{{count}} Elemente', { count: selected.length })
         : active.editorKind === 'image'
-          ? 'Foto'
-          : active.editorKind === 'icon' ? 'Motiv' : 'Wort';
+          ? translate('Foto')
+          : translate(active.editorKind === 'icon' ? 'Motiv' : 'Wort');
       this.canvas.discardActiveObject();
       this.canvas.remove(...selected);
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.setFeedback(`${deletedLabel} gelöscht`);
+      this.setFeedback('{{item}} gelöscht', { item: deletedLabel });
     }
 
     duplicateDesignItems(designs) {
@@ -1098,10 +1112,10 @@
       const designs = selected.map((object) => this.serializeObject(object));
       this.duplicateDesignItems(designs);
       this.setFeedback(selected.length > 1
-        ? `${selected.length} Elemente dupliziert`
+        ? '{{count}} Elemente dupliziert'
         : active.editorKind === 'image'
           ? 'Foto dupliziert'
-          : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
+          : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert', { count: selected.length });
     }
 
     copyActive() {
@@ -1110,10 +1124,10 @@
       const selected = this.selectedObjects(active);
       this.clipboard = selected.map((object) => ({ ...this.serializeObject(object) }));
       this.setFeedback(selected.length > 1
-        ? `${selected.length} Elemente kopiert`
+        ? '{{count}} Elemente kopiert'
         : active.editorKind === 'image'
           ? 'Foto kopiert'
-          : active.editorKind === 'icon' ? 'Motiv kopiert' : 'Wort kopiert');
+          : active.editorKind === 'icon' ? 'Motiv kopiert' : 'Wort kopiert', { count: selected.length });
       return true;
     }
 
@@ -1122,10 +1136,10 @@
       const copies = this.duplicateDesignItems(this.clipboard.map((item) => ({ ...item })));
       this.clipboard = copies.map((copy) => ({ ...this.serializeObject(copy) }));
       this.setFeedback(copies.length > 1
-        ? `${copies.length} Elemente eingefügt`
+        ? '{{count}} Elemente eingefügt'
         : copies[0].editorKind === 'image'
           ? 'Foto eingefügt'
-          : copies[0].editorKind === 'icon' ? 'Motiv eingefügt' : 'Wort eingefügt');
+          : copies[0].editorKind === 'icon' ? 'Motiv eingefügt' : 'Wort eingefügt', { count: copies.length });
       return true;
     }
 
@@ -1246,8 +1260,11 @@
       this.emitChange();
       this.updateSelectionPanel();
       this.setFeedback(textObjects.length === 1
-        ? `Schrift auf ${font.label} geändert`
-        : `${font.label} auf ${textObjects.length} Texte angewendet`);
+        ? 'Schrift auf {{font}} geändert'
+        : '{{font}} auf {{count}} Texte angewendet', {
+        font: translate(font.label),
+        count: textObjects.length,
+      });
     }
 
     applyPalette(colors) {
@@ -1269,8 +1286,9 @@
         button.className = 'editor-swatch';
         button.dataset.color = color.toLowerCase();
         button.style.backgroundColor = color;
-        button.title = `Farbe ${color}`;
-        button.setAttribute('aria-label', `Farbe ${color}`);
+        const colorLabel = translate('Farbe {{color}}', { color });
+        button.title = colorLabel;
+        button.setAttribute('aria-label', colorLabel);
         button.disabled = !hasSelection;
         button.addEventListener('click', () => this.setActiveColor(color));
         this.swatches.appendChild(button);
@@ -1301,13 +1319,13 @@
       });
       this.selectAllButton.disabled = this.canvas.getObjects().length === 0;
       if (!active) {
-        this.selectionStatus.textContent = 'Element auswählen';
-        this.selectionHint.textContent = 'Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere';
-        this.textLabel.textContent = 'Ausgewähltes Element';
+        this.selectionStatus.textContent = translate('Element auswählen');
+        this.selectionHint.textContent = translate('Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere');
+        this.textLabel.textContent = translate('Ausgewähltes Element');
         this.textInput.value = '';
-        this.fontPlaceholder.textContent = 'Schrift wählen';
+        this.fontPlaceholder.textContent = translate('Schrift wählen');
         this.fontSelect.value = '';
-        this.syncFontPicker('', 'Schrift wählen', true);
+        this.syncFontPicker('', translate('Schrift wählen'), true);
         this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
           button.classList.remove('is-selected');
         });
@@ -1318,33 +1336,34 @@
         ? fontKeys[0]
         : '';
       this.fontPlaceholder.textContent = !canChangeFont
-        ? 'Nur für Text'
-        : commonFontKey ? 'Schrift wählen' : 'Mehrere Schriften';
+        ? translate('Nur für Text')
+        : commonFontKey ? translate('Schrift wählen') : translate('Mehrere Schriften');
       this.fontSelect.value = commonFontKey;
       this.syncFontPicker(
         commonFontKey,
-        !canChangeFont ? 'Nur für Text' : 'Mehrere Schriften',
+        translate(!canChangeFont ? 'Nur für Text' : 'Mehrere Schriften'),
         !canChangeFont
       );
       if (isMultiple) {
-        this.selectionStatus.textContent = `${selected.length} Elemente ausgewählt`;
-        this.selectionHint.textContent = 'Gemeinsam ziehen, drehen oder skalieren · Escape hebt die Auswahl auf';
-        this.textLabel.textContent = 'Mehrfachauswahl';
-        this.textInput.value = `${selected.length} Elemente`;
+        this.selectionStatus.textContent = translate('{{count}} Elemente ausgewählt', { count: selected.length });
+        this.selectionHint.textContent = translate('Gemeinsam ziehen, drehen oder skalieren · Escape hebt die Auswahl auf');
+        this.textLabel.textContent = translate('Mehrfachauswahl');
+        this.textInput.value = translate('{{count}} Elemente', { count: selected.length });
       } else if (isImage) {
-        this.selectionStatus.textContent = 'Foto bearbeiten';
-        this.selectionHint.textContent = 'Foto ziehen, drehen oder skalieren';
-        this.textLabel.textContent = 'Ausgewähltes Foto';
-        this.textInput.value = 'Eigenes Foto';
+        this.selectionStatus.textContent = translate('Foto bearbeiten');
+        this.selectionHint.textContent = translate('Foto ziehen, drehen oder skalieren');
+        this.textLabel.textContent = translate('Ausgewähltes Foto');
+        this.textInput.value = translate('Eigenes Foto');
       } else if (isIcon) {
-        this.selectionStatus.textContent = `${active.editorIconLabel} bearbeiten`;
-        this.selectionHint.textContent = 'Motiv ziehen, drehen, färben oder skalieren';
-        this.textLabel.textContent = 'Ausgewähltes Motiv';
-        this.textInput.value = active.editorIconLabel;
+        const iconLabel = translate(active.editorIconLabel);
+        this.selectionStatus.textContent = translate('{{item}} bearbeiten', { item: iconLabel });
+        this.selectionHint.textContent = translate('Motiv ziehen, drehen, färben oder skalieren');
+        this.textLabel.textContent = translate('Ausgewähltes Motiv');
+        this.textInput.value = iconLabel;
       } else {
-        this.selectionStatus.textContent = `„${active.text}“ bearbeiten`;
-        this.selectionHint.textContent = 'Doppelklick: Wort direkt bearbeiten';
-        this.textLabel.textContent = 'Ausgewähltes Wort';
+        this.selectionStatus.textContent = translate('„{{text}}“ bearbeiten', { text: active.text });
+        this.selectionHint.textContent = translate('Doppelklick: Wort direkt bearbeiten');
+        this.textLabel.textContent = translate('Ausgewähltes Wort');
         this.textInput.value = active.text;
       }
       const activeColor = isMultiple ? this.selectionColor(selected) : this.getObjectColor(active);
@@ -1367,11 +1386,12 @@
       this.zoomLabel.textContent = `${Math.round(this.zoom * 100)} %`;
     }
 
-    setFeedback(message) {
-      this.feedback.textContent = message;
+    setFeedback(message, params) {
+      const translatedMessage = translate(message, params);
+      this.feedback.textContent = translatedMessage;
       clearTimeout(this.feedbackTimer);
       this.feedbackTimer = setTimeout(() => {
-        if (this.feedback.textContent === message) this.feedback.textContent = '';
+        if (this.feedback.textContent === translatedMessage) this.feedback.textContent = '';
       }, 1800);
     }
   }

@@ -79,6 +79,25 @@ add their own photos, words and motifs, and purchase it independently.
    clearly states that no real fulfillment was created. Live payments and real
    Printful orders remain hard-disabled until the tax phase is signed off.
 
+## Languages
+
+Wolkenworte supports German, English, French, Italian, Spanish and Turkish.
+The language chosen when an event is created is stored on the event and is
+used by default on its guest, display, configurator, shipping and confirmation
+pages. Every page also exposes a language selector; a visitor's explicit
+choice is stored locally in that browser and takes precedence over the event
+default. A `?lang=de|en|fr|it|es|tr` query parameter provides the same explicit
+override for shared or test links.
+
+German source copy is the canonical message id, the English catalog is the
+runtime fallback, and each additional locale lives in `public/locales/`.
+Fixed interface copy, metadata, accessibility labels, browser dialogs,
+product descriptions, editor feedback, quantities, money, country names and
+Stripe Checkout all use the active locale. `Wolkenworte`, couple names, guest
+word submissions and text or photos deliberately added to a personal design
+are never translated. Word normalization is locale-aware, including Turkish
+dotted and dotless I.
+
 ## Current development status
 
 - The full product currently runs locally with SQLite. There is no active

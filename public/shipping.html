@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg" />
+  <link rel="stylesheet" href="/i18n.css?v=20260826-1" />
+  <script src="/js/i18n.js?v=20260826-3"></script>
   <title>Lieferadresse – Wolkenworte</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
@@ -387,6 +389,7 @@
     const pathParts = location.pathname.split('/').filter(Boolean);
     const slug = pathParts[1];
     const query = new URLSearchParams(location.search);
+    const t = (source, params) => WolkenworteI18n.t(source, params);
     const configurationId = query.get('configuration');
     const configurationIds = [
       ...(query.get('configurations') || '').split(','),
@@ -413,7 +416,7 @@
     let countryDisplayNames = null;
 
     try {
-      countryDisplayNames = new Intl.DisplayNames(['de'], { type: 'region' });
+      countryDisplayNames = new Intl.DisplayNames([WolkenworteI18n.getLocale()], { type: 'region' });
     } catch { /* Printful's country name remains the fallback. */ }
 
     const backLink = document.getElementById('back-link');
@@ -431,7 +434,7 @@
     function showFatal(message) {
       loading.hidden = true;
       pageContent.hidden = true;
-      fatalError.textContent = message;
+      fatalError.textContent = t(message);
       fatalError.hidden = false;
     }
 
@@ -451,14 +454,17 @@
 
     function normalizeSearchText(value) {
       return String(value || '')
+        .toLocaleLowerCase(WolkenworteI18n.getLocale())
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .toLocaleLowerCase('de')
         .trim();
     }
 
     function sortedCountries() {
-      return [...countries].sort((a, b) => localizedCountryName(a).localeCompare(localizedCountryName(b), 'de'));
+      return [...countries].sort((a, b) => localizedCountryName(a).localeCompare(
+        localizedCountryName(b),
+        WolkenworteI18n.getLocale()
+      ));
     }
 
     function countryOptionsForPicker() {
@@ -568,15 +574,15 @@
       const search = document.createElement('input');
       search.className = 'search-input';
       search.type = 'search';
-      search.placeholder = searchPlaceholder;
+      search.placeholder = t(searchPlaceholder);
       search.autocomplete = 'off';
-      search.setAttribute('aria-label', searchPlaceholder);
+      search.setAttribute('aria-label', t(searchPlaceholder));
       search.setAttribute('aria-controls', `${pickerId}-results`);
       const clearSearch = document.createElement('button');
       clearSearch.className = 'search-input-clear';
       clearSearch.type = 'button';
       clearSearch.textContent = '×';
-      clearSearch.setAttribute('aria-label', 'Suche löschen');
+      clearSearch.setAttribute('aria-label', t('Suche löschen'));
       searchWrap.append(searchIcon, search, clearSearch);
 
       const results = document.createElement('div');
@@ -591,10 +597,12 @@
 
       function renderTrigger() {
         const option = selectedOption();
-        const label = option ? option.label : placeholder;
+        const label = option ? option.label : t(placeholder);
         triggerText.textContent = label;
         triggerMeta.textContent = option?.meta || '';
-        trigger.setAttribute('aria-label', option ? `${ariaLabel}: ${label}` : placeholder);
+        trigger.setAttribute('aria-label', option
+          ? t('{{field}}: {{value}}', { field: t(ariaLabel), value: label })
+          : t(placeholder));
       }
 
       function setActiveOption(nextIndex) {
@@ -621,7 +629,7 @@
         if (!resultOptions.length) {
           const empty = document.createElement('div');
           empty.className = 'search-empty';
-          empty.textContent = emptyText;
+          empty.textContent = t(emptyText);
           results.append(empty);
           setActiveOption(-1);
           return;
@@ -757,25 +765,26 @@
 
     function configurationSizeText(itemConfiguration) {
       const size = itemConfiguration?.product?.size || {};
-      if (size.volumeMl) return `${size.label} · ${size.volumeMl} ml`;
-      if (size.detail) return `${size.label} · ${size.detail}`;
-      return size.label || '';
+      const label = t(size.label || '');
+      if (size.volumeMl) return `${label} · ${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
+      if (size.detail) return `${label} · ${t(size.detail)}`;
+      return label;
     }
 
     function totalUnitLabel(quantity) {
       if (configurations.length === 1 && configuration?.product?.unit) {
-        return quantity === 1 ? configuration.product.unit.singular : configuration.product.unit.plural;
+        return t(quantity === 1 ? configuration.product.unit.singular : configuration.product.unit.plural);
       }
-      return quantity === 1 ? 'Produkt' : 'Produkte';
+      return t(quantity === 1 ? 'Produkt' : 'Produkte');
     }
 
     function totalProductLabel(quantity) {
-      return `${quantity} ${totalUnitLabel(quantity)}`;
+      return `${WolkenworteI18n.formatNumber(quantity)} ${totalUnitLabel(quantity)}`;
     }
 
     function quantityLabel(quantity, itemConfiguration = configuration) {
       const unit = itemConfiguration?.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
-      return `${quantity} ${quantity === 1 ? unit.singular : unit.plural}`;
+      return `${WolkenworteI18n.formatNumber(quantity)} ${t(quantity === 1 ? unit.singular : unit.plural)}`;
     }
 
     function defaultQuantityForConfiguration(itemConfiguration) {
@@ -806,11 +815,11 @@
       const label = document.createElement('label');
       const labelCopy = document.createElement('span');
       labelCopy.className = 'field-label';
-      labelCopy.textContent = labelText;
+      labelCopy.textContent = t(labelText);
       if (options.optional) {
         const optional = document.createElement('span');
         optional.className = 'optional';
-        optional.textContent = '(optional)';
+        optional.textContent = t('(optional)');
         labelCopy.append(optional);
       }
       label.append(labelCopy);
@@ -818,7 +827,7 @@
       input.type = options.type || 'text';
       input.maxLength = options.maxLength || 120;
       input.required = Boolean(options.required);
-      input.placeholder = options.placeholder || '';
+      input.placeholder = t(options.placeholder || '');
       input.autocomplete = options.autocomplete || '';
       if (options.inputMode) input.inputMode = options.inputMode;
       input.value = options.value || '';
@@ -880,7 +889,8 @@
       const copy = document.createElement('div');
       copy.className = 'shipment-product-copy';
       const title = document.createElement('strong');
-      title.textContent = itemConfiguration.product.displayName;
+      const productName = t(itemConfiguration.product.displayName);
+      title.textContent = productName;
       const size = document.createElement('span');
       size.textContent = configurationSizeText(itemConfiguration);
       const quantityCopy = document.createElement('span');
@@ -889,12 +899,15 @@
 
       const control = document.createElement('div');
       control.className = 'quantity-control';
-      control.setAttribute('aria-label', `${itemConfiguration.product.displayName} für Lieferung ${index + 1}`);
+      control.setAttribute('aria-label', t('{{product}} für Lieferung {{count}}', {
+        product: productName,
+        count: index + 1,
+      }));
 
       const minus = document.createElement('button');
       minus.type = 'button';
       minus.dataset.quantityMinus = '';
-      minus.setAttribute('aria-label', `${itemConfiguration.product.displayName} einmal weniger`);
+      minus.setAttribute('aria-label', t('{{product}} einmal weniger', { product: productName }));
       minus.textContent = '−';
 
       const input = document.createElement('input');
@@ -914,7 +927,7 @@
       const plus = document.createElement('button');
       plus.type = 'button';
       plus.dataset.quantityPlus = '';
-      plus.setAttribute('aria-label', `${itemConfiguration.product.displayName} einmal mehr`);
+      plus.setAttribute('aria-label', t('{{product}} einmal mehr', { product: productName }));
       plus.textContent = '+';
 
       minus.addEventListener('click', () => {
@@ -947,11 +960,11 @@
       head.className = 'shipment-head';
       const title = document.createElement('h3');
       title.className = 'shipment-title';
-      title.textContent = `Lieferung ${index + 1}`;
+      title.textContent = t('Lieferung {{count}}', { count: index + 1 });
       const remove = document.createElement('button');
       remove.className = 'shipment-remove';
       remove.type = 'button';
-      remove.textContent = 'Entfernen';
+      remove.textContent = t('Entfernen');
       remove.disabled = totalCards <= 1;
       remove.addEventListener('click', () => {
         const current = collectShipments({ validate: false }).shipments;
@@ -965,7 +978,7 @@
       productsBlock.className = 'shipment-products';
       const productsTitle = document.createElement('strong');
       productsTitle.className = 'shipment-products-title';
-      productsTitle.textContent = 'Produkte an diese Adresse';
+      productsTitle.textContent = t('Produkte an diese Adresse');
       productsBlock.append(productsTitle);
       configurations.forEach((itemConfiguration) => {
         productsBlock.appendChild(createShipmentProductRow(itemConfiguration, shipment, index));
@@ -1021,7 +1034,7 @@
       countryField.className = 'field-control';
       const countryLabel = document.createElement('span');
       countryLabel.className = 'field-label';
-      countryLabel.textContent = 'Land';
+      countryLabel.textContent = t('Land');
       countryField.append(countryLabel);
 
       const stateField = document.createElement('div');
@@ -1029,15 +1042,15 @@
       stateField.hidden = true;
       const stateLabel = document.createElement('span');
       stateLabel.className = 'field-label';
-      stateLabel.textContent = 'Bundesstaat oder Region';
+      stateLabel.textContent = t('Bundesstaat oder Region');
       stateField.append(stateLabel);
       const statePicker = createSearchPicker({
         fieldPath: shipmentFieldPath(index, 'state_code'),
         options: [],
         selectedValue: String(recipient.state_code || '').toUpperCase(),
         placeholder: 'Region auswählen',
-        searchPlaceholder: 'Region suchen',
-        emptyText: 'Keine Region gefunden',
+        searchPlaceholder: 'Region suchen…',
+        emptyText: 'Keine passenden Regionen gefunden.',
         ariaLabel: 'Bundesstaat oder Region',
         onSelect: clearQuote,
       });
@@ -1048,8 +1061,8 @@
         options: countryOptionsForPicker(),
         selectedValue: String(recipient.country_code || '').toUpperCase() || defaultCountryCode(),
         placeholder: 'Land auswählen',
-        searchPlaceholder: 'Land suchen',
-        emptyText: 'Kein Land gefunden',
+        searchPlaceholder: 'Land suchen…',
+        emptyText: 'Keine passenden Länder gefunden.',
         ariaLabel: 'Land',
         required: true,
         onSelect: (countryInput) => {
@@ -1109,12 +1122,12 @@
       const totalQuantity = shipments.reduce((sum, shipment) => sum + Math.max(0, Number(shipment.quantity) || 0), 0);
       const emptyShipmentIndex = shipments.findIndex((shipment) => shipment.quantity < 1);
       if (validate && emptyShipmentIndex >= 0) {
-        formError.textContent = 'Bitte wählt pro Lieferadresse mindestens ein Produkt.';
+        formError.textContent = t('Bitte wählt pro Lieferadresse mindestens ein Produkt.');
         shipmentList.querySelectorAll('.shipment-card')[emptyShipmentIndex]?.querySelector('[data-item-quantity]')?.focus();
         return { shipments, totalQuantity, quantityError: true };
       }
       if (validate && (totalQuantity < 1 || totalQuantity > 99)) {
-        formError.textContent = 'Bitte wählt insgesamt 1-99 Produkte.';
+        formError.textContent = t('Bitte wählt insgesamt 1-99 Produkte.');
         shipmentList.querySelector('[data-item-quantity]')?.focus();
         return { shipments, totalQuantity, quantityError: true };
       }
@@ -1132,14 +1145,14 @@
       quotePlaceholder.hidden = false;
       checkoutError.textContent = '';
       checkoutButton.disabled = false;
-      checkoutButton.textContent = 'Weiter zur Testzahlung →';
+      checkoutButton.textContent = t('Weiter zur Testzahlung →');
       if (configurations.length) {
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
       }
     }
 
     function formatMoney(cents, currency) {
-      return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(cents / 100);
+      return WolkenworteI18n.formatCurrency(cents, currency);
     }
 
     function shipmentTotalsByConfiguration(shipments) {
@@ -1174,11 +1187,11 @@
         copy.className = 'design-copy';
         const title = document.createElement('strong');
         if (index === 0) title.id = 'summary-title';
-        title.textContent = itemConfiguration.product.displayName;
+        title.textContent = t(itemConfiguration.product.displayName);
         const quantity = Number(totals?.get(itemConfiguration.id) || 0);
         const quantityText = totals
           ? quantityLabel(quantity, itemConfiguration)
-          : 'Menge wählt ihr unten';
+          : t('Menge wählt ihr unten');
         const size = document.createElement('span');
         size.textContent = `${quantityText} · ${configurationSizeText(itemConfiguration)}`;
         copy.append(title, size);
@@ -1190,7 +1203,9 @@
     function showQuote(quote) {
       currentQuote = quote;
       const shipmentCount = Number(quote.shipmentCount || 1);
-      const deliveryLabel = shipmentCount === 1 ? '1 Lieferadresse' : `${shipmentCount} Lieferadressen`;
+      const deliveryLabel = t(shipmentCount === 1 ? '{{count}} Lieferadresse' : '{{count}} Lieferadressen', {
+        count: WolkenworteI18n.formatNumber(shipmentCount),
+      });
       const productLabel = totalProductLabel(Number(quote.quantity || 0));
       document.getElementById('items-label').textContent =
         `${productLabel} · ${deliveryLabel}`;
@@ -1203,7 +1218,7 @@
       quoteResult.hidden = false;
       checkoutError.textContent = '';
       checkoutButton.disabled = false;
-      checkoutButton.textContent = 'Weiter zur Testzahlung →';
+      checkoutButton.textContent = t('Weiter zur Testzahlung →');
       document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -1249,9 +1264,9 @@
         ? saved.shipments
         : [defaultShipment()]);
       showQuote(saved.quote);
-      submitButton.textContent = 'Preis aktualisieren';
+      submitButton.textContent = t('Preis aktualisieren');
       if (checkoutWasCancelled) {
-        checkoutError.textContent = 'Die Testzahlung wurde abgebrochen. Ihr könnt sie hier erneut öffnen.';
+        checkoutError.textContent = t('Die Testzahlung wurde abgebrochen. Ihr könnt sie hier erneut öffnen.');
       }
     }
 
@@ -1264,14 +1279,23 @@
         const configurationUrl = configurationIds.length === 1
           ? `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationIds[0])}`
           : `/api/events/${encodeURIComponent(slug)}/configurations?ids=${encodeURIComponent(configurationIds.join(','))}`;
-        const [configurationResponse, countriesResponse] = await Promise.all([
+        const [configurationResponse, countriesResponse, eventResponse] = await Promise.all([
           fetch(configurationUrl),
           fetch('/api/shipping/countries'),
+          fetch(`/api/events/${encodeURIComponent(slug)}`),
         ]);
         const configurationData = await configurationResponse.json();
         const countriesData = await countriesResponse.json();
+        const eventData = await eventResponse.json();
         if (!configurationResponse.ok) throw new Error('configuration');
         if (!countriesResponse.ok) throw new Error(countriesData.message || 'countries');
+        if (!eventResponse.ok) throw new Error('configuration');
+        await WolkenworteI18n.useEventLocale(eventData.locale);
+        try {
+          countryDisplayNames = new Intl.DisplayNames([WolkenworteI18n.getLocale()], { type: 'region' });
+        } catch {
+          countryDisplayNames = null;
+        }
         configurations = Array.isArray(configurationData.configurations)
           ? configurationData.configurations
           : [configurationData];
@@ -1282,10 +1306,10 @@
 
         if (configuration.configurationType === 'personal_memory') {
           backLink.href = `/e/${encodeURIComponent(slug)}/configure?mode=personal`;
-          document.title = 'Persönliche Erinnerung bestellen – Wolkenworte';
-          document.getElementById('shipping-title').textContent = 'Wohin darf eure Erinnerung reisen?';
+          document.title = WolkenworteI18n.t('Persönliche Erinnerung bestellen – Wolkenworte');
+          document.getElementById('shipping-title').textContent = t('Wohin darf eure Erinnerung reisen?');
           document.getElementById('shipping-intro').textContent =
-            'Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.';
+            t('Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.');
         }
 
         renderShipments([defaultShipment()]);
@@ -1318,7 +1342,7 @@
       const { shipments, totalQuantity, quantityError } = collectShipments();
       if (quantityError || totalQuantity < 1 || totalQuantity > 99) return;
       submitButton.disabled = true;
-      submitButton.textContent = 'Preis wird berechnet…';
+      submitButton.textContent = t('Preis wird berechnet…');
       try {
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/cart/estimate-costs`,
@@ -1334,10 +1358,10 @@
           throw new Error(result.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.');
         }
         showQuote(result.quote);
-        submitButton.textContent = 'Preis aktualisieren';
+        submitButton.textContent = t('Preis aktualisieren');
       } catch (error) {
-        formError.textContent = error.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.';
-        submitButton.textContent = 'Erneut versuchen';
+        formError.textContent = t(error.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.');
+        submitButton.textContent = t('Erneut versuchen');
       } finally {
         submitButton.disabled = false;
       }
@@ -1346,15 +1370,20 @@
     checkoutButton.addEventListener('click', async () => {
       if (!currentQuote?.id) return;
       checkoutButton.disabled = true;
-      checkoutButton.textContent = 'Preis wird noch einmal geprüft…';
+      checkoutButton.textContent = t('Preis wird noch einmal geprüft…');
       checkoutError.textContent = '';
+      let checkoutAction = 'recheck';
       try {
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/cart/checkout`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ configurationIds, quoteId: currentQuote.id }),
+            body: JSON.stringify({
+              configurationIds,
+              quoteId: currentQuote.id,
+              locale: WolkenworteI18n.getLocale(),
+            }),
           }
         );
         const result = await response.json();
@@ -1362,12 +1391,13 @@
         if (!response.ok) {
           if (result.error === 'quote_expired') {
             clearQuote();
-            submitButton.textContent = 'Gesamtpreis neu berechnen →';
-            formError.textContent = result.message || 'Der Preis ist abgelaufen. Bitte berechnet ihn erneut.';
+            submitButton.textContent = t('Gesamtpreis neu berechnen →');
+            formError.textContent = t(result.message || 'Der Preis ist abgelaufen. Bitte berechnet ihn erneut.');
             return;
           }
           if (result.error === 'quote_changed') {
-            checkoutButton.textContent = 'Aktualisierten Preis bestätigen →';
+            checkoutAction = 'confirm';
+            checkoutButton.textContent = t('Aktualisierten Preis bestätigen →');
           }
           throw new Error(result.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.');
         }
@@ -1378,11 +1408,9 @@
         if (!result.url) throw new Error('Stripe hat keine gültige Zahlungsseite geliefert.');
         location.assign(result.url);
       } catch (error) {
-        checkoutError.textContent = error.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.';
+        checkoutError.textContent = t(error.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.');
         checkoutButton.disabled = false;
-        if (checkoutButton.textContent.includes('geprüft')) {
-          checkoutButton.textContent = 'Erneut zur Testzahlung →';
-        }
+        if (checkoutAction === 'recheck') checkoutButton.textContent = t('Erneut zur Testzahlung →');
       }
     });
 

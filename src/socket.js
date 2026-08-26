@@ -57,7 +57,7 @@ function attachSocketHandlers(io) {
     socket.emit('own-word-update', db.getWordContributions(event.id, socket.data.guestId));
 
     socket.on('submit-word', (rawWord) => {
-      const word = normalizeWord(rawWord);
+      const word = normalizeWord(rawWord, event.locale);
       if (!word) return;
 
       let receipt;

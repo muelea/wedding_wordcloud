@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg" />
+  <link rel="stylesheet" href="/i18n.css?v=20260826-1" />
+  <script src="/js/i18n.js?v=20260826-3"></script>
   <title>Wortwolke</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
@@ -722,7 +724,7 @@
 
 <header class="header">
   <p class="eyebrow">Herzlich willkommen</p>
-  <h1 id="couple-name">♡</h1>
+  <h1 id="couple-name" data-i18n-ignore>♡</h1>
 </header>
 
 <main class="card">
@@ -887,6 +889,7 @@
   const memoryCtaLink = document.getElementById('memory-cta-link');
   const previewContext = previewCanvas.getContext('2d');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const t = (source, params) => WolkenworteI18n.t(source, params);
 
   let currentWords = [];
   let previewOpen = false;
@@ -968,23 +971,23 @@
       if (navigator.share) {
         await navigator.share({
           title: document.title,
-          text: 'Teile ein Wort für unsere Wortwolke:',
+          text: t('Teile ein Wort für unsere Wortwolke:'),
           url: guestUrl,
         });
-        showShareConfirmation('Geteilt ✓');
+        showShareConfirmation(t('Geteilt ✓'));
         return;
       }
 
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(guestUrl);
       } else if (!copyWithTemporaryInput(guestUrl)) {
-        window.prompt('Kopiert diesen Link:', guestUrl);
+        window.prompt(t('Kopiert diesen Link:'), guestUrl);
         return;
       }
-      showShareConfirmation('Link kopiert ✓');
+      showShareConfirmation(t('Link kopiert ✓'));
     } catch (error) {
       if (error && error.name === 'AbortError') return;
-      window.prompt('Kopiert diesen Link:', guestUrl);
+      window.prompt(t('Kopiert diesen Link:'), guestUrl);
     }
   });
 
@@ -1005,7 +1008,7 @@
   function showShareConfirmation(message) {
     clearTimeout(shareResetTimer);
     shareLabel.textContent = message;
-    shareResetTimer = setTimeout(() => { shareLabel.textContent = 'Link teilen'; }, 1800);
+    shareResetTimer = setTimeout(() => { shareLabel.textContent = t('Link teilen'); }, 1800);
   }
 
   function updatePreview(words) {
@@ -1013,11 +1016,11 @@
     const total = currentWords.reduce((sum, [, count]) => sum + Number(count || 0), 0);
     previewTotal.textContent = String(total);
     previewCount.textContent = total === 0
-      ? 'Noch keine Wörter'
-      : `${total} ${total === 1 ? 'Wort' : 'Wörter'} live`;
+      ? t('Noch keine Wörter')
+      : t(total === 1 ? '{{count}} Wort live' : '{{count}} Wörter live', { count: total });
     previewLiveCopy.textContent = total === 0
-      ? 'Noch keine Wörter geteilt'
-      : `${total} ${total === 1 ? 'Wort' : 'Wörter'} live geteilt`;
+      ? t('Noch keine Wörter geteilt')
+      : t(total === 1 ? '{{count}} Wort live geteilt' : '{{count}} Wörter live geteilt', { count: total });
     previewEmpty.hidden = currentWords.length > 0;
     previewCanvas.hidden = currentWords.length === 0;
     previewMemoryCta.hidden = currentWords.length === 0;
@@ -1125,9 +1128,10 @@
 
   fetch(`/api/events/${encodeURIComponent(slug)}`)
     .then(r => r.json())
-    .then(({ coupleName, theme }) => {
+    .then(async ({ coupleName, theme, locale }) => {
+      await WolkenworteI18n.useEventLocale(locale);
       document.getElementById('couple-name').textContent = coupleName;
-      document.title = coupleName + ' – Wortwolke';
+      document.title = WolkenworteI18n.t('{{name}} – Wortwolke', { name: coupleName });
       if (!urlTheme && (theme === 'neon' || theme === 'pastel')) {
         applyTheme(theme);
       }
@@ -1165,13 +1169,15 @@
 
     const label = document.createElement('span');
     label.className = 'tag-word';
+    label.setAttribute('data-i18n-ignore', '');
     label.textContent = word;
 
     const removeButton = document.createElement('button');
     removeButton.className = 'tag-remove';
     removeButton.type = 'button';
-    removeButton.setAttribute('aria-label', `„${word}“ entfernen`);
-    removeButton.title = `„${word}“ entfernen`;
+    const removeLabel = t('„{{word}}“ entfernen', { word });
+    removeButton.setAttribute('aria-label', removeLabel);
+    removeButton.title = removeLabel;
     removeButton.textContent = '×';
     removeButton.addEventListener('click', () => removeOwnWord(receipt));
 
@@ -1226,7 +1232,7 @@
       }
       entry.tag.classList.remove('remove-pending');
       entry.removeButton.disabled = false;
-      showFlash('Das Wort konnte nicht entfernt werden. Bitte erneut versuchen.');
+      showFlash(t('Das Wort konnte nicht entfernt werden. Bitte erneut versuchen.'));
     };
 
     socket.emit('remove-word', { receipt }, finish);
@@ -1243,13 +1249,13 @@
   socket.on('word-accepted', (word, receipt) => {
     btn.disabled = false;
     input.focus();
-    showFlash(`„${word}“ wurde hinzugefügt!`);
+    showFlash(t('„{{word}}“ wurde hinzugefügt!', { word }));
     addOwnWord(word, receipt);
   });
 
   socket.on('word-error', () => {
     btn.disabled = false;
-    showFlash('Das Wort konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    showFlash(t('Das Wort konnte nicht gespeichert werden. Bitte erneut versuchen.'));
   });
 
   socket.on('theme-change', (t) => {
@@ -1260,18 +1266,20 @@
 
   socket.on('round-reset', () => {
     renderOwnWords([]);
-    showFlash('Eine neue Runde hat begonnen.');
+    showFlash(t('Eine neue Runde hat begonnen.'));
   });
 
   socket.on('fatal-error', (msg) => {
-    document.querySelector('main').innerHTML =
-      '<p class="error-state">Diese Wortwolke wurde nicht gefunden.</p>';
+    const errorState = document.createElement('p');
+    errorState.className = 'error-state';
+    errorState.textContent = t('Diese Wortwolke wurde nicht gefunden.');
+    document.querySelector('main').replaceChildren(errorState);
   });
 
   socket.on('disconnect', () => {
     btn.disabled = true;
     setRemoveControlsDisabled(true);
-    if (previewOpen) previewLiveCopy.textContent = 'Verbindung wird wiederhergestellt…';
+    if (previewOpen) previewLiveCopy.textContent = t('Verbindung wird wiederhergestellt…');
   });
   socket.on('connect', () => {
     btn.disabled = false;

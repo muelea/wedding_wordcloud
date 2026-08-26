@@ -6,7 +6,7 @@ const MAX_WORD_LENGTH = 30;
 // guests submit text only, no emoji. Ported from the prototype's server.js.
 const EMOJI_REGEX = /[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F]/gu;
 
-function normalizeWord(rawWord) {
+function normalizeWord(rawWord, locale = 'de') {
   if (typeof rawWord !== 'string') return '';
   // NFC normalization fixes NFD-encoded umlauts (e.g. macOS option-key input)
   return rawWord.normalize('NFC').trim()
@@ -16,7 +16,7 @@ function normalizeWord(rawWord) {
     .trim()
     .slice(0, MAX_WORD_LENGTH)
     .trim()
-    .toLowerCase();
+    .toLocaleLowerCase(locale);
 }
 
 module.exports = { normalizeWord, MAX_WORD_LENGTH };

@@ -40,6 +40,7 @@ db.exec(`
     couple_name     TEXT NOT NULL,
     admin_pin_hash  TEXT NOT NULL,
     admin_pin_salt  TEXT NOT NULL,
+    locale          TEXT NOT NULL DEFAULT 'de',
     theme           TEXT NOT NULL DEFAULT 'pastel',
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -115,6 +116,9 @@ db.exec(`
 const eventColumns = new Set(
   db.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
 );
+if (!eventColumns.has('locale')) {
+  db.exec("ALTER TABLE events ADD COLUMN locale TEXT NOT NULL DEFAULT 'de';");
+}
 for (const legacyColumn of ['event_title', 'wedding_date']) {
   if (eventColumns.has(legacyColumn)) {
     db.exec(`ALTER TABLE events DROP COLUMN ${legacyColumn};`);
@@ -278,13 +282,13 @@ function verifyPin(pin, hash, salt) {
 }
 
 // ── Events ───────────────────────────────────────────────────────────────
-function createEvent({ slug, coupleName, pin }) {
+function createEvent({ slug, coupleName, pin, locale = 'de' }) {
   const { hash, salt } = hashPin(pin);
   const stmt = db.prepare(`
-    INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt, locale)
+    VALUES (?, ?, ?, ?, ?)
   `);
-  const info = stmt.run(slug, coupleName, hash, salt);
+  const info = stmt.run(slug, coupleName, hash, salt, locale);
   return getEventById(info.lastInsertRowid);
 }
 

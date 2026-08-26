@@ -540,7 +540,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /\.editor-scroll \{[\s\S]*?padding: 12px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
   assert.match(configurePage, /\.editor-canvas-shell \{[\s\S]*?border: 1px solid rgba\(64, 15, 38, \.08\);[\s\S]*?box-shadow: none;/);
   assert.match(configurePage, /\.order-item \+ \.order-item::before \{[\s\S]*?rgba\(123, 70, 82, \.12\)/);
-  assert.match(configurePage, /edit\.textContent = isEditing \? 'Geöffnet' : 'Öffnen'/);
+  assert.match(configurePage, /edit\.textContent = t\(isEditing \? 'Geöffnet' : 'Öffnen'\)/);
   assert.match(configurePage, /edit\.disabled = isEditing/);
   assert.match(configurePage, /edit\.setAttribute\('aria-current', 'true'\)/);
   assert.doesNotMatch(configurePage, /save-button/);
