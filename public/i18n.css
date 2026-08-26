@@ -2,46 +2,169 @@
   z-index: 10000;
   display: inline-flex;
   align-items: center;
-  padding: 5px 8px;
-  border: 1px solid rgba(64, 15, 38, .14);
-  border-radius: 999px;
-  background: rgba(255, 253, 250, .94);
-  box-shadow: 0 5px 18px rgba(64, 15, 38, .08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.ww-language-picker:not(.ww-language-inline) {
-  position: fixed;
-  top: 14px;
-  right: 16px;
+  color: #400f26;
+  font-family: 'Jost', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .ww-language-inline {
-  position: static;
+  position: relative;
   flex: 0 0 auto;
 }
 
-.ww-language-picker select {
-  max-width: 108px;
+.ww-language-host-open {
+  z-index: 10001 !important;
+}
+
+body.preview-open .ww-language-picker {
+  display: none;
+}
+
+.ww-language-trigger,
+.ww-language-option {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ww-language-trigger {
+  min-width: 126px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 10px;
+  border: 1px solid rgba(64, 15, 38, .13);
+  border-radius: 999px;
+  background: rgba(255, 253, 250, .94);
+  box-shadow: 0 5px 18px rgba(64, 15, 38, .08);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.ww-language-trigger:hover,
+.ww-language-picker.is-open .ww-language-trigger {
+  border-color: rgba(156, 28, 76, .3);
+  background: #fffdfa;
+  box-shadow: 0 7px 22px rgba(64, 15, 38, .12);
+}
+
+.ww-language-trigger:focus-visible,
+.ww-language-option:focus-visible {
+  outline: 2px solid rgba(156, 28, 76, .55);
+  outline-offset: 2px;
+}
+
+.ww-language-flag {
+  width: 20px;
+  flex: 0 0 20px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 17px;
+  line-height: 1;
+  text-align: center;
+}
+
+.ww-language-current-name {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.ww-language-chevron {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  margin: -3px 1px 0 3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  opacity: .58;
+  transform: rotate(45deg);
+  transition: transform .18s ease, margin .18s ease;
+}
+
+.ww-language-picker.is-open .ww-language-chevron {
+  margin-top: 3px;
+  transform: rotate(225deg);
+}
+
+.ww-language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 166px;
+  padding: 6px;
+  border: 1px solid rgba(64, 15, 38, .11);
+  border-radius: 15px;
+  background: rgba(255, 253, 250, .985);
+  box-shadow: 0 18px 48px rgba(64, 15, 38, .16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.ww-language-menu[hidden] {
+  display: none;
+}
+
+.ww-language-option {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
   border: 0;
-  outline: 0;
+  border-radius: 10px;
   background: transparent;
   color: #400f26;
-  font: 600 12px/1.2 system-ui, -apple-system, sans-serif;
-  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  transition: color .14s ease, background .14s ease;
+}
+
+.ww-language-option:hover,
+.ww-language-option:focus-visible {
+  background: #fbf2e7;
+}
+
+.ww-language-option.is-selected {
+  background: rgba(156, 28, 76, .09);
+  color: #8c1945;
+  font-weight: 600;
+}
+
+.ww-language-option-name {
+  flex: 1 1 auto;
+}
+
+.ww-language-check {
+  opacity: 0;
+  color: #9c1c4c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ww-language-option.is-selected .ww-language-check {
+  opacity: 1;
 }
 
 @media (max-width: 620px) {
   .ww-site-header .ww-language-inline {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 16px;
+    position: relative;
+    inset: auto;
   }
-  .ww-site-header:has(.ww-language-inline) + main,
-  .ww-site-header:has(.ww-language-inline) + .page-intro {
-    margin-top: 38px !important;
+  .ww-language-trigger { min-width: 112px; height: 36px; font-size: 11px; }
+  .ww-language-menu { width: 158px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ww-language-trigger,
+  .ww-language-option,
+  .ww-language-chevron {
+    transition: none;
   }
-  .ww-language-picker:not(.ww-language-inline) { top: 10px; right: 10px; }
-  .ww-language-picker select { max-width: 88px; font-size: 11px; }
 }

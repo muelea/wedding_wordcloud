@@ -17,6 +17,14 @@
     es: 'Español',
     tr: 'Türkçe',
   });
+  const LANGUAGE_FLAGS = Object.freeze({
+    de: '🇩🇪',
+    en: '🇺🇸',
+    fr: '🇫🇷',
+    it: '🇮🇹',
+    es: '🇪🇸',
+    tr: '🇹🇷',
+  });
   const STORAGE_KEY = 'wolkenworte-language';
   const ATTRIBUTE_NAMES = Object.freeze(['aria-label', 'placeholder', 'title', 'alt', 'content']);
   const textSources = new WeakMap();
@@ -141,8 +149,7 @@
       try { root.localStorage?.setItem(STORAGE_KEY, locale); } catch {}
     }
     if (root.document) translateTree(root.document, true);
-    const selector = root.document?.getElementById('ww-language-select');
-    if (selector) selector.value = locale;
+    updateLanguageSelector();
     return locale;
   }
 
@@ -167,41 +174,193 @@
     }
   }
 
+  function updateLanguageSelector() {
+    const picker = root.document?.querySelector('.ww-language-picker');
+    if (!picker) return;
+    const trigger = picker.querySelector('#ww-language-select');
+    const currentFlag = picker.querySelector('.ww-language-current-flag');
+    const currentName = picker.querySelector('.ww-language-current-name');
+    if (currentFlag) currentFlag.textContent = LANGUAGE_FLAGS[locale];
+    if (currentName) currentName.textContent = LANGUAGE_NAMES[locale];
+    if (trigger) trigger.setAttribute('aria-label', `${t('Sprache')}: ${LANGUAGE_NAMES[locale]}`);
+    picker.querySelectorAll('[data-language-code]').forEach((option) => {
+      const isSelected = option.dataset.languageCode === locale;
+      option.setAttribute('aria-selected', String(isSelected));
+      option.classList.toggle('is-selected', isSelected);
+    });
+  }
+
+  function createLanguageMenuController({
+    optionCodes,
+    getSelectedCode,
+    getOpen,
+    setOpen,
+    getFocusedIndex,
+    focusOption,
+    focusTrigger,
+    onChoose,
+  }) {
+    const codes = [...optionCodes];
+
+    function close({ restoreFocus = false } = {}) {
+      if (!getOpen()) return;
+      setOpen(false);
+      if (restoreFocus) focusTrigger();
+    }
+
+    function open(direction = 0) {
+      setOpen(true);
+      const selectedIndex = Math.max(0, codes.indexOf(getSelectedCode()));
+      const focusIndex = (selectedIndex + direction + codes.length) % codes.length;
+      focusOption(focusIndex);
+    }
+
+    function toggle() {
+      if (getOpen()) close({ restoreFocus: true });
+      else open();
+    }
+
+    function choose(code) {
+      if (!codes.includes(code)) return false;
+      close();
+      onChoose(code);
+      return true;
+    }
+
+    function handleTriggerKey(key) {
+      if (key !== 'ArrowDown' && key !== 'ArrowUp') return false;
+      open(key === 'ArrowDown' ? 1 : -1);
+      return true;
+    }
+
+    function handleMenuKey(key) {
+      const currentIndex = getFocusedIndex();
+      let nextIndex = currentIndex;
+      if (key === 'ArrowDown') nextIndex = (currentIndex + 1) % codes.length;
+      else if (key === 'ArrowUp') nextIndex = (currentIndex - 1 + codes.length) % codes.length;
+      else if (key === 'Home') nextIndex = 0;
+      else if (key === 'End') nextIndex = codes.length - 1;
+      else if (key === 'Escape') {
+        close({ restoreFocus: true });
+        return true;
+      } else {
+        return false;
+      }
+      focusOption(nextIndex);
+      return true;
+    }
+
+    return Object.freeze({ close, open, toggle, choose, handleTriggerKey, handleMenuKey });
+  }
+
+  function languageUrl(href, code) {
+    const url = new URL(href);
+    url.searchParams.set('lang', normalizeLocale(code));
+    return url.toString();
+  }
+
   function mountLanguageSelector() {
     if (!root.document?.body || root.document.getElementById('ww-language-select')) return;
-    const wrapper = root.document.createElement('label');
+    const container = root.document.querySelector('.ww-nav');
+    if (!container) return;
+    const wrapper = root.document.createElement('div');
     wrapper.className = 'ww-language-picker';
     wrapper.setAttribute('data-i18n-ignore', '');
-    wrapper.setAttribute('aria-label', t('Sprache'));
-    const select = root.document.createElement('select');
-    select.id = 'ww-language-select';
-    select.setAttribute('aria-label', t('Sprache'));
+
+    const trigger = root.document.createElement('button');
+    trigger.id = 'ww-language-select';
+    trigger.className = 'ww-language-trigger';
+    trigger.type = 'button';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', 'ww-language-menu');
+
+    const currentFlag = root.document.createElement('span');
+    currentFlag.className = 'ww-language-flag ww-language-current-flag';
+    currentFlag.setAttribute('aria-hidden', 'true');
+    const currentName = root.document.createElement('span');
+    currentName.className = 'ww-language-current-name';
+    const chevron = root.document.createElement('span');
+    chevron.className = 'ww-language-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    trigger.append(currentFlag, currentName, chevron);
+
+    const menu = root.document.createElement('div');
+    menu.id = 'ww-language-menu';
+    menu.className = 'ww-language-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', t('Sprache'));
+    menu.hidden = true;
+
     for (const code of SUPPORTED_LOCALES) {
-      const option = root.document.createElement('option');
-      option.value = code;
-      option.textContent = LANGUAGE_NAMES[code];
-      select.appendChild(option);
+      const option = root.document.createElement('button');
+      option.id = `ww-language-option-${code}`;
+      option.className = 'ww-language-option';
+      option.type = 'button';
+      option.dataset.languageCode = code;
+      option.setAttribute('role', 'option');
+
+      const flag = root.document.createElement('span');
+      flag.className = 'ww-language-flag';
+      flag.setAttribute('aria-hidden', 'true');
+      flag.textContent = LANGUAGE_FLAGS[code];
+      const name = root.document.createElement('span');
+      name.className = 'ww-language-option-name';
+      name.textContent = LANGUAGE_NAMES[code];
+      const check = root.document.createElement('span');
+      check.className = 'ww-language-check';
+      check.setAttribute('aria-hidden', 'true');
+      check.textContent = '✓';
+      option.append(flag, name, check);
+      menu.appendChild(option);
     }
-    select.value = locale;
-    select.addEventListener('change', () => {
-      try { root.localStorage?.setItem(STORAGE_KEY, select.value); } catch {}
-      const url = new URL(root.location.href);
-      url.searchParams.set('lang', select.value);
-      root.location.assign(url.toString());
+
+    const options = Array.from(menu.querySelectorAll('[data-language-code]'));
+    let stackingHost = null;
+
+    function chooseLanguage(code) {
+      try { root.localStorage?.setItem(STORAGE_KEY, code); } catch {}
+      root.location.assign(languageUrl(root.location.href, code));
+    }
+
+    const controller = createLanguageMenuController({
+      optionCodes: SUPPORTED_LOCALES,
+      getSelectedCode: () => locale,
+      getOpen: () => !menu.hidden,
+      setOpen: (isOpen) => {
+        menu.hidden = !isOpen;
+        wrapper.classList.toggle('is-open', isOpen);
+        stackingHost?.classList.toggle('ww-language-host-open', isOpen);
+        trigger.setAttribute('aria-expanded', String(isOpen));
+      },
+      getFocusedIndex: () => options.indexOf(root.document.activeElement),
+      focusOption: (index) => options[index]?.focus(),
+      focusTrigger: () => trigger.focus(),
+      onChoose: chooseLanguage,
     });
-    wrapper.appendChild(select);
-    const container = root.document.querySelector('.ww-nav') ||
-      root.document.querySelector('body > .header');
-    if (container) {
-      wrapper.classList.add('ww-language-inline');
-      if (container.classList.contains('ww-nav') && container.lastElementChild) {
-        container.insertBefore(wrapper, container.lastElementChild);
-      } else {
-        container.appendChild(wrapper);
-      }
-    } else {
-      root.document.body.appendChild(wrapper);
-    }
+
+    trigger.addEventListener('click', controller.toggle);
+    trigger.addEventListener('keydown', (event) => {
+      if (controller.handleTriggerKey(event.key)) event.preventDefault();
+    });
+    menu.addEventListener('keydown', (event) => {
+      if (controller.handleMenuKey(event.key)) event.preventDefault();
+    });
+    options.forEach((option) => {
+      option.addEventListener('click', () => controller.choose(option.dataset.languageCode));
+    });
+    root.document.addEventListener('pointerdown', (event) => {
+      if (!wrapper.contains(event.target)) controller.close();
+    });
+    root.document.addEventListener('focusin', (event) => {
+      if (!wrapper.contains(event.target)) controller.close();
+    });
+
+    wrapper.append(trigger, menu);
+    wrapper.classList.add('ww-language-inline');
+    container.appendChild(wrapper);
+    stackingHost = wrapper.closest('header');
+    updateLanguageSelector();
   }
 
   function startObserver() {
@@ -240,6 +399,9 @@
     DEFAULT_LOCALE,
     SUPPORTED_LOCALES,
     LANGUAGE_NAMES,
+    LANGUAGE_FLAGS,
+    createLanguageMenuController,
+    languageUrl,
     normalizeLocale,
     getLocale: () => locale,
     getLocaleSource: () => localeSource,

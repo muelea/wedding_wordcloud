@@ -70,8 +70,11 @@ test('locale catalogs cover the complete user journey and preserve interpolation
 test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', filename), 'utf8');
-    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260826-1" \/>/, filename);
-    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260826-3"><\/script>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260826-5" \/>/, filename);
+    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260826-9"><\/script>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260826-3" \/>/, filename);
+    assert.match(html, /<header\b[^>]*\bww-site-header\b/, `${filename} needs the shared site header`);
+    assert.match(html, /class="[^"]*\bww-nav\b/, `${filename} needs a language-switcher host in its header`);
   }
 
   const guestPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'guest.html'), 'utf8');
@@ -79,6 +82,120 @@ test('every public page loads the shared language layer', () => {
   assert.match(guestPage, /id="couple-name" data-i18n-ignore/);
   assert.match(displayPage, /id="couple-name" data-i18n-ignore/);
   assert.match(guestPage, /label\.setAttribute\('data-i18n-ignore', ''\)/);
+});
+
+test('guest and display pages keep event content below a dedicated branded header', () => {
+  const guestPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'guest.html'), 'utf8');
+  const displayPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'display.html'), 'utf8');
+
+  for (const [filename, html] of [['guest.html', guestPage], ['display.html', displayPage]]) {
+    assert.match(html, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav">[\s\S]*?Wolkenworte[\s\S]*?<\/header>/, filename);
+  }
+
+  assert.match(guestPage, /<section class="event-intro"/);
+  assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="word-total"/);
+  assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="couple-name" data-i18n-ignore/);
+  assert.doesNotMatch(displayPage, /display-meta/,
+    'the display must not add a second header-like metadata bar');
+  assert.doesNotMatch(guestPage, /<header class="header">/);
+  assert.doesNotMatch(displayPage, /<header class="header">/);
+});
+
+test('shared site header is transparent at rest and becomes glassy only after scrolling', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
+  const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'site-header.js'), 'utf8');
+
+  assert.match(styles, /\.ww-site-header\s*\{[^}]*background:\s*transparent\s*!important/s);
+  assert.match(styles, /\.ww-site-header\.scrolled\s*\{[^}]*background:/s);
+  assert.match(styles, /\.ww-site-header\.scrolled\s*\{[^}]*backdrop-filter:\s*blur\(14px\)/s);
+  assert.match(runtime, /window\.scrollY\s*>\s*4/);
+  assert.match(runtime, /classList\.toggle\('scrolled', scrolled\)/);
+});
+
+test('shared header pins the brand left and language switcher right at every viewport size', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
+  const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
+
+  assert.match(styles, /\.ww-nav\s*\{[^}]*width:\s*100%\s*!important[^}]*padding:\s*0 40px\s*!important/s);
+  assert.match(styles, /\.ww-brand\s*\{[^}]*margin-right:\s*auto/s);
+  assert.match(styles, /\.ww-site-header \.ww-language-inline\s*\{[^}]*margin-left:\s*auto/s);
+  assert.match(styles, /@media \(max-width:\s*620px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
+  assert.match(runtime, /container\.appendChild\(wrapper\)/);
+  assert.doesNotMatch(runtime, /container\.insertBefore\(wrapper/,
+    'the language switcher must remain the final, right-aligned header item');
+});
+
+test('language switcher uses the branded accessible menu and Unicode flags', () => {
+  const browserI18n = require('../public/js/i18n.js');
+  const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
+
+  assert.deepEqual(browserI18n.LANGUAGE_FLAGS, {
+    de: '🇩🇪',
+    en: '🇺🇸',
+    fr: '🇫🇷',
+    it: '🇮🇹',
+    es: '🇪🇸',
+    tr: '🇹🇷',
+  });
+  assert.match(runtime, /setAttribute\('aria-haspopup', 'listbox'\)/);
+  assert.match(runtime, /setAttribute\('role', 'listbox'\)/);
+  assert.doesNotMatch(runtime, /createElement\('select'\)/);
+  assert.doesNotMatch(runtime, /addEventListener\('focusout'/,
+    'focusout must not race pointer clicks inside the language menu');
+  assert.match(styles, /\.ww-language-menu\s*\{/);
+  assert.match(styles, /\.ww-language-option\.is-selected/);
+  assert.match(runtime, /stackingHost\?\.classList\.toggle\('ww-language-host-open', isOpen\)/);
+  assert.match(styles, /\.ww-language-host-open\s*\{[^}]*z-index:\s*10001\s*!important/s);
+  assert.match(runtime, /querySelector\('\.ww-nav'\)/);
+  assert.doesNotMatch(runtime, /querySelector\('body > \.header'\)/,
+    'the language switcher must never fall back to page content');
+  assert.doesNotMatch(runtime, /body\.appendChild\(wrapper\)/,
+    'the language switcher must never be mounted outside a site header');
+});
+
+test('language switcher closes on a second trigger click and navigates on selection', () => {
+  const browserI18n = require('../public/js/i18n.js');
+  let open = false;
+  let focusedOption = -1;
+  let triggerFocusCount = 0;
+  let chosenLocale = '';
+  const controller = browserI18n.createLanguageMenuController({
+    optionCodes: browserI18n.SUPPORTED_LOCALES,
+    getSelectedCode: () => 'en',
+    getOpen: () => open,
+    setOpen: (value) => { open = value; },
+    getFocusedIndex: () => focusedOption,
+    focusOption: (index) => { focusedOption = index; },
+    focusTrigger: () => { triggerFocusCount += 1; },
+    onChoose: (code) => { chosenLocale = code; },
+  });
+
+  controller.toggle();
+  assert.equal(open, true);
+  assert.equal(focusedOption, browserI18n.SUPPORTED_LOCALES.indexOf('en'));
+
+  controller.toggle();
+  assert.equal(open, false, 'a second trigger click must close the menu');
+  assert.equal(triggerFocusCount, 1);
+
+  controller.open();
+  assert.equal(controller.choose('fr'), true);
+  assert.equal(open, false);
+  assert.equal(chosenLocale, 'fr', 'choosing an option must request that locale');
+  assert.equal(
+    browserI18n.languageUrl('https://example.test/start?source=qr#form', chosenLocale),
+    'https://example.test/start?source=qr&lang=fr#form'
+  );
+});
+
+test('guest live preview hides the language switcher until the preview closes', () => {
+  const guestPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'guest.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
+
+  assert.match(guestPage, /document\.body\.classList\.add\('preview-open'\)/);
+  assert.match(guestPage, /document\.body\.classList\.remove\('preview-open'\)/);
+  assert.match(styles, /body\.preview-open\s+\.ww-language-picker\s*\{[^}]*display:\s*none/s);
 });
 
 test('event locale is validated, persisted and returned by public APIs', async (t) => {
