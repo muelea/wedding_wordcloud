@@ -26,9 +26,7 @@
       --tag-tx:   #9c1c4c;
       --ph:       #b99aa3;
       --input-bg: #fffefc;
-      --header-grad: transparent;
       --header-bd:   rgba(64,15,38,0.1);
-      --orn:      rgba(193,146,47,0.55);
     }
 
     /* ── Neon theme ── */
@@ -48,13 +46,11 @@
       --tag-tx:   #ff8cf5;
       --ph:       #7a6a99;
       --input-bg: #0d0611;
-      --header-grad: rgba(0,255,242,0.16);
       --header-bd:   rgba(255,16,240,0.28);
-      --orn:      rgba(191,0,255,0.75);
     }
 
     html, body {
-      height: 100%;
+      min-height: 100%;
       background: linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
       color: var(--text);
       font-family: 'Jost', system-ui, -apple-system, sans-serif;
@@ -66,17 +62,17 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
-      padding: 0 0 48px;
+      min-height: 100dvh;
+      padding: 0 0 30px;
+      background:
+        radial-gradient(circle at 50% 4%, color-mix(in srgb, var(--accent2) 5%, transparent), transparent 34%),
+        linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
     }
 
     .header {
-      width: 100%;
+      width: min(620px, calc(100% - 40px));
       text-align: center;
-      padding: 36px 24px 28px;
-      background: linear-gradient(180deg, var(--header-grad) 0%, transparent 100%);
-      border-bottom: 1px solid var(--header-bd);
-      transition: background 0.5s, border-color 0.5s;
+      padding: 62px 0 28px;
     }
 
     .header .eyebrow {
@@ -86,13 +82,13 @@
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       transition: color 0.5s;
     }
 
     .header h1 {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: clamp(26px, 7vw, 36px);
+      font-size: clamp(34px, 7vw, 48px);
       font-weight: 500;
       font-style: italic;
       color: var(--primary2);
@@ -101,30 +97,26 @@
     }
 
     .creator-tools {
-      width: min(720px, calc(100% - 48px));
-      margin: 22px auto 0;
-      padding: 14px 15px 14px 17px;
+      width: 100%;
+      padding: 23px 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 18px;
-      border: 1px solid var(--header-bd);
-      border-radius: 18px;
-      background: color-mix(in srgb, var(--input-bg) 92%, transparent);
-      box-shadow: 0 12px 34px var(--shadow);
-      transition: background .5s, border-color .5s, box-shadow .5s;
+      border-top: 1px solid var(--header-bd);
+      border-bottom: 1px solid var(--header-bd);
     }
 
     .creator-status { min-width: 0; }
-    .creator-copy strong { display: block; font-size: 13px; font-weight: 600; }
-    .creator-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .creator-copy strong { display: block; font-size: 14px; font-weight: 600; }
+    .creator-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11.5px; }
     .creator-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
     .creator-action {
-      min-height: 38px;
-      padding: 9px 14px;
+      min-height: 40px;
+      padding: 10px 15px;
       border: 1px solid var(--header-bd);
-      border-radius: 999px;
-      background: transparent;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--input-bg) 64%, transparent);
       color: var(--text);
       font: 500 12px/1 'Jost', system-ui, sans-serif;
       text-decoration: none;
@@ -135,22 +127,29 @@
       transition: transform .18s, border-color .18s, color .18s, background .18s;
     }
     .creator-action:hover { transform: translateY(-1px); border-color: var(--primary2); color: var(--primary2); }
-    .creator-action.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
-    .creator-action.primary:hover { color: #fff; }
+    .creator-action.primary {
+      border-color: color-mix(in srgb, var(--primary2) 24%, transparent);
+      background: color-mix(in srgb, var(--primary2) 7%, var(--input-bg));
+      color: var(--primary2);
+    }
+    .creator-action.primary:hover { color: var(--primary2); }
 
     .card {
-      width: 100%;
-      max-width: 480px;
-      padding: 32px 24px 0;
+      width: min(620px, calc(100% - 40px));
+      padding: 30px 0 0;
+      display: grid;
+      gap: 30px;
     }
 
     .prompt {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 18px;
+      font-size: clamp(21px, 4vw, 25px);
       font-style: italic;
+      font-weight: 500;
       color: var(--primary2);
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 20px;
+      line-height: 1.3;
       transition: color 0.5s;
     }
 
@@ -158,16 +157,17 @@
       display: flex;
       align-items: center;
       background: var(--input-bg);
-      border: 1.5px solid var(--border);
-      border-radius: 16px;
+      min-height: 66px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
       overflow: hidden;
-      box-shadow: 0 4px 24px var(--shadow);
+      box-shadow: 0 12px 34px color-mix(in srgb, var(--shadow) 72%, transparent);
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .input-wrap:focus-within {
       border-color: var(--primary);
-      box-shadow: 0 4px 28px var(--shadow);
+      box-shadow: 0 15px 38px var(--shadow);
     }
 
     #word-input {
@@ -177,61 +177,73 @@
       outline: none;
       background: transparent;
       font-family: 'Jost', system-ui, sans-serif;
-      font-size: 19px;
+      font-size: 18px;
       color: var(--text);
-      padding: 18px 16px 18px 22px;
+      padding: 18px 16px 18px 20px;
       transition: color 0.5s;
     }
 
     #word-input::placeholder { color: var(--ph); font-style: italic; }
 
     #submit-btn {
-      margin: 8px;
-      padding: 12px 22px;
+      min-width: 108px;
+      min-height: 50px;
+      margin: 7px;
+      padding: 12px 17px;
       background: var(--primary);
       color: #fff;
       border: none;
       border-radius: 999px;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
+      gap: 8px;
       cursor: pointer;
+      font: 600 12.5px/1 'Jost', system-ui, sans-serif;
       transition: transform 0.15s, opacity 0.15s, background 0.5s;
       line-height: 1;
     }
-    #submit-btn .heart-icon { width: 18px; height: auto; }
+    #submit-btn .heart-icon { width: 16px; height: auto; }
 
     #submit-btn:active { transform: scale(0.94); }
     #submit-btn:disabled { opacity: 0.40; cursor: default; }
 
+    .form-meta {
+      min-height: 27px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 16px;
+    }
+
     .char-counter {
-      text-align: right;
       font-size: 11px;
       color: var(--muted);
       margin-top: 8px;
-      padding-right: 4px;
+      padding-right: 3px;
       transition: color 0.5s;
     }
 
     .guest-actions {
-      margin-top: 22px;
+      margin-top: 15px;
       display: flex;
       justify-content: center;
     }
     .preview-trigger {
-      width: min(330px, 100%);
-      min-height: 64px;
-      padding: 9px 14px 9px 10px;
+      width: 100%;
+      min-height: 68px;
+      padding: 10px 16px 10px 11px;
       display: grid;
       grid-template-columns: 42px minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
       border: 1px solid var(--header-bd);
-      border-radius: 18px;
-      background: color-mix(in srgb, var(--input-bg) 94%, transparent);
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--input-bg) 72%, transparent);
       color: var(--text);
       text-align: left;
       font-family: 'Jost', system-ui, sans-serif;
-      box-shadow: 0 9px 28px color-mix(in srgb, var(--shadow) 70%, transparent);
+      box-shadow: none;
       cursor: pointer;
       transition: transform .18s, background .18s, border-color .18s, box-shadow .18s;
     }
@@ -239,16 +251,16 @@
       transform: translateY(-2px);
       border-color: color-mix(in srgb, var(--primary2) 38%, transparent);
       background: var(--input-bg);
-      box-shadow: 0 14px 32px var(--shadow);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow) 68%, transparent);
     }
     .preview-icon {
       width: 42px;
       height: 42px;
       display: grid;
       place-items: center;
-      border-radius: 13px;
-      border: 1px solid var(--tag-bd);
-      background: color-mix(in srgb, var(--tag-bg) 84%, var(--input-bg));
+      border-radius: 12px;
+      border: 0;
+      background: color-mix(in srgb, var(--tag-bg) 82%, var(--input-bg));
       transition: background .5s, border-color .5s;
     }
     .preview-icon img {
@@ -286,34 +298,35 @@
     }
 
     .flash {
-      text-align: center;
-      margin-top: 20px;
-      height: 28px;
-      font-size: 14px;
+      min-height: 18px;
+      margin-top: 7px;
+      font-size: 12px;
       color: var(--primary2);
       opacity: 0;
       transition: opacity 0.3s, color 0.5s;
     }
     .flash.show { opacity: 1; }
 
-    .submitted-section { margin-top: 32px; }
+    .submitted-section {
+      padding-top: 24px;
+      border-top: 1px solid var(--header-bd);
+    }
 
     .submitted-label {
       font-size: 11px;
       letter-spacing: 2.5px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       transition: color 0.5s;
     }
 
     .memory-cta {
-      margin-top: 26px;
-      padding: 20px;
+      padding: 24px;
       border: 1px solid var(--header-bd);
-      border-radius: 22px;
-      background: color-mix(in srgb, var(--input-bg) 94%, transparent);
-      box-shadow: 0 14px 38px color-mix(in srgb, var(--shadow) 66%, transparent);
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--input-bg) 90%, var(--tag-bg));
+      box-shadow: 0 16px 42px color-mix(in srgb, var(--shadow) 58%, transparent);
     }
     .memory-cta-head {
       display: grid;
@@ -345,19 +358,19 @@
       font: italic 500 20px/1.2 'Playfair Display', Georgia, serif;
     }
     .memory-cta-copy {
-      margin: 14px 0 17px;
+      margin: 15px 0 18px;
       color: var(--muted);
       font-size: 12px;
       line-height: 1.55;
     }
     .memory-cta-link {
-      min-height: 46px;
-      padding: 12px 17px;
+      min-height: 48px;
+      padding: 13px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 14px;
-      border-radius: 999px;
+      border-radius: 14px;
       background: var(--primary);
       color: #fff;
       font-size: 12.5px;
@@ -368,7 +381,7 @@
     .memory-cta-link:hover { transform: translateY(-1px); box-shadow: 0 10px 24px var(--shadow); }
     .memory-cta-note {
       display: block;
-      margin-top: 10px;
+      margin-top: 11px;
       color: var(--muted);
       font-size: 9.5px;
       line-height: 1.45;
@@ -378,19 +391,19 @@
     .tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 16px 15px;
-      padding-top: 7px;
+      gap: 10px;
     }
 
     .tag {
       position: relative;
       display: inline-flex;
       align-items: center;
+      gap: 7px;
       background: var(--tag-bg);
       border: 1px solid var(--tag-bd);
       color: var(--tag-tx);
-      padding: 7px 18px;
-      border-radius: 999px;
+      padding: 8px 8px 8px 15px;
+      border-radius: 13px;
       font-family: 'Playfair Display', Georgia, serif;
       font-size: 15px;
       animation: tagIn 0.35s ease both;
@@ -398,27 +411,24 @@
     }
 
     .tag-remove {
-      position: absolute;
-      top: -10px;
-      right: -9px;
-      width: 24px;
-      height: 24px;
+      position: static;
+      width: 25px;
+      height: 25px;
       display: grid;
       place-items: center;
       padding: 0 0 1px;
-      border: 1px solid var(--tag-bd);
-      border-radius: 50%;
-      background: var(--input-bg);
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
       color: var(--tag-tx);
-      box-shadow: 0 4px 12px var(--shadow);
       font: 400 16px/1 'Jost', system-ui, sans-serif;
       cursor: pointer;
       transition: transform .16s, border-color .16s, background .5s, color .5s, opacity .16s;
     }
     .tag-remove:hover {
-      border-color: var(--primary2);
+      background: color-mix(in srgb, var(--primary2) 8%, transparent);
       color: var(--primary2);
-      transform: scale(1.08);
+      transform: none;
     }
     .tag-remove:active { transform: scale(.94); }
     .tag-remove:disabled { cursor: wait; opacity: .55; transform: rotate(45deg); }
@@ -436,18 +446,9 @@
       to { opacity: 0; transform: scale(.82) translateY(-4px); }
     }
 
-    .ornament {
-      text-align: center;
-      color: var(--orn);
-      font-size: 18px;
-      margin: 32px 0 0;
-      letter-spacing: 8px;
-      transition: color 0.5s;
-    }
-
     .guest-footer {
-      margin-top: auto;
-      padding: 46px 24px 0;
+      margin-top: 58px;
+      padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -559,6 +560,22 @@
       place-items: center;
       overflow: hidden;
     }
+    .preview-memory-cta {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      z-index: 2;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background: var(--primary);
+      box-shadow: 0 6px 20px var(--border);
+      color: #fff;
+      font: 500 14px/1 'Playfair Display', Georgia, serif;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: transform .15s, background .5s;
+    }
+    .preview-memory-cta:hover { transform: translateY(-1px); }
     #preview-canvas { display: block; max-width: 100%; max-height: 100%; opacity: 0; transition: opacity .25s; }
     #preview-canvas.visible { opacity: 1; }
     .cloud-preview-empty { text-align: center; color: var(--muted); }
@@ -672,15 +689,27 @@
     }
 
     @media (max-width: 620px) {
-      .creator-tools { width: calc(100% - 32px); align-items: stretch; flex-direction: column; padding: 15px; }
+      body { padding-bottom: 24px; }
+      .header { width: calc(100% - 32px); padding: 44px 0 22px; }
+      .header h1 { font-size: clamp(34px, 11vw, 43px); }
+      .card { width: calc(100% - 32px); padding-top: 24px; gap: 26px; }
+      .prompt { margin-bottom: 17px; font-size: 21px; }
+      .input-wrap { min-height: 62px; }
+      #word-input { padding: 16px 10px 16px 16px; font-size: 16px; }
+      #submit-btn { min-width: 96px; min-height: 48px; margin: 6px; padding: 11px 14px; }
+      .creator-tools { align-items: stretch; flex-direction: column; padding: 21px 0; gap: 14px; }
       .creator-actions { width: 100%; }
       .creator-action { flex: 1; }
+      .memory-cta { padding: 20px; }
+      .memory-cta h2 { font-size: 19px; }
+      .guest-footer { margin-top: 46px; }
       .cloud-preview { padding: 0; }
       .cloud-preview-dialog { width: 100%; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
       .cloud-preview-head { min-height: 78px; padding: 16px; }
       .cloud-preview-meta { gap: 9px; }
       .cloud-preview-total span { display: none; }
       .cloud-preview-stage { padding: 14px; }
+      .preview-memory-cta { top: 14px; right: 14px; padding: 11px 16px; font-size: 13px; }
       .cloud-preview-foot { min-height: 76px; padding: 10px 16px; gap: 10px; }
       #preview-live-copy { display: none; }
       .preview-foot-actions { flex: 1; gap: 12px; justify-content: space-between; }
@@ -700,56 +729,59 @@
   <h1 id="couple-name">♡</h1>
 </header>
 
-<section class="creator-tools" id="creator-tools" aria-label="Wortwolke teilen und Anzeige öffnen">
-  <div class="creator-status">
-    <div class="creator-copy">
-      <strong>Wortwolke weitergeben</strong>
-      <span>Link teilen oder Anzeige öffnen</span>
-    </div>
-  </div>
-  <div class="creator-actions">
-    <button class="creator-action" id="share-link" type="button"><span id="share-label">Link teilen</span></button>
-    <a class="creator-action primary" id="display-link" href="#" target="_blank" rel="noopener">Anzeige öffnen&nbsp;↗</a>
-  </div>
-</section>
-
 <main class="card">
-  <p class="prompt">Teile ein Wort für das Brautpaar&nbsp;✦</p>
+  <section class="contribution" aria-labelledby="contribution-title">
+    <h2 class="prompt" id="contribution-title">Teilt ein Wort für das Brautpaar.</h2>
 
-  <div class="input-wrap">
-    <input
-      id="word-input"
-      type="text"
-      inputmode="text"
-      autocomplete="off"
-      autocorrect="off"
-      spellcheck="false"
-      maxlength="30"
-      placeholder="Liebe, Glück, Freude, Vertrauen…"
-      aria-label="Ein Wort eingeben"
-    />
-    <button id="submit-btn" aria-label="Absenden"><svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></button>
-  </div>
-  <div class="char-counter"><span id="char-count">0</span> / 30</div>
+    <div class="input-wrap">
+      <input
+        id="word-input"
+        type="text"
+        inputmode="text"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        maxlength="30"
+        placeholder="Liebe, Glück, Freude, Vertrauen…"
+        aria-label="Ein Wort eingeben"
+      />
+      <button id="submit-btn" type="button" aria-label="Wort teilen"><span class="submit-label">Teilen</span><svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="form-meta">
+      <div class="flash" id="flash" role="status" aria-live="polite"></div>
+      <div class="char-counter"><span id="char-count">0</span> / 30</div>
+    </div>
 
-  <div class="guest-actions">
-    <button class="preview-trigger" id="preview-trigger" type="button" aria-controls="cloud-preview" aria-expanded="false">
-      <span class="preview-icon" aria-hidden="true">
-        <img src="/z_icons/icon.svg" alt="" />
-      </span>
-      <span class="preview-copy">
-        <strong>Wortwolke ansehen</strong>
-        <span class="preview-count" id="preview-count">Noch keine Wörter</span>
-      </span>
-      <span class="preview-chevron" aria-hidden="true">›</span>
-    </button>
-  </div>
-
-  <div class="flash" id="flash"></div>
+    <div class="guest-actions">
+      <button class="preview-trigger" id="preview-trigger" type="button" aria-controls="cloud-preview" aria-expanded="false">
+        <span class="preview-icon" aria-hidden="true">
+          <img src="/z_icons/icon.svg" alt="" />
+        </span>
+        <span class="preview-copy">
+          <strong>Wortwolke ansehen</strong>
+          <span class="preview-count" id="preview-count">Noch keine Wörter</span>
+        </span>
+        <span class="preview-chevron" aria-hidden="true">›</span>
+      </button>
+    </div>
+  </section>
 
   <section class="submitted-section" id="submitted-section" hidden>
     <p class="submitted-label">Deine Wörter</p>
     <div class="tags" id="tags"></div>
+  </section>
+
+  <section class="creator-tools" id="creator-tools" aria-label="Wortwolke teilen und Anzeige öffnen">
+    <div class="creator-status">
+      <div class="creator-copy">
+        <strong>Wortwolke weitergeben</strong>
+        <span>Teilt den Link oder öffnet die große Anzeige.</span>
+      </div>
+    </div>
+    <div class="creator-actions">
+      <button class="creator-action" id="share-link" type="button"><span id="share-label">Link teilen</span></button>
+      <a class="creator-action primary" id="display-link" href="#" target="_blank" rel="noopener">Anzeige öffnen&nbsp;↗</a>
+    </div>
   </section>
 
   <section class="memory-cta" aria-labelledby="memory-cta-title">
@@ -760,12 +792,11 @@
         <h2 id="memory-cta-title">Haltet euren Moment fest.</h2>
       </div>
     </div>
-    <p class="memory-cta-copy">Gestaltet direkt eure persönliche Tasse – mit eigenen Fotos, Namen und Worten. Ganz unabhängig von der Hochzeits-Wortwolke.</p>
-    <a class="memory-cta-link" id="memory-cta-link" href="#"><span>Persönliche Tasse gestalten</span><span aria-hidden="true">→</span></a>
+    <p class="memory-cta-copy">Gestaltet euer persönliches Erinnerungsstück – mit eigenen Fotos, Namen und Worten. Ganz unabhängig von der Hochzeits-Wortwolke.</p>
+    <a class="memory-cta-link" id="memory-cta-link" href="#"><span>Persönliche Erinnerung gestalten</span><span aria-hidden="true">→</span></a>
     <small class="memory-cta-note">Euer Entwurf bleibt getrennt von den Beiträgen des Brautpaars.</small>
   </section>
 
-  <p class="ornament">· · ·</p>
 </main>
 
 <footer class="guest-footer" aria-label="Rechtliche Hinweise">
@@ -788,6 +819,7 @@
       </div>
     </header>
     <div class="cloud-preview-stage" id="preview-stage">
+      <a class="preview-memory-cta" id="preview-memory-cta" href="#" hidden>Wortwolke verewigen</a>
       <canvas id="preview-canvas" aria-label="Live-Wortwolke"></canvas>
       <div class="cloud-preview-empty" id="preview-empty">
         <svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
@@ -849,6 +881,7 @@
   const previewEmpty = document.getElementById('preview-empty');
   const previewTotal = document.getElementById('preview-total');
   const previewLiveCopy = document.getElementById('preview-live-copy');
+  const previewMemoryCta = document.getElementById('preview-memory-cta');
   const previewDisplayLink = document.getElementById('preview-display-link');
   const previewQr = document.getElementById('preview-qr');
   const previewQrImg = document.getElementById('preview-qr-img');
@@ -909,6 +942,7 @@
   applyTheme(currentTheme);
 
   memoryCtaLink.href = `/e/${encodeURIComponent(slug)}/configure?mode=personal`;
+  previewMemoryCta.href = `/e/${encodeURIComponent(slug)}/configure`;
   displayLink.href = displayUrl;
   previewDisplayLink.href = displayUrl;
 
@@ -990,6 +1024,7 @@
       : `${total} ${total === 1 ? 'Wort' : 'Wörter'} live geteilt`;
     previewEmpty.hidden = currentWords.length > 0;
     previewCanvas.hidden = currentWords.length === 0;
+    previewMemoryCta.hidden = currentWords.length === 0;
     if (!currentWords.length) previewCanvas.classList.remove('visible');
     schedulePreviewRender();
   }

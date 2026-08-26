@@ -42,7 +42,16 @@ test('event creation & slug-preview flow', async (t) => {
   const guestHtml = await fetch(`${baseUrl}${event.guestUrl}`).then((r) => r.text());
   assert.match(guestHtml, /id="preview-trigger"/);
   assert.match(guestHtml, /id="cloud-preview"/);
+  assert.match(guestHtml, /id="preview-memory-cta"[^>]*hidden>Wortwolke verewigen<\/a>/);
+  assert.match(guestHtml, /previewMemoryCta\.href = `\/e\/\$\{encodeURIComponent\(slug\)\}\/configure`/);
+  assert.match(guestHtml, /previewMemoryCta\.hidden = currentWords\.length === 0/);
   assert.match(guestHtml, /id="creator-tools" aria-label="Wortwolke teilen und Anzeige öffnen">/);
+  assert.match(guestHtml, /id="contribution-title">Teilt ein Wort für das Brautpaar\.<\/h2>/);
+  assert.match(guestHtml, /id="submit-btn" type="button" aria-label="Wort teilen"/);
+  assert.match(guestHtml, /id="flash" role="status" aria-live="polite"/);
+  assert.match(guestHtml, /Persönliche Erinnerung gestalten/);
+  assert.doesNotMatch(guestHtml, /Persönliche Tasse gestalten/);
+  assert.doesNotMatch(guestHtml, /class="ornament"/);
   assert.match(guestHtml, /id="preview-qr"/);
   assert.match(guestHtml, /id="preview-qr-img"/);
   assert.match(guestHtml, /Scannen &amp; mitmachen/);

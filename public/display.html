@@ -220,8 +220,8 @@
     }
     .footer-actions span:hover { opacity: 1; }
 
-    /* ── Mug order CTA ── */
-    #mug-cta {
+    /* ── Memory configurator CTA ── */
+    #memory-cta {
       position: fixed;
       top: 96px;
       right: 40px;
@@ -240,9 +240,8 @@
       box-shadow: 0 6px 20px var(--border);
       transition: transform 0.15s, background 0.6s;
     }
-    #mug-cta.visible { display: inline-flex; }
-    #mug-cta:hover { transform: translateY(-1px); }
-    #mug-cta .price { opacity: 0.85; font-size: 12px; }
+    #memory-cta.visible { display: inline-flex; }
+    #memory-cta:hover { transform: translateY(-1px); }
 
     /* ── Toast ── */
     .toast-container {
@@ -289,8 +288,8 @@
   </div>
 </header>
 
-<button id="mug-cta" title="Wortwolke auf Tassen bestellen">
-  ☕ Jetzt bestellen
+<button id="memory-cta" title="Wortwolke verewigen">
+  Wortwolke verewigen
 </button>
 
 <div id="cloud-container">
@@ -332,7 +331,7 @@
   const emptyState      = document.getElementById('empty-state');
   const wordTotalEl     = document.getElementById('word-total');
   const toastContainer  = document.getElementById('toast-container');
-  const mugCta          = document.getElementById('mug-cta');
+  const memoryCta       = document.getElementById('memory-cta');
 
   let currentWords = [];
   let renderTimer  = null;
@@ -414,7 +413,7 @@
     const total = words.reduce((s, [, c]) => s + c, 0);
     wordTotalEl.textContent = total;
 
-    mugCta.classList.toggle('visible', words.length > 0);
+    memoryCta.classList.toggle('visible', words.length > 0);
 
     if (words.length === 0) {
       emptyState.classList.remove('hidden');
@@ -513,8 +512,8 @@
 
   document.getElementById('clear-hint').addEventListener('click', startNewSession);
 
-  // ── Mug configurator ──────────────────────────────────────────────────────
-  mugCta.addEventListener('click', () => {
+  // ── Product configurator ──────────────────────────────────────────────────
+  memoryCta.addEventListener('click', () => {
     location.href = `/e/${encodeURIComponent(slug)}/configure`;
   });
 
