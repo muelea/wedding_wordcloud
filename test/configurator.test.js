@@ -540,9 +540,23 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /\.editor-scroll \{[\s\S]*?padding: 12px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
   assert.match(configurePage, /\.editor-canvas-shell \{[\s\S]*?border: 1px solid rgba\(64, 15, 38, \.08\);[\s\S]*?box-shadow: none;/);
   assert.match(configurePage, /\.order-item \+ \.order-item::before \{[\s\S]*?rgba\(123, 70, 82, \.12\)/);
-  assert.match(configurePage, /class="save-button design-save-button" id="save-button"/);
-  assert.match(configurePage, /class="secondary-button" id="design-another" type="button" hidden/);
-  assert.match(configurePage, /class="save-button continue-button" id="continue-order" type="button" hidden/);
+  assert.doesNotMatch(configurePage, /save-button/);
+  assert.doesNotMatch(configurePage, /design-save-button/);
+  assert.match(configurePage, /class="secondary-button" id="design-another" type="button">/);
+  assert.match(configurePage, /class="primary-button continue-button" id="continue-order" type="button">/);
+  assert.match(configurePage, /async function saveCurrentDesign\(activeButton, \{ allowEmptyDraft = false \} = \{\}\)/);
+  assert.match(configurePage, /if \(!currentDesignNeedsSave\) return true/);
+  assert.match(configurePage, /if \(!await saveCurrentDesign\(null, \{ allowEmptyDraft: true \}\)\) return/);
+  assert.match(configurePage, /await loadOrderItem\(openingCurrentItem \? editingOrderItemId : configurationId\)/);
+  assert.match(configurePage, /async function saveBeforeLeaving\(event\)/);
+  assert.match(configurePage, /\[brandLink, backLink\]\.forEach\(\(link\) => link\.addEventListener\('click', saveBeforeLeaving\)\)/);
+  assert.match(configurePage, /location\.assign\(event\.currentTarget\.href\)/);
+  assert.match(configurePage, /allowEmptyDraft && !editingOrderItemId && isCompletelyEmpty/);
+  assert.match(configurePage, /href="\/datenschutz" target="_blank" rel="noopener"/);
+  assert.match(configurePage, /href="\/impressum" target="_blank" rel="noopener"/);
+  assert.match(configurePage, /if \(!await saveCurrentDesign\(designAnotherButton\)\) return/);
+  assert.match(configurePage, /if \(await saveCurrentDesign\(continueOrderButton\)\) navigateToShipping\(\)/);
+  assert.match(configurePage, /const missingSurface = productSurfaces\(\)\.find/);
 
   const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
   assert.equal(fabricBrowserBuild.status, 200);

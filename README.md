@@ -33,10 +33,13 @@ add their own photos, words and motifs, and purchase it independently.
    spiral notebook or decorative pillow from grouped product families, any
    color palette and product-specific arrangement actions, and approves an
    immutable Printful-sized file with a transparent background. Each approved
-   design is added to the local order basket, so the customer can design a mug,
-   a coaster, another mug size, etc. before moving to delivery. Basket designs
-   can be opened again for inspection or edits; saving an opened design creates
-   a new immutable configuration and replaces the previous basket entry.
+   design is added to the local order basket automatically when the customer
+   chooses another product or continues to the shipping address, so the
+   customer can design a mug, a coaster, another mug size, etc. before moving
+   to delivery. Basket designs can be opened again for inspection or edits;
+   either onward action, opening another basket design or returning to the
+   word cloud saves the current state as a new immutable configuration and
+   replaces the previous basket entry.
    Local illustrated thumbnails make the catalog scannable. A locally served
    Three.js preview maps mug artwork onto a rotatable model; flat products use
    the same design in a proportional print preview. Posters can be designed in

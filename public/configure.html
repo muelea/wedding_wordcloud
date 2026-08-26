@@ -1324,7 +1324,7 @@
     .custom-color-remove:disabled { cursor: not-allowed; opacity: .25; }
     .custom-palette-note { margin: 11px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 
-    .save-button {
+    .primary-button {
       width: auto;
       min-height: 44px;
       margin-top: 0;
@@ -1343,16 +1343,8 @@
       box-shadow: 0 7px 16px rgba(64, 15, 38, .12);
       transition: transform .2s, border-color .2s, background .2s, box-shadow .2s, opacity .2s;
     }
-    .save-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(64,15,38,.17); }
-    .save-button:disabled { cursor: wait; opacity: .6; transform: none; }
-    .design-save-button {
-      border-color: rgba(156, 28, 76, .2);
-      background: rgba(156, 28, 76, .055);
-      color: var(--berry-dark);
-      box-shadow: none;
-    }
-    .design-save-button:hover { border-color: rgba(156, 28, 76, .34); background: rgba(156, 28, 76, .09); box-shadow: none; }
-
+    .primary-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(64,15,38,.17); }
+    .primary-button:disabled { cursor: wait; opacity: .6; transform: none; }
     .order-box {
       margin-top: 0;
       padding: 16px 18px;
@@ -1455,7 +1447,6 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-    .order-actions [hidden] { display: none; }
     .secondary-button {
       width: auto;
       min-width: 210px;
@@ -1471,7 +1462,7 @@
       transition: border-color .2s, background .2s, color .2s;
     }
     .secondary-button:hover { border-color: rgba(123, 70, 82, .12); background: rgba(123, 70, 82, .055); color: var(--ink); }
-    .order-actions .design-save-button { min-width: 300px; }
+    .secondary-button:disabled { cursor: wait; opacity: .6; }
     .order-actions .continue-button {
       min-width: 190px;
       background: linear-gradient(135deg, var(--berry), var(--berry-dark));
@@ -1542,7 +1533,7 @@
       .workspace-tools { padding: 12px; border-radius: 16px; }
       .workbench { --workspace-stage-height: clamp(340px, 92vw, 470px); }
       .preview-card, .editor-card { padding: 20px; border-radius: 21px; }
-      .order-actions .save-button,
+      .order-actions .primary-button,
       .secondary-button {
         width: 100%;
         min-width: 0;
@@ -1590,7 +1581,7 @@
 <body>
   <header class="topbar ww-site-header">
     <div class="ww-nav">
-      <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
+      <a class="brand ww-brand" id="brand-link" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg" alt="" aria-hidden="true" />Wolkenworte</a>
       <a class="back-link ww-back-link" id="back-link" href="#" aria-label="Zurück zur Wortwolke"><span aria-hidden="true">←</span><span>Zurück zur Wortwolke</span></a>
     </div>
   </header>
@@ -1780,7 +1771,7 @@
           </section>
         </div>
 
-        <section class="checkout-panel" aria-label="Bestellung speichern">
+        <section class="checkout-panel" id="checkout-panel" aria-label="Bestellung fortsetzen">
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
               <strong>Eure Bestellung</strong>
@@ -1789,9 +1780,8 @@
             <div class="order-list" id="order-list"></div>
           </div>
           <div class="order-actions">
-            <button class="save-button design-save-button" id="save-button" type="button">Design zur Bestellung hinzufügen <span aria-hidden="true">→</span></button>
-            <button class="secondary-button" id="design-another" type="button" hidden>Weiteres Produkt gestalten</button>
-            <button class="save-button continue-button" id="continue-order" type="button" hidden>Zur Lieferadresse <span aria-hidden="true">→</span></button>
+            <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
+            <button class="primary-button continue-button" id="continue-order" type="button">Zur Lieferadresse <span aria-hidden="true">→</span></button>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
         </section>
@@ -1821,7 +1811,7 @@
   </dialog>
 
   <footer class="config-footer" aria-label="Rechtliche Hinweise">
-    <a href="/datenschutz">Datenschutz</a><span aria-hidden="true">·</span><a href="/impressum">Impressum</a>
+    <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a><span aria-hidden="true">·</span><a href="/impressum" target="_blank" rel="noopener">Impressum</a>
   </footer>
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
@@ -1840,7 +1830,6 @@
     let configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
     const loading = document.getElementById('loading');
     const content = document.getElementById('config-content');
-    const saveButton = document.getElementById('save-button');
     const errorText = document.getElementById('error-text');
     const mugCanvas = document.getElementById('mug-preview');
     const mugViewer = document.getElementById('mug-3d');
@@ -1886,6 +1875,7 @@
     const orderBox = document.getElementById('order-box');
     const orderList = document.getElementById('order-list');
     const orderCount = document.getElementById('order-count');
+    const checkoutPanel = document.getElementById('checkout-panel');
     const designAnotherButton = document.getElementById('design-another');
     const continueOrderButton = document.getElementById('continue-order');
 
@@ -1909,8 +1899,10 @@
     let fallbackOrderItems = [];
     let editingOrderItemId = null;
     let suppressDirty = false;
-    let hasUnsavedOpenedDesign = false;
+    let orderActionPending = false;
+    let currentDesignNeedsSave = true;
 
+    const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
     backLink.href = isPersonalMode
       ? `/e/${encodeURIComponent(slug)}`
@@ -2029,15 +2021,28 @@
       return items;
     }
 
-    async function openOrderItem(configurationId) {
+    function setOrderActionsBusy(isBusy, activeButton = null, busyLabel = 'Design wird gespeichert…') {
+      designAnotherButton.disabled = isBusy;
+      continueOrderButton.disabled = isBusy;
+      checkoutPanel.setAttribute('aria-busy', String(isBusy));
+      designAnotherButton.textContent = isBusy && activeButton === designAnotherButton
+        ? busyLabel
+        : 'Weiteres Produkt gestalten';
+      continueOrderButton.innerHTML = isBusy && activeButton === continueOrderButton
+        ? busyLabel
+        : 'Zur Lieferadresse <span aria-hidden="true">→</span>';
+    }
+
+    async function loadOrderItem(configurationId) {
+      if (orderActionPending) return;
       const item = loadOrderItems().find((candidate) => candidate.id === configurationId);
       if (!item) {
         errorText.textContent = 'Dieses Design ist nicht mehr in eurer Bestellung.';
         renderOrderBox();
         return;
       }
-      saveButton.disabled = true;
-      saveButton.textContent = 'Design wird geöffnet…';
+      orderActionPending = true;
+      setOrderActionsBusy(true);
       errorText.textContent = '';
       try {
         const response = await fetch(
@@ -2048,27 +2053,35 @@
         if (!response.ok) throw new Error(data.error || 'load_failed');
         await applySavedConfiguration(data);
         editingOrderItemId = data.id;
-        hasUnsavedOpenedDesign = false;
+        currentDesignNeedsSave = false;
         renderOrderBox();
-        saveButton.disabled = false;
-        saveButton.innerHTML = 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>';
         document.getElementById('preview-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
         mugEditor?.setFeedback('Design aus eurer Bestellung geöffnet');
       } catch {
-        saveButton.disabled = false;
-        saveButton.innerHTML = editingOrderItemId
-          ? 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>'
-          : 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
         errorText.textContent = 'Dieses Design konnte nicht geöffnet werden. Bitte versucht es noch einmal.';
+      } finally {
+        orderActionPending = false;
+        setOrderActionsBusy(false);
       }
+    }
+
+    async function openOrderItem(configurationId) {
+      if (orderActionPending) return;
+      const item = loadOrderItems().find((candidate) => candidate.id === configurationId);
+      if (!item) {
+        errorText.textContent = 'Dieses Design ist nicht mehr in eurer Bestellung.';
+        renderOrderBox();
+        return;
+      }
+      const openingCurrentItem = editingOrderItemId === configurationId;
+      if (!await saveCurrentDesign(null, { allowEmptyDraft: true })) return;
+      await loadOrderItem(openingCurrentItem ? editingOrderItemId : configurationId);
     }
 
     function renderOrderBox() {
       const items = loadOrderItems();
       const hasItems = items.length > 0;
       orderBox.hidden = !hasItems;
-      designAnotherButton.hidden = !hasItems;
-      continueOrderButton.hidden = !hasItems;
       orderList.replaceChildren();
       orderCount.textContent = items.length === 1 ? '1 Design' : `${items.length} Designs`;
       items.forEach((item) => {
@@ -2101,7 +2114,6 @@
         remove.addEventListener('click', () => {
           if (editingOrderItemId === item.id) {
             editingOrderItemId = null;
-            hasUnsavedOpenedDesign = false;
           }
           saveOrderItems(loadOrderItems().filter((candidate) => candidate.id !== item.id));
           renderOrderBox();
@@ -2113,15 +2125,10 @@
       });
     }
 
-    function continueToShipping() {
+    function navigateToShipping() {
       const ids = loadOrderItems().map((item) => item.id);
       if (!ids.length) {
-        errorText.textContent = 'Speichert zuerst mindestens ein Design für eure Bestellung.';
-        return;
-      }
-      if (editingOrderItemId && hasUnsavedOpenedDesign) {
-        errorText.textContent = 'Speichert zuerst eure Änderungen an diesem Design.';
-        saveButton.focus();
+        errorText.textContent = 'Das Design konnte nicht zur Bestellung hinzugefügt werden.';
         return;
       }
       const query = ids.length === 1
@@ -2129,19 +2136,6 @@
         : `configurations=${encodeURIComponent(ids.join(','))}`;
       location.assign(`/e/${encodeURIComponent(slug)}/shipping?${query}`);
     }
-
-    designAnotherButton.addEventListener('click', () => {
-      editingOrderItemId = null;
-      hasUnsavedOpenedDesign = false;
-      errorText.textContent = '';
-      saveButton.disabled = false;
-      saveButton.innerHTML = 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
-      document.getElementById('controls-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      mugEditor?.setFeedback('Wählt ein Produkt oder passt das Design weiter an.');
-      renderOrderBox();
-    });
-
-    continueOrderButton.addEventListener('click', continueToShipping);
 
     function setupCanvas(canvas) {
       const rect = canvas.getBoundingClientRect();
@@ -2799,11 +2793,7 @@
     function markDirty() {
       if (suppressDirty) return;
       errorText.textContent = '';
-      if (editingOrderItemId) hasUnsavedOpenedDesign = true;
-      saveButton.disabled = false;
-      saveButton.innerHTML = editingOrderItemId
-        ? 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>'
-        : 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
+      currentDesignNeedsSave = true;
     }
 
     function currentProductMockupAsset() {
@@ -3348,18 +3338,22 @@
       renderAll();
     });
 
-    saveButton.addEventListener('click', async () => {
+    async function saveCurrentDesign(activeButton, { allowEmptyDraft = false } = {}) {
+      if (orderActionPending) return false;
+      if (!currentDesignNeedsSave) return true;
       const designs = getAllSurfaceDesigns();
       const missingSurface = productSurfaces().find((surface) => !designs[surface.key]?.length);
       if (missingSurface) {
+        const isCompletelyEmpty = Object.values(designs).every((design) => !design.length);
+        if (allowEmptyDraft && !editingOrderItemId && isCompletelyEmpty) return true;
         errorText.textContent = productSurfaces().length > 1
           ? `Gestaltet bitte auch die ${missingSurface.label}.`
           : 'Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.';
         mugEditor.setFeedback(`${missingSurface.label} ist noch leer.`);
-        return;
+        return false;
       }
-      saveButton.disabled = true;
-      saveButton.textContent = 'Design wird gespeichert…';
+      orderActionPending = true;
+      setOrderActionsBusy(true, activeButton);
       errorText.textContent = '';
       try {
         const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
@@ -3378,15 +3372,42 @@
         if (!response.ok) throw new Error(data.error || 'save_failed');
         addOrderItem(data, { replaceId: editingOrderItemId });
         editingOrderItemId = data.id;
-        hasUnsavedOpenedDesign = false;
+        currentDesignNeedsSave = false;
         renderOrderBox();
-        saveButton.disabled = false;
-        saveButton.innerHTML = 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>';
+        return true;
       } catch {
-        saveButton.disabled = false;
-        saveButton.innerHTML = 'Erneut versuchen <span aria-hidden="true">→</span>';
         errorText.textContent = 'Der Entwurf konnte nicht gespeichert werden. Bitte versucht es noch einmal.';
+        return false;
+      } finally {
+        orderActionPending = false;
+        setOrderActionsBusy(false);
       }
+    }
+
+    async function saveBeforeLeaving(event) {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!mugEditor || !product) return;
+      event.preventDefault();
+      if (await saveCurrentDesign(null, { allowEmptyDraft: true })) {
+        location.assign(event.currentTarget.href);
+      } else {
+        errorText.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    [brandLink, backLink].forEach((link) => link.addEventListener('click', saveBeforeLeaving));
+
+    designAnotherButton.addEventListener('click', async () => {
+      if (!await saveCurrentDesign(designAnotherButton)) return;
+      editingOrderItemId = null;
+      errorText.textContent = '';
+      document.getElementById('controls-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      mugEditor?.setFeedback('Wählt ein Produkt oder passt das Design weiter an.');
+      renderOrderBox();
+    });
+
+    continueOrderButton.addEventListener('click', async () => {
+      if (await saveCurrentDesign(continueOrderButton)) navigateToShipping();
     });
 
     fetch(`/api/events/${encodeURIComponent(slug)}/configurator${isPersonalMode ? '?mode=personal' : ''}`)
