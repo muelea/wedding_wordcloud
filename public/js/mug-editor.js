@@ -472,6 +472,21 @@
       this.shell.style.setProperty('--print-safe-y', `${this.printMargin / this.height * 100}%`);
     }
 
+    refreshViewport() {
+      if (!this.shell || !this.scroll) return;
+      const styles = getComputedStyle(this.scroll);
+      const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+      const viewportWidth = Math.max(1, this.scroll.clientWidth - horizontalPadding);
+      const viewportHeight = Math.max(1, this.scroll.clientHeight - verticalPadding);
+      const aspect = this.width / this.height;
+      const fitWidth = Math.min(viewportWidth, viewportHeight * aspect);
+      const fitHeight = fitWidth / aspect;
+      this.shell.style.width = `${fitWidth * this.zoom}px`;
+      this.shell.style.height = `${fitHeight * this.zoom}px`;
+      this.canvas?.calcOffset();
+    }
+
     resizePrintArea({ printWidth, printHeight, defaultX, defaultY, safeMargin }) {
       const nextWidth = Number(printWidth);
       const nextHeight = Number(printHeight);
@@ -972,8 +987,8 @@
 
     setZoom(nextZoom) {
       this.zoom = Math.min(2, Math.max(1, Math.round(nextZoom * 4) / 4));
-      this.shell.style.width = `${this.zoom * 100}%`;
       this.scroll.classList.toggle('is-fit', this.zoom === 1);
+      this.refreshViewport();
       if (this.zoom === 1) {
         this.scroll.scrollLeft = 0;
         this.scroll.scrollTop = 0;

@@ -212,8 +212,21 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /id="placement-options"/);
   assert.match(configurePage, /id="surface-tabs"/);
+  assert.match(configurePage, /class="editor-tools editor-tools-primary">[\s\S]*?id="surface-editor"[\s\S]*?id="editor-add"/);
   assert.match(configurePage, /id="selected-theme-swatches"/);
   assert.doesNotMatch(configurePage, /id="selected-theme-detail"/);
+  assert.match(configurePage, /class="workspace-tools"/);
+  assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
+  assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260825-3/);
+  assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
+  assert.match(configurePage, /function refreshWorkspaceLayout\(\)/);
+  assert.match(configurePage, /availableWidth \/ printAspect \+ 24/);
+  assert.match(configurePage, /requestAnimationFrame\(refreshWorkspaceLayout\)/);
+  assert.doesNotMatch(configurePage, /const flatPreviewHeight =/);
+  assert.match(configurePage, /\.editor-scroll \{[\s\S]*?padding: 12px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
+  assert.match(configurePage, /\.editor-canvas-shell \{[\s\S]*?border: 1px solid rgba\(64, 15, 38, \.08\);[\s\S]*?box-shadow: none;/);
+  assert.match(configurePage, /\.order-item \+ \.order-item::before \{[\s\S]*?rgba\(123, 70, 82, \.12\)/);
   assert.match(configurePage, /class="save-button design-save-button" id="save-button"/);
   assert.match(configurePage, /class="secondary-button" id="design-another" type="button" hidden/);
   assert.match(configurePage, /class="save-button continue-button" id="continue-order" type="button" hidden/);
@@ -223,9 +236,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260821-5`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260825-3`);
   assert.equal(mugEditor.status, 200);
-  assert.match(await mugEditor.text(), /resizePrintArea/);
+  const mugEditorSource = await mugEditor.text();
+  assert.match(mugEditorSource, /resizePrintArea/);
+  assert.match(mugEditorSource, /refreshViewport/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
 
   const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260817-1`);

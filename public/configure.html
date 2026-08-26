@@ -103,32 +103,42 @@
       gap: 24px;
     }
 
+    .workspace-tools {
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 254, 252, .88);
+      box-shadow: 0 14px 36px rgba(64, 15, 38, .055);
+      backdrop-filter: blur(12px);
+    }
+
     .workbench {
+      --workspace-stage-height: clamp(440px, 58vh, 600px);
       display: grid;
-      grid-template-columns: minmax(0, 1.12fr) minmax(360px, .88fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 24px;
-      align-items: start;
+      align-items: stretch;
     }
 
     .preview-card,
     .editor-card {
+      min-width: 0;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
       background: rgba(255, 254, 252, .88);
       border: 1px solid var(--line);
+      border-radius: 28px;
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
     }
 
     .preview-card {
-      padding: 30px;
-      border-radius: 28px;
       overflow: hidden;
-      position: sticky;
-      top: 24px;
+      position: relative;
     }
 
     .editor-card {
-      padding: 30px;
-      border-radius: 28px;
       overflow: visible;
     }
 
@@ -153,14 +163,18 @@
     }
     .editor-title { margin-bottom: 16px; }
     .mug-stage {
-      min-height: 420px;
-      margin: 0 -30px 18px;
+      height: var(--workspace-stage-height);
+      min-height: 0;
+      margin: 16px -30px 0;
       padding: 8px 38px 22px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: clamp(20px, 4vw, 54px);
       position: relative;
+    }
+    .mug-stage.is-flat-product {
+      padding: 4px 8px 12px;
     }
 
     .mug-wrap {
@@ -169,9 +183,17 @@
       z-index: 1;
       text-align: center;
     }
+    .mug-stage.is-flat-product .mug-wrap {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
     .mug-viewer {
       width: 100%;
-      height: 350px;
+      height: min(350px, calc(var(--workspace-stage-height) - 48px));
       position: relative;
       cursor: grab;
       touch-action: none;
@@ -197,9 +219,8 @@
     .flat-product-preview {
       display: none;
       position: relative;
-      width: min(var(--flat-preview-width, 292px), 84%);
-      height: auto;
-      max-width: 84%;
+      width: var(--flat-preview-width, 292px);
+      height: var(--flat-preview-height, 292px);
       aspect-ratio: var(--flat-preview-aspect, 1);
       overflow: hidden;
       border: 1px solid rgba(77, 51, 54, .16);
@@ -214,10 +235,20 @@
       cursor: default;
       touch-action: auto;
     }
+    .mug-stage.is-flat-product .mug-viewer {
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      flex: 1;
+    }
+    .mug-stage.is-flat-product .mug-name {
+      flex: 0 0 auto;
+      margin-top: 7px;
+      line-height: 1.35;
+    }
     .mug-viewer.is-flat .mug-fallback { display: none; }
     .mug-viewer.is-flat .flat-product-preview { display: block; }
     .flat-product-preview.is-coaster {
-      width: min(76%, 292px);
       border-radius: 18px;
       box-shadow: 0 18px 34px rgba(74, 34, 43, .15), 7px 9px 0 #b99064;
     }
@@ -348,20 +379,24 @@
     }
 
     .wrap-preview {
+      min-height: 0;
+      flex: 1;
       padding: 0;
+      display: flex;
+      flex-direction: column;
       border: 0;
       border-radius: 0;
       background: transparent;
     }
     .surface-editor {
-      margin: 0 0 12px;
-      padding: 9px;
+      margin: 0;
+      padding: 3px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      justify-content: flex-start;
+      gap: 4px;
       border: 1px solid rgba(123, 70, 82, .14);
-      border-radius: 13px;
+      border-radius: 11px;
       background: #fbf6f1;
     }
     .surface-editor[hidden] { display: none; }
@@ -395,7 +430,7 @@
     .surface-copy[hidden] { display: none; }
     .editor-toolbar {
       position: relative;
-      margin-bottom: 12px;
+      margin: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -403,6 +438,7 @@
       flex-wrap: wrap;
     }
     .editor-tools { display: flex; align-items: center; gap: 6px; }
+    .editor-tools-primary { flex-wrap: wrap; }
     .editor-motif-picker { position: static; }
     .editor-motif-menu {
       position: absolute;
@@ -503,24 +539,34 @@
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
     .editor-scroll {
       width: 100%;
-      aspect-ratio: var(--print-aspect, 2700 / 1050);
+      height: var(--workspace-stage-height);
+      padding: 12px;
       overflow: auto;
       overscroll-behavior: contain;
-      border: 1px solid rgba(123, 70, 82, .18);
-      border-radius: 14px;
-      background: #fff;
-      box-shadow:
-        0 10px 28px rgba(64, 15, 38, .055),
-        inset 0 0 0 1px rgba(255, 255, 255, .82);
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
       scrollbar-color: rgba(123,70,82,.28) transparent;
     }
-    .editor-scroll.is-fit { overflow: hidden; }
+    .editor-scroll.is-fit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
     .editor-canvas-shell {
       width: 100%;
-      min-width: 100%;
+      min-width: 0;
       position: relative;
       aspect-ratio: var(--print-aspect, 2700 / 1050);
-      transition: width .2s ease;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border: 1px solid rgba(64, 15, 38, .08);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: none;
+      transition: width .2s ease, height .2s ease;
     }
     .editor-canvas-shell .canvas-container {
       width: 100% !important;
@@ -550,18 +596,23 @@
       box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
     }
     .editor-selection {
-      min-height: 104px;
-      margin-bottom: 12px;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 13px;
-      background: rgba(255,255,255,.72);
+      min-height: 0;
+      margin: 10px 0 0;
+      padding: 10px 0 0;
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
       transition: border-color .2s, background .2s, box-shadow .2s;
     }
     .editor-selection.is-active {
       border-color: rgba(156,28,76,.24);
-      background: rgba(255,255,255,.94);
-      box-shadow: 0 7px 20px rgba(73,29,44,.055);
+      background: transparent;
+      box-shadow: none;
     }
     .editor-selection.is-photo .editor-field-label-color { opacity: .42; }
     .editor-selection-head { display: none; }
@@ -626,7 +677,7 @@
     .editor-color-input::-webkit-color-swatch { border: 0; opacity: 0; }
     .editor-color-input::-moz-color-swatch { border: 0; opacity: 0; }
     .editor-color-input:disabled { cursor: not-allowed; opacity: .38; }
-    .editor-actions { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .editor-actions { margin-top: 0; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
     .editor-delete { color: #9b2b42; }
     .editor-status {
       position: absolute;
@@ -1137,6 +1188,7 @@
     .order-list { display: grid; }
     .order-item {
       min-width: 0;
+      position: relative;
       display: grid;
       grid-template-columns: 46px minmax(0, 1fr) auto;
       align-items: center;
@@ -1144,6 +1196,22 @@
       padding: 10px 0;
       border: 0;
       background: transparent;
+    }
+    .order-item + .order-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 55px;
+      right: 38px;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        rgba(123, 70, 82, 0),
+        rgba(123, 70, 82, .12) 8%,
+        rgba(123, 70, 82, .12) 92%,
+        rgba(123, 70, 82, 0)
+      );
+      pointer-events: none;
     }
     .order-item.is-editing {
       border-radius: 10px;
@@ -1268,9 +1336,12 @@
         width: 100%;
         margin-top: 8px;
       }
-      .workbench { grid-template-columns: 1fr; }
-      .preview-card { order: 1; position: static; min-height: 0; }
-      .editor-card { order: 2; }
+      .workbench {
+        --workspace-stage-height: clamp(400px, 66vh, 560px);
+        grid-template-columns: 1fr;
+      }
+      .editor-card { order: 1; }
+      .preview-card { order: 2; position: static; min-height: 0; }
     }
 
     @media (max-width: 620px) {
@@ -1280,6 +1351,8 @@
       .page { padding: 38px 0 50px; }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
+      .workspace-tools { padding: 12px; border-radius: 16px; }
+      .workbench { --workspace-stage-height: clamp(340px, 92vw, 470px); }
       .preview-card, .editor-card { padding: 20px; border-radius: 21px; }
       .order-actions .save-button,
       .secondary-button {
@@ -1292,15 +1365,18 @@
       }
       .design-toolbar { padding: 14px 0 16px; }
       .preview-head { align-items: center; }
-      .mug-stage { min-height: 310px; margin: 0 -20px 16px; padding: 6px 14px 18px; gap: 22px; }
-      .mug-viewer { height: 270px; }
+      .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 16px -20px 0; padding: 6px 14px 18px; gap: 22px; }
+      .mug-viewer { height: min(270px, calc(var(--workspace-stage-height) - 44px)); }
       .mug { width: min(35vw, 165px); }
       .mug-name { margin-top: 0; font-size: 11px; }
-      .surface-editor { align-items: stretch; flex-direction: column; }
-      .surface-tabs { width: 100%; }
-      .surface-tab { flex: 1; }
-      .surface-copy { width: 100%; }
+      .surface-editor { align-items: center; flex-direction: row; }
+      .surface-tabs { width: auto; }
+      .surface-tab { flex: 0 0 auto; }
+      .surface-copy { width: auto; }
       .editor-toolbar { align-items: flex-start; }
+      .editor-tools { flex-wrap: wrap; }
+      .editor-selection { grid-template-columns: 1fr; }
+      .editor-actions { justify-content: flex-start; }
       .editor-button { min-height: 40px; }
       .editor-icon-button { width: 40px; }
       .editor-motif-menu { width: min(350px, calc(100vw - 70px)); }
@@ -1396,16 +1472,13 @@
           </div>
         </section>
 
-        <div class="workbench">
-          <section class="editor-card" aria-labelledby="editor-title">
-            <h2 class="editor-title" id="editor-title">Druckfläche bearbeiten</h2>
-            <div class="wrap-preview">
-              <div class="surface-editor" id="surface-editor" hidden>
-                <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
-                <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
-              </div>
+        <section class="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
               <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
-                <div class="editor-tools">
+                <div class="editor-tools editor-tools-primary">
+                  <div class="surface-editor" id="surface-editor" hidden>
+                    <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
+                    <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
+                  </div>
                   <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
                   <button class="editor-button editor-button-primary" id="editor-photo" type="button"><span aria-hidden="true">＋</span> Foto</button>
                   <input class="editor-photo-input" id="editor-photo-input" type="file" accept="image/*" multiple />
@@ -1451,6 +1524,12 @@
                   <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
                 </div>
               </div>
+        </section>
+
+        <div class="workbench">
+          <section class="editor-card" aria-labelledby="editor-title">
+            <h2 class="editor-title" id="editor-title">Druckfläche bearbeiten</h2>
+            <div class="wrap-preview">
               <div class="editor-scroll is-fit" id="editor-scroll">
                 <div class="editor-canvas-shell" id="editor-canvas-shell">
                   <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter, Fotos und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
@@ -1531,7 +1610,7 @@
   <script src="/js/wordcloud-core.js?v=20260819-2"></script>
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/mug-editor.js?v=20260825-1"></script>
+  <script src="/js/mug-editor.js?v=20260825-3"></script>
   <script>
     'use strict';
 
@@ -1544,6 +1623,9 @@
     const errorText = document.getElementById('error-text');
     const mugCanvas = document.getElementById('mug-preview');
     const mugViewer = document.getElementById('mug-3d');
+    const productStage = document.getElementById('product-stage');
+    const workbench = document.querySelector('.workbench');
+    const editorScroll = document.getElementById('editor-scroll');
     const flatPreview = document.getElementById('flat-product-preview');
     const flatCanvas = document.getElementById('flat-preview');
     const wrapCanvas = document.getElementById('wrap-canvas');
@@ -2335,6 +2417,45 @@
       mug3D.resize();
     }
 
+    function refreshFlatProductPreviewFit() {
+      if (!product || product.previewType !== 'flat') return;
+      const previewInsets = {
+        coaster: { x: 20, y: 20 },
+        poster: { x: 8, y: 8 },
+        'framed-poster': { x: 34, y: 34 },
+        tote: { x: 18, y: 76 },
+        blanket: { x: 12, y: 12 },
+        notebook: { x: 30, y: 24 },
+        pillow: { x: 18, y: 18 },
+      }[product.previewShape] || { x: 12, y: 12 };
+      const availableWidth = Math.max(1, mugViewer.clientWidth - previewInsets.x);
+      const availableHeight = Math.max(1, mugViewer.clientHeight - previewInsets.y);
+      const aspect = product.printFile.width / product.printFile.height;
+      const previewWidth = Math.min(availableWidth, availableHeight * aspect);
+      const previewHeight = previewWidth / aspect;
+      flatPreview.style.setProperty('--flat-preview-width', `${Math.floor(previewWidth)}px`);
+      flatPreview.style.setProperty('--flat-preview-height', `${Math.floor(previewHeight)}px`);
+    }
+
+    function refreshWorkspaceLayout() {
+      if (!product) return;
+      const scrollStyles = getComputedStyle(editorScroll);
+      const horizontalPadding = parseFloat(scrollStyles.paddingLeft) + parseFloat(scrollStyles.paddingRight);
+      const availableWidth = Math.max(1, editorScroll.clientWidth - horizontalPadding);
+      const printAspect = product.printFile.width / product.printFile.height;
+      const isMobile = window.innerWidth <= 620;
+      const minimumHeight = isMobile ? 280 : 320;
+      const maximumHeight = isMobile
+        ? Math.min(470, window.innerHeight * .72)
+        : Math.min(620, window.innerHeight * .72);
+      const desiredHeight = availableWidth / printAspect + 24;
+      const stageHeight = Math.round(Math.min(maximumHeight, Math.max(minimumHeight, desiredHeight)));
+      workbench.style.setProperty('--workspace-stage-height', `${stageHeight}px`);
+      mugEditor?.refreshViewport();
+      refreshFlatProductPreviewFit();
+      resizeMug3D();
+    }
+
     function updateMug3DTexture() {
       if (!mug3D || !product) return;
       mug3D.updateTexture((ctx, { offsetX, offsetY }) => {
@@ -2409,6 +2530,7 @@
       if (!product) return;
       const isMug = product.previewType === 'mug';
       mugViewer.classList.toggle('is-flat', !isMug);
+      productStage.classList.toggle('is-flat-product', !isMug);
       flatPreview.classList.toggle('is-coaster', product.previewShape === 'coaster');
       flatPreview.classList.toggle('is-framed', product.previewShape === 'framed-poster');
       flatPreview.classList.toggle('is-tote', product.previewShape === 'tote');
@@ -2419,17 +2541,7 @@
         '--flat-preview-aspect',
         `${product.printFile.width} / ${product.printFile.height}`
       );
-      const flatPreviewHeight = product.previewShape === 'coaster'
-        ? 292
-        : product.previewShape === 'tote'
-          ? 286
-          : product.previewShape === 'blanket'
-            ? 250
-            : product.previewShape === 'pillow' ? 292 : 330;
-      flatPreview.style.setProperty(
-        '--flat-preview-width',
-        `${Math.round(flatPreviewHeight * product.printFile.width / product.printFile.height)}px`
-      );
+      requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;
       mugViewer.setAttribute('aria-label', isMug
         ? 'Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.'
@@ -2440,7 +2552,7 @@
       document.getElementById('mug-viewer-hint').textContent = isMug
         ? `↔ ↕ Ziehen zum Drehen · ${germanDecimal(product.size.heightCm)} cm × Ø ${germanDecimal(product.size.diameterCm)} cm`
         : `${product.displayName} · ${product.size.label}${activeSurfaceLabel}`;
-      document.getElementById('product-stage').setAttribute(
+      productStage.setAttribute(
         'aria-label',
         `Vorschau: ${product.displayName}, ${product.size.label}`
       );
@@ -2830,8 +2942,8 @@
     }
 
     window.addEventListener('resize', () => {
+      refreshWorkspaceLayout();
       renderAll();
-      resizeMug3D();
     });
 
     saveButton.addEventListener('click', async () => {
