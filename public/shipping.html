@@ -158,7 +158,7 @@
     .add-shipment-button:hover:not(:disabled) { background: rgba(156, 28, 76, .07); }
     .address-fields { display: grid; gap: 13px; }
     .field-row { display: grid; grid-template-columns: minmax(105px, .72fr) minmax(0, 1.28fr); gap: 13px; align-items: start; }
-    label { display: grid; gap: 5px; color: var(--ink); font-size: 13px; font-weight: 500; line-height: 1.2; }
+    label, .field-control { display: grid; gap: 5px; color: var(--ink); font-size: 13px; font-weight: 500; line-height: 1.2; }
     .field-label { display: inline-flex; align-items: baseline; gap: 4px; }
     .optional { color: var(--muted); font-weight: 400; }
     input, select {
@@ -170,6 +170,100 @@
     input::placeholder { color: #b9a8ad; }
     input:focus, select:focus { border-color: var(--line-strong); box-shadow: 0 0 0 3px rgba(164, 14, 76, .08); }
     input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--danger); }
+    .search-picker { position: relative; }
+    .search-trigger {
+      width: 100%; min-height: 50px; padding: 0 42px 0 14px;
+      position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border: 1px solid var(--line); border-radius: 12px; outline: none;
+      background: #fff; color: var(--ink); cursor: pointer; text-align: left; font-size: 16px;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .search-trigger::after {
+      content: "⌄";
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1;
+      transform: translateY(-54%);
+    }
+    .search-picker.is-open .search-trigger::after { transform: translateY(-44%) rotate(180deg); }
+    .search-trigger:focus-visible,
+    .search-picker.is-open .search-trigger { border-color: var(--line-strong); box-shadow: 0 0 0 3px rgba(164, 14, 76, .08); }
+    .search-trigger[aria-invalid="true"] { border-color: var(--danger); }
+    .search-trigger-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .search-trigger-meta { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; }
+    .search-menu {
+      position: absolute;
+      z-index: 40;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(64, 15, 38, .14);
+    }
+    .search-input-wrap { position: relative; }
+    .search-input {
+      height: 42px;
+      padding: 0 40px 0 36px;
+      font-size: 15px;
+    }
+    .search-input-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      color: var(--muted);
+      font-size: 18px;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .search-input-clear {
+      width: 32px;
+      height: 32px;
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 24px;
+      line-height: 1;
+    }
+    .search-input-clear:hover { background: rgba(64, 15, 38, .06); color: var(--ink); }
+    .search-results {
+      max-height: 238px;
+      margin-top: 8px;
+      display: grid;
+      gap: 3px;
+      overflow: auto;
+    }
+    .search-option {
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 15px;
+      text-align: left;
+    }
+    .search-option:hover,
+    .search-option.is-active { background: rgba(156, 28, 76, .07); }
+    .search-option.is-selected { background: rgba(40, 122, 100, .09); }
+    .search-option small { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+    .search-empty { padding: 12px 10px; color: var(--muted); font-size: 13px; font-weight: 400; }
     .state-field[hidden] { display: none; }
     .submit-button {
       width: 100%; min-height: 54px; margin-top: 5px; padding: 14px 20px;
@@ -349,67 +443,316 @@
       }
     }
 
-    function addCountryOption(group, country) {
-      const option = document.createElement('option');
-      option.value = country.code;
-      option.textContent = localizedCountryName(country);
-      group.appendChild(option);
-    }
-
-    function addCountryOptions(select, selectedCode = '') {
-      select.replaceChildren();
-      const empty = document.createElement('option');
-      empty.value = '';
-      empty.textContent = 'Land auswählen';
-      select.appendChild(empty);
-
-      const preferredCodes = ['DE', 'AT', 'CH'];
-      const preferredGroup = document.createElement('optgroup');
-      preferredGroup.label = 'Häufig gewählt';
-      preferredCodes.map((code) => countries.find((country) => country.code === code))
-        .filter(Boolean)
-        .forEach((country) => addCountryOption(preferredGroup, country));
-      select.appendChild(preferredGroup);
-
-      const allGroup = document.createElement('optgroup');
-      allGroup.label = 'Alle Länder';
-      countries.filter((country) => !preferredCodes.includes(country.code))
-        .sort((a, b) => localizedCountryName(a).localeCompare(localizedCountryName(b), 'de'))
-        .forEach((country) => addCountryOption(allGroup, country));
-      select.appendChild(allGroup);
-      select.value = selectedCode || defaultCountryCode();
-      select.disabled = false;
-    }
-
     function defaultCountryCode() {
       return countries.some((country) => country.code === 'DE')
         ? 'DE'
         : countries[0]?.code || '';
     }
 
-    function updateStates(countrySelect, stateField, stateSelect, selectedState = '') {
-      const country = countries.find((entry) => entry.code === countrySelect.value);
+    function normalizeSearchText(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('de')
+        .trim();
+    }
+
+    function sortedCountries() {
+      return [...countries].sort((a, b) => localizedCountryName(a).localeCompare(localizedCountryName(b), 'de'));
+    }
+
+    function countryOptionsForPicker() {
+      const preferredCodes = ['DE', 'AT', 'CH'];
+      const preferred = preferredCodes
+        .map((code) => countries.find((country) => country.code === code))
+        .filter(Boolean);
+      const remaining = sortedCountries().filter((country) => !preferredCodes.includes(country.code));
+      return [...preferred, ...remaining].map((country) => ({
+        value: country.code,
+        label: localizedCountryName(country),
+        meta: country.code,
+        searchText: country.name,
+      }));
+    }
+
+    function stateOptionsForPicker(states) {
+      return states.map((state) => ({
+        value: state.code,
+        label: state.name,
+        meta: state.code,
+      }));
+    }
+
+    function normalizePickerOptions(options) {
+      return (Array.isArray(options) ? options : [])
+        .map((option) => ({
+          value: String(option.value || '').trim(),
+          label: String(option.label || option.value || '').trim(),
+          meta: String(option.meta || '').trim(),
+          searchText: String(option.searchText || '').trim(),
+        }))
+        .filter((option) => option.value && option.label);
+    }
+
+    function pickerOptionsForSearch(options, query) {
+      const normalizedQuery = normalizeSearchText(query);
+      if (!normalizedQuery) return options;
+      return options.filter((option) => normalizeSearchText(
+        `${option.value} ${option.label} ${option.meta} ${option.searchText}`
+      ).includes(normalizedQuery));
+    }
+
+    function closeSearchPicker(picker) {
+      picker.classList.remove('is-open');
+      picker.querySelector('.search-menu').hidden = true;
+      picker.querySelector('.search-trigger').setAttribute('aria-expanded', 'false');
+      picker.querySelector('.search-input')?.removeAttribute('aria-activedescendant');
+    }
+
+    function closeSearchPickers(except = null) {
+      document.querySelectorAll('.search-picker.is-open').forEach((picker) => {
+        if (picker !== except) closeSearchPicker(picker);
+      });
+    }
+
+    let searchPickerCounter = 0;
+
+    function createSearchPicker({
+      fieldPath,
+      options = [],
+      selectedValue = '',
+      placeholder = 'Auswählen',
+      searchPlaceholder = 'Suchen',
+      emptyText = 'Nichts gefunden',
+      ariaLabel = 'Auswahl',
+      required = false,
+      onSelect = () => {},
+    }) {
+      const pickerId = `search-picker-${searchPickerCounter += 1}`;
+      let pickerOptions = normalizePickerOptions(options);
+      let resultOptions = [];
+      let activeIndex = -1;
+
+      const picker = document.createElement('div');
+      picker.className = 'search-picker';
+      picker.dataset.searchPicker = '';
+
+      const valueInput = document.createElement('input');
+      valueInput.type = 'hidden';
+      valueInput.required = Boolean(required);
+      valueInput.value = pickerOptions.some((option) => option.value === selectedValue) ? selectedValue : '';
+      valueInput.dataset.fieldPath = fieldPath;
+
+      const trigger = document.createElement('button');
+      trigger.className = 'search-trigger';
+      trigger.type = 'button';
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+
+      const triggerText = document.createElement('span');
+      triggerText.className = 'search-trigger-text';
+      const triggerMeta = document.createElement('small');
+      triggerMeta.className = 'search-trigger-meta';
+      trigger.append(triggerText, triggerMeta);
+
+      const menu = document.createElement('div');
+      menu.className = 'search-menu';
+      menu.hidden = true;
+
+      const searchWrap = document.createElement('div');
+      searchWrap.className = 'search-input-wrap';
+      const searchIcon = document.createElement('span');
+      searchIcon.className = 'search-input-icon';
+      searchIcon.textContent = '⌕';
+      searchIcon.setAttribute('aria-hidden', 'true');
+      const search = document.createElement('input');
+      search.className = 'search-input';
+      search.type = 'search';
+      search.placeholder = searchPlaceholder;
+      search.autocomplete = 'off';
+      search.setAttribute('aria-label', searchPlaceholder);
+      search.setAttribute('aria-controls', `${pickerId}-results`);
+      const clearSearch = document.createElement('button');
+      clearSearch.className = 'search-input-clear';
+      clearSearch.type = 'button';
+      clearSearch.textContent = '×';
+      clearSearch.setAttribute('aria-label', 'Suche löschen');
+      searchWrap.append(searchIcon, search, clearSearch);
+
+      const results = document.createElement('div');
+      results.className = 'search-results';
+      results.id = `${pickerId}-results`;
+      results.setAttribute('role', 'listbox');
+      menu.append(searchWrap, results);
+
+      function selectedOption() {
+        return pickerOptions.find((option) => option.value === valueInput.value);
+      }
+
+      function renderTrigger() {
+        const option = selectedOption();
+        const label = option ? option.label : placeholder;
+        triggerText.textContent = label;
+        triggerMeta.textContent = option?.meta || '';
+        trigger.setAttribute('aria-label', option ? `${ariaLabel}: ${label}` : placeholder);
+      }
+
+      function setActiveOption(nextIndex) {
+        const options = [...results.querySelectorAll('.search-option')];
+        if (!options.length) {
+          activeIndex = -1;
+          search.removeAttribute('aria-activedescendant');
+          return;
+        }
+        activeIndex = Math.max(0, Math.min(nextIndex, options.length - 1));
+        options.forEach((option, optionIndex) => {
+          const isActive = optionIndex === activeIndex;
+          option.classList.toggle('is-active', isActive);
+          if (isActive) {
+            option.scrollIntoView({ block: 'nearest' });
+            search.setAttribute('aria-activedescendant', option.id);
+          }
+        });
+      }
+
+      function renderOptions() {
+        resultOptions = pickerOptionsForSearch(pickerOptions, search.value);
+        results.replaceChildren();
+        if (!resultOptions.length) {
+          const empty = document.createElement('div');
+          empty.className = 'search-empty';
+          empty.textContent = emptyText;
+          results.append(empty);
+          setActiveOption(-1);
+          return;
+        }
+        const selectedIndex = resultOptions.findIndex((option) => option.value === valueInput.value);
+        resultOptions.forEach((pickerOption, optionIndex) => {
+          const option = document.createElement('button');
+          option.className = 'search-option';
+          option.type = 'button';
+          option.id = `${pickerId}-option-${pickerOption.value}`;
+          option.setAttribute('role', 'option');
+          option.setAttribute('aria-selected', pickerOption.value === valueInput.value ? 'true' : 'false');
+          const name = document.createElement('span');
+          name.textContent = pickerOption.label;
+          const meta = document.createElement('small');
+          meta.textContent = pickerOption.meta;
+          option.append(name, meta);
+          option.classList.toggle('is-selected', pickerOption.value === valueInput.value);
+          option.addEventListener('click', () => selectOption(pickerOption));
+          option.addEventListener('mouseenter', () => setActiveOption(optionIndex));
+          results.append(option);
+        });
+        setActiveOption(selectedIndex >= 0 ? selectedIndex : 0);
+      }
+
+      function openPicker() {
+        closeSearchPickers(picker);
+        picker.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+        menu.hidden = false;
+        search.value = '';
+        renderOptions();
+        requestAnimationFrame(() => search.focus());
+      }
+
+      function selectOption(option) {
+        const changed = valueInput.value !== option.value;
+        valueInput.value = option.value;
+        trigger.removeAttribute('aria-invalid');
+        renderTrigger();
+        closeSearchPicker(picker);
+        trigger.focus();
+        if (changed) onSelect(valueInput);
+      }
+
+      trigger.addEventListener('click', () => {
+        if (picker.classList.contains('is-open')) {
+          closeSearchPicker(picker);
+          return;
+        }
+        openPicker();
+      });
+      trigger.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          openPicker();
+        }
+      });
+      search.addEventListener('input', (event) => {
+        event.stopPropagation();
+        renderOptions();
+      });
+      search.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          event.stopPropagation();
+          setActiveOption(activeIndex + 1);
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          event.stopPropagation();
+          setActiveOption(activeIndex - 1);
+        } else if (event.key === 'Enter') {
+          event.preventDefault();
+          event.stopPropagation();
+          if (activeIndex >= 0 && resultOptions[activeIndex]) selectOption(resultOptions[activeIndex]);
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          closeSearchPicker(picker);
+          trigger.focus();
+        }
+      });
+      clearSearch.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        search.value = '';
+        renderOptions();
+        search.focus();
+      });
+
+      renderTrigger();
+      picker.append(valueInput, trigger, menu);
+      return {
+        element: picker,
+        input: valueInput,
+        trigger,
+        setOptions(nextOptions, nextSelectedValue = valueInput.value) {
+          pickerOptions = normalizePickerOptions(nextOptions);
+          valueInput.value = pickerOptions.some((option) => option.value === nextSelectedValue)
+            ? nextSelectedValue
+            : '';
+          renderTrigger();
+          if (picker.classList.contains('is-open')) renderOptions();
+        },
+        setRequired(nextRequired) {
+          valueInput.required = Boolean(nextRequired);
+        },
+      };
+    }
+
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest('.search-picker')) closeSearchPickers();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSearchPickers();
+    });
+
+    function updateStates(countryInput, stateField, statePicker, selectedState = '') {
+      const country = countries.find((entry) => entry.code === countryInput.value);
       const states = country?.states || [];
-      stateSelect.replaceChildren();
       if (!states.length) {
         stateField.hidden = true;
-        stateSelect.required = false;
-        stateSelect.value = '';
+        statePicker.setRequired(false);
+        statePicker.setOptions([], '');
         return;
       }
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.textContent = 'Region auswählen';
-      stateSelect.appendChild(placeholder);
-      for (const state of states) {
-        const option = document.createElement('option');
-        option.value = state.code;
-        option.textContent = state.name;
-        stateSelect.appendChild(option);
-      }
       stateField.hidden = false;
-      stateSelect.required = true;
-      stateSelect.value = selectedState;
+      statePicker.setRequired(true);
+      statePicker.setOptions(stateOptionsForPicker(states), selectedState);
     }
 
     function configurationSizeText(itemConfiguration) {
@@ -674,32 +1017,52 @@
       );
       fields.append(row);
 
-      const countryLabel = document.createElement('label');
+      const countryField = document.createElement('div');
+      countryField.className = 'field-control';
+      const countryLabel = document.createElement('span');
+      countryLabel.className = 'field-label';
       countryLabel.textContent = 'Land';
-      const countrySelect = document.createElement('select');
-      countrySelect.required = true;
-      countrySelect.autocomplete = index === 0 ? 'shipping country' : '';
-      countrySelect.dataset.fieldPath = shipmentFieldPath(index, 'country_code');
-      countryLabel.append(countrySelect);
-      fields.append(countryLabel);
+      countryField.append(countryLabel);
 
-      const stateField = document.createElement('label');
-      stateField.className = 'state-field';
+      const stateField = document.createElement('div');
+      stateField.className = 'field-control state-field';
       stateField.hidden = true;
-      stateField.textContent = 'Bundesstaat oder Region';
-      const stateSelect = document.createElement('select');
-      stateSelect.autocomplete = index === 0 ? 'shipping address-level1' : '';
-      stateSelect.dataset.fieldPath = shipmentFieldPath(index, 'state_code');
-      stateField.append(stateSelect);
+      const stateLabel = document.createElement('span');
+      stateLabel.className = 'field-label';
+      stateLabel.textContent = 'Bundesstaat oder Region';
+      stateField.append(stateLabel);
+      const statePicker = createSearchPicker({
+        fieldPath: shipmentFieldPath(index, 'state_code'),
+        options: [],
+        selectedValue: String(recipient.state_code || '').toUpperCase(),
+        placeholder: 'Region auswählen',
+        searchPlaceholder: 'Region suchen',
+        emptyText: 'Keine Region gefunden',
+        ariaLabel: 'Bundesstaat oder Region',
+        onSelect: clearQuote,
+      });
+      stateField.append(statePicker.element);
+
+      const countryPicker = createSearchPicker({
+        fieldPath: shipmentFieldPath(index, 'country_code'),
+        options: countryOptionsForPicker(),
+        selectedValue: String(recipient.country_code || '').toUpperCase() || defaultCountryCode(),
+        placeholder: 'Land auswählen',
+        searchPlaceholder: 'Land suchen',
+        emptyText: 'Kein Land gefunden',
+        ariaLabel: 'Land',
+        required: true,
+        onSelect: (countryInput) => {
+          updateStates(countryInput, stateField, statePicker);
+          clearQuote();
+        },
+      });
+      countryField.append(countryPicker.element);
+      fields.append(countryField);
       fields.append(stateField);
 
       card.append(head, productsBlock, fields);
-      addCountryOptions(countrySelect, String(recipient.country_code || '').toUpperCase());
-      updateStates(countrySelect, stateField, stateSelect, String(recipient.state_code || '').toUpperCase());
-      countrySelect.addEventListener('change', () => {
-        updateStates(countrySelect, stateField, stateSelect);
-        clearQuote();
-      });
+      updateStates(countryPicker.input, stateField, statePicker, String(recipient.state_code || '').toUpperCase());
       updateQuantityButtons(card);
       return card;
     }
@@ -860,7 +1223,12 @@
         }
         const direct = [...shipmentList.querySelectorAll('[data-field-path]')]
           .find((field) => field.dataset.fieldPath === name);
-        if (direct) return direct;
+        if (direct) {
+          if (direct.type === 'hidden') {
+            return direct.closest('.search-picker')?.querySelector('.search-trigger') || direct;
+          }
+          return direct;
+        }
         return document.getElementById(fieldIds[name] || name);
       };
       const first = fields.map(resolve).find(Boolean);

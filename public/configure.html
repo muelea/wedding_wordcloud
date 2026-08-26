@@ -920,20 +920,6 @@
     .save-button:disabled { cursor: wait; opacity: .6; transform: none; }
     .checkout-note { margin: 11px 0 0; text-align: center; color: var(--muted); font-size: 11px; }
 
-    .success-box {
-      display: none;
-      margin-top: 16px;
-      padding: 16px;
-      border: 1px solid rgba(57, 115, 95, .22);
-      border-radius: 14px;
-      background: rgba(57, 115, 95, .07);
-      color: var(--success);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-    .success-box.show { display: block; }
-    .success-box strong { display: block; margin-bottom: 3px; }
-    .success-box a { text-decoration: underline; text-underline-offset: 3px; }
     .order-box {
       margin-top: 16px;
       padding: 14px;
@@ -1234,7 +1220,6 @@
 
           <button class="save-button" id="save-button" type="button">Design zur Bestellung hinzufügen <span aria-hidden="true">→</span></button>
           <p class="checkout-note">Danach könnt ihr weitere Produkte gestalten oder zur Lieferadresse wechseln.</p>
-          <div class="success-box" id="success-box" aria-live="polite"></div>
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
               <strong>Eure Bestellung</strong>
@@ -1290,7 +1275,6 @@
     const customColorAdd = document.getElementById('custom-color-add');
     const photoButton = document.getElementById('editor-photo');
     const photoInput = document.getElementById('editor-photo-input');
-    const successBox = document.getElementById('success-box');
     const orderBox = document.getElementById('order-box');
     const orderList = document.getElementById('order-list');
     const orderCount = document.getElementById('order-count');
@@ -1400,15 +1384,6 @@
       return items;
     }
 
-    function showSuccess(title, copy) {
-      const strong = document.createElement('strong');
-      strong.textContent = title;
-      const span = document.createElement('span');
-      span.textContent = copy;
-      successBox.replaceChildren(strong, span);
-      successBox.classList.add('show');
-    }
-
     async function openOrderItem(configurationId) {
       const item = loadOrderItems().find((candidate) => candidate.id === configurationId);
       if (!item) {
@@ -1419,7 +1394,6 @@
       saveButton.disabled = true;
       saveButton.textContent = 'Design wird geöffnet…';
       errorText.textContent = '';
-      successBox.classList.remove('show');
       try {
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/edit`,
@@ -1433,7 +1407,6 @@
         renderOrderBox();
         saveButton.disabled = false;
         saveButton.innerHTML = 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>';
-        showSuccess('Design geöffnet.', 'Ihr könnt es prüfen, bearbeiten oder direkt mit eurer Bestellung fortfahren.');
         document.getElementById('preview-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
         mugEditor?.setFeedback('Design aus eurer Bestellung geöffnet');
       } catch {
@@ -1512,7 +1485,6 @@
     designAnotherButton.addEventListener('click', () => {
       editingOrderItemId = null;
       hasUnsavedOpenedDesign = false;
-      successBox.classList.remove('show');
       errorText.textContent = '';
       saveButton.disabled = false;
       saveButton.innerHTML = 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
@@ -2079,7 +2051,6 @@
     function markDirty() {
       if (suppressDirty) return;
       errorText.textContent = '';
-      successBox.classList.remove('show');
       if (editingOrderItemId) hasUnsavedOpenedDesign = true;
       saveButton.disabled = false;
       saveButton.innerHTML = editingOrderItemId
@@ -2457,19 +2428,10 @@
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'save_failed');
-        const replacedDesign = editingOrderItemId && editingOrderItemId !== data.id;
-        const items = addOrderItem(data, { replaceId: editingOrderItemId });
+        addOrderItem(data, { replaceId: editingOrderItemId });
         editingOrderItemId = data.id;
         hasUnsavedOpenedDesign = false;
         renderOrderBox();
-        showSuccess(
-          replacedDesign ? 'Änderungen gespeichert.' : 'Design gespeichert.',
-          replacedDesign
-            ? 'Der Eintrag in eurer Bestellung wurde aktualisiert.'
-            : items.length === 1
-            ? 'Ihr könnt jetzt zur Lieferadresse wechseln oder ein weiteres Produkt gestalten.'
-            : 'Das neue Design liegt in eurer Bestellung.'
-        );
         saveButton.disabled = false;
         saveButton.innerHTML = 'Änderungen in Bestellung speichern <span aria-hidden="true">→</span>';
       } catch {
