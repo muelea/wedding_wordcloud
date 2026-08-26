@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { startTestServer, createEvent } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
 async function saveConfiguration(baseUrl, slug, quantityOrOptions = 3) {
   const options = typeof quantityOrOptions === 'object'
@@ -15,8 +15,8 @@ async function saveConfiguration(baseUrl, slug, quantityOrOptions = 3) {
       productKey: options.productKey || 'white-glossy-mug-duo-11oz',
       quantity: options.quantity,
       theme: options.theme || 'pastel',
-      placement: options.placement || 'single',
       words: [['liebe', 3], ['glück', 2]],
+      ...productDesignPayload(options.productKey || 'white-glossy-mug-duo-11oz'),
     }),
   });
   assert.equal(response.status, 201);
@@ -204,7 +204,6 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
   const coaster = await saveConfiguration(baseUrl, event.slug, {
     productKey: 'cork-back-coaster',
-    placement: 'fit-area',
   });
 
   const printful = require('../src/printful');

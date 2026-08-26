@@ -402,6 +402,8 @@ function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { c
 
 function normalizeProductDesigns(rawBody, product) {
   if (!rawBody || typeof rawBody !== 'object') return null;
+  const rawDesigns = rawBody.designs;
+  if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
   const imageBudget = { count: 0, bytes: 0 };
   const normalizeOne = (rawDesign) => normalizeDesign(
     rawDesign,
@@ -411,31 +413,15 @@ function normalizeProductDesigns(rawBody, product) {
     imageBudget
   );
 
-  if (Object.hasOwn(rawBody, 'designs')) {
-    const rawDesigns = rawBody.designs;
-    if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
-    const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
-    if (Object.keys(rawDesigns).some((surfaceKey) => !allowedSurfaces.has(surfaceKey))) return null;
-    const surfaces = {};
-    for (const surface of product.printSurfaces) {
-      const design = normalizeOne(rawDesigns[surface.key]);
-      if (!design) return null;
-      surfaces[surface.key] = design;
-    }
-    return { version: 2, surfaces };
+  const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
+  if (Object.keys(rawDesigns).some((surfaceKey) => !allowedSurfaces.has(surfaceKey))) return null;
+  const surfaces = {};
+  for (const surface of product.printSurfaces) {
+    const design = normalizeOne(rawDesigns[surface.key]);
+    if (!design) return null;
+    surfaces[surface.key] = design;
   }
-
-  if (!Object.hasOwn(rawBody, 'design')) return null;
-  const design = normalizeOne(rawBody.design);
-  if (!design) return null;
-  if (product.printSurfaces.length === 1) return design;
-  return {
-    version: 2,
-    surfaces: Object.fromEntries(product.printSurfaces.map((surface) => [
-      surface.key,
-      design.map((item) => ({ ...item })),
-    ])),
-  };
+  return { version: 2, surfaces };
 }
 
 function configurationPrintFileUrls(slug, configurationId, product) {
@@ -456,13 +442,11 @@ function configurationResponse(slug, configuration) {
   const baseProduct = getProduct(configuration.product_key);
   const product = resolveProductOrientation(baseProduct, configuration.orientation);
   if (!product) return null;
-  const placement = product.layouts.find((option) => option.key === configuration.placement);
   const printFiles = configurationPrintFileUrls(slug, configuration.id, product);
   return {
     id: configuration.id,
     quantity: Number(configuration.quantity),
     product: getPublicProduct(baseProduct, product.orientation),
-    placement: placement ? { key: placement.key, label: placement.label } : null,
     orientation: product.orientation,
     configurationType: configuration.configuration_type,
     ...printFiles,
@@ -472,12 +456,6 @@ function configurationResponse(slug, configuration) {
 
 function configurationDesignSurfaces(product, design) {
   if (!design) return null;
-  if (Array.isArray(design)) {
-    return Object.fromEntries(product.printSurfaces.map((surface) => [
-      surface.key,
-      design.map((item) => ({ ...item })),
-    ]));
-  }
   if (design.version === 2 && design.surfaces && typeof design.surfaces === 'object') {
     return Object.fromEntries(product.printSurfaces.map((surface) => [
       surface.key,
@@ -510,7 +488,6 @@ function editableConfigurationResponse(slug, configuration) {
     ...summary,
     productKey: configuration.product_key,
     theme: configuration.theme,
-    placementKey: configuration.placement,
     words,
     designs: configurationDesignSurfaces(product, design),
   };
@@ -734,7 +711,6 @@ function makeRouter({ io, port }) {
     if (!product) return res.status(400).json({ error: 'invalid_orientation' });
 
     const theme = req.body?.theme;
-    const placement = req.body?.placement;
     const configurationType = String(req.body?.configurationType || 'event_wordcloud');
     if (!CONFIGURATION_TYPES.has(configurationType)) {
       return res.status(400).json({ error: 'invalid_configuration_type' });
@@ -747,10 +723,6 @@ function makeRouter({ io, port }) {
     if (!product.themes.some((option) => option.key === theme)) {
       return res.status(400).json({ error: 'invalid_theme' });
     }
-    if (!product.layouts.some((option) => option.key === placement)) {
-      return res.status(400).json({ error: 'invalid_placement' });
-    }
-
     // The browser sends the exact snapshot it previewed. Re-normalize it at
     // this trust boundary, then store it independently from the live event.
     const words = configurationType === 'personal_memory'
@@ -762,14 +734,9 @@ function makeRouter({ io, port }) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
-    const hasDesignPayload = Object.hasOwn(req.body || {}, 'design') ||
-      Object.hasOwn(req.body || {}, 'designs');
-    const design = hasDesignPayload ? normalizeProductDesigns(req.body, product) : null;
-    if (hasDesignPayload && !design) {
+    const design = normalizeProductDesigns(req.body, product);
+    if (!design) {
       return res.status(400).json({ error: 'invalid_design' });
-    }
-    if (configurationType === 'personal_memory' && !design) {
-      return res.status(400).json({ error: 'personal_design_required' });
     }
 
     const configuration = db.createConfiguration({
@@ -781,7 +748,6 @@ function makeRouter({ io, port }) {
       // address is entered and never taken from the browser/configuration.
       unitPriceCents: 0,
       theme,
-      placement,
       words,
       design,
       configurationType,
@@ -796,7 +762,6 @@ function makeRouter({ io, port }) {
       productKey: configuration.product_key,
       quantity: Number(configuration.quantity),
       theme: configuration.theme,
-      placement: configuration.placement,
       orientation: configuration.orientation === 'default'
         ? product.orientation
         : configuration.orientation,
@@ -1012,19 +977,13 @@ function makeRouter({ io, port }) {
     if (!product.printSurfaces.some((surface) => surface.key === surfaceKey)) {
       return res.status(400).send('print surface is invalid');
     }
-    let words;
     let design = null;
     try {
-      words = JSON.parse(configuration.words_json);
       if (configuration.design_json) {
         const storedDesign = JSON.parse(configuration.design_json);
-        if (Array.isArray(storedDesign)) {
-          // Configurations created before independent print surfaces used one
-          // immutable design for every Printful placement.
-          design = storedDesign;
-        } else if (storedDesign?.version === 2 &&
-                   storedDesign.surfaces &&
-                   Array.isArray(storedDesign.surfaces[surfaceKey])) {
+        if (storedDesign?.version === 2 &&
+            storedDesign.surfaces &&
+            Array.isArray(storedDesign.surfaces[surfaceKey])) {
           design = storedDesign.surfaces[surfaceKey];
         } else {
           return res.status(500).send('configuration is invalid');
@@ -1033,7 +992,8 @@ function makeRouter({ io, port }) {
     } catch {
       return res.status(500).send('configuration is invalid');
     }
-    const svg = buildProductPrintSvg(product, words, configuration.theme, configuration.placement, design);
+    if (!design) return res.status(500).send('configuration is invalid');
+    const svg = buildProductPrintSvg(product, design);
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(svg);

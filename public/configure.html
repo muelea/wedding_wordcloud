@@ -1169,14 +1169,14 @@
     .orientation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .option { position: relative; cursor: pointer; }
     .option input { position: absolute; opacity: 0; pointer-events: none; }
-    .placement-grid .option input {
-      inset: 0;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      cursor: pointer;
-      pointer-events: auto;
+    .placement-action {
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
     }
     .orientation-grid .option input {
       inset: 0;
@@ -1199,6 +1199,8 @@
       transition: border-color .2s, box-shadow .2s, transform .2s;
     }
     .option:hover .option-card { transform: translateY(-1px); border-color: rgba(156, 28, 76, .35); }
+    .placement-action:focus { outline: none; }
+    .placement-action:focus-visible .option-card { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
     .option input:focus-visible + .option-card { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
     .option input:checked + .option-card {
       border-color: var(--berry);
@@ -1661,9 +1663,9 @@
               <summary class="toolbar-summary">
                 <span>
                   <span class="toolbar-kicker">Platzierung</span>
-                  <strong id="selected-placement-name">Platzierung wählen</strong>
+                  <strong id="placement-summary-name">Design anordnen</strong>
                 </span>
-                <span class="toolbar-summary-detail" id="selected-placement-detail">Auswählen</span>
+                <span class="toolbar-summary-detail" id="placement-summary-detail">Wählt eine Anordnung für euer aktuelles Design.</span>
               </summary>
               <div class="toolbar-panel">
                 <div class="option-grid placement-grid" id="placement-options"></div>
@@ -1828,7 +1830,7 @@
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260826-1"></script>
   <script src="/js/design-fonts.js?v=20260826-1"></script>
-  <script src="/js/design-layout.js?v=20260826-3"></script>
+  <script src="/js/design-layout.js?v=20260826-4"></script>
   <script src="/js/mug-editor.js?v=20260826-9"></script>
   <script>
     'use strict';
@@ -1858,8 +1860,8 @@
     const selectedOrientationDetail = document.getElementById('selected-orientation-detail');
     const selectedThemeName = document.getElementById('selected-theme-name');
     const selectedThemeSwatches = document.getElementById('selected-theme-swatches');
-    const selectedPlacementName = document.getElementById('selected-placement-name');
-    const selectedPlacementDetail = document.getElementById('selected-placement-detail');
+    const placementSummaryName = document.getElementById('placement-summary-name');
+    const placementSummaryDetail = document.getElementById('placement-summary-detail');
     const changeProductButton = document.getElementById('change-product');
     const orientationStep = document.getElementById('orientation-step');
     const themeStep = document.getElementById('theme-step');
@@ -1898,7 +1900,6 @@
     let selectedTheme = 'pastel';
     let selectedOrientation = 'default';
     let customColors = [];
-    let selectedPlacement = 'single';
     let renderFrame = null;
     let mug3D = null;
     let mug3DLoadPromise = null;
@@ -2232,10 +2233,6 @@
       return product?.themes.find((option) => option.key === selectedTheme) || product?.themes[0] || null;
     }
 
-    function selectedPlacementOption() {
-      return product?.layouts.find((layout) => layout.key === selectedPlacement) || product?.layouts[0] || null;
-    }
-
     function updateToolbarSummaries() {
       const orientation = selectedOrientationOption();
       if (orientation) {
@@ -2247,11 +2244,8 @@
         selectedThemeName.textContent = palette.label;
         renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
       }
-      const placement = selectedPlacementOption();
-      if (placement) {
-        selectedPlacementName.textContent = placement.label;
-        selectedPlacementDetail.textContent = placement.description;
-      }
+      placementSummaryName.textContent = 'Design anordnen';
+      placementSummaryDetail.textContent = 'Wählt eine Anordnung für euer aktuelles Design.';
     }
 
     function closeToolbarMenus(except = null) {
@@ -2410,7 +2404,8 @@
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
-      const slots = view.layoutGeometry[selectedPlacement];
+      const initialLayoutKey = view.layouts[0].key;
+      const slots = view.layoutGeometry[initialLayoutKey];
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
@@ -2421,7 +2416,7 @@
         const xScale = slot.optimize ? 1 : slotWidth / slotHeight;
         placed.forEach((item, itemIndex) => {
           design.push({
-            id: `${selectedPlacement}-${slotIndex + 1}-${itemIndex + 1}`,
+            id: `${initialLayoutKey}-${slotIndex + 1}-${itemIndex + 1}`,
             text: item.word,
             x: Math.round((slot.x + item.x * xScale) * 10) / 10,
             y: Math.round((slot.y + item.y) * 10) / 10,
@@ -2518,9 +2513,6 @@
         selectedTheme = product.themes.some((option) => option.key === configurationData.theme)
           ? configurationData.theme
           : product.themes[0].key;
-        selectedPlacement = product.layouts.some((layout) => layout.key === configurationData.placementKey)
-          ? configurationData.placementKey
-          : product.layouts[0].key;
         words = Array.isArray(configurationData.words) ? configurationData.words : words;
 
         buildProductOptions();
@@ -2997,10 +2989,7 @@
 
     function selectedProductSlot() {
       const view = productView();
-      const layoutKey = view.layouts.some((layout) => layout.key === selectedPlacement)
-        ? selectedPlacement
-        : view.layouts[0].key;
-      return view.layoutGeometry[layoutKey][0];
+      return view.layoutGeometry[view.layouts[0].key][0];
     }
 
     function selectProduct(nextProduct) {
@@ -3008,9 +2997,6 @@
       product = nextProduct;
       selectedFamilyKey = product.familyKey;
       selectedOrientation = product.defaultOrientation || 'default';
-      if (!product.layouts.some((layout) => layout.key === selectedPlacement)) {
-        selectedPlacement = product.layouts[0].key;
-      }
       buildPlacementOptions();
       buildOrientationOptions();
       if (mugEditor) {
@@ -3142,27 +3128,20 @@
       updateProductOptionSelection();
     }
 
-    function applyPlacementToCurrentDesign(previousPlacement, nextPlacement) {
+    function applyPlacementToCurrentDesign(layoutKey) {
       if (!mugEditor) return false;
       storeActiveSurfaceState();
       const view = productView();
-      const previousSlots = view.layoutGeometry[previousPlacement] || view.layoutGeometry[view.layouts[0].key];
-      const nextSlots = view.layoutGeometry[nextPlacement] || view.layoutGeometry[view.layouts[0].key];
-      const optimize = nextSlots.some((slot) => slot.optimize === true);
-      if (previousPlacement === nextPlacement && !optimize) return false;
+      const slots = view.layoutGeometry[layoutKey];
+      if (!slots) return false;
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const nextStates = new Map();
       for (const surface of productSurfaces()) {
         const currentDesign = surfaceStates.get(surface.key)?.design || [];
-        const transformed = previousPlacement === nextPlacement
-          ? cloneDesign(currentDesign)
-          : DesignLayout.transformDesign(currentDesign, previousSlots, nextSlots);
-        const design = optimize
-          ? DesignLayout.optimizeDesign(transformed, nextSlots, measurementContext, {
-              fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
-            })
-          : transformed;
+        const design = DesignLayout.applyLayoutAction(currentDesign, slots, measurementContext, {
+          fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
+        });
         nextStates.set(surface.key, cloneEditorState({ design }, false));
       }
       surfaceStates = nextStates;
@@ -3235,39 +3214,21 @@
       updateToolbarSummaries();
     }
 
-    function activatePlacement(layout, { reapply = false } = {}) {
-      const previousPlacement = selectedPlacement;
-      if (previousPlacement === layout.key && !reapply) return;
-      selectedPlacement = layout.key;
-      updateToolbarSummaries();
+    function activatePlacement(layout) {
+      if (!layout) return;
       closeToolbarMenus();
       markDirty();
-      if (mugEditor) {
-        applyPlacementToCurrentDesign(previousPlacement, selectedPlacement);
-        mugEditor.setFeedback(selectedPlacement === 'fit-area'
-          ? 'Aktuelles Design nutzt jetzt die Druckfläche optimal'
-          : 'Aktuelles Design an die Platzierung angepasst');
-      }
+      applyPlacementToCurrentDesign(layout.key);
       renderAll();
     }
 
     function buildPlacementOptions() {
       placementOptions.replaceChildren();
-      if (!product.layouts.some((layout) => layout.key === selectedPlacement)) {
-        selectedPlacement = product.layouts[0].key;
-      }
       for (const layout of product.layouts) {
-        const label = document.createElement('label');
-        label.className = 'option';
-        const input = document.createElement('input');
-        input.type = 'radio';
-        input.name = 'placement';
-        input.value = layout.key;
-        input.checked = layout.key === selectedPlacement;
-        input.addEventListener('change', () => activatePlacement(layout));
-        input.addEventListener('click', () => {
-          if (layout.key === selectedPlacement) activatePlacement(layout, { reapply: true });
-        });
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'option placement-action';
+        button.addEventListener('click', () => activatePlacement(layout));
         const card = document.createElement('span');
         card.className = 'option-card';
         const name = document.createElement('strong');
@@ -3275,8 +3236,8 @@
         const description = document.createElement('small');
         description.textContent = layout.description;
         card.append(name, description);
-        label.append(input, card);
-        placementOptions.appendChild(label);
+        button.append(card);
+        placementOptions.appendChild(button);
       }
       updateToolbarSummaries();
     }
@@ -3408,7 +3369,6 @@
             productKey: product.key,
             orientation: selectedOrientation,
             theme: selectedTheme,
-            placement: selectedPlacement,
             words,
             designs,
             configurationType,

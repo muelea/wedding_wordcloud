@@ -24,14 +24,14 @@ add their own photos, words and motifs, and purchase it independently.
 5. From the guest page, any attendee can open the personal-memory flow. It
    starts with an empty product design, locally reduces selected photos before upload,
    and keeps that opaque design separate from the shared wedding word cloud. It uses
-   the same products, placements and editing tools as the shared-cloud configurator;
+   the same products, arrangement actions and editing tools as the shared-cloud configurator;
    only the initial canvas content differs.
    A guest can add up to six photos plus personal words and motifs, then use
    the normal address, quote and checkout flow for their own order.
 6. After the event, the couple opens a product configurator, chooses a white
    mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
    spiral notebook or decorative pillow from grouped product families, any
-   color palette and a product-specific print layout, and approves an
+   color palette and product-specific arrangement actions, and approves an
    immutable Printful-sized file with a transparent background. Each approved
    design is added to the local order basket, so the customer can design a mug,
    a coaster, another mug size, etc. before moving to delivery. Basket designs
@@ -52,8 +52,9 @@ add their own photos, words and motifs, and purchase it independently.
    users can also copy and paste selected elements with the standard keyboard
    shortcuts. Text elements can use the classic default or one of four curated,
    locally bundled print fonts; a font change also works across a mixed
-   multi-selection and affects only its text elements. Placement changes transform the complete
-   current canvas instead of regenerating it from the original event words. Words
+   multi-selection and affects only its text elements. Arrangement actions always transform the
+   complete current canvas and can be applied repeatedly; they are commands, not a persisted
+   selection. The immutable canvas design is the only source for preview and Printful output. Words
    can also be edited directly. Hard bounds keep
    the entire design printable.
 7. The saved designs continue to a dedicated, mobile-first shipping-address

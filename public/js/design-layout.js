@@ -58,52 +58,6 @@
     return candidate;
   }
 
-  function transformItem(item, source, target, id) {
-    const xScale = target.width / source.width;
-    const yScale = target.height / source.height;
-    const sizeScale = Math.min(xScale, yScale);
-    const transformed = {
-      ...item,
-      id,
-      x: round(target.x + (item.x - source.x) * xScale),
-      y: round(target.y + (item.y - source.y) * yScale),
-    };
-    if (item.type === 'image') {
-      transformed.width = round(Math.max(48, item.width * sizeScale));
-      transformed.height = round(Math.max(48, item.height * sizeScale));
-    } else if (item.type === 'icon') {
-      transformed.size = round(Math.max(48, item.size * sizeScale));
-    } else {
-      transformed.fontSize = round(Math.max(12, item.fontSize * sizeScale));
-    }
-    return transformed;
-  }
-
-  function transformDesign(design, fromSlots, toSlots) {
-    if (!Array.isArray(design) || !design.length) return [];
-    const sources = normalizedSlots(fromSlots);
-    const targets = normalizedSlots(toSlots);
-    if (!sources.length || !targets.length) return design.map((item) => ({ ...item }));
-
-    const usedIds = new Set(design.map((item) => String(item.id || '')).filter(Boolean));
-    const duplicateAcrossTargets = sources.length === 1 && targets.length > 1;
-    const transformed = [];
-
-    for (const item of design) {
-      const sourceIndex = nearestSlotIndex(item, sources);
-      const source = sources[sourceIndex];
-      const destinations = duplicateAcrossTargets
-        ? targets
-        : [targets[Math.min(sourceIndex, targets.length - 1)]];
-
-      destinations.forEach((target, destinationIndex) => {
-        const id = destinationIndex === 0 ? item.id : copyId(item, usedIds);
-        transformed.push(transformItem(item, source, target, id));
-      });
-    }
-    return transformed;
-  }
-
   function itemDimensions(item, scale, measureContext, fontFamily) {
     let width;
     let height;
@@ -211,6 +165,64 @@
     return optimized;
   }
 
+  function fitItemsInSlot(items, slot, measureContext, fontFamily) {
+    if (!items.length) return [];
+    const bounds = items.reduce((result, item) => {
+      const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
+      return {
+        x1: Math.min(result.x1, item.x - dimensions.width / 2),
+        x2: Math.max(result.x2, item.x + dimensions.width / 2),
+        y1: Math.min(result.y1, item.y - dimensions.height / 2),
+        y2: Math.max(result.y2, item.y + dimensions.height / 2),
+      };
+    }, { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
+    const sourceWidth = Math.max(1, bounds.x2 - bounds.x1);
+    const sourceHeight = Math.max(1, bounds.y2 - bounds.y1);
+    const inset = Math.max(2, Math.min(slot.width, slot.height) * .025);
+    const xScale = Math.max(0, slot.width - inset * 2) / sourceWidth;
+    const yScale = Math.max(0, slot.height - inset * 2) / sourceHeight;
+    const sizeScale = Math.min(xScale, yScale);
+    const sourceCenterX = (bounds.x1 + bounds.x2) / 2;
+    const sourceCenterY = (bounds.y1 + bounds.y2) / 2;
+    const targetCenterX = slot.x + slot.width / 2;
+    const targetCenterY = slot.y + slot.height / 2;
+
+    return items.map((item) => scaleItem(
+      item,
+      sizeScale,
+      targetCenterX + (item.x - sourceCenterX) * xScale,
+      targetCenterY + (item.y - sourceCenterY) * yScale
+    ));
+  }
+
+  function arrangeDesign(design, slots, measureContext, options = {}) {
+    if (!Array.isArray(design) || !design.length) return [];
+    const targets = normalizedSlots(slots);
+    if (!targets.length) return design.map((item) => ({ ...item }));
+    const fontFamily = options.fontFamily || 'Georgia, "Times New Roman", serif';
+    if (targets.length === 1) {
+      return fitItemsInSlot(design, targets[0], measureContext, fontFamily);
+    }
+
+    const grouped = targets.map(() => []);
+    design.forEach((item) => grouped[nearestSlotIndex(item, targets)].push(item));
+    const populatedGroups = grouped.filter((group) => group.length);
+    const usedIds = new Set(design.map((item) => String(item.id || '')).filter(Boolean));
+
+    if (populatedGroups.length === 1) {
+      return targets.flatMap((target, targetIndex) => (
+        fitItemsInSlot(design, target, measureContext, fontFamily).map((item) => ({
+          ...item,
+          id: targetIndex === 0 ? item.id : copyId(item, usedIds),
+        }))
+      ));
+    }
+
+    return grouped.flatMap((group, index) => (
+      fitItemsInSlot(group, targets[index], measureContext, fontFamily)
+    ));
+  }
+
   function optimizeItemsInSlot(items, slot, measureContext, fontFamily) {
     if (!items.length) return [];
     const minSide = Math.min(slot.width, slot.height);
@@ -302,5 +314,12 @@
     return design.map((item, index) => optimizedByIndex.get(index) || { ...item });
   }
 
-  return { transformDesign, optimizeDesign };
+  function applyLayoutAction(design, slots, measureContext, options = {}) {
+    const targets = normalizedSlots(slots);
+    return targets.some((slot) => slot.optimize)
+      ? optimizeDesign(design, targets, measureContext, options)
+      : arrangeDesign(design, targets, measureContext, options);
+  }
+
+  return { applyLayoutAction, optimizeDesign };
 });

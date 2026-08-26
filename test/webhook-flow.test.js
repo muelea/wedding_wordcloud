@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Stripe = require('stripe');
-const { startTestServer, createEvent } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
 async function saveConfiguration(baseUrl, slug) {
   const response = await fetch(`${baseUrl}/api/events/${slug}/configurations`, {
@@ -13,8 +13,8 @@ async function saveConfiguration(baseUrl, slug) {
       productKey: 'white-glossy-mug-duo-11oz',
       quantity: 2,
       theme: 'pastel',
-      placement: 'single',
       words: [['füreinander', 3], ['liebe', 2]],
+      ...productDesignPayload(),
     }),
   });
   assert.equal(response.status, 201);

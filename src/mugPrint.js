@@ -4,39 +4,11 @@ const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignFonts = require('./designFonts');
-const { DEFAULT_PRODUCT } = require('./products');
 
 const measureCanvas = createCanvas(10, 10);
 const measureCtx = measureCanvas.getContext('2d');
 
-// Printful file 43 ends on either side of the handle. Its two visible face
-// centres are roughly x=587 and x=2112; x=1350 is the back opposite the
-// handle. The verified geometry lives with the product so the browser
-// preview and print file share it.
-const CLOUD_LAYOUTS = DEFAULT_PRODUCT.layoutGeometry;
 const DESIGN_SAFE_MARGIN = 24;
-
-function textElements(placed, offsetX, offsetY) {
-  return placed.map((p) => {
-    const x = p.x + offsetX;
-    const y = p.y + offsetY;
-    const rotate = p.rotated ? ` transform="rotate(-90 ${x.toFixed(1)} ${y.toFixed(1)})"` : '';
-    return `<text x="${x.toFixed(1)}" y="${(y + p.fontPx * 0.34).toFixed(1)}" ` +
-      `font-size="${p.fontPx.toFixed(1)}" font-family="${WordCloudCore.SVG_FONT_FAMILY}" ` +
-      `fill="${p.color}" text-anchor="middle"${rotate}>${WordCloudCore.escapeXML(p.word)}</text>`;
-  }).join('\n  ');
-}
-
-function layoutSlot(words, slot, colors) {
-  const layoutHeight = slot.height || slot.side;
-  const layoutWidth = slot.width || slot.side;
-  if (slot.optimize) {
-    return WordCloudCore.layoutWordsInArea(words, layoutWidth, layoutHeight, measureCtx, colors);
-  }
-  const xScale = layoutWidth / layoutHeight;
-  return WordCloudCore.layoutWords(words, layoutHeight, measureCtx, colors)
-    .map((item) => ({ ...item, x: item.x * xScale }));
-}
 
 function getDesignBounds(item) {
   let itemWidth;
@@ -64,11 +36,12 @@ function getDesignBounds(item) {
 
 function isPrintDesignWithinBounds(
   design,
-  width = DEFAULT_PRODUCT.printFile.width,
-  height = DEFAULT_PRODUCT.printFile.height,
+  width,
+  height,
   safeMargin = DESIGN_SAFE_MARGIN
 ) {
-  if (!Array.isArray(design) || design.length === 0) return false;
+  if (!Array.isArray(design) || design.length === 0 ||
+      !Number.isFinite(width) || !Number.isFinite(height)) return false;
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
     if (item.type === 'image' &&
@@ -84,8 +57,6 @@ function isPrintDesignWithinBounds(
       item.y + halfHeight <= height - safeMargin;
   });
 }
-
-const isMugDesignWithinBounds = isPrintDesignWithinBounds;
 
 function designElements(design) {
   return design.map((item) => {
@@ -120,54 +91,23 @@ function designElements(design) {
   }).join('\n  ');
 }
 
-/**
- * Builds the exact Printful print file for one curated product.
- * The input words are an immutable configuration snapshot, never the live
- * event state, so a paid design cannot change while fulfillment is running.
- */
-function buildProductPrintSvg(product, words, theme = 'pastel', layout = 'single', design = null) {
-  if ((!Array.isArray(words) || words.length === 0) && !design) {
-    throw new Error('Cannot build a mug print without words');
-  }
-  if (!product?.printFile || !product?.layoutGeometry || !Array.isArray(product?.themes)) {
-    throw new Error('Cannot build a mug print for an invalid product');
-  }
-  const selectedTheme = product.themes.find((option) => option.key === theme) || product.themes[0];
-  const fallbackLayout = product.layouts?.[0]?.key;
-  const slots = product.layoutGeometry[layout] || product.layoutGeometry[fallbackLayout];
+/** Builds the exact Printful file from the immutable canvas shown in preview. */
+function buildProductPrintSvg(product, design) {
+  if (!product?.printFile) throw new Error('Cannot build a print for an invalid product');
   const { width, height } = product.printFile;
-
-  if (design) {
-    if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
-      throw new Error('Cannot build a mug print with an invalid design');
-    }
-    return `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
-      `viewBox="0 0 ${width} ${height}" data-background="transparent">\n` +
-      DesignFonts.embeddedSvgFontFaces(design) +
-      `  <g data-cloud="${layout}" data-custom="true">\n  ${designElements(design)}\n</g>\n` +
-      `</svg>`;
+  if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+    throw new Error('Cannot build a print with an invalid design');
   }
-
-  const groups = slots.map((slot) => {
-    const colors = WordCloudCore.makePaletteAssigner(selectedTheme.colors);
-    const placed = layoutSlot(words, slot, colors);
-    return `<g data-cloud="${layout}">\n  ${textElements(placed, slot.x, slot.y)}\n</g>`;
-  }).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
     `viewBox="0 0 ${width} ${height}" data-background="transparent">\n` +
-    `  ${groups}\n</svg>`;
+    DesignFonts.embeddedSvgFontFaces(design) +
+    `  <g>\n  ${designElements(design)}\n</g>\n` +
+    `</svg>`;
 }
-
-const buildMugPrintSvg = buildProductPrintSvg;
 
 module.exports = {
   buildProductPrintSvg,
-  buildMugPrintSvg,
   isPrintDesignWithinBounds,
-  isMugDesignWithinBounds,
-  CLOUD_LAYOUTS,
-  DESIGN_SAFE_MARGIN,
 };

@@ -82,4 +82,26 @@ async function createEvent(baseUrl, overrides = {}) {
   return { ...body, coupleName, pin: overrides.pin || '1234' };
 }
 
-module.exports = { startTestServer, createEvent, uniqueCoupleName };
+function productDesignPayload(productKey = 'white-glossy-mug-duo-11oz', orientation = 'default') {
+  const { getProduct, resolveProductOrientation } = require('../src/products');
+  const product = resolveProductOrientation(getProduct(productKey), orientation);
+  if (!product) throw new Error(`Unknown test product: ${productKey}`);
+  const design = [{
+    id: 'test-design-word',
+    text: 'liebe',
+    x: product.printFile.width / 2,
+    y: product.printFile.height / 2,
+    fontSize: Math.max(24, Math.min(96, product.printFile.height / 6)),
+    angle: 0,
+    color: '#a40e4c',
+    fontFamily: 'classic',
+  }];
+  return {
+    designs: Object.fromEntries(product.printSurfaces.map((surface) => [
+      surface.key,
+      design.map((item) => ({ ...item, id: `${item.id}-${surface.key}` })),
+    ])),
+  };
+}
+
+module.exports = { startTestServer, createEvent, uniqueCoupleName, productDesignPayload };

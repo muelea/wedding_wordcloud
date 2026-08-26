@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { io: ioClient } = require('socket.io-client');
-const { startTestServer, createEvent } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignLayout = require('../public/js/design-layout.js');
 const DesignFonts = require('../public/js/design-fonts.js');
@@ -31,31 +31,52 @@ function submitWord(socket, word) {
   });
 }
 
-test('placement changes transform the complete current design without dropping elements', () => {
+function oneSurfaceDesign(design) {
+  return { designs: { default: design } };
+}
+
+test('every placement action can be applied repeatedly to the complete current design', () => {
+  const measurementContext = {
+    font: '',
+    measureText(text) {
+      const fontSize = Number.parseFloat(this.font) || 12;
+      return { width: String(text).length * fontSize * .55 };
+    },
+  };
   const currentDesign = [
     { id: 'wort-ausgang', text: 'Liebe', x: 25, y: 40, fontSize: 18, angle: 0, color: '#a40e4c' },
     { id: 'wort-ergaenzt', text: 'Zusammenhalt', x: 75, y: 60, fontSize: 14, angle: -8, color: '#168f83' },
     { id: 'motiv-ergaenzt', type: 'icon', icon: 'heart', x: 50, y: 75, size: 20, angle: 5, color: '#d90368' },
   ];
-  const single = [{ x: 0, y: 0, width: 100, height: 100 }];
-  const fitArea = [{ x: 10, y: 20, width: 200, height: 120 }];
-  const bothSides = [
-    { x: 0, y: 0, width: 80, height: 80 },
-    { x: 120, y: 0, width: 80, height: 80 },
-  ];
+  const actions = {
+    single: [{ x: 10, y: 20, width: 200, height: 120 }],
+    'both-sides': [
+      { x: 0, y: 0, width: 80, height: 80 },
+      { x: 120, y: 0, width: 80, height: 80 },
+    ],
+    'full-wrap': [{ x: 5, y: 10, width: 240, height: 90 }],
+    centered: [{ x: 50, y: 30, width: 120, height: 120 }],
+    'fit-area': [{ x: 10, y: 20, width: 800, height: 500, optimize: true }],
+  };
 
-  const fitted = DesignLayout.transformDesign(currentDesign, single, fitArea);
-  assert.deepEqual(fitted.map((item) => item.id), currentDesign.map((item) => item.id));
-  assert.deepEqual(fitted.map((item) => item.text || item.icon), ['Liebe', 'Zusammenhalt', 'heart']);
-  assert.equal(fitted.find((item) => item.id === 'wort-ergaenzt').x, 160);
+  for (const [key, slots] of Object.entries(actions)) {
+    const applied = DesignLayout.applyLayoutAction(currentDesign, slots, measurementContext);
+    const expectedLength = key === 'both-sides' ? currentDesign.length * 2 : currentDesign.length;
+    assert.equal(applied.length, expectedLength, `${key} must preserve the complete design`);
+    assert.equal(new Set(applied.map((item) => item.id)).size, applied.length);
 
-  const duplicated = DesignLayout.transformDesign(currentDesign, single, bothSides);
-  assert.equal(duplicated.length, currentDesign.length * 2);
-  assert.equal(new Set(duplicated.map((item) => item.id)).size, duplicated.length);
-  assert.equal(duplicated.filter((item) => item.text === 'Zusammenhalt').length, 2);
-
-  const collapsed = DesignLayout.transformDesign(duplicated, bothSides, fitArea);
-  assert.equal(collapsed.length, duplicated.length, 'switching back must not remove either side');
+    const edited = applied.map((item, index) => index === 0
+      ? { ...item, x: item.x + 19, y: item.y + 11, fontSize: 12 }
+      : { ...item });
+    const appliedAgain = DesignLayout.applyLayoutAction(edited, slots, measurementContext);
+    assert.equal(appliedAgain.length, expectedLength, `${key} must be safe to execute again`);
+    assert.deepEqual(
+      [...appliedAgain.map((item) => item.id)].sort(),
+      [...applied.map((item) => item.id)].sort(),
+      `${key} must not add or remove elements when repeated`
+    );
+    assert.notDeepEqual(appliedAgain, edited, `${key} must process the edited canvas again`);
+  }
 });
 
 test('area optimization fills the target with the complete current design', () => {
@@ -364,17 +385,17 @@ test('configurator exposes every curated product with verified Printful geometry
 
   const db = require('../src/db');
   for (const expected of [
-    { key: 'white-glossy-mug-15oz', variantId: 4830, width: 2700, height: 1140, placement: 'single' },
-    { key: 'white-glossy-mug-20oz', variantId: 16586, width: 3071, height: 1205, placement: 'single' },
-    { key: 'cork-back-coaster', variantId: 15662, width: 1181, height: 1181, placement: 'fit-area' },
-    { key: 'matte-poster-30x40cm', variantId: 8948, width: 3544, height: 4724, placement: 'fit-area' },
-    { key: 'matte-poster-50x70cm', variantId: 8952, width: 5906, height: 8268, placement: 'fit-area' },
-    { key: 'framed-matte-poster-black-30x40cm', variantId: 9357, width: 3600, height: 4800, placement: 'fit-area' },
-    { key: 'framed-matte-poster-black-50x70cm', variantId: 9358, width: 5906, height: 8268, placement: 'fit-area' },
-    { key: 'all-over-tote-black-handles', variantId: 4533, width: 2550, height: 2475, placement: 'fit-area' },
-    { key: 'throw-blanket-50x60in', variantId: 10986, width: 9450, height: 7950, placement: 'fit-area' },
-    { key: 'all-over-basic-pillow-18in', variantId: 4532, width: 2850, height: 2850, placement: 'fit-area' },
-    { key: 'spiral-notebook-dotted', variantId: 12141, width: 1725, height: 2625, placement: 'fit-area' },
+    { key: 'white-glossy-mug-15oz', variantId: 4830, width: 2700, height: 1140 },
+    { key: 'white-glossy-mug-20oz', variantId: 16586, width: 3071, height: 1205 },
+    { key: 'cork-back-coaster', variantId: 15662, width: 1181, height: 1181 },
+    { key: 'matte-poster-30x40cm', variantId: 8948, width: 3544, height: 4724 },
+    { key: 'matte-poster-50x70cm', variantId: 8952, width: 5906, height: 8268 },
+    { key: 'framed-matte-poster-black-30x40cm', variantId: 9357, width: 3600, height: 4800 },
+    { key: 'framed-matte-poster-black-50x70cm', variantId: 9358, width: 5906, height: 8268 },
+    { key: 'all-over-tote-black-handles', variantId: 4533, width: 2550, height: 2475 },
+    { key: 'throw-blanket-50x60in', variantId: 10986, width: 9450, height: 7950 },
+    { key: 'all-over-basic-pillow-18in', variantId: 4532, width: 2850, height: 2850 },
+    { key: 'spiral-notebook-dotted', variantId: 12141, width: 1725, height: 2625 },
   ]) {
     const saveResponse = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
       method: 'POST',
@@ -383,8 +404,8 @@ test('configurator exposes every curated product with verified Printful geometry
         productKey: expected.key,
         quantity: 1,
         theme: 'pastel',
-        placement: expected.placement,
         words: [['liebe', 1]],
+        ...productDesignPayload(expected.key),
       }),
     });
     assert.equal(saveResponse.status, 201);
@@ -406,8 +427,8 @@ test('configurator exposes every curated product with verified Printful geometry
       orientation: 'landscape',
       quantity: 1,
       theme: 'pastel',
-      placement: 'fit-area',
       words: [['liebe', 1]],
+      ...productDesignPayload('matte-poster-30x40cm', 'landscape'),
     }),
   });
   assert.equal(landscapeSave.status, 201);
@@ -482,7 +503,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
-  assert.match(configurePage, /design-layout\.js\?v=20260826-3/);
+  assert.match(configurePage, /design-layout\.js\?v=20260826-4/);
   assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
   assert.match(configurePage, /mug-editor\.js\?v=20260826-9/);
   assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"[^>]*hidden/);
@@ -499,9 +520,13 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
   assert.match(configurePage, /return `wolkenworte-order:\$\{slug\}`/);
   assert.doesNotMatch(configurePage, /wrong_configuration_type/);
-  assert.match(configurePage, /applyPlacementToCurrentDesign\(previousPlacement, selectedPlacement\)/);
-  assert.match(configurePage, /DesignLayout\.optimizeDesign\(transformed, nextSlots/);
-  assert.match(configurePage, /input\.addEventListener\('click', \(\) => \{[\s\S]{0,160}activatePlacement\(layout, \{ reapply: true \}\)/);
+  assert.match(configurePage, /<strong id="placement-summary-name">Design anordnen<\/strong>/);
+  assert.match(configurePage, /Wählt eine Anordnung für euer aktuelles Design\./);
+  assert.match(configurePage, /DesignLayout\.applyLayoutAction\(currentDesign, slots/);
+  assert.match(configurePage, /button\.className = 'option placement-action'/);
+  assert.match(configurePage, /button\.addEventListener\('click', \(\) => activatePlacement\(layout\)\)/);
+  assert.doesNotMatch(configurePage, /selectedPlacement/);
+  assert.doesNotMatch(configurePage, /name = 'placement'/);
   assert.doesNotMatch(configurePage, /Fläche füllen/);
   assert.doesNotMatch(configurePage, /input\.addEventListener\('change',[\s\S]{0,400}mugEditor\.setDesign\(buildAutomaticDesign\(\)/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
@@ -596,12 +621,11 @@ test('a guest can create an isolated personal photo design without event words',
       productKey: 'white-glossy-mug-duo-11oz',
       quantity: 1,
       theme: 'pastel',
-      placement: 'single',
       words: [['must-not-leak', 1]],
     }),
   });
   assert.equal(missingDesign.status, 400);
-  assert.equal((await missingDesign.json()).error, 'personal_design_required');
+  assert.equal((await missingDesign.json()).error, 'invalid_design');
 
   const onePixelPng =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ' +
@@ -624,9 +648,8 @@ test('a guest can create an isolated personal photo design without event words',
       productKey: 'white-glossy-mug-duo-11oz',
       quantity: 1,
       theme: 'pastel',
-      placement: 'single',
       words: [['must-not-leak', 1]],
-      design,
+      ...oneSurfaceDesign(design),
     }),
   });
   assert.equal(save.status, 201);
@@ -639,7 +662,6 @@ test('a guest can create an isolated personal photo design without event words',
   assert.equal(savedInfo.configurationType, 'personal_memory');
 
   const printSvg = await fetch(baseUrl + configuration.printFileUrl).then((response) => response.text());
-  assert.match(printSvg, /data-custom="true"/);
   assert.match(printSvg, /data-photo="true"/);
   assert.match(printSvg, /href="data:image\/png;base64,/);
   assert.match(printSvg, /width="800\.0" height="600\.0"/);
@@ -654,8 +676,7 @@ test('a guest can create an isolated personal photo design without event words',
       productKey: 'matte-poster-30x40cm',
       quantity: 1,
       theme: 'sage-gold',
-      placement: 'fit-area',
-      design: [{
+      ...oneSurfaceDesign([{
         id: 'wort-poster',
         type: 'text',
         text: 'Paula Mika',
@@ -664,7 +685,7 @@ test('a guest can create an isolated personal photo design without event words',
         fontSize: 220,
         angle: 0,
         color: '#063e36',
-      }],
+      }]),
     }),
   });
   assert.equal(posterSave.status, 201, 'personal mode accepts the shared flat-product catalog');
@@ -681,7 +702,6 @@ test('a guest can create an isolated personal photo design without event words',
       productKey: 'all-over-basic-pillow-18in',
       quantity: 1,
       theme: 'pastel',
-      placement: 'fit-area',
       designs: {
         front: [{
           id: 'wort-vorne', type: 'text', text: 'Vorne', x: 1425, y: 1425,
@@ -716,7 +736,6 @@ test('a guest can create an isolated personal photo design without event words',
       productKey: 'all-over-basic-pillow-18in',
       quantity: 1,
       theme: 'pastel',
-      placement: 'fit-area',
       designs: { front: [{
         id: 'nur-vorne', type: 'text', text: 'Nur vorne', x: 1425, y: 1425,
         fontSize: 180, angle: 0, color: '#a40e4c',
@@ -734,7 +753,6 @@ test('a guest can create an isolated personal photo design without event words',
       productKey: 'all-over-basic-pillow-18in',
       quantity: 1,
       theme: 'pastel',
-      placement: 'fit-area',
       designs: {
         front: Array.from({ length: 4 }, (_, index) => ({
           id: `foto-vorne-${index}`, type: 'image', src: onePixelPng,
@@ -757,8 +775,7 @@ test('a guest can create an isolated personal photo design without event words',
       configurationType: 'personal_memory',
       quantity: 1,
       theme: 'pastel',
-      placement: 'single',
-      design: [{ ...design[0], src: 'data:image/svg+xml;base64,PHN2Zy8+' }],
+      ...oneSurfaceDesign([{ ...design[0], src: 'data:image/svg+xml;base64,PHN2Zy8+' }]),
     }),
   });
   assert.equal(unsafeImage.status, 400);
@@ -777,6 +794,10 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   await submitWord(socket, 'Glück');
 
   const snapshot = [['liebe', 2], ['glück', 1]];
+  const design = [
+    { id: 'liebe', text: 'liebe', x: 900, y: 500, fontSize: 120, angle: 0, color: '#a40e4c' },
+    { id: 'glueck', text: 'glück', x: 1750, y: 560, fontSize: 90, angle: 0, color: '#d90368' },
+  ];
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -784,8 +805,8 @@ test('confirmed configuration freezes the approved words in a permanent Printful
       productKey: 'white-glossy-mug-duo-11oz',
       quantity: 7,
       theme: 'pastel',
-      placement: 'single',
       words: snapshot,
+      ...oneSurfaceDesign(design),
     }),
   });
   assert.equal(save.status, 201);
@@ -812,78 +833,51 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   assert.equal((svg.match(/<text /g) || []).length, snapshot.length);
 });
 
-test('two-sided placement prints each approved word exactly twice and rejects invalid options', async (t) => {
+test('configurations require the exact canvas and store no placement state', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Doppelseite Dana' });
+  const event = await createEvent(baseUrl, { coupleName: 'Canvas Carla' });
 
-  const invalid = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+  const missingDesign = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ theme: 'rainbow', placement: 'everywhere', words: [['liebe', 1]] }),
+    body: JSON.stringify({ theme: 'pastel', words: [['liebe', 1]] }),
   });
-  assert.equal(invalid.status, 400);
+  assert.equal(missingDesign.status, 400);
+  assert.equal((await missingDesign.json()).error, 'invalid_design');
 
   const invalidQuantity = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quantity: 100, theme: 'pastel', placement: 'single', words: [['liebe', 1]] }),
+    body: JSON.stringify({
+      quantity: 100,
+      theme: 'pastel',
+      words: [['liebe', 1]],
+      ...productDesignPayload(),
+    }),
   });
   assert.equal(invalidQuantity.status, 400);
   assert.equal((await invalidQuantity.json()).error, 'invalid_quantity');
 
-  const defaultQuantity = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ theme: 'pastel', placement: 'single', words: [['liebe', 1]] }),
-  });
-  assert.equal(defaultQuantity.status, 201);
-  assert.equal((await defaultQuantity.json()).quantity, 1);
-
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quantity: 1, theme: 'sage-gold', placement: 'both-sides', words: [['liebe & treue', 3], ['spaß', 2]] }),
+    body: JSON.stringify({
+      quantity: 1,
+      theme: 'sage-gold',
+      words: [['liebe', 1]],
+      ...productDesignPayload(),
+    }),
   });
   assert.equal(save.status, 201);
   const configuration = await save.json();
+  assert.equal(Object.hasOwn(configuration, 'placement'), false);
+
+  const db = require('../src/db');
+  const columns = db.db.prepare('PRAGMA table_info(configurations)').all().map((column) => column.name);
+  assert.equal(columns.includes('placement'), false);
   const svg = await fetch(baseUrl + configuration.printFileUrl).then((res) => res.text());
-  assert.equal((svg.match(/<text /g) || []).length, 4);
-  assert.equal((svg.match(/liebe &amp; treue/g) || []).length, 2);
-  assert.equal((svg.match(/>spaß<\/text>/g) || []).length, 2);
-  assert.match(svg, /fill="#063e36"/);
-  assert.doesNotMatch(svg, /<rect\b/);
-
-  const fullWrapSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quantity: 3, theme: 'ocean', placement: 'full-wrap', words: [['liebe', 3], ['spaß', 2]] }),
-  });
-  assert.equal(fullWrapSave.status, 201);
-  const fullWrapConfiguration = await fullWrapSave.json();
-  const fullWrapSvg = await fetch(baseUrl + fullWrapConfiguration.printFileUrl).then((res) => res.text());
-  assert.match(fullWrapSvg, /data-cloud="full-wrap"/);
-  assert.equal((fullWrapSvg.match(/<text /g) || []).length, 2);
-  assert.equal((fullWrapSvg.match(/<g data-cloud=/g) || []).length, 1);
-  assert.match(fullWrapSvg, /fill="#003049"/);
-  assert.doesNotMatch(fullWrapSvg, /<rect\b/);
-
-  const fitAreaSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      quantity: 2,
-      theme: 'pastel',
-      placement: 'fit-area',
-      words: [['liebe', 8], ['glück', 5], ['zusammen', 3], ['humor', 1]],
-    }),
-  });
-  assert.equal(fitAreaSave.status, 201);
-  const fitAreaConfiguration = await fitAreaSave.json();
-  const fitAreaSvg = await fetch(baseUrl + fitAreaConfiguration.printFileUrl).then((res) => res.text());
-  assert.match(fitAreaSvg, /data-cloud="fit-area"/);
-  assert.equal((fitAreaSvg.match(/<text /g) || []).length, 4);
-  assert.doesNotMatch(fitAreaSvg, /<rect\b/);
+  assert.doesNotMatch(svg, /data-cloud=/);
 });
 
 test('custom editor design is frozen exactly and cannot leave the printable area', async (t) => {
@@ -904,15 +898,13 @@ test('custom editor design is frozen exactly and cannot leave the printable area
       productKey: 'white-glossy-mug-duo-11oz',
       quantity: 2,
       theme: 'custom',
-      placement: 'full-wrap',
       words,
-      design,
+      ...oneSurfaceDesign(design),
     }),
   });
   assert.equal(save.status, 201);
   const configuration = await save.json();
   const svg = await fetch(baseUrl + configuration.printFileUrl).then((res) => res.text());
-  assert.match(svg, /data-cloud="full-wrap" data-custom="true"/);
   assert.match(svg, /x="1280\.0"/);
   assert.match(svg, /font-size="118\.0"/);
   assert.match(svg, /transform="rotate\(15\.0 1280\.0 460\.0\)"/);
@@ -941,7 +933,7 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   const editableBody = await editable.json();
   assert.equal(editableBody.productKey, 'white-glossy-mug-duo-11oz');
   assert.equal(editableBody.theme, 'custom');
-  assert.equal(editableBody.placementKey, 'full-wrap');
+  assert.equal(Object.hasOwn(editableBody, 'placementKey'), false);
   assert.deepEqual(editableBody.words, words);
   assert.deepEqual(editableBody.designs.default.map((item) => ({
     id: item.id,
@@ -962,12 +954,11 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     body: JSON.stringify({
       quantity: 2,
       theme: 'pastel',
-      placement: 'single',
       words,
-      design: [{
+      ...oneSurfaceDesign([{
         id: 'wort-fremde-schrift', text: 'bleibt sicher', x: 1300, y: 500,
         fontSize: 100, angle: 0, color: '#123456', fontFamily: 'untrusted-font',
-      }],
+      }]),
     }),
   });
   assert.equal(unknownFont.status, 400);
@@ -979,9 +970,11 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     body: JSON.stringify({
       quantity: 2,
       theme: 'pastel',
-      placement: 'single',
       words,
-      design: [{ id: 'outside', text: 'zu weit', x: 10, y: 500, fontSize: 100, angle: 0, color: '#123456' }],
+      ...oneSurfaceDesign([{
+        id: 'outside', text: 'zu weit', x: 10, y: 500,
+        fontSize: 100, angle: 0, color: '#123456',
+      }]),
     }),
   });
   assert.equal(outside.status, 400);
@@ -993,12 +986,11 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     body: JSON.stringify({
       quantity: 2,
       theme: 'pastel',
-      placement: 'single',
       words,
-      design: [
+      ...oneSurfaceDesign([
         { id: 'wort-1', text: 'bleibt', x: 1200, y: 500, fontSize: 100, angle: 0, color: '#123456' },
         { id: 'motiv-rand', type: 'icon', icon: 'heart', x: 30, y: 500, size: 160, angle: 0, color: '#d90368' },
-      ],
+      ]),
     }),
   });
   assert.equal(outsideMotif.status, 400);
@@ -1010,12 +1002,11 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     body: JSON.stringify({
       quantity: 2,
       theme: 'pastel',
-      placement: 'single',
       words,
-      design: [
+      ...oneSurfaceDesign([
         { id: 'wort-1', text: 'bleibt', x: 1200, y: 500, fontSize: 100, angle: 0, color: '#123456' },
         { id: 'motiv-fremd', type: 'icon', icon: 'uploaded-script', x: 1500, y: 500, size: 160, angle: 0, color: '#123456' },
-      ],
+      ]),
     }),
   });
   assert.equal(unknownMotif.status, 400);

@@ -99,9 +99,8 @@ db.exec(`
     quantity             INTEGER NOT NULL DEFAULT 2,
     unit_price_cents     INTEGER NOT NULL DEFAULT 1745,
     theme                TEXT NOT NULL,
-    placement            TEXT NOT NULL,
     words_json           TEXT NOT NULL,
-    design_json          TEXT,
+    design_json          TEXT NOT NULL,
     configuration_type   TEXT NOT NULL DEFAULT 'event_wordcloud',
     orientation          TEXT NOT NULL DEFAULT 'default',
     print_width          INTEGER NOT NULL,
@@ -186,6 +185,9 @@ db.exec(`
 const configurationColumns = new Set(
   db.prepare('PRAGMA table_info(configurations)').all().map((column) => column.name)
 );
+if (configurationColumns.has('placement')) {
+  db.exec('ALTER TABLE configurations DROP COLUMN placement;');
+}
 if (!configurationColumns.has('quantity')) {
   db.exec('ALTER TABLE configurations ADD COLUMN quantity INTEGER NOT NULL DEFAULT 2;');
 }
@@ -944,10 +946,9 @@ function isCheckoutQuoteExpired(quote) {
 }
 
 // ── Product configurations ──────────────────────────────────────────────
-// A configuration stores the exact word list the couple previewed. This is
-// intentionally separate from the live `words` table: guests may keep
-// submitting after the couple opens the configurator, but an approved print
-// file must remain immutable from preview through fulfillment.
+// A configuration stores the exact immutable canvas approved in the preview.
+// The word snapshot is kept as its editing/reset input, independently from the
+// live event table, which may continue changing after approval.
 function createConfiguration({
   eventId,
   productKey,
@@ -955,7 +956,6 @@ function createConfiguration({
   quantity,
   unitPriceCents,
   theme,
-  placement,
   words,
   design,
   configurationType = 'event_wordcloud',
@@ -963,13 +963,14 @@ function createConfiguration({
   printWidth,
   printHeight,
 }) {
+  if (!design) throw new TypeError('A configuration requires an immutable canvas design.');
   const id = crypto.randomBytes(12).toString('base64url');
   db.prepare(`
     INSERT INTO configurations (
       id, event_id, product_key, printful_variant_id, quantity,
-      unit_price_cents, theme, placement, words_json, design_json,
+      unit_price_cents, theme, words_json, design_json,
       configuration_type, orientation, print_width, print_height
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     eventId,
@@ -978,9 +979,8 @@ function createConfiguration({
     quantity,
     unitPriceCents,
     theme,
-    placement,
     JSON.stringify(words),
-    design ? JSON.stringify(design) : null,
+    JSON.stringify(design),
     configurationType,
     orientation,
     printWidth,

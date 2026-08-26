@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { startTestServer, createEvent } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
 test('fulfillment is immutable, idempotent and only writes a draft behind all live safety gates', async (t) => {
   const previous = {};
@@ -40,9 +40,8 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     quantity: 4,
     unitPriceCents: 0,
     theme: 'pastel',
-    placement: 'single',
     words: [['liebe', 3]],
-    design: null,
+    design: { version: 2, surfaces: productDesignPayload().designs },
     printWidth: 2700,
     printHeight: 1050,
   });
@@ -196,11 +195,10 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     quantity: 1,
     unitPriceCents: 0,
     theme: 'pastel',
-    placement: 'fit-area',
     words: [['liebe', 3]],
-    design: null,
-    printWidth: 1500,
-    printHeight: 1500,
+    design: { version: 2, surfaces: productDesignPayload('cork-back-coaster').designs },
+    printWidth: 1181,
+    printHeight: 1181,
   });
   const mixedQuote = db.createCheckoutQuote({
     eventId: event.id,
