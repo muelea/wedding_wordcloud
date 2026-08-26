@@ -290,7 +290,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="workspace-tools"/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260825-3/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260826-1/);
+  assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
   assert.match(configurePage, /function updateProductMockup\(\)/);
   assert.match(configurePage, /product\.previewMockup\.canvas\.fit === 'cover'/);
@@ -311,11 +312,13 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260825-3`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-1`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
   assert.match(mugEditorSource, /refreshViewport/);
+  assert.match(mugEditorSource, /bringActiveToFront\(\)/);
+  assert.match(mugEditorSource, /bringObjectToFront\(active\)/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
   for (const [asset, contentType] of [
     ['/assets/product-mockups/tote-front.jpg', 'image/jpeg'],

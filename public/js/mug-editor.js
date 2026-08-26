@@ -56,6 +56,7 @@
         options.rotateLeftButton,
         options.rotateRightButton,
         options.duplicateButton,
+        options.bringFrontButton,
         options.deleteButton,
       ];
       this.history = [];
@@ -325,6 +326,7 @@
       options.rotateLeftButton.addEventListener('click', () => this.rotateActive(-15));
       options.rotateRightButton.addEventListener('click', () => this.rotateActive(15));
       options.duplicateButton.addEventListener('click', () => this.duplicateActive());
+      options.bringFrontButton.addEventListener('click', () => this.bringActiveToFront());
       options.deleteButton.addEventListener('click', () => this.deleteActive());
 
       this.textInput.addEventListener('input', () => {
@@ -842,6 +844,22 @@
       this.setFeedback(active.editorKind === 'image'
         ? 'Foto dupliziert'
         : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
+    }
+
+    bringActiveToFront() {
+      const active = this.canvas.getActiveObject();
+      if (!active) return;
+      const objects = this.canvas.getObjects();
+      if (objects[objects.length - 1] === active) {
+        this.setFeedback('Element ist bereits ganz vorn.');
+        return;
+      }
+      this.canvas.bringObjectToFront(active);
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.setFeedback('Element ganz nach vorn gebracht');
     }
 
     serializeObject(object) {

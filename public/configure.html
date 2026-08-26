@@ -1575,6 +1575,7 @@
                   <button class="editor-button" id="editor-rotate-left" type="button" aria-label="Nach links drehen" title="Nach links drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↺</span> Drehen</button>
                   <button class="editor-button" id="editor-rotate-right" type="button" aria-label="Nach rechts drehen" title="Nach rechts drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↻</span> Drehen</button>
                   <button class="editor-button" id="editor-duplicate" type="button" disabled>Duplizieren</button>
+                  <button class="editor-button" id="editor-bring-front" type="button" aria-label="Ganz nach vorn" title="Ganz nach vorn" disabled><span aria-hidden="true">↥</span> Nach vorn</button>
                   <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
                 </div>
               </div>
@@ -1668,7 +1669,7 @@
   <script src="/js/wordcloud-core.js?v=20260819-2"></script>
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/mug-editor.js?v=20260825-3"></script>
+  <script src="/js/mug-editor.js?v=20260826-1"></script>
   <script>
     'use strict';
 
@@ -3026,6 +3027,7 @@
         rotateLeftButton: document.getElementById('editor-rotate-left'),
         rotateRightButton: document.getElementById('editor-rotate-right'),
         duplicateButton: document.getElementById('editor-duplicate'),
+        bringFrontButton: document.getElementById('editor-bring-front'),
         deleteButton: document.getElementById('editor-delete'),
         printWidth: product.printFile.width,
         printHeight: product.printFile.height,
