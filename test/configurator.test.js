@@ -57,6 +57,60 @@ test('placement changes transform the complete current design without dropping e
   assert.equal(collapsed.length, duplicated.length, 'switching back must not remove either side');
 });
 
+test('area optimization fills the target with the complete current design', () => {
+  const measurementContext = {
+    font: '',
+    measureText(text) {
+      const fontSize = Number.parseFloat(this.font) || 12;
+      return { width: String(text).length * fontSize * .55 };
+    },
+  };
+  const currentDesign = [
+    { id: 'wort-a', text: 'Liebe', x: 40, y: 40, fontSize: 18, angle: 0, color: '#a40e4c' },
+    { id: 'wort-b', text: 'Wir', x: 55, y: 55, fontSize: 14, angle: -8, color: '#168f83' },
+    { id: 'motiv-a', type: 'icon', icon: 'heart', x: 45, y: 60, size: 48, angle: 5, color: '#d90368' },
+  ];
+  const target = [{ x: 100, y: 200, width: 800, height: 500, optimize: true }];
+  const optimized = DesignLayout.optimizeDesign(currentDesign, target, measurementContext, {
+    fontFamily: 'Georgia',
+  });
+
+  assert.deepEqual(optimized.map((item) => item.id), currentDesign.map((item) => item.id));
+  assert.deepEqual(optimized.map((item) => item.color), currentDesign.map((item) => item.color));
+  assert.deepEqual(optimized.map((item) => item.angle), currentDesign.map((item) => item.angle));
+  assert.ok(optimized[0].fontSize > currentDesign[0].fontSize * 2);
+  assert.ok(optimized.every((item) => item.x >= 100 && item.x <= 900));
+  assert.ok(optimized.every((item) => item.y >= 200 && item.y <= 700));
+
+  const oneWord = DesignLayout.optimizeDesign(
+    [{ id: 'solo', text: 'Ja', x: 10, y: 10, fontSize: 12, angle: 0, color: '#400f26' }],
+    target,
+    measurementContext,
+    { fontFamily: 'Georgia' }
+  );
+  assert.ok(oneWord[0].fontSize > 400, 'a single word should grow to use the available height');
+  assert.equal(oneWord[0].x, 500);
+  assert.equal(oneWord[0].y, 450);
+
+  const editedAfterOptimization = [{
+    ...oneWord[0],
+    x: 150,
+    y: 240,
+    fontSize: 24,
+    color: '#168f83',
+  }];
+  const optimizedAgain = DesignLayout.optimizeDesign(
+    editedAfterOptimization,
+    target,
+    measurementContext,
+    { fontFamily: 'Georgia' }
+  );
+  assert.ok(optimizedAgain[0].fontSize > 400, 'the active option must be safe to execute again');
+  assert.equal(optimizedAgain[0].x, 500);
+  assert.equal(optimizedAgain[0].y, 450);
+  assert.equal(optimizedAgain[0].color, '#168f83', 'manual edits remain the optimization input');
+});
+
 test('configurator exposes every curated product with verified Printful geometry', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
@@ -247,6 +301,10 @@ test('configurator exposes every curated product with verified Printful geometry
   );
   assert.ok(data.product.themes.every((theme) => theme.colors.length >= 6));
   assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap', 'fit-area']);
+  assert.ok(data.products.every((candidate) => {
+    const fitArea = candidate.layouts.find((layout) => layout.key === 'fit-area');
+    return !fitArea || fitArea.label === 'Fläche optimal nutzen';
+  }));
   assert.deepEqual(data.product.layoutGeometry.single, [{ x: 127, y: 65, side: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['full-wrap'], [{ x: 130, y: 65, width: 2440, height: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['fit-area'], [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }]);
@@ -318,7 +376,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="workspace-tools"/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(configurePage, /design-layout\.js\?v=20260826-1/);
+  assert.match(configurePage, /design-layout\.js\?v=20260826-2/);
   assert.match(configurePage, /mug-editor\.js\?v=20260826-2/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /id="editor-duplicate"[^>]*title="Duplizieren \(⌘\/Strg \+ C und V\)"/);
@@ -327,6 +385,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /return `wolkenworte-order:\$\{slug\}`/);
   assert.doesNotMatch(configurePage, /wrong_configuration_type/);
   assert.match(configurePage, /applyPlacementToCurrentDesign\(previousPlacement, selectedPlacement\)/);
+  assert.match(configurePage, /DesignLayout\.optimizeDesign\(transformed, nextSlots/);
+  assert.match(configurePage, /input\.addEventListener\('click', \(\) => \{[\s\S]{0,160}activatePlacement\(layout, \{ reapply: true \}\)/);
+  assert.doesNotMatch(configurePage, /Fläche füllen/);
   assert.doesNotMatch(configurePage, /input\.addEventListener\('change',[\s\S]{0,400}mugEditor\.setDesign\(buildAutomaticDesign\(\)/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
   assert.match(configurePage, /function updateProductMockup\(\)/);

@@ -88,15 +88,15 @@ const MUG_LAYOUTS = Object.freeze([
   Object.freeze({
     key: 'fit-area',
     label: 'Fläche optimal nutzen',
-    description: 'Automatisch großflächig angeordnet',
+    description: 'Aktuellen Inhalt automatisch großflächig anordnen',
   }),
 ]);
 
 const FLAT_LAYOUTS = Object.freeze([
   Object.freeze({
     key: 'fit-area',
-    label: 'Fläche füllen',
-    description: 'Automatisch über die gesamte Fläche angeordnet',
+    label: 'Fläche optimal nutzen',
+    description: 'Aktuellen Inhalt automatisch großflächig anordnen',
   }),
   Object.freeze({
     key: 'centered',
