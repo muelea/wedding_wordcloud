@@ -483,7 +483,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
   assert.match(configurePage, /design-layout\.js\?v=20260826-3/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260826-5/);
+  assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260826-6/);
   assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"/);
   assert.match(configurePage, /fontSelect: document\.getElementById\('editor-font'\)/);
   assert.match(configurePage, /DesignFonts\.cssFamily\(item\.fontFamily\)/);
@@ -519,7 +520,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-5`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-6`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
@@ -557,8 +558,10 @@ test('configurator exposes every curated product with verified Printful geometry
     assert.ok((await response.arrayBuffer()).byteLength > 2000);
   }
 
-  const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260817-1`);
+  const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260826-1`);
   assert.equal(motifLibrary.status, 200);
+  assert.equal(MugIcons.VIEWBOX_SIZE, 48);
+  assert.equal(MugIcons.STROKE_WIDTH, 1.5);
   assert.equal(MugIcons.ICONS.length, 10);
   assert.ok(MugIcons.ICONS.every((icon) => icon.id && icon.label && icon.path));
 });
@@ -917,7 +920,9 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.match(svg, />Unser Wort<\/text>/);
   assert.match(svg, />für immer<\/text>/);
   assert.match(svg, /data-motif="heart"/);
+  assert.ok(svg.includes(`d="${MugIcons.get('heart').path}"`));
   assert.match(svg, /stroke="#d90368"/);
+  assert.match(svg, /stroke-width="1\.5"/);
   assert.match(svg, /translate\(1880\.0 390\.0\) rotate\(-12\.0\)/);
   assert.doesNotMatch(svg, />ursprünglich<\/text>/, 'the edited design, not the original cloud, is printed');
   assert.equal((svg.match(/<text /g) || []).length, 2);

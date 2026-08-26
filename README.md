@@ -243,7 +243,7 @@ public/
   datenschutz.html         Current local-development privacy disclosure
   js/mug-3d-viewer.js      Shared rotatable Three.js mug preview
   js/mug-editor.js         Bounded, dynamically scaled text/motif/photo print-area editor
-  js/mug-icons.js          Curated code-native wedding motif library
+  js/mug-icons.js          Curated editorial fine-line wedding motif library
   404.html                 Unknown-event page
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
 test/                      node:test suite — see "Testing" below

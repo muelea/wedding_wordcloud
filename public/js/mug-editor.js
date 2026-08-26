@@ -501,6 +501,7 @@
         svg.setAttribute('aria-hidden', 'true');
         const path = document.createElementNS(svgNamespace, 'path');
         path.setAttribute('d', icon.path);
+        path.setAttribute('stroke-width', root.MugIcons.STROKE_WIDTH);
         svg.appendChild(path);
 
         const label = document.createElement('span');
