@@ -478,6 +478,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="selected-theme-swatches"/);
   assert.doesNotMatch(configurePage, /id="selected-theme-detail"/);
   assert.match(configurePage, /class="workspace-tools"/);
+  assert.match(configurePage, /\.workspace-tools \{[\s\S]*?position: relative;[\s\S]*?z-index: 20;/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
