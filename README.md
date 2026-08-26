@@ -44,8 +44,10 @@ add their own photos, words and motifs, and purchase it independently.
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
    and every curated wedding motif can be moved, resized, rotated, recolored,
-   duplicated or removed; desktop users can also copy and paste selected elements
-   with the standard keyboard shortcuts. Placement changes transform the complete
+   duplicated or removed. A selection rectangle, Shift/Command/Control-click and
+   “Select all” support the familiar temporary multi-selection workflow; desktop
+   users can also copy and paste selected elements with the standard keyboard
+   shortcuts. Placement changes transform the complete
    current canvas instead of regenerating it from the original event words. Words
    can also be edited directly. Hard bounds keep
    the entire design printable.

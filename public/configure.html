@@ -1553,6 +1553,7 @@
                     </div>
                   </div>
                   <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Zurücksetzen</button>
+                  <button class="editor-button" id="editor-select-all" type="button" title="Alles auswählen (⌘/Strg + A)">Alles auswählen</button>
                 </div>
                 <div class="editor-tools">
                   <button class="editor-button editor-icon-button" id="editor-undo" type="button" aria-label="Rückgängig" title="Rückgängig">↶</button>
@@ -1679,7 +1680,7 @@
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
   <script src="/js/design-layout.js?v=20260826-2"></script>
-  <script src="/js/mug-editor.js?v=20260826-2"></script>
+  <script src="/js/mug-editor.js?v=20260826-3"></script>
   <script>
     'use strict';
 
@@ -3072,6 +3073,7 @@
         iconMenu: document.getElementById('editor-icon-menu'),
         iconGrid: document.getElementById('editor-icon-grid'),
         resetButton: document.getElementById('editor-reset'),
+        selectAllButton: document.getElementById('editor-select-all'),
         undoButton: document.getElementById('editor-undo'),
         redoButton: document.getElementById('editor-redo'),
         zoomOutButton: document.getElementById('editor-zoom-out'),

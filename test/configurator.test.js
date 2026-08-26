@@ -377,9 +377,10 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(configurePage, /design-layout\.js\?v=20260826-2/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260826-2/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260826-3/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /id="editor-duplicate"[^>]*title="Duplizieren \(⌘\/Strg \+ C und V\)"/);
+  assert.match(configurePage, /id="editor-select-all"[^>]*title="Alles auswählen \(⌘\/Strg \+ A\)"/);
   assert.doesNotMatch(configurePage, /Gestaltet eure persönliche Erinnerung/);
   assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
   assert.match(configurePage, /return `wolkenworte-order:\$\{slug\}`/);
@@ -409,17 +410,22 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-2`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-3`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
   assert.match(mugEditorSource, /refreshViewport/);
   assert.match(mugEditorSource, /bringActiveToFront\(\)/);
-  assert.match(mugEditorSource, /bringObjectToFront\(active\)/);
+  assert.match(mugEditorSource, /bringObjectToFront\(object\)/);
   assert.match(mugEditorSource, /copyActive\(\)/);
   assert.match(mugEditorSource, /pasteClipboard\(\)/);
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'c'/);
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'v'/);
+  assert.match(mugEditorSource, /selection: true/);
+  assert.match(mugEditorSource, /selectionKey: \['shiftKey', 'ctrlKey', 'metaKey'\]/);
+  assert.match(mugEditorSource, /new root\.fabric\.ActiveSelection\(selectable/);
+  assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'a'/);
+  assert.match(mugEditorSource, /root\.fabric\.util\.qrDecompose\(object\.calcTransformMatrix\(\)\)/);
   assert.doesNotMatch(mugEditorSource, /Mindestens ein Element muss bleiben/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
   for (const [asset, contentType] of [

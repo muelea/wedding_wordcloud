@@ -73,7 +73,11 @@
       this.canvas = new root.fabric.Canvas(options.canvas, {
         width: this.canvasWidth,
         height: this.canvasHeight,
-        selection: false,
+        selection: true,
+        selectionColor: 'rgba(156, 28, 76, .06)',
+        selectionBorderColor: 'rgba(156, 28, 76, .5)',
+        selectionLineWidth: 1,
+        selectionKey: ['shiftKey', 'ctrlKey', 'metaKey'],
         enableRetinaScaling: false,
         preserveObjectStacking: true,
         stopContextMenu: true,
@@ -247,8 +251,14 @@
     }
 
     bindCanvasEvents() {
-      this.canvas.on('selection:created', () => this.updateSelectionPanel());
-      this.canvas.on('selection:updated', () => this.updateSelectionPanel());
+      this.canvas.on('selection:created', () => {
+        this.configureActiveSelection();
+        this.updateSelectionPanel();
+      });
+      this.canvas.on('selection:updated', () => {
+        this.configureActiveSelection();
+        this.updateSelectionPanel();
+      });
       this.canvas.on('selection:cleared', () => this.updateSelectionPanel());
       this.canvas.on('object:moving', (event) => this.handleTransform(event.target));
       this.canvas.on('object:scaling', (event) => this.handleTransform(event.target));
@@ -320,6 +330,7 @@
       options.undoButton.addEventListener('click', () => this.undo());
       options.redoButton.addEventListener('click', () => this.redo());
       options.resetButton.addEventListener('click', () => this.onReset());
+      options.selectAllButton.addEventListener('click', () => this.selectAll());
       options.zoomOutButton.addEventListener('click', () => this.setZoom(this.zoom - .25));
       options.zoomInButton.addEventListener('click', () => this.setZoom(this.zoom + .25));
       options.smallerButton.addEventListener('click', () => this.resizeActive(.9));
@@ -374,6 +385,10 @@
           event.preventDefault();
           return;
         }
+        if (!editingField && command && event.key.toLowerCase() === 'a' && this.selectAll()) {
+          event.preventDefault();
+          return;
+        }
         if (!editingField && command && event.key.toLowerCase() === 'c' && this.copyActive()) {
           event.preventDefault();
           return;
@@ -386,7 +401,12 @@
           this.deleteActive();
           event.preventDefault();
         }
-        if (event.key === 'Escape') this.closeIconPicker();
+        if (event.key === 'Escape') {
+          this.closeIconPicker();
+          this.canvas.discardActiveObject();
+          this.canvas.requestRenderAll();
+          this.updateSelectionPanel();
+        }
       });
       document.addEventListener('click', (event) => {
         if (!this.iconMenu.hidden && !event.target.closest('.editor-motif-picker')) this.closeIconPicker();
@@ -396,6 +416,64 @@
       this.redoButton = options.redoButton;
       this.zoomOutButton = options.zoomOutButton;
       this.zoomInButton = options.zoomInButton;
+      this.selectAllButton = options.selectAllButton;
+    }
+
+    isActiveSelection(object) {
+      return Boolean(object && (
+        object instanceof root.fabric.ActiveSelection ||
+        object.type === 'ActiveSelection' ||
+        object.type === 'activeSelection'
+      ));
+    }
+
+    selectedObjects(active = this.canvas.getActiveObject()) {
+      if (!active) return [];
+      return this.isActiveSelection(active) ? active.getObjects() : [active];
+    }
+
+    configureActiveSelection() {
+      const active = this.canvas.getActiveObject();
+      if (!this.isActiveSelection(active)) return;
+      active.set({
+        lockScalingFlip: true,
+        centeredScaling: true,
+        centeredRotation: true,
+        transparentCorners: false,
+        cornerColor: '#ffffff',
+        cornerStrokeColor: '#9c1c4c',
+        borderColor: '#9c1c4c',
+        cornerStyle: 'circle',
+        cornerSize: 14,
+        touchCornerSize: 28,
+        padding: 4,
+      });
+      active.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+      active.setCoords();
+    }
+
+    setActiveObjects(objects) {
+      const selectable = objects.filter(Boolean);
+      this.canvas.discardActiveObject();
+      if (!selectable.length) return null;
+      if (selectable.length === 1) {
+        this.canvas.setActiveObject(selectable[0]);
+        return selectable[0];
+      }
+      const selection = new root.fabric.ActiveSelection(selectable, { canvas: this.canvas });
+      this.canvas.setActiveObject(selection);
+      this.configureActiveSelection();
+      return selection;
+    }
+
+    selectAll() {
+      const objects = this.canvas.getObjects().filter((object) => object.selectable !== false);
+      if (!objects.length) return false;
+      this.setActiveObjects(objects);
+      this.canvas.requestRenderAll();
+      this.updateSelectionPanel();
+      this.setFeedback(objects.length === 1 ? 'Element ausgewählt' : `${objects.length} Elemente ausgewählt`);
+      return true;
     }
 
     renderIconPicker() {
@@ -576,6 +654,7 @@
 
     absorbScale(object) {
       if (!object) return;
+      if (this.isActiveSelection(object)) return;
       if (object.editorKind === 'image') {
         const width = object.width * object.scaleX / this.editorScale;
         const height = object.height * object.scaleY / this.editorScale;
@@ -612,6 +691,14 @@
     getObjectColor(object) {
       if (object.editorKind === 'image') return null;
       return String(object.editorKind === 'icon' ? object.editorDrawing.stroke : object.fill);
+    }
+
+    selectionColor(objects) {
+      const colors = objects
+        .map((object) => this.getObjectColor(object))
+        .filter(Boolean)
+        .map((color) => color.toLowerCase());
+      return colors.length && colors.every((color) => color === colors[0]) ? colors[0] : null;
     }
 
     applyObjectColor(object, color) {
@@ -825,11 +912,14 @@
     deleteActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return;
-      const deletedLabel = active.editorKind === 'image'
-        ? 'Foto'
-        : active.editorKind === 'icon' ? 'Motiv' : 'Wort';
-      this.canvas.remove(active);
+      const selected = this.selectedObjects(active);
+      const deletedLabel = selected.length > 1
+        ? `${selected.length} Elemente`
+        : active.editorKind === 'image'
+          ? 'Foto'
+          : active.editorKind === 'icon' ? 'Motiv' : 'Wort';
       this.canvas.discardActiveObject();
+      this.canvas.remove(...selected);
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
@@ -837,49 +927,60 @@
       this.setFeedback(`${deletedLabel} gelöscht`);
     }
 
-    duplicateDesignItem(design) {
-      const nextDesign = { ...design };
-      nextDesign.id = this.nextId(nextDesign.type === 'image' ? 'foto' : nextDesign.type === 'icon' ? 'motiv' : 'wort');
-      nextDesign.x += 48;
-      nextDesign.y += 48;
-      const copy = this.makeObject(nextDesign);
-      this.keepInside(copy);
-      this.canvas.add(copy);
-      this.canvas.setActiveObject(copy);
+    duplicateDesignItems(designs) {
+      const copies = designs.map((design) => {
+        const nextDesign = { ...design };
+        nextDesign.id = this.nextId(nextDesign.type === 'image' ? 'foto' : nextDesign.type === 'icon' ? 'motiv' : 'wort');
+        nextDesign.x += 48;
+        nextDesign.y += 48;
+        return this.makeObject(nextDesign);
+      });
+      this.canvas.discardActiveObject();
+      this.canvas.add(...copies);
+      const selection = this.setActiveObjects(copies);
+      this.keepInside(selection);
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      return copy;
+      return copies;
     }
 
     duplicateActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return;
-      this.duplicateDesignItem(this.serializeObject(active));
-      this.setFeedback(active.editorKind === 'image'
-        ? 'Foto dupliziert'
-        : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
+      const selected = this.selectedObjects(active);
+      const designs = selected.map((object) => this.serializeObject(object));
+      this.duplicateDesignItems(designs);
+      this.setFeedback(selected.length > 1
+        ? `${selected.length} Elemente dupliziert`
+        : active.editorKind === 'image'
+          ? 'Foto dupliziert'
+          : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
     }
 
     copyActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return false;
-      this.clipboard = { ...this.serializeObject(active) };
-      this.setFeedback(active.editorKind === 'image'
-        ? 'Foto kopiert'
-        : active.editorKind === 'icon' ? 'Motiv kopiert' : 'Wort kopiert');
+      const selected = this.selectedObjects(active);
+      this.clipboard = selected.map((object) => ({ ...this.serializeObject(object) }));
+      this.setFeedback(selected.length > 1
+        ? `${selected.length} Elemente kopiert`
+        : active.editorKind === 'image'
+          ? 'Foto kopiert'
+          : active.editorKind === 'icon' ? 'Motiv kopiert' : 'Wort kopiert');
       return true;
     }
 
     pasteClipboard() {
-      if (!this.clipboard) return false;
-      const source = { ...this.clipboard };
-      const copy = this.duplicateDesignItem(source);
-      this.clipboard = { ...this.serializeObject(copy) };
-      this.setFeedback(copy.editorKind === 'image'
-        ? 'Foto eingefügt'
-        : copy.editorKind === 'icon' ? 'Motiv eingefügt' : 'Wort eingefügt');
+      if (!Array.isArray(this.clipboard) || !this.clipboard.length) return false;
+      const copies = this.duplicateDesignItems(this.clipboard.map((item) => ({ ...item })));
+      this.clipboard = copies.map((copy) => ({ ...this.serializeObject(copy) }));
+      this.setFeedback(copies.length > 1
+        ? `${copies.length} Elemente eingefügt`
+        : copies[0].editorKind === 'image'
+          ? 'Foto eingefügt'
+          : copies[0].editorKind === 'icon' ? 'Motiv eingefügt' : 'Wort eingefügt');
       return true;
     }
 
@@ -887,32 +988,38 @@
       const active = this.canvas.getActiveObject();
       if (!active) return;
       const objects = this.canvas.getObjects();
-      if (objects[objects.length - 1] === active) {
-        this.setFeedback('Element ist bereits ganz vorn.');
+      const selected = this.selectedObjects(active);
+      const ordered = objects.filter((object) => selected.includes(object));
+      const top = objects.slice(-ordered.length);
+      if (ordered.every((object, index) => top[index] === object)) {
+        this.setFeedback(selected.length > 1 ? 'Auswahl ist bereits ganz vorn.' : 'Element ist bereits ganz vorn.');
         return;
       }
-      this.canvas.bringObjectToFront(active);
+      this.canvas.discardActiveObject();
+      ordered.forEach((object) => this.canvas.bringObjectToFront(object));
+      this.setActiveObjects(ordered);
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.setFeedback('Element ganz nach vorn gebracht');
+      this.setFeedback(selected.length > 1 ? 'Auswahl ganz nach vorn gebracht' : 'Element ganz nach vorn gebracht');
     }
 
     serializeObject(object) {
+      const transform = root.fabric.util.qrDecompose(object.calcTransformMatrix());
       const common = {
         id: object.editorId,
-        x: object.left / this.editorScale,
-        y: object.top / this.editorScale,
-        angle: object.angle || 0,
+        x: transform.translateX / this.editorScale,
+        y: transform.translateY / this.editorScale,
+        angle: transform.angle || 0,
       };
       if (object.editorKind === 'image') {
         return {
           ...common,
           type: 'image',
           src: object.editorSrc,
-          width: object.width * object.scaleX / this.editorScale,
-          height: object.height * object.scaleY / this.editorScale,
+          width: object.width * Math.abs(transform.scaleX) / this.editorScale,
+          height: object.height * Math.abs(transform.scaleY) / this.editorScale,
         };
       }
       common.color = this.getObjectColor(object);
@@ -921,13 +1028,16 @@
           ...common,
           type: 'icon',
           icon: object.editorIcon,
-          size: Math.max(object.width * object.scaleX, object.height * object.scaleY) / this.editorScale,
+          size: Math.max(
+            object.width * Math.abs(transform.scaleX),
+            object.height * Math.abs(transform.scaleY)
+          ) / this.editorScale,
         };
       }
       return {
         ...common,
         text: object.text,
-        fontSize: object.fontSize * object.scaleX / this.editorScale,
+        fontSize: object.fontSize * Math.abs(transform.scaleX) / this.editorScale,
       };
     }
 
@@ -957,7 +1067,7 @@
     setActiveColor(color) {
       const active = this.canvas.getActiveObject();
       if (!active || !/^#[0-9a-f]{6}$/i.test(color)) return;
-      this.applyObjectColor(active, color);
+      this.selectedObjects(active).forEach((object) => this.applyObjectColor(object, color));
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
@@ -994,21 +1104,26 @@
     updateSelectionPanel() {
       const active = this.canvas.getActiveObject();
       const hasSelection = Boolean(active);
-      const isIcon = active?.editorKind === 'icon';
-      const isImage = active?.editorKind === 'image';
+      const selected = this.selectedObjects(active);
+      const isMultiple = selected.length > 1;
+      const isIcon = !isMultiple && active?.editorKind === 'icon';
+      const isImage = !isMultiple && active?.editorKind === 'image';
+      const canColor = selected.some((object) => object.editorKind !== 'image');
       this.selectionPanel.classList.toggle('is-active', hasSelection);
       this.selectionPanel.classList.toggle('is-photo', Boolean(isImage));
+      this.selectionPanel.classList.toggle('is-multiple', isMultiple);
       this.selectionPanel.setAttribute('aria-disabled', String(!hasSelection));
       this.shell.classList.toggle('has-selection', hasSelection);
-      this.textInput.disabled = !hasSelection || isIcon || isImage;
-      this.colorInput.disabled = !hasSelection || isImage;
+      this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
+      this.colorInput.disabled = !hasSelection || !canColor;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
-        button.disabled = !hasSelection || isImage;
+        button.disabled = !hasSelection || !canColor;
       });
+      this.selectAllButton.disabled = this.canvas.getObjects().length === 0;
       if (!active) {
         this.selectionStatus.textContent = 'Element auswählen';
-        this.selectionHint.textContent = 'Wort, Foto oder Motiv anklicken, um die Werkzeuge zu aktivieren';
+        this.selectionHint.textContent = 'Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere';
         this.textLabel.textContent = 'Ausgewähltes Element';
         this.textInput.value = '';
         this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
@@ -1016,7 +1131,12 @@
         });
         return;
       }
-      if (isImage) {
+      if (isMultiple) {
+        this.selectionStatus.textContent = `${selected.length} Elemente ausgewählt`;
+        this.selectionHint.textContent = 'Gemeinsam ziehen, drehen oder skalieren · Escape hebt die Auswahl auf';
+        this.textLabel.textContent = 'Mehrfachauswahl';
+        this.textInput.value = `${selected.length} Elemente`;
+      } else if (isImage) {
         this.selectionStatus.textContent = 'Foto bearbeiten';
         this.selectionHint.textContent = 'Foto ziehen, drehen oder skalieren';
         this.textLabel.textContent = 'Ausgewähltes Foto';
@@ -1032,11 +1152,10 @@
         this.textLabel.textContent = 'Ausgewähltes Wort';
         this.textInput.value = active.text;
       }
-      const activeColor = this.getObjectColor(active);
-      if (!activeColor) return;
-      this.colorInput.value = activeColor;
+      const activeColor = isMultiple ? this.selectionColor(selected) : this.getObjectColor(active);
+      if (activeColor) this.colorInput.value = activeColor;
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
-        button.classList.toggle('is-selected', button.dataset.color === activeColor.toLowerCase());
+        button.classList.toggle('is-selected', Boolean(activeColor) && button.dataset.color === activeColor.toLowerCase());
       });
     }
 
