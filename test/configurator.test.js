@@ -281,6 +281,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /class="flat-product-composite"/);
   assert.match(configurePage, /id="flat-product-mockup"/);
+  assert.match(configurePage, /class="preview-disclaimer">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen\.<\/p>/);
   assert.match(configurePage, /id="placement-options"/);
   assert.match(configurePage, /id="surface-tabs"/);
   assert.match(configurePage, /class="editor-tools editor-tools-primary">[\s\S]*?id="surface-editor"[\s\S]*?id="editor-add"/);

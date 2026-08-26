@@ -422,6 +422,14 @@
       font-size: 12px;
       letter-spacing: .02em;
     }
+    .preview-disclaimer {
+      max-width: 440px;
+      margin: 8px auto 0;
+      color: rgba(105, 78, 84, .78);
+      font-size: 11px;
+      line-height: 1.45;
+      letter-spacing: .01em;
+    }
 
     .wrap-preview {
       min-height: 0;
@@ -1414,6 +1422,7 @@
       .mug-viewer { height: min(270px, calc(var(--workspace-stage-height) - 44px)); }
       .mug { width: min(35vw, 165px); }
       .mug-name { margin-top: 0; font-size: 11px; }
+      .preview-disclaimer { max-width: 300px; margin-top: 7px; font-size: 10.5px; }
       .surface-editor { align-items: center; flex-direction: row; }
       .surface-tabs { width: auto; }
       .surface-tab { flex: 0 0 auto; }
@@ -1604,6 +1613,7 @@
                   </div>
                 </div>
                 <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
+                <p class="preview-disclaimer">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen.</p>
               </div>
             </div>
           </section>
