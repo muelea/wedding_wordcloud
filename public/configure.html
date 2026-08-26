@@ -729,20 +729,82 @@
     }
     .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
     .editor-text-input:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
-    .editor-font-select {
+    .editor-field-label-font { min-width: 0; position: relative; }
+    .editor-font-picker { min-width: 0; position: relative; }
+    .editor-font-select[hidden] { display: none; }
+    .editor-font-toggle {
       width: 100%;
       height: 38px;
       margin: 0;
-      padding: 7px 30px 7px 10px;
+      padding: 7px 9px 7px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       border: 1px solid rgba(123,70,82,.2);
       border-radius: 9px;
-      background-color: #fff;
+      background: #fff;
       color: var(--ink);
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 400;
+      text-align: left;
     }
-    .editor-font-select:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
-    .editor-font-select:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
+    .editor-font-toggle:hover:not(:disabled) { border-color: rgba(156,28,76,.42); background: #fffaf8; }
+    .editor-font-toggle:focus-visible { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
+    .editor-font-toggle:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
+    .editor-font-current {
+      min-width: 0;
+      overflow: hidden;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .editor-font-caret {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-family: 'Jost', system-ui, sans-serif;
+      font-size: 12px;
+      transition: transform .18s ease;
+    }
+    .editor-font-toggle[aria-expanded="true"] .editor-font-caret { transform: rotate(180deg); }
+    .editor-font-menu {
+      position: absolute;
+      z-index: 50;
+      top: calc(100% + 6px);
+      left: 0;
+      width: min(250px, calc(100vw - 70px));
+      padding: 6px;
+      border: 1px solid rgba(123,70,82,.16);
+      border-radius: 13px;
+      background: rgba(255,255,255,.99);
+      box-shadow: 0 18px 42px rgba(64,15,38,.14);
+      backdrop-filter: blur(12px);
+    }
+    .editor-font-menu[hidden] { display: none; }
+    .editor-font-option {
+      width: 100%;
+      min-height: 48px;
+      padding: 7px 9px;
+      display: grid;
+      gap: 2px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+    }
+    .editor-font-option:hover,
+    .editor-font-option:focus-visible { outline: 0; background: #fff6f3; }
+    .editor-font-option[aria-selected="true"] { background: rgba(156,28,76,.075); color: var(--berry); }
+    .editor-font-option-name { font-size: 15px; line-height: 1.2; }
+    .editor-font-option-description {
+      color: var(--muted);
+      font-family: 'Jost', system-ui, sans-serif;
+      font-size: 9.5px;
+      line-height: 1.25;
+    }
     .editor-field-label-color { align-self: center; }
     .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 0; }
     .editor-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
@@ -1647,9 +1709,17 @@
                   <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
                     <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
                   </label>
-                  <label class="editor-field-label editor-field-label-font"><span class="editor-field-label-text">Schriftart</span>
-                    <select class="editor-font-select" id="editor-font" aria-label="Schriftart" disabled></select>
-                  </label>
+                  <div class="editor-field-label editor-field-label-font">
+                    <span class="editor-field-label-text">Schriftart</span>
+                    <div class="editor-font-picker" id="editor-font-picker">
+                      <button class="editor-font-toggle" id="editor-font-toggle" type="button" aria-label="Schriftart wählen" aria-haspopup="listbox" aria-expanded="false" aria-controls="editor-font-menu" disabled>
+                        <span class="editor-font-current" id="editor-font-current">Schrift wählen</span>
+                        <span class="editor-font-caret" aria-hidden="true">⌄</span>
+                      </button>
+                      <div class="editor-font-menu" id="editor-font-menu" role="listbox" aria-label="Schriftart" hidden></div>
+                    </div>
+                    <select class="editor-font-select" id="editor-font" aria-label="Schriftart" hidden disabled></select>
+                  </div>
                   <div class="editor-field-label editor-field-label-color" role="group" aria-label="Farbe auswählen">
                     <div class="editor-colors">
                       <div class="editor-swatches" id="editor-swatches"></div>
@@ -1759,7 +1829,7 @@
   <script src="/js/mug-icons.js?v=20260826-1"></script>
   <script src="/js/design-fonts.js?v=20260826-1"></script>
   <script src="/js/design-layout.js?v=20260826-3"></script>
-  <script src="/js/mug-editor.js?v=20260826-6"></script>
+  <script src="/js/mug-editor.js?v=20260826-9"></script>
   <script>
     'use strict';
 
@@ -3266,6 +3336,9 @@
         textInput: document.getElementById('editor-text'),
         textLabel: document.getElementById('editor-text-label'),
         fontSelect: document.getElementById('editor-font'),
+        fontButton: document.getElementById('editor-font-toggle'),
+        fontCurrent: document.getElementById('editor-font-current'),
+        fontMenu: document.getElementById('editor-font-menu'),
         swatches: document.getElementById('editor-swatches'),
         colorInput: document.getElementById('editor-color'),
         feedback: document.getElementById('editor-feedback'),

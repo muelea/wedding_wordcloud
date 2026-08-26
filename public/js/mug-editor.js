@@ -44,6 +44,9 @@
       this.textInput = options.textInput;
       this.textLabel = options.textLabel;
       this.fontSelect = options.fontSelect;
+      this.fontButton = options.fontButton;
+      this.fontCurrent = options.fontCurrent;
+      this.fontMenu = options.fontMenu;
       this.swatches = options.swatches;
       this.zoomLabel = options.zoomLabel;
       this.feedback = options.feedback;
@@ -378,6 +381,41 @@
           this.setFeedback('Schrift konnte nicht geladen werden');
         });
       });
+      this.fontButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.toggleFontPicker();
+      });
+      this.fontButton.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        event.preventDefault();
+        this.openFontPicker(event.key === 'ArrowUp' ? -1 : 1);
+      });
+      this.fontMenu.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          this.moveFontOptionFocus(event.key === 'ArrowDown' ? 1 : -1);
+          return;
+        }
+        if (event.key === 'Home' || event.key === 'End') {
+          event.preventDefault();
+          this.fontOptionButtons[event.key === 'Home' ? 0 : this.fontOptionButtons.length - 1]?.focus();
+          return;
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          this.closeFontPicker(true);
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          const activeOption = this.fontOptionButtons.find((button) => button === document.activeElement);
+          if (!activeOption) return;
+          event.preventDefault();
+          activeOption.click();
+          return;
+        }
+        if (event.key === 'Tab') this.closeFontPicker();
+      });
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
@@ -411,6 +449,11 @@
           this.deleteActive();
           event.preventDefault();
         }
+        if (event.key === 'Escape' && !this.fontMenu.hidden) {
+          this.closeFontPicker(true);
+          event.preventDefault();
+          return;
+        }
         if (event.key === 'Escape') {
           this.closeIconPicker();
           this.canvas.discardActiveObject();
@@ -420,6 +463,7 @@
       });
       document.addEventListener('click', (event) => {
         if (!this.iconMenu.hidden && !event.target.closest('.editor-motif-picker')) this.closeIconPicker();
+        if (!this.fontMenu.hidden && !event.target.closest('.editor-font-picker')) this.closeFontPicker();
       });
 
       this.undoButton = options.undoButton;
@@ -514,6 +558,7 @@
 
     renderFontOptions() {
       this.fontSelect.replaceChildren();
+      this.fontMenu.replaceChildren();
       const placeholder = document.createElement('option');
       placeholder.value = '';
       placeholder.textContent = 'Schrift wählen';
@@ -526,12 +571,83 @@
         option.textContent = `${font.label} – ${font.description}`;
         option.style.fontFamily = font.cssFamily;
         this.fontSelect.appendChild(option);
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'editor-font-option';
+        button.dataset.fontKey = font.key;
+        button.setAttribute('role', 'option');
+        button.setAttribute('aria-selected', 'false');
+
+        const name = document.createElement('span');
+        name.className = 'editor-font-option-name';
+        name.style.fontFamily = font.cssFamily;
+        name.textContent = font.label;
+
+        const description = document.createElement('span');
+        description.className = 'editor-font-option-description';
+        description.textContent = font.description;
+
+        button.append(name, description);
+        button.addEventListener('click', () => {
+          this.fontSelect.value = font.key;
+          this.fontSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          this.closeFontPicker(true);
+        });
+        this.fontMenu.appendChild(button);
       }
+      this.fontOptionButtons = [...this.fontMenu.querySelectorAll('.editor-font-option')];
       this.fontSelect.value = '';
+      this.syncFontPicker('', 'Schrift wählen', true);
+    }
+
+    syncFontPicker(fontKey, placeholder, disabled) {
+      const font = fontKey ? root.DesignFonts.get(fontKey) : null;
+      this.fontButton.disabled = disabled;
+      this.fontCurrent.textContent = font ? font.label : placeholder;
+      this.fontCurrent.style.fontFamily = font ? font.cssFamily : '';
+      this.fontButton.title = font ? `${font.label} – ${font.description}` : placeholder;
+      this.fontOptionButtons.forEach((button) => {
+        button.setAttribute('aria-selected', String(button.dataset.fontKey === fontKey));
+      });
+      if (disabled) this.closeFontPicker();
+    }
+
+    toggleFontPicker() {
+      if (this.fontButton.disabled) return;
+      this.fontMenu.hidden ? this.openFontPicker() : this.closeFontPicker(true);
+    }
+
+    openFontPicker(focusDirection = 0) {
+      if (this.fontButton.disabled) return;
+      this.closeIconPicker();
+      this.fontMenu.hidden = false;
+      this.fontButton.setAttribute('aria-expanded', 'true');
+      const selectedIndex = this.fontOptionButtons.findIndex((button) =>
+        button.dataset.fontKey === this.fontSelect.value
+      );
+      const index = focusDirection < 0
+        ? this.fontOptionButtons.length - 1
+        : selectedIndex >= 0 ? selectedIndex : 0;
+      this.fontOptionButtons[index]?.focus();
+    }
+
+    closeFontPicker(restoreFocus = false) {
+      this.fontMenu.hidden = true;
+      this.fontButton.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) this.fontButton.focus();
+    }
+
+    moveFontOptionFocus(direction) {
+      const current = this.fontOptionButtons.indexOf(document.activeElement);
+      const start = current >= 0 ? current : 0;
+      const next = (start + direction + this.fontOptionButtons.length) % this.fontOptionButtons.length;
+      this.fontOptionButtons[next]?.focus();
     }
 
     toggleIconPicker() {
       const shouldOpen = this.iconMenu.hidden;
+      if (shouldOpen) this.closeFontPicker();
       this.iconMenu.hidden = !shouldOpen;
       this.iconButton.setAttribute('aria-expanded', String(shouldOpen));
       if (shouldOpen) this.iconGrid.querySelector('button')?.focus();
@@ -1191,6 +1307,7 @@
         this.textInput.value = '';
         this.fontPlaceholder.textContent = 'Schrift wählen';
         this.fontSelect.value = '';
+        this.syncFontPicker('', 'Schrift wählen', true);
         this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
           button.classList.remove('is-selected');
         });
@@ -1204,6 +1321,11 @@
         ? 'Nur für Text'
         : commonFontKey ? 'Schrift wählen' : 'Mehrere Schriften';
       this.fontSelect.value = commonFontKey;
+      this.syncFontPicker(
+        commonFontKey,
+        !canChangeFont ? 'Nur für Text' : 'Mehrere Schriften',
+        !canChangeFont
+      );
       if (isMultiple) {
         this.selectionStatus.textContent = `${selected.length} Elemente ausgewählt`;
         this.selectionHint.textContent = 'Gemeinsam ziehen, drehen oder skalieren · Escape hebt die Auswahl auf';

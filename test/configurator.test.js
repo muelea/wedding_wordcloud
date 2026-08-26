@@ -484,9 +484,13 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
   assert.match(configurePage, /design-layout\.js\?v=20260826-3/);
   assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260826-6/);
-  assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260826-9/);
+  assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"[^>]*hidden/);
+  assert.match(configurePage, /id="editor-font-toggle"[^>]*aria-haspopup="listbox"/);
+  assert.match(configurePage, /id="editor-font-menu"[^>]*role="listbox"/);
+  assert.match(configurePage, /\.editor-font-toggle \{[\s\S]*?font-size: 11px;/);
   assert.match(configurePage, /fontSelect: document\.getElementById\('editor-font'\)/);
+  assert.match(configurePage, /fontButton: document\.getElementById\('editor-font-toggle'\)/);
   assert.match(configurePage, /DesignFonts\.cssFamily\(item\.fontFamily\)/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /id="editor-duplicate"[^>]*title="Duplizieren \(⌘\/Strg \+ C und V\)"/);
@@ -520,7 +524,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-6`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-9`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
@@ -537,6 +541,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'a'/);
   assert.match(mugEditorSource, /root\.fabric\.util\.qrDecompose\(object\.calcTransformMatrix\(\)\)/);
   assert.match(mugEditorSource, /setActiveFont\(fontKey\)/);
+  assert.match(mugEditorSource, /name\.style\.fontFamily = font\.cssFamily/);
+  assert.match(mugEditorSource, /syncFontPicker\(fontKey, placeholder, disabled\)/);
   assert.match(mugEditorSource, /fontFamily: root\.DesignFonts\.normalizeKey\(object\.editorFontKey\)/);
   assert.doesNotMatch(mugEditorSource, /Mindestens ein Element muss bleiben/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
