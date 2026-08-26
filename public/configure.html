@@ -340,6 +340,18 @@
     }
     .flat-product-preview.has-product-mockup::before,
     .flat-product-preview.has-product-mockup::after { display: none; }
+    .flat-product-composite {
+      display: block;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .flat-product-preview.has-product-mockup .flat-product-composite {
+      position: absolute;
+      inset: 0;
+      transform: scale(var(--product-mockup-scale, 1));
+      transform-origin: center;
+    }
     .flat-product-preview.has-product-mockup canvas {
       position: absolute;
       z-index: 1;
@@ -348,8 +360,7 @@
       width: var(--product-mockup-canvas-width, 100%);
       height: var(--product-mockup-canvas-height, 100%);
       border-radius: 0;
-      transform: scale(var(--product-mockup-scale, 1));
-      transform-origin: center;
+      clip-path: var(--product-mockup-canvas-clip, none);
     }
     .flat-product-mockup {
       display: none;
@@ -361,8 +372,6 @@
       object-fit: contain;
       pointer-events: none;
       mix-blend-mode: var(--product-mockup-blend, normal);
-      transform: scale(var(--product-mockup-scale, 1));
-      transform-origin: center;
       user-select: none;
     }
     .flat-product-preview.has-product-mockup .flat-product-mockup { display: block; }
@@ -1588,8 +1597,10 @@
                     <div class="mug"><canvas class="mug-art" id="mug-preview"></canvas></div>
                   </div>
                   <div class="flat-product-preview" id="flat-product-preview" aria-hidden="true">
-                    <canvas id="flat-preview"></canvas>
-                    <img class="flat-product-mockup" id="flat-product-mockup" alt="" draggable="false">
+                    <span class="flat-product-composite">
+                      <canvas id="flat-preview"></canvas>
+                      <img class="flat-product-mockup" id="flat-product-mockup" alt="" draggable="false">
+                    </span>
                   </div>
                 </div>
                 <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
@@ -2543,8 +2554,11 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
       }
-      const scale = Math.min(width / product.printFile.width, height / product.printFile.height) *
-        (hasProductMockup ? 1 : .9);
+      const widthScale = width / product.printFile.width;
+      const heightScale = height / product.printFile.height;
+      const scale = (hasProductMockup && product.previewMockup.canvas.fit === 'cover'
+        ? Math.max(widthScale, heightScale)
+        : Math.min(widthScale, heightScale)) * (hasProductMockup ? 1 : .9);
       drawDesign(
         ctx,
         (width - product.printFile.width * scale) / 2,
@@ -2592,6 +2606,10 @@
       flatPreview.style.setProperty('--product-mockup-canvas-top', `${canvas?.top ?? 0}%`);
       flatPreview.style.setProperty('--product-mockup-canvas-width', `${canvas?.width ?? 100}%`);
       flatPreview.style.setProperty('--product-mockup-canvas-height', `${canvas?.height ?? 100}%`);
+      flatPreview.style.setProperty(
+        '--product-mockup-canvas-clip',
+        canvas?.clipPath || 'none'
+      );
       if (asset) {
         if (flatMockup.getAttribute('src') !== asset) flatMockup.src = asset;
       } else {

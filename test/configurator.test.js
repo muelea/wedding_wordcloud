@@ -170,15 +170,49 @@ test('configurator exposes every curated product with verified Printful geometry
       back: '/assets/product-mockups/basic-pillow-flat.png',
     },
   });
+  const mockupCanvases = Object.fromEntries(data.products
+    .filter((candidate) => candidate.previewMockup)
+    .map((candidate) => [candidate.key, candidate.previewMockup.canvas]));
+  assert.deepEqual(mockupCanvases, {
+    'cork-back-coaster': {
+      left: 17.5, top: 17.7, width: 65.3, height: 64.9, fit: 'cover', clipPath: 'none',
+    },
+    'matte-poster-30x40cm': {
+      left: 25, top: 17.7, width: 49.2, height: 65.5, fit: 'cover', clipPath: 'none',
+    },
+    'matte-poster-50x70cm': {
+      left: 21.4, top: 10, width: 57.2, height: 80, fit: 'cover', clipPath: 'none',
+    },
+    'framed-matte-poster-black-30x40cm': {
+      left: 24.1, top: 15.1, width: 51.9, height: 69.7, fit: 'cover', clipPath: 'none',
+    },
+    'framed-matte-poster-black-50x70cm': {
+      left: 22.8, top: 11.3, width: 54.5, height: 77.4, fit: 'cover', clipPath: 'none',
+    },
+    'all-over-tote-black-handles': {
+      left: 5,
+      top: 35.5,
+      width: 90,
+      height: 58.5,
+      fit: 'cover',
+      clipPath: 'polygon(0 0, 100% 0, 96% 100%, 3% 100%)',
+    },
+    'throw-blanket-50x60in': {
+      left: 6.3, top: 13.7, width: 86.8, height: 71.9, fit: 'cover', clipPath: 'none',
+    },
+    'spiral-notebook-dotted': {
+      left: 19.9, top: 4.7, width: 57.6, height: 90.4, fit: 'cover', clipPath: 'none',
+    },
+    'all-over-basic-pillow-18in': {
+      left: 17.1, top: 18.7, width: 64.8, height: 63.1, fit: 'cover', clipPath: 'none',
+    },
+  });
   const tote = data.products.find((candidate) => candidate.key === 'all-over-tote-black-handles');
   assert.deepEqual(
     [tote.previewMockup.width, tote.previewMockup.height],
     [700, 1000]
   );
   assert.equal(tote.previewMockup.blendMode, 'multiply');
-  assert.deepEqual(tote.previewMockup.canvas, {
-    left: 5, top: 35.5, width: 90, height: 58.5,
-  });
   assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
     ['pastel', 'sage-gold', 'ocean', 'custom']
@@ -245,6 +279,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="variant-options"/);
   assert.match(configurePage, /id="flat-product-preview"/);
+  assert.match(configurePage, /class="flat-product-composite"/);
   assert.match(configurePage, /id="flat-product-mockup"/);
   assert.match(configurePage, /id="placement-options"/);
   assert.match(configurePage, /id="surface-tabs"/);
@@ -257,6 +292,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /mug-editor\.js\?v=20260825-3/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
   assert.match(configurePage, /function updateProductMockup\(\)/);
+  assert.match(configurePage, /product\.previewMockup\.canvas\.fit === 'cover'/);
+  assert.match(configurePage, /--product-mockup-canvas-clip/);
   assert.match(configurePage, /function refreshWorkspaceLayout\(\)/);
   assert.match(configurePage, /Math\.max\([\s\S]*?availableWidth \/ printAspect,[\s\S]*?availableWidth \/ previewAspect[\s\S]*?\) \+ 24/);
   assert.match(configurePage, /requestAnimationFrame\(refreshWorkspaceLayout\)/);

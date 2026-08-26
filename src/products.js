@@ -189,6 +189,8 @@ function makeProduct({
             top: previewMockup.canvas?.top ?? 0,
             width: previewMockup.canvas?.width ?? 100,
             height: previewMockup.canvas?.height ?? 100,
+            fit: previewMockup.canvas?.fit || 'contain',
+            clipPath: previewMockup.canvas?.clipPath || 'none',
           }),
           assets: Object.freeze({ ...previewMockup.assets }),
         })
@@ -348,6 +350,7 @@ const COASTER = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1.3,
+    canvas: { left: 17.5, top: 17.7, width: 65.3, height: 64.9, fit: 'cover' },
     assets: { default: '/assets/product-mockups/coaster-flat.png' },
   },
   productId: 611,
@@ -487,6 +490,7 @@ const POSTER_30X40 = makePosterProduct({
     width: 1000,
     height: 1000,
     scale: 1.18,
+    canvas: { left: 25, top: 17.7, width: 49.2, height: 65.5, fit: 'cover' },
     assets: { default: '/assets/product-mockups/matte-poster-30x40.png' },
   },
   template: {
@@ -511,6 +515,7 @@ const POSTER_50X70 = makePosterProduct({
     width: 1000,
     height: 1000,
     scale: 1.1,
+    canvas: { left: 21.4, top: 10, width: 57.2, height: 80, fit: 'cover' },
     assets: { default: '/assets/product-mockups/matte-poster-50x70.png' },
   },
   template: {
@@ -535,6 +540,7 @@ const FRAMED_POSTER_30X40 = makeFramedPosterProduct({
     width: 1000,
     height: 1000,
     scale: 1.12,
+    canvas: { left: 24.1, top: 15.1, width: 51.9, height: 69.7, fit: 'cover' },
     assets: { default: '/assets/product-mockups/framed-poster-black-30x40.png' },
   },
   template: {
@@ -559,6 +565,7 @@ const FRAMED_POSTER_50X70 = makeFramedPosterProduct({
     width: 1000,
     height: 1000,
     scale: 1.1,
+    canvas: { left: 22.8, top: 11.3, width: 54.5, height: 77.4, fit: 'cover' },
     assets: { default: '/assets/product-mockups/framed-poster-black-50x70.png' },
   },
   template: {
@@ -586,7 +593,14 @@ const TOTE_BAG = makeProduct({
     height: 1000,
     scale: 1,
     blendMode: 'multiply',
-    canvas: { left: 5, top: 35.5, width: 90, height: 58.5 },
+    canvas: {
+      left: 5,
+      top: 35.5,
+      width: 90,
+      height: 58.5,
+      fit: 'cover',
+      clipPath: 'polygon(0 0, 100% 0, 96% 100%, 3% 100%)',
+    },
     assets: { default: '/assets/product-mockups/tote-front.jpg' },
   },
   productId: 84,
@@ -630,6 +644,7 @@ const THROW_BLANKET_50X60 = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1.1,
+    canvas: { left: 6.3, top: 13.7, width: 86.8, height: 71.9, fit: 'cover' },
     assets: { default: '/assets/product-mockups/throw-blanket-flat-horizontal.png' },
   },
   productId: 395,
@@ -679,6 +694,7 @@ const SPIRAL_NOTEBOOK = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1,
+    canvas: { left: 19.9, top: 4.7, width: 57.6, height: 90.4, fit: 'cover' },
     assets: {
       front: '/assets/product-mockups/spiral-notebook-front.png',
       back: '/assets/product-mockups/spiral-notebook-back.png',
@@ -736,6 +752,7 @@ const BASIC_PILLOW_18 = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1.3,
+    canvas: { left: 17.1, top: 18.7, width: 64.8, height: 63.1, fit: 'cover' },
     assets: {
       front: '/assets/product-mockups/basic-pillow-flat.png',
       back: '/assets/product-mockups/basic-pillow-flat.png',
