@@ -330,6 +330,42 @@
       border-radius: 21%;
       pointer-events: none;
     }
+    .flat-product-preview.has-product-mockup {
+      margin-top: 0;
+      overflow: hidden;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    .flat-product-preview.has-product-mockup::before,
+    .flat-product-preview.has-product-mockup::after { display: none; }
+    .flat-product-preview.has-product-mockup canvas {
+      position: absolute;
+      z-index: 1;
+      top: var(--product-mockup-canvas-top, 0%);
+      left: var(--product-mockup-canvas-left, 0%);
+      width: var(--product-mockup-canvas-width, 100%);
+      height: var(--product-mockup-canvas-height, 100%);
+      border-radius: 0;
+      transform: scale(var(--product-mockup-scale, 1));
+      transform-origin: center;
+    }
+    .flat-product-mockup {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      object-fit: contain;
+      pointer-events: none;
+      mix-blend-mode: var(--product-mockup-blend, normal);
+      transform: scale(var(--product-mockup-scale, 1));
+      transform-origin: center;
+      user-select: none;
+    }
+    .flat-product-preview.has-product-mockup .flat-product-mockup { display: block; }
     .flat-product-preview canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; border-radius: inherit; }
     .mug {
       width: clamp(180px, 19vw, 236px);
@@ -1553,6 +1589,7 @@
                   </div>
                   <div class="flat-product-preview" id="flat-product-preview" aria-hidden="true">
                     <canvas id="flat-preview"></canvas>
+                    <img class="flat-product-mockup" id="flat-product-mockup" alt="" draggable="false">
                   </div>
                 </div>
                 <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
@@ -1628,6 +1665,7 @@
     const editorScroll = document.getElementById('editor-scroll');
     const flatPreview = document.getElementById('flat-product-preview');
     const flatCanvas = document.getElementById('flat-preview');
+    const flatMockup = document.getElementById('flat-product-mockup');
     const wrapCanvas = document.getElementById('wrap-canvas');
     const selectedProductThumb = document.getElementById('selected-product-thumb');
     const selectedProductName = document.getElementById('selected-product-name');
@@ -2419,7 +2457,8 @@
 
     function refreshFlatProductPreviewFit() {
       if (!product || product.previewType !== 'flat') return;
-      const previewInsets = {
+      const hasProductMockup = Boolean(currentProductMockupAsset());
+      const previewInsets = hasProductMockup ? { x: 8, y: 8 } : ({
         coaster: { x: 20, y: 20 },
         poster: { x: 8, y: 8 },
         'framed-poster': { x: 34, y: 34 },
@@ -2427,10 +2466,12 @@
         blanket: { x: 12, y: 12 },
         notebook: { x: 30, y: 24 },
         pillow: { x: 18, y: 18 },
-      }[product.previewShape] || { x: 12, y: 12 };
+      }[product.previewShape] || { x: 12, y: 12 });
       const availableWidth = Math.max(1, mugViewer.clientWidth - previewInsets.x);
       const availableHeight = Math.max(1, mugViewer.clientHeight - previewInsets.y);
-      const aspect = product.printFile.width / product.printFile.height;
+      const aspect = hasProductMockup
+        ? product.previewMockup.width / product.previewMockup.height
+        : product.printFile.width / product.printFile.height;
       const previewWidth = Math.min(availableWidth, availableHeight * aspect);
       const previewHeight = previewWidth / aspect;
       flatPreview.style.setProperty('--flat-preview-width', `${Math.floor(previewWidth)}px`);
@@ -2443,12 +2484,18 @@
       const horizontalPadding = parseFloat(scrollStyles.paddingLeft) + parseFloat(scrollStyles.paddingRight);
       const availableWidth = Math.max(1, editorScroll.clientWidth - horizontalPadding);
       const printAspect = product.printFile.width / product.printFile.height;
+      const previewAspect = product.previewMockup
+        ? product.previewMockup.width / product.previewMockup.height
+        : printAspect;
       const isMobile = window.innerWidth <= 620;
       const minimumHeight = isMobile ? 280 : 320;
       const maximumHeight = isMobile
         ? Math.min(470, window.innerHeight * .72)
         : Math.min(620, window.innerHeight * .72);
-      const desiredHeight = availableWidth / printAspect + 24;
+      const desiredHeight = Math.max(
+        availableWidth / printAspect,
+        availableWidth / previewAspect
+      ) + 24;
       const stageHeight = Math.round(Math.min(maximumHeight, Math.max(minimumHeight, desiredHeight)));
       workbench.style.setProperty('--workspace-stage-height', `${stageHeight}px`);
       mugEditor?.refreshViewport();
@@ -2491,11 +2538,13 @@
       const width = canvas.width;
       const height = canvas.height;
       ctx.clearRect(0, 0, width, height);
-      if (product.previewType === 'flat') {
+      const hasProductMockup = product.previewType === 'flat' && Boolean(currentProductMockupAsset());
+      if (product.previewType === 'flat' && !hasProductMockup) {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
       }
-      const scale = Math.min(width / product.printFile.width, height / product.printFile.height) * .9;
+      const scale = Math.min(width / product.printFile.width, height / product.printFile.height) *
+        (hasProductMockup ? 1 : .9);
       drawDesign(
         ctx,
         (width - product.printFile.width * scale) / 2,
@@ -2522,6 +2571,34 @@
         : 'Design zur Bestellung hinzufügen <span aria-hidden="true">→</span>';
     }
 
+    function currentProductMockupAsset() {
+      const assets = product?.previewMockup?.assets;
+      return assets?.[activeSurface] || assets?.default || '';
+    }
+
+    function updateProductMockup() {
+      const asset = currentProductMockupAsset();
+      const canvas = product?.previewMockup?.canvas;
+      flatPreview.classList.toggle('has-product-mockup', Boolean(asset));
+      flatPreview.style.setProperty(
+        '--product-mockup-scale',
+        String(product?.previewMockup?.scale || 1)
+      );
+      flatPreview.style.setProperty(
+        '--product-mockup-blend',
+        product?.previewMockup?.blendMode || 'normal'
+      );
+      flatPreview.style.setProperty('--product-mockup-canvas-left', `${canvas?.left ?? 0}%`);
+      flatPreview.style.setProperty('--product-mockup-canvas-top', `${canvas?.top ?? 0}%`);
+      flatPreview.style.setProperty('--product-mockup-canvas-width', `${canvas?.width ?? 100}%`);
+      flatPreview.style.setProperty('--product-mockup-canvas-height', `${canvas?.height ?? 100}%`);
+      if (asset) {
+        if (flatMockup.getAttribute('src') !== asset) flatMockup.src = asset;
+      } else {
+        flatMockup.removeAttribute('src');
+      }
+    }
+
     function germanDecimal(value) {
       return String(value).replace('.', ',');
     }
@@ -2537,9 +2614,12 @@
       flatPreview.classList.toggle('is-blanket', product.previewShape === 'blanket');
       flatPreview.classList.toggle('is-notebook', product.previewShape === 'notebook');
       flatPreview.classList.toggle('is-pillow', product.previewShape === 'pillow');
+      updateProductMockup();
       flatPreview.style.setProperty(
         '--flat-preview-aspect',
-        `${product.printFile.width} / ${product.printFile.height}`
+        product.previewMockup
+          ? `${product.previewMockup.width} / ${product.previewMockup.height}`
+          : `${product.printFile.width} / ${product.printFile.height}`
       );
       requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;

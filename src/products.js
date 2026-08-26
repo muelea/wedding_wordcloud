@@ -140,6 +140,7 @@ function makeProduct({
   printSurfaces,
   familyKey,
   thumbnail,
+  previewMockup,
 }) {
   const printPlacement = printFile.placement || 'default';
   const resolvedFulfillmentPlacements = fulfillmentPlacements?.length
@@ -177,6 +178,21 @@ function makeProduct({
     icon,
     previewType,
     previewShape,
+    previewMockup: previewMockup
+      ? Object.freeze({
+          width: previewMockup.width,
+          height: previewMockup.height,
+          scale: previewMockup.scale || 1,
+          blendMode: previewMockup.blendMode || 'normal',
+          canvas: Object.freeze({
+            left: previewMockup.canvas?.left ?? 0,
+            top: previewMockup.canvas?.top ?? 0,
+            width: previewMockup.canvas?.width ?? 100,
+            height: previewMockup.canvas?.height ?? 100,
+          }),
+          assets: Object.freeze({ ...previewMockup.assets }),
+        })
+      : null,
     defaultQuantity,
     minQuantity: 1,
     maxQuantity: 99,
@@ -328,6 +344,12 @@ const COASTER = makeProduct({
   icon: '◉',
   previewType: 'flat',
   previewShape: 'coaster',
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.3,
+    assets: { default: '/assets/product-mockups/coaster-flat.png' },
+  },
   productId: 611,
   variantId: 15662,
   printfileId: 358,
@@ -357,7 +379,9 @@ const COASTER = makeProduct({
   layouts: FLAT_LAYOUTS,
 });
 
-function makePosterProduct({ key, variantId, printfileId, templateId, label, width, height, template }) {
+function makePosterProduct({
+  key, variantId, printfileId, templateId, label, width, height, template, previewMockup,
+}) {
   const safeMargin = 96;
   const centeredSide = Math.min(width - 720, height - 1200);
   return makeProduct({
@@ -370,6 +394,7 @@ function makePosterProduct({ key, variantId, printfileId, templateId, label, wid
     icon: '▤',
     previewType: 'flat',
     previewShape: 'poster',
+    previewMockup,
     productId: 268,
     variantId,
     printfileId,
@@ -403,7 +428,9 @@ function makePosterProduct({ key, variantId, printfileId, templateId, label, wid
   });
 }
 
-function makeFramedPosterProduct({ key, variantId, printfileId, templateId, label, width, height, template }) {
+function makeFramedPosterProduct({
+  key, variantId, printfileId, templateId, label, width, height, template, previewMockup,
+}) {
   const safeMargin = 96;
   const centeredSide = Math.min(width - 720, height - 1200);
   return makeProduct({
@@ -416,6 +443,7 @@ function makeFramedPosterProduct({ key, variantId, printfileId, templateId, labe
     icon: '▣',
     previewType: 'flat',
     previewShape: 'framed-poster',
+    previewMockup,
     productId: 304,
     variantId,
     printfileId,
@@ -455,6 +483,12 @@ const POSTER_30X40 = makePosterProduct({
   label: '30 × 40 cm',
   width: 3544,
   height: 4724,
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.18,
+    assets: { default: '/assets/product-mockups/matte-poster-30x40.png' },
+  },
   template: {
     width: 728,
     height: 728,
@@ -473,6 +507,12 @@ const POSTER_50X70 = makePosterProduct({
   label: '50 × 70 cm',
   width: 5906,
   height: 8268,
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.1,
+    assets: { default: '/assets/product-mockups/matte-poster-50x70.png' },
+  },
   template: {
     width: 728,
     height: 728,
@@ -491,6 +531,12 @@ const FRAMED_POSTER_30X40 = makeFramedPosterProduct({
   label: '30 × 40 cm',
   width: 3600,
   height: 4800,
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.12,
+    assets: { default: '/assets/product-mockups/framed-poster-black-30x40.png' },
+  },
   template: {
     width: 728,
     height: 728,
@@ -509,6 +555,12 @@ const FRAMED_POSTER_50X70 = makeFramedPosterProduct({
   label: '50 × 70 cm',
   width: 5906,
   height: 8268,
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.1,
+    assets: { default: '/assets/product-mockups/framed-poster-black-50x70.png' },
+  },
   template: {
     width: 728,
     height: 728,
@@ -529,6 +581,14 @@ const TOTE_BAG = makeProduct({
   icon: '▱',
   previewType: 'flat',
   previewShape: 'tote',
+  previewMockup: {
+    width: 700,
+    height: 1000,
+    scale: 1,
+    blendMode: 'multiply',
+    canvas: { left: 5, top: 35.5, width: 90, height: 58.5 },
+    assets: { default: '/assets/product-mockups/tote-front.jpg' },
+  },
   productId: 84,
   variantId: 4533,
   printfileId: 6,
@@ -566,6 +626,12 @@ const THROW_BLANKET_50X60 = makeProduct({
   icon: '▰',
   previewType: 'flat',
   previewShape: 'blanket',
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.1,
+    assets: { default: '/assets/product-mockups/throw-blanket-flat-horizontal.png' },
+  },
   productId: 395,
   variantId: 10986,
   printfileId: 208,
@@ -609,6 +675,15 @@ const SPIRAL_NOTEBOOK = makeProduct({
   icon: '▥',
   previewType: 'flat',
   previewShape: 'notebook',
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1,
+    assets: {
+      front: '/assets/product-mockups/spiral-notebook-front.png',
+      back: '/assets/product-mockups/spiral-notebook-back.png',
+    },
+  },
   productId: 474,
   variantId: 12141,
   printfileId: 242,
@@ -657,6 +732,15 @@ const BASIC_PILLOW_18 = makeProduct({
   icon: '◇',
   previewType: 'flat',
   previewShape: 'pillow',
+  previewMockup: {
+    width: 1000,
+    height: 1000,
+    scale: 1.3,
+    assets: {
+      front: '/assets/product-mockups/basic-pillow-flat.png',
+      back: '/assets/product-mockups/basic-pillow-flat.png',
+    },
+  },
   productId: 83,
   variantId: 4532,
   printfileId: 32,
@@ -727,6 +811,7 @@ function getPublicProduct(product = DEFAULT_PRODUCT) {
     icon: product.icon,
     previewType: product.previewType,
     previewShape: product.previewShape,
+    previewMockup: product.previewMockup,
     defaultQuantity: product.defaultQuantity,
     minQuantity: product.minQuantity,
     maxQuantity: product.maxQuantity,

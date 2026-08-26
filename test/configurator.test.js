@@ -144,6 +144,41 @@ test('configurator exposes every curated product with verified Printful geometry
     { key: 'front', label: 'Vorderseite' },
     { key: 'back', label: 'Rückseite' },
   ]);
+  const mockupAssets = Object.fromEntries(data.products
+    .filter((candidate) => candidate.previewMockup)
+    .map((candidate) => [candidate.key, candidate.previewMockup.assets]));
+  assert.deepEqual(mockupAssets, {
+    'cork-back-coaster': { default: '/assets/product-mockups/coaster-flat.png' },
+    'matte-poster-30x40cm': { default: '/assets/product-mockups/matte-poster-30x40.png' },
+    'matte-poster-50x70cm': { default: '/assets/product-mockups/matte-poster-50x70.png' },
+    'framed-matte-poster-black-30x40cm': {
+      default: '/assets/product-mockups/framed-poster-black-30x40.png',
+    },
+    'framed-matte-poster-black-50x70cm': {
+      default: '/assets/product-mockups/framed-poster-black-50x70.png',
+    },
+    'all-over-tote-black-handles': { default: '/assets/product-mockups/tote-front.jpg' },
+    'throw-blanket-50x60in': {
+      default: '/assets/product-mockups/throw-blanket-flat-horizontal.png',
+    },
+    'spiral-notebook-dotted': {
+      front: '/assets/product-mockups/spiral-notebook-front.png',
+      back: '/assets/product-mockups/spiral-notebook-back.png',
+    },
+    'all-over-basic-pillow-18in': {
+      front: '/assets/product-mockups/basic-pillow-flat.png',
+      back: '/assets/product-mockups/basic-pillow-flat.png',
+    },
+  });
+  const tote = data.products.find((candidate) => candidate.key === 'all-over-tote-black-handles');
+  assert.deepEqual(
+    [tote.previewMockup.width, tote.previewMockup.height],
+    [700, 1000]
+  );
+  assert.equal(tote.previewMockup.blendMode, 'multiply');
+  assert.deepEqual(tote.previewMockup.canvas, {
+    left: 5, top: 35.5, width: 90, height: 58.5,
+  });
   assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
     ['pastel', 'sage-gold', 'ocean', 'custom']
@@ -210,6 +245,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="variant-options"/);
   assert.match(configurePage, /id="flat-product-preview"/);
+  assert.match(configurePage, /id="flat-product-mockup"/);
   assert.match(configurePage, /id="placement-options"/);
   assert.match(configurePage, /id="surface-tabs"/);
   assert.match(configurePage, /class="editor-tools editor-tools-primary">[\s\S]*?id="surface-editor"[\s\S]*?id="editor-add"/);
@@ -220,8 +256,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(configurePage, /mug-editor\.js\?v=20260825-3/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
+  assert.match(configurePage, /function updateProductMockup\(\)/);
   assert.match(configurePage, /function refreshWorkspaceLayout\(\)/);
-  assert.match(configurePage, /availableWidth \/ printAspect \+ 24/);
+  assert.match(configurePage, /Math\.max\([\s\S]*?availableWidth \/ printAspect,[\s\S]*?availableWidth \/ previewAspect[\s\S]*?\) \+ 24/);
   assert.match(configurePage, /requestAnimationFrame\(refreshWorkspaceLayout\)/);
   assert.doesNotMatch(configurePage, /const flatPreviewHeight =/);
   assert.match(configurePage, /\.editor-scroll \{[\s\S]*?padding: 12px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
@@ -242,6 +279,23 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /resizePrintArea/);
   assert.match(mugEditorSource, /refreshViewport/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
+  for (const [asset, contentType] of [
+    ['/assets/product-mockups/tote-front.jpg', 'image/jpeg'],
+    ['/assets/product-mockups/coaster-flat.png', 'image/png'],
+    ['/assets/product-mockups/matte-poster-30x40.png', 'image/png'],
+    ['/assets/product-mockups/matte-poster-50x70.png', 'image/png'],
+    ['/assets/product-mockups/framed-poster-black-30x40.png', 'image/png'],
+    ['/assets/product-mockups/framed-poster-black-50x70.png', 'image/png'],
+    ['/assets/product-mockups/throw-blanket-flat-horizontal.png', 'image/png'],
+    ['/assets/product-mockups/spiral-notebook-front.png', 'image/png'],
+    ['/assets/product-mockups/spiral-notebook-back.png', 'image/png'],
+    ['/assets/product-mockups/basic-pillow-flat.png', 'image/png'],
+  ]) {
+    const response = await fetch(baseUrl + asset);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), contentType);
+    assert.ok((await response.arrayBuffer()).byteLength > 2000);
+  }
 
   const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260817-1`);
   assert.equal(motifLibrary.status, 200);
