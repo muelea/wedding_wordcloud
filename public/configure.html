@@ -98,15 +98,21 @@
       line-height: 1.7;
     }
 
-    .config-grid {
+    .config-studio {
       display: grid;
-      grid-template-columns: minmax(0, 1.12fr) minmax(390px, .88fr);
-      gap: 34px;
+      gap: 24px;
+    }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(360px, .88fr);
+      gap: 24px;
       align-items: start;
     }
 
     .preview-card,
-    .controls {
+    .editor-card,
+    .checkout-panel {
       background: rgba(255, 254, 252, .88);
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
@@ -114,12 +120,24 @@
     }
 
     .preview-card {
-      min-height: 690px;
       padding: 30px;
       border-radius: 28px;
       overflow: hidden;
       position: sticky;
       top: 24px;
+    }
+
+    .editor-card {
+      padding: 30px;
+      border-radius: 28px;
+      overflow: visible;
+    }
+
+    .checkout-panel {
+      padding: 24px;
+      display: grid;
+      gap: 14px;
+      border-radius: 24px;
     }
 
     .preview-head {
@@ -129,14 +147,16 @@
       gap: 20px;
     }
     .preview-head h2,
-    .controls h2 {
+    .editor-title,
+    .design-toolbar h2 {
       margin: 0;
       font-family: 'Playfair Display', Georgia, serif;
       font-size: 25px;
       font-weight: 500;
     }
+    .editor-title { margin-bottom: 16px; }
     .mug-stage {
-      min-height: 400px;
+      min-height: 420px;
       margin: 0 -30px 18px;
       padding: 8px 38px 22px;
       display: flex;
@@ -331,19 +351,11 @@
     }
 
     .wrap-preview {
-      padding: 21px 22px 19px;
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      background: rgba(255, 255, 255, .48);
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
     }
-    .wrap-head {
-      margin-bottom: 13px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .wrap-head strong { font-size: 13px; font-weight: 600; }
     .surface-editor {
       margin: 0 0 12px;
       padding: 9px;
@@ -480,6 +492,15 @@
     .editor-button:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
     .editor-button:disabled { cursor: not-allowed; opacity: .34; }
     .editor-button-primary { border-color: rgba(156, 28, 76, .28); color: var(--berry); }
+    .editor-rotate-symbol {
+      width: 16px;
+      display: inline-block;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: .8;
+      text-align: center;
+      transform: translateY(-1px);
+    }
     .editor-photo-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .editor-icon-button { width: 36px; padding: 7px; font-size: 15px; }
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
@@ -532,7 +553,7 @@
       box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
     }
     .editor-selection {
-      min-height: 132px;
+      min-height: 104px;
       margin-bottom: 12px;
       padding: 12px;
       border: 1px solid var(--line);
@@ -546,42 +567,27 @@
       box-shadow: 0 7px 20px rgba(73,29,44,.055);
     }
     .editor-selection.is-photo .editor-field-label-color { opacity: .42; }
-    .editor-selection-head {
-      min-height: 19px;
-      margin-bottom: 9px;
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .editor-selection-status {
-      max-width: 48%;
-      overflow: hidden;
-      color: var(--ink);
-      font-size: 11px;
-      font-weight: 600;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .editor-selection-hint {
-      overflow: hidden;
-      color: var(--muted);
-      font-size: 9px;
-      text-align: right;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    .editor-selection-head { display: none; }
     .editor-selection-row {
       display: grid;
       grid-template-columns: minmax(150px, 1fr) auto;
-      align-items: end;
+      align-items: center;
       gap: 12px;
     }
     .editor-field-label { display: block; color: var(--muted); font-size: 10px; }
+    .editor-field-label-text {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
     .editor-text-input {
       width: 100%;
       height: 38px;
-      margin-top: 5px;
+      margin-top: 0;
       padding: 8px 10px;
       border: 1px solid rgba(123,70,82,.2);
       border-radius: 9px;
@@ -591,7 +597,8 @@
     }
     .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
     .editor-text-input:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
-    .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .editor-field-label-color { align-self: center; }
+    .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 0; }
     .editor-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
     .editor-swatch {
       width: 23px;
@@ -624,47 +631,122 @@
     .editor-color-input:disabled { cursor: not-allowed; opacity: .38; }
     .editor-actions { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
     .editor-delete { color: #9b2b42; }
-    .editor-help {
-      min-height: 17px;
-      margin: 10px 0 0;
+    .editor-status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .design-toolbar {
+      padding: 16px 0 18px;
+      display: grid;
+      grid-template-columns: minmax(220px, .42fr) minmax(0, 1fr);
+      align-items: center;
+      gap: 18px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .design-toolbar h2 { margin-bottom: 3px; }
+    .controls-sub { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .design-toolbar-controls {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(300px, 1.2fr) minmax(220px, .8fr) minmax(220px, .8fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+    .toolbar-menu {
+      min-width: 0;
+      position: relative;
+    }
+    .toolbar-menu[hidden] { display: none; }
+    .toolbar-summary {
+      min-height: 82px;
+      padding: 13px 15px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 18px;
+      grid-template-rows: auto auto;
+      align-items: center;
+      align-content: center;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(255, 255, 255, .7);
+      cursor: pointer;
+      list-style: none;
+      transition: border-color .2s, background .2s, box-shadow .2s;
+    }
+    .toolbar-summary::-webkit-details-marker { display: none; }
+    .toolbar-summary::after {
+      content: '⌄';
+      grid-column: 2;
+      grid-row: 1 / 3;
+      justify-self: end;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1;
+      transition: transform .2s, color .2s;
+    }
+    .toolbar-menu[open] .toolbar-summary::after {
+      color: var(--berry);
+      transform: rotate(180deg);
+    }
+    .toolbar-summary:hover,
+    .toolbar-menu[open] .toolbar-summary {
+      border-color: rgba(156, 28, 76, .3);
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(64, 15, 38, .06);
+    }
+    .toolbar-summary:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .toolbar-summary > span {
+      min-width: 0;
+      grid-column: 1;
+    }
+    .toolbar-summary > span:first-child { grid-row: 1; }
+    .toolbar-kicker {
+      display: block;
       color: var(--muted);
       font-size: 10px;
-      line-height: 1.45;
-    }
-    .editor-photo-note {
-      margin: 3px 0 0;
-      color: var(--muted);
-      font-size: 9px;
-      line-height: 1.45;
-    }
-    .editor-photo-note a { color: var(--berry); text-decoration: underline; text-underline-offset: 2px; }
-
-    .controls {
-      border-radius: 28px;
-      padding: 30px;
-    }
-    .controls > h2 { margin-bottom: 4px; }
-    .controls-sub { margin: 0 0 28px; color: var(--muted); font-size: 13px; }
-    .step { padding: 25px 0; border-top: 1px solid var(--line); }
-    .step:first-of-type { border-top: 0; padding-top: 4px; }
-    .step-title {
-      margin: 0 0 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
       font-weight: 600;
+      letter-spacing: .09em;
+      text-transform: uppercase;
     }
-    .step-number {
-      width: 25px;
-      height: 25px;
-      display: grid;
-      place-items: center;
-      border-radius: 50%;
-      background: var(--cream);
-      color: var(--berry);
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 12px;
+    .toolbar-summary strong {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .toolbar-summary-detail {
+      grid-row: 2;
+      min-width: 0;
+      margin-top: 2px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.3;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .toolbar-panel {
+      position: absolute;
+      z-index: 40;
+      top: calc(100% + 8px);
+      right: 0;
+      width: min(560px, calc(100vw - 72px));
+      padding: 14px;
+      border: 1px solid rgba(123, 70, 82, .16);
+      border-radius: 18px;
+      background: rgba(255, 253, 250, .98);
+      box-shadow: 0 24px 60px rgba(64, 15, 38, .15);
+      backdrop-filter: blur(12px);
     }
 
     .selected-product {
@@ -678,6 +760,7 @@
       border-radius: 17px;
       background: rgba(255, 255, 255, .7);
     }
+    .toolbar-product { min-width: 0; }
     .selected-product-thumb {
       width: 58px;
       height: 58px;
@@ -1004,29 +1087,33 @@
     .custom-palette-note { margin: 11px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 
     .save-button {
-      width: 100%;
-      margin-top: 16px;
-      padding: 16px 20px;
+      width: auto;
+      min-height: 44px;
+      margin-top: 0;
+      padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
       border: 0;
-      border-radius: 14px;
+      border-radius: 12px;
       background: linear-gradient(135deg, var(--berry), var(--berry-dark));
       color: #fff;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      box-shadow: 0 12px 24px rgba(115, 20, 55, .19);
+      box-shadow: 0 9px 18px rgba(115, 20, 55, .14);
       transition: transform .2s, box-shadow .2s, opacity .2s;
     }
-    .save-button:hover { transform: translateY(-1px); box-shadow: 0 15px 28px rgba(115,20,55,.24); }
+    .save-button:hover { transform: translateY(-1px); box-shadow: 0 12px 22px rgba(115,20,55,.19); }
     .save-button:disabled { cursor: wait; opacity: .6; transform: none; }
-    .checkout-note { margin: 11px 0 0; text-align: center; color: var(--muted); font-size: 11px; }
+    .checkout-panel > .save-button {
+      justify-self: end;
+      min-width: min(100%, 300px);
+    }
 
     .order-box {
-      margin-top: 16px;
+      margin-top: 0;
       padding: 14px;
       border: 1px solid rgba(123, 70, 82, .14);
       border-radius: 16px;
@@ -1104,13 +1191,16 @@
     .order-remove:hover { background: rgba(156, 28, 76, .08); color: var(--berry); }
     .order-actions {
       margin-top: 12px;
-      display: grid;
-      gap: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     .secondary-button {
-      width: 100%;
-      min-height: 44px;
-      padding: 11px 14px;
+      width: auto;
+      min-width: 210px;
+      min-height: 40px;
+      padding: 10px 14px;
       border: 1px solid rgba(156, 28, 76, .24);
       border-radius: 12px;
       background: #fff;
@@ -1120,6 +1210,7 @@
       font-weight: 600;
     }
     .secondary-button:hover { border-color: var(--berry); background: rgba(156, 28, 76, .04); }
+    .order-actions .save-button { min-width: 190px; }
     .error-text { min-height: 18px; margin: 11px 0 0; color: #a12c43; text-align: center; font-size: 12px; }
 
     .loading {
@@ -1142,10 +1233,30 @@
     }
     .config-footer a:hover { color: var(--berry); }
 
+    @media (max-width: 1180px) {
+      .design-toolbar { grid-template-columns: 1fr; align-items: stretch; }
+      .design-toolbar-copy {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .controls-sub { max-width: 520px; text-align: right; }
+      .design-toolbar-controls { grid-template-columns: minmax(300px, 1fr) minmax(210px, .7fr) minmax(210px, .7fr); }
+    }
+
     @media (max-width: 940px) {
-      .config-grid { grid-template-columns: 1fr; }
-      .preview-card { position: static; min-height: 0; }
-      .controls { max-width: none; }
+      .design-toolbar-copy { display: block; }
+      .controls-sub { max-width: none; text-align: left; }
+      .design-toolbar-controls { grid-template-columns: 1fr; }
+      .toolbar-panel {
+        position: static;
+        width: 100%;
+        margin-top: 8px;
+      }
+      .workbench { grid-template-columns: 1fr; }
+      .preview-card { order: 1; position: static; min-height: 0; }
+      .editor-card { order: 2; }
     }
 
     @media (max-width: 620px) {
@@ -1155,14 +1266,23 @@
       .page { padding: 38px 0 50px; }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
-      .preview-card, .controls { padding: 20px; border-radius: 21px; }
+      .preview-card, .editor-card, .checkout-panel { padding: 20px; border-radius: 21px; }
+      .checkout-panel > .save-button,
+      .order-actions .save-button,
+      .secondary-button {
+        width: 100%;
+        min-width: 0;
+      }
+      .order-actions {
+        display: grid;
+        gap: 8px;
+      }
+      .design-toolbar { padding: 14px 0 16px; }
       .preview-head { align-items: center; }
       .mug-stage { min-height: 310px; margin: 0 -20px 16px; padding: 6px 14px 18px; gap: 22px; }
       .mug-viewer { height: 270px; }
       .mug { width: min(35vw, 165px); }
       .mug-name { margin-top: 0; font-size: 11px; }
-      .wrap-preview { padding: 15px; }
-      .wrap-head { align-items: flex-start; }
       .surface-editor { align-items: stretch; flex-direction: column; }
       .surface-tabs { width: 100%; }
       .surface-tab { flex: 1; }
@@ -1173,9 +1293,6 @@
       .editor-motif-menu { width: min(350px, calc(100vw - 70px)); }
       .editor-motif-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
       .editor-selection-row { grid-template-columns: 1fr; }
-      .editor-selection-head { align-items: flex-start; flex-direction: column; gap: 2px; }
-      .editor-selection-status { max-width: 100%; }
-      .editor-selection-hint { max-width: 100%; text-align: left; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
       .selected-product { grid-template-columns: 52px minmax(0, 1fr); }
       .selected-product-thumb { width: 52px; height: 52px; }
@@ -1210,99 +1327,15 @@
         <p class="intro-copy" id="config-intro">Wählt Produkt, Farbwelt und Platzierung. Menge und Lieferadressen entscheidet ihr im nächsten Schritt.</p>
       </section>
 
-      <div class="config-grid">
-        <section class="preview-card" aria-labelledby="preview-title">
-          <div class="preview-head">
-            <h2 id="preview-title">Eure Vorschau</h2>
+      <div class="config-studio">
+        <section class="design-toolbar" aria-labelledby="controls-title">
+          <div class="design-toolbar-copy">
+            <h2 id="controls-title">Euer Design</h2>
+            <p class="controls-sub" id="controls-subtitle">Drei kurze Schritte – mehr braucht es nicht.</p>
           </div>
 
-          <div class="mug-stage" id="product-stage" aria-label="Vorschau des gestalteten Produkts">
-            <div class="mug-wrap">
-              <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen horizontal oder vertikal ziehen. Alternativ die Pfeiltasten verwenden.">
-                <div class="mug-fallback">
-                  <div class="mug"><canvas class="mug-art" id="mug-preview"></canvas></div>
-                </div>
-                <div class="flat-product-preview" id="flat-product-preview" aria-hidden="true">
-                  <canvas id="flat-preview"></canvas>
-                </div>
-              </div>
-              <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
-            </div>
-          </div>
-
-          <div class="wrap-preview">
-            <div class="wrap-head">
-              <strong>So liegt das Motiv auf der Druckfläche</strong>
-            </div>
-            <div class="surface-editor" id="surface-editor" hidden>
-              <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
-              <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
-            </div>
-            <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
-              <div class="editor-tools">
-                <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
-                <button class="editor-button editor-button-primary" id="editor-photo" type="button"><span aria-hidden="true">＋</span> Foto</button>
-                <input class="editor-photo-input" id="editor-photo-input" type="file" accept="image/*" multiple />
-                <div class="editor-motif-picker">
-                  <button class="editor-button editor-button-primary" id="editor-icon-toggle" type="button" aria-expanded="false" aria-controls="editor-icon-menu" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Motiv</button>
-                  <div class="editor-motif-menu" id="editor-icon-menu" role="dialog" aria-label="Motiv auswählen" hidden>
-                    <strong class="editor-motif-title">Welches Motiv möchtet ihr hinzufügen?</strong>
-                    <div class="editor-motif-grid" id="editor-icon-grid"></div>
-                  </div>
-                </div>
-                <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Zurücksetzen</button>
-              </div>
-              <div class="editor-tools">
-                <button class="editor-button editor-icon-button" id="editor-undo" type="button" aria-label="Rückgängig" title="Rückgängig">↶</button>
-                <button class="editor-button editor-icon-button" id="editor-redo" type="button" aria-label="Wiederholen" title="Wiederholen">↷</button>
-                <button class="editor-button editor-icon-button" id="editor-zoom-out" type="button" aria-label="Ansicht verkleinern" title="Ansicht verkleinern">−</button>
-                <span class="editor-zoom-label" id="editor-zoom-label">100 %</span>
-                <button class="editor-button editor-icon-button" id="editor-zoom-in" type="button" aria-label="Ansicht vergrößern" title="Ansicht vergrößern">＋</button>
-              </div>
-            </div>
-            <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
-              <div class="editor-selection-head">
-                <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
-                <span class="editor-selection-hint" id="editor-selection-hint">Wort, Foto oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
-              </div>
-              <div class="editor-selection-row">
-                <label class="editor-field-label"><span id="editor-text-label">Ausgewähltes Element</span>
-                  <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
-                </label>
-                <div class="editor-field-label editor-field-label-color">Farbe
-                  <div class="editor-colors">
-                    <div class="editor-swatches" id="editor-swatches"></div>
-                    <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
-                  </div>
-                </div>
-              </div>
-              <div class="editor-actions">
-                <button class="editor-button" id="editor-smaller" type="button" disabled>− Kleiner</button>
-                <button class="editor-button" id="editor-larger" type="button" disabled>＋ Größer</button>
-                <button class="editor-button" id="editor-rotate-left" type="button" disabled>↶ Drehen</button>
-                <button class="editor-button" id="editor-rotate-right" type="button" disabled>↷ Drehen</button>
-                <button class="editor-button" id="editor-duplicate" type="button" disabled>Duplizieren</button>
-                <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
-              </div>
-            </div>
-            <div class="editor-scroll is-fit" id="editor-scroll">
-              <div class="editor-canvas-shell" id="editor-canvas-shell">
-                <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter, Fotos und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
-                <span class="print-safe-guide" aria-hidden="true"></span>
-              </div>
-            </div>
-            <p class="editor-help" id="editor-feedback" aria-live="polite">Wort, Foto oder Motiv auswählen und direkt auf der Druckfläche bearbeiten.</p>
-            <p class="editor-photo-note">Bitte verwendet nur Fotos, die ihr nutzen dürft. Details findet ihr im <a href="/datenschutz">Datenschutz</a>.</p>
-          </div>
-        </section>
-
-        <aside class="controls" aria-labelledby="controls-title">
-          <h2 id="controls-title">Euer Design</h2>
-          <p class="controls-sub" id="controls-subtitle">Drei kurze Schritte – mehr braucht es nicht.</p>
-
-          <section class="step">
-            <h3 class="step-title"><span class="step-number">1</span> Produkt</h3>
-            <div class="selected-product" id="selected-product">
+          <div class="design-toolbar-controls">
+            <div class="selected-product toolbar-product" id="selected-product">
               <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
               <span class="selected-product-copy">
                 <strong id="selected-product-name">Weiße Tasse</strong>
@@ -1310,31 +1343,134 @@
               </span>
               <button class="product-change" id="change-product" type="button">Produkt ändern</button>
             </div>
-          </section>
 
-          <section class="step">
-            <h3 class="step-title"><span class="step-number">2</span> Farbwelt</h3>
-            <div class="option-grid" id="theme-options"></div>
-            <div class="custom-palette-panel" id="custom-palette-panel" hidden>
-              <div class="custom-palette-head">
-                <div class="custom-palette-copy">
-                  <strong>Eure Farben</strong>
-                  <span>So viele oder wenige, wie ihr möchtet.</span>
+            <details class="toolbar-menu" id="theme-step">
+              <summary class="toolbar-summary">
+                <span>
+                  <span class="toolbar-kicker">Farbwelt</span>
+                  <strong id="selected-theme-name">Farbwelt wählen</strong>
+                </span>
+                <span class="toolbar-summary-detail" id="selected-theme-detail">Auswählen</span>
+              </summary>
+              <div class="toolbar-panel">
+                <div class="option-grid" id="theme-options"></div>
+                <div class="custom-palette-panel" id="custom-palette-panel" hidden>
+                  <div class="custom-palette-head">
+                    <div class="custom-palette-copy">
+                      <strong>Eure Farben</strong>
+                      <span>So viele oder wenige, wie ihr möchtet.</span>
+                    </div>
+                    <button class="custom-color-add" id="custom-color-add" type="button">＋ Farbe</button>
+                  </div>
+                  <div class="custom-color-list" id="custom-color-list"></div>
+                  <p class="custom-palette-note">Die Farben werden gleichmäßig auf eure Wörter verteilt. Einzelne Wörter könnt ihr unten auf der Druckfläche weiterhin separat ändern.</p>
                 </div>
-                <button class="custom-color-add" id="custom-color-add" type="button">＋ Farbe</button>
               </div>
-              <div class="custom-color-list" id="custom-color-list"></div>
-              <p class="custom-palette-note">Die Farben werden gleichmäßig auf eure Wörter verteilt. Einzelne Wörter könnt ihr unten auf der Druckfläche weiterhin separat ändern.</p>
+            </details>
+
+            <details class="toolbar-menu" id="placement-step">
+              <summary class="toolbar-summary">
+                <span>
+                  <span class="toolbar-kicker">Platzierung</span>
+                  <strong id="selected-placement-name">Platzierung wählen</strong>
+                </span>
+                <span class="toolbar-summary-detail" id="selected-placement-detail">Auswählen</span>
+              </summary>
+              <div class="toolbar-panel">
+                <div class="option-grid placement-grid" id="placement-options"></div>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <div class="workbench">
+          <section class="editor-card" aria-labelledby="editor-title">
+            <h2 class="editor-title" id="editor-title">Druckfläche bearbeiten</h2>
+            <div class="wrap-preview">
+              <div class="surface-editor" id="surface-editor" hidden>
+                <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
+                <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
+              </div>
+              <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
+                <div class="editor-tools">
+                  <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
+                  <button class="editor-button editor-button-primary" id="editor-photo" type="button"><span aria-hidden="true">＋</span> Foto</button>
+                  <input class="editor-photo-input" id="editor-photo-input" type="file" accept="image/*" multiple />
+                  <div class="editor-motif-picker">
+                    <button class="editor-button editor-button-primary" id="editor-icon-toggle" type="button" aria-expanded="false" aria-controls="editor-icon-menu" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Motiv</button>
+                    <div class="editor-motif-menu" id="editor-icon-menu" role="dialog" aria-label="Motiv auswählen" hidden>
+                      <strong class="editor-motif-title">Welches Motiv möchtet ihr hinzufügen?</strong>
+                      <div class="editor-motif-grid" id="editor-icon-grid"></div>
+                    </div>
+                  </div>
+                  <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Zurücksetzen</button>
+                </div>
+                <div class="editor-tools">
+                  <button class="editor-button editor-icon-button" id="editor-undo" type="button" aria-label="Rückgängig" title="Rückgängig">↶</button>
+                  <button class="editor-button editor-icon-button" id="editor-redo" type="button" aria-label="Wiederholen" title="Wiederholen">↷</button>
+                  <button class="editor-button editor-icon-button" id="editor-zoom-out" type="button" aria-label="Ansicht verkleinern" title="Ansicht verkleinern">−</button>
+                  <span class="editor-zoom-label" id="editor-zoom-label">100 %</span>
+                  <button class="editor-button editor-icon-button" id="editor-zoom-in" type="button" aria-label="Ansicht vergrößern" title="Ansicht vergrößern">＋</button>
+                </div>
+              </div>
+              <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
+                <div class="editor-selection-head">
+                  <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
+                  <span class="editor-selection-hint" id="editor-selection-hint">Wort, Foto oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
+                </div>
+                <div class="editor-selection-row">
+                  <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
+                    <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
+                  </label>
+                  <div class="editor-field-label editor-field-label-color" role="group" aria-label="Farbe auswählen">
+                    <div class="editor-colors">
+                      <div class="editor-swatches" id="editor-swatches"></div>
+                      <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
+                    </div>
+                  </div>
+                </div>
+                <div class="editor-actions">
+                  <button class="editor-button" id="editor-smaller" type="button" disabled>− Kleiner</button>
+                  <button class="editor-button" id="editor-larger" type="button" disabled>＋ Größer</button>
+                  <button class="editor-button" id="editor-rotate-left" type="button" aria-label="Nach links drehen" title="Nach links drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↺</span> Drehen</button>
+                  <button class="editor-button" id="editor-rotate-right" type="button" aria-label="Nach rechts drehen" title="Nach rechts drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↻</span> Drehen</button>
+                  <button class="editor-button" id="editor-duplicate" type="button" disabled>Duplizieren</button>
+                  <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
+                </div>
+              </div>
+              <div class="editor-scroll is-fit" id="editor-scroll">
+                <div class="editor-canvas-shell" id="editor-canvas-shell">
+                  <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter, Fotos und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
+                  <span class="print-safe-guide" aria-hidden="true"></span>
+                </div>
+              </div>
+              <p class="editor-status" id="editor-feedback" aria-live="polite"></p>
             </div>
           </section>
 
-          <section class="step" id="placement-step">
-            <h3 class="step-title"><span class="step-number">3</span> Platzierung</h3>
-            <div class="option-grid placement-grid" id="placement-options"></div>
-          </section>
+          <section class="preview-card" aria-labelledby="preview-title">
+            <div class="preview-head">
+              <h2 id="preview-title">Eure Vorschau</h2>
+            </div>
 
+            <div class="mug-stage" id="product-stage" aria-label="Vorschau des gestalteten Produkts">
+              <div class="mug-wrap">
+                <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen horizontal oder vertikal ziehen. Alternativ die Pfeiltasten verwenden.">
+                  <div class="mug-fallback">
+                    <div class="mug"><canvas class="mug-art" id="mug-preview"></canvas></div>
+                  </div>
+                  <div class="flat-product-preview" id="flat-product-preview" aria-hidden="true">
+                    <canvas id="flat-preview"></canvas>
+                  </div>
+                </div>
+                <span class="mug-name" id="mug-viewer-hint">↔ ↕ Ziehen zum Drehen</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="checkout-panel" aria-label="Bestellung speichern">
           <button class="save-button" id="save-button" type="button">Design zur Bestellung hinzufügen <span aria-hidden="true">→</span></button>
-          <p class="checkout-note">Danach könnt ihr weitere Produkte gestalten oder zur Lieferadresse wechseln.</p>
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
               <strong>Eure Bestellung</strong>
@@ -1347,7 +1483,7 @@
             </div>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
-        </aside>
+        </section>
       </div>
     </div>
   </main>
@@ -1401,7 +1537,13 @@
     const selectedProductThumb = document.getElementById('selected-product-thumb');
     const selectedProductName = document.getElementById('selected-product-name');
     const selectedProductDetail = document.getElementById('selected-product-detail');
+    const selectedThemeName = document.getElementById('selected-theme-name');
+    const selectedThemeDetail = document.getElementById('selected-theme-detail');
+    const selectedPlacementName = document.getElementById('selected-placement-name');
+    const selectedPlacementDetail = document.getElementById('selected-placement-detail');
     const changeProductButton = document.getElementById('change-product');
+    const themeStep = document.getElementById('theme-step');
+    const placementStep = document.getElementById('placement-step');
     const productDialog = document.getElementById('product-dialog');
     const productDialogClose = document.getElementById('product-dialog-close');
     const productDialogDone = document.getElementById('product-dialog-done');
@@ -1727,6 +1869,45 @@
         : palette;
     }
 
+    function selectedThemeOption() {
+      return product?.themes.find((option) => option.key === selectedTheme) || product?.themes[0] || null;
+    }
+
+    function selectedPlacementOption() {
+      return product?.layouts.find((layout) => layout.key === selectedPlacement) || product?.layouts[0] || null;
+    }
+
+    function updateToolbarSummaries() {
+      const palette = selectedThemeOption();
+      if (palette) {
+        selectedThemeName.textContent = palette.label;
+        selectedThemeDetail.textContent = palette.key === 'custom'
+          ? `${customColors.length} Farben`
+          : palette.description;
+      }
+      const placement = selectedPlacementOption();
+      if (placement) {
+        selectedPlacementName.textContent = placement.label;
+        selectedPlacementDetail.textContent = placement.description;
+      }
+    }
+
+    function closeToolbarMenus(except = null) {
+      [themeStep, placementStep].forEach((menu) => {
+        if (menu && menu !== except) menu.open = false;
+      });
+    }
+
+    [themeStep, placementStep].forEach((menu) => {
+      menu?.addEventListener('toggle', () => {
+        if (menu.open) closeToolbarMenus(menu);
+      });
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.toolbar-menu')) closeToolbarMenus();
+    });
+
     function colorWithAlpha(hex, alpha) {
       const value = hex.replace('#', '');
       const red = Number.parseInt(value.slice(0, 2), 16);
@@ -1756,6 +1937,7 @@
 
     function applyCustomPalette() {
       updateCustomThemeCard();
+      updateToolbarSummaries();
       markDirty();
       if (mugEditor) applyPaletteAcrossSurfaces(customColors);
       renderAll();
@@ -1800,6 +1982,7 @@
         item.append(input, value, remove);
         customColorList.appendChild(item);
       });
+      updateToolbarSummaries();
     }
 
     customColorAdd.addEventListener('click', () => {
@@ -2303,6 +2486,7 @@
       selectedProductThumb.alt = '';
       selectedProductName.textContent = product.displayName;
       selectedProductDetail.textContent = selectedProductSummary(product);
+      updateToolbarSummaries();
     }
 
     function closeProductDialog() {
@@ -2512,6 +2696,8 @@
         input.checked = layout.key === selectedPlacement;
         input.addEventListener('change', () => {
           selectedPlacement = layout.key;
+          updateToolbarSummaries();
+          closeToolbarMenus();
           markDirty();
           if (mugEditor) {
             mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
@@ -2532,6 +2718,7 @@
         label.append(input, card);
         placementOptions.appendChild(label);
       }
+      updateToolbarSummaries();
     }
 
     function buildThemeOptions() {
@@ -2548,8 +2735,10 @@
         input.checked = palette.key === selectedTheme;
         input.addEventListener('change', () => {
           selectedTheme = palette.key;
+          updateToolbarSummaries();
           markDirty();
           renderCustomColorControls();
+          if (palette.key !== 'custom') closeToolbarMenus();
           if (mugEditor) applyPaletteAcrossSurfaces(getPalette(selectedTheme).colors);
           renderAll();
         });
@@ -2571,6 +2760,7 @@
         label.append(input, card);
         themeOptions.appendChild(label);
       }
+      updateToolbarSummaries();
     }
 
     function initEditor() {
