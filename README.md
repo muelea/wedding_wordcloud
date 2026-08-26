@@ -23,7 +23,9 @@ add their own photos, words and motifs, and purchase it independently.
    how many guests submitted the same word.
 5. From the guest page, any attendee can open the personal-memory flow. It
    starts with an empty product design, locally reduces selected photos before upload,
-   and keeps that opaque design separate from the shared wedding word cloud.
+   and keeps that opaque design separate from the shared wedding word cloud. It uses
+   the same products, placements and editing tools as the shared-cloud configurator;
+   only the initial canvas content differs.
    A guest can add up to six photos plus personal words and motifs, then use
    the normal address, quote and checkout flow for their own order.
 6. After the event, the couple opens a product configurator, chooses a white
@@ -42,7 +44,10 @@ add their own photos, words and motifs, and purchase it independently.
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
    and every curated wedding motif can be moved, resized, rotated, recolored,
-   duplicated or removed; words can also be edited directly. Hard bounds keep
+   duplicated or removed; desktop users can also copy and paste selected elements
+   with the standard keyboard shortcuts. Placement changes transform the complete
+   current canvas instead of regenerating it from the original event words. Words
+   can also be edited directly. Hard bounds keep
    the entire design printable.
 7. The saved designs continue to a dedicated, mobile-first shipping-address
    page. There the customer chooses the quantity of each design per delivery
@@ -233,7 +238,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 53 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 54 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,

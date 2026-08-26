@@ -68,6 +68,7 @@
       this.photoElements = new Map();
       this.photoSourceIds = new Map();
       this.photoSources = new Map();
+      this.clipboard = null;
 
       this.canvas = new root.fabric.Canvas(options.canvas, {
         width: this.canvasWidth,
@@ -359,7 +360,9 @@
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
-        const editingField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
+        const activeElement = document.activeElement;
+        const editingField = /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement?.tagName || '') ||
+          Boolean(activeElement?.isContentEditable);
         const command = event.metaKey || event.ctrlKey;
         if (!editingField && command && event.key.toLowerCase() === 'z') {
           event.shiftKey ? this.redo() : this.undo();
@@ -368,6 +371,14 @@
         }
         if (!editingField && command && event.key.toLowerCase() === 'y') {
           this.redo();
+          event.preventDefault();
+          return;
+        }
+        if (!editingField && command && event.key.toLowerCase() === 'c' && this.copyActive()) {
+          event.preventDefault();
+          return;
+        }
+        if (!editingField && command && event.key.toLowerCase() === 'v' && this.pasteClipboard()) {
           event.preventDefault();
           return;
         }
@@ -428,7 +439,11 @@
       this.suspended = true;
       this.canvas.discardActiveObject();
       for (const object of [...this.canvas.getObjects()]) this.canvas.remove(object);
-      for (const item of design) this.canvas.add(this.makeObject(item));
+      for (const item of design) {
+        const object = this.makeObject(item);
+        this.keepInside(object);
+        this.canvas.add(object);
+      }
       this.canvas.requestRenderAll();
       this.suspended = false;
       this.updateSelectionPanel();
@@ -810,10 +825,6 @@
     deleteActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return;
-      if (this.canvas.getObjects().length <= 1) {
-        this.setFeedback('Mindestens ein Element muss bleiben.');
-        return;
-      }
       const deletedLabel = active.editorKind === 'image'
         ? 'Foto'
         : active.editorKind === 'icon' ? 'Motiv' : 'Wort';
@@ -826,14 +837,12 @@
       this.setFeedback(`${deletedLabel} gelöscht`);
     }
 
-    duplicateActive() {
-      const active = this.canvas.getActiveObject();
-      if (!active) return;
-      const design = this.serializeObject(active);
-      design.id = this.nextId(active.editorKind === 'image' ? 'foto' : active.editorKind === 'icon' ? 'motiv' : 'wort');
-      design.x += 48;
-      design.y += 48;
-      const copy = this.makeObject(design);
+    duplicateDesignItem(design) {
+      const nextDesign = { ...design };
+      nextDesign.id = this.nextId(nextDesign.type === 'image' ? 'foto' : nextDesign.type === 'icon' ? 'motiv' : 'wort');
+      nextDesign.x += 48;
+      nextDesign.y += 48;
+      const copy = this.makeObject(nextDesign);
       this.keepInside(copy);
       this.canvas.add(copy);
       this.canvas.setActiveObject(copy);
@@ -841,9 +850,37 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
+      return copy;
+    }
+
+    duplicateActive() {
+      const active = this.canvas.getActiveObject();
+      if (!active) return;
+      this.duplicateDesignItem(this.serializeObject(active));
       this.setFeedback(active.editorKind === 'image'
         ? 'Foto dupliziert'
         : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert');
+    }
+
+    copyActive() {
+      const active = this.canvas.getActiveObject();
+      if (!active) return false;
+      this.clipboard = { ...this.serializeObject(active) };
+      this.setFeedback(active.editorKind === 'image'
+        ? 'Foto kopiert'
+        : active.editorKind === 'icon' ? 'Motiv kopiert' : 'Wort kopiert');
+      return true;
+    }
+
+    pasteClipboard() {
+      if (!this.clipboard) return false;
+      const source = { ...this.clipboard };
+      const copy = this.duplicateDesignItem(source);
+      this.clipboard = { ...this.serializeObject(copy) };
+      this.setFeedback(copy.editorKind === 'image'
+        ? 'Foto eingefügt'
+        : copy.editorKind === 'icon' ? 'Motiv eingefügt' : 'Wort eingefügt');
+      return true;
     }
 
     bringActiveToFront() {

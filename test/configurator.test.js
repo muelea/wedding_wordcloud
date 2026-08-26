@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
 const MugIcons = require('../public/js/mug-icons.js');
+const DesignLayout = require('../public/js/design-layout.js');
 
 function connectSocket(baseUrl, slug) {
   return new Promise((resolve, reject) => {
@@ -28,6 +29,33 @@ function submitWord(socket, word) {
     socket.emit('submit-word', word);
   });
 }
+
+test('placement changes transform the complete current design without dropping elements', () => {
+  const currentDesign = [
+    { id: 'wort-ausgang', text: 'Liebe', x: 25, y: 40, fontSize: 18, angle: 0, color: '#a40e4c' },
+    { id: 'wort-ergaenzt', text: 'Zusammenhalt', x: 75, y: 60, fontSize: 14, angle: -8, color: '#168f83' },
+    { id: 'motiv-ergaenzt', type: 'icon', icon: 'heart', x: 50, y: 75, size: 20, angle: 5, color: '#d90368' },
+  ];
+  const single = [{ x: 0, y: 0, width: 100, height: 100 }];
+  const fitArea = [{ x: 10, y: 20, width: 200, height: 120 }];
+  const bothSides = [
+    { x: 0, y: 0, width: 80, height: 80 },
+    { x: 120, y: 0, width: 80, height: 80 },
+  ];
+
+  const fitted = DesignLayout.transformDesign(currentDesign, single, fitArea);
+  assert.deepEqual(fitted.map((item) => item.id), currentDesign.map((item) => item.id));
+  assert.deepEqual(fitted.map((item) => item.text || item.icon), ['Liebe', 'Zusammenhalt', 'heart']);
+  assert.equal(fitted.find((item) => item.id === 'wort-ergaenzt').x, 160);
+
+  const duplicated = DesignLayout.transformDesign(currentDesign, single, bothSides);
+  assert.equal(duplicated.length, currentDesign.length * 2);
+  assert.equal(new Set(duplicated.map((item) => item.id)).size, duplicated.length);
+  assert.equal(duplicated.filter((item) => item.text === 'Zusammenhalt').length, 2);
+
+  const collapsed = DesignLayout.transformDesign(duplicated, bothSides, fitArea);
+  assert.equal(collapsed.length, duplicated.length, 'switching back must not remove either side');
+});
 
 test('configurator exposes every curated product with verified Printful geometry', async (t) => {
   const { baseUrl, close } = await startTestServer();
@@ -290,8 +318,16 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="workspace-tools"/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260826-1/);
+  assert.match(configurePage, /design-layout\.js\?v=20260826-1/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260826-2/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
+  assert.match(configurePage, /id="editor-duplicate"[^>]*title="Duplizieren \(⌘\/Strg \+ C und V\)"/);
+  assert.doesNotMatch(configurePage, /Gestaltet eure persönliche Erinnerung/);
+  assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
+  assert.match(configurePage, /return `wolkenworte-order:\$\{slug\}`/);
+  assert.doesNotMatch(configurePage, /wrong_configuration_type/);
+  assert.match(configurePage, /applyPlacementToCurrentDesign\(previousPlacement, selectedPlacement\)/);
+  assert.doesNotMatch(configurePage, /input\.addEventListener\('change',[\s\S]{0,400}mugEditor\.setDesign\(buildAutomaticDesign\(\)/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
   assert.match(configurePage, /function updateProductMockup\(\)/);
   assert.match(configurePage, /product\.previewMockup\.canvas\.fit === 'cover'/);
@@ -312,13 +348,18 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-1`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-2`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
   assert.match(mugEditorSource, /refreshViewport/);
   assert.match(mugEditorSource, /bringActiveToFront\(\)/);
   assert.match(mugEditorSource, /bringObjectToFront\(active\)/);
+  assert.match(mugEditorSource, /copyActive\(\)/);
+  assert.match(mugEditorSource, /pasteClipboard\(\)/);
+  assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'c'/);
+  assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'v'/);
+  assert.doesNotMatch(mugEditorSource, /Mindestens ein Element muss bleiben/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
   for (const [asset, contentType] of [
     ['/assets/product-mockups/tote-front.jpg', 'image/jpeg'],

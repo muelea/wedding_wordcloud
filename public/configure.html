@@ -1574,7 +1574,7 @@
                   <button class="editor-button" id="editor-larger" type="button" disabled>＋ Größer</button>
                   <button class="editor-button" id="editor-rotate-left" type="button" aria-label="Nach links drehen" title="Nach links drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↺</span> Drehen</button>
                   <button class="editor-button" id="editor-rotate-right" type="button" aria-label="Nach rechts drehen" title="Nach rechts drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↻</span> Drehen</button>
-                  <button class="editor-button" id="editor-duplicate" type="button" disabled>Duplizieren</button>
+                  <button class="editor-button" id="editor-duplicate" type="button" title="Duplizieren (⌘/Strg + C und V)" disabled>Duplizieren</button>
                   <button class="editor-button" id="editor-bring-front" type="button" aria-label="Ganz nach vorn" title="Ganz nach vorn" disabled><span aria-hidden="true">↥</span> Nach vorn</button>
                   <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
                 </div>
@@ -1669,13 +1669,14 @@
   <script src="/js/wordcloud-core.js?v=20260819-2"></script>
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/mug-editor.js?v=20260826-1"></script>
+  <script src="/js/design-layout.js?v=20260826-1"></script>
+  <script src="/js/mug-editor.js?v=20260826-2"></script>
   <script>
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
     const isPersonalMode = new URLSearchParams(location.search).get('mode') === 'personal';
-    const configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
+    let configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
     const loading = document.getElementById('loading');
     const content = document.getElementById('config-content');
     const saveButton = document.getElementById('save-button');
@@ -1750,35 +1751,41 @@
     if (isPersonalMode) {
       backLink.setAttribute('aria-label', 'Zurück zur Gäste-Seite');
       backLink.querySelector('span:last-child').textContent = 'Zurück zur Gäste-Seite';
-      loading.textContent = 'Euer persönliches Design wird vorbereitet…';
-      document.getElementById('config-eyebrow').textContent = 'Euer Moment. Eure Erinnerung.';
-      document.getElementById('config-title').textContent = 'Gestaltet eure persönliche Erinnerung.';
-      document.getElementById('config-intro').textContent =
-        'Startet mit einer leeren Fläche und gestaltet euren Moment mit eigenen Fotos, Namen und persönlichen Worten.';
-      document.getElementById('controls-subtitle').textContent = 'Produkt und Farbwelt – den Rest gestaltet ihr direkt auf der Druckfläche.';
-      document.getElementById('placement-step').hidden = true;
-      const resetButton = document.getElementById('editor-reset');
-      resetButton.textContent = 'Seite leeren';
-      resetButton.title = 'Aktuelle Druckseite leeren';
+      loading.textContent = 'Euer Design wird vorbereitet…';
     }
 
     function orderStorageKey() {
-      return `wolkenworte-order:${slug}:${configurationType}`;
+      return `wolkenworte-order:${slug}`;
+    }
+
+    function normalizeOrderItems(items) {
+      if (!Array.isArray(items)) return [];
+      const seen = new Set();
+      return items
+        .filter((item) => item && /^[A-Za-z0-9_-]{16}$/.test(String(item.id || '')))
+        .filter((item) => {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        })
+        .slice(-20);
     }
 
     function loadOrderItems() {
       try {
-        const parsed = JSON.parse(localStorage.getItem(orderStorageKey()) || '[]');
-        if (!Array.isArray(parsed)) return [];
-        const seen = new Set();
-        return parsed
-          .filter((item) => item && /^[A-Za-z0-9_-]{16}$/.test(String(item.id || '')))
-          .filter((item) => {
-            if (seen.has(item.id)) return false;
-            seen.add(item.id);
-            return true;
-          })
-          .slice(0, 20);
+        const stored = localStorage.getItem(orderStorageKey());
+        if (stored) return normalizeOrderItems(JSON.parse(stored));
+
+        const legacyItems = ['event_wordcloud', 'personal_memory'].flatMap((type) => {
+          try {
+            return JSON.parse(localStorage.getItem(`wolkenworte-order:${slug}:${type}`) || '[]');
+          } catch {
+            return [];
+          }
+        });
+        const migrated = normalizeOrderItems(legacyItems);
+        if (migrated.length) localStorage.setItem(orderStorageKey(), JSON.stringify(migrated));
+        return migrated;
       } catch {
         return fallbackOrderItems;
       }
@@ -1807,6 +1814,7 @@
         displayName: product.displayName,
         sizeText: productSizeText(product),
         printFileUrl: configuration.printFileUrl,
+        configurationType: configuration.configurationType,
         createdAt: configuration.createdAt || new Date().toISOString(),
       };
     }
@@ -2199,7 +2207,7 @@
     }
 
     function buildAutomaticDesign() {
-      if (isPersonalMode) return [];
+      if (configurationType === 'personal_memory') return [];
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
@@ -2296,10 +2304,13 @@
     async function applySavedConfiguration(configurationData) {
       const nextProduct = products.find((candidate) => candidate.key === configurationData.productKey);
       if (!nextProduct) throw new Error('invalid_product');
-      if (configurationData.configurationType !== configurationType) throw new Error('wrong_configuration_type');
+      if (!['event_wordcloud', 'personal_memory'].includes(configurationData.configurationType)) {
+        throw new Error('invalid_configuration_type');
+      }
 
       suppressDirty = true;
       try {
+        configurationType = configurationData.configurationType;
         product = nextProduct;
         selectedFamilyKey = product.familyKey;
         selectedTheme = product.themes.some((option) => option.key === configurationData.theme)
@@ -2916,6 +2927,22 @@
       updateProductOptionSelection();
     }
 
+    function applyPlacementToCurrentDesign(previousPlacement, nextPlacement) {
+      if (!mugEditor || previousPlacement === nextPlacement) return;
+      storeActiveSurfaceState();
+      const previousSlots = product.layoutGeometry[previousPlacement] || product.layoutGeometry[product.layouts[0].key];
+      const nextSlots = product.layoutGeometry[nextPlacement] || product.layoutGeometry[product.layouts[0].key];
+      const nextStates = new Map();
+      for (const surface of productSurfaces()) {
+        const currentDesign = surfaceStates.get(surface.key)?.design || [];
+        const design = DesignLayout.transformDesign(currentDesign, previousSlots, nextSlots);
+        nextStates.set(surface.key, cloneEditorState({ design }, false));
+      }
+      surfaceStates = nextStates;
+      mugEditor.setState(surfaceStates.get(activeSurface));
+      updateSurfaceControlSelection();
+    }
+
     function buildPlacementOptions() {
       placementOptions.replaceChildren();
       if (!product.layouts.some((layout) => layout.key === selectedPlacement)) {
@@ -2930,16 +2957,16 @@
         input.value = layout.key;
         input.checked = layout.key === selectedPlacement;
         input.addEventListener('change', () => {
+          const previousPlacement = selectedPlacement;
           selectedPlacement = layout.key;
           updateToolbarSummaries();
           closeToolbarMenus();
           markDirty();
           if (mugEditor) {
-            mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
-            resetSurfaceStates(mugEditor.getState());
+            applyPlacementToCurrentDesign(previousPlacement, selectedPlacement);
             mugEditor.setFeedback(selectedPlacement === 'fit-area'
-              ? 'Druckfläche optimal genutzt'
-              : 'Motiv passend neu angeordnet');
+              ? 'Aktuelles Design nutzt jetzt die Druckfläche optimal'
+              : 'Aktuelles Design an die Platzierung angepasst');
           }
           renderAll();
         });
@@ -3041,7 +3068,7 @@
         },
         onReset: () => {
           mugEditor.setDesign(buildAutomaticDesign(), { record: true });
-          mugEditor.setFeedback(isPersonalMode
+          mugEditor.setFeedback(configurationType === 'personal_memory'
             ? 'Druckseite geleert'
             : 'Automatische Wortwolke wiederhergestellt');
           markDirty();
@@ -3104,6 +3131,7 @@
         return data;
       })
       .then((data) => {
+        configurationType = data.configurationType;
         words = data.words;
         products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
         product = products.find((candidate) => candidate.key === data.product?.key) || products[0];
@@ -3129,9 +3157,7 @@
         buildThemeOptions();
         renderCustomColorControls();
 
-        document.title = isPersonalMode
-          ? 'Persönliche Erinnerung gestalten – Wolkenworte'
-          : `Erinnerung für ${data.event.coupleName} – Wolkenworte`;
+        document.title = `Erinnerung für ${data.event.coupleName} gestalten – Wolkenworte`;
         updateProductPresentation();
 
         loading.hidden = true;
