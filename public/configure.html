@@ -1439,6 +1439,12 @@
       font-weight: 600;
     }
     .order-edit:hover { background: rgba(156, 28, 76, .06); border-color: rgba(156, 28, 76, .36); }
+    .order-edit:disabled {
+      border-color: transparent;
+      background: rgba(156, 28, 76, .07);
+      color: var(--muted);
+      cursor: default;
+    }
     .order-remove { width: 32px; }
     .order-remove:hover { background: rgba(156, 28, 76, .08); color: var(--berry); }
     .order-actions {
@@ -2085,9 +2091,10 @@
       orderList.replaceChildren();
       orderCount.textContent = items.length === 1 ? '1 Design' : `${items.length} Designs`;
       items.forEach((item) => {
+        const isEditing = item.id === editingOrderItemId;
         const row = document.createElement('div');
         row.className = 'order-item';
-        row.classList.toggle('is-editing', item.id === editingOrderItemId);
+        row.classList.toggle('is-editing', isEditing);
         const image = document.createElement('img');
         image.src = item.printFileUrl;
         image.alt = '';
@@ -2103,9 +2110,16 @@
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.className = 'order-edit';
-        edit.textContent = 'Öffnen';
-        edit.setAttribute('aria-label', `${title.textContent} öffnen und bearbeiten`);
-        edit.addEventListener('click', () => openOrderItem(item.id));
+        edit.textContent = isEditing ? 'Geöffnet' : 'Öffnen';
+        edit.disabled = isEditing;
+        edit.setAttribute('aria-label', isEditing
+          ? `${title.textContent} ist zur Bearbeitung geöffnet`
+          : `${title.textContent} öffnen und bearbeiten`);
+        if (isEditing) {
+          edit.setAttribute('aria-current', 'true');
+        } else {
+          edit.addEventListener('click', () => openOrderItem(item.id));
+        }
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'order-remove';
