@@ -103,6 +103,7 @@ db.exec(`
     words_json           TEXT NOT NULL,
     design_json          TEXT,
     configuration_type   TEXT NOT NULL DEFAULT 'event_wordcloud',
+    orientation          TEXT NOT NULL DEFAULT 'default',
     print_width          INTEGER NOT NULL,
     print_height         INTEGER NOT NULL,
     created_at           TEXT NOT NULL DEFAULT (datetime('now'))
@@ -196,6 +197,9 @@ if (!configurationColumns.has('design_json')) {
 }
 if (!configurationColumns.has('configuration_type')) {
   db.exec("ALTER TABLE configurations ADD COLUMN configuration_type TEXT NOT NULL DEFAULT 'event_wordcloud';");
+}
+if (!configurationColumns.has('orientation')) {
+  db.exec("ALTER TABLE configurations ADD COLUMN orientation TEXT NOT NULL DEFAULT 'default';");
 }
 
 // Forward-only, no-ops-on-new-databases migrations for the checkout state
@@ -955,6 +959,7 @@ function createConfiguration({
   words,
   design,
   configurationType = 'event_wordcloud',
+  orientation = 'default',
   printWidth,
   printHeight,
 }) {
@@ -963,8 +968,8 @@ function createConfiguration({
     INSERT INTO configurations (
       id, event_id, product_key, printful_variant_id, quantity,
       unit_price_cents, theme, placement, words_json, design_json,
-      configuration_type, print_width, print_height
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      configuration_type, orientation, print_width, print_height
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     eventId,
@@ -977,6 +982,7 @@ function createConfiguration({
     JSON.stringify(words),
     design ? JSON.stringify(design) : null,
     configurationType,
+    orientation,
     printWidth,
     printHeight
   );

@@ -13,6 +13,7 @@ const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const {
   DEFAULT_PRODUCT,
   getProduct,
+  resolveProductOrientation,
   getPublicProduct,
   getPublicProducts,
   getPublicProductFamilies,
@@ -443,15 +444,17 @@ function configurationPrintFileUrls(slug, configurationId, product) {
 }
 
 function configurationResponse(slug, configuration) {
-  const product = getProduct(configuration.product_key);
+  const baseProduct = getProduct(configuration.product_key);
+  const product = resolveProductOrientation(baseProduct, configuration.orientation);
   if (!product) return null;
   const placement = product.layouts.find((option) => option.key === configuration.placement);
   const printFiles = configurationPrintFileUrls(slug, configuration.id, product);
   return {
     id: configuration.id,
     quantity: Number(configuration.quantity),
-    product: getPublicProduct(product),
+    product: getPublicProduct(baseProduct, product.orientation),
     placement: placement ? { key: placement.key, label: placement.label } : null,
+    orientation: product.orientation,
     configurationType: configuration.configuration_type,
     ...printFiles,
     createdAt: configuration.created_at,
@@ -480,7 +483,11 @@ function configurationDesignSurfaces(product, design) {
 function editableConfigurationResponse(slug, configuration) {
   const summary = configurationResponse(slug, configuration);
   if (!summary) return null;
-  const product = getProduct(configuration.product_key);
+  const product = resolveProductOrientation(
+    getProduct(configuration.product_key),
+    configuration.orientation
+  );
+  if (!product) return null;
   let words;
   let design = null;
   try {
@@ -712,8 +719,10 @@ function makeRouter({ io, port }) {
     const event = db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
 
-    const product = getProduct(req.body?.productKey || DEFAULT_PRODUCT.key);
-    if (!product) return res.status(400).json({ error: 'invalid_product' });
+    const baseProduct = getProduct(req.body?.productKey || DEFAULT_PRODUCT.key);
+    if (!baseProduct) return res.status(400).json({ error: 'invalid_product' });
+    const product = resolveProductOrientation(baseProduct, req.body?.orientation);
+    if (!product) return res.status(400).json({ error: 'invalid_orientation' });
 
     const theme = req.body?.theme;
     const placement = req.body?.placement;
@@ -767,6 +776,7 @@ function makeRouter({ io, port }) {
       words,
       design,
       configurationType,
+      orientation: product.orientation,
       printWidth: product.printFile.width,
       printHeight: product.printFile.height,
     });
@@ -778,6 +788,9 @@ function makeRouter({ io, port }) {
       quantity: Number(configuration.quantity),
       theme: configuration.theme,
       placement: configuration.placement,
+      orientation: configuration.orientation === 'default'
+        ? product.orientation
+        : configuration.orientation,
       configurationType: configuration.configuration_type,
       ...printFiles,
       createdAt: configuration.created_at,
@@ -977,8 +990,15 @@ function makeRouter({ io, port }) {
   router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
     const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).send('configuration not found');
-    const product = getProduct(configuration.product_key);
+    const product = resolveProductOrientation(
+      getProduct(configuration.product_key),
+      configuration.orientation
+    );
     if (!product) return res.status(500).send('configuration is invalid');
+    if (Number(configuration.print_width) !== product.printFile.width ||
+        Number(configuration.print_height) !== product.printFile.height) {
+      return res.status(500).send('configuration is invalid');
+    }
     const surfaceKey = String(req.query.surface || product.printSurfaces[0].key);
     if (!product.printSurfaces.some((surface) => surface.key === surfaceKey)) {
       return res.status(400).send('print surface is invalid');
@@ -1111,7 +1131,10 @@ function makeRouter({ io, port }) {
 
       const session = await stripe.createCheckoutSession({
         order,
-        products: configurations.map((configuration) => getProduct(configuration.product_key)).filter(Boolean),
+        products: configurations.map((configuration) => resolveProductOrientation(
+          getProduct(configuration.product_key),
+          configuration.orientation
+        )).filter(Boolean),
         slug: event.slug,
         configurationIds: configurations.map((configuration) => configuration.id),
         quoteId: refreshedQuote.id,
@@ -1152,7 +1175,10 @@ function makeRouter({ io, port }) {
       if (!event) return res.status(404).json({ error: 'event_not_found' });
       const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
-      const product = getProduct(configuration.product_key);
+      const product = resolveProductOrientation(
+        getProduct(configuration.product_key),
+        configuration.orientation
+      );
       if (!product) return res.status(500).json({ error: 'configuration_invalid' });
       const quoteId = typeof req.body?.quoteId === 'string' ? req.body.quoteId : '';
       const storedQuote = db.getEventCheckoutQuote(event.slug, configuration.id, quoteId);

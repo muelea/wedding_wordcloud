@@ -372,6 +372,7 @@
       object-fit: contain;
       pointer-events: none;
       mix-blend-mode: var(--product-mockup-blend, normal);
+      transform: rotate(var(--product-mockup-rotation, 0deg));
       user-select: none;
     }
     .flat-product-preview.has-product-mockup .flat-product-mockup { display: block; }
@@ -760,6 +761,9 @@
       gap: 10px;
       align-items: stretch;
     }
+    .design-toolbar-controls.has-orientation {
+      grid-template-columns: minmax(280px, 1.15fr) repeat(3, minmax(170px, .72fr));
+    }
     .toolbar-menu {
       min-width: 0;
       position: relative;
@@ -1056,9 +1060,19 @@
 
     .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .placement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .orientation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .option { position: relative; cursor: pointer; }
     .option input { position: absolute; opacity: 0; pointer-events: none; }
     .placement-grid .option input {
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    .orientation-grid .option input {
       inset: 0;
       z-index: 1;
       width: 100%;
@@ -1387,12 +1401,16 @@
       }
       .controls-sub { max-width: 520px; text-align: right; }
       .design-toolbar-controls { grid-template-columns: minmax(300px, 1fr) minmax(210px, .7fr) minmax(210px, .7fr); }
+      .design-toolbar-controls.has-orientation {
+        grid-template-columns: minmax(280px, 1.1fr) repeat(3, minmax(170px, .72fr));
+      }
     }
 
     @media (max-width: 940px) {
       .design-toolbar-copy { display: block; }
       .controls-sub { max-width: none; text-align: left; }
       .design-toolbar-controls { grid-template-columns: 1fr; }
+      .design-toolbar-controls.has-orientation { grid-template-columns: 1fr; }
       .toolbar-panel {
         position: static;
         width: 100%;
@@ -1495,6 +1513,19 @@
               </span>
               <button class="product-change" id="change-product" type="button">Produkt ändern</button>
             </div>
+
+            <details class="toolbar-menu" id="orientation-step" hidden>
+              <summary class="toolbar-summary">
+                <span>
+                  <span class="toolbar-kicker">Ausrichtung</span>
+                  <strong id="selected-orientation-name">Hochformat</strong>
+                </span>
+                <span class="toolbar-summary-detail" id="selected-orientation-detail">Vertikal</span>
+              </summary>
+              <div class="toolbar-panel">
+                <div class="option-grid orientation-grid" id="orientation-options"></div>
+              </div>
+            </details>
 
             <details class="toolbar-menu" id="theme-step">
               <summary class="toolbar-summary">
@@ -1703,17 +1734,23 @@
     const selectedProductThumb = document.getElementById('selected-product-thumb');
     const selectedProductName = document.getElementById('selected-product-name');
     const selectedProductDetail = document.getElementById('selected-product-detail');
+    const controlsSubtitle = document.getElementById('controls-subtitle');
+    const designToolbarControls = document.querySelector('.design-toolbar-controls');
+    const selectedOrientationName = document.getElementById('selected-orientation-name');
+    const selectedOrientationDetail = document.getElementById('selected-orientation-detail');
     const selectedThemeName = document.getElementById('selected-theme-name');
     const selectedThemeSwatches = document.getElementById('selected-theme-swatches');
     const selectedPlacementName = document.getElementById('selected-placement-name');
     const selectedPlacementDetail = document.getElementById('selected-placement-detail');
     const changeProductButton = document.getElementById('change-product');
+    const orientationStep = document.getElementById('orientation-step');
     const themeStep = document.getElementById('theme-step');
     const placementStep = document.getElementById('placement-step');
     const productDialog = document.getElementById('product-dialog');
     const productDialogClose = document.getElementById('product-dialog-close');
     const productDialogDone = document.getElementById('product-dialog-done');
     const themeOptions = document.getElementById('theme-options');
+    const orientationOptions = document.getElementById('orientation-options');
     const productOptions = document.getElementById('product-options');
     const variantPanel = document.getElementById('variant-panel');
     const variantOptions = document.getElementById('variant-options');
@@ -1741,6 +1778,7 @@
     let pendingFamilyKey = null;
     let productDialogCloseReason = 'cancel';
     let selectedTheme = 'pastel';
+    let selectedOrientation = 'default';
     let customColors = [];
     let selectedPlacement = 'single';
     let renderFrame = null;
@@ -1810,19 +1848,46 @@
       }
     }
 
-    function productSizeText(candidate) {
-      const size = candidate?.size || {};
+    function productView(candidate = product, orientation = null) {
+      if (!candidate) return null;
+      const options = Array.isArray(candidate.orientations) ? candidate.orientations : [];
+      if (!options.length) return { ...candidate, orientation: 'default' };
+      const key = orientation || (candidate === product ? selectedOrientation : null) ||
+        candidate.defaultOrientation || candidate.orientation || options[0].key;
+      const selected = options.find((option) => option.key === key) ||
+        options.find((option) => option.key === candidate.defaultOrientation) || options[0];
+      return {
+        ...candidate,
+        orientation: selected.key,
+        size: selected.size,
+        printFile: selected.printFile,
+        layoutGeometry: selected.layoutGeometry,
+        previewMockup: selected.previewMockup,
+      };
+    }
+
+    function selectedOrientationOption(candidate = product, orientation = selectedOrientation) {
+      const options = Array.isArray(candidate?.orientations) ? candidate.orientations : [];
+      return options.find((option) => option.key === orientation) ||
+        options.find((option) => option.key === candidate?.defaultOrientation) || options[0] || null;
+    }
+
+    function productSizeText(candidate, orientation = null) {
+      const size = productView(candidate, orientation)?.size || {};
       if (size.volumeMl) return `${size.label} · ${size.volumeMl} ml`;
       if (size.detail) return `${size.label} · ${size.detail}`;
       return size.label || '';
     }
 
     function orderItemFromConfiguration(configuration) {
+      const view = productView(product, configuration.orientation);
+      const orientation = selectedOrientationOption(product, view.orientation);
       return {
         id: configuration.id,
         productKey: configuration.productKey,
         displayName: product.displayName,
-        sizeText: productSizeText(product),
+        sizeText: `${productSizeText(product, view.orientation)}${orientation ? ` · ${orientation.label}` : ''}`,
+        orientation: view.orientation,
         printFileUrl: configuration.printFileUrl,
         configurationType: configuration.configurationType,
         createdAt: configuration.createdAt || new Date().toISOString(),
@@ -2054,6 +2119,11 @@
     }
 
     function updateToolbarSummaries() {
+      const orientation = selectedOrientationOption();
+      if (orientation) {
+        selectedOrientationName.textContent = orientation.label;
+        selectedOrientationDetail.textContent = orientation.description;
+      }
       const palette = selectedThemeOption();
       if (palette) {
         selectedThemeName.textContent = palette.label;
@@ -2067,12 +2137,12 @@
     }
 
     function closeToolbarMenus(except = null) {
-      [themeStep, placementStep].forEach((menu) => {
+      [orientationStep, themeStep, placementStep].forEach((menu) => {
         if (menu && menu !== except) menu.open = false;
       });
     }
 
-    [themeStep, placementStep].forEach((menu) => {
+    [orientationStep, themeStep, placementStep].forEach((menu) => {
       menu?.addEventListener('toggle', () => {
         if (menu.open) closeToolbarMenus(menu);
       });
@@ -2218,10 +2288,11 @@
 
     function buildAutomaticDesign() {
       if (configurationType === 'personal_memory') return [];
+      const view = productView();
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
-      const slots = product.layoutGeometry[selectedPlacement];
+      const slots = view.layoutGeometry[selectedPlacement];
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
@@ -2323,6 +2394,8 @@
         configurationType = configurationData.configurationType;
         product = nextProduct;
         selectedFamilyKey = product.familyKey;
+        const savedOrientation = selectedOrientationOption(product, configurationData.orientation);
+        selectedOrientation = savedOrientation?.key || product.defaultOrientation || 'default';
         selectedTheme = product.themes.some((option) => option.key === configurationData.theme)
           ? configurationData.theme
           : product.themes[0].key;
@@ -2332,14 +2405,16 @@
         words = Array.isArray(configurationData.words) ? configurationData.words : words;
 
         buildProductOptions();
+        buildOrientationOptions();
         buildPlacementOptions();
         buildThemeOptions();
         renderCustomColorControls();
 
         const defaultSlot = selectedProductSlot();
+        const view = productView();
         mugEditor.resizePrintArea({
-          printWidth: product.printFile.width,
-          printHeight: product.printFile.height,
+          printWidth: view.printFile.width,
+          printHeight: view.printFile.height,
           safeMargin: product.designSafeMargin,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
@@ -2500,6 +2575,7 @@
 
     function refreshFlatProductPreviewFit() {
       if (!product || product.previewType !== 'flat') return;
+      const view = productView();
       const hasProductMockup = Boolean(currentProductMockupAsset());
       const previewInsets = hasProductMockup ? { x: 8, y: 8 } : ({
         coaster: { x: 20, y: 20 },
@@ -2513,8 +2589,8 @@
       const availableWidth = Math.max(1, mugViewer.clientWidth - previewInsets.x);
       const availableHeight = Math.max(1, mugViewer.clientHeight - previewInsets.y);
       const aspect = hasProductMockup
-        ? product.previewMockup.width / product.previewMockup.height
-        : product.printFile.width / product.printFile.height;
+        ? view.previewMockup.width / view.previewMockup.height
+        : view.printFile.width / view.printFile.height;
       const previewWidth = Math.min(availableWidth, availableHeight * aspect);
       const previewHeight = previewWidth / aspect;
       flatPreview.style.setProperty('--flat-preview-width', `${Math.floor(previewWidth)}px`);
@@ -2523,12 +2599,13 @@
 
     function refreshWorkspaceLayout() {
       if (!product) return;
+      const view = productView();
       const scrollStyles = getComputedStyle(editorScroll);
       const horizontalPadding = parseFloat(scrollStyles.paddingLeft) + parseFloat(scrollStyles.paddingRight);
       const availableWidth = Math.max(1, editorScroll.clientWidth - horizontalPadding);
-      const printAspect = product.printFile.width / product.printFile.height;
-      const previewAspect = product.previewMockup
-        ? product.previewMockup.width / product.previewMockup.height
+      const printAspect = view.printFile.width / view.printFile.height;
+      const previewAspect = view.previewMockup
+        ? view.previewMockup.width / view.previewMockup.height
         : printAspect;
       const isMobile = window.innerWidth <= 620;
       const minimumHeight = isMobile ? 280 : 320;
@@ -2576,6 +2653,7 @@
 
     function renderProductPreview() {
       if (!product) return;
+      const view = productView();
       const canvas = product.previewType === 'flat' ? flatCanvas : mugCanvas;
       const ctx = setupCanvas(canvas);
       const width = canvas.width;
@@ -2586,15 +2664,15 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
       }
-      const widthScale = width / product.printFile.width;
-      const heightScale = height / product.printFile.height;
-      const scale = (hasProductMockup && product.previewMockup.canvas.fit === 'cover'
+      const widthScale = width / view.printFile.width;
+      const heightScale = height / view.printFile.height;
+      const scale = (hasProductMockup && view.previewMockup.canvas.fit === 'cover'
         ? Math.max(widthScale, heightScale)
         : Math.min(widthScale, heightScale)) * (hasProductMockup ? 1 : .9);
       drawDesign(
         ctx,
-        (width - product.printFile.width * scale) / 2,
-        (height - product.printFile.height * scale) / 2,
+        (width - view.printFile.width * scale) / 2,
+        (height - view.printFile.height * scale) / 2,
         scale
       );
       if (product.previewType === 'mug') updateMug3DTexture();
@@ -2618,21 +2696,26 @@
     }
 
     function currentProductMockupAsset() {
-      const assets = product?.previewMockup?.assets;
+      const assets = productView()?.previewMockup?.assets;
       return assets?.[activeSurface] || assets?.default || '';
     }
 
     function updateProductMockup() {
+      const view = productView();
       const asset = currentProductMockupAsset();
-      const canvas = product?.previewMockup?.canvas;
+      const canvas = view?.previewMockup?.canvas;
       flatPreview.classList.toggle('has-product-mockup', Boolean(asset));
       flatPreview.style.setProperty(
         '--product-mockup-scale',
-        String(product?.previewMockup?.scale || 1)
+        String(view?.previewMockup?.scale || 1)
       );
       flatPreview.style.setProperty(
         '--product-mockup-blend',
-        product?.previewMockup?.blendMode || 'normal'
+        view?.previewMockup?.blendMode || 'normal'
+      );
+      flatPreview.style.setProperty(
+        '--product-mockup-rotation',
+        `${view?.previewMockup?.rotation || 0}deg`
       );
       flatPreview.style.setProperty('--product-mockup-canvas-left', `${canvas?.left ?? 0}%`);
       flatPreview.style.setProperty('--product-mockup-canvas-top', `${canvas?.top ?? 0}%`);
@@ -2655,6 +2738,7 @@
 
     function updateProductPresentation() {
       if (!product) return;
+      const view = productView();
       const isMug = product.previewType === 'mug';
       mugViewer.classList.toggle('is-flat', !isMug);
       productStage.classList.toggle('is-flat-product', !isMug);
@@ -2667,24 +2751,24 @@
       updateProductMockup();
       flatPreview.style.setProperty(
         '--flat-preview-aspect',
-        product.previewMockup
-          ? `${product.previewMockup.width} / ${product.previewMockup.height}`
-          : `${product.printFile.width} / ${product.printFile.height}`
+        view.previewMockup
+          ? `${view.previewMockup.width} / ${view.previewMockup.height}`
+          : `${view.printFile.width} / ${view.printFile.height}`
       );
       requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;
       mugViewer.setAttribute('aria-label', isMug
         ? 'Interaktive 3D-Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.'
-        : `Vorschau: ${product.displayName}, ${product.size.label}`);
+        : `Vorschau: ${product.displayName}, ${view.size.label}`);
       const activeSurfaceLabel = productSurfaces().length > 1
         ? ` · ${productSurfaces().find((surface) => surface.key === activeSurface)?.label || ''}`
         : '';
       document.getElementById('mug-viewer-hint').textContent = isMug
         ? `↔ ↕ Ziehen zum Drehen · ${germanDecimal(product.size.heightCm)} cm × Ø ${germanDecimal(product.size.diameterCm)} cm`
-        : `${product.displayName} · ${product.size.label}${activeSurfaceLabel}`;
+        : `${product.displayName} · ${view.size.label}${activeSurfaceLabel}`;
       productStage.setAttribute(
         'aria-label',
-        `Vorschau: ${product.displayName}, ${product.size.label}`
+        `Vorschau: ${product.displayName}, ${view.size.label}`
       );
     }
 
@@ -2731,9 +2815,7 @@
 
     function selectedProductSummary(candidate = product) {
       if (!candidate) return '';
-      if (candidate.size.volumeMl) return `${candidate.size.label} · ${candidate.size.volumeMl} ml`;
-      if (candidate.size.detail) return `${candidate.size.label} · ${candidate.size.detail}`;
-      return candidate.size.label || '';
+      return productSizeText(candidate, candidate === product ? selectedOrientation : null);
     }
 
     function renderSelectedProduct() {
@@ -2795,31 +2877,35 @@
     });
 
     function selectedProductSlot() {
-      const layoutKey = product.layouts.some((layout) => layout.key === selectedPlacement)
+      const view = productView();
+      const layoutKey = view.layouts.some((layout) => layout.key === selectedPlacement)
         ? selectedPlacement
-        : product.layouts[0].key;
-      return product.layoutGeometry[layoutKey][0];
+        : view.layouts[0].key;
+      return view.layoutGeometry[layoutKey][0];
     }
 
     function selectProduct(nextProduct) {
       if (!nextProduct || nextProduct.key === product?.key) return;
       product = nextProduct;
       selectedFamilyKey = product.familyKey;
+      selectedOrientation = product.defaultOrientation || 'default';
       if (!product.layouts.some((layout) => layout.key === selectedPlacement)) {
         selectedPlacement = product.layouts[0].key;
       }
       buildPlacementOptions();
+      buildOrientationOptions();
       if (mugEditor) {
         const defaultSlot = selectedProductSlot();
+        const view = productView();
         mugEditor.resizePrintArea({
-          printWidth: product.printFile.width,
-          printHeight: product.printFile.height,
+          printWidth: view.printFile.width,
+          printHeight: view.printFile.height,
           safeMargin: product.designSafeMargin,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
         resetSurfaceStates(mugEditor.getState());
-        mugEditor.setFeedback(`Druckfläche für ${product.size.label} angepasst`);
+        mugEditor.setFeedback(`Druckfläche für ${view.size.label} angepasst`);
       } else {
         activeSurface = productSurfaces()[0].key;
         buildSurfaceControls();
@@ -2940,8 +3026,9 @@
     function applyPlacementToCurrentDesign(previousPlacement, nextPlacement) {
       if (!mugEditor) return false;
       storeActiveSurfaceState();
-      const previousSlots = product.layoutGeometry[previousPlacement] || product.layoutGeometry[product.layouts[0].key];
-      const nextSlots = product.layoutGeometry[nextPlacement] || product.layoutGeometry[product.layouts[0].key];
+      const view = productView();
+      const previousSlots = view.layoutGeometry[previousPlacement] || view.layoutGeometry[view.layouts[0].key];
+      const nextSlots = view.layoutGeometry[nextPlacement] || view.layoutGeometry[view.layouts[0].key];
       const optimize = nextSlots.some((slot) => slot.optimize === true);
       if (previousPlacement === nextPlacement && !optimize) return false;
       const measurementCanvas = document.createElement('canvas');
@@ -2963,6 +3050,70 @@
       mugEditor.setState(surfaceStates.get(activeSurface));
       updateSurfaceControlSelection();
       return true;
+    }
+
+    function activateOrientation(orientation) {
+      if (!orientation || orientation.key === selectedOrientation) return;
+      storeActiveSurfaceState();
+      selectedOrientation = orientation.key;
+      if (mugEditor) {
+        const view = productView();
+        const defaultSlot = selectedProductSlot();
+        mugEditor.resizePrintArea({
+          printWidth: view.printFile.width,
+          printHeight: view.printFile.height,
+          safeMargin: product.designSafeMargin,
+          defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
+          defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
+        });
+        resetSurfaceStates(mugEditor.getState());
+        mugEditor.setFeedback(`Poster auf ${orientation.label} umgestellt`);
+      }
+      buildOrientationOptions();
+      renderSelectedProduct();
+      updateProductPresentation();
+      closeToolbarMenus();
+      markDirty();
+      renderAll();
+    }
+
+    function buildOrientationOptions() {
+      orientationOptions.replaceChildren();
+      const options = Array.isArray(product?.orientations) ? product.orientations : [];
+      const hasOrientationChoice = options.length > 1;
+      orientationStep.hidden = !hasOrientationChoice;
+      designToolbarControls.classList.toggle('has-orientation', hasOrientationChoice);
+      controlsSubtitle.textContent = hasOrientationChoice
+        ? 'Produkt, Ausrichtung, Farbwelt und Platzierung.'
+        : 'Drei kurze Schritte – mehr braucht es nicht.';
+      if (!hasOrientationChoice) {
+        selectedOrientation = 'default';
+        updateToolbarSummaries();
+        return;
+      }
+      if (!options.some((option) => option.key === selectedOrientation)) {
+        selectedOrientation = product.defaultOrientation || options[0].key;
+      }
+      for (const orientation of options) {
+        const label = document.createElement('label');
+        label.className = 'option';
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'orientation';
+        input.value = orientation.key;
+        input.checked = orientation.key === selectedOrientation;
+        input.addEventListener('change', () => activateOrientation(orientation));
+        const card = document.createElement('span');
+        card.className = 'option-card';
+        const name = document.createElement('strong');
+        name.textContent = orientation.label;
+        const description = document.createElement('small');
+        description.textContent = `${orientation.size.label} · ${orientation.description}`;
+        card.append(name, description);
+        label.append(input, card);
+        orientationOptions.appendChild(label);
+      }
+      updateToolbarSummaries();
     }
 
     function activatePlacement(layout, { reapply = false } = {}) {
@@ -3055,6 +3206,7 @@
 
     function initEditor() {
       const defaultSlot = selectedProductSlot();
+      const view = productView();
       mugEditor = new MugPrintEditor({
         canvas: wrapCanvas,
         shell: document.getElementById('editor-canvas-shell'),
@@ -3085,8 +3237,8 @@
         duplicateButton: document.getElementById('editor-duplicate'),
         bringFrontButton: document.getElementById('editor-bring-front'),
         deleteButton: document.getElementById('editor-delete'),
-        printWidth: product.printFile.width,
-        printHeight: product.printFile.height,
+        printWidth: view.printFile.width,
+        printHeight: view.printFile.height,
         safeMargin: product.designSafeMargin,
         defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
@@ -3131,6 +3283,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             productKey: product.key,
+            orientation: selectedOrientation,
             theme: selectedTheme,
             placement: selectedPlacement,
             words,
@@ -3164,6 +3317,7 @@
         words = data.words;
         products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
         product = products.find((candidate) => candidate.key === data.product?.key) || products[0];
+        selectedOrientation = product.defaultOrientation || 'default';
         productFamilies = Array.isArray(data.productFamilies) && data.productFamilies.length
           ? data.productFamilies.filter((family) => products.some((candidate) => candidate.familyKey === family.key))
           : [...new Set(products.map((candidate) => candidate.familyKey))].map((familyKey) => {
@@ -3182,6 +3336,7 @@
           ? data.event.theme
           : product.themes[0].key;
         buildProductOptions();
+        buildOrientationOptions();
         buildPlacementOptions();
         buildThemeOptions();
         renderCustomColorControls();

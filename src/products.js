@@ -105,6 +105,19 @@ const FLAT_LAYOUTS = Object.freeze([
   }),
 ]);
 
+const POSTER_ORIENTATIONS = Object.freeze([
+  Object.freeze({
+    key: 'portrait',
+    label: 'Hochformat',
+    description: 'Klassisch hochkant aufgehängt',
+  }),
+  Object.freeze({
+    key: 'landscape',
+    label: 'Querformat',
+    description: 'Breit und horizontal aufgehängt',
+  }),
+]);
+
 function freezeSlots(slots) {
   return Object.freeze(slots.map((slot) => Object.freeze(slot)));
 }
@@ -141,6 +154,8 @@ function makeProduct({
   familyKey,
   thumbnail,
   previewMockup,
+  orientationOptions,
+  defaultOrientation,
 }) {
   const printPlacement = printFile.placement || 'default';
   const resolvedFulfillmentPlacements = fulfillmentPlacements?.length
@@ -168,6 +183,16 @@ function makeProduct({
   const resolvedOptions = Array.isArray(fulfillmentOptions)
     ? fulfillmentOptions.map((option) => Object.freeze({ ...option }))
     : [];
+  const resolvedOrientationOptions = Array.isArray(orientationOptions)
+    ? orientationOptions.map((option) => Object.freeze({ ...option }))
+    : [];
+  const resolvedDefaultOrientation = resolvedOrientationOptions.length
+    ? defaultOrientation || resolvedOrientationOptions[0].key
+    : 'default';
+  if (resolvedOrientationOptions.length &&
+      !resolvedOrientationOptions.some((option) => option.key === resolvedDefaultOrientation)) {
+    throw new TypeError(`Ungültige Standardausrichtung für ${key}.`);
+  }
   return Object.freeze({
     key,
     familyKey,
@@ -184,6 +209,7 @@ function makeProduct({
           height: previewMockup.height,
           scale: previewMockup.scale || 1,
           blendMode: previewMockup.blendMode || 'normal',
+          rotation: previewMockup.rotation || 0,
           canvas: Object.freeze({
             left: previewMockup.canvas?.left ?? 0,
             top: previewMockup.canvas?.top ?? 0,
@@ -210,6 +236,8 @@ function makeProduct({
       options: Object.freeze(resolvedOptions),
     }),
     printSurfaces: Object.freeze(resolvedPrintSurfaces),
+    orientationOptions: Object.freeze(resolvedOrientationOptions),
+    defaultOrientation: resolvedDefaultOrientation,
     size: Object.freeze(size),
     printFile: Object.freeze({ ...printFile, placement: printPlacement }),
     template: Object.freeze(template),
@@ -217,6 +245,75 @@ function makeProduct({
     themes: THEMES,
     layouts,
   });
+}
+
+function transposeLayoutGeometry(layoutGeometry) {
+  return Object.fromEntries(Object.entries(layoutGeometry).map(([key, slots]) => [
+    key,
+    slots.map((slot) => ({
+      ...slot,
+      x: slot.y,
+      y: slot.x,
+      ...(Number.isFinite(slot.width) && Number.isFinite(slot.height)
+        ? { width: slot.height, height: slot.width }
+        : {}),
+    })),
+  ]));
+}
+
+function landscapeSizeLabel(label) {
+  const match = /^(.*?)\s+×\s+(.*?)\s+(cm|mm)$/.exec(String(label || ''));
+  return match ? `${match[2]} × ${match[1]} ${match[3]}` : String(label || '');
+}
+
+function rotateMockupCanvasClockwise(canvas) {
+  if (!canvas) return canvas;
+  const roundPercent = (value) => Math.round(value * 10_000) / 10_000;
+  return {
+    ...canvas,
+    left: roundPercent(100 - canvas.top - canvas.height),
+    top: canvas.left,
+    width: canvas.height,
+    height: canvas.width,
+  };
+}
+
+function resolveProductOrientation(product, rawOrientation) {
+  if (!product) return null;
+  const options = product.orientationOptions || [];
+  const requested = String(rawOrientation || product.defaultOrientation || 'default');
+  const orientation = requested === 'default' && options.length
+    ? product.defaultOrientation
+    : requested;
+  if (options.length) {
+    if (!options.some((option) => option.key === orientation)) return null;
+  } else if (orientation !== 'default') {
+    return null;
+  }
+
+  if (orientation !== 'landscape') return { ...product, orientation };
+  if (!product.printFile?.canRotate) return null;
+  return {
+    ...product,
+    orientation,
+    size: {
+      ...product.size,
+      label: landscapeSizeLabel(product.size.label),
+    },
+    printFile: {
+      ...product.printFile,
+      width: product.printFile.height,
+      height: product.printFile.width,
+    },
+    layoutGeometry: transposeLayoutGeometry(product.layoutGeometry),
+    previewMockup: product.previewMockup
+      ? {
+          ...product.previewMockup,
+          rotation: ((product.previewMockup.rotation || 0) + 90) % 360,
+          canvas: rotateMockupCanvasClockwise(product.previewMockup.canvas),
+        }
+      : null,
+  };
 }
 
 function makeMugProduct(options) {
@@ -428,6 +525,8 @@ function makePosterProduct({
       }],
     },
     layouts: FLAT_LAYOUTS,
+    orientationOptions: POSTER_ORIENTATIONS,
+    defaultOrientation: 'portrait',
   });
 }
 
@@ -475,6 +574,8 @@ function makeFramedPosterProduct({
       }],
     },
     layouts: FLAT_LAYOUTS,
+    orientationOptions: POSTER_ORIENTATIONS,
+    defaultOrientation: 'portrait',
   });
 }
 
@@ -817,30 +918,44 @@ function getProduct(key) {
   return PRODUCTS.find((product) => product.key === key) || null;
 }
 
-function getPublicProduct(product = DEFAULT_PRODUCT) {
+function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defaultOrientation) {
+  const resolvedProduct = resolveProductOrientation(product, orientation);
+  if (!resolvedProduct) return null;
   return {
-    key: product.key,
-    familyKey: product.familyKey,
-    thumbnail: product.thumbnail,
-    name: product.name,
-    displayName: product.displayName,
-    description: product.description,
-    icon: product.icon,
-    previewType: product.previewType,
-    previewShape: product.previewShape,
-    previewMockup: product.previewMockup,
-    defaultQuantity: product.defaultQuantity,
-    minQuantity: product.minQuantity,
-    maxQuantity: product.maxQuantity,
-    currency: product.currency,
-    unit: product.unit,
-    designSafeMargin: product.designSafeMargin,
-    printSurfaces: product.printSurfaces,
-    size: product.size,
-    printFile: product.printFile,
-    layoutGeometry: product.layoutGeometry,
-    themes: product.themes,
-    layouts: product.layouts,
+    key: resolvedProduct.key,
+    familyKey: resolvedProduct.familyKey,
+    thumbnail: resolvedProduct.thumbnail,
+    name: resolvedProduct.name,
+    displayName: resolvedProduct.displayName,
+    description: resolvedProduct.description,
+    icon: resolvedProduct.icon,
+    previewType: resolvedProduct.previewType,
+    previewShape: resolvedProduct.previewShape,
+    previewMockup: resolvedProduct.previewMockup,
+    defaultQuantity: resolvedProduct.defaultQuantity,
+    minQuantity: resolvedProduct.minQuantity,
+    maxQuantity: resolvedProduct.maxQuantity,
+    currency: resolvedProduct.currency,
+    unit: resolvedProduct.unit,
+    designSafeMargin: resolvedProduct.designSafeMargin,
+    printSurfaces: resolvedProduct.printSurfaces,
+    size: resolvedProduct.size,
+    printFile: resolvedProduct.printFile,
+    layoutGeometry: resolvedProduct.layoutGeometry,
+    themes: resolvedProduct.themes,
+    layouts: resolvedProduct.layouts,
+    orientation: resolvedProduct.orientation,
+    defaultOrientation: product.defaultOrientation,
+    orientations: product.orientationOptions.map((option) => {
+      const oriented = resolveProductOrientation(product, option.key);
+      return {
+        ...option,
+        size: oriented.size,
+        printFile: oriented.printFile,
+        layoutGeometry: oriented.layoutGeometry,
+        previewMockup: oriented.previewMockup,
+      };
+    }),
   };
 }
 
@@ -873,6 +988,7 @@ module.exports = {
   PRODUCTS,
   DEFAULT_PRODUCT,
   getProduct,
+  resolveProductOrientation,
   getPublicProduct,
   getPublicProducts,
   getPublicProductFamilies,

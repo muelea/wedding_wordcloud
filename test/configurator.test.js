@@ -305,6 +305,26 @@ test('configurator exposes every curated product with verified Printful geometry
     const fitArea = candidate.layouts.find((layout) => layout.key === 'fit-area');
     return !fitArea || fitArea.label === 'Fläche optimal nutzen';
   }));
+  const poster = data.products.find((candidate) => candidate.key === 'matte-poster-30x40cm');
+  assert.equal(poster.defaultOrientation, 'portrait');
+  assert.deepEqual(poster.orientations.map((orientation) => orientation.key), ['portrait', 'landscape']);
+  assert.deepEqual(
+    poster.orientations.map((orientation) => [
+      orientation.size.label,
+      orientation.printFile.width,
+      orientation.printFile.height,
+    ]),
+    [['30 × 40 cm', 3544, 4724], ['40 × 30 cm', 4724, 3544]]
+  );
+  const posterProducts = data.products.filter((candidate) => candidate.familyKey === 'posters');
+  assert.equal(posterProducts.length, 4);
+  assert.ok(posterProducts.every((candidate) =>
+    candidate.orientations.map((orientation) => orientation.key).join(',') === 'portrait,landscape'
+  ));
+  assert.ok(data.products.filter((candidate) => candidate.familyKey !== 'posters')
+    .every((candidate) => candidate.orientations.length === 0));
+  assert.equal(data.product.defaultOrientation, 'default');
+  assert.deepEqual(data.product.orientations, []);
   assert.deepEqual(data.product.layoutGeometry.single, [{ x: 127, y: 65, side: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['full-wrap'], [{ x: 130, y: 65, width: 2440, height: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['fit-area'], [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }]);
@@ -346,6 +366,46 @@ test('configurator exposes every curated product with verified Printful geometry
     assert.match(svg, new RegExp(`width="${expected.width}" height="${expected.height}"`));
   }
 
+  const landscapeSave = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      productKey: 'matte-poster-30x40cm',
+      orientation: 'landscape',
+      quantity: 1,
+      theme: 'pastel',
+      placement: 'fit-area',
+      words: [['liebe', 1]],
+    }),
+  });
+  assert.equal(landscapeSave.status, 201);
+  const landscapeConfiguration = await landscapeSave.json();
+  assert.equal(landscapeConfiguration.orientation, 'landscape');
+  const storedLandscape = db.getConfiguration(landscapeConfiguration.id);
+  assert.equal(storedLandscape.orientation, 'landscape');
+  assert.equal(Number(storedLandscape.printful_variant_id), 8948,
+    'orientation must not create a different priced Printful variant');
+  assert.equal(Number(storedLandscape.print_width), 4724);
+  assert.equal(Number(storedLandscape.print_height), 3544);
+  const landscapeSvg = await fetch(baseUrl + landscapeConfiguration.printFileUrl)
+    .then((response) => response.text());
+  assert.match(landscapeSvg, /width="4724" height="3544"/);
+  const landscapeEdit = await fetch(
+    `${baseUrl}/api/events/${event.slug}/configurations/${landscapeConfiguration.id}/edit`
+  ).then((response) => response.json());
+  assert.equal(landscapeEdit.orientation, 'landscape');
+  assert.equal(landscapeEdit.product.size.label, '40 × 30 cm');
+  assert.equal(landscapeEdit.product.printFile.width, 4724);
+  assert.equal(landscapeEdit.product.printFile.height, 3544);
+
+  const invalidOrientation = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productKey: 'matte-poster-30x40cm', orientation: 'diagonal' }),
+  });
+  assert.equal(invalidOrientation.status, 400);
+  assert.equal((await invalidOrientation.json()).error, 'invalid_orientation');
+
   const threeBrowserBuild = await fetch(`${baseUrl}/vendor/three.min.js?v=0.160.1`);
   assert.equal(threeBrowserBuild.status, 200);
   assert.match(threeBrowserBuild.headers.get('cache-control') || '', /immutable/);
@@ -369,6 +429,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="flat-product-mockup"/);
   assert.match(configurePage, /class="preview-disclaimer">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen\.<\/p>/);
   assert.match(configurePage, /id="placement-options"/);
+  assert.match(configurePage, /id="orientation-step" hidden/);
+  assert.match(configurePage, /id="orientation-options"/);
+  assert.match(configurePage, /function activateOrientation\(orientation\)/);
+  assert.match(configurePage, /orientation: selectedOrientation/);
+  assert.match(configurePage, /--product-mockup-rotation/);
   assert.match(configurePage, /id="surface-tabs"/);
   assert.match(configurePage, /class="editor-tools editor-tools-primary">[\s\S]*?id="surface-editor"[\s\S]*?id="editor-add"/);
   assert.match(configurePage, /id="selected-theme-swatches"/);
@@ -392,7 +457,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.doesNotMatch(configurePage, /input\.addEventListener\('change',[\s\S]{0,400}mugEditor\.setDesign\(buildAutomaticDesign\(\)/);
   assert.match(configurePage, /function refreshFlatProductPreviewFit\(\)/);
   assert.match(configurePage, /function updateProductMockup\(\)/);
-  assert.match(configurePage, /product\.previewMockup\.canvas\.fit === 'cover'/);
+  assert.match(configurePage, /view\.previewMockup\.canvas\.fit === 'cover'/);
   assert.match(configurePage, /--product-mockup-canvas-clip/);
   assert.match(configurePage, /function refreshWorkspaceLayout\(\)/);
   assert.match(configurePage, /Math\.max\([\s\S]*?availableWidth \/ printAspect,[\s\S]*?availableWidth \/ previewAspect[\s\S]*?\) \+ 24/);

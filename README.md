@@ -39,7 +39,10 @@ add their own photos, words and motifs, and purchase it independently.
    a new immutable configuration and replaces the previous basket entry.
    Local illustrated thumbnails make the catalog scannable. A locally served
    Three.js preview maps mug artwork onto a rotatable model; flat products use
-   the same design in a proportional print preview. Products with two printable
+   the same design in a proportional print preview. Posters can be designed in
+   portrait or landscape format; switching orientation preserves the current
+   design, swaps the immutable print-file dimensions and keeps the same Printful
+   variant and price basis. Products with two printable
    faces expose separate front/back editors plus a copy-to-back shortcut and
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word

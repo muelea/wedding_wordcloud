@@ -328,4 +328,34 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   assert.deepEqual(pillowPayload.items[0].options, [
     { id: 'stitch_color', value: 'white' },
   ], 'the pillow keeps its curated white zipper and stitch color without a storefront selector');
+
+  const landscapePosterPayload = fulfillment.buildPrintfulPayload({
+    mode: 'draft',
+    order: {
+      id: 44,
+      quote_id: 'landscape-poster-quote',
+      shipping_json: JSON.stringify({
+        name: 'Paula Poster',
+        address1: 'Querweg 4',
+        city: 'Berlin',
+        zip: '10115',
+        country_code: 'DE',
+      }),
+    },
+    event: { slug: createdEvent.slug },
+    configuration: {
+      id: 'landscape-poster-configuration',
+      product_key: 'matte-poster-30x40cm',
+      printful_variant_id: 8948,
+      orientation: 'landscape',
+      quantity: 1,
+    },
+  });
+  assert.equal(landscapePosterPayload.items[0].variant_id, 8948,
+    'landscape keeps the verified poster variant and therefore the same price basis');
+  assert.deepEqual(landscapePosterPayload.items[0].files, [{
+    type: 'default',
+    url: `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
+      '/configurations/landscape-poster-configuration/print.svg',
+  }], 'Printful receives the orientation-specific immutable SVG from the normal file route');
 });
