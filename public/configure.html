@@ -667,6 +667,109 @@
       font-size: 12px;
     }
 
+    .selected-product {
+      min-height: 82px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(255, 255, 255, .7);
+    }
+    .selected-product-thumb {
+      width: 58px;
+      height: 58px;
+      padding: 4px;
+      object-fit: contain;
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 6px 18px rgba(73, 29, 44, .08);
+    }
+    .selected-product-copy { min-width: 0; }
+    .selected-product-copy strong { display: block; overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+    .selected-product-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .product-change {
+      min-height: 36px;
+      padding: 8px 12px;
+      border: 1px solid rgba(123, 70, 82, .18);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--berry);
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: border-color .2s, background .2s, transform .2s;
+    }
+    .product-change:hover { transform: translateY(-1px); border-color: rgba(156, 28, 76, .4); background: #fff9f7; }
+    .product-change:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .product-dialog {
+      width: min(780px, calc(100% - 32px));
+      max-height: min(780px, calc(100vh - 42px));
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid rgba(123, 70, 82, .16);
+      border-radius: 24px;
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: 0 30px 90px rgba(64, 15, 38, .22);
+    }
+    .product-dialog:focus { outline: none; }
+    .product-dialog::backdrop { background: rgba(64, 15, 38, .28); backdrop-filter: blur(6px); }
+    .product-dialog-shell { max-height: inherit; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+    .product-dialog-head {
+      padding: 22px 24px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .product-dialog-head h2 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 26px;
+      font-weight: 500;
+    }
+    .product-dialog-close {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(123, 70, 82, .14);
+      border-radius: 50%;
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .product-dialog-close:hover { color: var(--berry); border-color: rgba(156, 28, 76, .36); }
+    .product-dialog-body {
+      min-height: 0;
+      padding: 18px 24px 22px;
+      overflow: auto;
+    }
+    .product-dialog-footer {
+      padding: 14px 24px 22px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 253, 250, .82);
+    }
+    .product-dialog-done {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+    }
     .product-options { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
     .product-option {
       position: relative;
@@ -680,6 +783,7 @@
       text-align: left;
       cursor: pointer;
     }
+    .product-option:focus { outline: none; }
     .product-choice {
       min-height: 92px;
       padding: 12px;
@@ -754,6 +858,7 @@
       text-align: left;
     }
     .variant-option[aria-checked="true"] { border-color: var(--berry); box-shadow: inset 0 0 0 1px var(--berry); }
+    .variant-option:focus { outline: none; }
     .variant-option:focus-visible { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 1px; }
     .variant-option img { width: 44px; height: 44px; object-fit: contain; }
     .variant-option strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1072,6 +1177,13 @@
       .editor-selection-status { max-width: 100%; }
       .editor-selection-hint { max-width: 100%; text-align: left; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
+      .selected-product { grid-template-columns: 52px minmax(0, 1fr); }
+      .selected-product-thumb { width: 52px; height: 52px; }
+      .product-change { grid-column: 1 / -1; width: 100%; }
+      .product-dialog { width: min(100% - 20px, 560px); max-height: calc(100vh - 20px); border-radius: 20px; }
+      .product-dialog-head,
+      .product-dialog-body,
+      .product-dialog-footer { padding-inline: 18px; }
       .product-options, .variant-options { grid-template-columns: 1fr; }
       .option-grid { grid-template-columns: 1fr; }
       .option-card { min-height: 76px; }
@@ -1190,10 +1302,13 @@
 
           <section class="step">
             <h3 class="step-title"><span class="step-number">1</span> Produkt</h3>
-            <div class="product-options" id="product-options" role="radiogroup" aria-label="Produktgruppe wählen"></div>
-            <div class="variant-panel" id="variant-panel" hidden>
-              <p class="variant-head" id="variant-title">Ausführung wählen</p>
-              <div class="variant-options" id="variant-options" role="radiogroup" aria-labelledby="variant-title"></div>
+            <div class="selected-product" id="selected-product">
+              <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
+              <span class="selected-product-copy">
+                <strong id="selected-product-name">Weiße Tasse</strong>
+                <span id="selected-product-detail">11 oz · 325 ml</span>
+              </span>
+              <button class="product-change" id="change-product" type="button">Produkt ändern</button>
             </div>
           </section>
 
@@ -1237,6 +1352,27 @@
     </div>
   </main>
 
+  <dialog class="product-dialog" id="product-dialog" aria-labelledby="product-dialog-title" tabindex="-1">
+    <div class="product-dialog-shell">
+      <div class="product-dialog-head">
+        <div>
+          <h2 id="product-dialog-title">Produkt wählen</h2>
+        </div>
+        <button class="product-dialog-close" id="product-dialog-close" type="button" aria-label="Produktwahl schließen">×</button>
+      </div>
+      <div class="product-dialog-body">
+        <div class="product-options" id="product-options" role="radiogroup" aria-label="Produktgruppe wählen"></div>
+        <div class="variant-panel" id="variant-panel" hidden>
+          <p class="variant-head" id="variant-title">Ausführung wählen</p>
+          <div class="variant-options" id="variant-options" role="radiogroup" aria-labelledby="variant-title"></div>
+        </div>
+      </div>
+      <div class="product-dialog-footer">
+        <button class="product-dialog-done" id="product-dialog-done" type="button">Produkt übernehmen</button>
+      </div>
+    </div>
+  </dialog>
+
   <footer class="config-footer" aria-label="Rechtliche Hinweise">
     <a href="/datenschutz">Datenschutz</a><span aria-hidden="true">·</span><a href="/impressum">Impressum</a>
   </footer>
@@ -1262,6 +1398,13 @@
     const flatPreview = document.getElementById('flat-product-preview');
     const flatCanvas = document.getElementById('flat-preview');
     const wrapCanvas = document.getElementById('wrap-canvas');
+    const selectedProductThumb = document.getElementById('selected-product-thumb');
+    const selectedProductName = document.getElementById('selected-product-name');
+    const selectedProductDetail = document.getElementById('selected-product-detail');
+    const changeProductButton = document.getElementById('change-product');
+    const productDialog = document.getElementById('product-dialog');
+    const productDialogClose = document.getElementById('product-dialog-close');
+    const productDialogDone = document.getElementById('product-dialog-done');
     const themeOptions = document.getElementById('theme-options');
     const productOptions = document.getElementById('product-options');
     const variantPanel = document.getElementById('variant-panel');
@@ -1286,6 +1429,9 @@
     let productFamilies = [];
     let product = null;
     let selectedFamilyKey = null;
+    let pendingProductKey = null;
+    let pendingFamilyKey = null;
+    let productDialogCloseReason = 'cancel';
     let selectedTheme = 'pastel';
     let customColors = [];
     let selectedPlacement = 'single';
@@ -2110,14 +2256,25 @@
       mugViewer.classList.remove('is-ready');
     }
 
+    function dialogSelectedProduct() {
+      return products.find((candidate) => candidate.key === pendingProductKey) || product;
+    }
+
+    function dialogSelectedFamilyKey() {
+      return pendingFamilyKey || dialogSelectedProduct()?.familyKey || selectedFamilyKey;
+    }
+
     function updateProductOptionSelection() {
+      renderSelectedProduct();
+      const dialogProduct = dialogSelectedProduct();
+      const dialogFamilyKey = dialogSelectedFamilyKey();
       productOptions.querySelectorAll('.product-option').forEach((option) => {
-        const selected = option.dataset.familyKey === selectedFamilyKey;
+        const selected = option.dataset.familyKey === dialogFamilyKey;
         option.setAttribute('aria-checked', String(selected));
         option.tabIndex = selected ? 0 : -1;
       });
       variantOptions.querySelectorAll('.variant-option').forEach((option) => {
-        const selected = option.dataset.productKey === product?.key;
+        const selected = option.dataset.productKey === dialogProduct?.key;
         option.setAttribute('aria-checked', String(selected));
         option.tabIndex = selected ? 0 : -1;
       });
@@ -2132,6 +2289,70 @@
         ? `${candidate.size.volumeMl} ml · ${germanDecimal(candidate.size.heightCm)} cm hoch`
         : candidate.size.detail;
     }
+
+    function selectedProductSummary(candidate = product) {
+      if (!candidate) return '';
+      if (candidate.size.volumeMl) return `${candidate.size.label} · ${candidate.size.volumeMl} ml`;
+      if (candidate.size.detail) return `${candidate.size.label} · ${candidate.size.detail}`;
+      return candidate.size.label || '';
+    }
+
+    function renderSelectedProduct() {
+      if (!product) return;
+      selectedProductThumb.src = product.thumbnail;
+      selectedProductThumb.alt = '';
+      selectedProductName.textContent = product.displayName;
+      selectedProductDetail.textContent = selectedProductSummary(product);
+    }
+
+    function closeProductDialog() {
+      if (productDialog.open) productDialog.close();
+    }
+
+    function openProductDialog() {
+      pendingProductKey = product?.key || null;
+      pendingFamilyKey = selectedFamilyKey;
+      productDialogCloseReason = 'cancel';
+      buildProductOptions();
+      if (!productDialog.open) productDialog.showModal();
+      updateProductOptionSelection();
+      requestAnimationFrame(() => {
+        productDialog.focus({ preventScroll: true });
+      });
+    }
+
+    function resetProductDialogSelection() {
+      pendingProductKey = null;
+      pendingFamilyKey = null;
+    }
+
+    function confirmProductDialog() {
+      const nextProduct = dialogSelectedProduct();
+      productDialogCloseReason = 'confirm';
+      resetProductDialogSelection();
+      if (nextProduct?.key !== product?.key) {
+        selectProduct(nextProduct);
+      } else {
+        updateProductOptionSelection();
+      }
+      closeProductDialog();
+    }
+
+    changeProductButton.addEventListener('click', openProductDialog);
+    productDialogClose.addEventListener('click', closeProductDialog);
+    productDialogDone.addEventListener('click', confirmProductDialog);
+    productDialog.addEventListener('click', (event) => {
+      if (event.target === productDialog) closeProductDialog();
+    });
+    productDialog.addEventListener('close', () => {
+      if (productDialogCloseReason !== 'confirm') {
+        resetProductDialogSelection();
+        buildProductOptions();
+        updateProductOptionSelection();
+      }
+      productDialogCloseReason = 'cancel';
+      changeProductButton.focus();
+    });
 
     function selectedProductSlot() {
       const layoutKey = product.layouts.some((layout) => layout.key === selectedPlacement)
@@ -2172,19 +2393,28 @@
       initMug3D();
     }
 
-    function selectFamily(family) {
+    function selectDialogProduct(candidate) {
+      if (!candidate) return;
+      pendingProductKey = candidate.key;
+      pendingFamilyKey = candidate.familyKey;
+      updateProductOptionSelection();
+    }
+
+    function selectDialogFamily(family) {
       if (!family) return;
-      selectedFamilyKey = family.key;
+      pendingFamilyKey = family.key;
       const candidates = productsInFamily(family.key);
-      const nextProduct = candidates.find((candidate) => candidate.key === product?.key) || candidates[0];
-      if (nextProduct?.key !== product?.key) selectProduct(nextProduct);
+      const currentProduct = dialogSelectedProduct();
+      const nextProduct = candidates.find((candidate) => candidate.key === currentProduct?.key) || candidates[0];
+      if (nextProduct) pendingProductKey = nextProduct.key;
       buildVariantOptions();
       updateProductOptionSelection();
     }
 
     function buildVariantOptions() {
-      const family = productFamilies.find((candidate) => candidate.key === selectedFamilyKey);
-      const candidates = productsInFamily(selectedFamilyKey);
+      const activeFamilyKey = dialogSelectedFamilyKey();
+      const family = productFamilies.find((candidate) => candidate.key === activeFamilyKey);
+      const candidates = productsInFamily(activeFamilyKey);
       variantPanel.hidden = candidates.length < 2;
       variantOptions.replaceChildren();
       if (candidates.length < 2) return;
@@ -2196,12 +2426,12 @@
         option.dataset.productKey = candidate.key;
         option.setAttribute('role', 'radio');
         option.setAttribute('aria-label', `${candidate.displayName}, ${candidate.size.label}`);
-        option.addEventListener('click', () => selectProduct(candidate));
+        option.addEventListener('click', () => selectDialogProduct(candidate));
         option.addEventListener('keydown', (event) => {
           if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
           const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
           const nextIndex = (candidateIndex + direction + candidates.length) % candidates.length;
-          selectProduct(candidates[nextIndex]);
+          selectDialogProduct(candidates[nextIndex]);
           variantOptions.querySelectorAll('.variant-option')[nextIndex]?.focus();
           event.preventDefault();
         });
@@ -2230,13 +2460,13 @@
         option.dataset.familyKey = family.key;
         option.setAttribute('role', 'radio');
         option.setAttribute('aria-label', family.label);
-        option.addEventListener('click', () => selectFamily(family));
+        option.addEventListener('click', () => selectDialogFamily(family));
         option.addEventListener('keydown', (event) => {
           if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
           const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
           const nextIndex = (familyIndex + direction + productFamilies.length) % productFamilies.length;
           const nextOption = productOptions.querySelectorAll('.product-option')[nextIndex];
-          selectFamily(productFamilies[nextIndex]);
+          selectDialogFamily(productFamilies[nextIndex]);
           nextOption?.focus();
           event.preventDefault();
         });
