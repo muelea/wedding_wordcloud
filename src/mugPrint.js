@@ -3,6 +3,7 @@
 const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 const MugIcons = require('../public/js/mug-icons.js');
+const DesignFonts = require('./designFonts');
 const { DEFAULT_PRODUCT } = require('./products');
 
 const measureCanvas = createCanvas(10, 10);
@@ -47,10 +48,10 @@ function getDesignBounds(item) {
     itemWidth = item.size;
     itemHeight = item.size;
   } else {
-    measureCtx.font = `${item.fontSize}px ${WordCloudCore.FONT_FAMILY}`;
+    measureCtx.font = `${item.fontSize}px ${DesignFonts.cssFamily(item.fontFamily)}`;
     const metrics = measureCtx.measureText(item.text);
     itemWidth = Math.max(1, metrics.width);
-    itemHeight = Math.max(1, item.fontSize);
+    itemHeight = Math.max(1, item.fontSize * 1.18);
   }
   const radians = item.angle * Math.PI / 180;
   const cos = Math.abs(Math.cos(radians));
@@ -111,8 +112,10 @@ function designElements(design) {
     const rotate = item.angle
       ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
       : '';
+    const fontKey = DesignFonts.normalizeKey(item.fontFamily);
     return `<text x="${item.x.toFixed(1)}" y="${(item.y + item.fontSize * 0.34).toFixed(1)}" ` +
-      `font-size="${item.fontSize.toFixed(1)}" font-family="${WordCloudCore.SVG_FONT_FAMILY}" ` +
+      `font-size="${item.fontSize.toFixed(1)}" font-family="${DesignFonts.svgFamily(fontKey)}" ` +
+      `data-font="${fontKey}" ` +
       `fill="${item.color}" text-anchor="middle"${rotate}>${WordCloudCore.escapeXML(item.text)}</text>`;
   }).join('\n  ');
 }
@@ -141,6 +144,7 @@ function buildProductPrintSvg(product, words, theme = 'pastel', layout = 'single
     return `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
       `viewBox="0 0 ${width} ${height}" data-background="transparent">\n` +
+      DesignFonts.embeddedSvgFontFaces(design) +
       `  <g data-cloud="${layout}" data-custom="true">\n  ${designElements(design)}\n</g>\n` +
       `</svg>`;
   }

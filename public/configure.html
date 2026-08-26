@@ -9,6 +9,35 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
 
+    @font-face {
+      font-family: 'Wolkenworte Lora';
+      src: url('/assets/design-fonts/lora/Lora.ttf?v=20260826-1') format('truetype');
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Wolkenworte Montserrat';
+      src: url('/assets/design-fonts/montserrat/Montserrat.ttf?v=20260826-1') format('truetype');
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Wolkenworte Caveat';
+      src: url('/assets/design-fonts/caveat/Caveat.ttf?v=20260826-1') format('truetype');
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Wolkenworte Baloo 2';
+      src: url('/assets/design-fonts/baloo-2/Baloo2.ttf?v=20260826-1') format('truetype');
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
+
     :root {
       --ink: #400f26;
       --berry: #9c1c4c;
@@ -672,7 +701,7 @@
     .editor-selection-head { display: none; }
     .editor-selection-row {
       display: grid;
-      grid-template-columns: minmax(150px, 1fr) auto;
+      grid-template-columns: minmax(150px, 1fr) minmax(155px, .55fr) auto;
       align-items: center;
       gap: 12px;
     }
@@ -699,6 +728,20 @@
     }
     .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
     .editor-text-input:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
+    .editor-font-select {
+      width: 100%;
+      height: 38px;
+      margin: 0;
+      padding: 7px 30px 7px 10px;
+      border: 1px solid rgba(123,70,82,.2);
+      border-radius: 9px;
+      background-color: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .editor-font-select:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
+    .editor-font-select:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
     .editor-field-label-color { align-self: center; }
     .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 0; }
     .editor-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
@@ -1603,6 +1646,9 @@
                   <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
                     <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
                   </label>
+                  <label class="editor-field-label editor-field-label-font"><span class="editor-field-label-text">Schriftart</span>
+                    <select class="editor-font-select" id="editor-font" aria-label="Schriftart" disabled></select>
+                  </label>
                   <div class="editor-field-label editor-field-label-color" role="group" aria-label="Farbe auswählen">
                     <div class="editor-colors">
                       <div class="editor-swatches" id="editor-swatches"></div>
@@ -1710,8 +1756,9 @@
   <script src="/js/wordcloud-core.js?v=20260819-2"></script>
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260817-1"></script>
-  <script src="/js/design-layout.js?v=20260826-2"></script>
-  <script src="/js/mug-editor.js?v=20260826-3"></script>
+  <script src="/js/design-fonts.js?v=20260826-1"></script>
+  <script src="/js/design-layout.js?v=20260826-3"></script>
+  <script src="/js/mug-editor.js?v=20260826-5"></script>
   <script>
     'use strict';
 
@@ -2310,6 +2357,7 @@
             fontSize: Math.round(item.fontPx * 10) / 10,
             angle: item.rotated ? -90 : 0,
             color: item.color,
+            fontFamily: DesignFonts.DEFAULT_FONT_KEY,
           });
         });
       });
@@ -2560,7 +2608,7 @@
             ctx.stroke(new Path2D(icon.path));
           }
         } else {
-          ctx.font = `${item.fontSize * scale}px ${WordCloudCore.FONT_FAMILY}`;
+          ctx.font = `${item.fontSize * scale}px ${DesignFonts.cssFamily(item.fontFamily)}`;
           ctx.fillStyle = item.color;
           ctx.fillText(item.text, 0, item.fontSize * scale * .34);
         }
@@ -3041,7 +3089,7 @@
           : DesignLayout.transformDesign(currentDesign, previousSlots, nextSlots);
         const design = optimize
           ? DesignLayout.optimizeDesign(transformed, nextSlots, measurementContext, {
-              fontFamily: WordCloudCore.FONT_FAMILY,
+              fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
             })
           : transformed;
         nextStates.set(surface.key, cloneEditorState({ design }, false));
@@ -3216,6 +3264,7 @@
         selectionHint: document.getElementById('editor-selection-hint'),
         textInput: document.getElementById('editor-text'),
         textLabel: document.getElementById('editor-text-label'),
+        fontSelect: document.getElementById('editor-font'),
         swatches: document.getElementById('editor-swatches'),
         colorInput: document.getElementById('editor-color'),
         feedback: document.getElementById('editor-feedback'),

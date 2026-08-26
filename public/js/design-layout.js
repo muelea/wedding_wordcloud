@@ -115,7 +115,10 @@
     } else {
       const fontSize = Math.max(1, Number(item.fontSize) || 12);
       if (measureContext) {
-        measureContext.font = `${fontSize}px ${fontFamily}`;
+        const itemFontFamily = typeof fontFamily === 'function'
+          ? fontFamily(item)
+          : fontFamily;
+        measureContext.font = `${fontSize}px ${itemFontFamily}`;
         width = Math.max(1, measureContext.measureText(String(item.text || '')).width);
       } else {
         width = Math.max(1, String(item.text || '').length * fontSize * .58);

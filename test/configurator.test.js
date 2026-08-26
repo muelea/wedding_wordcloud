@@ -6,6 +6,7 @@ const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignLayout = require('../public/js/design-layout.js');
+const DesignFonts = require('../public/js/design-fonts.js');
 
 function connectSocket(baseUrl, slug) {
   return new Promise((resolve, reject) => {
@@ -109,6 +110,37 @@ test('area optimization fills the target with the complete current design', () =
   assert.equal(optimizedAgain[0].x, 500);
   assert.equal(optimizedAgain[0].y, 450);
   assert.equal(optimizedAgain[0].color, '#168f83', 'manual edits remain the optimization input');
+});
+
+test('area optimization measures every text with its selected design font', () => {
+  const measuredFonts = [];
+  const measurementContext = {
+    _font: '',
+    set font(value) {
+      this._font = value;
+      measuredFonts.push(value);
+    },
+    get font() { return this._font; },
+    measureText(text) {
+      const fontSize = Number.parseFloat(this._font) || 12;
+      return { width: String(text).length * fontSize * .5 };
+    },
+  };
+  const design = [
+    { id: 'klassisch', text: 'Liebe', x: 50, y: 50, fontSize: 24, angle: 0, color: '#a40e4c', fontFamily: 'classic' },
+    { id: 'handschrift', text: 'Glück', x: 80, y: 70, fontSize: 22, angle: 0, color: '#168f83', fontFamily: 'caveat' },
+  ];
+  const optimized = DesignLayout.optimizeDesign(
+    design,
+    [{ x: 0, y: 0, width: 500, height: 300, optimize: true }],
+    measurementContext,
+    { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
+  );
+
+  assert.equal(optimized.length, design.length);
+  assert.ok(measuredFonts.some((font) => font.includes('Georgia')));
+  assert.ok(measuredFonts.some((font) => font.includes('Wolkenworte Caveat')));
+  assert.deepEqual(optimized.map((item) => item.fontFamily), ['classic', 'caveat']);
 });
 
 test('configurator exposes every curated product with verified Printful geometry', async (t) => {
@@ -416,6 +448,13 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(sharedMugViewer.headers.get('cache-control') || '', /immutable/);
   assert.match(await sharedMugViewer.text(), /Mug3DViewer/);
 
+  assert.deepEqual(DesignFonts.FONTS.map((font) => font.key), [
+    'classic', 'lora', 'montserrat', 'caveat', 'baloo-2',
+  ]);
+  const bundledFont = await fetch(`${baseUrl}/assets/design-fonts/lora/Lora.ttf?v=20260826-1`);
+  assert.equal(bundledFont.status, 200);
+  assert.ok((await bundledFont.arrayBuffer()).byteLength > 100000);
+
   const [landingPage, configurePage] = await Promise.all([
     fetch(`${baseUrl}/`).then((response) => response.text()),
     fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
@@ -441,8 +480,12 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="workspace-tools"/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(configurePage, /design-layout\.js\?v=20260826-2/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260826-3/);
+  assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
+  assert.match(configurePage, /design-layout\.js\?v=20260826-3/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260826-5/);
+  assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"/);
+  assert.match(configurePage, /fontSelect: document\.getElementById\('editor-font'\)/);
+  assert.match(configurePage, /DesignFonts\.cssFamily\(item\.fontFamily\)/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /id="editor-duplicate"[^>]*title="Duplizieren \(⌘\/Strg \+ C und V\)"/);
   assert.match(configurePage, /id="editor-select-all"[^>]*title="Alles auswählen \(⌘\/Strg \+ A\)"/);
@@ -475,7 +518,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-3`);
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-5`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
@@ -491,6 +534,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /new root\.fabric\.ActiveSelection\(selectable/);
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'a'/);
   assert.match(mugEditorSource, /root\.fabric\.util\.qrDecompose\(object\.calcTransformMatrix\(\)\)/);
+  assert.match(mugEditorSource, /setActiveFont\(fontKey\)/);
+  assert.match(mugEditorSource, /fontFamily: root\.DesignFonts\.normalizeKey\(object\.editorFontKey\)/);
   assert.doesNotMatch(mugEditorSource, /Mindestens ein Element muss bleiben/);
   assert.match(await fetch(`${baseUrl}/assets/product-thumbnails/pillow.svg`).then((response) => response.text()), /Dekokissen/);
   for (const [asset, contentType] of [
@@ -837,8 +882,8 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   const event = await createEvent(baseUrl, { coupleName: 'Editor Ella & Finn' });
   const words = [['ursprünglich', 2], ['liebe', 1]];
   const design = [
-    { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456' },
-    { id: 'wort-2', text: 'für immer', x: 1550, y: 655, fontSize: 82, angle: -30, color: '#abcdef' },
+    { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456', fontFamily: 'lora' },
+    { id: 'wort-2', text: 'für immer', x: 1550, y: 655, fontSize: 82, angle: -30, color: '#abcdef', fontFamily: 'caveat' },
     { id: 'motiv-1', type: 'icon', icon: 'heart', x: 1880, y: 390, size: 170, angle: -12, color: '#d90368' },
   ];
 
@@ -862,6 +907,12 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.match(svg, /font-size="118\.0"/);
   assert.match(svg, /transform="rotate\(15\.0 1280\.0 460\.0\)"/);
   assert.match(svg, /fill="#123456"/);
+  assert.match(svg, /data-font="lora"/);
+  assert.match(svg, /data-font="caveat"/);
+  assert.match(svg, /font-family="'Wolkenworte Lora', Georgia, serif"/);
+  assert.match(svg, /font-family="'Wolkenworte Caveat', cursive"/);
+  assert.match(svg, /@font-face\{font-family:'Wolkenworte Lora';src:url\(data:font\/ttf;base64,/);
+  assert.match(svg, /@font-face\{font-family:'Wolkenworte Caveat';src:url\(data:font\/ttf;base64,/);
   assert.match(svg, />Unser Wort<\/text>/);
   assert.match(svg, />für immer<\/text>/);
   assert.match(svg, /data-motif="heart"/);
@@ -886,11 +937,29 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     text: item.text,
     icon: item.icon,
     color: item.color,
+    fontFamily: item.fontFamily,
   })), [
-    { id: 'wort-1', type: 'text', text: 'Unser Wort', icon: undefined, color: '#123456' },
-    { id: 'wort-2', type: 'text', text: 'für immer', icon: undefined, color: '#abcdef' },
-    { id: 'motiv-1', type: 'icon', text: undefined, icon: 'heart', color: '#d90368' },
+    { id: 'wort-1', type: 'text', text: 'Unser Wort', icon: undefined, color: '#123456', fontFamily: 'lora' },
+    { id: 'wort-2', type: 'text', text: 'für immer', icon: undefined, color: '#abcdef', fontFamily: 'caveat' },
+    { id: 'motiv-1', type: 'icon', text: undefined, icon: 'heart', color: '#d90368', fontFamily: undefined },
   ]);
+
+  const unknownFont = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      placement: 'single',
+      words,
+      design: [{
+        id: 'wort-fremde-schrift', text: 'bleibt sicher', x: 1300, y: 500,
+        fontSize: 100, angle: 0, color: '#123456', fontFamily: 'untrusted-font',
+      }],
+    }),
+  });
+  assert.equal(unknownFont.status, 400);
+  assert.equal((await unknownFont.json()).error, 'invalid_design');
 
   const outside = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',

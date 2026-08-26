@@ -19,6 +19,7 @@ const {
   getPublicProductFamilies,
 } = require('../products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
+const DesignFonts = require('../designFonts');
 const MugIcons = require('../../public/js/mug-icons.js');
 
 const PIN_RE = /^\d{4,6}$/;
@@ -385,8 +386,16 @@ function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { c
 
     const text = normalizeDesignText(rawItem.text);
     const fontSize = Number(rawItem.fontSize);
-    if (!text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
-    normalized.push({ ...common, color, text, fontSize: Math.round(fontSize * 10) / 10 });
+    const rawFontFamily = rawItem.fontFamily;
+    if ((rawFontFamily != null && !DesignFonts.has(rawFontFamily)) ||
+        !text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
+    normalized.push({
+      ...common,
+      color,
+      text,
+      fontSize: Math.round(fontSize * 10) / 10,
+      fontFamily: DesignFonts.normalizeKey(rawFontFamily),
+    });
   }
   return isPrintDesignWithinBounds(normalized, width, height, safeMargin) ? normalized : null;
 }

@@ -50,7 +50,9 @@ add their own photos, words and motifs, and purchase it independently.
    duplicated or removed. A selection rectangle, Shift/Command/Control-click and
    “Select all” support the familiar temporary multi-selection workflow; desktop
    users can also copy and paste selected elements with the standard keyboard
-   shortcuts. Placement changes transform the complete
+   shortcuts. Text elements can use the classic default or one of four curated,
+   locally bundled print fonts; a font change also works across a mixed
+   multi-selection and affects only its text elements. Placement changes transform the complete
    current canvas instead of regenerating it from the original event words. Words
    can also be edited directly. Hard bounds keep
    the entire design printable.
@@ -111,6 +113,16 @@ Photos are stored as data URLs inside the immutable configuration's
 SQLite database contains the personal photos and needs the same persistence,
 backup, access-control and future deletion treatment as order data. The
 configuration-specific print route is addressed only by its opaque random id.
+
+## Bundled design fonts
+
+The product editor ships Lora, Montserrat, Caveat and Baloo 2 locally alongside
+the existing Georgia default. Browser preview, server-side bounds checking and
+the immutable SVG use the same font definitions; non-default fonts are embedded
+directly into the print SVG so fulfillment does not depend on fonts installed at
+Printful. Each bundled font is distributed under the SIL Open Font License 1.1;
+the corresponding `OFL.txt` files live next to the font binaries in
+`public/assets/design-fonts/`.
 
 ## Quick start
 

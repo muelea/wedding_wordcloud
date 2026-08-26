@@ -24,6 +24,7 @@
     constructor(options) {
       if (!root.fabric) throw new Error('Fabric.js is required for the mug editor');
       if (!root.MugIcons) throw new Error('MugIcons is required for the mug editor');
+      if (!root.DesignFonts) throw new Error('DesignFonts is required for the mug editor');
       this.width = options.printWidth;
       this.height = options.printHeight;
       this.printMargin = Number.isFinite(options.safeMargin) ? options.safeMargin : DEFAULT_PRINT_MARGIN;
@@ -42,6 +43,7 @@
       this.selectionPanel = options.selectionPanel;
       this.textInput = options.textInput;
       this.textLabel = options.textLabel;
+      this.fontSelect = options.fontSelect;
       this.swatches = options.swatches;
       this.zoomLabel = options.zoomLabel;
       this.feedback = options.feedback;
@@ -86,6 +88,7 @@
       this.canvas.backgroundColor = '#ffffff';
       this.canvas.renderAll();
       this.bindCanvasEvents();
+      this.renderFontOptions();
       this.bindControls(options);
       this.renderSwatches();
       this.renderIconPicker();
@@ -95,12 +98,13 @@
     makeObject(item) {
       if (item.type === 'image') return this.makeImageObject(item);
       if (item.type === 'icon') return this.makeIconObject(item);
+      const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
       const text = new root.fabric.IText(item.text, {
         left: item.x * this.editorScale,
         top: item.y * this.editorScale,
         originX: 'center',
         originY: 'center',
-        fontFamily: 'Georgia',
+        fontFamily: root.DesignFonts.get(fontKey).family,
         fontSize: Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, item.fontSize * this.editorScale),
         fill: item.color,
         angle: item.angle || 0,
@@ -123,6 +127,7 @@
       });
       text.editorKind = 'text';
       text.editorId = item.id || this.nextId();
+      text.editorFontKey = fontKey;
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
@@ -368,6 +373,11 @@
         if (active?.editorKind === 'text' && !this.textInput.value.trim()) this.textInput.value = active.text;
       });
       options.colorInput.addEventListener('input', () => this.setActiveColor(options.colorInput.value));
+      this.fontSelect.addEventListener('change', () => {
+        this.setActiveFont(this.fontSelect.value).catch(() => {
+          this.setFeedback('Schrift konnte nicht geladen werden');
+        });
+      });
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
@@ -499,6 +509,24 @@
         button.addEventListener('click', () => this.addIcon(icon.id));
         this.iconGrid.appendChild(button);
       }
+    }
+
+    renderFontOptions() {
+      this.fontSelect.replaceChildren();
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Schrift wählen';
+      placeholder.disabled = true;
+      this.fontSelect.appendChild(placeholder);
+      this.fontPlaceholder = placeholder;
+      for (const font of root.DesignFonts.FONTS) {
+        const option = document.createElement('option');
+        option.value = font.key;
+        option.textContent = `${font.label} – ${font.description}`;
+        option.style.fontFamily = font.cssFamily;
+        this.fontSelect.appendChild(option);
+      }
+      this.fontSelect.value = '';
     }
 
     toggleIconPicker() {
@@ -1038,6 +1066,7 @@
         ...common,
         text: object.text,
         fontSize: object.fontSize * Math.abs(transform.scaleX) / this.editorScale,
+        fontFamily: root.DesignFonts.normalizeKey(object.editorFontKey),
       };
     }
 
@@ -1072,6 +1101,36 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
+    }
+
+    async setActiveFont(fontKey) {
+      if (!root.DesignFonts.has(fontKey)) return;
+      const active = this.canvas.getActiveObject();
+      if (!active) return;
+      const selected = this.selectedObjects(active);
+      const textObjects = selected.filter((object) => object.editorKind === 'text');
+      if (!textObjects.length) return;
+      const font = root.DesignFonts.get(fontKey);
+      if (document.fonts && font.file) {
+        await document.fonts.load(`16px "${font.family}"`);
+      }
+
+      this.canvas.discardActiveObject();
+      for (const object of textObjects) {
+        object.editorFontKey = font.key;
+        object.set({ fontFamily: font.family });
+        object.initDimensions();
+        object.setCoords();
+      }
+      const selection = this.setActiveObjects(selected);
+      this.keepInside(selection);
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.setFeedback(textObjects.length === 1
+        ? `Schrift auf ${font.label} geändert`
+        : `${font.label} auf ${textObjects.length} Texte angewendet`);
     }
 
     applyPalette(colors) {
@@ -1109,6 +1168,8 @@
       const isIcon = !isMultiple && active?.editorKind === 'icon';
       const isImage = !isMultiple && active?.editorKind === 'image';
       const canColor = selected.some((object) => object.editorKind !== 'image');
+      const selectedTexts = selected.filter((object) => object.editorKind === 'text');
+      const canChangeFont = selectedTexts.length > 0;
       this.selectionPanel.classList.toggle('is-active', hasSelection);
       this.selectionPanel.classList.toggle('is-photo', Boolean(isImage));
       this.selectionPanel.classList.toggle('is-multiple', isMultiple);
@@ -1116,6 +1177,7 @@
       this.shell.classList.toggle('has-selection', hasSelection);
       this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
       this.colorInput.disabled = !hasSelection || !canColor;
+      this.fontSelect.disabled = !hasSelection || !canChangeFont;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
         button.disabled = !hasSelection || !canColor;
@@ -1126,11 +1188,21 @@
         this.selectionHint.textContent = 'Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere';
         this.textLabel.textContent = 'Ausgewähltes Element';
         this.textInput.value = '';
+        this.fontPlaceholder.textContent = 'Schrift wählen';
+        this.fontSelect.value = '';
         this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
           button.classList.remove('is-selected');
         });
         return;
       }
+      const fontKeys = selectedTexts.map((object) => root.DesignFonts.normalizeKey(object.editorFontKey));
+      const commonFontKey = fontKeys.length && fontKeys.every((key) => key === fontKeys[0])
+        ? fontKeys[0]
+        : '';
+      this.fontPlaceholder.textContent = !canChangeFont
+        ? 'Nur für Text'
+        : commonFontKey ? 'Schrift wählen' : 'Mehrere Schriften';
+      this.fontSelect.value = commonFontKey;
       if (isMultiple) {
         this.selectionStatus.textContent = `${selected.length} Elemente ausgewählt`;
         this.selectionHint.textContent = 'Gemeinsam ziehen, drehen oder skalieren · Escape hebt die Auswahl auf';
