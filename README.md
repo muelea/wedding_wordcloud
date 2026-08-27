@@ -171,8 +171,17 @@ Everything in `.env.example` is documented inline. Summary:
 |---|---|---|
 | `PORT` | no (defaults 3000) | server port |
 | `PUBLIC_URL` | only in production | overrides auto-detected base URL used in QR codes / links |
-| `ADMIN_TOKEN_SECRET` | **yes, in production** | signs the admin PIN session token — the default is intentionally insecure |
-| `DB_PATH` | no | SQLite file location (defaults `./data/weddingcloud.sqlite`) |
+| `ADMIN_TOKEN_SECRET` | transitional | signs the current admin PIN session token; removed when the hosted reset flow stops issuing reusable tokens |
+| `DB_PATH` | transitional | current SQLite file location; removed after the Postgres migration |
+| `DATABASE_URL` | after hosted Package 1 | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
+| `MIGRATION_DATABASE_URL` | deployment only | privileged Postgres migration connection; local/CI secret only and never available to the Fly web Machine |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | after hosted Package 1 | private Storage API URL and backend-only secret key; the secret key must never reach browser code |
+| `SUPABASE_STORAGE_BUCKET` | after hosted Package 2 | private photo/print-artifact bucket name (defaults `wolkenworte-private`) |
+| `RATE_LIMIT_HMAC_SECRET`, `MAINTENANCE_SECRET` | hosted environment | independent secrets for privacy-preserving rate-limit identities and authenticated maintenance wake-ups |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | before transactional-email smoke test | backend-only sending key and verified Wolkenworte sender |
+| `RESEND_WEBHOOK_SECRET` | after the Resend webhook is deployed | verifies signed Resend delivery webhooks |
+| `EMAIL_DELIVERY_MODE` | no (defaults `mock`) | `mock` or `live`; Stripe test payments always remain mocked |
+| `ALLOW_TEST_DATA_RESET` | no (must remain `false`) | second guard for the approved one-time pre-live hosted-test cleanup |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | only for test checkout | Stripe test secret and local/Dashboard webhook signing secret; unset → checkout/webhook return a clean 501 |
 | `STRIPE_ALLOW_LIVE_PAYMENTS` | no (must remain `false`) | rejects live Stripe keys and live webhook events during this test-only phase |
 | `CHECKOUT_QUOTE_TTL_MINUTES` | no (defaults 30) | lifetime of a saved address/price quote; accepted range 5–120 minutes |
@@ -183,6 +192,10 @@ Everything in `.env.example` is documented inline. Summary:
 | `SHOP_PRODUCT_MARKUP_PERCENT` | no (defaults 50) | provisional catalog-wide markup added to Printful's current product costs |
 | `SHOP_PAYMENT_RESERVE_PERCENT` | no (defaults 3.15) | internal payment-cost reserve percentage folded into the product subtotal |
 | `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | no (defaults 25) | internal fixed payment-cost reserve in cents, also folded into the product subtotal |
+
+The hosted-refactor variables are prepared ahead of implementation. The
+current application continues to use SQLite and does not consume the new
+Postgres, Supabase Storage or Resend values yet.
 
 **Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
 future hosted secrets must be set in the provider's encrypted secret store,
