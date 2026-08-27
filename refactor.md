@@ -405,12 +405,31 @@ requests.
 - Order creation claims one quote in the database and keeps the existing Stripe
   idempotency key. A concurrent request must return the one stored Checkout
   Session rather than issuing another external request.
+- Stripe Checkout creation must also survive the process or database failing
+  after Stripe accepted the request but before the returned Session id was
+  attached to the order. Before the first Stripe call, persist the exact frozen
+  request inputs, idempotency key, first-attempt time and a deterministic Session
+  expiry. A stalled `creating_checkout` state is recoverable: every automatic
+  retry reuses the same request parameters and idempotency key while that key is
+  safely inside Stripe's retention window. If the result is still ambiguous near
+  that boundary, block the attempt rather than issuing a new key; a fresh attempt
+  may begin only after the possibly-created Session is known to be expired or an
+  operator has reconciled it.
+- A signature-verified successful Stripe webhook may reconcile this crash window
+  when `stripe_session_id` has not yet been stored. It resolves the candidate
+  order from the Session's `orderId` and `quoteId` metadata, then verifies the
+  order state, checkout mode, amount, currency and payment status before
+  atomically attaching the Session id and recording payment. Metadata never
+  bypasses those trusted-order checks.
 - Configuration creation, order creation and cleanup lock or mark the affected
   rows so an asset/configuration cannot become paid while it is being deleted.
 
 Add integration tests for concurrent submission, concurrent owned removals,
-reset-versus-submission, duplicate quote checkout, duplicate Stripe events and
-cleanup-versus-order creation.
+reset-versus-submission, duplicate quote checkout, duplicate Stripe events,
+cleanup-versus-order creation, and a forced interruption after Stripe accepts a
+Checkout Session but before the Session id is persisted. The interrupted case
+must recover one Session and one paid-order transition without creating a second
+Stripe Session.
 
 ### Test isolation
 
@@ -870,6 +889,43 @@ with explicit maintainer approval:
 - real product-margin review;
 - live Stripe webhook and fulfillment alerting.
 
+### Controlled provider smoke path
+
+The hosted test environment needs an explicit operator-only way to complete the
+real Resend and Printful launch-gate checks without weakening the rule that
+Stripe test payments always use mock fulfillment and mock email delivery.
+
+Implement a guarded CLI command or one-off deployment-runner command, never a
+public HTTP route. Each invocation requires an explicit confirmation flag and
+refuses to run while Stripe live payments are enabled. It uses synthetic hosted
+test data only and records a sanitized smoke outcome for the launch checklist.
+
+The email smoke path:
+
+- renders the same Wolkenworte order-confirmation template from a synthetic,
+  immutable order snapshot;
+- sends through the same Resend client, idempotency-key, tag and signed-webhook
+  reconciliation code used by durable email jobs;
+- accepts only an explicitly supplied, allowlisted maintainer/test recipient;
+- can exercise delivered and bounced outcomes without creating a Stripe payment;
+  and
+- cannot be invoked by the web process or turn an ordinary test-payment email
+  job into a real send.
+
+The Printful smoke path:
+
+- renders and stores artifacts through the same paid-artifact pipeline used by
+  fulfillment;
+- creates only an explicitly approved Printful draft from a synthetic order and
+  verifies that Printful downloads the capability URL;
+- requires draft mode plus the existing order-write safety switch and refuses to
+  run if `PRINTFUL_CONFIRM_LIVE_ORDERS=true`; and
+- never confirms, charges or submits the draft for production.
+
+These commands are controlled verification tools, not alternate payment or
+fulfillment paths. Their synthetic rows and objects are included in the guarded
+pre-live cleanup.
+
 ## Work package 6: buyer contact and transactional email
 
 Keep one buyer contact address per order. Stripe-hosted Checkout continues to
@@ -1013,7 +1069,11 @@ Before adding a second web Machine, implement both:
 1. an official Socket.io cross-Machine adapter (the Postgres adapter may use the
    existing Postgres service; Redis is not required initially). Its
    `LISTEN`/`NOTIFY` connection must use a direct or session-mode Postgres
-   connection, never a transaction pooler; and
+   connection, never a transaction pooler. If the official Postgres adapter is
+   selected, add its attachment table through a versioned migration and grant
+   the runtime role only the required access; this table carries broadcasts
+   above Postgres's notification payload limit and needs the adapter's bounded
+   cleanup behavior; and
 2. a tested Fly replay/cookie affinity design for Socket.io's HTTP long-polling
    requests.
 
@@ -1026,15 +1086,25 @@ Load-test before live launch with at least:
 
 - 100 concurrent event rooms;
 - 2,000 concurrent sockets distributed across those rooms;
-- a hot-room scenario with 300 concurrent sockets in one event;
-- bursts of at least 50 word submissions per second;
+- a hot-room scenario with 300 concurrent sockets in one event, seeded close to
+  the configured maximum of 500 unique words and 5,000 active contributions;
+- bursts of at least 50 accepted word submissions per second;
 - simultaneous configuration saves and estimates;
 - a reconnect storm after a cold start or application restart;
 - a forced application restart during pending fulfillment;
 - assertions that no word, theme, reset, or receipt crosses event boundaries.
 
+The capacity run must measure application throughput rather than rate-limit
+throughput. Use representative independent guest identities and enough source
+networks that the configured shared-venue IP ceilings do not reject the offered
+50-per-second load. Do not count deliberate rate-limit rejections as accepted
+submissions or as evidence that the capacity target passed. Separately run the
+same abuse tests with production rate-limit settings and prove that the limits
+hold. Do not add a production HTTP or Socket.io bypass for load testing.
+
 Record p50/p95/p99 API latency, room-update delay, CPU, memory, database pool
-usage, outbound bandwidth, event-loop delay, errors, and reconnect success.
+usage, outbound bandwidth, event-loop delay, errors, reconnect success and the
+serialized size of hot-room snapshots.
 Initial pass/fail targets at the stated 2,000-socket/50-submission load are:
 
 - submitted-word acknowledgement p95 at most 300 ms and p99 at most 1 second;
@@ -1377,6 +1447,12 @@ The final refactor is accepted only when all of the following are true:
   count with no zero-count row, lost decrement or foreign removal;
 - archive plus reset is atomic under a concurrent submission;
 - concurrent checkout attempts produce one Stripe Session/order;
+- an interruption after Stripe accepts Checkout but before local Session
+  persistence is recovered with the frozen request and original idempotency key;
+  a verified successful webhook can reconcile the missing Session link through
+  trusted metadata and creates one payment transition, while an unresolved
+  ambiguous attempt never rolls to a new key before the old Session is known to
+  be expired;
 - duplicate Stripe events produce one payment transition and one fulfillment;
 - the verified Stripe buyer email is stored on the order and a duplicate
   successful-payment event creates only one order-confirmation job;
@@ -1389,6 +1465,11 @@ The final refactor is accepted only when all of the following are true:
   becomes `blocked`, alerts support and causes no automatic request with a new
   idempotency key;
 - test payments and automated tests never contact the live Resend API;
+- the guarded operator email smoke sends only to its explicit allowlist and
+  exercises signed delivery/bounce reconciliation without enabling real email
+  for Stripe test payments;
+- the guarded Printful smoke creates a draft that downloads the frozen artifact
+  URL but cannot confirm or submit it;
 - a signed Printful shipment event updates the retained shipment and creates
   one buyer-addressed tracking email, including for replayed and split-shipment
   events;
@@ -1450,8 +1531,10 @@ The final refactor is accepted only when all of the following are true:
   and cannot be moved backward by an out-of-order delivery event;
 - print font metrics and generated artifacts match local expected output;
 - the documented 2,000-socket load test meets the agreed latency/error target
-  established before the test, including the hot-room and reconnect-storm
-  scenarios;
+  established before the test, including a near-maximum-size hot room, at least
+  50 accepted submissions per second, measured snapshot size/outbound bandwidth
+  and the reconnect-storm scenario; production rate limits are verified in a
+  separate run and their rejections are not counted as accepted load;
 - the cleanup command refuses to run without both safety guards and empties
   only test business data and the configured bucket.
 
