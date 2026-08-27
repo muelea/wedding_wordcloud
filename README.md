@@ -100,17 +100,17 @@ dotted and dotless I.
 
 ## Current development status
 
-- The full product currently runs locally with SQLite. There is no active
-  public production deployment.
+- The full product now runs on Postgres. Versioned migrations and a dedicated
+  least-privileged runtime role are configured in the Supabase project; there
+  is still no active public production deployment.
 - Stripe Checkout and signed Stripe webhooks run in test mode. Printful is
   already used for countries and live cost estimates when configured, but a
   Stripe test payment can only create a local `mocked` fulfillment record.
-- Fly.io staging with a temporary `*.fly.dev` HTTPS address and one persistent
-  SQLite volume is the next discussed hosting step, but no Fly configuration
-  exists in the repository yet.
-- Supabase/Postgres is a possible later database migration before live
-  operation. The current data layer remains deliberately synchronous
-  `node:sqlite`; adding Supabase credentials alone would not switch it.
+- The empty Fly.io app exists, but Docker/Fly packaging and the first hosted
+  test deployment belong to the next work package.
+- The application data layer is fully asynchronous through one bounded `pg`
+  pool. Application startup checks the required migration version and never
+  creates or alters schema objects.
 - Customer VAT/Stripe Tax treatment, public hosting details, retention rules,
   signed Printful status webhooks and the first controlled Printful draft are
   intentionally still pending before live sales.
@@ -132,8 +132,8 @@ validates actual JPEG/PNG/WebP signatures and enforces at most six photos and
 at most 6 MiB decoded image data across the complete design.
 
 Photos are stored as data URLs inside the immutable configuration's
-`design_json`; there is no separate public upload directory. Consequently the
-SQLite database contains the personal photos and needs the same persistence,
+`design_json`; there is no separate public upload directory. Consequently
+Postgres currently contains the personal photos and needs the same persistence,
 backup, access-control and future deletion treatment as order data. The
 configuration-specific print route is addressed only by its opaque random id.
 
@@ -151,7 +151,11 @@ the corresponding `OFL.txt` files live next to the font binaries in
 
 ```bash
 npm install
-cp .env.example .env    # optional locally — see below
+cp .env.example .env
+supabase start
+supabase db reset
+# Put the local admin connection in MIGRATION_DATABASE_URL, then:
+npm run db:provision-runtime
 npm start                # or: npm run dev (auto-restarts on file change)
 ```
 
@@ -159,9 +163,15 @@ The server prints a URL on startup (your machine's LAN IP, so phones on the
 same WiFi can reach it). Open it — `/` is the landing page, `/start` is
 event creation.
 
-Requires Node with built-in `node:sqlite` support (Node 22.5+ / 24+). You'll
-see an `ExperimentalWarning: SQLite is an experimental feature` on startup —
-expected, harmless.
+Requires Node 22+ and the Supabase CLI/Docker stack for local database work.
+`npm test` uses `MIGRATION_DATABASE_URL` (or `TEST_DATABASE_URL`) to create one
+isolated Postgres schema per test server and removes it afterward.
+
+For a clean hosted project, run `npm run db:migrate` with only the privileged
+`MIGRATION_DATABASE_URL`, then `npm run db:provision-runtime` once. The second
+command generates the `wolkenworte_app` password, proves the role cannot create
+tables, verifies schema access and writes its `DATABASE_URL` to the ignored
+local `.env`. Never put `MIGRATION_DATABASE_URL` in Fly Secrets.
 
 ## Environment variables
 
@@ -172,8 +182,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `PORT` | no (defaults 3000) | server port |
 | `PUBLIC_URL` | only in production | overrides auto-detected base URL used in QR codes / links |
 | `ADMIN_TOKEN_SECRET` | transitional | signs the current admin PIN session token; removed when the hosted reset flow stops issuing reusable tokens |
-| `DB_PATH` | transitional | current SQLite file location; removed after the Postgres migration |
-| `DATABASE_URL` | after hosted Package 1 | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
+| `DATABASE_URL` | yes | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
+| `DATABASE_CA_CERT_PATH` / `DATABASE_CA_CERT` | hosted database | Supabase database CA path or PEM contents used for full TLS and hostname verification |
 | `MIGRATION_DATABASE_URL` | deployment only | privileged Postgres migration connection; local/CI secret only and never available to the Fly web Machine |
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | after hosted Package 1 | private Storage API URL and backend-only secret key; the secret key must never reach browser code |
 | `SUPABASE_STORAGE_BUCKET` | after hosted Package 2 | private photo/print-artifact bucket name (defaults `wolkenworte-private`) |
@@ -193,9 +203,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `SHOP_PAYMENT_RESERVE_PERCENT` | no (defaults 3.15) | internal payment-cost reserve percentage folded into the product subtotal |
 | `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | no (defaults 25) | internal fixed payment-cost reserve in cents, also folded into the product subtotal |
 
-The hosted-refactor variables are prepared ahead of implementation. The
-current application continues to use SQLite and does not consume the new
-Postgres, Supabase Storage or Resend values yet.
+Postgres variables are active now. Supabase Storage and Resend variables are
+prepared for their later work packages and remain unused by the runtime today.
 
 **Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
 future hosted secrets must be set in the provider's encrypted secret store,
@@ -251,7 +260,9 @@ still need professional review before live payments are enabled.
 ```
 server.js                  Express + Socket.io bootstrap, route mounting
 src/
-  db.js                    SQLite schema + queries (events/contributions/configurations/quotes/orders)
+  db.js                    async Postgres data boundary and transaction logic
+  dbConfig.js              verified-TLS and bounded pg pool configuration
+  asyncRoute.js            rejected-promise boundary for Express routes
   slug.js                  German-aware slugify + unique random-suffix generation
   words.js                 Word normalization (trim/case-fold/emoji-strip)
   adminAuth.js             PIN → HMAC session token issue/verify
@@ -291,14 +302,14 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 54 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 75 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
 dynamic Stripe Checkout, price-change confirmation, webhook idempotency, immutable fulfillment
 payloads, live safety gates and Stripe/Printful stub behavior. Each test
-file uses its own scratch SQLite file and ephemeral port, so it's safe to run
-repeatedly / in parallel.
+server uses its own randomly named migrated Postgres schema and ephemeral port,
+then drops the schema in cleanup, so files remain isolated in parallel.
 
 **The most important test is `test/isolation.test.js`** — it proves two
 concurrent events never leak words or theme changes into each other's
@@ -308,12 +319,12 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 - Repository: GitHub `muelea/wedding_wordcloud`, `main`. The app is currently
   local-only; pushing `main` does not represent an approved production deploy.
-- The next discussed staging target is Fly.io in an EU region, using one
-  Machine and a persistent volume mounted at `/data` with
-  `DB_PATH=/data/weddingcloud.sqlite`. This has not been scaffolded yet.
-- Fly Volumes are local to one Machine, so the SQLite staging setup must not be
-  scaled horizontally. A later managed Supabase/Postgres migration is a
-  separate code change because the current DB API is synchronous.
+- The next staging step is the existing Fly.io app in Frankfurt with one web
+  Machine and no persistent volume; durable business data is already in
+  Supabase Postgres. Docker/Fly configuration has not been scaffolded yet.
+- Fly receives only the least-privileged `DATABASE_URL`. Migrations run first
+  from local/CI tooling with `MIGRATION_DATABASE_URL`, which must never be
+  available to an ordinary web Machine.
 - `PUBLIC_URL` will initially use the Fly-provided HTTPS hostname. A later
   custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
 - Hosted credentials (`ADMIN_TOKEN_SECRET`, Stripe and Printful) belong in Fly
@@ -411,8 +422,8 @@ created draft is confirmed. Keep every switch false while developing locally.
 
 1. Verify the separate front/back SVG URLs in one controlled Printful draft
    and inspect the resulting notebook and pillow mockups before enabling sales.
-2. Create the Fly.io staging app, persistent SQLite volume and hosted test
-   secrets; then verify the complete Stripe test flow over public HTTPS.
+2. Add the Docker/Fly configuration and hosted test secrets, then verify the
+   complete Stripe test flow over the Fly-provided public HTTPS address.
 3. Decide the business's VAT status, EU/OSS registrations and bookkeeping
    export; then verify or replace the current customer-tax estimate with the
    reviewed Stripe Tax configuration.
@@ -425,8 +436,8 @@ created draft is confirmed. Keep every switch false while developing locally.
 6. Configure signed Printful v2 webhooks for production/shipment status once
    the public callback URL exists; do not register a callback before its
    signing secret can be stored in the production environment.
-7. Before live operation, decide whether to keep a single persistent SQLite
-   instance or migrate the synchronous data layer to Supabase/Postgres.
+7. Move personal-photo bytes from Postgres JSON into private Supabase Storage
+   while preserving immutable configuration isolation.
 8. Define and implement retention/deletion for events, immutable designs,
    embedded personal photos, addresses and completed orders.
 9. Rate-limiting — no per-IP throttle yet on word submission or event

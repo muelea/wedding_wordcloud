@@ -1,272 +1,102 @@
 'use strict';
 
-/**
- * Data layer.
- *
- * Uses Node's built-in `node:sqlite` (DatabaseSync) instead of Postgres.
- * Why: the brief asks for Postgres, with SQLite as an acceptable local-dev
- * drop-in "if Postgres isn't easily available in this environment" — and it
- * isn't (no local Postgres server/binary in this sandbox, no `psql`/`pg_ctl`
- * on PATH, no ability to install and daemonize one here). `node:sqlite`
- * specifically (rather than `better-sqlite3` or similar) was chosen because
- * it ships in Node itself with zero native-compile step, which matters for
- * an "agent-first, low-maintenance" project with no ops team watching for
- * a broken `npm install` after a Node upgrade.
- *
- * The schema and queries below are written in plain ANSI-ish SQL
- * (INTEGER PRIMARY KEY AUTOINCREMENT, ON CONFLICT ... DO UPDATE, no
- * SQLite-only extensions) so porting to real Postgres later is a matter of
- * swapping this file's driver, not rewriting the schema or call sites.
- */
-
-const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
+const { Pool } = require('pg');
+const { connectionOptions } = require('./dbConfig');
+const { getProduct, resolveProductOrientation } = require('./products');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-fs.mkdirSync(DATA_DIR, { recursive: true });
+const REQUIRED_SCHEMA_VERSION = '1';
+const JSON_COLUMNS = new Set([
+  'words_json',
+  'design_json',
+  'shipping_json',
+  'fulfillment_payload_json',
+  'configuration_ids_json',
+  'checkout_request_json',
+  'recipient_json',
+  'shipments_json',
+  'printful_costs_json',
+  'items_json',
+  'configuration_snapshot_json',
+]);
 
-const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'weddingcloud.sqlite');
+let pool = null;
 
-const db = new DatabaseSync(DB_PATH);
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS events (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug            TEXT UNIQUE NOT NULL,
-    couple_name     TEXT NOT NULL,
-    admin_pin_hash  TEXT NOT NULL,
-    admin_pin_salt  TEXT NOT NULL,
-    locale          TEXT NOT NULL DEFAULT 'de',
-    theme           TEXT NOT NULL DEFAULT 'pastel',
-    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS words (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id   INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    word       TEXT NOT NULL,
-    count      INTEGER NOT NULL DEFAULT 1,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(event_id, word)
-  );
-
-  CREATE TABLE IF NOT EXISTS word_contributions (
-    receipt_id TEXT PRIMARY KEY,
-    event_id   INTEGER NOT NULL,
-    word       TEXT NOT NULL,
-    owner_id   TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY(event_id, word) REFERENCES words(event_id, word) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS word_contributions_owner_idx
-    ON word_contributions(event_id, owner_id, created_at);
-
-  CREATE TABLE IF NOT EXISTS archives (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id   INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    words_json TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS orders (
-    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id           INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    stripe_session_id  TEXT UNIQUE,
-    status             TEXT NOT NULL DEFAULT 'pending', -- payment / checkout state
-    shipping_json      TEXT,
-    printful_order_id  TEXT,
-    fulfillment_status TEXT NOT NULL DEFAULT 'not_started',
-    fulfillment_mode   TEXT,
-    fulfillment_attempts INTEGER NOT NULL DEFAULT 0,
-    fulfillment_error  TEXT,
-    fulfillment_payload_json TEXT,
-    printful_order_status TEXT,
-    fulfillment_updated_at TEXT,
-    configuration_ids_json TEXT,
-    created_at         TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS configurations (
-    id                   TEXT PRIMARY KEY,
-    event_id             INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    product_key          TEXT NOT NULL,
-    printful_variant_id  INTEGER NOT NULL,
-    quantity             INTEGER NOT NULL DEFAULT 2,
-    unit_price_cents     INTEGER NOT NULL DEFAULT 1745,
-    theme                TEXT NOT NULL,
-    words_json           TEXT NOT NULL,
-    design_json          TEXT NOT NULL,
-    configuration_type   TEXT NOT NULL DEFAULT 'event_wordcloud',
-    orientation          TEXT NOT NULL DEFAULT 'default',
-    print_width          INTEGER NOT NULL,
-    print_height         INTEGER NOT NULL,
-    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
-
-// These fields were part of the original setup form but are no longer
-// collected or shown anywhere. Drop them from existing local databases while
-// leaving every event's identity, access, words and order data untouched.
-const eventColumns = new Set(
-  db.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
-);
-if (!eventColumns.has('locale')) {
-  db.exec("ALTER TABLE events ADD COLUMN locale TEXT NOT NULL DEFAULT 'de';");
+function getPool() {
+  if (pool) return pool;
+  pool = new Pool(connectionOptions(process.env.DATABASE_URL));
+  pool.on('error', (error) => {
+    console.error('[database] idle Postgres client failed:', error.message);
+  });
+  return pool;
 }
-for (const legacyColumn of ['event_title', 'wedding_date']) {
-  if (eventColumns.has(legacyColumn)) {
-    db.exec(`ALTER TABLE events DROP COLUMN ${legacyColumn};`);
+
+function toBoundaryValue(key, value) {
+  if (value instanceof Date) return value.toISOString();
+  if (JSON_COLUMNS.has(key) && value != null && typeof value !== 'string') {
+    return JSON.stringify(value);
+  }
+  return value;
+}
+
+function rowToBoundary(row) {
+  if (!row) return null;
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, toBoundaryValue(key, value)])
+  );
+}
+
+function rowsToBoundary(rows) {
+  return rows.map(rowToBoundary);
+}
+
+function jsonValue(value) {
+  return JSON.stringify(value == null ? null : value);
+}
+
+async function withTransaction(work) {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch { /* preserve original error */ }
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
-// Quotes deliberately live separately from orders: couples can calculate a
-// price more than once while correcting their address, but only the quote
-// they explicitly continue with becomes an order. The exact cent amounts and
-// address snapshot are immutable inputs to Stripe Checkout.
-db.exec(`
-  CREATE TABLE IF NOT EXISTS checkout_quotes (
-    id                    TEXT PRIMARY KEY,
-    event_id              INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    configuration_id      TEXT NOT NULL REFERENCES configurations(id) ON DELETE CASCADE,
-    configuration_ids_json TEXT,
-    recipient_json        TEXT NOT NULL,
-    shipments_json        TEXT,
-    printful_costs_json    TEXT NOT NULL,
-    currency              TEXT NOT NULL,
-    quantity              INTEGER NOT NULL,
-    items_cents           INTEGER NOT NULL,
-    payment_reserve_cents INTEGER NOT NULL DEFAULT 0,
-    shipping_cents        INTEGER NOT NULL,
-    tax_cents             INTEGER NOT NULL,
-    total_cents           INTEGER NOT NULL,
-    expires_at            TEXT NOT NULL,
-    created_at            TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS checkout_quotes_event_configuration_idx
-    ON checkout_quotes(event_id, configuration_id);
-
-  CREATE TABLE IF NOT EXISTS checkout_order_shipments (
-    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id              INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    shipment_index        INTEGER NOT NULL,
-    quantity              INTEGER NOT NULL,
-    items_json            TEXT,
-    recipient_json        TEXT NOT NULL,
-    printful_costs_json    TEXT NOT NULL,
-    currency              TEXT NOT NULL,
-    shipping_cents        INTEGER NOT NULL,
-    tax_cents             INTEGER NOT NULL,
-    fulfillment_status    TEXT NOT NULL DEFAULT 'pending',
-    fulfillment_mode      TEXT,
-    fulfillment_attempts  INTEGER NOT NULL DEFAULT 0,
-    fulfillment_error     TEXT,
-    fulfillment_payload_json TEXT,
-    printful_order_id     TEXT,
-    printful_order_status TEXT,
-    updated_at            TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(order_id, shipment_index)
-  );
-
-  CREATE TABLE IF NOT EXISTS stripe_webhook_events (
-    stripe_event_id  TEXT PRIMARY KEY,
-    event_type       TEXT NOT NULL,
-    stripe_session_id TEXT,
-    processed_at     TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
-
-// Keep local databases created before the configurable-quantity feature
-// usable without a manual migration step. Existing two-mug drafts retain their
-// original quantity of two and the equivalent 17,45 € unit price.
-const configurationColumns = new Set(
-  db.prepare('PRAGMA table_info(configurations)').all().map((column) => column.name)
-);
-if (configurationColumns.has('placement')) {
-  db.exec('ALTER TABLE configurations DROP COLUMN placement;');
-}
-if (!configurationColumns.has('quantity')) {
-  db.exec('ALTER TABLE configurations ADD COLUMN quantity INTEGER NOT NULL DEFAULT 2;');
-}
-if (!configurationColumns.has('unit_price_cents')) {
-  db.exec('ALTER TABLE configurations ADD COLUMN unit_price_cents INTEGER NOT NULL DEFAULT 1745;');
-}
-if (!configurationColumns.has('design_json')) {
-  db.exec('ALTER TABLE configurations ADD COLUMN design_json TEXT;');
-}
-if (!configurationColumns.has('configuration_type')) {
-  db.exec("ALTER TABLE configurations ADD COLUMN configuration_type TEXT NOT NULL DEFAULT 'event_wordcloud';");
-}
-if (!configurationColumns.has('orientation')) {
-  db.exec("ALTER TABLE configurations ADD COLUMN orientation TEXT NOT NULL DEFAULT 'default';");
+async function closePool() {
+  if (!pool) return;
+  const closing = pool;
+  pool = null;
+  await closing.end();
 }
 
-// Forward-only, no-ops-on-new-databases migrations for the checkout state
-// stored in older local SQLite files. Keeping these additive makes `git pull`
-// + restart sufficient for local development.
-const orderColumns = new Set(
-  db.prepare('PRAGMA table_info(orders)').all().map((column) => column.name)
-);
-const orderMigrations = [
-  ['configuration_id', 'TEXT'],
-  ['quote_id', 'TEXT'],
-  ['currency', 'TEXT'],
-  ['items_cents', 'INTEGER'],
-  ['payment_reserve_cents', 'INTEGER NOT NULL DEFAULT 0'],
-  ['shipping_cents', 'INTEGER'],
-  ['tax_cents', 'INTEGER'],
-  ['total_cents', 'INTEGER'],
-  ['stripe_checkout_url', 'TEXT'],
-  ['stripe_payment_intent_id', 'TEXT'],
-  ['stripe_event_id', 'TEXT'],
-  ['mode', "TEXT NOT NULL DEFAULT 'test'"],
-  ['paid_at', 'TEXT'],
-  ['fulfillment_status', "TEXT NOT NULL DEFAULT 'not_started'"],
-  ['fulfillment_mode', 'TEXT'],
-  ['fulfillment_attempts', 'INTEGER NOT NULL DEFAULT 0'],
-  ['fulfillment_error', 'TEXT'],
-  ['fulfillment_payload_json', 'TEXT'],
-  ['printful_order_status', 'TEXT'],
-  ['fulfillment_updated_at', 'TEXT'],
-  ['configuration_ids_json', 'TEXT'],
-];
-for (const [name, declaration] of orderMigrations) {
-  if (!orderColumns.has(name)) {
-    db.exec(`ALTER TABLE orders ADD COLUMN ${name} ${declaration};`);
+async function assertDatabaseReady() {
+  const result = await getPool().query(`
+    SELECT
+      (SELECT version::text FROM app_schema_versions ORDER BY version DESC LIMIT 1) AS version,
+      current_user AS current_user,
+      has_schema_privilege(current_user, current_schema(), 'CREATE') AS can_create_schema_objects
+  `);
+  if (result.rows[0]?.version !== REQUIRED_SCHEMA_VERSION) {
+    throw new Error(
+      `Postgres-Schema ist nicht aktuell (erwartet: ${REQUIRED_SCHEMA_VERSION}). ` +
+      'Bitte zuerst die Supabase-Migrationen anwenden.'
+    );
   }
-}
-db.exec('CREATE UNIQUE INDEX IF NOT EXISTS orders_quote_id_unique ON orders(quote_id) WHERE quote_id IS NOT NULL;');
-
-const checkoutQuoteColumns = new Set(
-  db.prepare('PRAGMA table_info(checkout_quotes)').all().map((column) => column.name)
-);
-if (!checkoutQuoteColumns.has('shipments_json')) {
-  db.exec('ALTER TABLE checkout_quotes ADD COLUMN shipments_json TEXT;');
-}
-if (!checkoutQuoteColumns.has('payment_reserve_cents')) {
-  db.exec('ALTER TABLE checkout_quotes ADD COLUMN payment_reserve_cents INTEGER NOT NULL DEFAULT 0;');
-}
-if (!checkoutQuoteColumns.has('configuration_ids_json')) {
-  db.exec('ALTER TABLE checkout_quotes ADD COLUMN configuration_ids_json TEXT;');
+  if (process.env.NODE_ENV === 'production' &&
+      (result.rows[0].current_user !== 'wolkenworte_app' || result.rows[0].can_create_schema_objects)) {
+    throw new Error('Der Produktionsprozess verwendet nicht die eingeschränkte wolkenworte_app-Rolle.');
+  }
+  return true;
 }
 
-const checkoutOrderShipmentColumns = new Set(
-  db.prepare('PRAGMA table_info(checkout_order_shipments)').all().map((column) => column.name)
-);
-if (!checkoutOrderShipmentColumns.has('items_json')) {
-  db.exec('ALTER TABLE checkout_order_shipments ADD COLUMN items_json TEXT;');
-}
-
-// ── Password hashing (admin PIN) ────────────────────────────────────────────
-// scrypt from Node's built-in crypto — no bcrypt dependency needed for a
-// 4-6 digit PIN gate on a low-stakes local admin action.
+// ── PIN hashing ─────────────────────────────────────────────────────────
 function hashPin(pin) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(String(pin), salt, 64).toString('hex');
@@ -277,197 +107,176 @@ function verifyPin(pin, hash, salt) {
   const candidate = crypto.scryptSync(String(pin), salt, 64).toString('hex');
   const a = Buffer.from(candidate, 'hex');
   const b = Buffer.from(hash, 'hex');
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// ── Events ───────────────────────────────────────────────────────────────
-function createEvent({ slug, coupleName, pin, locale = 'de' }) {
+// ── Events ──────────────────────────────────────────────────────────────
+async function createEvent({ slug, coupleName, pin, locale = 'de' }) {
   const { hash, salt } = hashPin(pin);
-  const stmt = db.prepare(`
-    INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt, locale)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  const info = stmt.run(slug, coupleName, hash, salt, locale);
-  return getEventById(info.lastInsertRowid);
+  const result = await getPool().query(`
+    INSERT INTO events (
+      slug, couple_name, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
+    ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
+    RETURNING *
+  `, [slug, coupleName, hash, salt, locale]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getEventBySlug(slug) {
-  return db.prepare('SELECT * FROM events WHERE slug = ?').get(slug) || null;
+async function getEventBySlug(slug) {
+  const result = await getPool().query('SELECT * FROM events WHERE slug = $1', [slug]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getEventById(id) {
-  return db.prepare('SELECT * FROM events WHERE id = ?').get(id) || null;
+async function getEventById(id) {
+  const result = await getPool().query('SELECT * FROM events WHERE id = $1', [id]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function slugExists(slug) {
-  return !!db.prepare('SELECT 1 FROM events WHERE slug = ?').get(slug);
+async function slugExists(slug) {
+  const result = await getPool().query('SELECT EXISTS (SELECT 1 FROM events WHERE slug = $1) AS exists', [slug]);
+  return result.rows[0].exists;
 }
 
-function setEventTheme(eventId, theme) {
-  db.prepare('UPDATE events SET theme = ? WHERE id = ?').run(theme, eventId);
+async function setEventTheme(eventId, theme) {
+  await getPool().query('UPDATE events SET theme = $1 WHERE id = $2', [theme, eventId]);
 }
 
-// ── Words ────────────────────────────────────────────────────────────────
-// Atomic upsert — the core correctness fix over the prototype's in-memory
-// Map: concurrent submissions from many phones at once can't race/clobber
-// each other, and the count survives a server restart.
-function upsertWord(eventId, word) {
-  db.prepare(`
+// ── Words ───────────────────────────────────────────────────────────────
+async function upsertWordWith(client, eventId, word) {
+  await client.query(`
     INSERT INTO words (event_id, word, count, updated_at)
-    VALUES (?, ?, 1, datetime('now'))
-    ON CONFLICT(event_id, word) DO UPDATE SET
-      count = count + 1,
-      updated_at = datetime('now')
-  `).run(eventId, word);
+    VALUES ($1, $2, 1, transaction_timestamp())
+    ON CONFLICT (event_id, word) DO UPDATE SET
+      count = words.count + 1,
+      updated_at = transaction_timestamp()
+  `, [eventId, word]);
 }
 
-// Each aggregate increment gets an unguessable receipt tied to one anonymous
-// browser session. The receipt is a capability for exactly that contribution,
-// while ownerId prevents a receipt copied from another guest from being used
-// in a different browser session. Keeping both writes in one transaction means
-// the visible count can never diverge from the removable contributions.
-function addWordContribution(eventId, word, ownerId) {
+async function upsertWord(eventId, word) {
+  await upsertWordWith(getPool(), eventId, word);
+}
+
+async function addWordContribution(eventId, word, ownerId) {
   const receiptId = crypto.randomBytes(18).toString('base64url');
-  db.exec('BEGIN IMMEDIATE;');
-  try {
-    upsertWord(eventId, word);
-    db.prepare(`
+  // One Postgres statement is one transaction. The event KEY SHARE lock is
+  // compatible across submissions but conflicts with reset's FOR UPDATE lock,
+  // so the aggregate and its receipt are wholly before or after a reset.
+  const result = await getPool().query(`
+    WITH locked_event AS MATERIALIZED (
+      SELECT id FROM events WHERE id = $1 FOR KEY SHARE
+    ), upserted_word AS (
+      INSERT INTO words (event_id, word, count, updated_at)
+      SELECT id, $2, 1, transaction_timestamp()
+      FROM locked_event
+      ON CONFLICT (event_id, word) DO UPDATE SET
+        count = words.count + 1,
+        updated_at = transaction_timestamp()
+      RETURNING event_id, word
+    ), inserted_contribution AS (
       INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
-      VALUES (?, ?, ?, ?)
-    `).run(receiptId, eventId, word, ownerId);
-    db.exec('COMMIT;');
-    return receiptId;
-  } catch (error) {
-    db.exec('ROLLBACK;');
-    throw error;
-  }
+      SELECT $3, event_id, word, $4
+      FROM upserted_word
+      RETURNING receipt_id
+    )
+    SELECT receipt_id FROM inserted_contribution
+  `, [eventId, word, receiptId, ownerId]);
+  if (!result.rowCount) throw new Error('event not found');
+  return result.rows[0].receipt_id;
 }
 
-function getWordContributions(eventId, ownerId) {
-  return db.prepare(`
+async function getWordContributions(eventId, ownerId) {
+  const result = await getPool().query(`
     SELECT receipt_id, word
     FROM word_contributions
-    WHERE event_id = ? AND owner_id = ?
-    ORDER BY created_at ASC, rowid ASC
-  `).all(eventId, ownerId).map((row) => ({ receipt: row.receipt_id, word: row.word }));
+    WHERE event_id = $1 AND owner_id = $2
+    ORDER BY created_at ASC, receipt_id ASC
+  `, [eventId, ownerId]);
+  return result.rows.map((row) => ({ receipt: row.receipt_id, word: row.word }));
 }
 
-// Removes one—and only one—owned contribution. Aggregate words from older
-// databases that predate receipts remain valid: a new removable contribution
-// can increment such a row and later decrement it back to its legacy count.
-function removeWordContribution(eventId, receiptId, ownerId) {
-  db.exec('BEGIN IMMEDIATE;');
-  try {
-    const contribution = db.prepare(`
-      SELECT word
-      FROM word_contributions
-      WHERE receipt_id = ? AND event_id = ? AND owner_id = ?
-    `).get(receiptId, eventId, ownerId);
-
-    if (!contribution) {
-      db.exec('COMMIT;');
-      return null;
-    }
-
-    db.prepare(`
+async function removeWordContribution(eventId, receiptId, ownerId) {
+  return withTransaction(async (client) => {
+    await client.query('SELECT id FROM events WHERE id = $1 FOR KEY SHARE', [eventId]);
+    const deleted = await client.query(`
       DELETE FROM word_contributions
-      WHERE receipt_id = ? AND event_id = ? AND owner_id = ?
-    `).run(receiptId, eventId, ownerId);
+      WHERE event_id = $1 AND receipt_id = $2 AND owner_id = $3
+      RETURNING word
+    `, [eventId, receiptId, ownerId]);
+    const contribution = deleted.rows[0];
+    if (!contribution) return null;
 
-    const aggregate = db.prepare(`
-      SELECT count FROM words WHERE event_id = ? AND word = ?
-    `).get(eventId, contribution.word);
-
-    if (!aggregate || Number(aggregate.count) <= 1) {
-      db.prepare('DELETE FROM words WHERE event_id = ? AND word = ?')
-        .run(eventId, contribution.word);
+    const aggregate = await client.query(`
+      SELECT count FROM words
+      WHERE event_id = $1 AND word = $2
+      FOR UPDATE
+    `, [eventId, contribution.word]);
+    if (!aggregate.rows[0] || aggregate.rows[0].count <= 1) {
+      await client.query('DELETE FROM words WHERE event_id = $1 AND word = $2', [eventId, contribution.word]);
     } else {
-      db.prepare(`
+      await client.query(`
         UPDATE words
-        SET count = count - 1, updated_at = datetime('now')
-        WHERE event_id = ? AND word = ?
-      `).run(eventId, contribution.word);
+        SET count = count - 1, updated_at = transaction_timestamp()
+        WHERE event_id = $1 AND word = $2
+      `, [eventId, contribution.word]);
     }
-
-    db.exec('COMMIT;');
     return contribution.word;
-  } catch (error) {
-    db.exec('ROLLBACK;');
-    throw error;
-  }
+  });
 }
 
-function getWords(eventId) {
-  const rows = db.prepare('SELECT word, count FROM words WHERE event_id = ? ORDER BY count DESC').all(eventId);
-  return rows.map((r) => [r.word, Number(r.count)]);
+async function getWordsWith(queryable, eventId) {
+  const result = await queryable.query(`
+    SELECT word, count
+    FROM words
+    WHERE event_id = $1
+    ORDER BY count DESC, word ASC
+  `, [eventId]);
+  return result.rows.map((row) => [row.word, row.count]);
 }
 
-function clearWords(eventId) {
-  db.prepare('DELETE FROM words WHERE event_id = ?').run(eventId);
+async function getWords(eventId) {
+  return getWordsWith(getPool(), eventId);
 }
 
-// Snapshot current words before a reset ("Neue Runde"), mirroring the
-// prototype's archive-to-disk behavior, so starting a new round never
-// silently loses the previous one.
-function archiveWords(eventId) {
-  const words = getWords(eventId);
-  if (words.length === 0) return;
-  db.prepare('INSERT INTO archives (event_id, words_json) VALUES (?, ?)')
-    .run(eventId, JSON.stringify(words));
+async function clearWords(eventId) {
+  await getPool().query('DELETE FROM words WHERE event_id = $1', [eventId]);
 }
 
-// ── Orders ───────────────────────────────────────────────────────────────
-function createOrder({ eventId, stripeSessionId }) {
-  const info = db.prepare(`
-    INSERT INTO orders (event_id, stripe_session_id, status) VALUES (?, ?, 'pending')
-  `).run(eventId, stripeSessionId);
-  return info.lastInsertRowid;
+async function archiveWords(eventId) {
+  const words = await getWords(eventId);
+  if (!words.length) return null;
+  await getPool().query(
+    'INSERT INTO archives (event_id, words_json) VALUES ($1, $2::jsonb)',
+    [eventId, jsonValue(words)]
+  );
+  return words;
 }
 
-function markOrderPaid(stripeSessionId, shippingJson) {
-  db.prepare(`
-    UPDATE orders SET status = 'paid', shipping_json = ?, updated_at = datetime('now')
-    WHERE stripe_session_id = ?
-  `).run(shippingJson, stripeSessionId);
+async function archiveAndClearWords(eventId) {
+  return withTransaction(async (client) => {
+    const locked = await client.query('SELECT id FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    if (!locked.rowCount) return null;
+    const words = await getWordsWith(client, eventId);
+    if (words.length) {
+      await client.query(
+        'INSERT INTO archives (event_id, words_json) VALUES ($1, $2::jsonb)',
+        [eventId, jsonValue(words)]
+      );
+    }
+    await client.query('DELETE FROM words WHERE event_id = $1', [eventId]);
+    return words;
+  });
 }
 
-function markOrderFulfilled(stripeSessionId, printfulOrderId) {
-  db.prepare(`
-    UPDATE orders SET status = 'fulfilled', printful_order_id = ?, updated_at = datetime('now')
-    WHERE stripe_session_id = ?
-  `).run(printfulOrderId, stripeSessionId);
-}
-
-function getOrderBySessionId(stripeSessionId) {
-  return db.prepare('SELECT * FROM orders WHERE stripe_session_id = ?').get(stripeSessionId) || null;
-}
-
-function getOrderById(id) {
-  return db.prepare('SELECT * FROM orders WHERE id = ?').get(id) || null;
-}
-
-function getOrderByQuoteId(quoteId) {
-  return db.prepare('SELECT * FROM orders WHERE quote_id = ?').get(quoteId) || null;
-}
-
-function getEventOrderBySessionId(slug, stripeSessionId) {
-  return db.prepare(`
-    SELECT orders.*
-    FROM orders
-    JOIN events ON events.id = orders.event_id
-    WHERE orders.stripe_session_id = ? AND events.slug = ?
-  `).get(stripeSessionId, slug) || null;
+// ── JSON helpers ────────────────────────────────────────────────────────
+function parseJson(value, fallback = null) {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value;
+  try { return JSON.parse(value); } catch { return fallback; }
 }
 
 function parseJsonArray(value) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const parsed = parseJson(value, []);
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 function uniqueConfigurationIds(ids) {
@@ -487,9 +296,8 @@ function getOrderConfigurationIds(order) {
 }
 
 function shipmentQuantity(shipment) {
-  if (Number.isSafeInteger(Number(shipment?.quantity)) && Number(shipment.quantity) > 0) {
-    return Number(shipment.quantity);
-  }
+  const explicit = Number(shipment?.quantity);
+  if (Number.isSafeInteger(explicit) && explicit > 0) return explicit;
   if (Array.isArray(shipment?.items)) {
     return shipment.items.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0);
   }
@@ -498,310 +306,513 @@ function shipmentQuantity(shipment) {
 
 function getCheckoutQuoteShipments(quote) {
   if (!quote) return [];
-  if (quote.shipments_json) {
-    try {
-      const shipments = JSON.parse(quote.shipments_json);
-      if (Array.isArray(shipments)) {
-        return shipments.map((shipment) => ({
-          ...shipment,
-          quantity: shipmentQuantity(shipment),
-        }));
-      }
-    } catch {
-      return [];
-    }
+  const stored = parseJson(quote.shipments_json);
+  if (Array.isArray(stored)) {
+    return stored.map((shipment) => ({ ...shipment, quantity: shipmentQuantity(shipment) }));
   }
-
-  let recipient;
-  let printfulCosts;
-  try {
-    recipient = JSON.parse(quote.recipient_json);
-    printfulCosts = JSON.parse(quote.printful_costs_json);
-  } catch {
-    return [];
-  }
+  const recipient = parseJson(quote.recipient_json);
+  const printfulCosts = parseJson(quote.printful_costs_json);
   const quantity = Number(quote.quantity);
   if (!recipient || !Number.isSafeInteger(quantity) || quantity < 1) return [];
   return [{ quantity, recipient, printfulCosts }];
 }
 
-function insertOrderShipments(orderId, quote) {
+// ── Orders and checkout ─────────────────────────────────────────────────
+async function createOrder({ eventId, stripeSessionId }) {
+  return withTransaction(async (client) => {
+    const eventResult = await client.query('SELECT slug, couple_name FROM events WHERE id = $1', [eventId]);
+    const event = eventResult.rows[0];
+    if (!event) throw new Error('event not found');
+    const result = await client.query(`
+      INSERT INTO orders (
+        event_id, event_slug_snapshot, event_label_snapshot, stripe_session_id, status
+      ) VALUES ($1, $2, $3, $4, 'pending')
+      RETURNING id
+    `, [eventId, event.slug, event.couple_name, stripeSessionId]);
+    return result.rows[0].id;
+  });
+}
+
+async function markOrderPaid(stripeSessionId, shippingJson) {
+  await getPool().query(`
+    UPDATE orders
+    SET status = 'paid', shipping_json = $1::jsonb, updated_at = transaction_timestamp()
+    WHERE stripe_session_id = $2
+  `, [typeof shippingJson === 'string' ? shippingJson : jsonValue(shippingJson), stripeSessionId]);
+}
+
+async function markOrderFulfilled(stripeSessionId, printfulOrderId) {
+  await getPool().query(`
+    UPDATE orders
+    SET status = 'fulfilled', printful_order_id = $1, updated_at = transaction_timestamp()
+    WHERE stripe_session_id = $2
+  `, [printfulOrderId, stripeSessionId]);
+}
+
+async function oneOrder(sql, params) {
+  const result = await getPool().query(sql, params);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getOrderBySessionId(stripeSessionId) {
+  return oneOrder('SELECT * FROM orders WHERE stripe_session_id = $1', [stripeSessionId]);
+}
+
+async function getOrderById(id) {
+  return oneOrder('SELECT * FROM orders WHERE id = $1', [id]);
+}
+
+async function getOrderByQuoteId(quoteId) {
+  return oneOrder('SELECT * FROM orders WHERE quote_id = $1', [quoteId]);
+}
+
+async function getEventOrderBySessionId(slug, stripeSessionId) {
+  return oneOrder(`
+    SELECT orders.*
+    FROM orders
+    WHERE orders.stripe_session_id = $1
+      AND orders.event_slug_snapshot = $2
+  `, [stripeSessionId, slug]);
+}
+
+function normalizedShipmentItems(shipment, primaryConfigurationId) {
+  if (Array.isArray(shipment.items) && shipment.items.length) {
+    return shipment.items.map((item) => ({
+      configurationId: String(item.configurationId || item.configuration_id || ''),
+      quantity: Number(item.quantity),
+    }));
+  }
+  return [{ configurationId: primaryConfigurationId, quantity: shipmentQuantity(shipment) }];
+}
+
+function configurationSnapshot(configuration) {
+  const product = resolveProductOrientation(
+    getProduct(configuration.product_key),
+    configuration.orientation
+  );
+  if (!product) throw new Error('configuration product is invalid');
+  return {
+    version: 1,
+    configurationId: configuration.id,
+    productKey: configuration.product_key,
+    printfulVariantId: configuration.printful_variant_id,
+    printfulPlacements: product.printful.placements,
+    printfulOptions: product.printful.options,
+    orientation: configuration.orientation,
+    configurationType: configuration.configuration_type,
+    theme: configuration.theme,
+    printWidth: configuration.print_width,
+    printHeight: configuration.print_height,
+    words: parseJson(configuration.words_json, []),
+    design: parseJson(configuration.design_json),
+    createdAt: configuration.created_at,
+  };
+}
+
+async function insertOrderShipmentsAndItems(client, orderId, quote, configurations) {
   const shipments = getCheckoutQuoteShipments(quote);
-  const stmt = db.prepare(`
-    INSERT INTO checkout_order_shipments (
-      order_id, shipment_index, quantity, items_json, recipient_json, printful_costs_json,
-      currency, shipping_cents, tax_cents
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  shipments.forEach((shipment, index) => {
+  const configurationById = new Map(configurations.map((entry) => [entry.id, entry]));
+  for (let shipmentIndex = 0; shipmentIndex < shipments.length; shipmentIndex += 1) {
+    const shipment = shipments[shipmentIndex];
     const printfulCosts = shipment.printfulCosts || shipment.costs || {};
     const customerCosts = shipment.customerCosts || {};
-    const items = Array.isArray(shipment.items) && shipment.items.length
-      ? shipment.items.map((item) => ({
-          configurationId: String(item.configurationId || item.configuration_id || ''),
-          quantity: Number(item.quantity),
-        }))
-      : null;
+    const items = normalizedShipmentItems(shipment, quote.configuration_id);
     const shippingCents = Number.isSafeInteger(Number(customerCosts.shippingCents))
       ? Number(customerCosts.shippingCents)
       : Math.round(Number(printfulCosts.shipping || 0) * 100);
     const taxCents = Number.isSafeInteger(Number(customerCosts.taxCents))
       ? Number(customerCosts.taxCents)
-      : Math.round(Number(printfulCosts.tax || 0) * 100) +
-        Math.round(Number(printfulCosts.vat || 0) * 100);
-    stmt.run(
+      : Math.round(Number(printfulCosts.tax || 0) * 100) + Math.round(Number(printfulCosts.vat || 0) * 100);
+    await client.query(`
+      INSERT INTO checkout_order_shipments (
+        order_id, shipment_index, quantity, items_json, recipient_json,
+        printful_costs_json, currency, shipping_cents, tax_cents
+      ) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7, $8, $9)
+    `, [
       orderId,
-      index,
+      shipmentIndex,
       shipmentQuantity(shipment),
-      items ? JSON.stringify(items) : null,
-      JSON.stringify(shipment.recipient),
-      JSON.stringify(printfulCosts),
+      jsonValue(items),
+      jsonValue(shipment.recipient),
+      jsonValue(printfulCosts),
       String(printfulCosts.currency || quote.currency || '').toUpperCase(),
       shippingCents,
-      taxCents
+      taxCents,
+    ]);
+
+    for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
+      const item = items[itemIndex];
+      const configuration = configurationById.get(item.configurationId);
+      if (!configuration || !Number.isSafeInteger(item.quantity) || item.quantity < 1) {
+        throw new Error('checkout item configuration is invalid');
+      }
+      await client.query(`
+        INSERT INTO order_items (
+          order_id, configuration_id, shipment_index, item_index, product_key,
+          printful_variant_id, quantity, configuration_snapshot_json
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      `, [
+        orderId,
+        configuration.id,
+        shipmentIndex,
+        itemIndex,
+        configuration.product_key,
+        configuration.printful_variant_id,
+        item.quantity,
+        jsonValue(configurationSnapshot(configuration)),
+      ]);
+    }
+  }
+}
+
+async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'test', checkoutRequest = null }) {
+  if (!['test', 'live'].includes(mode)) throw new Error('invalid checkout mode');
+  return withTransaction(async (client) => {
+    const lockedQuoteResult = await client.query(
+      'SELECT * FROM checkout_quotes WHERE id = $1 FOR UPDATE',
+      [quote.id]
     );
+    const lockedQuote = rowToBoundary(lockedQuoteResult.rows[0]);
+    if (!lockedQuote || String(lockedQuote.event_id) !== String(eventId)) {
+      throw new Error('checkout quote not found');
+    }
+    const existingResult = await client.query('SELECT * FROM orders WHERE quote_id = $1', [lockedQuote.id]);
+    if (existingResult.rows[0]) {
+      return { order: rowToBoundary(existingResult.rows[0]), created: false };
+    }
+
+    const eventResult = await client.query(
+      'SELECT slug, couple_name FROM events WHERE id = $1 FOR KEY SHARE',
+      [eventId]
+    );
+    const event = eventResult.rows[0];
+    if (!event) throw new Error('event not found');
+
+    const configurationIds = getCheckoutQuoteConfigurationIds(lockedQuote);
+    const configurationResult = await client.query(`
+      SELECT * FROM configurations
+      WHERE id = ANY($1::text[]) AND event_id = $2
+      FOR KEY SHARE
+    `, [configurationIds, eventId]);
+    const configurations = rowsToBoundary(configurationResult.rows);
+    if (configurations.length !== configurationIds.length) {
+      throw new Error('checkout configuration not found');
+    }
+
+    const idempotencyKey = `wolkenworte-${mode}-quote-${lockedQuote.id}`;
+    const sessionExpiresAt = new Date(Date.now() + 31 * 60 * 1000);
+    const inserted = await client.query(`
+      INSERT INTO orders (
+        event_id, event_slug_snapshot, event_label_snapshot,
+        configuration_id, configuration_ids_json, quote_id, status, shipping_json,
+        currency, items_cents, payment_reserve_cents, shipping_cents, tax_cents,
+        total_cents, mode, checkout_request_json, stripe_idempotency_key,
+        checkout_session_expires_at
+      ) VALUES (
+        $1, $2, $3, $4, $5::jsonb, $6, 'creating_checkout', $7::jsonb,
+        $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16, $17
+      )
+      RETURNING *
+    `, [
+      eventId,
+      event.slug,
+      event.couple_name,
+      configurationId || configurationIds[0],
+      jsonValue(configurationIds),
+      lockedQuote.id,
+      lockedQuote.shipments_json || lockedQuote.recipient_json,
+      lockedQuote.currency,
+      lockedQuote.items_cents,
+      lockedQuote.payment_reserve_cents || 0,
+      lockedQuote.shipping_cents,
+      lockedQuote.tax_cents,
+      lockedQuote.total_cents,
+      mode,
+      jsonValue(checkoutRequest || {}),
+      idempotencyKey,
+      sessionExpiresAt,
+    ]);
+    const order = rowToBoundary(inserted.rows[0]);
+    await insertOrderShipmentsAndItems(client, order.id, lockedQuote, configurations);
+    return { order, created: true };
   });
 }
 
-function createCheckoutOrder({ eventId, configurationId, quote, mode = 'test' }) {
-  if (!['test', 'live'].includes(mode)) throw new Error('invalid checkout mode');
-  const existing = getOrderByQuoteId(quote.id);
-  if (existing) return { order: existing, created: false };
-  const configurationIds = getCheckoutQuoteConfigurationIds(quote);
-  db.exec('BEGIN IMMEDIATE;');
-  try {
-    const info = db.prepare(`
-      INSERT INTO orders (
-        event_id, configuration_id, configuration_ids_json, quote_id, status, shipping_json,
-        currency, items_cents, payment_reserve_cents, shipping_cents, tax_cents, total_cents, mode
-      ) VALUES (?, ?, ?, ?, 'creating_checkout', ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      eventId,
-      configurationId || configurationIds[0],
-      JSON.stringify(configurationIds.length ? configurationIds : [configurationId]),
-      quote.id,
-      quote.shipments_json || quote.recipient_json,
-      quote.currency,
-      Number(quote.items_cents),
-      Number(quote.payment_reserve_cents || 0),
-      Number(quote.shipping_cents),
-      Number(quote.tax_cents),
-      Number(quote.total_cents),
-      mode
-    );
-    insertOrderShipments(info.lastInsertRowid, quote);
-    db.exec('COMMIT;');
-    return { order: getOrderById(info.lastInsertRowid), created: true };
-  } catch (error) {
-    db.exec('ROLLBACK;');
-    // A concurrent double-click can race the initial lookup. The unique
-    // quote index makes the database the final arbiter.
-    const racedOrder = getOrderByQuoteId(quote.id);
-    if (racedOrder) return { order: racedOrder, created: false };
-    throw error;
-  }
-}
-
-function attachStripeSession(orderId, { id, url }) {
-  db.prepare(`
+async function claimCheckoutAttempt(orderId) {
+  const result = await getPool().query(`
     UPDATE orders
-    SET stripe_session_id = ?, stripe_checkout_url = ?, status = 'checkout_pending',
-        updated_at = datetime('now')
-    WHERE id = ? AND status = 'creating_checkout'
-  `).run(id, url, orderId);
+    SET checkout_first_attempt_at = coalesce(checkout_first_attempt_at, transaction_timestamp()),
+        checkout_last_attempt_at = transaction_timestamp(),
+        checkout_attempts = checkout_attempts + 1,
+        checkout_ambiguous = false,
+        checkout_error = null,
+        updated_at = transaction_timestamp()
+    WHERE id = $1
+      AND status = 'creating_checkout'
+      AND stripe_session_id IS NULL
+      AND checkout_session_expires_at > transaction_timestamp()
+      AND (
+        checkout_last_attempt_at IS NULL OR
+        checkout_ambiguous = true OR
+        checkout_last_attempt_at < transaction_timestamp() - interval '30 seconds'
+      )
+    RETURNING *
+  `, [orderId]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function attachStripeSession(orderId, { id, url }) {
+  const result = await getPool().query(`
+    UPDATE orders
+    SET stripe_session_id = $1, stripe_checkout_url = $2,
+        status = 'checkout_pending', checkout_ambiguous = false,
+        checkout_error = null, updated_at = transaction_timestamp()
+    WHERE id = $3 AND status = 'creating_checkout' AND stripe_session_id IS NULL
+    RETURNING *
+  `, [id, url, orderId]);
+  if (!result.rows[0]) {
+    const existing = await getOrderById(orderId);
+    if (existing?.stripe_session_id === id) return existing;
+    throw new Error('checkout session could not be attached');
+  }
+  return rowToBoundary(result.rows[0]);
+}
+
+async function markCheckoutCreationFailed(orderId, error = null) {
+  const safeError = String(error?.message || error || 'Stripe Checkout response was not persisted').slice(0, 1000);
+  const result = await getPool().query(`
+    UPDATE orders
+    SET checkout_ambiguous = true, checkout_error = $1, updated_at = transaction_timestamp()
+    WHERE id = $2 AND status = 'creating_checkout' AND stripe_session_id IS NULL
+    RETURNING *
+  `, [safeError, orderId]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function retryCheckoutOrder(orderId) {
   return getOrderById(orderId);
 }
 
-function markCheckoutCreationFailed(orderId) {
-  db.prepare(`
-    UPDATE orders SET status = 'checkout_failed', updated_at = datetime('now')
-    WHERE id = ? AND status = 'creating_checkout'
-  `).run(orderId);
+function normalizeBuyerEmail(value) {
+  if (typeof value !== 'string') return null;
+  const email = value.normalize('NFC').trim().toLowerCase();
+  if (!email || email.length > 254 || /[\x00-\x20\x7f]/.test(email)) return null;
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) return null;
+  return email;
 }
 
-function retryCheckoutOrder(orderId) {
-  db.prepare(`
-    UPDATE orders SET status = 'creating_checkout', updated_at = datetime('now')
-    WHERE id = ? AND status = 'checkout_failed'
-  `).run(orderId);
-  return getOrderById(orderId);
-}
-
-/**
- * Record a successful payment and the Stripe event atomically. If
- * Stripe retries the same webhook, the event insert changes zero rows and
- * the order cannot be transitioned or queued for fulfillment twice. Stripe
- * test payments are always queued for the local mock pipeline.
- */
-function recordSuccessfulPayment({ stripeEventId, eventType, stripeSessionId, paymentIntentId, livemode }) {
-  db.exec('BEGIN IMMEDIATE;');
-  try {
-    const inserted = db.prepare(`
+async function recordSuccessfulPayment({
+  stripeEventId,
+  eventType,
+  stripeSessionId,
+  paymentIntentId,
+  livemode,
+  orderId = null,
+  quoteId = null,
+  amountTotal = null,
+  currency = null,
+  paymentStatus = 'paid',
+  buyerEmail = null,
+}) {
+  return withTransaction(async (client) => {
+    const insertedEvent = await client.query(`
       INSERT INTO stripe_webhook_events (stripe_event_id, event_type, stripe_session_id)
-      VALUES (?, ?, ?)
-      ON CONFLICT(stripe_event_id) DO NOTHING
-    `).run(stripeEventId, eventType, stripeSessionId);
-    if (Number(inserted.changes) === 0) {
-      db.exec('COMMIT;');
-      return { duplicate: true, order: getOrderBySessionId(stripeSessionId) };
+      VALUES ($1, $2, $3)
+      ON CONFLICT (stripe_event_id) DO NOTHING
+      RETURNING stripe_event_id
+    `, [stripeEventId, eventType, stripeSessionId]);
+    if (!insertedEvent.rowCount) {
+      const duplicateOrder = await client.query(`
+        SELECT * FROM orders
+        WHERE stripe_session_id = $1 OR ($2::bigint IS NOT NULL AND id = $2)
+        ORDER BY (stripe_session_id = $1) DESC
+        LIMIT 1
+      `, [stripeSessionId, orderId]);
+      return { duplicate: true, order: rowToBoundary(duplicateOrder.rows[0]) };
     }
 
-    const currentOrder = getOrderBySessionId(stripeSessionId);
-    if (currentOrder && ['paid_test', 'paid'].includes(currentOrder.status)) {
-      // Stripe can legitimately emit more than one successful event type for
-      // the same Session. Treat the Session itself as already processed even
-      // when the event id is new.
-      db.exec('COMMIT;');
-      return { duplicate: true, order: currentOrder };
+    let orderResult = await client.query(
+      'SELECT * FROM orders WHERE stripe_session_id = $1 FOR UPDATE',
+      [stripeSessionId]
+    );
+    if (!orderResult.rows[0] && orderId && quoteId) {
+      orderResult = await client.query(`
+        SELECT * FROM orders
+        WHERE id = $1 AND quote_id = $2 AND stripe_session_id IS NULL
+        FOR UPDATE
+      `, [orderId, quoteId]);
     }
+    const order = orderResult.rows[0];
+    if (!order) throw new Error('checkout order not found or not payable');
 
     const expectedMode = livemode ? 'live' : 'test';
-    if (!currentOrder || currentOrder.mode !== expectedMode) {
-      throw new Error('checkout mode does not match Stripe payment mode');
+    const trustedAmount = amountTotal == null || Number(amountTotal) === order.total_cents;
+    const trustedCurrency = currency == null || String(currency).toUpperCase() === order.currency;
+    if (order.mode !== expectedMode || !trustedAmount || !trustedCurrency || paymentStatus !== 'paid') {
+      throw new Error('checkout payment does not match trusted order data');
     }
-    const paymentStatus = livemode ? 'paid' : 'paid_test';
-    const fulfillmentMode = livemode ? null : 'mock';
-    const updated = db.prepare(`
-      UPDATE orders
-      SET status = ?, stripe_payment_intent_id = ?, stripe_event_id = ?,
-          fulfillment_status = 'pending', fulfillment_mode = ?,
-          fulfillment_error = NULL, paid_at = datetime('now'),
-          fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
-      WHERE stripe_session_id = ? AND status = 'checkout_pending'
-    `).run(paymentStatus, paymentIntentId || null, stripeEventId, fulfillmentMode, stripeSessionId);
-    if (Number(updated.changes) === 0) {
+    if (order.quote_id && quoteId && order.quote_id !== quoteId) {
+      throw new Error('checkout quote does not match trusted order data');
+    }
+
+    if (['paid_test', 'paid'].includes(order.status)) {
+      await client.query(
+        'UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2',
+        [order.id, stripeEventId]
+      );
+      return { duplicate: true, order: rowToBoundary(order) };
+    }
+    if (!['checkout_pending', 'creating_checkout'].includes(order.status)) {
       throw new Error('checkout order not found or not payable');
     }
-    db.exec('COMMIT;');
-    return { duplicate: false, order: getOrderBySessionId(stripeSessionId) };
-  } catch (error) {
-    db.exec('ROLLBACK;');
-    throw error;
-  }
+
+    const paymentState = livemode ? 'paid' : 'paid_test';
+    const fulfillmentMode = livemode ? null : 'mock';
+    const storedBuyerEmail = normalizeBuyerEmail(buyerEmail);
+    const updated = await client.query(`
+      UPDATE orders
+      SET stripe_session_id = coalesce(stripe_session_id, $1),
+          stripe_payment_intent_id = $2,
+          stripe_event_id = $3,
+          buyer_email = coalesce(buyer_email, $4),
+          status = $5,
+          fulfillment_status = 'pending',
+          fulfillment_mode = $6,
+          fulfillment_error = null,
+          paid_at = transaction_timestamp(),
+          fulfillment_updated_at = transaction_timestamp(),
+          checkout_ambiguous = false,
+          checkout_error = null,
+          updated_at = transaction_timestamp()
+      WHERE id = $7
+      RETURNING *
+    `, [
+      stripeSessionId,
+      paymentIntentId || null,
+      stripeEventId,
+      storedBuyerEmail,
+      paymentState,
+      fulfillmentMode,
+      order.id,
+    ]);
+    await client.query(
+      'UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2',
+      [order.id, stripeEventId]
+    );
+    return { duplicate: false, order: rowToBoundary(updated.rows[0]) };
+  });
 }
 
-function recordTestPayment(options) {
+async function recordTestPayment(options) {
   return recordSuccessfulPayment({ ...options, livemode: false });
 }
 
-/**
- * Claiming is a single conditional UPDATE. Stripe retries, server restarts
- * and two in-process workers therefore cannot run the same fulfillment at
- * the same time. Completed draft/submitted/mock records are never claimable.
- */
-function claimFulfillmentOrder(orderId) {
-  const updated = db.prepare(`
+async function claimFulfillmentOrder(orderId) {
+  const result = await getPool().query(`
     UPDATE orders
     SET fulfillment_status = 'processing',
         fulfillment_attempts = fulfillment_attempts + 1,
-        fulfillment_error = NULL,
-        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
-    WHERE id = ?
+        fulfillment_error = null,
+        fulfillment_updated_at = transaction_timestamp(),
+        updated_at = transaction_timestamp()
+    WHERE id = $1
       AND fulfillment_status IN ('pending', 'failed')
       AND fulfillment_attempts < 3
       AND status IN ('paid_test', 'paid')
-  `).run(orderId);
-  return Number(updated.changes) === 1 ? getOrderById(orderId) : null;
+    RETURNING *
+  `, [orderId]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function completeFulfillment(orderId, { mode, payload, printfulOrderId, printfulStatus }) {
-  const status = mode === 'mock'
-    ? 'mocked'
-    : mode === 'draft'
-      ? 'draft'
-      : 'submitted';
-  db.prepare(`
+async function completeFulfillment(orderId, { mode, payload, printfulOrderId, printfulStatus }) {
+  const status = mode === 'mock' ? 'mocked' : mode === 'draft' ? 'draft' : 'submitted';
+  const result = await getPool().query(`
     UPDATE orders
-    SET fulfillment_status = ?, fulfillment_mode = ?, fulfillment_payload_json = ?,
-        printful_order_id = ?, printful_order_status = ?, fulfillment_error = NULL,
-        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
-    WHERE id = ? AND fulfillment_status = 'processing'
-  `).run(
-    status,
-    mode,
-    JSON.stringify(payload),
-    printfulOrderId || null,
-    printfulStatus || status,
-    orderId
-  );
-  return getOrderById(orderId);
+    SET fulfillment_status = $1, fulfillment_mode = $2,
+        fulfillment_payload_json = $3::jsonb, printful_order_id = $4,
+        printful_order_status = $5, fulfillment_error = null,
+        fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
+    WHERE id = $6 AND fulfillment_status = 'processing'
+    RETURNING *
+  `, [status, mode, jsonValue(payload), printfulOrderId || null, printfulStatus || status, orderId]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getOrderShipments(orderId) {
-  return db.prepare(`
-    SELECT *
-    FROM checkout_order_shipments
-    WHERE order_id = ?
+async function getOrderShipments(orderId) {
+  const result = await getPool().query(`
+    SELECT * FROM checkout_order_shipments
+    WHERE order_id = $1
     ORDER BY shipment_index ASC
-  `).all(orderId);
+  `, [orderId]);
+  return rowsToBoundary(result.rows);
 }
 
-function completeOrderShipment(shipmentId, { mode, payload, printfulOrderId, printfulStatus }) {
-  const status = mode === 'mock'
-    ? 'mocked'
-    : mode === 'draft'
-      ? 'draft'
-      : 'submitted';
-  db.prepare(`
+async function getOrderItems(orderId) {
+  const result = await getPool().query(`
+    SELECT * FROM order_items
+    WHERE order_id = $1
+    ORDER BY shipment_index ASC, item_index ASC
+  `, [orderId]);
+  return rowsToBoundary(result.rows);
+}
+
+async function completeOrderShipment(shipmentId, { mode, payload, printfulOrderId, printfulStatus }) {
+  const status = mode === 'mock' ? 'mocked' : mode === 'draft' ? 'draft' : 'submitted';
+  await getPool().query(`
     UPDATE checkout_order_shipments
-    SET fulfillment_status = ?, fulfillment_mode = ?, fulfillment_payload_json = ?,
-        printful_order_id = ?, printful_order_status = ?, fulfillment_error = NULL,
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).run(
-    status,
-    mode,
-    JSON.stringify(payload),
-    printfulOrderId || null,
-    printfulStatus || status,
-    shipmentId
-  );
+    SET fulfillment_status = $1, fulfillment_mode = $2,
+        fulfillment_payload_json = $3::jsonb, printful_order_id = $4,
+        printful_order_status = $5, fulfillment_error = null,
+        updated_at = transaction_timestamp()
+    WHERE id = $6
+  `, [status, mode, jsonValue(payload), printfulOrderId || null, printfulStatus || status, shipmentId]);
 }
 
-function failOrderShipment(shipmentId, error) {
+async function failOrderShipment(shipmentId, error) {
   const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
-  db.prepare(`
+  await getPool().query(`
     UPDATE checkout_order_shipments
-    SET fulfillment_status = 'failed',
-        fulfillment_attempts = fulfillment_attempts + 1,
-        fulfillment_error = ?,
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).run(safeError, shipmentId);
+    SET fulfillment_status = 'failed', fulfillment_attempts = fulfillment_attempts + 1,
+        fulfillment_error = $1, updated_at = transaction_timestamp()
+    WHERE id = $2
+  `, [safeError, shipmentId]);
 }
 
-function failFulfillment(orderId, error, { blocked = false } = {}) {
+async function failFulfillment(orderId, error, { blocked = false } = {}) {
   const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
-  db.prepare(`
+  const result = await getPool().query(`
     UPDATE orders
-    SET fulfillment_status = ?, fulfillment_error = ?,
-        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
-    WHERE id = ? AND fulfillment_status = 'processing'
-  `).run(blocked ? 'blocked' : 'failed', safeError, orderId);
-  return getOrderById(orderId);
+    SET fulfillment_status = $1, fulfillment_error = $2,
+        fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
+    WHERE id = $3 AND fulfillment_status = 'processing'
+    RETURNING *
+  `, [blocked ? 'blocked' : 'failed', safeError, orderId]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getPendingFulfillmentOrders(limit = 20) {
+async function getPendingFulfillmentOrders(limit = 20) {
   const safeLimit = Number.isSafeInteger(limit) && limit > 0 && limit <= 100 ? limit : 20;
-  return db.prepare(`
+  const result = await getPool().query(`
     SELECT * FROM orders
     WHERE fulfillment_status IN ('pending', 'failed')
       AND fulfillment_attempts < 3
       AND status IN ('paid_test', 'paid')
     ORDER BY id ASC
-    LIMIT ?
-  `).all(safeLimit);
+    LIMIT $1
+  `, [safeLimit]);
+  return rowsToBoundary(result.rows);
 }
 
-function recoverStaleFulfillments() {
-  return db.prepare(`
+async function recoverStaleFulfillments() {
+  const result = await getPool().query(`
     UPDATE orders
     SET fulfillment_status = 'failed',
         fulfillment_error = 'Verarbeitung wurde durch einen Serverneustart unterbrochen.',
-        fulfillment_updated_at = datetime('now'), updated_at = datetime('now')
+        fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
     WHERE fulfillment_status = 'processing'
-      AND fulfillment_updated_at < datetime('now', '-15 minutes')
-  `).run();
+      AND fulfillment_updated_at < transaction_timestamp() - interval '15 minutes'
+  `);
+  return result.rowCount;
 }
 
 // ── Expiring checkout quotes ────────────────────────────────────────────
@@ -811,127 +822,43 @@ function checkoutQuoteTtlMs() {
   return Math.round(safeMinutes * 60 * 1000);
 }
 
-function cleanupAbandonedQuotes() {
-  // Keep checkout/paid records for reconciliation, but remove personal
-  // address data from abandoned quotes one day after expiry.
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  db.prepare(`
+async function cleanupAbandonedQuotes() {
+  await getPool().query(`
     DELETE FROM checkout_quotes
-    WHERE expires_at < ?
+    WHERE expires_at < transaction_timestamp() - interval '1 day'
       AND NOT EXISTS (SELECT 1 FROM orders WHERE orders.quote_id = checkout_quotes.id)
-  `).run(cutoff);
+  `);
 }
 
-function createCheckoutQuote({ eventId, configurationId, configurationIds, recipient, shipments, printfulCosts, quote }) {
-  cleanupAbandonedQuotes();
+async function createCheckoutQuote({ eventId, configurationId, configurationIds, recipient, shipments, printfulCosts, quote }) {
+  await cleanupAbandonedQuotes();
   const id = crypto.randomBytes(18).toString('base64url');
-  const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
+  const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs());
   const storedConfigurationIds = uniqueConfigurationIds(configurationIds || [configurationId]);
   const primaryConfigurationId = configurationId || storedConfigurationIds[0];
   const normalizedShipments = Array.isArray(shipments) && shipments.length ? shipments : null;
   const primaryRecipient = recipient || normalizedShipments?.[0]?.recipient;
-  const storedPrintfulCosts = printfulCosts ||
-    (normalizedShipments
-      ? { shipments: normalizedShipments.map((shipment) => shipment.printfulCosts || shipment.costs || {}) }
-      : null);
-  db.prepare(`
+  const storedPrintfulCosts = printfulCosts || (normalizedShipments
+    ? { shipments: normalizedShipments.map((shipment) => shipment.printfulCosts || shipment.costs || {}) }
+    : null);
+  const result = await getPool().query(`
     INSERT INTO checkout_quotes (
-      id, event_id, configuration_id, configuration_ids_json, recipient_json, shipments_json, printful_costs_json,
-      currency, quantity, items_cents, payment_reserve_cents, shipping_cents, tax_cents, total_cents, expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+      id, event_id, configuration_id, configuration_ids_json, recipient_json,
+      shipments_json, printful_costs_json, currency, quantity, items_cents,
+      payment_reserve_cents, shipping_cents, tax_cents, total_cents, expires_at
+    ) VALUES (
+      $1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9,
+      $10, $11, $12, $13, $14, $15
+    )
+    RETURNING *
+  `, [
     id,
     eventId,
     primaryConfigurationId,
-    JSON.stringify(storedConfigurationIds.length ? storedConfigurationIds : [primaryConfigurationId]),
-    JSON.stringify(primaryRecipient),
-    normalizedShipments ? JSON.stringify(normalizedShipments) : null,
-    JSON.stringify(storedPrintfulCosts),
-    quote.currency,
-    quote.quantity,
-    quote.itemsCents,
-    quote.paymentReserveCents || 0,
-    quote.shippingCents,
-    quote.taxCents,
-    quote.totalCents,
-    expiresAt
-  );
-  return getCheckoutQuote(id);
-}
-
-function getCheckoutQuote(id) {
-  return db.prepare('SELECT * FROM checkout_quotes WHERE id = ?').get(id) || null;
-}
-
-function getEventCheckoutQuote(slug, configurationId, quoteId) {
-  return db.prepare(`
-    SELECT checkout_quotes.*
-    FROM checkout_quotes
-    JOIN events ON events.id = checkout_quotes.event_id
-    WHERE checkout_quotes.id = ?
-      AND checkout_quotes.configuration_id = ?
-      AND events.slug = ?
-  `).get(quoteId, configurationId, slug) || null;
-}
-
-function getEventCartCheckoutQuote(slug, configurationIds, quoteId) {
-  const quote = db.prepare(`
-    SELECT checkout_quotes.*
-    FROM checkout_quotes
-    JOIN events ON events.id = checkout_quotes.event_id
-    WHERE checkout_quotes.id = ?
-      AND events.slug = ?
-  `).get(quoteId, slug) || null;
-  if (!quote) return null;
-  const expectedIds = uniqueConfigurationIds(configurationIds).sort();
-  const storedIds = getCheckoutQuoteConfigurationIds(quote).sort();
-  if (expectedIds.length !== storedIds.length ||
-      expectedIds.some((id, index) => id !== storedIds[index])) {
-    return null;
-  }
-  return quote;
-}
-
-function updateCheckoutQuote(quoteId, { recipient, shipments, printfulCosts, quote }) {
-  const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs()).toISOString();
-  const normalizedShipments = Array.isArray(shipments) && shipments.length ? shipments : null;
-  const primaryRecipient = recipient || normalizedShipments?.[0]?.recipient || null;
-  const storedPrintfulCosts = printfulCosts ||
-    (normalizedShipments
-      ? { shipments: normalizedShipments.map((shipment) => shipment.printfulCosts || shipment.costs || {}) }
-      : null);
-  if (normalizedShipments) {
-    db.prepare(`
-      UPDATE checkout_quotes
-      SET recipient_json = ?, shipments_json = ?, printful_costs_json = ?,
-          currency = ?, quantity = ?, items_cents = ?, payment_reserve_cents = ?,
-          shipping_cents = ?, tax_cents = ?, total_cents = ?, expires_at = ?,
-          updated_at = datetime('now')
-      WHERE id = ?
-    `).run(
-      JSON.stringify(primaryRecipient),
-      JSON.stringify(normalizedShipments),
-      JSON.stringify(storedPrintfulCosts),
-      quote.currency,
-      quote.quantity,
-      quote.itemsCents,
-      quote.paymentReserveCents || 0,
-      quote.shippingCents,
-      quote.taxCents,
-      quote.totalCents,
-      expiresAt,
-      quoteId
-    );
-    return getCheckoutQuote(quoteId);
-  }
-  db.prepare(`
-    UPDATE checkout_quotes
-    SET printful_costs_json = ?, currency = ?, quantity = ?, items_cents = ?, payment_reserve_cents = ?,
-        shipping_cents = ?, tax_cents = ?, total_cents = ?, expires_at = ?,
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).run(
-    JSON.stringify(storedPrintfulCosts),
+    jsonValue(storedConfigurationIds.length ? storedConfigurationIds : [primaryConfigurationId]),
+    jsonValue(primaryRecipient),
+    normalizedShipments ? jsonValue(normalizedShipments) : null,
+    jsonValue(storedPrintfulCosts),
     quote.currency,
     quote.quantity,
     quote.itemsCents,
@@ -940,20 +867,88 @@ function updateCheckoutQuote(quoteId, { recipient, shipments, printfulCosts, quo
     quote.taxCents,
     quote.totalCents,
     expiresAt,
-    quoteId
-  );
-  return getCheckoutQuote(quoteId);
+  ]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getCheckoutQuote(id) {
+  const result = await getPool().query('SELECT * FROM checkout_quotes WHERE id = $1', [id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getEventCheckoutQuote(slug, configurationId, quoteId) {
+  const result = await getPool().query(`
+    SELECT checkout_quotes.*
+    FROM checkout_quotes
+    JOIN events ON events.id = checkout_quotes.event_id
+    WHERE checkout_quotes.id = $1
+      AND checkout_quotes.configuration_id = $2
+      AND events.slug = $3
+  `, [quoteId, configurationId, slug]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getEventCartCheckoutQuote(slug, configurationIds, quoteId) {
+  const result = await getPool().query(`
+    SELECT checkout_quotes.*
+    FROM checkout_quotes
+    JOIN events ON events.id = checkout_quotes.event_id
+    WHERE checkout_quotes.id = $1 AND events.slug = $2
+  `, [quoteId, slug]);
+  const quote = rowToBoundary(result.rows[0]);
+  if (!quote) return null;
+  const expectedIds = uniqueConfigurationIds(configurationIds).sort();
+  const storedIds = getCheckoutQuoteConfigurationIds(quote).sort();
+  if (expectedIds.length !== storedIds.length || expectedIds.some((id, index) => id !== storedIds[index])) {
+    return null;
+  }
+  return quote;
+}
+
+async function updateCheckoutQuote(quoteId, { recipient, shipments, printfulCosts, quote }) {
+  const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs());
+  const normalizedShipments = Array.isArray(shipments) && shipments.length ? shipments : null;
+  const primaryRecipient = recipient || normalizedShipments?.[0]?.recipient || null;
+  const storedPrintfulCosts = printfulCosts || (normalizedShipments
+    ? { shipments: normalizedShipments.map((shipment) => shipment.printfulCosts || shipment.costs || {}) }
+    : null);
+  const result = normalizedShipments
+    ? await getPool().query(`
+        UPDATE checkout_quotes
+        SET recipient_json = $1::jsonb, shipments_json = $2::jsonb,
+            printful_costs_json = $3::jsonb, currency = $4, quantity = $5,
+            items_cents = $6, payment_reserve_cents = $7, shipping_cents = $8,
+            tax_cents = $9, total_cents = $10, expires_at = $11,
+            updated_at = transaction_timestamp()
+        WHERE id = $12
+        RETURNING *
+      `, [
+        jsonValue(primaryRecipient), jsonValue(normalizedShipments), jsonValue(storedPrintfulCosts),
+        quote.currency, quote.quantity, quote.itemsCents, quote.paymentReserveCents || 0,
+        quote.shippingCents, quote.taxCents, quote.totalCents, expiresAt, quoteId,
+      ])
+    : await getPool().query(`
+        UPDATE checkout_quotes
+        SET printful_costs_json = $1::jsonb, currency = $2, quantity = $3,
+            items_cents = $4, payment_reserve_cents = $5, shipping_cents = $6,
+            tax_cents = $7, total_cents = $8, expires_at = $9,
+            updated_at = transaction_timestamp()
+        WHERE id = $10
+        RETURNING *
+      `, [
+        jsonValue(storedPrintfulCosts), quote.currency, quote.quantity, quote.itemsCents,
+        quote.paymentReserveCents || 0, quote.shippingCents, quote.taxCents,
+        quote.totalCents, expiresAt, quoteId,
+      ]);
+  return rowToBoundary(result.rows[0]);
 }
 
 function isCheckoutQuoteExpired(quote) {
   return !quote || !Number.isFinite(Date.parse(quote.expires_at)) || Date.parse(quote.expires_at) <= Date.now();
 }
 
-// ── Product configurations ──────────────────────────────────────────────
-// A configuration stores the exact immutable canvas approved in the preview.
-// The word snapshot is kept as its editing/reset input, independently from the
-// live event table, which may continue changing after approval.
-function createConfiguration({
+// ── Configurations ──────────────────────────────────────────────────────
+async function createConfiguration({
   eventId,
   productKey,
   printfulVariantId,
@@ -969,56 +964,54 @@ function createConfiguration({
 }) {
   if (!design) throw new TypeError('A configuration requires an immutable canvas design.');
   const id = crypto.randomBytes(12).toString('base64url');
-  db.prepare(`
+  const result = await getPool().query(`
     INSERT INTO configurations (
-      id, event_id, product_key, printful_variant_id, quantity,
-      unit_price_cents, theme, words_json, design_json,
-      configuration_type, orientation, print_width, print_height
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    eventId,
-    productKey,
-    printfulVariantId,
-    quantity,
-    unitPriceCents,
-    theme,
-    JSON.stringify(words),
-    JSON.stringify(design),
-    configurationType,
-    orientation,
-    printWidth,
-    printHeight
-  );
-  return getConfiguration(id);
+      id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
+      theme, words_json, design_json, configuration_type, orientation,
+      print_width, print_height
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13)
+    RETURNING *
+  `, [
+    id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
+    jsonValue(words), jsonValue(design), configurationType, orientation, printWidth, printHeight,
+  ]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getConfiguration(id) {
-  return db.prepare('SELECT * FROM configurations WHERE id = ?').get(id) || null;
+async function getConfiguration(id) {
+  const result = await getPool().query('SELECT * FROM configurations WHERE id = $1', [id]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getEventConfiguration(slug, configurationId) {
-  return db.prepare(`
+async function getEventConfiguration(slug, configurationId) {
+  const result = await getPool().query(`
     SELECT configurations.*
     FROM configurations
     JOIN events ON events.id = configurations.event_id
-    WHERE configurations.id = ? AND events.slug = ?
-  `).get(configurationId, slug) || null;
+    WHERE configurations.id = $1 AND events.slug = $2
+  `, [configurationId, slug]);
+  return rowToBoundary(result.rows[0]);
 }
 
-function getEventConfigurations(slug, configurationIds) {
+async function getEventConfigurations(slug, configurationIds) {
   const ids = uniqueConfigurationIds(configurationIds);
   if (!ids.length) return [];
-  const rows = ids
-    .map((id) => getEventConfiguration(slug, id))
-    .filter(Boolean);
-  if (rows.length !== ids.length) return [];
-  const byId = new Map(rows.map((row) => [row.id, row]));
+  const result = await getPool().query(`
+    SELECT configurations.*
+    FROM configurations
+    JOIN events ON events.id = configurations.event_id
+    WHERE configurations.id = ANY($1::text[]) AND events.slug = $2
+  `, [ids, slug]);
+  if (result.rows.length !== ids.length) return [];
+  const byId = new Map(rowsToBoundary(result.rows).map((row) => [row.id, row]));
   return ids.map((id) => byId.get(id));
 }
 
 module.exports = {
-  db,
+  get pool() { return getPool(); },
+  getPool,
+  closePool,
+  assertDatabaseReady,
   hashPin,
   verifyPin,
   createEvent,
@@ -1033,6 +1026,7 @@ module.exports = {
   getWords,
   clearWords,
   archiveWords,
+  archiveAndClearWords,
   createOrder,
   markOrderPaid,
   markOrderFulfilled,
@@ -1044,6 +1038,7 @@ module.exports = {
   getCheckoutQuoteConfigurationIds,
   getOrderConfigurationIds,
   createCheckoutOrder,
+  claimCheckoutAttempt,
   attachStripeSession,
   markCheckoutCreationFailed,
   retryCheckoutOrder,
@@ -1052,11 +1047,13 @@ module.exports = {
   claimFulfillmentOrder,
   completeFulfillment,
   getOrderShipments,
+  getOrderItems,
   completeOrderShipment,
   failOrderShipment,
   failFulfillment,
   getPendingFulfillmentOrders,
   recoverStaleFulfillments,
+  cleanupAbandonedQuotes,
   createCheckoutQuote,
   getCheckoutQuote,
   getEventCheckoutQuote,

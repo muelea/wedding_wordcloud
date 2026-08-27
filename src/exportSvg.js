@@ -10,9 +10,8 @@
  *
  * History: an earlier pass here used a fixed average-character-width ratio
  * instead, reasoning that node-canvas's native-compile step conflicted with
- * this project's "agent-first, no ops team" operating philosophy (the same
- * reasoning that motivated `node:sqlite` over `better-sqlite3` — see
- * "Architectural decisions" in the README). That reasoning was wrong for
+ * this project's "agent-first, no ops team" operating philosophy. That
+ * reasoning was wrong for
  * this specific decision: "agent-first" describes lean day-to-day
  * *operations* (support, marketing automation, no headcount watching a
  * server) — it doesn't mean avoiding a one-time build-step dependency for

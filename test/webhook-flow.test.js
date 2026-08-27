@@ -80,15 +80,15 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
   const { quote } = await estimateResponse.json();
 
   const db = require('../src/db');
-  const eventRow = db.getEventBySlug(event.slug);
-  const quoteRow = db.getCheckoutQuote(quote.id);
-  const { order } = db.createCheckoutOrder({
+  const eventRow = await db.getEventBySlug(event.slug);
+  const quoteRow = await db.getCheckoutQuote(quote.id);
+  const { order } = await db.createCheckoutOrder({
     eventId: eventRow.id,
     configurationId: configuration.id,
     quote: quoteRow,
   });
   const stripeSessionId = 'cs_test_webhook_flow';
-  db.attachStripeSession(order.id, { id: stripeSessionId, url: 'https://checkout.stripe.test/session' });
+  await db.attachStripeSession(order.id, { id: stripeSessionId, url: 'https://checkout.stripe.test/session' });
 
   const payload = JSON.stringify({
     id: 'evt_test_paid_once',
@@ -104,6 +104,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
         metadata: {
           eventSlug: event.slug,
           configurationId: configuration.id,
+          configurationIds: configuration.id,
           quoteId: quote.id,
           orderId: String(order.id),
           checkoutMode: 'test',
@@ -127,10 +128,10 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     assert.equal((await response.json()).duplicate, expectedDuplicate);
   }
 
-  let paidOrder = db.getOrderBySessionId(stripeSessionId);
+  let paidOrder = await db.getOrderBySessionId(stripeSessionId);
   for (let attempt = 0; attempt < 30 && paidOrder.fulfillment_status !== 'mocked'; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
-    paidOrder = db.getOrderBySessionId(stripeSessionId);
+    paidOrder = await db.getOrderBySessionId(stripeSessionId);
   }
   assert.equal(paidOrder.status, 'paid_test');
   assert.equal(paidOrder.stripe_payment_intent_id, 'pi_test_paid_once');

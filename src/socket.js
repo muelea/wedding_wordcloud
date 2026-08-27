@@ -25,7 +25,7 @@ const GUEST_ID_RE = /^[a-f0-9]{32}$/;
 const RECEIPT_RE = /^[A-Za-z0-9_-]{24}$/;
 
 function attachSocketHandlers(io) {
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     const slug = socket.handshake.query && socket.handshake.query.slug;
 
     if (!slug || typeof slug !== 'string') {
@@ -34,9 +34,17 @@ function attachSocketHandlers(io) {
       return;
     }
 
-    const event = db.getEventBySlug(slug);
-    if (!event) {
-      socket.emit('fatal-error', 'unknown event');
+    let event;
+    try {
+      event = await db.getEventBySlug(slug);
+      if (!event) {
+        socket.emit('fatal-error', 'unknown event');
+        socket.disconnect(true);
+        return;
+      }
+    } catch (error) {
+      console.error(`[socket:${slug}] Could not load event:`, error.message);
+      socket.emit('fatal-error', 'event unavailable');
       socket.disconnect(true);
       return;
     }
@@ -53,29 +61,42 @@ function attachSocketHandlers(io) {
 
     // Send current state to the newly connected client only (not the room —
     // no need to re-broadcast to everyone else just because one client joined).
-    socket.emit('word-update', db.getWords(event.id));
-    socket.emit('own-word-update', db.getWordContributions(event.id, socket.data.guestId));
+    try {
+      const [words, contributions] = await Promise.all([
+        db.getWords(event.id),
+        db.getWordContributions(event.id, socket.data.guestId),
+      ]);
+      socket.emit('word-update', words);
+      socket.emit('own-word-update', contributions);
+    } catch (error) {
+      console.error(`[socket:${event.slug}] Could not load current state:`, error.message);
+      socket.emit('fatal-error', 'event unavailable');
+      socket.disconnect(true);
+      return;
+    }
 
-    socket.on('submit-word', (rawWord) => {
+    socket.on('submit-word', async (rawWord) => {
       const word = normalizeWord(rawWord, event.locale);
       if (!word) return;
 
       let receipt;
+      let words;
       try {
-        receipt = db.addWordContribution(event.id, word, socket.data.guestId);
+        receipt = await db.addWordContribution(event.id, word, socket.data.guestId);
+        words = await db.getWords(event.id);
       } catch (error) {
         console.error(`[socket:${event.slug}] Could not save word contribution:`, error);
         socket.emit('word-error');
         return;
       }
 
-      io.to(event.slug).emit('word-update', db.getWords(event.id));
+      io.to(event.slug).emit('word-update', words);
       // Keep the normalized word as the first argument for backwards
       // compatibility; the private receipt is only sent to its submitter.
       socket.emit('word-accepted', word, receipt);
     });
 
-    socket.on('remove-word', (payload, acknowledge) => {
+    socket.on('remove-word', async (payload, acknowledge) => {
       const respond = typeof acknowledge === 'function' ? acknowledge : () => {};
       const receipt = payload && typeof payload === 'object' ? payload.receipt : payload;
       if (typeof receipt !== 'string' || !RECEIPT_RE.test(receipt)) {
@@ -84,12 +105,14 @@ function attachSocketHandlers(io) {
       }
 
       let removedWord;
+      let words;
       try {
-        removedWord = db.removeWordContribution(
+        removedWord = await db.removeWordContribution(
           event.id,
           receipt,
           socket.data.guestId
         );
+        if (removedWord) words = await db.getWords(event.id);
       } catch (error) {
         console.error(`[socket:${event.slug}] Could not remove word contribution:`, error);
         respond({ ok: false, error: 'server_error' });
@@ -102,15 +125,20 @@ function attachSocketHandlers(io) {
         return;
       }
 
-      io.to(event.slug).emit('word-update', db.getWords(event.id));
+      io.to(event.slug).emit('word-update', words);
       respond({ ok: true, word: removedWord });
     });
 
     // Relay theme changes to all connected clients FOR THIS EVENT ONLY.
-    socket.on('theme-change', (theme) => {
+    socket.on('theme-change', async (theme) => {
       if (theme !== 'neon' && theme !== 'pastel') return;
-      db.setEventTheme(event.id, theme);
-      socket.to(event.slug).emit('theme-change', theme);
+      try {
+        await db.setEventTheme(event.id, theme);
+        socket.to(event.slug).emit('theme-change', theme);
+      } catch (error) {
+        console.error(`[socket:${event.slug}] Could not save theme:`, error.message);
+        socket.emit('theme-error');
+      }
     });
   });
 }

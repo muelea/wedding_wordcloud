@@ -6,9 +6,9 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (53 tests, `node --test`). All must pass. Each test file
-  uses its own scratch SQLite file and ephemeral port, so it's safe to run
-  repeatedly.
+- Run `npm test` (75 tests, `node --test`). All must pass. Database-backed
+  tests use isolated migrated Postgres schemas plus ephemeral ports and clean
+  them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
   optional — it's the test that proves one couple's event never leaks words
   or theme changes into another couple's display. See "Hard invariants"
@@ -76,10 +76,10 @@ it — this file is about how to work in it safely.
 - No build step. Plain CommonJS (`require`/`module.exports`), no bundler,
   no TypeScript. Keep it that way unless explicitly asked to change it —
   the project is intentionally low-dependency/low-ops.
-- `node:sqlite` (Node's built-in, not `better-sqlite3`) is a deliberate
-  choice — zero native-compile step. It's marked experimental (harmless
-  warning on startup) but don't swap it for another DB driver without
-  checking with a maintainer first.
+- Postgres through one bounded `pg.Pool` is the production and test data layer.
+  Keep SQL behind `src/db.js`, keep callers async/await, and evolve schema only
+  through ordered files in `supabase/migrations/`; do not add an ORM or a
+  SQLite test substitute.
 - German is the user-facing language throughout (`public/*.html` copy, form
   labels, error messages). Keep new user-facing strings in German unless
   told otherwise.
@@ -94,10 +94,9 @@ The repository is GitHub `muelea/wedding_wordcloud`, `main` branch. The app is
 currently developed and tested locally; there is no active public production
 deployment and pushing `main` must not be treated as a deployment action.
 
-The next discussed infrastructure step is a Fly.io staging app using its
-temporary `*.fly.dev` HTTPS address and one persistent volume for the current
-SQLite database. A later move to Supabase/Postgres is being considered before
-live operation, but neither Fly nor Supabase has been configured in this repo.
-Do not add deployment infrastructure, migrate the database or push branches
-without explicit maintainer approval. Local secrets stay in `.env`; future
-hosted secrets belong in the hosting provider's secret store, never in Git.
+The Supabase/Postgres foundation and least-privileged runtime role are active.
+The Fly.io app exists but is not deployed; Docker/Fly packaging is the next
+work package and needs explicit maintainer approval. Local secrets stay in
+`.env`; hosted runtime secrets belong in Fly Secrets, while the privileged
+`MIGRATION_DATABASE_URL` stays only in local/CI migration tooling, never Fly.
+Do not deploy or push branches without explicit maintainer approval.

@@ -12,6 +12,9 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     'PRINTFUL_FULFILLMENT_MODE',
     'PRINTFUL_ALLOW_ORDER_WRITES',
     'PRINTFUL_CONFIRM_LIVE_ORDERS',
+    'EMAIL_DELIVERY_MODE',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
   ]) {
     previous[name] = process.env[name];
   }
@@ -20,6 +23,9 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   process.env.PRINTFUL_FULFILLMENT_MODE = 'draft';
   process.env.PRINTFUL_ALLOW_ORDER_WRITES = 'true';
   process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'false';
+  process.env.EMAIL_DELIVERY_MODE = 'live';
+  process.env.RESEND_API_KEY = 're_test_configuration_only';
+  process.env.RESEND_FROM_EMAIL = 'Wolkenworte <test@example.test>';
   t.after(() => {
     for (const [name, value] of Object.entries(previous)) {
       if (value == null) delete process.env[name];
@@ -32,8 +38,8 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   const createdEvent = await createEvent(baseUrl, { coupleName: 'Draft Dora & Sicher Sven' });
 
   const db = require('../src/db');
-  const event = db.getEventBySlug(createdEvent.slug);
-  const configuration = db.createConfiguration({
+  const event = await db.getEventBySlug(createdEvent.slug);
+  const configuration = await db.createConfiguration({
     eventId: event.id,
     productKey: 'white-glossy-mug-duo-11oz',
     printfulVariantId: 1320,
@@ -45,7 +51,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     printWidth: 2700,
     printHeight: 1050,
   });
-  const quote = db.createCheckoutQuote({
+  const quote = await db.createCheckoutQuote({
     eventId: event.id,
     configurationId: configuration.id,
     recipient: {
@@ -61,17 +67,17 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
       shippingCents: 500, taxCents: 500, totalCents: 4600,
     },
   });
-  const { order } = db.createCheckoutOrder({
+  const { order } = await db.createCheckoutOrder({
     eventId: event.id,
     configurationId: configuration.id,
     quote,
     mode: 'live',
   });
-  db.attachStripeSession(order.id, {
+  await db.attachStripeSession(order.id, {
     id: 'cs_live_fulfillment_test',
     url: 'https://checkout.stripe.example/session',
   });
-  db.recordSuccessfulPayment({
+  await db.recordSuccessfulPayment({
     stripeEventId: 'evt_live_fulfillment_test',
     eventType: 'checkout.session.completed',
     stripeSessionId: 'cs_live_fulfillment_test',
@@ -121,7 +127,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     }],
   }]);
 
-  const splitQuote = db.createCheckoutQuote({
+  const splitQuote = await db.createCheckoutQuote({
     eventId: event.id,
     configurationId: configuration.id,
     shipments: [
@@ -153,17 +159,17 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
       shippingCents: 1100, taxCents: 560, totalCents: 5115,
     },
   });
-  const { order: splitOrder } = db.createCheckoutOrder({
+  const { order: splitOrder } = await db.createCheckoutOrder({
     eventId: event.id,
     configurationId: configuration.id,
     quote: splitQuote,
     mode: 'live',
   });
-  db.attachStripeSession(splitOrder.id, {
+  await db.attachStripeSession(splitOrder.id, {
     id: 'cs_live_split_fulfillment_test',
     url: 'https://checkout.stripe.example/split-session',
   });
-  db.recordSuccessfulPayment({
+  await db.recordSuccessfulPayment({
     stripeEventId: 'evt_live_split_fulfillment_test',
     eventType: 'checkout.session.completed',
     stripeSessionId: 'cs_live_split_fulfillment_test',
@@ -186,9 +192,9 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   ]);
   assert.deepEqual(splitCalls.map((call) => call.payload.items[0].quantity), [2, 1]);
   assert.deepEqual(splitCalls.map((call) => call.payload.recipient.name), ['Adresse A', 'Adresse B']);
-  assert.deepEqual(db.getOrderShipments(splitOrder.id).map((shipment) => shipment.fulfillment_status), ['draft', 'draft']);
+  assert.deepEqual((await db.getOrderShipments(splitOrder.id)).map((shipment) => shipment.fulfillment_status), ['draft', 'draft']);
 
-  const coasterConfiguration = db.createConfiguration({
+  const coasterConfiguration = await db.createConfiguration({
     eventId: event.id,
     productKey: 'cork-back-coaster',
     printfulVariantId: 15662,
@@ -200,7 +206,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     printWidth: 1181,
     printHeight: 1181,
   });
-  const mixedQuote = db.createCheckoutQuote({
+  const mixedQuote = await db.createCheckoutQuote({
     eventId: event.id,
     configurationId: configuration.id,
     configurationIds: [configuration.id, coasterConfiguration.id],
@@ -224,17 +230,17 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
       shippingCents: 600, taxCents: 751, totalCents: 4701,
     },
   });
-  const { order: mixedOrder } = db.createCheckoutOrder({
+  const { order: mixedOrder } = await db.createCheckoutOrder({
     eventId: event.id,
     configurationId: configuration.id,
     quote: mixedQuote,
     mode: 'live',
   });
-  db.attachStripeSession(mixedOrder.id, {
+  await db.attachStripeSession(mixedOrder.id, {
     id: 'cs_live_mixed_fulfillment_test',
     url: 'https://checkout.stripe.example/mixed-session',
   });
-  db.recordSuccessfulPayment({
+  await db.recordSuccessfulPayment({
     stripeEventId: 'evt_live_mixed_fulfillment_test',
     eventType: 'checkout.session.completed',
     stripeSessionId: 'cs_live_mixed_fulfillment_test',

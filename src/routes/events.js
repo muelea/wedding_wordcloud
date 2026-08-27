@@ -22,6 +22,7 @@ const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint
 const DesignFonts = require('../designFonts');
 const MugIcons = require('../../public/js/mug-icons.js');
 const I18n = require('../i18n');
+const { asyncRoute } = require('../asyncRoute');
 
 const PIN_RE = /^\d{4,6}$/;
 const MAX_NAME_LENGTH = 80;
@@ -270,6 +271,32 @@ function checkoutQuoteResponse(quote) {
     totalCents: Number(quote.total_cents),
     expiresAt: quote.expires_at,
   };
+}
+
+function parseStoredCheckoutRequest(order) {
+  try {
+    const parsed = JSON.parse(order?.checkout_request_json || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function attemptPersistedCheckout(order) {
+  const claimed = await db.claimCheckoutAttempt(order.id);
+  if (!claimed) return null;
+  try {
+    const request = parseStoredCheckoutRequest(claimed);
+    const session = await stripe.createCheckoutSession({ order: claimed, ...request });
+    await db.attachStripeSession(claimed.id, session);
+    return session;
+  } catch (error) {
+    // A timeout or process interruption can occur after Stripe accepted the
+    // request. Keep the attempt recoverable and reuse the exact same frozen
+    // parameters and idempotency key on the next claim.
+    await db.markCheckoutCreationFailed(claimed.id, error);
+    throw error;
+  }
 }
 
 function quoteAmountsDiffer(stored, fresh) {
@@ -566,7 +593,7 @@ function makeRouter({ io, port }) {
   });
 
   // ── Create event ──────────────────────────────────────────────────────
-  router.post('/events', express.json(), (req, res) => {
+  router.post('/events', express.json(), asyncRoute(async (req, res) => {
     const { coupleName, pin } = req.body || {};
     if (req.body?.locale != null && !I18n.isSupportedLocale(req.body.locale)) {
       return res.status(400).json({ error: 'invalid_locale' });
@@ -594,20 +621,23 @@ function makeRouter({ io, port }) {
     // the full reasoning. Retries with a fresh suffix on the astronomically
     // unlikely case of a real collision rather than assuming one can't
     // happen.
-    let finalSlug;
-    try {
-      finalSlug = makeUniqueSlug(slug, (candidate) => db.slugExists(candidate));
-    } catch (err) {
-      console.error('Slug generation failed:', err);
-      return res.status(500).json({ error: 'slug_generation_failed' });
+    let event = null;
+    for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
+      const finalSlug = makeUniqueSlug(slug, () => false);
+      try {
+        // The unique index is the final arbiter. A race retries with a fresh
+        // suffix instead of relying on a stale availability pre-check.
+        event = await db.createEvent({
+          slug: finalSlug,
+          coupleName: coupleName.trim(),
+          pin,
+          locale,
+        });
+      } catch (error) {
+        if (error?.code !== '23505') throw error;
+      }
     }
-
-    const event = db.createEvent({
-      slug: finalSlug,
-      coupleName: coupleName.trim(),
-      pin,
-      locale,
-    });
+    if (!event) return res.status(500).json({ error: 'slug_generation_failed' });
 
     res.status(201).json({
       slug: event.slug,
@@ -616,11 +646,11 @@ function makeRouter({ io, port }) {
       displayUrl: `/e/${event.slug}/display`,
       adminToken: adminAuth.issueToken(event.slug),
     });
-  });
+  }));
 
   // ── Public event info (guest + display pages fetch this) ────────────────
-  router.get('/events/:slug', (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.get('/events/:slug', asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     res.json({
       slug: event.slug,
@@ -628,10 +658,10 @@ function makeRouter({ io, port }) {
       theme: event.theme,
       locale: event.locale,
     });
-  });
+  }));
 
-  router.get('/events/:slug/qr', async (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.get('/events/:slug/qr', asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     const url = `${getBaseUrl(req, port)}/e/${event.slug}`;
     try {
@@ -644,11 +674,11 @@ function makeRouter({ io, port }) {
     } catch (err) {
       res.status(500).json({ error: 'QR generation failed' });
     }
-  });
+  }));
 
   // ── Admin PIN verification -> short-lived session token ─────────────────
-  router.post('/events/:slug/admin/verify', express.json(), (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.post('/events/:slug/admin/verify', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     const { pin } = req.body || {};
     if (!pin || !db.verifyPin(pin, event.admin_pin_hash, event.admin_pin_salt)) {
@@ -656,7 +686,7 @@ function makeRouter({ io, port }) {
     }
     const token = adminAuth.issueToken(event.slug);
     res.json({ token });
-  });
+  }));
 
   function requireAdmin(req, res, next) {
     const auth = req.get('authorization') || '';
@@ -668,22 +698,21 @@ function makeRouter({ io, port }) {
   }
 
   // ── Reset ("Neue Runde") — archives then clears, PIN-gated ─────────────
-  router.post('/events/:slug/reset', requireAdmin, (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.post('/events/:slug/reset', requireAdmin, asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    db.archiveWords(event.id);
-    db.clearWords(event.id);
+    await db.archiveAndClearWords(event.id);
     io.to(event.slug).emit('word-update', []);
     io.to(event.slug).emit('round-reset');
     res.json({ ok: true });
-  });
+  }));
 
   // ── Product configurator ────────────────────────────────────────────────
-  router.get('/events/:slug/configurator', (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.get('/events/:slug/configurator', asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     const personalMemory = req.query.mode === 'personal';
-    const words = personalMemory ? [] : db.getWords(event.id);
+    const words = personalMemory ? [] : await db.getWords(event.id);
     if (!personalMemory && !words.length) return res.status(409).json({ error: 'no_words' });
     res.json({
       event: {
@@ -700,22 +729,22 @@ function makeRouter({ io, port }) {
       products: getPublicProducts(),
       productFamilies: getPublicProductFamilies(),
     });
-  });
+  }));
 
   // Printful's current shipping destinations are proxied through our server
   // so the private API token never reaches the browser. The Printful module
   // caches this slow-changing list for 24 hours.
-  router.get('/shipping/countries', async (req, res) => {
+  router.get('/shipping/countries', asyncRoute(async (req, res) => {
     try {
       const countries = await printful.getShippingCountries();
       res.json({ countries });
     } catch (error) {
       sendPrintfulError(res, error);
     }
-  });
+  }));
 
-  router.post('/events/:slug/configurations', express.json({ limit: '9mb' }), (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.post('/events/:slug/configurations', express.json({ limit: '9mb' }), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
 
     const baseProduct = getProduct(req.body?.productKey || DEFAULT_PRODUCT.key);
@@ -742,7 +771,7 @@ function makeRouter({ io, port }) {
       ? []
       : req.body && Object.hasOwn(req.body, 'words')
         ? normalizeSnapshotWords(req.body.words, event.locale)
-        : db.getWords(event.id);
+        : await db.getWords(event.id);
     if (configurationType === 'event_wordcloud' && (!words || !words.length)) {
       return res.status(400).json({ error: 'invalid_words' });
     }
@@ -752,12 +781,12 @@ function makeRouter({ io, port }) {
       return res.status(400).json({ error: 'invalid_design' });
     }
 
-    const configuration = db.createConfiguration({
+    const configuration = await db.createConfiguration({
       eventId: event.id,
       productKey: product.key,
       printfulVariantId: product.printful.variantId,
       quantity,
-      // Legacy SQLite column only. Retail pricing is calculated after the
+      // Compatibility snapshot only. Retail pricing is calculated after the
       // address is entered and never taken from the browser/configuration.
       unitPriceCents: 0,
       theme,
@@ -782,12 +811,12 @@ function makeRouter({ io, port }) {
       ...printFiles,
       createdAt: configuration.created_at,
     });
-  });
+  }));
 
-  router.get('/events/:slug/configurations', (req, res) => {
+  router.get('/events/:slug/configurations', asyncRoute(async (req, res) => {
     const ids = normalizeConfigurationIdList(req.query.ids);
     if (!ids.length) return res.status(400).json({ error: 'invalid_configurations' });
-    const configurations = db.getEventConfigurations(req.params.slug, ids);
+    const configurations = await db.getEventConfigurations(req.params.slug, ids);
     if (configurations.length !== ids.length) {
       return res.status(404).json({ error: 'configuration_not_found' });
     }
@@ -796,30 +825,30 @@ function makeRouter({ io, port }) {
       return res.status(500).json({ error: 'configuration_invalid' });
     }
     res.json({ configurations: response });
-  });
+  }));
 
-  router.get('/events/:slug/configurations/:configurationId', (req, res) => {
-    const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+  router.get('/events/:slug/configurations/:configurationId', asyncRoute(async (req, res) => {
+    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
     const response = configurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
-  });
+  }));
 
-  router.get('/events/:slug/configurations/:configurationId/edit', (req, res) => {
+  router.get('/events/:slug/configurations/:configurationId/edit', asyncRoute(async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
     const response = editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
-  });
+  }));
 
   router.post(
     '/events/:slug/configurations/:configurationId/estimate-costs',
     express.json({ limit: '16kb' }),
-    async (req, res) => {
-      const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    asyncRoute(async (req, res) => {
+      const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
       try {
         const product = getProduct(configuration.product_key);
@@ -860,7 +889,7 @@ function makeRouter({ io, port }) {
             message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
           });
         }
-        const savedQuote = db.createCheckoutQuote({
+        const savedQuote = await db.createCheckoutQuote({
           eventId: configuration.event_id,
           configurationId: configuration.id,
           shipments: quotedShipments,
@@ -877,12 +906,12 @@ function makeRouter({ io, port }) {
         }
         return sendPrintfulError(res, error);
       }
-    }
+    })
   );
 
-  router.post('/events/:slug/cart/estimate-costs', express.json({ limit: '32kb' }), async (req, res) => {
+  router.post('/events/:slug/cart/estimate-costs', express.json({ limit: '32kb' }), asyncRoute(async (req, res) => {
     const ids = normalizeConfigurationIdList(req.body?.configurationIds || req.body?.configuration_ids);
-    const configurations = db.getEventConfigurations(req.params.slug, ids);
+    const configurations = await db.getEventConfigurations(req.params.slug, ids);
     if (!ids.length || configurations.length !== ids.length) {
       return res.status(404).json({ error: 'configuration_not_found' });
     }
@@ -907,7 +936,7 @@ function makeRouter({ io, port }) {
           message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
         });
       }
-      const savedQuote = db.createCheckoutQuote({
+      const savedQuote = await db.createCheckoutQuote({
         eventId: configurations[0].event_id,
         configurationId: configurations[0].id,
         configurationIds: configurations.map((configuration) => configuration.id),
@@ -925,19 +954,19 @@ function makeRouter({ io, port }) {
       }
       return sendPrintfulError(res, error);
     }
-  });
+  }));
 
   // Restore an opaque saved quote after returning from Stripe's cancel URL.
   // The response is no-store because it contains the normalized address.
-  router.get('/events/:slug/configurations/:configurationId/quotes/:quoteId', (req, res) => {
+  router.get('/events/:slug/configurations/:configurationId/quotes/:quoteId', asyncRoute(async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    const quote = db.getEventCheckoutQuote(
+    const quote = await db.getEventCheckoutQuote(
       req.params.slug,
       req.params.configurationId,
       req.params.quoteId
     );
     if (!quote) return res.status(404).json({ error: 'quote_not_found' });
-    const order = db.getOrderByQuoteId(quote.id);
+    const order = await db.getOrderByQuoteId(quote.id);
     if (db.isCheckoutQuoteExpired(quote) && !order) {
       return res.status(410).json({ error: 'quote_expired' });
     }
@@ -950,18 +979,18 @@ function makeRouter({ io, port }) {
     const shipments = db.getCheckoutQuoteShipments(quote)
       .map((shipment) => ({ quantity: Number(shipment.quantity), recipient: shipment.recipient }));
     return res.json({ quote: checkoutQuoteResponse(quote), recipient, shipments });
-  });
+  }));
 
-  router.get('/events/:slug/cart/quotes/:quoteId', (req, res) => {
+  router.get('/events/:slug/cart/quotes/:quoteId', asyncRoute(async (req, res) => {
     res.set('Cache-Control', 'no-store');
     const ids = normalizeConfigurationIdList(req.query.ids);
-    const quote = db.getEventCartCheckoutQuote(req.params.slug, ids, req.params.quoteId);
+    const quote = await db.getEventCartCheckoutQuote(req.params.slug, ids, req.params.quoteId);
     if (!quote) return res.status(404).json({ error: 'quote_not_found' });
-    const order = db.getOrderByQuoteId(quote.id);
+    const order = await db.getOrderByQuoteId(quote.id);
     if (db.isCheckoutQuoteExpired(quote) && !order) {
       return res.status(410).json({ error: 'quote_expired' });
     }
-    const configurations = db.getEventConfigurations(req.params.slug, ids);
+    const configurations = await db.getEventConfigurations(req.params.slug, ids);
     const shipments = db.getCheckoutQuoteShipments(quote)
       .map((shipment) => ({
         quantity: Number(shipment.quantity),
@@ -972,10 +1001,10 @@ function makeRouter({ io, port }) {
       quote: { ...checkoutQuoteResponse(quote), ...cartSummary(configurations) },
       shipments,
     });
-  });
+  }));
 
-  router.get('/events/:slug/configurations/:configurationId/print.svg', (req, res) => {
-    const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+  router.get('/events/:slug/configurations/:configurationId/print.svg', asyncRoute(async (req, res) => {
+    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).send('configuration not found');
     const product = resolveProductOrientation(
       getProduct(configuration.product_key),
@@ -1010,18 +1039,18 @@ function makeRouter({ io, port }) {
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(svg);
-  });
+  }));
 
-  router.post('/events/:slug/cart/checkout', express.json({ limit: '32kb' }), async (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.post('/events/:slug/cart/checkout', express.json({ limit: '32kb' }), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event_not_found' });
     const ids = normalizeConfigurationIdList(req.body?.configurationIds || req.body?.configuration_ids);
-    const configurations = db.getEventConfigurations(event.slug, ids);
+    const configurations = await db.getEventConfigurations(event.slug, ids);
     if (!ids.length || configurations.length !== ids.length) {
       return res.status(404).json({ error: 'configuration_not_found' });
     }
     const quoteId = typeof req.body?.quoteId === 'string' ? req.body.quoteId : '';
-    const storedQuote = db.getEventCartCheckoutQuote(event.slug, ids, quoteId);
+    const storedQuote = await db.getEventCartCheckoutQuote(event.slug, ids, quoteId);
     if (!storedQuote) {
       return res.status(404).json({
         error: 'quote_not_found',
@@ -1029,7 +1058,7 @@ function makeRouter({ io, port }) {
       });
     }
 
-    let order = db.getOrderByQuoteId(storedQuote.id);
+    let order = await db.getOrderByQuoteId(storedQuote.id);
     if (order?.status === 'checkout_pending' && order.stripe_checkout_url) {
       return res.json({ url: order.stripe_checkout_url, reused: true });
     }
@@ -1040,6 +1069,15 @@ function makeRouter({ io, port }) {
       });
     }
     if (order?.status === 'creating_checkout') {
+      try {
+        const recoveredSession = await attemptPersistedCheckout(order);
+        if (recoveredSession) return res.json({ url: recoveredSession.url, recovered: true });
+      } catch (error) {
+        if (error?.code === 'STRIPE_NOT_CONFIGURED') {
+          return res.status(501).json({ error: 'checkout_not_configured' });
+        }
+        console.error('Cart checkout recovery failed:', error.message);
+      }
       return res.status(409).json({
         error: 'checkout_in_progress',
         message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
@@ -1079,7 +1117,7 @@ function makeRouter({ io, port }) {
       }
 
       const changed = quoteAmountsDiffer(storedQuote, freshQuote);
-      const refreshedQuote = db.updateCheckoutQuote(storedQuote.id, {
+      const refreshedQuote = await db.updateCheckoutQuote(storedQuote.id, {
         shipments: pricedShipments,
         quote: freshQuote,
       });
@@ -1091,16 +1129,28 @@ function makeRouter({ io, port }) {
         });
       }
 
-      const orderResult = db.createCheckoutOrder({
+      const products = configurations.map((configuration) => resolveProductOrientation(
+        getProduct(configuration.product_key),
+        configuration.orientation
+      )).filter(Boolean);
+      const checkoutRequest = stripe.freezeCheckoutRequest({
+        products,
+        slug: event.slug,
+        configurationIds: configurations.map((configuration) => configuration.id),
+        quoteId: refreshedQuote.id,
+        quantity: freshQuote.quantity,
+        shipmentCount: pricedShipments.length,
+        baseUrl: getBaseUrl(req, port),
+        locale: I18n.normalizeLocale(req.body?.locale || event.locale),
+      });
+      const orderResult = await db.createCheckoutOrder({
         eventId: event.id,
         configurationId: configurations[0].id,
         quote: refreshedQuote,
         mode: stripe.getCheckoutMode(),
+        checkoutRequest,
       });
       order = orderResult.order;
-      if (!orderResult.created && order.status === 'checkout_failed') {
-        order = db.retryCheckoutOrder(order.id);
-      }
       if (!orderResult.created && order.status !== 'creating_checkout') {
         if (order.status === 'checkout_pending' && order.stripe_checkout_url) {
           return res.json({ url: order.stripe_checkout_url, reused: true });
@@ -1111,24 +1161,15 @@ function makeRouter({ io, port }) {
         });
       }
 
-      const session = await stripe.createCheckoutSession({
-        order,
-        products: configurations.map((configuration) => resolveProductOrientation(
-          getProduct(configuration.product_key),
-          configuration.orientation
-        )).filter(Boolean),
-        slug: event.slug,
-        configurationIds: configurations.map((configuration) => configuration.id),
-        quoteId: refreshedQuote.id,
-        quantity: freshQuote.quantity,
-        shipmentCount: pricedShipments.length,
-        baseUrl: getBaseUrl(req, port),
-        locale: I18n.normalizeLocale(req.body?.locale || event.locale),
-      });
-      db.attachStripeSession(order.id, session);
+      const session = await attemptPersistedCheckout(order);
+      if (!session) {
+        return res.status(409).json({
+          error: 'checkout_in_progress',
+          message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+        });
+      }
       return res.json({ url: session.url });
     } catch (error) {
-      if (order?.id) db.markCheckoutCreationFailed(order.id);
       if (error?.code === 'STRIPE_NOT_CONFIGURED') {
         return res.status(501).json({
           error: 'checkout_not_configured',
@@ -1145,7 +1186,7 @@ function makeRouter({ io, port }) {
         message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',
       });
     }
-  });
+  }));
 
   // Re-estimate from the saved address immediately before Stripe. The client
   // supplies only the opaque quote id; product, quantity, address and cents
@@ -1153,10 +1194,10 @@ function makeRouter({ io, port }) {
   router.post(
     '/events/:slug/configurations/:configurationId/checkout',
     express.json({ limit: '4kb' }),
-    async (req, res) => {
-      const event = db.getEventBySlug(req.params.slug);
+    asyncRoute(async (req, res) => {
+      const event = await db.getEventBySlug(req.params.slug);
       if (!event) return res.status(404).json({ error: 'event_not_found' });
-      const configuration = db.getEventConfiguration(req.params.slug, req.params.configurationId);
+      const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
       const product = resolveProductOrientation(
         getProduct(configuration.product_key),
@@ -1164,7 +1205,7 @@ function makeRouter({ io, port }) {
       );
       if (!product) return res.status(500).json({ error: 'configuration_invalid' });
       const quoteId = typeof req.body?.quoteId === 'string' ? req.body.quoteId : '';
-      const storedQuote = db.getEventCheckoutQuote(event.slug, configuration.id, quoteId);
+      const storedQuote = await db.getEventCheckoutQuote(event.slug, configuration.id, quoteId);
       if (!storedQuote) {
         return res.status(404).json({
           error: 'quote_not_found',
@@ -1175,7 +1216,7 @@ function makeRouter({ io, port }) {
       // A repeated click returns the same Stripe Session. No re-estimate is
       // necessary because this exact quote was already revalidated before
       // that Session was created.
-      let order = db.getOrderByQuoteId(storedQuote.id);
+      let order = await db.getOrderByQuoteId(storedQuote.id);
       if (order?.status === 'checkout_pending' && order.stripe_checkout_url) {
         return res.json({ url: order.stripe_checkout_url, reused: true });
       }
@@ -1186,6 +1227,15 @@ function makeRouter({ io, port }) {
         });
       }
       if (order?.status === 'creating_checkout') {
+        try {
+          const recoveredSession = await attemptPersistedCheckout(order);
+          if (recoveredSession) return res.json({ url: recoveredSession.url, recovered: true });
+        } catch (error) {
+          if (error?.code === 'STRIPE_NOT_CONFIGURED') {
+            return res.status(501).json({ error: 'checkout_not_configured' });
+          }
+          console.error('Dynamic checkout recovery failed:', error.message);
+        }
         return res.status(409).json({
           error: 'checkout_in_progress',
           message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
@@ -1231,7 +1281,7 @@ function makeRouter({ io, port }) {
         }
 
         const changed = quoteAmountsDiffer(storedQuote, freshQuote);
-        const refreshedQuote = db.updateCheckoutQuote(storedQuote.id, {
+        const refreshedQuote = await db.updateCheckoutQuote(storedQuote.id, {
           shipments: quotedShipments,
           quote: freshQuote,
         });
@@ -1243,16 +1293,24 @@ function makeRouter({ io, port }) {
           });
         }
 
-        const orderResult = db.createCheckoutOrder({
+        const checkoutRequest = stripe.freezeCheckoutRequest({
+          product,
+          slug: event.slug,
+          configurationId: configuration.id,
+          quoteId: refreshedQuote.id,
+          quantity: freshQuote.quantity,
+          shipmentCount: refreshedShipments.length,
+          baseUrl: getBaseUrl(req, port),
+          locale: I18n.normalizeLocale(req.body?.locale || event.locale),
+        });
+        const orderResult = await db.createCheckoutOrder({
           eventId: event.id,
           configurationId: configuration.id,
           quote: refreshedQuote,
           mode: stripe.getCheckoutMode(),
+          checkoutRequest,
         });
         order = orderResult.order;
-        if (!orderResult.created && order.status === 'checkout_failed') {
-          order = db.retryCheckoutOrder(order.id);
-        }
         if (!orderResult.created && order.status !== 'creating_checkout') {
           if (order.status === 'checkout_pending' && order.stripe_checkout_url) {
             return res.json({ url: order.stripe_checkout_url, reused: true });
@@ -1263,21 +1321,15 @@ function makeRouter({ io, port }) {
           });
         }
 
-        const session = await stripe.createCheckoutSession({
-          order,
-          product,
-          slug: event.slug,
-          configurationId: configuration.id,
-          quoteId: refreshedQuote.id,
-          quantity: freshQuote.quantity,
-          shipmentCount: refreshedShipments.length,
-          baseUrl: getBaseUrl(req, port),
-          locale: I18n.normalizeLocale(req.body?.locale || event.locale),
-        });
-        db.attachStripeSession(order.id, session);
+        const session = await attemptPersistedCheckout(order);
+        if (!session) {
+          return res.status(409).json({
+            error: 'checkout_in_progress',
+            message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+          });
+        }
         return res.json({ url: session.url });
       } catch (error) {
-        if (order?.id) db.markCheckoutCreationFailed(order.id);
         if (error?.code === 'STRIPE_NOT_CONFIGURED') {
           return res.status(501).json({
             error: 'checkout_not_configured',
@@ -1294,25 +1346,25 @@ function makeRouter({ io, port }) {
           message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',
         });
       }
-    }
+    })
   );
 
-  router.get('/events/:slug/orders/status', (req, res) => {
+  router.get('/events/:slug/orders/status', asyncRoute(async (req, res) => {
     res.set('Cache-Control', 'no-store');
     const sessionId = typeof req.query.session_id === 'string' ? req.query.session_id : '';
     if (!/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
       return res.status(400).json({ error: 'invalid_session' });
     }
-    const order = db.getEventOrderBySessionId(req.params.slug, sessionId);
+    const order = await db.getEventOrderBySessionId(req.params.slug, sessionId);
     if (!order) return res.status(404).json({ error: 'order_not_found' });
     const configurationIds = db.getOrderConfigurationIds(order);
-    const configurations = configurationIds.map((id) => db.getConfiguration(id)).filter(Boolean);
-    const configuration = configurations[0] || db.getConfiguration(order.configuration_id);
+    const configurations = (await Promise.all(configurationIds.map((id) => db.getConfiguration(id)))).filter(Boolean);
+    const configuration = configurations[0] || await db.getConfiguration(order.configuration_id);
     const products = configurations.map((entry) => getProduct(entry.product_key)).filter(Boolean);
     const product = products.length === 1 ? products[0] : null;
     const paymentConfirmed = ['paid_test', 'paid'].includes(order.status);
     const fulfillmentCreated = ['draft', 'submitted'].includes(order.fulfillment_status);
-    const orderShipments = db.getOrderShipments(order.id);
+    const orderShipments = await db.getOrderShipments(order.id);
     res.json({
       status: order.status,
       paymentConfirmed,
@@ -1333,17 +1385,17 @@ function makeRouter({ io, port }) {
       configurationType: configuration?.configuration_type || 'event_wordcloud',
       paidAt: order.paid_at,
     });
-  });
+  }));
 
   // Retain a clear response for clients of the former fixed-Price endpoint.
-  router.post('/events/:slug/checkout', express.json(), (req, res) => {
-    const event = db.getEventBySlug(req.params.slug);
+  router.post('/events/:slug/checkout', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event_not_found' });
     return res.status(410).json({
       error: 'quote_required',
       message: 'Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.',
     });
-  });
+  }));
 
   return router;
 }

@@ -105,7 +105,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   assert.equal(checkoutCalls, 1, 'double click must never create a second Stripe Session');
 
   const db = require('../src/db');
-  const order = db.getOrderBySessionId('cs_test_dynamic_1');
+  const order = await db.getOrderBySessionId('cs_test_dynamic_1');
   assert.equal(order.status, 'checkout_pending');
   assert.equal(order.quote_id, quote.id);
   assert.equal(order.payment_reserve_cents, quote.paymentReserveCents);
@@ -271,9 +271,9 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   assert.equal(capturedCheckout.shipmentCount, 1);
 
   const db = require('../src/db');
-  const order = db.getOrderBySessionId('cs_test_cart_1');
+  const order = await db.getOrderBySessionId('cs_test_cart_1');
   assert.deepEqual(JSON.parse(order.configuration_ids_json), [mug.id, coaster.id]);
-  const storedShipments = db.getOrderShipments(order.id);
+  const storedShipments = await db.getOrderShipments(order.id);
   assert.equal(storedShipments.length, 1);
   assert.deepEqual(JSON.parse(storedShipments[0].items_json), [
     { configurationId: mug.id, quantity: 1 },
@@ -317,8 +317,10 @@ test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
 
   const quote = await calculateQuote(baseUrl, event.slug, configuration.id);
   const db = require('../src/db');
-  db.db.prepare('UPDATE checkout_quotes SET expires_at = ? WHERE id = ?')
-    .run('2000-01-01T00:00:00.000Z', quote.id);
+  await db.getPool().query(
+    'UPDATE checkout_quotes SET expires_at = $1 WHERE id = $2',
+    ['2000-01-01T00:00:00.000Z', quote.id]
+  );
 
   const response = await fetch(
     `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/checkout`,

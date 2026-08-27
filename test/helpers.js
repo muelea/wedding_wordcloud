@@ -3,61 +3,109 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { Pool } = require('pg');
+
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+const INITIAL_DATABASE_URL = process.env.TEST_DATABASE_URL ||
+  process.env.MIGRATION_DATABASE_URL ||
+  process.env.DATABASE_URL;
+const APPLICATION_MIGRATION = path.join(
+  __dirname,
+  '..',
+  'supabase',
+  'migrations',
+  '20260827000001_application_schema.sql'
+);
+
+function clearApplicationModules() {
+  for (const modulePath of [
+    '../src/db',
+    '../src/routes/events',
+    '../src/routes/webhook',
+    '../src/fulfillment',
+    '../src/socket',
+    '../server',
+  ]) {
+    delete require.cache[require.resolve(modulePath)];
+  }
+}
 
 /**
- * Boots a fresh server instance backed by its own scratch SQLite file, on an
- * ephemeral port. Each test FILE gets its own process under `node --test`
- * (that's the test runner's default isolation model), so setting
- * process.env.DB_PATH before requiring server.js/db.js here is safe — no
- * cross-file DB collisions, and every call to startTestServer() within the
- * same file still shares one process-wide `node:sqlite` connection (module
- * caching), which is fine since each test creates its own uniquely-slugged
- * events rather than relying on a clean table.
+ * Boots one server against an isolated Postgres schema. Node's test runner
+ * gives each test file its own process; every server within that file gets a
+ * fresh random schema and applies the exact production application migration.
  */
-function startTestServer() {
-  const dbPath = path.join(__dirname, `.tmp-${crypto.randomBytes(6).toString('hex')}.sqlite`);
-  process.env.DB_PATH = dbPath;
+async function startTestServer() {
+  if (!INITIAL_DATABASE_URL) {
+    throw new Error('Tests require TEST_DATABASE_URL, MIGRATION_DATABASE_URL or DATABASE_URL.');
+  }
+  const schema = `test_${process.pid}_${crypto.randomBytes(6).toString('hex')}`;
+  const { connectionOptions } = require('../src/dbConfig');
+  const adminPool = new Pool(connectionOptions(INITIAL_DATABASE_URL, {
+    schema: 'public',
+    applicationName: `wolkenworte-test-setup-${process.pid}`,
+    requireDirect: false,
+  }));
+  const setupClient = await adminPool.connect();
+  try {
+    await setupClient.query(`CREATE SCHEMA "${schema}"`);
+    await setupClient.query(`SET search_path TO "${schema}", public`);
+    await setupClient.query(fs.readFileSync(APPLICATION_MIGRATION, 'utf8'));
+  } catch (error) {
+    try { await setupClient.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } catch { /* ignore */ }
+    throw error;
+  } finally {
+    setupClient.release();
+  }
+
+  process.env.NODE_ENV = 'test';
+  process.env.DATABASE_URL = INITIAL_DATABASE_URL;
+  process.env.DATABASE_SCHEMA = schema;
+  process.env.DATABASE_APPLICATION_NAME = `wolkenworte-test-${process.pid}`;
   process.env.ADMIN_TOKEN_SECRET = 'test-secret';
-  delete require.cache[require.resolve('../src/db')];
-  // These modules close over the db export at require-time. Rebind them to
-  // the fresh scratch database whenever this test file starts another server.
-  delete require.cache[require.resolve('../src/routes/events')];
-  delete require.cache[require.resolve('../src/routes/webhook')];
-  delete require.cache[require.resolve('../src/fulfillment')];
-  delete require.cache[require.resolve('../src/socket')];
-  delete require.cache[require.resolve('../server')];
+  clearApplicationModules();
 
-  const { server, io } = require('../server');
+  const { server, io, initialize } = require('../server');
+  const database = require('../src/db');
+  await initialize();
 
-  const cleanupFiles = () => {
-    for (const suffix of ['', '-journal', '-wal', '-shm']) {
-      try { fs.unlinkSync(dbPath + suffix); } catch { /* ignore */ }
-    }
-  };
-
-  return new Promise((resolve, reject) => {
-    const onListenError = (error) => {
-      cleanupFiles();
-      reject(error);
-    };
-    server.once('error', onListenError);
-    server.listen(0, '127.0.0.1', () => {
-      server.off('error', onListenError);
-      const { port } = server.address();
-      resolve({
-        port,
-        baseUrl: `http://127.0.0.1:${port}`,
-        server,
-        io,
-        dbPath,
-        async close() {
-          await new Promise((res) => io.close(() => res()));
-          await new Promise((res) => server.close(() => res()));
-          cleanupFiles();
-        },
+  try {
+    await new Promise((resolve, reject) => {
+      const onListenError = (error) => reject(error);
+      server.once('error', onListenError);
+      server.listen(0, '127.0.0.1', () => {
+        server.off('error', onListenError);
+        resolve();
       });
     });
-  });
+  } catch (error) {
+    await database.closePool();
+    await adminPool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    await adminPool.end();
+    throw error;
+  }
+
+  const { port } = server.address();
+  return {
+    port,
+    baseUrl: `http://127.0.0.1:${port}`,
+    server,
+    io,
+    schema,
+    async query(sql, params = []) {
+      return database.getPool().query(sql, params);
+    },
+    async close() {
+      await new Promise((resolve) => io.close(() => resolve()));
+      if (server.listening) {
+        await new Promise((resolve) => server.close(() => resolve()));
+      }
+      await database.closePool();
+      await adminPool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await adminPool.end();
+    },
+  };
 }
 
 let counter = 0;

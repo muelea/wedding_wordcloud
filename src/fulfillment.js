@@ -181,8 +181,8 @@ function buildPrintfulPayload({
   );
   const items = shipmentItems.length
     ? shipmentItems.map((item, index) => {
-        const itemConfiguration = configurationById.get(item.configurationId) ||
-          db.getConfiguration(item.configurationId);
+      const itemConfiguration = configurationById.get(item.configurationId) ||
+          null;
         if (!itemConfiguration) throw new Error('Eine gespeicherte Bestellkonfiguration wurde nicht gefunden.');
         return buildPrintfulItem({
           order,
@@ -222,20 +222,22 @@ function parseStoredPayload(value) {
 
 async function processOrder(orderId) {
   if (activeOrders.has(orderId)) return db.getOrderById(orderId);
-  const order = db.claimFulfillmentOrder(orderId);
+  const order = await db.claimFulfillmentOrder(orderId);
   if (!order) return db.getOrderById(orderId);
   activeOrders.add(orderId);
 
   try {
-    const event = db.getEventById(order.event_id);
-    const configurations = db.getOrderConfigurationIds(order).map((id) => db.getConfiguration(id));
-    const configuration = configurations[0] || db.getConfiguration(order.configuration_id);
+    const event = await db.getEventById(order.event_id);
+    const configurations = await Promise.all(
+      db.getOrderConfigurationIds(order).map((id) => db.getConfiguration(id))
+    );
+    const configuration = configurations[0] || await db.getConfiguration(order.configuration_id);
     if (!event || !configuration || configurations.some((entry) => !entry)) {
       throw new Error('Bestellkonfiguration wurde nicht gefunden.');
     }
 
     const mode = resolveMode(order);
-    const orderShipments = db.getOrderShipments(order.id);
+    const orderShipments = await db.getOrderShipments(order.id);
     if (orderShipments.length > 0) {
       const completedStatuses = new Set(['mocked', 'draft', 'submitted']);
       const completedModes = [];
@@ -257,7 +259,7 @@ async function processOrder(orderId) {
         });
         try {
           if (mode === 'mock') {
-            db.completeOrderShipment(shipment.id, {
+            await db.completeOrderShipment(shipment.id, {
               mode,
               payload,
               printfulOrderId: orderShipments.length > 1
@@ -274,7 +276,7 @@ async function processOrder(orderId) {
             confirm: mode === 'live',
           });
           const completedMode = result.mocked ? 'mock' : mode;
-          db.completeOrderShipment(shipment.id, {
+          await db.completeOrderShipment(shipment.id, {
             mode: completedMode,
             payload,
             printfulOrderId: result.printfulOrderId,
@@ -282,12 +284,12 @@ async function processOrder(orderId) {
           });
           completedModes.push(completedMode);
         } catch (error) {
-          db.failOrderShipment(shipment.id, error);
+          await db.failOrderShipment(shipment.id, error);
           throw error;
         }
       }
 
-      const finalShipments = db.getOrderShipments(order.id);
+      const finalShipments = await db.getOrderShipments(order.id);
       const payload = {
         shipments: finalShipments
           .map((shipment) => parseStoredPayload(shipment.fulfillment_payload_json))
@@ -339,7 +341,7 @@ async function processOrder(orderId) {
     });
   } catch (error) {
     const blocked = error?.code === 'FULFILLMENT_BLOCKED';
-    const failed = db.failFulfillment(order.id, error, { blocked });
+    const failed = await db.failFulfillment(order.id, error, { blocked });
     console.error(`[fulfillment:${blocked ? 'blocked' : 'failed'}] order ${order.id}:`, error.message);
     if (!blocked && Number(failed.fulfillment_attempts) < MAX_ATTEMPTS) {
       const delay = RETRY_DELAYS_MS[Math.max(0, Number(failed.fulfillment_attempts) - 1)] || 30_000;
@@ -360,9 +362,9 @@ function scheduleOrder(orderId) {
   });
 }
 
-function resumePendingOrders() {
-  db.recoverStaleFulfillments();
-  const orders = db.getPendingFulfillmentOrders(20);
+async function resumePendingOrders() {
+  await db.recoverStaleFulfillments();
+  const orders = await db.getPendingFulfillmentOrders(20);
   for (const order of orders) scheduleOrder(order.id);
   return orders.length;
 }

@@ -410,7 +410,7 @@ test('configurator exposes every curated product with verified Printful geometry
     });
     assert.equal(saveResponse.status, 201);
     const saved = await saveResponse.json();
-    const stored = db.getConfiguration(saved.id);
+    const stored = await db.getConfiguration(saved.id);
     assert.equal(stored.product_key, expected.key);
     assert.equal(Number(stored.printful_variant_id), expected.variantId);
     assert.equal(Number(stored.print_width), expected.width);
@@ -434,7 +434,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.equal(landscapeSave.status, 201);
   const landscapeConfiguration = await landscapeSave.json();
   assert.equal(landscapeConfiguration.orientation, 'landscape');
-  const storedLandscape = db.getConfiguration(landscapeConfiguration.id);
+  const storedLandscape = await db.getConfiguration(landscapeConfiguration.id);
   assert.equal(storedLandscape.orientation, 'landscape');
   assert.equal(Number(storedLandscape.printful_variant_id), 8948,
     'orientation must not create a different priced Printful variant');
@@ -891,7 +891,11 @@ test('configurations require the exact canvas and store no placement state', asy
   assert.equal(Object.hasOwn(configuration, 'placement'), false);
 
   const db = require('../src/db');
-  const columns = db.db.prepare('PRAGMA table_info(configurations)').all().map((column) => column.name);
+  const columns = (await db.getPool().query(`
+    SELECT column_name AS name
+    FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'configurations'
+  `)).rows.map((column) => column.name);
   assert.equal(columns.includes('placement'), false);
   const svg = await fetch(baseUrl + configuration.printFileUrl).then((res) => res.text());
   assert.doesNotMatch(svg, /data-cloud=/);

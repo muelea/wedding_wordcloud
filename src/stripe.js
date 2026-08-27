@@ -58,6 +58,54 @@ function notConfiguredError() {
   return error;
 }
 
+function freezeProduct(product) {
+  if (!product) return null;
+  return {
+    key: String(product.key || ''),
+    name: String(product.name || ''),
+    unit: {
+      singular: String(product.unit?.singular || 'Produkt'),
+      plural: String(product.unit?.plural || 'Produkte'),
+    },
+    size: { label: String(product.size?.label || '') },
+  };
+}
+
+/**
+ * Persist only the deterministic, non-secret inputs used to construct a
+ * Stripe Session. A retry after an ambiguous provider response must use this
+ * exact snapshot together with the original idempotency key.
+ */
+function freezeCheckoutRequest({
+  product = null,
+  products = null,
+  slug,
+  configurationId = null,
+  configurationIds = null,
+  quoteId,
+  quantity,
+  shipmentCount = 1,
+  baseUrl,
+  locale = I18n.DEFAULT_LOCALE,
+}) {
+  const frozenProducts = (Array.isArray(products) && products.length ? products : [product])
+    .map(freezeProduct)
+    .filter(Boolean);
+  const ids = (Array.isArray(configurationIds) && configurationIds.length
+    ? configurationIds
+    : [configurationId]).filter(Boolean).map(String);
+  return {
+    products: frozenProducts,
+    slug: String(slug || ''),
+    configurationIds: ids,
+    quoteId: String(quoteId || ''),
+    quantity: Number(quantity),
+    shipmentCount: Number(shipmentCount),
+    baseUrl: String(baseUrl || ''),
+    locale: I18n.normalizeLocale(locale),
+  };
+}
+
 /**
  * Create a Stripe-hosted Checkout Session from an already persisted order.
  * The browser never supplies the amount.
@@ -125,6 +173,19 @@ async function createCheckoutSession({
     : `${baseUrl}/e/${encodedSlug}/shipping?configuration=${encodedConfiguration}` +
       `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`;
 
+  const expiresAt = Math.floor(Date.parse(order?.checkout_session_expires_at || '') / 1000);
+  if (!Number.isSafeInteger(expiresAt)) {
+    const error = new Error('Die gespeicherte Stripe-Ablaufzeit ist ungültig.');
+    error.code = 'STRIPE_INVALID_CHECKOUT_REQUEST';
+    throw error;
+  }
+  const idempotencyKey = String(order?.stripe_idempotency_key || '');
+  if (!idempotencyKey) {
+    const error = new Error('Der gespeicherte Stripe-Idempotenzschlüssel fehlt.');
+    error.code = 'STRIPE_INVALID_CHECKOUT_REQUEST';
+    throw error;
+  }
+
   const session = await client.checkout.sessions.create({
     mode: 'payment',
     locale: checkoutLocale,
@@ -150,8 +211,9 @@ async function createCheckoutSession({
     payment_intent_data: { metadata },
     success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
+    expires_at: expiresAt,
   }, {
-    idempotencyKey: `weddingcloud-${checkoutMode}-order-${order.id}`,
+    idempotencyKey,
   });
 
   return { url: session.url, id: session.id };
@@ -174,6 +236,7 @@ module.exports = {
   isConfigured,
   isLiveModeAllowed,
   getCheckoutMode,
+  freezeCheckoutRequest,
   createCheckoutSession,
   constructWebhookEvent,
 };

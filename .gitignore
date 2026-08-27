@@ -5,3 +5,5 @@ data/*.sqlite-wal
 data/*.sqlite-shm
 .env
 *.log
+supabase/.branches/
+supabase/.temp/

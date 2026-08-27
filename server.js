@@ -15,6 +15,8 @@ const { makeWebhookRouter } = require('./src/routes/webhook');
 const { getBaseUrl } = require('./src/baseUrl');
 const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
+const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
+const { validateRuntimeConfig } = require('./src/runtimeConfig');
 
 const PORT = process.env.PORT || 3000;
 
@@ -77,36 +79,36 @@ app.get('/datenschutz', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'datenschutz.html'));
 });
 
-app.get('/e/:slug', (req, res) => {
-  const event = db.getEventBySlug(req.params.slug);
+app.get('/e/:slug', asyncRoute(async (req, res) => {
+  const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   res.sendFile(path.join(__dirname, 'public', 'guest.html'));
-});
+}));
 
-app.get('/e/:slug/display', (req, res) => {
-  const event = db.getEventBySlug(req.params.slug);
+app.get('/e/:slug/display', asyncRoute(async (req, res) => {
+  const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   res.sendFile(path.join(__dirname, 'public', 'display.html'));
-});
+}));
 
-app.get('/e/:slug/configure', (req, res) => {
-  const event = db.getEventBySlug(req.params.slug);
+app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
+  const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   res.sendFile(path.join(__dirname, 'public', 'configure.html'));
-});
+}));
 
-app.get('/e/:slug/shipping', (req, res) => {
-  const event = db.getEventBySlug(req.params.slug);
+app.get('/e/:slug/shipping', asyncRoute(async (req, res) => {
+  const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   res.sendFile(path.join(__dirname, 'public', 'shipping.html'));
-});
+}));
 
-app.get('/e/:slug/order-confirmation', (req, res) => {
-  const event = db.getEventBySlug(req.params.slug);
+app.get('/e/:slug/order-confirmation', asyncRoute(async (req, res) => {
+  const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   res.set('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'public', 'order-confirmation.html'));
-});
+}));
 
 // Legacy live-event SVG export used by the display/download flow. Paid mug
 // orders use the immutable configuration-specific route under /api instead,
@@ -116,27 +118,46 @@ app.get('/e/:slug/order-confirmation', (req, res) => {
 // words — see src/exportSvg.js) rather than cached to disk: the word list
 // can keep growing right up to checkout, and regenerating per-request means
 // there's never a stale file to invalidate.
-app.get('/e/:slug/export.svg', (req, res) => {
-  const event = db.getEventBySlug(req.params.slug);
+app.get('/e/:slug/export.svg', asyncRoute(async (req, res) => {
+  const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).send('event not found');
-  const words = db.getWords(event.id);
+  const words = await db.getWords(event.id);
   if (!words.length) return res.status(404).send('no words submitted yet');
   const svg = layoutForExport(words, event.theme);
   res.set('Content-Type', 'image/svg+xml; charset=utf-8');
   res.send(svg);
-});
+}));
 
 attachSocketHandlers(io);
 
 // Resume paid orders that were safely persisted before a restart. Claiming
 // in the database prevents duplicate processing when a Stripe retry arrives
 // at the same time.
-server.on('listening', () => {
-  const resumed = fulfillment.resumePendingOrders();
-  if (resumed) console.log(`[fulfillment] ${resumed} wartende Bestellung(en) wieder aufgenommen.`);
+server.on('listening', async () => {
+  if (process.env.NODE_ENV === 'test') return;
+  try {
+    const resumed = await fulfillment.resumePendingOrders();
+    if (resumed) console.log(`[fulfillment] ${resumed} wartende Bestellung(en) wieder aufgenommen.`);
+  } catch (error) {
+    console.error('[fulfillment] pending-order recovery failed:', error.message);
+  }
 });
 
-if (require.main === module) {
+// Rejected async route promises end here. SQL text, credentials and driver
+// errors are logged server-side and never sent to a browser.
+app.use(sanitizedErrorHandler);
+
+let initialization = null;
+function initialize() {
+  if (!initialization) {
+    validateRuntimeConfig();
+    initialization = db.assertDatabaseReady();
+  }
+  return initialization;
+}
+
+async function start() {
+  await initialize();
   server.listen(PORT, () => {
     const base = getBaseUrl(null, PORT);
     console.log('\n  ♡  WeddingCloud is running!\n');
@@ -145,4 +166,25 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, server, io };
+async function shutdown(signal) {
+  console.log(`[server] ${signal} received; closing HTTP and Postgres cleanly.`);
+  await new Promise((resolve) => server.close(() => resolve()));
+  await db.closePool();
+}
+
+if (require.main === module) {
+  start().catch((error) => {
+    console.error('[startup] Wolkenworte could not start:', error.message);
+    process.exitCode = 1;
+  });
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.once(signal, () => {
+      shutdown(signal).catch((error) => {
+        console.error('[shutdown] clean shutdown failed:', error.message);
+        process.exitCode = 1;
+      });
+    });
+  }
+}
+
+module.exports = { app, server, io, initialize, start, shutdown };

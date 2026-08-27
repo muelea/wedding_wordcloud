@@ -4,13 +4,14 @@ const express = require('express');
 const db = require('../db');
 const stripeIntegration = require('../stripe');
 const fulfillment = require('../fulfillment');
+const { asyncRoute } = require('../asyncRoute');
 
 // Mounted before express.json() in server.js. Stripe signature verification
 // requires the exact raw bytes, so this route owns its raw body parser.
 function makeWebhookRouter() {
   const router = express.Router();
 
-  router.post('/stripe', express.raw({ type: 'application/json' }), (req, res) => {
+  router.post('/stripe', express.raw({ type: 'application/json' }), asyncRoute(async (req, res) => {
     let event;
     try {
       event = stripeIntegration.constructWebhookEvent(req.body, req.get('stripe-signature'));
@@ -37,17 +38,29 @@ function makeWebhookRouter() {
     }
 
     const session = event.data.object;
-    const order = db.getOrderBySessionId(session.id);
+    const metadata = session.metadata || {};
+    let order = await db.getOrderBySessionId(session.id);
+    // Stripe may have accepted the idempotent create while the process died
+    // before persisting the Session id. Signed metadata can locate the one
+    // frozen candidate, but it still has to pass every trusted-order check.
+    if (!order && /^\d+$/.test(String(metadata.orderId || '')) && metadata.quoteId) {
+      const candidate = await db.getOrderById(metadata.orderId);
+      if (candidate?.quote_id === metadata.quoteId && !candidate.stripe_session_id) {
+        order = candidate;
+      }
+    }
     if (!order) {
       console.warn(`[webhook:stripe] completed unknown Checkout Session ${session.id}`);
       return res.json({ received: true, ignored: 'order_not_found' });
     }
 
-    const metadata = session.metadata || {};
     const eventMode = event.livemode ? 'live' : 'test';
+    const expectedConfigurationIds = db.getOrderConfigurationIds(order).join(',');
     const metadataMatches = metadata.orderId === String(order.id) &&
       metadata.quoteId === order.quote_id &&
       metadata.configurationId === order.configuration_id &&
+      metadata.configurationIds === expectedConfigurationIds &&
+      metadata.eventSlug === order.event_slug_snapshot &&
       metadata.checkoutMode === eventMode &&
       order.mode === eventMode;
     const amountMatches = Number(session.amount_total) === Number(order.total_cents) &&
@@ -63,12 +76,18 @@ function makeWebhookRouter() {
     }
 
     try {
-      const result = db.recordSuccessfulPayment({
+      const result = await db.recordSuccessfulPayment({
         stripeEventId: event.id,
         eventType: event.type,
         stripeSessionId: session.id,
         paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
         livemode: Boolean(event.livemode),
+        orderId: order.id,
+        quoteId: metadata.quoteId,
+        amountTotal: session.amount_total,
+        currency: session.currency,
+        paymentStatus: session.payment_status,
+        buyerEmail: session.customer_details?.email,
       });
       if (result.order?.id) fulfillment.scheduleOrder(result.order.id);
       if (!result.duplicate) {
@@ -83,7 +102,7 @@ function makeWebhookRouter() {
       // A temporary database error should be retried by Stripe.
       return res.status(500).send('could not persist payment');
     }
-  });
+  }));
 
   return router;
 }
