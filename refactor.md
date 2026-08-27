@@ -196,6 +196,8 @@ Add only the dependencies needed for the selected approach:
 - `pg` for Postgres access;
 - `@supabase/supabase-js` for private Storage operations;
 - `resend` for transactional customer email;
+- `sharp` for bounded server-side image decoding, dimension validation and
+  metadata-stripping normalization;
 - a small established Express rate-limit package if preferred over a local
   middleware implementation.
 
@@ -233,7 +235,10 @@ Rules:
   secrets. Neither is reused as a Stripe, Storage, PIN, or database credential.
 - `ALLOW_TEST_DATA_RESET` is absent or `false` everywhere except the temporary
   hosted-test cleanup window; it is never enabled in live operation.
-- Hosted secrets belong in Fly secrets. Local secrets remain in `.env`.
+- Hosted runtime secrets belong in Fly secrets. `MIGRATION_DATABASE_URL` is the
+  exception: store it only in the CI/deployment system's secret store and never
+  configure it as a Fly application secret, because Fly application secrets are
+  available to ordinary web Machines. Local secrets remain in `.env`.
 - Keep all existing Stripe and Printful safety variables.
 - `EMAIL_DELIVERY_MODE` is `mock` or `live` and defaults to `mock`. A Stripe
   test payment always produces a mocked email result even if the hosted
@@ -325,6 +330,11 @@ changes:
   because a Postgres column default cannot reference another column;
 - allow retained paid orders to outlive events; make `orders.event_id`
   nullable and use `ON DELETE SET NULL`, not `ON DELETE CASCADE`;
+- allow immutable configurations required by retained paid order items to
+  outlive events; make `configurations.event_id` nullable with `ON DELETE
+  RESTRICT`, not cascade. Expiration cleanup explicitly deletes unpaid
+  configurations and explicitly sets retained paid configurations' `event_id`
+  to null before deleting the event;
 - store an `event_slug_snapshot` and any customer-facing event label needed by
   a retained order so order support does not require the event row;
 - retain unique constraints on event slug, `(event_id, word)`, Stripe Session,
@@ -430,7 +440,7 @@ Add a `design_assets` table with at least:
 
 ```text
 id                    opaque random text primary key
-event_id              event foreign key with restricted deletion
+event_id              nullable event foreign key with restricted deletion
 uploader_owner_id     anonymous guest/event owner identifier
 object_key            unique text
 mime_type             validated JPEG, PNG, or WebP
@@ -452,10 +462,13 @@ asset_id              design asset foreign key with restrict deletion
 primary key (configuration_id, asset_id)
 ```
 
-`design_assets.event_id` must use `ON DELETE RESTRICT`, not cascade. Event
-cleanup explicitly removes unreferenced Storage objects and their metadata
-before deleting the event, preventing a database cascade from orphaning bytes
-in the private bucket.
+`design_assets.event_id` is nullable and must use `ON DELETE RESTRICT`, not
+cascade. Event cleanup explicitly removes unreferenced Storage objects and
+their metadata before deleting the event. Assets referenced by a configuration
+that must survive for a retained paid order are explicitly detached by setting
+their `event_id` to null under the same locked cleanup operation. Only then may
+the event be deleted. This prevents both database cascades that orphan bytes
+and foreign-key references that would otherwise keep expired events forever.
 
 An immutable configuration stores asset IDs in `design_json`, never a data URL
 or raw image bytes. Multiple configuration revisions may reference the same
@@ -473,19 +486,24 @@ POST /api/events/:slug/assets
 Required behavior:
 
 1. accept only a bounded JSON body for one reduced image;
-2. decode server-side;
+2. decode the base64 payload server-side;
 3. validate actual JPEG, PNG, or WebP magic bytes;
-4. enforce the existing browser source and server decoded-size rules;
-5. calculate SHA-256 and byte size;
-6. create a metadata row with an unguessable event-scoped object key and
+4. use a bounded server-side image decoder to prove that the file is valid,
+   reject a longest side above 1,600 pixels or more than 2,560,000 total pixels,
+   and never trust the browser-side reduction as the enforcement boundary;
+5. normalize/re-encode the accepted image before Storage, preserving
+   transparency where applicable and stripping metadata;
+6. enforce the existing browser source and server decoded-file-size rules;
+7. calculate SHA-256 and byte size from the normalized stored bytes;
+8. create a metadata row with an unguessable event-scoped object key and
    `storage_status=uploading` before making the non-transactional Storage call;
-7. upload the object, then atomically mark the row `active` with its 30-day
+9. upload the object, then atomically mark the row `active` with its 30-day
    expiry;
-8. if upload/finalization fails, retain a discoverable cleanup row rather than
+10. if upload/finalization fails, retain a discoverable cleanup row rather than
    losing the object key; never leave an untracked Storage object;
-9. return only the opaque asset ID and a short-lived preview URL after the row
+11. return only the opaque asset ID and a short-lived preview URL after the row
    is active;
-10. never return a Supabase secret key or permanent public object URL.
+12. never return a Supabase secret key or permanent public object URL.
 
 At configuration creation, the server must validate that:
 
@@ -523,6 +541,14 @@ bounded batch synchronously before returning, and expose no cleanup details to
 unauthenticated callers. Calling the public Fly hostname intentionally wakes a
 scaled-to-zero Machine. Cron run failures and maintenance failures must remain
 visible to monitoring.
+
+`pg_net` is asynchronous, so a successful Supabase Cron invocation proves only
+that the HTTP request was queued, not that Fly received it or that maintenance
+completed. Persist a small `maintenance_runs` record or equivalent heartbeat
+with start time, completion time and sanitized outcome. Monitoring must alert
+when no successful completion occurs within two expected Cron intervals and
+must also surface `pg_net` timeout/non-2xx response results. Do not put target
+IDs, object keys, addresses or other customer data in these run records.
 
 Store the Cron caller's copy of `MAINTENANCE_SECRET` in Supabase Vault or an
 equivalent hosted secret facility. Migrations may refer to the Vault secret by
@@ -586,7 +612,11 @@ Keep expiration invisible and simple to users.
   words, contributions, archives, unpaid quotes, unpaid configurations, and
   unreferenced photo assets.
 - Paid orders and required commerce records survive through nullable
-  `orders.event_id`, snapshots, and non-cascading retention.
+  `orders.event_id`, snapshots, and non-cascading retention. Before deleting an
+  event, cleanup explicitly sets `event_id` to null on configurations referenced
+  by retained order items and on assets referenced by those surviving
+  configurations. This detachment and the deletion eligibility checks occur
+  under the same locks used to prevent cleanup-versus-order races.
 - Do not reuse an expired slug for another event. Keep a small slug tombstone
   table if deleting the event row would otherwise make reuse possible.
 
@@ -681,6 +711,12 @@ Normalize IPv4 and IPv6 representations. Do not let an arbitrary
 `X-Forwarded-For` value control rate limiting, and replace the current blanket
 `app.set('trust proxy', true)` with an explicit trusted-proxy policy before
 depending on `req.ip`.
+
+For rate-limit identity, use the complete normalized IPv4 address but mask IPv6
+addresses to their `/64` network prefix before applying the HMAC. This prevents
+ordinary IPv6 privacy-address rotation within one assigned network from
+bypassing the source limits. Store only the resulting HMAC, never either raw
+address representation.
 
 Hash IP addresses with an environment-secret HMAC before durable storage. Do
 not retain raw IP addresses for rate limiting. Clean expired buckets.
@@ -869,7 +905,7 @@ subject               text snapshot
 html_body             text snapshot
 text_body             text snapshot
 status                pending, processing, sent, delivered, bounced,
-                      failed or blocked
+                      complained, failed or blocked
 provider_message_id   nullable unique text
 attempt_count         integer
 next_attempt_at       timestamptz
@@ -881,6 +917,7 @@ last_error            nullable sanitized text
 sent_at               nullable timestamptz
 delivered_at          nullable timestamptz
 bounced_at            nullable timestamptz
+complained_at         nullable timestamptz
 created_at            timestamptz
 updated_at            timestamptz
 ```
@@ -941,9 +978,11 @@ at-least-once deliveries by the Resend `svix-id` header. Resolve the email job
 by the stored `provider_message_id` or the non-PII email-job tag, then use sent,
 delivered, bounced, failed and complained events to reconcile the job and raise
 appropriate alerts. Webhook transitions must tolerate retries and out-of-order
-delivery without moving a terminal failure state backward. Do not track opens
-or clicks for these required transactional messages. Do not add newsletters,
-marketing consent or contact-list functionality.
+delivery without moving a terminal failure state backward. `complained` is a
+terminal status, records `complained_at` and alerts support; it never transitions
+back to sent or delivered. Do not track opens or clicks for these required
+transactional messages. Do not add newsletters, marketing consent or
+contact-list functionality.
 
 Tests must prove that duplicate Stripe, Printful and Resend events cannot create
 duplicate jobs or provider requests; an accepted send with a lost API response
@@ -1064,10 +1103,15 @@ The deployment workflow must:
 
 1. build and test the candidate image;
 2. apply pending migrations with `MIGRATION_DATABASE_URL` through a dedicated
-   migration step outside the web process;
+   CI/deployment-runner step outside the web process;
 3. abort if migration application or migration-version verification fails;
 4. deploy the application image;
 5. require `/health/ready` and a sanitized smoke test to pass.
+
+Do not implement step 2 as a Fly `release_command` backed by a Fly application
+secret: Fly application secrets are also available to ordinary web Machines.
+The deployment runner receives `MIGRATION_DATABASE_URL`; the Fly application
+receives only the least-privileged runtime `DATABASE_URL`.
 
 Do not bake database or Supabase credentials into the image. Validate Fly
 configuration strictly so misspelled lifecycle or health-check settings cannot
@@ -1080,6 +1124,8 @@ The initial hosted test configuration uses:
 
 ```toml
 primary_region = "fra"
+kill_signal = "SIGTERM"
+kill_timeout = "30s"
 
 [http_service]
   internal_port = 8080
@@ -1092,6 +1138,10 @@ primary_region = "fra"
 Use service health checks against `/health/ready`. Configure connection-based
 concurrency deliberately because Socket.io maintains long-lived connections;
 final soft/hard limits come from load testing, not copied defaults.
+
+Keep the explicit 30-second `kill_timeout`: it gives the 15-second bounded
+maintenance handler and ordinary graceful shutdown enough time to checkpoint
+claimed work before Fly terminates the process.
 
 Before live launch, change only the availability baseline to at least:
 
@@ -1257,7 +1307,9 @@ These are release-blocking. Do not weaken them to make the refactor easier.
 4. Unknown and foreign receipts remain indistinguishable.
 5. Personal-memory designs never inherit event words.
 6. Personal image validation uses decoded bytes and magic signatures, not MIME
-   claims or filename extensions.
+   claims or filename extensions. The server also proves the image decodes,
+   enforces the 1,600-pixel/2,560,000-pixel bounds and stores normalized bytes;
+   browser-side resizing is never the security boundary.
 7. An immutable paid design cannot change when later edits or submissions occur.
 8. The browser never controls price, Printful variant, fulfillment URL, order
    status, or trusted quantity.
@@ -1289,6 +1341,12 @@ These are release-blocking. Do not weaken them to make the refactor easier.
     blocked and is never blindly resent with a new key.
 24. Transactional email failure never loses or rolls back payment and never
     blocks fulfillment; it remains retryable or becomes visibly blocked.
+25. The privileged migration credential is never available to an ordinary Fly
+    web Machine; the runtime role cannot create or alter schema objects.
+26. Retained paid configurations and their required photo assets are explicitly
+    detached before event deletion and never disappear through a cascade.
+27. A queued Cron HTTP request is not treated as completed maintenance; a
+    persisted successful-run heartbeat must remain fresh and monitorable.
 
 ## Verification and acceptance criteria
 
@@ -1309,6 +1367,7 @@ The final refactor is accepted only when all of the following are true:
 - all existing behavioral tests pass after conversion to Postgres;
 - the runtime database role cannot create/alter schema objects and hosted
   deployment applies migrations before the incompatible application version;
+  `MIGRATION_DATABASE_URL` is absent from the ordinary Fly web Machine;
 - isolation tests still prove no cross-event word or theme traffic;
 - theme changes remain strictly event-scoped and require no PIN or admin
   session;
@@ -1338,13 +1397,17 @@ The final refactor is accepted only when all of the following are true:
 - exhausted email retries alert support while the paid fulfillment job remains
   independently processable;
 - personal configuration JSON contains asset IDs and no `data:image/...` bytes;
+- malformed images and images above the server-side dimension or pixel limits
+  are rejected before Storage, even when submitted outside the browser UI;
 - saving five revisions with the same photos stores one copy of each photo;
 - foreign-event asset IDs are rejected;
 - assets marked `uploading`, `deleting` or `delete_failed` cannot be attached
   to a new configuration;
 - expired signed preview URLs do not make stored configurations invalid;
 - expired events behave like unknown events;
-- expiring an event leaves its paid order/support data intact;
+- expiring an event leaves its paid order/support data intact, detaches retained
+  paid configurations/assets and does not leave the expired event blocked by a
+  foreign-key reference;
 - every retained paid item has a normalized order-item snapshot and no paid
   retention rule depends only on an ID stored inside JSON;
 - unpaid personal assets are removed after their TTL when unreferenced;
@@ -1359,7 +1422,8 @@ The final refactor is accepted only when all of the following are true:
 - configured rate limits return stable, localized-safe errors without leaking
   whether a PIN or private resource exists;
 - source-IP limiting ignores spoofed forwarded headers and shared-venue NAT
-  traffic remains within the documented generous secondary ceilings;
+  traffic remains within the documented generous secondary ceilings; IPv6
+  addresses that differ only in host bits within one `/64` use the same bucket;
 - event-wide contribution, unique-word and socket ceilings are enforced
   atomically enough that concurrent requests cannot materially exceed them;
 - event-wide unpaid asset byte/count and configuration-revision ceilings reject
@@ -1371,12 +1435,19 @@ The final refactor is accepted only when all of the following are true:
 - the installed Supabase Cron request explicitly uses a 30-second `pg_net`
   timeout and the maintenance handler stops or checkpoints work within its
   15-second budget, including after a hosted cold start;
+- maintenance records a successful completion heartbeat, a simulated queued
+  request with no successful HTTP completion does not refresh it, and stale
+  heartbeats plus `pg_net` timeout/non-2xx results reach monitoring;
 - an unauthenticated maintenance request performs no work, and the Cron secret
   is absent from migrations, application logs and ordinary HTTP logs;
 - forced restart during fulfillment resumes without duplicate external work;
 - an expired fulfillment lease is recoverable and a stale lease owner cannot
   overwrite the successful retry result;
 - unversioned application JavaScript no longer receives immutable caching;
+- Fly configuration retains `SIGTERM` with a 30-second `kill_timeout`, and a
+  shutdown test proves claimed work is completed or safely checkpointed;
+- a signed Resend complaint event produces one terminal `complained` transition
+  and cannot be moved backward by an out-of-order delivery event;
 - print font metrics and generated artifacts match local expected output;
 - the documented 2,000-socket load test meets the agreed latency/error target
   established before the test, including the hot-room and reconnect-storm
