@@ -501,44 +501,21 @@
 
   document.getElementById('export-hint').addEventListener('click', exportSVG);
 
-  // ── Admin PIN gate (once per browser session) ────────────────────────────
-  function adminTokenKey() { return `admin-token:${slug}`; }
-
-  async function getAdminToken() {
-    const cached = sessionStorage.getItem(adminTokenKey());
-    if (cached) return cached;
-    const pin = prompt(t('Admin-PIN eingeben, um die Wortwolke zurückzusetzen:'));
-    if (!pin) return null;
-    try {
-      const res = await fetch(`/api/events/${encodeURIComponent(slug)}/admin/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
-      if (!res.ok) { alert(t('Falscher PIN.')); return null; }
-      const { token } = await res.json();
-      sessionStorage.setItem(adminTokenKey(), token);
-      return token;
-    } catch {
-      alert(t('Verbindung fehlgeschlagen.'));
-      return null;
-    }
-  }
-
   // ── New session (archive current words on the server, then clear) ───────
   async function startNewSession() {
     if (!currentWords.length) return;
     if (!confirm(t('Aktuelle Wörter archivieren und eine neue Runde starten?'))) return;
-    const token = await getAdminToken();
-    if (!token) return;
+    const pin = prompt(t('Admin-PIN eingeben, um die Wortwolke zurückzusetzen:'));
+    if (!pin) return;
     const res = await fetch(`/api/events/${encodeURIComponent(slug)}/reset`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin }),
     }).catch(() => null);
-    if (res && res.status === 401) {
-      sessionStorage.removeItem(adminTokenKey());
-      alert(t('PIN abgelaufen oder falsch — bitte erneut versuchen.'));
-    }
+    if (!res) return alert(t('Verbindung fehlgeschlagen.'));
+    if (res.status === 401) return alert(t('Falscher PIN.'));
+    if (res.status === 429) return alert(t('Zu viele Versuche. Bitte wartet 15 Minuten.'));
+    if (!res.ok) alert(t('Verbindung fehlgeschlagen.'));
   }
 
   document.getElementById('clear-hint').addEventListener('click', startNewSession);

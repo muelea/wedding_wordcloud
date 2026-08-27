@@ -390,6 +390,7 @@
     const slug = pathParts[1];
     const query = new URLSearchParams(location.search);
     const t = (source, params) => WolkenworteI18n.t(source, params);
+    const guestId = getOrCreateGuestId();
     const configurationId = query.get('configuration');
     const configurationIds = [
       ...(query.get('configurations') || '').split(','),
@@ -414,6 +415,19 @@
     let configuration = null;
     let currentQuote = null;
     let countryDisplayNames = null;
+
+    function getOrCreateGuestId() {
+      const storageKey = `guest-session:${slug}`;
+      try {
+        const existing = sessionStorage.getItem(storageKey);
+        if (/^[a-f0-9]{32}$/.test(existing || '')) return existing;
+      } catch {}
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      const created = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+      try { sessionStorage.setItem(storageKey, created); } catch {}
+      return created;
+    }
 
     try {
       countryDisplayNames = new Intl.DisplayNames([WolkenworteI18n.getLocale()], { type: 'region' });
@@ -1348,7 +1362,10 @@
           `/api/events/${encodeURIComponent(slug)}/cart/estimate-costs`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Wolkenworte-Guest-Id': guestId,
+            },
             body: JSON.stringify({ configurationIds, shipments }),
           }
         );
@@ -1378,7 +1395,10 @@
           `/api/events/${encodeURIComponent(slug)}/cart/checkout`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Wolkenworte-Guest-Id': guestId,
+            },
             body: JSON.stringify({
               configurationIds,
               quoteId: currentQuote.id,

@@ -27,8 +27,7 @@ test('event creation & slug-preview flow', async (t) => {
   assert.equal(match[1], 'anna-und-ben');
   assert.equal(event.guestUrl, `/e/${event.slug}`);
   assert.equal(event.displayUrl, `/e/${event.slug}/display`);
-  assert.equal(typeof event.adminToken, 'string');
-  assert.ok(event.adminToken.length > 20);
+  assert.equal('adminToken' in event, false);
 
   // Creating a cloud now hands the couple straight to the guest experience;
   // the old intermediate success screen no longer adds an extra decision.
@@ -149,48 +148,41 @@ test('slug is auto-derived from couple names when not supplied, umlauts translit
   assert.equal(match[1], 'joe-und-bjoern-mueller');
 });
 
-test('admin PIN gates reset: wrong PIN rejected, correct PIN issues a working token, reset archives and clears', async (t) => {
+test('admin PIN authorizes one reset request without issuing or storing a reusable token', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
   const event = await createEvent(baseUrl, { coupleName: 'Pinnwand Petra', pin: '7777' });
 
-  // Reset without any token is rejected.
-  const noAuth = await fetch(`${baseUrl}/api/events/${event.slug}/reset`, { method: 'POST' });
+  // A missing PIN and a wrong PIN use the same generic authentication error.
+  const noAuth = await fetch(`${baseUrl}/api/events/${event.slug}/reset`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
   assert.equal(noAuth.status, 401);
+  assert.deepEqual(await noAuth.json(), { error: 'invalid_pin' });
 
-  // Wrong PIN is rejected.
-  const wrongPin = await fetch(`${baseUrl}/api/events/${event.slug}/admin/verify`, {
+  const wrongPin = await fetch(`${baseUrl}/api/events/${event.slug}/reset`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin: '0000' }),
   });
   assert.equal(wrongPin.status, 401);
+  assert.deepEqual(await wrongPin.json(), { error: 'invalid_pin' });
 
-  // Correct PIN issues a token.
+  // The retired verification endpoint no longer exists.
   const verifyRes = await fetch(`${baseUrl}/api/events/${event.slug}/admin/verify`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pin: '7777' }),
   });
-  assert.equal(verifyRes.status, 200);
-  const { token } = await verifyRes.json();
-  assert.ok(token && typeof token === 'string');
+  assert.equal(verifyRes.status, 404);
 
-  // A token minted for a DIFFERENT event's slug must not work here (in case
-  // this ever gets reused/copy-pasted) — verifyToken checks slug match.
-  const otherEvent = await createEvent(baseUrl, { coupleName: 'Anderswo Anton', pin: '5555' });
-  const otherVerify = await fetch(`${baseUrl}/api/events/${otherEvent.slug}/admin/verify`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: '5555' }),
-  });
-  const { token: otherToken } = await otherVerify.json();
-  const crossReset = await fetch(`${baseUrl}/api/events/${event.slug}/reset`, {
-    method: 'POST', headers: { Authorization: `Bearer ${otherToken}` },
-  });
-  assert.equal(crossReset.status, 401, 'a token issued for a different event must not authorize this one');
-
-  // Reset with the correct token succeeds.
+  // The correct PIN is verified for this reset only.
   const resetRes = await fetch(`${baseUrl}/api/events/${event.slug}/reset`, {
-    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: '7777' }),
   });
   assert.equal(resetRes.status, 200);
+
+  const displayHtml = await fetch(`${baseUrl}/e/${event.slug}/display`).then((response) => response.text());
+  assert.doesNotMatch(displayHtml, /admin-token:|sessionStorage\.setItem\([^)]*admin/i);
+  assert.match(displayHtml, /JSON\.stringify\(\{ pin \}\)/);
 });

@@ -56,7 +56,8 @@
     <section class="legal-section">
       <h2>3. Veranstaltungen und Admin-PIN</h2>
       <p>Beim Erstellen einer Wortwolke verarbeiten wir die Namen des Paars, die gewünschte Adressbezeichnung, die daraus erzeugte Veranstaltungsadresse sowie Erstellungszeitpunkt und Design-Thema.</p>
-      <p>Der Admin-PIN wird nicht im Klartext gespeichert, sondern mit einem individuellen Salt kryptografisch abgeleitet. Beim Erstellen der Veranstaltung beziehungsweise nach einer erfolgreichen PIN-Prüfung erhält der Browser ein signiertes, zeitlich begrenztes Admin-Token.</p>
+      <p>Der Admin-PIN wird nicht im Klartext gespeichert, sondern mit einem individuellen Salt kryptografisch abgeleitet. Er wird nur für den jeweiligen Zurücksetzungsversuch übertragen, geprüft und danach verworfen; Wolkenworte stellt kein wiederverwendbares Admin-Token aus.</p>
+      <p>Zum Schutz vor automatisierten PIN-Versuchen wird die normalisierte IP-Adresse mit einem geheimen Schlüssel pseudonymisiert. Gespeichert werden nur dieser nicht rückrechenbare Prüfwert, die Anzahl fehlgeschlagener Versuche und die zeitlich begrenzte Sperre.</p>
       <p>Die Verarbeitung erfolgt zur Bereitstellung und Verwaltung der gewünschten Veranstaltung auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO und zur Absicherung administrativer Funktionen auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO.</p>
     </section>
 
@@ -92,8 +93,8 @@
       <h2>8. Speicherung im Browser</h2>
       <p>Wolkenworte setzt derzeit keine eigenen Cookies ein und verwendet keine Analyse- oder Werbetracker.</p>
       <p>Für Gäste wird im Session Storage eine zufällige, veranstaltungsbezogene Sitzungskennung gespeichert. Sie dient ausschließlich dazu, dem Browser die eigenen Wortbeiträge anzuzeigen und nur deren Entfernung zu erlauben.</p>
-      <p>Beim Erstellen einer Veranstaltung beziehungsweise nach erfolgreicher Admin-PIN-Prüfung wird das zeitlich begrenzte Admin-Token unter einem veranstaltungsbezogenen Schlüssel im Session Storage des Browsers gespeichert. Es dient ausschließlich dazu, administrative Aktionen innerhalb dieser Browser-Sitzung zu autorisieren. Zusätzlich werden dort rein funktionale Kennzeichnungen gespeichert, damit das erstellende Gerät die passenden Verwaltungsoptionen und den einmaligen Einrichtungs-Hinweis anzeigen kann. Das Token läuft serverseitig spätestens nach zwölf Stunden ab und der Session Storage wird grundsätzlich beim Beenden der zugehörigen Browser-Sitzung entfernt.</p>
-      <p>Diese Speicherung ist für die ausdrücklich gewünschte Admin-Funktion erforderlich. Rechtsgrundlage ist § 25 Abs. 2 Nr. 2 TDDDG sowie Art. 6 Abs. 1 lit. f DSGVO.</p>
+      <p>Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Entwürfe im Warenkorb werden lokal gespeichert, damit sie beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.</p>
+      <p>Diese Speicherung ist für die ausdrücklich gewünschten Funktionen erforderlich. Rechtsgrundlage ist § 25 Abs. 2 Nr. 2 TDDDG sowie Art. 6 Abs. 1 lit. f DSGVO.</p>
     </section>
 
     <section class="legal-section">

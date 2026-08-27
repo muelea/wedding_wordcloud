@@ -406,9 +406,6 @@
       }
       try {
         sessionStorage.setItem(`creation-notice:${data.slug}`, '1');
-        if (data.adminToken) {
-          sessionStorage.setItem(`admin-token:${data.slug}`, data.adminToken);
-        }
       } catch {
         // Storage can be unavailable in strict privacy modes. The event is
         // still valid, so continue to its guest page without the setup notice.

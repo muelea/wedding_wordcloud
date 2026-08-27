@@ -231,12 +231,15 @@ async function processOrder(orderId) {
   activeOrders.add(orderId);
 
   try {
-    const event = await db.getEventById(order.event_id);
+    const event = await db.getEventById(order.event_id) || {
+      slug: order.event_slug_snapshot,
+      couple_name: order.event_label_snapshot,
+    };
     const configurations = await Promise.all(
       db.getOrderConfigurationIds(order).map((id) => db.getConfiguration(id))
     );
     const configuration = configurations[0] || await db.getConfiguration(order.configuration_id);
-    if (!event || !configuration || configurations.some((entry) => !entry)) {
+    if (!configuration || configurations.some((entry) => !entry)) {
       throw new Error('Bestellkonfiguration wurde nicht gefunden.');
     }
 

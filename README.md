@@ -118,7 +118,9 @@ dotted and dotless I.
 - The application data layer is fully asynchronous through one bounded `pg`
   pool. Application startup checks the required migration version and never
   creates or alters schema objects.
-- Customer VAT/Stripe Tax treatment, public hosting details, retention rules,
+- Event/configuration expiration, safe paid-data retention, one-use reset PINs
+  and the complete initial abuse-control boundary are implemented. Customer
+  VAT/Stripe Tax treatment, scheduled maintenance/job leasing,
   signed Printful status webhooks and the first controlled Printful draft are
   intentionally still pending before live sales.
 
@@ -149,9 +151,10 @@ Editable configurations receive a fresh 15-minute signed preview URL. The
 configuration-specific print route verifies and embeds the private bytes on
 demand and uses `private, no-store`; its opaque random configuration id remains
 the public handle. Failed upload/deletion transitions retain a retryable object
-key instead of silently orphaning Storage bytes. Automated expiry cleanup is a
-later maintenance package; no surviving configuration reference can be deleted
-by the Phase 3 state machine.
+key instead of silently orphaning Storage bytes. Phase 4 provides race-safe,
+object-first cleanup primitives: paid configurations/assets detach from expired
+events, while a failed object deletion retains its key for retry. Phase 5 adds
+the authenticated scheduled maintenance runner that invokes these primitives.
 
 ## Bundled design fonts
 
@@ -197,7 +200,6 @@ Everything in `.env.example` is documented inline. Summary:
 |---|---|---|
 | `PORT` | no (defaults 3000) | server port |
 | `PUBLIC_URL` | only in production | overrides auto-detected base URL used in QR codes / links |
-| `ADMIN_TOKEN_SECRET` | transitional | signs the current admin PIN session token; removed when the hosted reset flow stops issuing reusable tokens |
 | `DATABASE_URL` | yes | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
 | `DATABASE_CA_CERT_PATH` / `DATABASE_CA_CERT` | hosted database | Supabase database CA path or PEM contents used for full TLS and hostname verification |
 | `MIGRATION_DATABASE_URL` | deployment only | privileged Postgres migration connection; local/CI secret only and never available to the Fly web Machine |
@@ -284,10 +286,12 @@ src/
   dbConfig.js              verified-TLS and bounded pg pool configuration
   designAssets.js          bounded image normalization + private asset lifecycle
   privateStorage.js        backend-only Supabase Storage boundary
+  lifecycle.js             expired-event cleanup + paid-data detachment
+  clientIdentity.js        trusted normalized/HMAC source identity
+  rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
   asyncRoute.js            rejected-promise boundary for Express routes
   slug.js                  German-aware slugify + unique random-suffix generation
   words.js                 Word normalization (trim/case-fold/emoji-strip)
-  adminAuth.js             PIN → HMAC session token issue/verify
   baseUrl.js               LAN-IP / PUBLIC_URL resolution
   socket.js                Socket.io connection handling — room isolation lives here
   stripe.js                Stripe Checkout session creation + webhook verification
@@ -324,12 +328,14 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 85 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 97 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
 dynamic Stripe Checkout, price-change confirmation, webhook idempotency, immutable fulfillment
 payloads, private Storage normalization/deduplication/deletion recovery,
+expiration privacy, safe paid-data retention, one-use async PIN reset and
+database/process abuse ceilings,
 hosting health/cache/shutdown behavior, live safety gates and
 Stripe/Printful stub behavior. Each test
 server uses its own randomly named migrated Postgres schema and ephemeral port,
@@ -362,7 +368,7 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   `FLY_API_TOKEN`. These deployment-runner credentials are not Fly app secrets.
 - `PUBLIC_URL` currently uses the Fly-provided HTTPS hostname. A later
   custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
-- Hosted credentials (`ADMIN_TOKEN_SECRET`, Stripe and Printful) belong in Fly
+- Hosted credentials (Stripe, Printful and the HMAC/maintenance secrets) belong in Fly
   secrets or the eventual host's equivalent. Keep every live-payment and
   Printful order-write switch disabled in staging.
 - The Debian/glibc image installs only the runtime libraries needed by
@@ -456,8 +462,8 @@ created draft is confirmed. Keep every switch false while developing locally.
 
 ## Next steps
 
-1. Implement event/configuration expiration, paid-data retention boundaries,
-   one-use reset PIN verification and abuse controls (Phase 4).
+1. Implement deterministic paid print artifacts, leased durable jobs and the
+   authenticated bounded maintenance endpoint/schedule (Phase 5).
 2. Register the separate hosted Stripe test webhook in Stripe Dashboard and
    verify the complete test Checkout flow over the Fly HTTPS address.
 3. Verify the separate front/back SVG URLs in one controlled Printful draft
@@ -474,7 +480,5 @@ created draft is confirmed. Keep every switch false while developing locally.
 7. Configure signed Printful v2 webhooks for production/shipment status once
    the public callback URL exists; do not register a callback before its
    signing secret can be stored in the production environment.
-8. Complete scheduled retention/deletion for events, immutable designs,
-   private personal-photo objects, addresses and completed orders.
-9. Rate-limiting — no per-IP throttle yet on word submission or event
-   creation.
+8. Complete the scheduled invocation and monitoring for the implemented
+   event/configuration cleanup primitives as part of Phase 5 maintenance.

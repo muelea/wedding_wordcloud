@@ -20,6 +20,8 @@
 const db = require('./db');
 const crypto = require('crypto');
 const { normalizeWord } = require('./words');
+const { sourceHashForSocket } = require('./clientIdentity');
+const rateLimits = require('./rateLimits');
 
 const GUEST_ID_RE = /^[a-f0-9]{32}$/;
 const RECEIPT_RE = /^[A-Za-z0-9_-]{24}$/;
@@ -58,6 +60,14 @@ function attachSocketHandlers(io) {
     socket.data.guestId = typeof requestedGuestId === 'string' && GUEST_ID_RE.test(requestedGuestId)
       ? requestedGuestId
       : crypto.randomBytes(16).toString('hex');
+    socket.data.sourceHash = sourceHashForSocket(socket);
+    const releaseSocket = rateLimits.acquireSocket(event.id, socket.data.sourceHash);
+    if (!releaseSocket) {
+      socket.emit('fatal-error', 'rate_limited');
+      socket.disconnect(true);
+      return;
+    }
+    socket.once('disconnect', releaseSocket);
 
     // Send current state to the newly connected client only (not the room —
     // no need to re-broadcast to everyone else just because one client joined).
@@ -78,6 +88,19 @@ function attachSocketHandlers(io) {
     socket.on('submit-word', async (rawWord) => {
       const word = normalizeWord(rawWord, event.locale);
       if (!word) return;
+      const guestKey = `${event.id}:${socket.data.guestId}`;
+      if (!rateLimits.consumeTokens([
+        { name: 'word:burst', key: guestKey, ...rateLimits.LIMITS.wordBurst },
+        { name: 'word:guest', key: guestKey, ...rateLimits.LIMITS.wordGuest },
+        {
+          name: 'word:source',
+          key: `${event.id}:${socket.data.sourceHash}`,
+          ...rateLimits.LIMITS.wordSource,
+        },
+      ])) {
+        socket.emit('word-error', { error: 'rate_limited' });
+        return;
+      }
 
       let receipt;
       let words;
@@ -86,7 +109,12 @@ function attachSocketHandlers(io) {
         words = await db.getWords(event.id);
       } catch (error) {
         console.error(`[socket:${event.slug}] Could not save word contribution:`, error);
-        socket.emit('word-error');
+        const limited = new Set([
+          'guest_contribution_limit',
+          'event_contribution_limit',
+          'unique_word_limit',
+        ]).has(error?.code);
+        socket.emit('word-error', { error: limited ? 'limit_reached' : 'server_error' });
         return;
       }
 
@@ -98,6 +126,14 @@ function attachSocketHandlers(io) {
 
     socket.on('remove-word', async (payload, acknowledge) => {
       const respond = typeof acknowledge === 'function' ? acknowledge : () => {};
+      if (!rateLimits.consume([{
+        name: 'word:remove',
+        key: `${event.id}:${socket.data.guestId}`,
+        ...rateLimits.LIMITS.wordRemoveGuest,
+      }])) {
+        respond({ ok: false, error: 'rate_limited' });
+        return;
+      }
       const receipt = payload && typeof payload === 'object' ? payload.receipt : payload;
       if (typeof receipt !== 'string' || !RECEIPT_RE.test(receipt)) {
         respond({ ok: false, error: 'not_found' });
@@ -132,6 +168,17 @@ function attachSocketHandlers(io) {
     // Relay theme changes to all connected clients FOR THIS EVENT ONLY.
     socket.on('theme-change', async (theme) => {
       if (theme !== 'neon' && theme !== 'pastel') return;
+      if (!rateLimits.consume([
+        {
+          name: 'theme:guest',
+          key: `${event.id}:${socket.data.guestId}`,
+          ...rateLimits.LIMITS.themeGuest,
+        },
+        { name: 'theme:event', key: event.id, ...rateLimits.LIMITS.themeEvent },
+      ])) {
+        socket.emit('theme-error', { error: 'rate_limited' });
+        return;
+      }
       try {
         await db.setEventTheme(event.id, theme);
         socket.to(event.slug).emit('theme-change', theme);

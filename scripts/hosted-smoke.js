@@ -93,18 +93,19 @@ async function main() {
     throw new Error('versioned static-asset cache smoke failed');
   }
 
+  const adminPin = String(crypto.randomInt(1000, 10_000));
   const eventResponse = await fetchWithTimeout('/api/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       coupleName: `Hosted Smoke ${new Date().toISOString()}`,
       slug: 'hosted-smoke',
-      pin: String(crypto.randomInt(1000, 10_000)),
+      pin: adminPin,
       locale: 'de',
     }),
   });
   const event = await eventResponse.json();
-  if (eventResponse.status !== 201 || typeof event.slug !== 'string') {
+  if (eventResponse.status !== 201 || typeof event.slug !== 'string' || 'adminToken' in event) {
     throw new Error(`event creation smoke failed (${eventResponse.status})`);
   }
 
@@ -121,6 +122,22 @@ async function main() {
     }
   } finally {
     socket.close();
+  }
+
+  const resetResponse = await fetchWithTimeout(`/api/events/${encodeURIComponent(event.slug)}/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: adminPin }),
+  });
+  if (resetResponse.status !== 200 || !(await resetResponse.json()).ok) {
+    throw new Error(`one-use PIN reset smoke failed (${resetResponse.status})`);
+  }
+  const retiredAdminResponse = await fetchWithTimeout(
+    `/api/events/${encodeURIComponent(event.slug)}/admin/verify`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: adminPin }) }
+  );
+  if (retiredAdminResponse.status !== 404) {
+    throw new Error(`retired admin-token endpoint is still reachable (${retiredAdminResponse.status})`);
   }
 
   const ownerId = crypto.randomBytes(16).toString('hex');
@@ -145,7 +162,10 @@ async function main() {
     `/api/events/${encodeURIComponent(event.slug)}/configurations`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Wolkenworte-Guest-Id': ownerId,
+      },
       body: JSON.stringify({
         configurationType: 'personal_memory',
         productKey: 'white-glossy-mug-duo-11oz',
@@ -192,7 +212,7 @@ async function main() {
   }
 
   console.log(
-    `[smoke] hosted HTTP, Postgres, private Storage, immutable photo print, cache and Socket.io checks passed ` +
+    `[smoke] hosted HTTP, Postgres, one-use PIN reset, private Storage, immutable photo print, cache and Socket.io checks passed ` +
     `in ${Date.now() - startedAt}ms.`
   );
 }

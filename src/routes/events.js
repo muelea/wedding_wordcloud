@@ -5,7 +5,8 @@ const QRCode = require('qrcode');
 const db = require('../db');
 const { slugify, makeUniqueSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
-const adminAuth = require('../adminAuth');
+const { sourceHashForRequest } = require('../clientIdentity');
+const rateLimits = require('../rateLimits');
 const stripe = require('../stripe');
 const printful = require('../printful');
 const { buildCustomerQuoteForShipments } = require('../pricing');
@@ -570,6 +571,32 @@ async function estimateCartShipments({ body, countries, configurations }) {
 function makeRouter({ io, port }) {
   const router = express.Router();
 
+  function requestIdentities(req) {
+    const sourceHash = sourceHashForRequest(req);
+    const guestId = rateLimits.guestIdentity(req.get('X-Wolkenworte-Guest-Id'), sourceHash);
+    return { sourceHash, guestId };
+  }
+
+  function consumeEventRequest(req, event, action, guestLimit, sourceLimit) {
+    const { sourceHash, guestId } = requestIdentities(req);
+    return rateLimits.consume([
+      {
+        name: `${action}:guest`,
+        key: `${event.id}:${guestId}`,
+        ...guestLimit,
+      },
+      {
+        name: `${action}:source`,
+        key: `${event.id}:${sourceHash}`,
+        ...sourceLimit,
+      },
+    ]);
+  }
+
+  function rateLimited(res) {
+    return res.status(429).json({ error: 'rate_limited' });
+  }
+
   // ── Slug preview (live-checked while typing in the create form) ─────────
   // NOTE: this only validates/previews the name-derived *prefix*. The final
   // slug always gets a random suffix appended at creation time (see
@@ -588,6 +615,12 @@ function makeRouter({ io, port }) {
 
   // ── Create event ──────────────────────────────────────────────────────
   router.post('/events', express.json(), asyncRoute(async (req, res) => {
+    const sourceHash = sourceHashForRequest(req);
+    if (!rateLimits.consume([{
+      name: 'event:create',
+      key: sourceHash,
+      ...rateLimits.LIMITS.eventCreate,
+    }])) return rateLimited(res);
     const { coupleName, pin } = req.body || {};
     if (req.body?.locale != null && !I18n.isSupportedLocale(req.body.locale)) {
       return res.status(400).json({ error: 'invalid_locale' });
@@ -638,7 +671,6 @@ function makeRouter({ io, port }) {
       locale: event.locale,
       guestUrl: `/e/${event.slug}`,
       displayUrl: `/e/${event.slug}/display`,
-      adminToken: adminAuth.issueToken(event.slug),
     });
   }));
 
@@ -670,31 +702,20 @@ function makeRouter({ io, port }) {
     }
   }));
 
-  // ── Admin PIN verification -> short-lived session token ─────────────────
-  router.post('/events/:slug/admin/verify', express.json(), asyncRoute(async (req, res) => {
+  // ── Reset ("Neue Runde") — one request, one PIN verification ───────────
+  router.post('/events/:slug/reset', express.json({ limit: '1kb' }), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const { pin } = req.body || {};
-    if (!pin || !db.verifyPin(pin, event.admin_pin_hash, event.admin_pin_salt)) {
-      return res.status(401).json({ error: 'invalid pin' });
+    const sourceHash = sourceHashForRequest(req);
+    let authorization;
+    try {
+      authorization = await db.authorizeResetPin(event, req.body?.pin, sourceHash);
+    } catch (error) {
+      if (error?.code === 'pin_busy') return res.status(503).json({ error: 'temporarily_unavailable' });
+      throw error;
     }
-    const token = adminAuth.issueToken(event.slug);
-    res.json({ token });
-  }));
-
-  function requireAdmin(req, res, next) {
-    const auth = req.get('authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-    if (!adminAuth.verifyToken(token, req.params.slug)) {
-      return res.status(401).json({ error: 'admin authorization required' });
-    }
-    next();
-  }
-
-  // ── Reset ("Neue Runde") — archives then clears, PIN-gated ─────────────
-  router.post('/events/:slug/reset', requireAdmin, asyncRoute(async (req, res) => {
-    const event = await db.getEventBySlug(req.params.slug);
-    if (!event) return res.status(404).json({ error: 'event not found' });
+    if (authorization.blocked) return rateLimited(res);
+    if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
     await db.archiveAndClearWords(event.id);
     io.to(event.slug).emit('word-update', []);
     io.to(event.slug).emit('round-reset');
@@ -741,6 +762,9 @@ function makeRouter({ io, port }) {
     res.set('Cache-Control', 'no-store');
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event_not_found' });
+    if (!consumeEventRequest(
+      req, event, 'asset', rateLimits.LIMITS.assetGuest, rateLimits.LIMITS.assetSource
+    )) return rateLimited(res);
     try {
       const result = await designAssets.uploadEventAsset({
         event,
@@ -759,6 +783,13 @@ function makeRouter({ io, port }) {
   router.post('/events/:slug/configurations', express.json({ limit: '256kb' }), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
+    if (!consumeEventRequest(
+      req,
+      event,
+      'configuration',
+      rateLimits.LIMITS.configurationGuest,
+      rateLimits.LIMITS.configurationSource
+    )) return rateLimited(res);
 
     const baseProduct = getProduct(req.body?.productKey || DEFAULT_PRODUCT.key);
     if (!baseProduct) return res.status(400).json({ error: 'invalid_product' });
@@ -816,6 +847,7 @@ function makeRouter({ io, port }) {
       if (error.code === 'invalid_design_assets') {
         return res.status(400).json({ error: 'invalid_design' });
       }
+      if (error.code === 'configuration_limit') return rateLimited(res);
       throw error;
     }
 
@@ -871,6 +903,13 @@ function makeRouter({ io, port }) {
     asyncRoute(async (req, res) => {
       const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+      if (!consumeEventRequest(
+        req,
+        { id: configuration.event_id },
+        'estimate',
+        rateLimits.LIMITS.estimateGuest,
+        rateLimits.LIMITS.estimateSource
+      )) return rateLimited(res);
       try {
         const product = getProduct(configuration.product_key);
         if (!product) return res.status(500).json({ error: 'configuration_invalid' });
@@ -936,6 +975,13 @@ function makeRouter({ io, port }) {
     if (!ids.length || configurations.length !== ids.length) {
       return res.status(404).json({ error: 'configuration_not_found' });
     }
+    if (!consumeEventRequest(
+      req,
+      { id: configurations[0].event_id },
+      'estimate',
+      rateLimits.LIMITS.estimateGuest,
+      rateLimits.LIMITS.estimateSource
+    )) return rateLimited(res);
     try {
       const countries = await printful.getShippingCountries();
       const { invalidFields, pricedShipments, calculatedQuote } = await estimateCartShipments({
@@ -1076,6 +1122,9 @@ function makeRouter({ io, port }) {
   router.post('/events/:slug/cart/checkout', express.json({ limit: '32kb' }), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event_not_found' });
+    if (!consumeEventRequest(
+      req, event, 'checkout', rateLimits.LIMITS.checkoutGuest, rateLimits.LIMITS.checkoutSource
+    )) return rateLimited(res);
     const ids = normalizeConfigurationIdList(req.body?.configurationIds || req.body?.configuration_ids);
     const configurations = await db.getEventConfigurations(event.slug, ids);
     if (!ids.length || configurations.length !== ids.length) {
@@ -1229,6 +1278,9 @@ function makeRouter({ io, port }) {
     asyncRoute(async (req, res) => {
       const event = await db.getEventBySlug(req.params.slug);
       if (!event) return res.status(404).json({ error: 'event_not_found' });
+      if (!consumeEventRequest(
+        req, event, 'checkout', rateLimits.LIMITS.checkoutGuest, rateLimits.LIMITS.checkoutSource
+      )) return rateLimited(res);
       const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
       const product = resolveProductOrientation(

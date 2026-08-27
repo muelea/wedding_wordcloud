@@ -3435,7 +3435,10 @@
       try {
         const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Wolkenworte-Guest-Id': guestId,
+          },
           body: JSON.stringify({
             productKey: product.key,
             orientation: selectedOrientation,

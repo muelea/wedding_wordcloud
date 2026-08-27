@@ -14,7 +14,6 @@ const REQUIRED = [
   'SUPABASE_SECRET_KEY',
   'RATE_LIMIT_HMAC_SECRET',
   'MAINTENANCE_SECRET',
-  'ADMIN_TOKEN_SECRET',
 ];
 const OPTIONAL = [
   'STRIPE_SECRET_KEY',
@@ -86,4 +85,3 @@ if (require.main === module) {
 }
 
 module.exports = { databaseCa, importSecrets, main, runtimeSecrets };
-

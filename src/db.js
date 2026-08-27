@@ -5,13 +5,17 @@ const { Pool } = require('pg');
 const { connectionOptions } = require('./dbConfig');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const REQUIRED_SCHEMA_VERSION = '2';
+const REQUIRED_SCHEMA_VERSION = '3';
 const MAX_CONFIGURATION_ASSETS = 6;
 const MAX_CONFIGURATION_ASSET_BYTES = 6 * 1024 * 1024;
 const MAX_UNATTACHED_OWNER_ASSETS = 12;
 const MAX_UNATTACHED_OWNER_BYTES = 12 * 1024 * 1024;
 const MAX_UNATTACHED_EVENT_ASSETS = 2000;
 const MAX_UNATTACHED_EVENT_BYTES = 1024 * 1024 * 1024;
+const MAX_EVENT_CONTRIBUTIONS = 5000;
+const MAX_EVENT_UNIQUE_WORDS = 500;
+const MAX_OWNER_CONTRIBUTIONS = 100;
+const MAX_ACTIVE_UNPAID_CONFIGURATIONS = 2000;
 const JSON_COLUMNS = new Set([
   'words_json',
   'design_json',
@@ -118,48 +122,172 @@ async function checkDatabaseReady(timeoutMs = 1_500) {
 }
 
 // ── PIN hashing ─────────────────────────────────────────────────────────
-function hashPin(pin) {
+// scrypt is deliberately asynchronous and bounded. This keeps PIN attempts
+// from blocking the event loop or saturating libuv's worker pool.
+const MAX_ACTIVE_PIN_DERIVATIONS = 4;
+const MAX_QUEUED_PIN_DERIVATIONS = 32;
+let activePinDerivations = 0;
+const queuedPinDerivations = [];
+
+function runPinDerivation(work) {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      activePinDerivations += 1;
+      work((error, result) => {
+        activePinDerivations -= 1;
+        const next = queuedPinDerivations.shift();
+        if (next) queueMicrotask(next);
+        if (error) reject(error); else resolve(result);
+      });
+    };
+    if (activePinDerivations < MAX_ACTIVE_PIN_DERIVATIONS) return run();
+    if (queuedPinDerivations.length >= MAX_QUEUED_PIN_DERIVATIONS) {
+      const error = new Error('PIN verification is temporarily busy.');
+      error.code = 'pin_busy';
+      reject(error);
+      return;
+    }
+    queuedPinDerivations.push(run);
+  });
+}
+
+function derivePin(pin, salt) {
+  return runPinDerivation((done) => crypto.scrypt(String(pin), salt, 64, done));
+}
+
+async function hashPin(pin) {
   const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(String(pin), salt, 64).toString('hex');
+  const hash = (await derivePin(pin, salt)).toString('hex');
   return { hash, salt };
 }
 
-function verifyPin(pin, hash, salt) {
-  const candidate = crypto.scryptSync(String(pin), salt, 64).toString('hex');
-  const a = Buffer.from(candidate, 'hex');
+async function verifyPin(pin, hash, salt) {
+  const candidate = await derivePin(pin, salt);
+  const a = Buffer.from(candidate);
   const b = Buffer.from(hash, 'hex');
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 // ── Events ──────────────────────────────────────────────────────────────
 async function createEvent({ slug, coupleName, pin, locale = 'de' }) {
-  const { hash, salt } = hashPin(pin);
-  const result = await getPool().query(`
-    INSERT INTO events (
-      slug, couple_name, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
-    ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
-    RETURNING *
-  `, [slug, coupleName, hash, salt, locale]);
-  return rowToBoundary(result.rows[0]);
+  const { hash, salt } = await hashPin(pin);
+  return withTransaction(async (client) => {
+    await client.query(`
+      INSERT INTO reserved_event_slugs (slug, original_created_at)
+      VALUES ($1, transaction_timestamp())
+    `, [slug]);
+    const result = await client.query(`
+      INSERT INTO events (
+        slug, couple_name, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
+      ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
+      RETURNING *
+    `, [slug, coupleName, hash, salt, locale]);
+    return rowToBoundary(result.rows[0]);
+  });
 }
 
 async function getEventBySlug(slug) {
-  const result = await getPool().query('SELECT * FROM events WHERE slug = $1', [slug]);
+  const result = await getPool().query(`
+    SELECT * FROM events
+    WHERE slug = $1 AND expires_at > transaction_timestamp()
+  `, [slug]);
   return rowToBoundary(result.rows[0]);
 }
 
 async function getEventById(id) {
-  const result = await getPool().query('SELECT * FROM events WHERE id = $1', [id]);
+  const result = await getPool().query(`
+    SELECT * FROM events
+    WHERE id = $1 AND expires_at > transaction_timestamp()
+  `, [id]);
   return rowToBoundary(result.rows[0]);
 }
 
 async function slugExists(slug) {
-  const result = await getPool().query('SELECT EXISTS (SELECT 1 FROM events WHERE slug = $1) AS exists', [slug]);
+  const result = await getPool().query(`
+    SELECT EXISTS (SELECT 1 FROM reserved_event_slugs WHERE slug = $1) AS exists
+  `, [slug]);
   return result.rows[0].exists;
 }
 
 async function setEventTheme(eventId, theme) {
-  await getPool().query('UPDATE events SET theme = $1 WHERE id = $2', [theme, eventId]);
+  const result = await getPool().query(`
+    UPDATE events SET theme = $1
+    WHERE id = $2 AND expires_at > transaction_timestamp()
+  `, [theme, eventId]);
+  if (!result.rowCount) throw new Error('event not found');
+}
+
+async function getResetPinStatus(eventId, sourceIpHash) {
+  await getPool().query(`
+    DELETE FROM admin_pin_failures
+    WHERE updated_at < transaction_timestamp() - interval '1 day'
+  `);
+  const result = await getPool().query(`
+    SELECT blocked_until > transaction_timestamp() AS blocked
+    FROM admin_pin_failures
+    WHERE event_id = $1 AND source_ip_hash = $2
+  `, [eventId, sourceIpHash]);
+  return { blocked: result.rows[0]?.blocked === true };
+}
+
+async function recordResetPinFailure(eventId, sourceIpHash) {
+  const result = await getPool().query(`
+    INSERT INTO admin_pin_failures (
+      event_id, source_ip_hash, window_started_at, failed_attempts, blocked_until, updated_at
+    ) VALUES ($1, $2, transaction_timestamp(), 1, null, transaction_timestamp())
+    ON CONFLICT (event_id, source_ip_hash) DO UPDATE SET
+      window_started_at = case
+        when admin_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
+          then transaction_timestamp()
+        else admin_pin_failures.window_started_at
+      end,
+      failed_attempts = case
+        when admin_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
+          then 1
+        else least(5, admin_pin_failures.failed_attempts + 1)
+      end,
+      blocked_until = case
+        when admin_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
+          then null
+        when admin_pin_failures.failed_attempts + 1 >= 5
+          then transaction_timestamp() + interval '15 minutes'
+        else admin_pin_failures.blocked_until
+      end,
+      updated_at = transaction_timestamp()
+    RETURNING failed_attempts, blocked_until
+  `, [eventId, sourceIpHash]);
+  return {
+    attempts: Number(result.rows[0].failed_attempts),
+    blocked: result.rows[0].blocked_until && Date.parse(result.rows[0].blocked_until) > Date.now(),
+  };
+}
+
+async function clearResetPinFailures(eventId, sourceIpHash) {
+  await getPool().query(`
+    DELETE FROM admin_pin_failures WHERE event_id = $1 AND source_ip_hash = $2
+  `, [eventId, sourceIpHash]);
+}
+
+async function authorizeResetPin(event, pin, sourceIpHash) {
+  const status = await getResetPinStatus(event.id, sourceIpHash);
+  if (status.blocked) return { ok: false, blocked: true };
+  const validShape = /^\d{4,6}$/.test(String(pin || ''));
+  let valid = false;
+  if (validShape) {
+    valid = await verifyPin(pin, event.admin_pin_hash, event.admin_pin_salt);
+  }
+  if (!valid) {
+    await recordResetPinFailure(event.id, sourceIpHash);
+    return { ok: false, blocked: false };
+  }
+  await clearResetPinFailures(event.id, sourceIpHash);
+  return { ok: true, blocked: false };
+}
+
+function limitError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
 }
 
 // ── Words ───────────────────────────────────────────────────────────────
@@ -179,29 +307,53 @@ async function upsertWord(eventId, word) {
 
 async function addWordContribution(eventId, word, ownerId) {
   const receiptId = crypto.randomBytes(18).toString('base64url');
-  // One Postgres statement is one transaction. The event KEY SHARE lock is
-  // compatible across submissions but conflicts with reset's FOR UPDATE lock,
-  // so the aggregate and its receipt are wholly before or after a reset.
   const result = await getPool().query(`
     WITH locked_event AS MATERIALIZED (
-      SELECT id FROM events WHERE id = $1 FOR KEY SHARE
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+      FOR UPDATE
+    ), usage AS MATERIALIZED (
+      SELECT
+        (SELECT count(*)::integer FROM word_contributions WHERE event_id = $1) AS event_count,
+        (SELECT count(*)::integer FROM word_contributions WHERE event_id = $1 AND owner_id = $2) AS owner_count,
+        (SELECT count(*)::integer FROM words WHERE event_id = $1) AS unique_count,
+        EXISTS (SELECT 1 FROM words WHERE event_id = $1 AND word = $3) AS word_exists
+      FROM locked_event
+    ), decision AS MATERIALIZED (
+      SELECT case
+        when owner_count >= $5 then 'guest_contribution_limit'
+        when event_count >= $6 then 'event_contribution_limit'
+        when not word_exists and unique_count >= $7 then 'unique_word_limit'
+        else null
+      end AS error
+      FROM usage
     ), upserted_word AS (
       INSERT INTO words (event_id, word, count, updated_at)
-      SELECT id, $2, 1, transaction_timestamp()
-      FROM locked_event
+      SELECT $1, $3, 1, transaction_timestamp()
+      FROM decision WHERE error IS NULL
       ON CONFLICT (event_id, word) DO UPDATE SET
         count = words.count + 1,
         updated_at = transaction_timestamp()
       RETURNING event_id, word
     ), inserted_contribution AS (
       INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
-      SELECT $3, event_id, word, $4
-      FROM upserted_word
+      SELECT $4, event_id, word, $2 FROM upserted_word
       RETURNING receipt_id
     )
-    SELECT receipt_id FROM inserted_contribution
-  `, [eventId, word, receiptId, ownerId]);
+    SELECT decision.error, inserted_contribution.receipt_id
+    FROM decision
+    LEFT JOIN inserted_contribution ON true
+  `, [
+    eventId,
+    ownerId,
+    word,
+    receiptId,
+    MAX_OWNER_CONTRIBUTIONS,
+    MAX_EVENT_CONTRIBUTIONS,
+    MAX_EVENT_UNIQUE_WORDS,
+  ]);
   if (!result.rowCount) throw new Error('event not found');
+  if (result.rows[0].error) throw limitError(result.rows[0].error);
   return result.rows[0].receipt_id;
 }
 
@@ -217,7 +369,12 @@ async function getWordContributions(eventId, ownerId) {
 
 async function removeWordContribution(eventId, receiptId, ownerId) {
   return withTransaction(async (client) => {
-    await client.query('SELECT id FROM events WHERE id = $1 FOR KEY SHARE', [eventId]);
+    const event = await client.query(`
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+      FOR KEY SHARE
+    `, [eventId]);
+    if (!event.rowCount) return null;
     const deleted = await client.query(`
       DELETE FROM word_contributions
       WHERE event_id = $1 AND receipt_id = $2 AND owner_id = $3
@@ -274,7 +431,11 @@ async function archiveWords(eventId) {
 
 async function archiveAndClearWords(eventId) {
   return withTransaction(async (client) => {
-    const locked = await client.query('SELECT id FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    const locked = await client.query(`
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+      FOR UPDATE
+    `, [eventId]);
     if (!locked.rowCount) return null;
     const words = await getWordsWith(client, eventId);
     if (words.length) {
@@ -341,7 +502,10 @@ function getCheckoutQuoteShipments(quote) {
 // ── Orders and checkout ─────────────────────────────────────────────────
 async function createOrder({ eventId, stripeSessionId }) {
   return withTransaction(async (client) => {
-    const eventResult = await client.query('SELECT slug, couple_name FROM events WHERE id = $1', [eventId]);
+    const eventResult = await client.query(`
+      SELECT slug, couple_name FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+    `, [eventId]);
     const event = eventResult.rows[0];
     if (!event) throw new Error('event not found');
     const result = await client.query(`
@@ -503,7 +667,9 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     }
 
     const eventResult = await client.query(
-      'SELECT slug, couple_name FROM events WHERE id = $1 FOR KEY SHARE',
+      `SELECT slug, couple_name FROM events
+       WHERE id = $1 AND expires_at > transaction_timestamp()
+       FOR KEY SHARE`,
       [eventId]
     );
     const event = eventResult.rows[0];
@@ -513,6 +679,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     const configurationResult = await client.query(`
       SELECT * FROM configurations
       WHERE id = ANY($1::text[]) AND event_id = $2
+        AND expires_at > transaction_timestamp()
       FOR KEY SHARE
     `, [configurationIds, eventId]);
     const configurations = rowsToBoundary(configurationResult.rows);
@@ -905,6 +1072,7 @@ async function getEventCheckoutQuote(slug, configurationId, quoteId) {
     WHERE checkout_quotes.id = $1
       AND checkout_quotes.configuration_id = $2
       AND events.slug = $3
+      AND events.expires_at > transaction_timestamp()
   `, [quoteId, configurationId, slug]);
   return rowToBoundary(result.rows[0]);
 }
@@ -915,6 +1083,7 @@ async function getEventCartCheckoutQuote(slug, configurationIds, quoteId) {
     FROM checkout_quotes
     JOIN events ON events.id = checkout_quotes.event_id
     WHERE checkout_quotes.id = $1 AND events.slug = $2
+      AND events.expires_at > transaction_timestamp()
   `, [quoteId, slug]);
   const quote = rowToBoundary(result.rows[0]);
   if (!quote) return null;
@@ -993,7 +1162,11 @@ async function beginDesignAssetUpload({
   extension,
 }) {
   return withTransaction(async (client) => {
-    const lockedEvent = await client.query('SELECT id FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    const lockedEvent = await client.query(`
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+      FOR UPDATE
+    `, [eventId]);
     if (!lockedEvent.rowCount) {
       const error = new Error('event not found');
       error.code = 'event_not_found';
@@ -1021,18 +1194,52 @@ async function beginDesignAssetUpload({
 
     const usage = await client.query(`
       SELECT
-        count(*) filter (where uploader_owner_id = $2)::integer AS owner_count,
-        coalesce(sum(byte_size) filter (where uploader_owner_id = $2), 0)::bigint AS owner_bytes,
-        count(*)::integer AS event_count,
-        coalesce(sum(byte_size), 0)::bigint AS event_bytes
+        count(*) filter (
+          where uploader_owner_id = $2 and not exists (
+            select 1 from configuration_assets reference where reference.asset_id = asset.id
+          )
+        )::integer AS owner_count,
+        coalesce(sum(byte_size) filter (
+          where uploader_owner_id = $2 and not exists (
+            select 1 from configuration_assets reference where reference.asset_id = asset.id
+          )
+        ), 0)::bigint AS owner_bytes,
+        count(*) filter (where not (
+          exists (
+            select 1 from configuration_assets reference where reference.asset_id = asset.id
+          ) and not exists (
+            select 1
+            from configuration_assets reference
+            where reference.asset_id = asset.id
+              and not exists (
+                select 1
+                from order_items item
+                join orders paid_order on paid_order.id = item.order_id
+                where item.configuration_id = reference.configuration_id
+                  and paid_order.status in ('paid_test', 'paid', 'fulfilled')
+              )
+          )
+        ))::integer AS event_count,
+        coalesce(sum(byte_size) filter (where not (
+          exists (
+            select 1 from configuration_assets reference where reference.asset_id = asset.id
+          ) and not exists (
+            select 1
+            from configuration_assets reference
+            where reference.asset_id = asset.id
+              and not exists (
+                select 1
+                from order_items item
+                join orders paid_order on paid_order.id = item.order_id
+                where item.configuration_id = reference.configuration_id
+                  and paid_order.status in ('paid_test', 'paid', 'fulfilled')
+              )
+          )
+        )), 0)::bigint AS event_bytes
       FROM design_assets asset
       WHERE event_id = $1
         AND storage_status in ('uploading', 'active')
         AND deleted_at IS NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM configuration_assets reference
-          WHERE reference.asset_id = asset.id
-        )
     `, [eventId, ownerId]);
     const totals = usage.rows[0];
     const exceedsOwner = Number(totals.owner_count) + 1 > MAX_UNATTACHED_OWNER_ASSETS ||
@@ -1165,6 +1372,31 @@ async function createConfiguration({
     throw assetValidationError();
   }
   return withTransaction(async (client) => {
+    const eventResult = await client.query(`
+      SELECT id, expires_at FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+      FOR UPDATE
+    `, [eventId]);
+    const event = eventResult.rows[0];
+    if (!event) throw new Error('event not found');
+
+    const activeConfigurations = await client.query(`
+      SELECT count(*)::integer AS count
+      FROM configurations configuration
+      WHERE configuration.event_id = $1
+        AND configuration.expires_at > transaction_timestamp()
+        AND NOT EXISTS (
+          SELECT 1
+          FROM order_items item
+          JOIN orders on orders.id = item.order_id
+          WHERE item.configuration_id = configuration.id
+            AND orders.status in ('paid_test', 'paid', 'fulfilled')
+        )
+    `, [eventId]);
+    if (Number(activeConfigurations.rows[0].count) >= MAX_ACTIVE_UNPAID_CONFIGURATIONS) {
+      throw limitError('configuration_limit');
+    }
+
     if (assetIds.length) {
       const assets = await client.query(`
         SELECT id, byte_size
@@ -1190,12 +1422,19 @@ async function createConfiguration({
       INSERT INTO configurations (
         id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
         theme, words_json, design_json, configuration_type, orientation,
-        print_width, print_height
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13)
+        print_width, print_height, expires_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13,
+        case when $10 = 'personal_memory'
+          then transaction_timestamp() + interval '30 days'
+          else $14::timestamptz
+        end
+      )
       RETURNING *
     `, [
       id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
       jsonValue(words), jsonValue(design), configurationType, orientation, printWidth, printHeight,
+      event.expires_at,
     ]);
     if (assetIds.length) {
       await client.query(`
@@ -1218,6 +1457,15 @@ async function getEventConfiguration(slug, configurationId) {
     FROM configurations
     JOIN events ON events.id = configurations.event_id
     WHERE configurations.id = $1 AND events.slug = $2
+      AND events.expires_at > transaction_timestamp()
+      AND (
+        configurations.expires_at > transaction_timestamp() OR EXISTS (
+          SELECT 1 FROM order_items item
+          JOIN orders retained_order ON retained_order.id = item.order_id
+          WHERE item.configuration_id = configurations.id
+            AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
+        )
+      )
   `, [configurationId, slug]);
   return rowToBoundary(result.rows[0]);
 }
@@ -1230,10 +1478,124 @@ async function getEventConfigurations(slug, configurationIds) {
     FROM configurations
     JOIN events ON events.id = configurations.event_id
     WHERE configurations.id = ANY($1::text[]) AND events.slug = $2
+      AND events.expires_at > transaction_timestamp()
+      AND (
+        configurations.expires_at > transaction_timestamp() OR EXISTS (
+          SELECT 1 FROM order_items item
+          JOIN orders retained_order ON retained_order.id = item.order_id
+          WHERE item.configuration_id = configurations.id
+            AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
+        )
+      )
   `, [ids, slug]);
   if (result.rows.length !== ids.length) return [];
   const byId = new Map(rowsToBoundary(result.rows).map((row) => [row.id, row]));
   return ids.map((id) => byId.get(id));
+}
+
+// ── Expired event cleanup ───────────────────────────────────────────────
+// Scheduling and bounded batch orchestration belong to Phase 5. These
+// primitives establish the race-safe object-first cleanup boundary now.
+async function prepareExpiredEventCleanup(eventId) {
+  return withTransaction(async (client) => {
+    const eventResult = await client.query(`
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at <= transaction_timestamp()
+      FOR UPDATE
+    `, [eventId]);
+    if (!eventResult.rowCount) return null;
+
+    // Let an already-created Stripe Checkout session finish or expire. This
+    // prevents the event-expiry boundary from deleting a still-payable order.
+    const activeCheckout = await client.query(`
+      SELECT 1 FROM orders
+      WHERE event_id = $1
+        AND status IN ('creating_checkout', 'checkout_pending')
+        AND checkout_session_expires_at > transaction_timestamp()
+      LIMIT 1
+    `, [eventId]);
+    if (activeCheckout.rowCount) return null;
+
+    // Unpaid/abandoned checkout attempts are event-lifetime data. Removing
+    // them first releases their configuration references. Paid commerce is
+    // retained and detached below.
+    await client.query(`
+      DELETE FROM orders
+      WHERE event_id = $1 AND status NOT IN ('paid_test', 'paid', 'fulfilled')
+    `, [eventId]);
+
+    const retainedResult = await client.query(`
+      SELECT DISTINCT configuration_id
+      FROM (
+        SELECT item.configuration_id
+        FROM order_items item
+        JOIN orders retained_order ON retained_order.id = item.order_id
+        WHERE retained_order.event_id = $1
+          AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
+          AND item.configuration_id IS NOT NULL
+        UNION
+        SELECT retained_order.configuration_id
+        FROM orders retained_order
+        WHERE retained_order.event_id = $1
+          AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
+          AND retained_order.configuration_id IS NOT NULL
+      ) retained
+    `, [eventId]);
+    const retainedConfigurationIds = retainedResult.rows.map((row) => row.configuration_id);
+
+    if (retainedConfigurationIds.length) {
+      await client.query(`
+        UPDATE design_assets asset
+        SET event_id = null
+        WHERE asset.event_id = $1 AND EXISTS (
+          SELECT 1 FROM configuration_assets reference
+          WHERE reference.asset_id = asset.id
+            AND reference.configuration_id = ANY($2::text[])
+        )
+      `, [eventId, retainedConfigurationIds]);
+      await client.query(`
+        UPDATE configurations
+        SET event_id = null
+        WHERE event_id = $1 AND id = ANY($2::text[])
+      `, [eventId, retainedConfigurationIds]);
+    }
+
+    await client.query('DELETE FROM configurations WHERE event_id = $1', [eventId]);
+    const assets = await client.query(`
+      UPDATE design_assets asset
+      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
+          last_delete_error = null
+      WHERE asset.event_id = $1
+        AND NOT EXISTS (
+          SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
+        )
+      RETURNING *
+    `, [eventId]);
+    return {
+      eventId: String(eventId),
+      retainedConfigurationIds,
+      assets: rowsToBoundary(assets.rows),
+    };
+  });
+}
+
+async function finishExpiredEventDeletion(eventId) {
+  return withTransaction(async (client) => {
+    const event = await client.query(`
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at <= transaction_timestamp()
+      FOR UPDATE
+    `, [eventId]);
+    if (!event.rowCount) return false;
+    const remaining = await client.query(`
+      SELECT
+        EXISTS (SELECT 1 FROM configurations WHERE event_id = $1) AS configurations,
+        EXISTS (SELECT 1 FROM design_assets WHERE event_id = $1) AS assets
+    `, [eventId]);
+    if (remaining.rows[0].configurations || remaining.rows[0].assets) return false;
+    await client.query('DELETE FROM events WHERE id = $1', [eventId]);
+    return true;
+  });
 }
 
 module.exports = {
@@ -1249,6 +1611,10 @@ module.exports = {
   getEventById,
   slugExists,
   setEventTheme,
+  getResetPinStatus,
+  recordResetPinFailure,
+  clearResetPinFailures,
+  authorizeResetPin,
   upsertWord,
   addWordContribution,
   getWordContributions,
@@ -1301,4 +1667,6 @@ module.exports = {
   getConfiguration,
   getEventConfiguration,
   getEventConfigurations,
+  prepareExpiredEventCleanup,
+  finishExpiredEventDeletion,
 };

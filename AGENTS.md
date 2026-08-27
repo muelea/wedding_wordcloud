@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (85 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (97 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
@@ -59,6 +59,16 @@ it — this file is about how to work in it safely.
   browser silently refocuses the field — looks exactly like a broken submit
   button, and cost real debugging time to track down. The dot-masking is
   done with CSS (`-webkit-text-security: disc`) instead, purely visual.
+- **Reset has no reusable admin credential.** The PIN is submitted only in the
+  JSON body of one reset request, verified asynchronously, and discarded. Do
+  not restore an admin-token endpoint, browser token storage, accounts or a
+  reusable session. Failed-attempt rows contain only an HMAC of the normalized
+  source address, never the raw IPv4/IPv6 address.
+- **Expired events look unknown and their slugs are never reused.** Public
+  lookups filter `expires_at`; `reserved_event_slugs` survives event cleanup.
+  Paid configurations and assets must detach before an event is deleted, and
+  Storage objects must be removed before their last metadata row. A failed
+  object deletion retains a retryable key.
 - **`.env` is never committed.** It's gitignored and holds real Stripe/
   Printful keys in some environments. If you need a new env var, add it to
   `.env.example` with an empty/placeholder value and document it in
@@ -86,10 +96,9 @@ it — this file is about how to work in it safely.
 - German is the user-facing language throughout (`public/*.html` copy, form
   labels, error messages). Keep new user-facing strings in German unless
   told otherwise.
-- No accounts/login system for guests or couples — the admin PIN
-  (`src/adminAuth.js`, short-lived signed token in `sessionStorage`) is the
-  only auth, and it's intentionally lightweight (not a session/cookie
-  system, not JWT/bcrypt). Don't add a login system as a "nice to have."
+- No accounts/login system for guests or couples. The admin PIN authorizes only
+  one reset request at a time; it is not a session/cookie/JWT mechanism. Don't
+  add a login system as a "nice to have."
 
 ## Where things deploy
 

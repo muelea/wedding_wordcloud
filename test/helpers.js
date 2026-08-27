@@ -13,6 +13,7 @@ const INITIAL_DATABASE_URL = process.env.TEST_DATABASE_URL ||
 const APPLICATION_MIGRATIONS = [
   '20260827000001_application_schema.sql',
   '20260827000004_application_design_assets.sql',
+  '20260827000007_application_lifecycle_abuse.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -23,6 +24,9 @@ function clearApplicationModules() {
     '../src/fulfillment',
     '../src/privateStorage',
     '../src/designAssets',
+    '../src/clientIdentity',
+    '../src/rateLimits',
+    '../src/lifecycle',
     '../src/socket',
     '../server',
   ]) {
@@ -64,7 +68,7 @@ async function startTestServer() {
   process.env.DATABASE_URL = INITIAL_DATABASE_URL;
   process.env.DATABASE_SCHEMA = schema;
   process.env.DATABASE_APPLICATION_NAME = `wolkenworte-test-${process.pid}`;
-  process.env.ADMIN_TOKEN_SECRET = 'test-secret';
+  process.env.RATE_LIMIT_HMAC_SECRET = 'test-rate-limit-secret-that-is-long-enough';
   clearApplicationModules();
 
   const { server, io, initialize, shutdown } = require('../server');
@@ -111,16 +115,21 @@ async function startTestServer() {
 }
 
 let counter = 0;
+let clientCounter = 0;
 function uniqueCoupleName() {
   counter += 1;
   return `Test Couple ${Date.now()}-${counter}`;
 }
 
 async function createEvent(baseUrl, overrides = {}) {
+  clientCounter += 1;
   const coupleName = overrides.coupleName || uniqueCoupleName();
   const res = await fetch(`${baseUrl}/api/events`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Wolkenworte-Test-Client-IP': overrides.clientIp || `192.0.2.${(clientCounter % 250) + 1}`,
+    },
     body: JSON.stringify({
       coupleName,
       slug: overrides.slug,

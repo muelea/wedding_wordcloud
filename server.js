@@ -30,8 +30,9 @@ io.engine.on('headers', (headers) => {
   headers['Cache-Control'] = 'no-store';
 });
 
-// Behind a reverse proxy, this makes req.protocol correctly report "https".
-app.set('trust proxy', true);
+// Trust only the immediate private/local reverse-proxy hop. Source abuse
+// identity is resolved separately and never accepts arbitrary X-Forwarded-For.
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
 app.use(compression());
 
