@@ -231,6 +231,12 @@ Rules:
   runtime privileges Wolkenworte needs. `MIGRATION_DATABASE_URL` is used only
   by local tooling or the deployment workflow and is never required by the web
   process at runtime.
+- Both hosted Postgres connections must use TLS with certificate and hostname
+  verification (`sslmode=verify-full` or the equivalent `pg` configuration)
+  and the Supabase project must enforce SSL for database connections. Install
+  and trust Supabase's database CA certificate; never make a hosted connection
+  work by setting `rejectUnauthorized: false`. The local Supabase stack may use
+  its documented local non-TLS connection.
 - `RATE_LIMIT_HMAC_SECRET` and `MAINTENANCE_SECRET` must be independent random
   secrets. Neither is reused as a Stripe, Storage, PIN, or database credential.
 - `ALLOW_TEST_DATA_RESET` is absent or `false` everywhere except the temporary
@@ -798,6 +804,19 @@ The durable fulfillment job must, before calling Printful:
 6. pass that URL to Printful;
 7. reuse the same artifact and Printful external ID on retries.
 
+Draft creation must preserve the existing `update_existing=true` behavior. A
+deterministic external ID is a duplicate boundary, but it is not by itself a
+complete recovery procedure. If a Printful create or confirm request times out,
+the connection drops, or the process stops after Printful may have accepted the
+request, the next leased attempt must first retrieve the order by its external
+ID and reconcile the provider status. It may retry draft creation with
+`update_existing=true` only when no matching order exists, and may retry
+confirmation only when the reconciled order is still an unconfirmed draft. If
+Printful already accepted or submitted the order, persist that result instead
+of issuing another write. Never recover an ambiguous attempt by generating a
+new external ID, and only the current lease owner may commit the reconciled
+result.
+
 Provide a route such as:
 
 ```text
@@ -863,7 +882,9 @@ startup-only recovery and transient timers with a Postgres-backed claim loop:
 - jobs store `next_attempt_at`, attempt count, last sanitized error, and a final
   `blocked`/manual-review state;
 - process restart or Machine sleep cannot lose a job;
-- Stripe and Printful idempotency remain the external duplicate guards.
+- Stripe idempotency and Printful's deterministic external IDs remain external
+  duplicate guards; ambiguous Printful create/confirm outcomes are reconciled
+  by external ID before any retry as specified above.
 
 Do not create a separate Fly worker Machine in the initial architecture.
 Limit fulfillment concurrency initially (one order or a small measured number
@@ -1522,6 +1543,9 @@ The final refactor is accepted only when all of the following are true:
 - an unauthenticated maintenance request performs no work, and the Cron secret
   is absent from migrations, application logs and ordinary HTTP logs;
 - forced restart during fulfillment resumes without duplicate external work;
+- a lost Printful create or confirmation response is reconciled through the
+  deterministic external ID before retry, completes from the provider's actual
+  status, and never creates or confirms a second order;
 - an expired fulfillment lease is recoverable and a stale lease owner cannot
   overwrite the successful retry result;
 - unversioned application JavaScript no longer receives immutable caching;
