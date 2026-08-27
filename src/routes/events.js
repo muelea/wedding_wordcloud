@@ -20,6 +20,7 @@ const {
 } = require('../products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
 const DesignFonts = require('../designFonts');
+const designAssets = require('../designAssets');
 const MugIcons = require('../../public/js/mug-icons.js');
 const I18n = require('../i18n');
 const { asyncRoute } = require('../asyncRoute');
@@ -31,8 +32,7 @@ const MAX_SNAPSHOT_WORDS = 200;
 // left for words the couple adds manually in the editor.
 const MAX_DESIGN_ELEMENTS = 500;
 const MAX_DESIGN_IMAGES = 6;
-const MAX_DESIGN_IMAGE_BYTES = 6 * 1024 * 1024;
-const MAX_IMAGE_DATA_URL_LENGTH = Math.ceil(MAX_DESIGN_IMAGE_BYTES * 4 / 3) + 128;
+const DESIGN_ASSET_ID_RE = /^[A-Za-z0-9_-]{24}$/;
 const CONFIGURATION_TYPES = new Set(['event_wordcloud', 'personal_memory']);
 const ADDRESS_LIMITS = Object.freeze({
   name: 100,
@@ -336,30 +336,15 @@ function normalizeDesignText(rawText, locale = I18n.DEFAULT_LOCALE) {
   return normalizeWord(text, locale) === text.toLocaleLowerCase(locale) ? text : '';
 }
 
-function normalizeDesignImage(rawSource) {
-  if (typeof rawSource !== 'string' || rawSource.length > MAX_IMAGE_DATA_URL_LENGTH) return null;
-  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(rawSource);
-  if (!match) return null;
-  let bytes;
-  try {
-    bytes = Buffer.from(match[2], 'base64');
-  } catch {
-    return null;
-  }
-  if (!bytes.length || bytes.length > MAX_DESIGN_IMAGE_BYTES) return null;
-  const mime = match[1];
-  const isJpeg = mime === 'jpeg' && bytes.length >= 3 &&
-    bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  const isPng = mime === 'png' && bytes.length >= 8 &&
-    bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-  const isWebp = mime === 'webp' && bytes.length >= 12 &&
-    bytes.subarray(0, 4).toString('ascii') === 'RIFF' &&
-    bytes.subarray(8, 12).toString('ascii') === 'WEBP';
-  if (!isJpeg && !isPng && !isWebp) return null;
-  return { source: `data:image/${mime};base64,${match[2]}`, byteLength: bytes.length };
-}
-
-function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { count: 0, bytes: 0 }, locale = I18n.DEFAULT_LOCALE) {
+function normalizeDesign(
+  rawDesign,
+  width,
+  height,
+  safeMargin,
+  imageBudget = { assetIds: new Set() },
+  locale = I18n.DEFAULT_LOCALE,
+  allowImages = false
+) {
   if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
   }
@@ -387,19 +372,19 @@ function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { c
       angle: Math.round(angle * 10) / 10,
     };
     if (type === 'image') {
-      const image = normalizeDesignImage(rawItem.src);
+      const assetId = String(rawItem.assetId || '');
       const imageWidth = Number(rawItem.width);
       const imageHeight = Number(rawItem.height);
-      imageBudget.count += 1;
-      imageBudget.bytes += image?.byteLength || 0;
-      if (!image || imageBudget.count > MAX_DESIGN_IMAGES || imageBudget.bytes > MAX_DESIGN_IMAGE_BYTES ||
+      if (!allowImages || !DESIGN_ASSET_ID_RE.test(assetId) ||
           !Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) ||
           imageWidth < 48 || imageHeight < 48 || imageWidth > width || imageHeight > height) {
         return null;
       }
+      imageBudget.assetIds.add(assetId);
+      if (imageBudget.assetIds.size > MAX_DESIGN_IMAGES) return null;
       normalized.push({
         ...common,
-        src: image.source,
+        assetId,
         width: Math.round(imageWidth * 10) / 10,
         height: Math.round(imageHeight * 10) / 10,
       });
@@ -431,18 +416,24 @@ function normalizeDesign(rawDesign, width, height, safeMargin, imageBudget = { c
   return isPrintDesignWithinBounds(normalized, width, height, safeMargin) ? normalized : null;
 }
 
-function normalizeProductDesigns(rawBody, product, locale = I18n.DEFAULT_LOCALE) {
+function normalizeProductDesigns(
+  rawBody,
+  product,
+  configurationType,
+  locale = I18n.DEFAULT_LOCALE
+) {
   if (!rawBody || typeof rawBody !== 'object') return null;
   const rawDesigns = rawBody.designs;
   if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
-  const imageBudget = { count: 0, bytes: 0 };
+  const imageBudget = { assetIds: new Set() };
   const normalizeOne = (rawDesign) => normalizeDesign(
     rawDesign,
     product.printFile.width,
     product.printFile.height,
     product.designSafeMargin,
     imageBudget,
-    locale
+    locale,
+    configurationType === 'personal_memory'
   );
 
   const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
@@ -499,7 +490,7 @@ function configurationDesignSurfaces(product, design) {
   return null;
 }
 
-function editableConfigurationResponse(slug, configuration) {
+async function editableConfigurationResponse(slug, configuration) {
   const summary = configurationResponse(slug, configuration);
   if (!summary) return null;
   const product = resolveProductOrientation(
@@ -516,6 +507,9 @@ function editableConfigurationResponse(slug, configuration) {
     return null;
   }
   if (!Array.isArray(words)) return null;
+  if (designAssets.collectAssetIds(design).length) {
+    design = await designAssets.materializeDesignForEditing(configuration.id, design);
+  }
   return {
     ...summary,
     productKey: configuration.product_key,
@@ -743,7 +737,26 @@ function makeRouter({ io, port }) {
     }
   }));
 
-  router.post('/events/:slug/configurations', express.json({ limit: '9mb' }), asyncRoute(async (req, res) => {
+  router.post('/events/:slug/assets', express.json({ limit: '27mb' }), asyncRoute(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const event = await db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'event_not_found' });
+    try {
+      const result = await designAssets.uploadEventAsset({
+        event,
+        ownerId: req.get('X-Wolkenworte-Guest-Id'),
+        dataUrl: req.body?.dataUrl,
+      });
+      return res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof designAssets.DesignAssetError) {
+        return res.status(error.status).json({ error: error.code });
+      }
+      throw error;
+    }
+  }));
+
+  router.post('/events/:slug/configurations', express.json({ limit: '256kb' }), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
 
@@ -776,27 +789,35 @@ function makeRouter({ io, port }) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
-    const design = normalizeProductDesigns(req.body, product, event.locale);
+    const design = normalizeProductDesigns(req.body, product, configurationType, event.locale);
     if (!design) {
       return res.status(400).json({ error: 'invalid_design' });
     }
 
-    const configuration = await db.createConfiguration({
-      eventId: event.id,
-      productKey: product.key,
-      printfulVariantId: product.printful.variantId,
-      quantity,
-      // Compatibility snapshot only. Retail pricing is calculated after the
-      // address is entered and never taken from the browser/configuration.
-      unitPriceCents: 0,
-      theme,
-      words,
-      design,
-      configurationType,
-      orientation: product.orientation,
-      printWidth: product.printFile.width,
-      printHeight: product.printFile.height,
-    });
+    let configuration;
+    try {
+      configuration = await db.createConfiguration({
+        eventId: event.id,
+        productKey: product.key,
+        printfulVariantId: product.printful.variantId,
+        quantity,
+        // Compatibility snapshot only. Retail pricing is calculated after the
+        // address is entered and never taken from the browser/configuration.
+        unitPriceCents: 0,
+        theme,
+        words,
+        design,
+        configurationType,
+        orientation: product.orientation,
+        printWidth: product.printFile.width,
+        printHeight: product.printFile.height,
+      });
+    } catch (error) {
+      if (error.code === 'invalid_design_assets') {
+        return res.status(400).json({ error: 'invalid_design' });
+      }
+      throw error;
+    }
 
     const printFiles = configurationPrintFileUrls(event.slug, configuration.id, product);
     res.status(201).json({
@@ -839,7 +860,7 @@ function makeRouter({ io, port }) {
     res.set('Cache-Control', 'no-store');
     const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
-    const response = editableConfigurationResponse(req.params.slug, configuration);
+    const response = await editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
   }));
@@ -1035,9 +1056,20 @@ function makeRouter({ io, port }) {
       return res.status(500).send('configuration is invalid');
     }
     if (!design) return res.status(500).send('configuration is invalid');
+    if (configuration.configuration_type === 'personal_memory' && design.some((item) => item.type === 'image')) {
+      try {
+        const storedDesign = JSON.parse(configuration.design_json);
+        const materialized = await designAssets.materializeDesignForPrint(configuration.id, storedDesign);
+        design = materialized.surfaces[surfaceKey];
+      } catch {
+        return res.status(503).send('configuration asset is unavailable');
+      }
+    }
     const svg = buildProductPrintSvg(product, design);
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('Cache-Control', configuration.configuration_type === 'personal_memory'
+      ? 'private, no-store'
+      : 'public, max-age=31536000, immutable');
     res.send(svg);
   }));
 

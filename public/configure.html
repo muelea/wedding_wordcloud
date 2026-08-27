@@ -1829,14 +1829,34 @@
   <script src="/js/mug-icons.js?v=20260826-1"></script>
   <script src="/js/design-fonts.js?v=20260826-1"></script>
   <script src="/js/design-layout.js?v=20260826-4"></script>
-  <script src="/js/mug-editor.js?v=20260826-9"></script>
+  <script src="/js/mug-editor.js?v=20260827-10"></script>
   <script>
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
     const isPersonalMode = new URLSearchParams(location.search).get('mode') === 'personal';
+    const guestId = getOrCreateGuestId();
     const t = (source, params) => WolkenworteI18n.t(source, params);
     let configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
+
+    function getOrCreateGuestId() {
+      const storageKey = `guest-session:${slug}`;
+      try {
+        const existing = sessionStorage.getItem(storageKey);
+        if (/^[a-f0-9]{32}$/.test(existing || '')) return existing;
+      } catch {}
+      const bytes = new Uint8Array(16);
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        window.crypto.getRandomValues(bytes);
+      } else {
+        for (let index = 0; index < bytes.length; index += 1) {
+          bytes[index] = Math.floor(Math.random() * 256);
+        }
+      }
+      const created = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+      try { sessionStorage.setItem(storageKey, created); } catch {}
+      return created;
+    }
     const loading = document.getElementById('loading');
     const content = document.getElementById('config-content');
     const errorText = document.getElementById('error-text');
@@ -1881,6 +1901,7 @@
     const customColorAdd = document.getElementById('custom-color-add');
     const photoButton = document.getElementById('editor-photo');
     const photoInput = document.getElementById('editor-photo-input');
+    photoButton.hidden = configurationType !== 'personal_memory';
     const orderBox = document.getElementById('order-box');
     const orderList = document.getElementById('order-list');
     const orderCount = document.getElementById('order-count');
@@ -2217,9 +2238,11 @@
       const files = [...photoInput.files];
       photoInput.value = '';
       if (!files.length || !mugEditor) return;
-      const existingPhotos = Object.values(getAllSurfaceDesigns())
+      const existingPhotos = new Set(Object.values(getAllSurfaceDesigns())
         .flat()
-        .filter((item) => item.type === 'image').length;
+        .filter((item) => item.type === 'image')
+        .map((item) => item.assetId)
+        .filter(Boolean)).size;
       const available = Math.max(0, 6 - existingPhotos);
       if (!available) {
         mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
@@ -2230,7 +2253,20 @@
       try {
         for (const file of files.slice(0, available)) {
           mugEditor.setFeedback('Foto wird vorbereitet…');
-          await mugEditor.addImage(await preparePhoto(file));
+          const prepared = await preparePhoto(file);
+          const response = await fetch(`/api/events/${encodeURIComponent(slug)}/assets`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Wolkenworte-Guest-Id': guestId,
+            },
+            body: JSON.stringify({ dataUrl: prepared }),
+          });
+          const uploaded = await response.json();
+          if (!response.ok || !uploaded.assetId || !uploaded.previewUrl) {
+            throw new Error(uploaded.error || 'photo_upload_failed');
+          }
+          await mugEditor.addImage(uploaded.previewUrl, uploaded.assetId);
         }
         if (files.length > available) mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
       } catch {
@@ -2524,6 +2560,7 @@
       suppressDirty = true;
       try {
         configurationType = configurationData.configurationType;
+        photoButton.hidden = configurationType !== 'personal_memory';
         product = nextProduct;
         selectedFamilyKey = product.familyKey;
         const savedOrientation = selectedOrientationOption(product, configurationData.orientation);

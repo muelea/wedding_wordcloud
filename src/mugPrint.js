@@ -45,7 +45,8 @@ function isPrintDesignWithinBounds(
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
     if (item.type === 'image' &&
-        (!Number.isFinite(item.width) || !Number.isFinite(item.height) || typeof item.src !== 'string')) {
+        (!Number.isFinite(item.width) || !Number.isFinite(item.height) ||
+         (typeof item.src !== 'string' && typeof item.assetId !== 'string'))) {
       return false;
     }
     const bounds = getDesignBounds(item);
@@ -61,6 +62,9 @@ function isPrintDesignWithinBounds(
 function designElements(design) {
   return design.map((item) => {
     if (item.type === 'image') {
+      if (typeof item.src !== 'string' || !item.src.startsWith('data:image/')) {
+        throw new Error('Cannot build a print with an unresolved private image');
+      }
       const x = item.x - item.width / 2;
       const y = item.y - item.height / 2;
       const rotate = item.angle

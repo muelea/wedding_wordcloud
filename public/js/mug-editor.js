@@ -168,6 +168,7 @@
       });
       photo.editorKind = 'image';
       photo.editorSrc = item.src;
+      photo.editorAssetId = item.assetId;
       photo.editorId = item.id || this.nextId('foto');
       this.setImageSize(photo, item.width, item.height);
       photo.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
@@ -1004,14 +1005,16 @@
       this.setFeedback('{{item}} hinzugefügt', { item: translate(definition.label) });
     }
 
-    async addImage(src) {
-      if (typeof src !== 'string' || !src.startsWith('data:image/')) {
+    async addImage(src, assetId) {
+      if (typeof src !== 'string' || !/^https:\/\/|^data:image\//.test(src) ||
+          !/^[A-Za-z0-9_-]{24}$/.test(String(assetId || ''))) {
         throw new Error('invalid_photo');
       }
       let element = this.photoElements.get(src);
       if (!element) {
         element = await new Promise((resolve, reject) => {
           const image = new Image();
+          image.crossOrigin = 'anonymous';
           image.onload = () => resolve(image);
           image.onerror = () => reject(new Error('photo_decode_failed'));
           image.src = src;
@@ -1028,6 +1031,7 @@
         id: this.nextId('foto'),
         type: 'image',
         src,
+        assetId,
         x: this.defaultX,
         y: this.defaultY,
         width,
@@ -1047,7 +1051,7 @@
     }
 
     async preloadImage(src) {
-      if (typeof src !== 'string' || !src.startsWith('data:image/')) {
+      if (typeof src !== 'string' || !/^https:\/\/|^data:image\//.test(src)) {
         throw new Error('invalid_photo');
       }
       if (this.photoElements.has(src)) {
@@ -1056,6 +1060,7 @@
       }
       const element = await new Promise((resolve, reject) => {
         const image = new Image();
+        image.crossOrigin = 'anonymous';
         image.onload = () => resolve(image);
         image.onerror = () => reject(new Error('photo_decode_failed'));
         image.src = src;
@@ -1177,6 +1182,7 @@
           ...common,
           type: 'image',
           src: object.editorSrc,
+          assetId: object.editorAssetId,
           width: object.width * Math.abs(transform.scaleX) / this.editorScale,
           height: object.height * Math.abs(transform.scaleY) / this.editorScale,
         };

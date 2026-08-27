@@ -10,13 +10,10 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const INITIAL_DATABASE_URL = process.env.TEST_DATABASE_URL ||
   process.env.MIGRATION_DATABASE_URL ||
   process.env.DATABASE_URL;
-const APPLICATION_MIGRATION = path.join(
-  __dirname,
-  '..',
-  'supabase',
-  'migrations',
-  '20260827000001_application_schema.sql'
-);
+const APPLICATION_MIGRATIONS = [
+  '20260827000001_application_schema.sql',
+  '20260827000004_application_design_assets.sql',
+].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
   for (const modulePath of [
@@ -24,6 +21,8 @@ function clearApplicationModules() {
     '../src/routes/events',
     '../src/routes/webhook',
     '../src/fulfillment',
+    '../src/privateStorage',
+    '../src/designAssets',
     '../src/socket',
     '../server',
   ]) {
@@ -51,7 +50,9 @@ async function startTestServer() {
   try {
     await setupClient.query(`CREATE SCHEMA "${schema}"`);
     await setupClient.query(`SET search_path TO "${schema}", public`);
-    await setupClient.query(fs.readFileSync(APPLICATION_MIGRATION, 'utf8'));
+    for (const migration of APPLICATION_MIGRATIONS) {
+      await setupClient.query(fs.readFileSync(migration, 'utf8'));
+    }
   } catch (error) {
     try { await setupClient.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } catch { /* ignore */ }
     throw error;

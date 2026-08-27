@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (78 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (85 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
@@ -18,8 +18,9 @@ it — this file is about how to work in it safely.
   pass; they cover cross-event isolation and receipt-bound removal.
 - If you touched personal photos/configuration types in `src/routes/events.js`,
   `src/mugPrint.js`, `public/configure.html` or `public/js/mug-editor.js`,
-  `test/configurator.test.js` must pass; it covers empty personal starts,
-  image validation, configuration isolation and immutable print output.
+  both `test/configurator.test.js` and `test/storage-assets.test.js` must pass;
+  they cover empty personal starts, decoded-image validation, private Storage,
+  configuration isolation and immutable print output.
 - If you touched `public/js/wordcloud-core.js` (the layout/export engine),
   `test/svg-export.test.js` and `test/export-font-metrics.test.js` must
   still pass — they check no dropped/duplicated/overlapping words and real
@@ -43,11 +44,13 @@ it — this file is about how to work in it safely.
 - **Personal-memory configurations stay isolated from the event word cloud.**
   `configuration_type=personal_memory` starts with no event words and requires
   its own non-empty design. It must never silently fall back to `words` from
-  the shared event. Photos are embedded in the immutable `design_json`, not
-  written to a public upload directory. Keep the server checks: JPEG/PNG/WebP
-  magic bytes only, at most 6 images and at most 6 MiB decoded image data for
-  the complete design. The opaque configuration id is the only public handle
-  used by its immutable print-file route.
+  the shared event. Photos live only in the private Supabase Storage bucket;
+  immutable `design_json` contains opaque asset ids and never bytes, signed
+  URLs or permanent public URLs. Keep the server checks: decoded JPEG/PNG/WebP
+  with valid magic bytes, at most 1,600 px/2,560,000 pixels per upload, at most
+  6 unique assets and at most 6 MiB stored bytes per complete design. Asset
+  joins are transactional; non-active/foreign assets cannot be attached, and
+  failed Storage deletion must retain its retryable object key.
 - **The admin PIN fields in `public/create.html` (`#pin`, `#pin-confirm`)
   must stay `type="tel"`, not `type="password"`.** Two adjacent
   `type="password"` fields make Safari/Chrome treat the form as an account

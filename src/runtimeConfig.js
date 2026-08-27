@@ -43,6 +43,11 @@ function validateRuntimeConfig() {
     if (!String(process.env.SUPABASE_SECRET_KEY || '').startsWith('sb_secret_')) {
       errors.push('SUPABASE_SECRET_KEY muss ein aktueller backend-only sb_secret_-Key sein.');
     }
+    if (!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(
+      String(process.env.SUPABASE_STORAGE_BUCKET || 'wolkenworte-private').trim()
+    )) {
+      errors.push('SUPABASE_STORAGE_BUCKET muss ein gültiger privater Bucket-Name sein.');
+    }
     const rateSecret = String(process.env.RATE_LIMIT_HMAC_SECRET || '');
     const maintenanceSecret = String(process.env.MAINTENANCE_SECRET || '');
     if (rateSecret.length < 32 || maintenanceSecret.length < 32) {

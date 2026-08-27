@@ -5,7 +5,13 @@ const { Pool } = require('pg');
 const { connectionOptions } = require('./dbConfig');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const REQUIRED_SCHEMA_VERSION = '1';
+const REQUIRED_SCHEMA_VERSION = '2';
+const MAX_CONFIGURATION_ASSETS = 6;
+const MAX_CONFIGURATION_ASSET_BYTES = 6 * 1024 * 1024;
+const MAX_UNATTACHED_OWNER_ASSETS = 12;
+const MAX_UNATTACHED_OWNER_BYTES = 12 * 1024 * 1024;
+const MAX_UNATTACHED_EVENT_ASSETS = 2000;
+const MAX_UNATTACHED_EVENT_BYTES = 1024 * 1024 * 1024;
 const JSON_COLUMNS = new Set([
   'words_json',
   'design_json',
@@ -963,6 +969,181 @@ function isCheckoutQuoteExpired(quote) {
 }
 
 // ── Configurations ──────────────────────────────────────────────────────
+function designAssetIds(design) {
+  if (!design?.surfaces || typeof design.surfaces !== 'object' || Array.isArray(design.surfaces)) return [];
+  return [...new Set(Object.values(design.surfaces)
+    .flatMap((surface) => Array.isArray(surface) ? surface : [])
+    .filter((item) => item?.type === 'image')
+    .map((item) => String(item.assetId || ''))
+    .filter(Boolean))];
+}
+
+function assetValidationError() {
+  const error = new Error('Configuration contains unavailable design assets.');
+  error.code = 'invalid_design_assets';
+  return error;
+}
+
+async function beginDesignAssetUpload({
+  eventId,
+  ownerId,
+  mimeType,
+  byteSize,
+  sha256,
+  extension,
+}) {
+  return withTransaction(async (client) => {
+    const lockedEvent = await client.query('SELECT id FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    if (!lockedEvent.rowCount) {
+      const error = new Error('event not found');
+      error.code = 'event_not_found';
+      throw error;
+    }
+
+    const existing = await client.query(`
+      SELECT *
+      FROM design_assets
+      WHERE event_id = $1 AND uploader_owner_id = $2 AND sha256 = $3
+        AND storage_status = 'active' AND deleted_at IS NULL
+      ORDER BY created_at ASC, id ASC
+      LIMIT 1
+      FOR UPDATE
+    `, [eventId, ownerId, sha256]);
+    if (existing.rows[0]) {
+      const refreshed = await client.query(`
+        UPDATE design_assets
+        SET expires_at = greatest(expires_at, transaction_timestamp() + interval '30 days')
+        WHERE id = $1
+        RETURNING *
+      `, [existing.rows[0].id]);
+      return { reused: true, asset: rowToBoundary(refreshed.rows[0]) };
+    }
+
+    const usage = await client.query(`
+      SELECT
+        count(*) filter (where uploader_owner_id = $2)::integer AS owner_count,
+        coalesce(sum(byte_size) filter (where uploader_owner_id = $2), 0)::bigint AS owner_bytes,
+        count(*)::integer AS event_count,
+        coalesce(sum(byte_size), 0)::bigint AS event_bytes
+      FROM design_assets asset
+      WHERE event_id = $1
+        AND storage_status in ('uploading', 'active')
+        AND deleted_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM configuration_assets reference
+          WHERE reference.asset_id = asset.id
+        )
+    `, [eventId, ownerId]);
+    const totals = usage.rows[0];
+    const exceedsOwner = Number(totals.owner_count) + 1 > MAX_UNATTACHED_OWNER_ASSETS ||
+      Number(totals.owner_bytes) + byteSize > MAX_UNATTACHED_OWNER_BYTES;
+    const exceedsEvent = Number(totals.event_count) + 1 > MAX_UNATTACHED_EVENT_ASSETS ||
+      Number(totals.event_bytes) + byteSize > MAX_UNATTACHED_EVENT_BYTES;
+    if (exceedsOwner || exceedsEvent) {
+      const error = new Error('Asset upload ceiling reached.');
+      error.code = 'asset_limit';
+      throw error;
+    }
+
+    const id = crypto.randomBytes(18).toString('base64url');
+    const objectKey = `photos/${eventId}/${crypto.randomBytes(24).toString('hex')}.${extension}`;
+    const inserted = await client.query(`
+      INSERT INTO design_assets (
+        id, event_id, uploader_owner_id, object_key, mime_type, byte_size,
+        sha256, storage_status, expires_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'uploading', transaction_timestamp() + interval '30 days')
+      RETURNING *
+    `, [id, eventId, ownerId, objectKey, mimeType, byteSize, sha256]);
+    return { reused: false, asset: rowToBoundary(inserted.rows[0]) };
+  });
+}
+
+async function activateDesignAsset(assetId) {
+  const result = await getPool().query(`
+    UPDATE design_assets
+    SET storage_status = 'active', last_delete_error = NULL,
+        expires_at = greatest(expires_at, transaction_timestamp() + interval '30 days')
+    WHERE id = $1 AND storage_status = 'uploading' AND deleted_at IS NULL
+    RETURNING *
+  `, [assetId]);
+  if (!result.rows[0]) throw new Error('Design asset could not be activated.');
+  return rowToBoundary(result.rows[0]);
+}
+
+async function markDesignAssetUploadFailed(assetId, reason) {
+  const sanitized = String(reason || 'storage_upload_failed').replace(/[^a-z0-9_:-]/gi, '').slice(0, 240);
+  const result = await getPool().query(`
+    UPDATE design_assets
+    SET storage_status = 'delete_failed', last_delete_error = $2
+    WHERE id = $1 AND storage_status = 'uploading' AND deleted_at IS NULL
+    RETURNING *
+  `, [assetId, sanitized]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getConfigurationAssets(configurationId) {
+  const result = await getPool().query(`
+    SELECT asset.*
+    FROM configuration_assets reference
+    JOIN design_assets asset ON asset.id = reference.asset_id
+    WHERE reference.configuration_id = $1
+    ORDER BY asset.id
+  `, [configurationId]);
+  return rowsToBoundary(result.rows);
+}
+
+async function claimDesignAssetForDeletion(assetId) {
+  return withTransaction(async (client) => {
+    const locked = await client.query(`
+      SELECT * FROM design_assets WHERE id = $1 FOR UPDATE
+    `, [assetId]);
+    const asset = locked.rows[0];
+    if (!asset || asset.deleted_at || asset.storage_status === 'deleting') return null;
+    const references = await client.query(
+      'SELECT 1 FROM configuration_assets WHERE asset_id = $1 LIMIT 1',
+      [assetId]
+    );
+    const staleUpload = asset.storage_status === 'uploading' &&
+      Date.parse(asset.created_at) <= Date.now() - 15 * 60 * 1000;
+    const eligible = asset.storage_status === 'delete_failed' || staleUpload ||
+      (asset.storage_status === 'active' && Date.parse(asset.expires_at) <= Date.now());
+    if (references.rowCount || !eligible) return null;
+    const claimed = await client.query(`
+      UPDATE design_assets
+      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
+          last_delete_error = NULL
+      WHERE id = $1
+      RETURNING *
+    `, [assetId]);
+    return rowToBoundary(claimed.rows[0]);
+  });
+}
+
+async function finishDesignAssetDeletion(assetId) {
+  const result = await getPool().query(`
+    DELETE FROM design_assets asset
+    WHERE asset.id = $1 AND asset.storage_status = 'deleting'
+      AND NOT EXISTS (
+        SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
+      )
+    RETURNING id
+  `, [assetId]);
+  if (!result.rowCount) throw new Error('Design asset deletion lost its claim.');
+  return true;
+}
+
+async function failDesignAssetDeletion(assetId, reason) {
+  const sanitized = String(reason || 'storage_delete_failed').replace(/[^a-z0-9_:-]/gi, '').slice(0, 240);
+  const result = await getPool().query(`
+    UPDATE design_assets
+    SET storage_status = 'delete_failed', last_delete_error = $2
+    WHERE id = $1 AND storage_status = 'deleting'
+    RETURNING *
+  `, [assetId, sanitized]);
+  if (!result.rows[0]) throw new Error('Design asset deletion failure could not be recorded.');
+  return rowToBoundary(result.rows[0]);
+}
+
 async function createConfiguration({
   eventId,
   productKey,
@@ -978,19 +1159,52 @@ async function createConfiguration({
   printHeight,
 }) {
   if (!design) throw new TypeError('A configuration requires an immutable canvas design.');
-  const id = crypto.randomBytes(12).toString('base64url');
-  const result = await getPool().query(`
-    INSERT INTO configurations (
-      id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
-      theme, words_json, design_json, configuration_type, orientation,
-      print_width, print_height
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13)
-    RETURNING *
-  `, [
-    id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
-    jsonValue(words), jsonValue(design), configurationType, orientation, printWidth, printHeight,
-  ]);
-  return rowToBoundary(result.rows[0]);
+  const assetIds = designAssetIds(design);
+  if (assetIds.length > MAX_CONFIGURATION_ASSETS ||
+      (configurationType === 'event_wordcloud' && assetIds.length)) {
+    throw assetValidationError();
+  }
+  return withTransaction(async (client) => {
+    if (assetIds.length) {
+      const assets = await client.query(`
+        SELECT id, byte_size
+        FROM design_assets
+        WHERE id = ANY($1::text[]) AND event_id = $2
+          AND storage_status = 'active' AND deleted_at IS NULL
+        ORDER BY id
+        FOR KEY SHARE
+      `, [assetIds, eventId]);
+      const totalBytes = assets.rows.reduce((sum, asset) => sum + Number(asset.byte_size), 0);
+      if (assets.rowCount !== assetIds.length || totalBytes > MAX_CONFIGURATION_ASSET_BYTES) {
+        throw assetValidationError();
+      }
+      await client.query(`
+        UPDATE design_assets
+        SET expires_at = greatest(expires_at, transaction_timestamp() + interval '30 days')
+        WHERE id = ANY($1::text[])
+      `, [assetIds]);
+    }
+
+    const id = crypto.randomBytes(12).toString('base64url');
+    const result = await client.query(`
+      INSERT INTO configurations (
+        id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
+        theme, words_json, design_json, configuration_type, orientation,
+        print_width, print_height
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13)
+      RETURNING *
+    `, [
+      id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
+      jsonValue(words), jsonValue(design), configurationType, orientation, printWidth, printHeight,
+    ]);
+    if (assetIds.length) {
+      await client.query(`
+        INSERT INTO configuration_assets (configuration_id, asset_id)
+        SELECT $1, unnest($2::text[])
+      `, [id, assetIds]);
+    }
+    return rowToBoundary(result.rows[0]);
+  });
 }
 
 async function getConfiguration(id) {
@@ -1076,6 +1290,13 @@ module.exports = {
   getEventCartCheckoutQuote,
   updateCheckoutQuote,
   isCheckoutQuoteExpired,
+  beginDesignAssetUpload,
+  activateDesignAsset,
+  markDesignAssetUploadFailed,
+  getConfigurationAssets,
+  claimDesignAssetForDeletion,
+  finishDesignAssetDeletion,
+  failDesignAssetDeletion,
   createConfiguration,
   getConfiguration,
   getEventConfiguration,

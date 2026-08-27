@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { io: ioClient } = require('socket.io-client');
+const sharp = require('sharp');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignLayout = require('../public/js/design-layout.js');
@@ -505,7 +506,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
   assert.match(configurePage, /design-layout\.js\?v=20260826-4/);
   assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260826-9/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260827-10/);
   assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"[^>]*hidden/);
   assert.match(configurePage, /id="editor-font-toggle"[^>]*aria-haspopup="listbox"/);
   assert.match(configurePage, /id="editor-font-menu"[^>]*role="listbox"/);
@@ -617,6 +618,18 @@ test('configurator exposes every curated product with verified Printful geometry
 test('a guest can create an isolated personal photo design without event words', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
+  const objects = new Map();
+  const privateStorage = require('../src/privateStorage');
+  privateStorage.setAdapterForTests({
+    async upload(key, bytes) { objects.set(key, Buffer.from(bytes)); },
+    async createSignedUrl(key) { return `https://storage.test/${key}?token=short-lived`; },
+    async download(key) {
+      if (!objects.has(key)) throw new Error('missing object');
+      return objects.get(key);
+    },
+    async remove(key) { objects.delete(key); },
+  });
+  t.after(() => privateStorage.resetAdapterForTests());
   const event = await createEvent(baseUrl, { coupleName: 'Persönliche Paula & Mika' });
 
   const sharedConfigurator = await fetch(`${baseUrl}/api/events/${event.slug}/configurator`);
@@ -644,13 +657,25 @@ test('a guest can create an isolated personal photo design without event words',
   assert.equal(missingDesign.status, 400);
   assert.equal((await missingDesign.json()).error, 'invalid_design');
 
-  const onePixelPng =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ' +
-    'AAAADUlEQVR42mNk+M/wHwAF/gL+4N1xAAAAAElFTkSuQmCC';
+  const photoBytes = await sharp({
+    create: { width: 64, height: 64, channels: 4, background: '#c94f7c' },
+  }).png().toBuffer();
+  const onePixelPng = `data:image/png;base64,${photoBytes.toString('base64')}`;
+  const uploaded = await fetch(`${baseUrl}/api/events/${event.slug}/assets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Wolkenworte-Guest-Id': 'a'.repeat(32),
+    },
+    body: JSON.stringify({ dataUrl: onePixelPng }),
+  });
+  assert.equal(uploaded.status, 201);
+  const asset = await uploaded.json();
   const design = [{
     id: 'foto-1',
     type: 'image',
-    src: onePixelPng,
+    assetId: asset.assetId,
+    src: asset.previewUrl,
     x: 1350,
     y: 525,
     width: 800,
@@ -792,7 +817,9 @@ test('a guest can create an isolated personal photo design without event words',
       configurationType: 'personal_memory',
       quantity: 1,
       theme: 'pastel',
-      ...oneSurfaceDesign([{ ...design[0], src: 'data:image/svg+xml;base64,PHN2Zy8+' }]),
+      ...oneSurfaceDesign([{
+        ...design[0], assetId: undefined, src: 'data:image/svg+xml;base64,PHN2Zy8+',
+      }]),
     }),
   });
   assert.equal(unsafeImage.status, 400);

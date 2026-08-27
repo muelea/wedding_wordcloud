@@ -111,6 +111,10 @@ dotted and dotless I.
   Stripe test payment can only create a local `mocked` fulfillment record.
 - The production container, readiness/liveness checks, cache rules, graceful
   shutdown, Fly configuration and manual deployment workflow are in the repository.
+- Personal photos are normalized by the server and stored once in a private
+  Supabase Storage bucket. Immutable configurations contain only opaque asset
+  IDs; editable responses use short-lived signed previews and print SVGs
+  materialize verified private bytes on demand.
 - The application data layer is fully asynchronous through one bounded `pg`
   pool. Application startup checks the required migration version and never
   creates or alters schema objects.
@@ -134,11 +138,20 @@ most 1600 px and encodes the result as JPEG at quality `0.84`. The server then
 validates actual JPEG/PNG/WebP signatures and enforces at most six photos and
 at most 6 MiB decoded image data across the complete design.
 
-Photos are stored as data URLs inside the immutable configuration's
-`design_json`; there is no separate public upload directory. Consequently
-Postgres currently contains the personal photos and needs the same persistence,
-backup, access-control and future deletion treatment as order data. The
-configuration-specific print route is addressed only by its opaque random id.
+The reduced browser image is uploaded once to the backend. The server verifies
+its real JPEG/PNG/WebP signature, fully decodes it with bounded dimensions and
+pixels, strips metadata, normalizes it, and writes it to the private
+`wolkenworte-private` Supabase Storage bucket. Postgres stores only the opaque
+asset id, checksum, byte size, state and configuration references—never the
+image bytes or a permanent object URL. Revisions reuse the same object.
+
+Editable configurations receive a fresh 15-minute signed preview URL. The
+configuration-specific print route verifies and embeds the private bytes on
+demand and uses `private, no-store`; its opaque random configuration id remains
+the public handle. Failed upload/deletion transitions retain a retryable object
+key instead of silently orphaning Storage bytes. Automated expiry cleanup is a
+later maintenance package; no surviving configuration reference can be deleted
+by the Phase 3 state machine.
 
 ## Bundled design fonts
 
@@ -188,8 +201,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `DATABASE_URL` | yes | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
 | `DATABASE_CA_CERT_PATH` / `DATABASE_CA_CERT` | hosted database | Supabase database CA path or PEM contents used for full TLS and hostname verification |
 | `MIGRATION_DATABASE_URL` | deployment only | privileged Postgres migration connection; local/CI secret only and never available to the Fly web Machine |
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | hosted runtime | private Storage API URL and backend-only secret key prepared for Package 3; the secret key must never reach browser code |
-| `SUPABASE_STORAGE_BUCKET` | Package 3 | private photo/print-artifact bucket name (defaults `wolkenworte-private`) |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | hosted runtime | active private Storage API URL and backend-only secret key; the secret key never reaches browser code |
+| `SUPABASE_STORAGE_BUCKET` | hosted runtime | private photo/print-artifact bucket name (currently `wolkenworte-private`) |
 | `RATE_LIMIT_HMAC_SECRET`, `MAINTENANCE_SECRET` | hosted environment | independent secrets for privacy-preserving rate-limit identities and authenticated maintenance wake-ups |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | before transactional-email smoke test | backend-only sending key and verified Wolkenworte sender |
 | `RESEND_WEBHOOK_SECRET` | after the Resend webhook is deployed | verifies signed Resend delivery webhooks |
@@ -206,8 +219,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `SHOP_PAYMENT_RESERVE_PERCENT` | no (defaults 3.15) | internal payment-cost reserve percentage folded into the product subtotal |
 | `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | no (defaults 25) | internal fixed payment-cost reserve in cents, also folded into the product subtotal |
 
-Postgres variables are active now. Supabase Storage and Resend variables are
-prepared for their later work packages and remain unused by the runtime today.
+Postgres and Supabase Storage variables are active now. Resend variables remain
+prepared for their later work package and are unused by the runtime today.
 
 **Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
 future hosted secrets must be set in the provider's encrypted secret store,
@@ -269,6 +282,8 @@ scripts/hosted-smoke.js    Sanitized HTTPS/Postgres/Socket.io hosted smoke
 src/
   db.js                    async Postgres data boundary and transaction logic
   dbConfig.js              verified-TLS and bounded pg pool configuration
+  designAssets.js          bounded image normalization + private asset lifecycle
+  privateStorage.js        backend-only Supabase Storage boundary
   asyncRoute.js            rejected-promise boundary for Express routes
   slug.js                  German-aware slugify + unique random-suffix generation
   words.js                 Word normalization (trim/case-fold/emoji-strip)
@@ -309,12 +324,13 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 78 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 85 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
 dynamic Stripe Checkout, price-change confirmation, webhook idempotency, immutable fulfillment
-payloads, hosting health/cache/shutdown behavior, live safety gates and
+payloads, private Storage normalization/deduplication/deletion recovery,
+hosting health/cache/shutdown behavior, live safety gates and
 Stripe/Printful stub behavior. Each test
 server uses its own randomly named migrated Postgres schema and ephemeral port,
 then drops the schema in cleanup, so files remain isolated in parallel.
@@ -355,6 +371,9 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   font-metric probes are part of the Phase 2 verification record.
 - `/health/live` is process-only. `/health/ready` performs a bounded Postgres
   and schema/role check and is the Fly service health check. Both are `no-store`.
+- The Supabase bucket is private and limited to the three normalized image MIME
+  types and 6 MiB objects. Fly holds the backend-only Storage key; browser
+  previews are signed for 15 minutes and immutable designs store no signed URL.
 
 ## Test checkout setup
 
@@ -437,8 +456,8 @@ created draft is confirmed. Keep every switch false while developing locally.
 
 ## Next steps
 
-1. Move personal-photo bytes from Postgres JSON into private Supabase Storage
-   while preserving immutable configuration isolation (Phase 3).
+1. Implement event/configuration expiration, paid-data retention boundaries,
+   one-use reset PIN verification and abuse controls (Phase 4).
 2. Register the separate hosted Stripe test webhook in Stripe Dashboard and
    verify the complete test Checkout flow over the Fly HTTPS address.
 3. Verify the separate front/back SVG URLs in one controlled Printful draft
@@ -455,7 +474,7 @@ created draft is confirmed. Keep every switch false while developing locally.
 7. Configure signed Printful v2 webhooks for production/shipment status once
    the public callback URL exists; do not register a callback before its
    signing secret can be stored in the production environment.
-8. Define and implement retention/deletion for events, immutable designs,
-   embedded personal photos, addresses and completed orders.
+8. Complete scheduled retention/deletion for events, immutable designs,
+   private personal-photo objects, addresses and completed orders.
 9. Rate-limiting — no per-IP throttle yet on word submission or event
    creation.
