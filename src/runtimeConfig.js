@@ -15,6 +15,11 @@ function validateRuntimeConfig() {
   if (!['mock', 'live'].includes(emailMode)) {
     errors.push('EMAIL_DELIVERY_MODE muss mock oder live sein.');
   }
+  const resendConfigured = Boolean(
+    String(process.env.RESEND_API_KEY || '').trim() &&
+    String(process.env.RESEND_FROM_EMAIL || '').trim() &&
+    String(process.env.RESEND_WEBHOOK_SECRET || '').trim()
+  );
   for (const name of [
     'ALLOW_TEST_DATA_RESET',
     'STRIPE_ALLOW_LIVE_PAYMENTS',
@@ -58,10 +63,13 @@ function validateRuntimeConfig() {
     if (flag('ALLOW_TEST_DATA_RESET') === 'true') {
       errors.push('ALLOW_TEST_DATA_RESET darf im Webprozess nicht aktiviert sein.');
     }
+    if (emailMode === 'live' && !resendConfigured) {
+      errors.push('Resend-Liveversand benötigt API-Key, Absender und Webhook-Signatursecret.');
+    }
   }
 
   if (flag('STRIPE_ALLOW_LIVE_PAYMENTS') === 'true') {
-    if (emailMode !== 'live' || !process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+    if (emailMode !== 'live' || !resendConfigured) {
       errors.push('Live-Zahlungen benötigen gültig konfigurierten Resend-Liveversand.');
     }
   }

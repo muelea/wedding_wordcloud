@@ -55,7 +55,7 @@ test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliati
     'PRINTFUL_ALLOW_ORDER_WRITES', 'PRINTFUL_CONFIRM_LIVE_ORDERS',
     'PRINTFUL_API_KEY', 'PRINTFUL_STORE_ID', 'PRINTFUL_WEBHOOK_SECRET',
     'PRINTFUL_WEBHOOK_PUBLIC_KEY', 'EMAIL_DELIVERY_MODE', 'RESEND_API_KEY',
-    'RESEND_FROM_EMAIL',
+    'RESEND_FROM_EMAIL', 'RESEND_WEBHOOK_SECRET',
   ]) previous[name] = process.env[name];
   process.env.STRIPE_ALLOW_LIVE_PAYMENTS = 'true';
   process.env.PRINTFUL_FULFILLMENT_MODE = 'draft';
@@ -68,6 +68,7 @@ test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliati
   process.env.EMAIL_DELIVERY_MODE = 'live';
   process.env.RESEND_API_KEY = 're_phase_five_test';
   process.env.RESEND_FROM_EMAIL = 'Wolkenworte <test@example.test>';
+  process.env.RESEND_WEBHOOK_SECRET = 'whsec_cGhhc2UtZml2ZS13ZWJob29rLXNlY3JldA==';
   t.after(() => {
     for (const [name, value] of Object.entries(previous)) {
       if (value == null) delete process.env[name];

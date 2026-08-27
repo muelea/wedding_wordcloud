@@ -15,6 +15,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     'EMAIL_DELIVERY_MODE',
     'RESEND_API_KEY',
     'RESEND_FROM_EMAIL',
+    'RESEND_WEBHOOK_SECRET',
   ]) {
     previous[name] = process.env[name];
   }
@@ -26,6 +27,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   process.env.EMAIL_DELIVERY_MODE = 'live';
   process.env.RESEND_API_KEY = 're_test_configuration_only';
   process.env.RESEND_FROM_EMAIL = 'Wolkenworte <test@example.test>';
+  process.env.RESEND_WEBHOOK_SECRET = 'whsec_dGVzdC1mdWxmaWxsbWVudC13ZWJob29rLXNlY3JldA==';
   t.after(() => {
     for (const [name, value] of Object.entries(previous)) {
       if (value == null) delete process.env[name];

@@ -4,8 +4,9 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 const { connectionOptions } = require('./dbConfig');
 const { getProduct, resolveProductOrientation } = require('./products');
+const { buildEmailSnapshot } = require('./emailTemplates');
 
-const REQUIRED_SCHEMA_VERSION = '4';
+const REQUIRED_SCHEMA_VERSION = '5';
 const MAX_CONFIGURATION_ASSETS = 6;
 const MAX_CONFIGURATION_ASSET_BYTES = 6 * 1024 * 1024;
 const MAX_UNATTACHED_OWNER_ASSETS = 12;
@@ -668,7 +669,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     }
 
     const eventResult = await client.query(
-      `SELECT slug, couple_name FROM events
+      `SELECT slug, couple_name, locale FROM events
        WHERE id = $1 AND expires_at > transaction_timestamp()
        FOR KEY SHARE`,
       [eventId]
@@ -696,10 +697,10 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
         configuration_id, configuration_ids_json, quote_id, status, shipping_json,
         currency, items_cents, payment_reserve_cents, shipping_cents, tax_cents,
         total_cents, mode, checkout_request_json, stripe_idempotency_key,
-        checkout_session_expires_at
+        checkout_session_expires_at, locale_snapshot
       ) VALUES (
         $1, $2, $3, $4, $5::jsonb, $6, 'creating_checkout', $7::jsonb,
-        $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16, $17
+        $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16, $17, $18
       )
       RETURNING *
     `, [
@@ -720,6 +721,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
       jsonValue(checkoutRequest || {}),
       idempotencyKey,
       sessionExpiresAt,
+      event.locale,
     ]);
     const order = rowToBoundary(inserted.rows[0]);
     await insertOrderShipmentsAndItems(client, order.id, lockedQuote, configurations);
@@ -788,6 +790,58 @@ function normalizeBuyerEmail(value) {
   if (!email || email.length > 254 || /[\x00-\x20\x7f]/.test(email)) return null;
   if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) return null;
   return email;
+}
+
+async function insertEmailJobForOrder(client, {
+  order,
+  kind,
+  dedupeKey,
+  shipmentId = null,
+  noticeAmountCents = null,
+  providerSmoke = false,
+}) {
+  const itemsResult = await client.query(`
+    SELECT * FROM order_items WHERE order_id = $1
+    ORDER BY shipment_index ASC, item_index ASC
+  `, [order.id]);
+  const shipmentsResult = await client.query(`
+    SELECT * FROM checkout_order_shipments WHERE order_id = $1
+    ORDER BY shipment_index ASC
+  `, [order.id]);
+  const shipment = shipmentId == null
+    ? null
+    : shipmentsResult.rows.find((entry) => String(entry.id) === String(shipmentId));
+  if (shipmentId != null && !shipment) throw new Error('email shipment does not belong to order');
+  const snapshot = buildEmailSnapshot({
+    kind,
+    order: rowToBoundary(order),
+    orderItems: rowsToBoundary(itemsResult.rows),
+    shipments: rowsToBoundary(shipmentsResult.rows),
+    shipment: rowToBoundary(shipment),
+    noticeAmountCents,
+    locale: order.locale_snapshot,
+  });
+  const recipient = normalizeBuyerEmail(order.buyer_email);
+  const status = recipient ? 'pending' : 'blocked';
+  const lastError = recipient ? null : 'buyer_email_missing';
+  const inserted = await client.query(`
+    INSERT INTO email_jobs (
+      order_id, shipment_id, kind, dedupe_key, recipient_email, locale,
+      template_version, subject, html_body, text_body, status, provider_smoke,
+      last_error
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+    )
+    ON CONFLICT (dedupe_key) DO NOTHING
+    RETURNING *
+  `, [
+    order.id, shipmentId, kind, dedupeKey, recipient, snapshot.locale,
+    snapshot.templateVersion, snapshot.subject, snapshot.htmlBody, snapshot.textBody,
+    status, Boolean(providerSmoke), lastError,
+  ]);
+  if (inserted.rows[0]) return { job: rowToBoundary(inserted.rows[0]), created: true };
+  const existing = await client.query('SELECT * FROM email_jobs WHERE dedupe_key = $1', [dedupeKey]);
+  return { job: rowToBoundary(existing.rows[0]), created: false };
 }
 
 async function recordSuccessfulPayment({
@@ -888,7 +942,17 @@ async function recordSuccessfulPayment({
       'UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2',
       [order.id, stripeEventId]
     );
-    return { duplicate: false, order: rowToBoundary(updated.rows[0]) };
+    const email = await insertEmailJobForOrder(client, {
+      order: updated.rows[0],
+      kind: 'order_confirmation',
+      dedupeKey: `order_confirmation:order:${order.id}`,
+    });
+    return {
+      duplicate: false,
+      order: rowToBoundary(updated.rows[0]),
+      emailJob: email.job,
+      emailJobCreated: email.created,
+    };
   });
 }
 
@@ -1086,6 +1150,176 @@ async function recoverStaleFulfillments() {
         fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
     WHERE fulfillment_status = 'processing'
       AND fulfillment_locked_until <= transaction_timestamp()
+  `);
+  return result.rowCount;
+}
+
+// ── Durable transactional email jobs ──────────────────────────────────
+async function getEmailJobById(id) {
+  const result = await getPool().query('SELECT * FROM email_jobs WHERE id = $1', [id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getEmailJobsForOrder(orderId) {
+  const result = await getPool().query(`
+    SELECT * FROM email_jobs WHERE order_id = $1 ORDER BY id ASC
+  `, [orderId]);
+  return rowsToBoundary(result.rows);
+}
+
+async function claimEmailJob({ jobId = null, lockedBy, leaseMs = 60_000 } = {}) {
+  if (!lockedBy || String(lockedBy).length > 120) throw new Error('invalid email lease owner');
+  const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
+    ? leaseMs
+    : 60_000;
+  const result = await getPool().query(`
+    WITH candidate AS (
+      SELECT id
+      FROM email_jobs
+      WHERE ($1::bigint IS NULL OR id = $1)
+        AND status IN ('pending', 'failed', 'processing')
+        AND provider_terminal = false
+        AND attempt_count < 4
+        AND next_attempt_at <= transaction_timestamp()
+        AND (locked_until IS NULL OR locked_until <= transaction_timestamp())
+      ORDER BY next_attempt_at ASC, id ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    )
+    UPDATE email_jobs target
+    SET status = 'processing',
+        attempt_count = target.attempt_count + 1,
+        locked_by = $2,
+        locked_until = transaction_timestamp() + ($3::integer * interval '1 millisecond'),
+        lease_version = target.lease_version + 1,
+        updated_at = transaction_timestamp()
+    FROM candidate
+    WHERE target.id = candidate.id
+    RETURNING target.*
+  `, [jobId, String(lockedBy), safeLeaseMs]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function renewEmailLease(jobId, { lockedBy, leaseVersion }, leaseMs = 60_000) {
+  const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
+    ? leaseMs
+    : 60_000;
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET locked_until = transaction_timestamp() + ($1::integer * interval '1 millisecond'),
+        updated_at = transaction_timestamp()
+    WHERE id = $2 AND status = 'processing' AND locked_by = $3 AND lease_version = $4
+      AND locked_until > transaction_timestamp()
+    RETURNING id
+  `, [safeLeaseMs, jobId, lockedBy, leaseVersion]);
+  return result.rowCount === 1;
+}
+
+async function beginEmailProviderAttempt(jobId, { lockedBy, leaseVersion }) {
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET first_send_attempt_at = coalesce(first_send_attempt_at, transaction_timestamp()),
+        updated_at = transaction_timestamp()
+    WHERE id = $1 AND status = 'processing' AND locked_by = $2 AND lease_version = $3
+      AND locked_until > transaction_timestamp()
+    RETURNING *
+  `, [jobId, lockedBy, leaseVersion]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function completeMockEmail(jobId, { lockedBy, leaseVersion }) {
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET status = 'delivered', provider_message_id = coalesce(provider_message_id, 'mock-' || id::text),
+        provider_terminal = true, delivery_ambiguous = false, last_error = null,
+        sent_at = coalesce(sent_at, transaction_timestamp()),
+        delivered_at = coalesce(delivered_at, transaction_timestamp()),
+        locked_by = null, locked_until = null, updated_at = transaction_timestamp()
+    WHERE id = $1 AND status = 'processing' AND locked_by = $2 AND lease_version = $3
+      AND locked_until > transaction_timestamp()
+    RETURNING *
+  `, [jobId, lockedBy, leaseVersion]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function completeEmailProviderAcceptance(jobId, { lockedBy, leaseVersion }, providerMessageId) {
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET status = 'sent', provider_message_id = $1, delivery_ambiguous = false,
+        last_error = null, sent_at = coalesce(sent_at, transaction_timestamp()),
+        locked_by = null, locked_until = null, updated_at = transaction_timestamp()
+    WHERE id = $2 AND status = 'processing' AND locked_by = $3 AND lease_version = $4
+      AND locked_until > transaction_timestamp()
+    RETURNING *
+  `, [String(providerMessageId), jobId, lockedBy, leaseVersion]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function failEmailJob(
+  jobId,
+  { lockedBy, leaseVersion },
+  errorCode,
+  { ambiguous = false, blocked = false } = {}
+) {
+  const safeError = String(errorCode || 'email_delivery_failed')
+    .toLowerCase().replace(/[^a-z0-9_:-]/g, '_').slice(0, 240);
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET status = CASE WHEN $1 OR attempt_count >= 4 THEN 'blocked' ELSE 'failed' END,
+        last_error = $2,
+        delivery_ambiguous = delivery_ambiguous OR $3,
+        next_attempt_at = CASE
+          WHEN $1 OR attempt_count >= 4 THEN next_attempt_at
+          WHEN attempt_count = 1 THEN transaction_timestamp() + interval '30 seconds'
+          WHEN attempt_count = 2 THEN transaction_timestamp() + interval '5 minutes'
+          ELSE transaction_timestamp() + interval '30 minutes'
+        END,
+        locked_by = null, locked_until = null, updated_at = transaction_timestamp()
+    WHERE id = $4 AND status = 'processing' AND locked_by = $5 AND lease_version = $6
+      AND locked_until > transaction_timestamp()
+    RETURNING *
+  `, [Boolean(blocked), safeError, Boolean(ambiguous), jobId, lockedBy, leaseVersion]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function blockExpiredAmbiguousEmail(jobId, { lockedBy, leaseVersion }) {
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET status = 'blocked', last_error = 'delivery_outcome_unknown',
+        delivery_ambiguous = true, locked_by = null, locked_until = null,
+        updated_at = transaction_timestamp()
+    WHERE id = $1 AND status = 'processing' AND locked_by = $2 AND lease_version = $3
+      AND locked_until > transaction_timestamp()
+    RETURNING *
+  `, [jobId, lockedBy, leaseVersion]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getPendingEmailJobs(limit = 20) {
+  const safeLimit = Number.isSafeInteger(limit) && limit > 0 && limit <= 100 ? limit : 20;
+  const result = await getPool().query(`
+    SELECT * FROM email_jobs
+    WHERE status IN ('pending', 'failed', 'processing')
+      AND provider_terminal = false AND attempt_count < 4
+      AND next_attempt_at <= transaction_timestamp()
+      AND (locked_until IS NULL OR locked_until <= transaction_timestamp())
+    ORDER BY next_attempt_at ASC, id ASC
+    LIMIT $1
+  `, [safeLimit]);
+  return rowsToBoundary(result.rows);
+}
+
+async function recoverStaleEmailJobs() {
+  const result = await getPool().query(`
+    UPDATE email_jobs
+    SET status = 'failed', last_error = CASE
+          WHEN delivery_ambiguous THEN last_error
+          ELSE 'email_processing_interrupted'
+        END,
+        locked_by = null, locked_until = null, next_attempt_at = transaction_timestamp(),
+        updated_at = transaction_timestamp()
+    WHERE status = 'processing' AND locked_until <= transaction_timestamp()
+      AND provider_terminal = false
   `);
   return result.rowCount;
 }
@@ -1925,6 +2159,148 @@ async function getLatestMaintenanceRun() {
   return rowToBoundary(result.rows[0]);
 }
 
+// ── Replay-safe Resend provider status updates ─────────────────────────
+async function recordResendWebhook({
+  svixId,
+  eventType,
+  eventCreatedAt = null,
+  providerMessageId = null,
+  emailJobTag = null,
+}) {
+  const statusByEvent = {
+    'email.sent': 'sent',
+    'email.delivered': 'delivered',
+    'email.bounced': 'bounced',
+    'email.failed': 'failed',
+    'email.complained': 'complained',
+  };
+  const nextStatus = statusByEvent[eventType];
+  if (!nextStatus) return { duplicate: false, matched: false, ignored: true };
+  return withTransaction(async (client) => {
+    const inserted = await client.query(`
+      INSERT INTO resend_webhook_events (
+        svix_id, event_type, event_created_at, provider_message_id
+      ) VALUES ($1, $2, $3::timestamptz, $4)
+      ON CONFLICT (svix_id) DO NOTHING
+      RETURNING svix_id
+    `, [svixId, eventType, eventCreatedAt, providerMessageId]);
+    if (!inserted.rowCount) return { duplicate: true, matched: false };
+
+    const providerMatch = providerMessageId
+      ? await client.query('SELECT * FROM email_jobs WHERE provider_message_id = $1 FOR UPDATE', [providerMessageId])
+      : { rows: [] };
+    const taggedId = /^\d+$/.test(String(emailJobTag || '')) ? String(emailJobTag) : null;
+    const tagMatch = taggedId
+      ? await client.query('SELECT * FROM email_jobs WHERE id = $1 FOR UPDATE', [taggedId])
+      : { rows: [] };
+    if (providerMatch.rows[0] && tagMatch.rows[0] &&
+        String(providerMatch.rows[0].id) !== String(tagMatch.rows[0].id)) {
+      return { duplicate: false, matched: false, mismatch: true };
+    }
+    const job = providerMatch.rows[0] || tagMatch.rows[0];
+    if (!job) return { duplicate: false, matched: false };
+    if (job.provider_message_id && providerMessageId && job.provider_message_id !== providerMessageId) {
+      return { duplicate: false, matched: false, mismatch: true };
+    }
+
+    let resolvedStatus = nextStatus;
+    const terminalFailure = job.provider_terminal && ['bounced', 'failed', 'complained'].includes(job.status);
+    if (job.status === 'complained') resolvedStatus = 'complained';
+    else if (terminalFailure && nextStatus !== 'complained') resolvedStatus = job.status;
+    else if (job.status === 'delivered' && nextStatus === 'sent') resolvedStatus = 'delivered';
+
+    const terminal = ['delivered', 'bounced', 'failed', 'complained'].includes(resolvedStatus);
+    const errorByStatus = {
+      bounced: 'provider_bounced',
+      failed: 'provider_failed',
+      complained: 'provider_complained',
+    };
+    const updated = await client.query(`
+      UPDATE email_jobs
+      SET status = $1,
+          provider_message_id = coalesce(provider_message_id, $2),
+          provider_terminal = $3,
+          provider_event_at = CASE
+            WHEN $4::timestamptz IS NULL THEN provider_event_at
+            ELSE greatest(coalesce(provider_event_at, $4::timestamptz), $4::timestamptz)
+          END,
+          delivery_ambiguous = false,
+          last_error = $5,
+          sent_at = CASE WHEN $1 IN ('sent', 'delivered', 'bounced', 'complained')
+            THEN coalesce(sent_at, $4::timestamptz, transaction_timestamp()) ELSE sent_at END,
+          delivered_at = CASE WHEN $1 = 'delivered'
+            THEN coalesce(delivered_at, $4::timestamptz, transaction_timestamp()) ELSE delivered_at END,
+          bounced_at = CASE WHEN $1 = 'bounced'
+            THEN coalesce(bounced_at, $4::timestamptz, transaction_timestamp()) ELSE bounced_at END,
+          complained_at = CASE WHEN $1 = 'complained'
+            THEN coalesce(complained_at, $4::timestamptz, transaction_timestamp()) ELSE complained_at END,
+          locked_by = null, locked_until = null, updated_at = transaction_timestamp()
+      WHERE id = $6
+      RETURNING *
+    `, [
+      resolvedStatus, providerMessageId, terminal, eventCreatedAt,
+      errorByStatus[resolvedStatus] || null, job.id,
+    ]);
+    await client.query(`
+      UPDATE resend_webhook_events SET email_job_id = $1 WHERE svix_id = $2
+    `, [job.id, svixId]);
+    return { duplicate: false, matched: true, job: rowToBoundary(updated.rows[0]) };
+  });
+}
+
+async function recordStripeRefund({
+  stripeEventId,
+  eventType,
+  paymentIntentId,
+  livemode,
+  amountRefunded,
+  currency,
+}) {
+  return withTransaction(async (client) => {
+    const inserted = await client.query(`
+      INSERT INTO stripe_webhook_events (stripe_event_id, event_type, stripe_session_id)
+      VALUES ($1, $2, null)
+      ON CONFLICT (stripe_event_id) DO NOTHING
+      RETURNING stripe_event_id
+    `, [stripeEventId, eventType]);
+    if (!inserted.rowCount) return { duplicate: true, matched: false };
+    const orderResult = await client.query(`
+      SELECT * FROM orders WHERE stripe_payment_intent_id = $1 FOR UPDATE
+    `, [paymentIntentId]);
+    const order = orderResult.rows[0];
+    if (!order) return { duplicate: false, matched: false };
+    const expectedMode = livemode ? 'live' : 'test';
+    if (order.mode !== expectedMode || String(currency || '').toUpperCase() !== order.currency ||
+        !Number.isSafeInteger(Number(amountRefunded)) || Number(amountRefunded) < 0 ||
+        Number(amountRefunded) > Number(order.total_cents)) {
+      throw new Error('refund does not match trusted order data');
+    }
+    const updated = await client.query(`
+      UPDATE orders
+      SET refunded_at = coalesce(refunded_at, transaction_timestamp()),
+          refunded_cents = greatest(coalesce(refunded_cents, 0), $1),
+          updated_at = transaction_timestamp()
+      WHERE id = $2 RETURNING *
+    `, [Number(amountRefunded), order.id]);
+    await client.query(`
+      UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2
+    `, [order.id, stripeEventId]);
+    const email = await insertEmailJobForOrder(client, {
+      order: updated.rows[0],
+      kind: 'refund_confirmation',
+      dedupeKey: `refund_confirmation:order:${order.id}`,
+      noticeAmountCents: Number(amountRefunded),
+    });
+    return {
+      duplicate: false,
+      matched: true,
+      order: rowToBoundary(updated.rows[0]),
+      emailJob: email.job,
+      emailJobCreated: email.created,
+    };
+  });
+}
+
 // ── Replay-safe Printful provider status updates ────────────────────────
 async function recordPrintfulWebhook({
   eventKey,
@@ -1933,6 +2309,9 @@ async function recordPrintfulWebhook({
   externalOrderId = null,
   providerShipmentId = null,
   providerStatus = null,
+  carrier = null,
+  trackingNumber = null,
+  trackingUrl = null,
   shippedAt = null,
   deliveredAt = null,
 }) {
@@ -1970,6 +2349,9 @@ async function recordPrintfulWebhook({
           provider_shipment_id = coalesce(provider_shipment_id, $2),
           shipped_at = coalesce(shipped_at, $3::timestamptz),
           delivered_at = coalesce(delivered_at, $4::timestamptz),
+          carrier = coalesce(carrier, $7),
+          tracking_number = coalesce(tracking_number, $8),
+          tracking_url = coalesce(tracking_url, $9),
           fulfillment_status = CASE
             WHEN $6 IN ('order_failed', 'order_canceled') THEN 'blocked'
             ELSE fulfillment_status
@@ -1980,20 +2362,24 @@ async function recordPrintfulWebhook({
           END,
           updated_at = transaction_timestamp()
       WHERE id = $5
-    `, [safeStatus, providerShipmentId, shippedAt, deliveredAt, shipment.id, eventType]);
+    `, [
+      safeStatus, providerShipmentId, shippedAt, deliveredAt, shipment.id, eventType,
+      carrier, trackingNumber, trackingUrl,
+    ]);
 
     if (['order_failed', 'order_canceled'].includes(eventType)) {
       await client.query(`
         UPDATE orders
         SET fulfillment_status = 'blocked', fulfillment_error = 'printful_' || $2,
+            canceled_at = CASE WHEN $2 = 'order_canceled'
+              THEN coalesce(canceled_at, transaction_timestamp()) ELSE canceled_at END,
             fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
         WHERE id = $1 AND fulfillment_status IN ('draft', 'submitted')
       `, [shipment.order_id, eventType]);
     }
 
-    const orderResult = await client.query(`
-      SELECT fulfillment_submitted_at FROM orders WHERE id = $1 FOR UPDATE
-    `, [shipment.order_id]);
+    const orderResult = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [shipment.order_id]);
+    const storedOrder = orderResult.rows[0];
     const orderSubmittedAt = orderResult.rows[0]?.fulfillment_submitted_at;
     const retentionBase = deliveredAt
       ? new Date(new Date(deliveredAt).getTime() + 60 * 24 * 60 * 60 * 1000)
@@ -2015,7 +2401,28 @@ async function recordPrintfulWebhook({
         WHERE id = $1 AND status = 'paid'
       `, [shipment.order_id]);
     }
-    return { duplicate: false, matched: true, orderId: String(shipment.order_id) };
+    let email = null;
+    if (eventType === 'shipment_sent' && providerShipmentId) {
+      email = await insertEmailJobForOrder(client, {
+        order: storedOrder,
+        kind: 'shipment_confirmation',
+        shipmentId: shipment.id,
+        dedupeKey: `shipment_confirmation:order:${shipment.order_id}:shipment:${providerShipmentId}`,
+      });
+    } else if (eventType === 'order_canceled') {
+      email = await insertEmailJobForOrder(client, {
+        order: storedOrder,
+        kind: 'cancellation_confirmation',
+        dedupeKey: `cancellation_confirmation:order:${shipment.order_id}`,
+      });
+    }
+    return {
+      duplicate: false,
+      matched: true,
+      orderId: String(shipment.order_id),
+      emailJob: email?.job || null,
+      emailJobCreated: Boolean(email?.created),
+    };
   });
 }
 
@@ -2104,6 +2511,97 @@ async function finishProviderSmokeRun(id, { succeeded, outcomeCode }) {
   return rowToBoundary(result.rows[0]);
 }
 
+async function createEmailSmokeJob({ recipientEmail, locale = 'de' }) {
+  const recipient = normalizeBuyerEmail(recipientEmail);
+  if (!recipient) throw new Error('email smoke recipient is invalid');
+  const product = resolveProductOrientation(getProduct('white-glossy-mug-duo-11oz'), 'default');
+  const quoteId = `email_smoke_${crypto.randomBytes(12).toString('base64url')}`;
+  return withTransaction(async (client) => {
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        event_id, event_slug_snapshot, event_label_snapshot, configuration_ids_json,
+        quote_id, status, shipping_json, buyer_email, currency, items_cents,
+        shipping_cents, tax_cents, total_cents, mode, paid_at,
+        fulfillment_status, fulfillment_mode, provider_smoke, locale_snapshot
+      ) VALUES (
+        null, 'email-provider-smoke', 'Wolkenworte E-Mail Provider Smoke', '[]'::jsonb,
+        $1, 'paid', $2::jsonb, $3, 'EUR', 2490, 490, 566, 3546, 'live',
+        transaction_timestamp(), 'mocked', 'mock', true, $4
+      ) RETURNING *
+    `, [
+      quoteId,
+      jsonValue({
+        name: 'Wolkenworte Testempfänger', address1: 'Testweg 6',
+        zip: '74080', city: 'Heilbronn', country_code: 'DE',
+      }),
+      recipient,
+      String(locale),
+    ]);
+    const order = orderResult.rows[0];
+    const shipmentResult = await client.query(`
+      INSERT INTO checkout_order_shipments (
+        order_id, shipment_index, quantity, items_json, recipient_json,
+        printful_costs_json, currency, shipping_cents, tax_cents,
+        fulfillment_status, fulfillment_mode
+      ) VALUES (
+        $1, 0, 1, $2::jsonb, $3::jsonb, '{}'::jsonb, 'EUR', 490, 566,
+        'mocked', 'mock'
+      ) RETURNING *
+    `, [
+      order.id,
+      jsonValue([{ configurationId: null, quantity: 1 }]),
+      jsonValue({
+        name: 'Wolkenworte Testempfänger', address1: 'Testweg 6',
+        zip: '74080', city: 'Heilbronn', country_code: 'DE',
+      }),
+    ]);
+    await client.query(`
+      INSERT INTO order_items (
+        order_id, configuration_id, shipment_index, item_index, product_key,
+        printful_variant_id, quantity, configuration_snapshot_json
+      ) VALUES ($1, null, 0, 0, $2, $3, 1, $4::jsonb)
+    `, [
+      order.id,
+      product.key,
+      product.printful.variantId,
+      jsonValue({
+        version: 1,
+        configurationId: `email-smoke-${crypto.randomBytes(6).toString('base64url')}`,
+        productKey: product.key,
+        printfulVariantId: product.printful.variantId,
+        orientation: 'default',
+        configurationType: 'personal_memory',
+      }),
+    ]);
+    const email = await insertEmailJobForOrder(client, {
+      order,
+      kind: 'order_confirmation',
+      dedupeKey: `email_smoke:order_confirmation:${order.id}`,
+      providerSmoke: true,
+    });
+    const smokeResult = await client.query(`
+      INSERT INTO email_smoke_runs (order_id, email_job_id, status)
+      VALUES ($1, $2, 'running') RETURNING *
+    `, [order.id, email.job.id]);
+    return {
+      order: rowToBoundary(order),
+      shipment: rowToBoundary(shipmentResult.rows[0]),
+      emailJob: email.job,
+      smokeRun: rowToBoundary(smokeResult.rows[0]),
+    };
+  });
+}
+
+async function finishEmailSmokeRun(id, { succeeded, outcomeCode }) {
+  const result = await getPool().query(`
+    UPDATE email_smoke_runs
+    SET status = $1, outcome_code = $2, completed_at = transaction_timestamp()
+    WHERE id = $3 AND status = 'running'
+    RETURNING *
+  `, [succeeded ? 'succeeded' : 'failed', String(outcomeCode || '').slice(0, 120) || null, id]);
+  return rowToBoundary(result.rows[0]);
+}
+
 module.exports = {
   get pool() { return getPool(); },
   getPool,
@@ -2156,6 +2654,17 @@ module.exports = {
   failFulfillment,
   getPendingFulfillmentOrders,
   recoverStaleFulfillments,
+  getEmailJobById,
+  getEmailJobsForOrder,
+  claimEmailJob,
+  renewEmailLease,
+  beginEmailProviderAttempt,
+  completeMockEmail,
+  completeEmailProviderAcceptance,
+  failEmailJob,
+  blockExpiredAmbiguousEmail,
+  getPendingEmailJobs,
+  recoverStaleEmailJobs,
   cleanupAbandonedQuotes,
   createCheckoutQuote,
   getCheckoutQuote,
@@ -2193,7 +2702,11 @@ module.exports = {
   finishMaintenanceRun,
   failMaintenanceRun,
   getLatestMaintenanceRun,
+  recordResendWebhook,
+  recordStripeRefund,
   recordPrintfulWebhook,
   createProviderSmokeOrder,
   finishProviderSmokeRun,
+  createEmailSmokeJob,
+  finishEmailSmokeRun,
 };

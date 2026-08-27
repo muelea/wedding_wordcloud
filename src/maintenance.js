@@ -2,10 +2,12 @@
 
 const db = require('./db');
 const fulfillment = require('./fulfillment');
+const emailDelivery = require('./emailDelivery');
 const lifecycle = require('./lifecycle');
 
 const WALL_CLOCK_BUDGET_MS = 15_000;
-const FULFILLMENT_BUDGET_MS = 10_000;
+const FULFILLMENT_BUDGET_MS = 7_000;
+const EMAIL_BUDGET_MS = 12_000;
 let running = null;
 
 function sanitizedCode(error) {
@@ -21,12 +23,19 @@ async function execute(triggerKind) {
       maxJobs: 1,
       deadline: startedAt + FULFILLMENT_BUDGET_MS,
     });
+    const emailSummary = await emailDelivery.drainDueJobs({
+      maxJobs: 1,
+      deadline: startedAt + EMAIL_BUDGET_MS,
+    });
     const retentionSummary = await lifecycle.runRetentionBatch({
       deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250,
     });
     const summary = {
       fulfillmentClaimed: fulfillmentSummary.claimed,
       fulfillmentCompleted: fulfillmentSummary.completed,
+      emailsClaimed: emailSummary.claimed,
+      emailsCompleted: emailSummary.completed,
+      emailsBlocked: emailSummary.blocked,
       configurationsCleaned: retentionSummary.configurations,
       assetsCleaned: retentionSummary.assets,
       eventsCleaned: retentionSummary.events,
@@ -50,4 +59,4 @@ async function run(triggerKind = 'http') {
   }
 }
 
-module.exports = { WALL_CLOCK_BUDGET_MS, FULFILLMENT_BUDGET_MS, run };
+module.exports = { WALL_CLOCK_BUDGET_MS, FULFILLMENT_BUDGET_MS, EMAIL_BUDGET_MS, run };

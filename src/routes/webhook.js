@@ -5,12 +5,47 @@ const express = require('express');
 const db = require('../db');
 const stripeIntegration = require('../stripe');
 const fulfillment = require('../fulfillment');
+const emailDelivery = require('../emailDelivery');
 const { asyncRoute } = require('../asyncRoute');
 
 // Mounted before express.json() in server.js. Stripe signature verification
 // requires the exact raw bytes, so this route owns its raw body parser.
 function makeWebhookRouter() {
   const router = express.Router();
+
+  router.post('/resend', express.raw({ type: 'application/json', limit: '256kb' }), asyncRoute(async (req, res) => {
+    let event;
+    try {
+      event = resendIntegration().verifyWebhook(req.body, {
+        id: req.get('svix-id'),
+        timestamp: req.get('svix-timestamp'),
+        signature: req.get('svix-signature'),
+      });
+    } catch (error) {
+      if (error.code === 'RESEND_WEBHOOK_NOT_CONFIGURED') {
+        return res.status(501).send('resend webhook not configured');
+      }
+      console.warn('[webhook:resend] signature verification failed');
+      return res.status(400).send('invalid webhook signature');
+    }
+    const supported = new Set([
+      'email.sent', 'email.delivered', 'email.bounced', 'email.failed', 'email.complained',
+    ]);
+    if (!event || !supported.has(event.type) || !event.data) {
+      return res.json({ received: true, ignored: 'unsupported_event' });
+    }
+    const result = await db.recordResendWebhook({
+      svixId: req.get('svix-id'),
+      eventType: event.type,
+      eventCreatedAt: event.created_at || event.data.created_at || null,
+      providerMessageId: event.data.email_id == null ? null : String(event.data.email_id),
+      emailJobTag: event.data.tags?.email_job_id,
+    });
+    if (result.job && ['email.bounced', 'email.failed', 'email.complained'].includes(event.type)) {
+      console.error(`[email:provider-alert] job ${result.job.id}: ${result.job.status}`);
+    }
+    return res.json({ received: true, duplicate: result.duplicate, matched: result.matched });
+  }));
 
   router.post('/printful', express.raw({ type: 'application/json', limit: '256kb' }), asyncRoute(async (req, res) => {
     let signatureValid;
@@ -59,9 +94,15 @@ function makeWebhookRouter() {
       externalOrderId: order.external_id == null ? null : String(order.external_id),
       providerShipmentId: shipment.id == null ? null : String(shipment.id),
       providerStatus: shipment.status || order.status || event.type,
+      carrier: inferredCarrier(shipment),
+      trackingNumber: String(shipment.tracking_number || '').slice(0, 200) || null,
+      trackingUrl: normalizedTrackingUrl(shipment.tracking_url),
       shippedAt: shipment.shipped_at || null,
       deliveredAt: shipment.delivered_at || null,
     });
+    if (result.emailJob?.id && result.emailJob.status === 'pending') {
+      emailDelivery.scheduleJob(result.emailJob.id);
+    }
     return res.json({ received: true, duplicate: result.duplicate });
   }));
 
@@ -80,15 +121,38 @@ function makeWebhookRouter() {
       return res.status(400).send(`Webhook Error: ${error.message}`);
     }
 
-    if (!['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type)) {
-      return res.json({ received: true });
-    }
-
     // Hard safety switch for this phase: even a correctly signed live event
     // cannot transition an order until live payments are deliberately enabled.
     if (event.livemode && !stripeIntegration.isLiveModeAllowed()) {
       console.error(`[webhook:stripe] ignored live event ${event.id}; live payments are blocked.`);
       return res.json({ received: true, ignored: 'live_mode_blocked' });
+    }
+
+    if (event.type === 'charge.refunded') {
+      const charge = event.data.object;
+      const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : null;
+      if (!paymentIntentId) return res.json({ received: true, ignored: 'order_not_found' });
+      try {
+        const result = await db.recordStripeRefund({
+          stripeEventId: event.id,
+          eventType: event.type,
+          paymentIntentId,
+          livemode: Boolean(event.livemode),
+          amountRefunded: Number(charge.amount_refunded),
+          currency: charge.currency,
+        });
+        if (result.emailJob?.id && result.emailJob.status === 'pending') {
+          emailDelivery.scheduleJob(result.emailJob.id);
+        }
+        return res.json({ received: true, duplicate: result.duplicate, matched: result.matched });
+      } catch (error) {
+        console.error('[webhook:stripe] could not persist refund:', error);
+        return res.status(500).send('could not persist refund');
+      }
+    }
+
+    if (!['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type)) {
+      return res.json({ received: true });
     }
 
     const session = event.data.object;
@@ -144,6 +208,11 @@ function makeWebhookRouter() {
         buyerEmail: session.customer_details?.email,
       });
       if (result.order?.id) fulfillment.scheduleOrder(result.order.id);
+      if (result.emailJob?.id && result.emailJob.status === 'pending') {
+        emailDelivery.scheduleJob(result.emailJob.id);
+      } else if (result.emailJob?.status === 'blocked') {
+        console.error(`[email:blocked] order ${result.order?.id}: buyer_email_missing`);
+      }
       if (!result.duplicate) {
         const message = event.livemode
           ? 'Live-Zahlung gespeichert; Fulfillment wurde sicher vorgemerkt.'
@@ -164,6 +233,28 @@ function makeWebhookRouter() {
 function printfulIntegration() {
   // Lazy load keeps Stripe-only test stubs independent from Printful env state.
   return require('../printful');
+}
+
+function resendIntegration() {
+  return require('../resend');
+}
+
+function normalizedTrackingUrl(value) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(String(value));
+    return ['https:', 'http:'].includes(parsed.protocol) ? parsed.toString().slice(0, 2000) : null;
+  } catch {
+    return null;
+  }
+}
+
+function inferredCarrier(shipment) {
+  const explicit = String(shipment?.carrier || shipment?.service || '').trim();
+  if (explicit) return explicit.slice(0, 120);
+  const trackingUrl = normalizedTrackingUrl(shipment?.tracking_url);
+  if (!trackingUrl) return null;
+  try { return new URL(trackingUrl).hostname.replace(/^www\./, '').slice(0, 120); } catch { return null; }
 }
 
 module.exports = { makeWebhookRouter };

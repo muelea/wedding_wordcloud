@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (105 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (113 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
@@ -81,6 +81,14 @@ it — this file is about how to work in it safely.
   on `/internal/maintenance/run`, weaken its constant-time bearer check, or
   replace its completion heartbeat with an in-process-only timer. Printful
   callbacks verify the exact raw body and remain replay-safe.
+- **Transactional email is durable and payment-independent.** A verified
+  successful Stripe event stores payment, fulfillment work and one immutable
+  confirmation job in the same transaction. Never call Resend inside the
+  Stripe webhook, copy email into shipment recipients, or let email failure
+  roll back payment/block fulfillment. Test payments always use email `mock`.
+  Live retries reuse the permanent job dedupe key only inside the 23-hour
+  safety window; signed raw-body Resend callbacks dedupe by `svix-id`, and
+  stale lease owners cannot commit.
 - **`.env` is never committed.** It's gitignored and holds real Stripe/
   Printful keys in some environments. If you need a new env var, add it to
   `.env.example` with an empty/placeholder value and document it in

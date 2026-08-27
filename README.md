@@ -124,9 +124,12 @@ dotted and dotless I.
 - Event/configuration expiration, safe paid-data retention, one-use reset PINs,
   abuse controls, bounded authenticated maintenance, Supabase Cron wake-ups,
   leased fulfillment and signed replay-safe Printful status webhooks are
-  implemented. Customer VAT/Stripe Tax treatment, transactional email and the
-  first explicitly approved controlled Printful draft remain pending before
-  live sales.
+  implemented. Verified Stripe buyer contact, immutable multilingual order
+  confirmations, leased Resend jobs, shipment/refund/cancellation notices and
+  signed replay-safe Resend delivery webhooks are also implemented. Customer
+  VAT/Stripe Tax treatment, legal review of the versioned contractual copy,
+  Resend domain/webhook activation and the first explicitly approved controlled
+  Printful draft remain pending before live sales.
 
 ## Guest ownership and personal photo designs
 
@@ -213,6 +216,7 @@ Everything in `.env.example` is documented inline. Summary:
 | `RATE_LIMIT_HMAC_SECRET`, `MAINTENANCE_SECRET` | hosted environment | independent secrets for privacy-preserving rate-limit identities and authenticated maintenance wake-ups |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | before transactional-email smoke test | backend-only sending key and verified Wolkenworte sender |
 | `RESEND_WEBHOOK_SECRET` | after the Resend webhook is deployed | verifies signed Resend delivery webhooks |
+| `RESEND_SMOKE_RECIPIENTS` | only for controlled provider smoke | comma-separated allowlist of maintainer/test recipients accepted by the guarded live-email smoke command |
 | `EMAIL_DELIVERY_MODE` | no (defaults `mock`) | `mock` or `live`; Stripe test payments always remain mocked |
 | `ALLOW_TEST_DATA_RESET` | no (must remain `false`) | second guard for the approved one-time pre-live hosted-test cleanup |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | only for test checkout | Stripe test secret and local/Dashboard webhook signing secret; unset → checkout/webhook return a clean 501 |
@@ -227,8 +231,9 @@ Everything in `.env.example` is documented inline. Summary:
 | `SHOP_PAYMENT_RESERVE_PERCENT` | no (defaults 3.15) | internal payment-cost reserve percentage folded into the product subtotal |
 | `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | no (defaults 25) | internal fixed payment-cost reserve in cents, also folded into the product subtotal |
 
-Postgres and Supabase Storage variables are active now. Resend variables remain
-prepared for their later work package and are unused by the runtime today.
+Postgres, Supabase Storage and durable email jobs are active now. Resend remains
+in `mock` mode until its sending domain and signed webhook are deliberately
+activated; hosted Stripe test payments cannot contact the live Resend API.
 
 **Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
 future hosted secrets must be set in the provider's encrypted secret store,
@@ -305,6 +310,9 @@ src/
   stripe.js                Stripe Checkout session creation + webhook verification
   printful.js              Printful estimates plus draft/confirm API primitives
   fulfillment.js           leased single-concurrency worker + mock/draft/live gates
+  resend.js                Resend client, idempotent send and signed webhook verification
+  emailDelivery.js         leased transactional-email worker + 23-hour ambiguity boundary
+  emailTemplates.js        immutable multilingual order/shipment/refund/cancellation messages
   pricing.js               integer-cent quote + catalog-wide markup rule
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
   mugPrint.js              Product-sized SVG print-file renderer
@@ -312,7 +320,7 @@ src/
   routes/
     events.js              Event/configuration CRUD, personal photos, pricing and checkout
     maintenance.js         secret-authenticated synchronous Cron wake-up
-    webhook.js             raw-body Stripe and signed Printful callbacks
+    webhook.js             raw-body Stripe, signed Printful and signed Resend callbacks
 public/
   landing.html             Marketing landing page, served at '/'
   create.html              Event creation form, served at '/start'
@@ -337,13 +345,15 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 105 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 113 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
 dynamic Stripe Checkout, price-change confirmation, webhook idempotency,
 immutable artifacts, lease recovery/stale-owner rejection, provider ambiguity
-reconciliation, signed callbacks, authenticated maintenance, private Storage normalization/deduplication/deletion recovery,
+reconciliation, signed callbacks, atomic buyer-email jobs, Resend idempotency,
+lost-response recovery, lease fencing, shipment/refund/cancellation notices,
+authenticated maintenance, private Storage normalization/deduplication/deletion recovery,
 expiration privacy, safe paid-data retention, one-use async PIN reset and
 database/process abuse ceilings,
 hosting health/cache/shutdown behavior, live safety gates and
@@ -391,8 +401,10 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - `PUBLIC_URL` currently uses the Fly-provided HTTPS hostname. A later
   custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
 - Hosted credentials (Stripe, Printful and the HMAC/maintenance secrets) belong in Fly
-  secrets or the eventual host's equivalent. Keep every live-payment and
-  Printful order-write switch disabled in staging.
+  secrets or the eventual host's equivalent. Resend API/webhook credentials are
+  handled the same way. Keep every live-payment, live-email and Printful
+  order-write switch disabled in staging except during an explicitly approved
+  provider smoke.
 - The Debian/glibc image installs only the runtime libraries needed by
   `node-canvas`, runs as the non-root `node` user under `tini -s`, and bundles
   and registers Gelasio as `Wolkenworte Classic`. Local and AMD64 container
@@ -424,6 +436,48 @@ Checkout button is safe. The durable fulfillment worker records a local
 `mocked` result and the exact payload it would use later, but no code path in
 this test flow calls Printful's order endpoints — even if all Printful live
 switches were accidentally enabled.
+
+## Transactional email safety and activation
+
+A signature-verified successful Stripe event is the only authority for the
+buyer email. In the same database transaction, Wolkenworte records the payment,
+queues fulfillment and inserts one immutable `order_confirmation` email job.
+The message snapshot contains the order number/date, buyer address, products,
+variants, quantities, design references, every delivery address, all exact
+cent totals, seller identity and versioned contractual/personalization wording.
+No recipient address is copied into a shipment, and no provider call happens in
+the Stripe webhook request.
+
+Email jobs use database claims, expiring leases and lease versions. Their
+permanent dedupe key is also the Resend `Idempotency-Key`; a non-PII job id is
+sent as a tag. An ambiguous provider response can reuse only that exact key for
+23 hours. If a signed webhook has not resolved the outcome by then, the job is
+blocked for manual review instead of risking a duplicate send. Signed Resend
+events are deduplicated by `svix-id` and terminal bounce/failure/complaint states
+cannot be moved backward by a late delivery event. Email failure never rolls
+back payment or blocks Printful fulfillment.
+
+`EMAIL_DELIVERY_MODE=mock` is the safe default. Stripe test payments are always
+mocked even if another value is accidentally configured. Real provider
+activation can therefore wait until the sending domain is available:
+
+1. Verify the Wolkenworte sending subdomain in Resend and create a domain-scoped
+   sending key.
+2. Set `RESEND_API_KEY` and the verified `RESEND_FROM_EMAIL` in the ignored
+   local `.env`; keep `EMAIL_DELIVERY_MODE=mock` in Fly.
+3. Deploy the `/webhook/resend` endpoint, then run
+   `npm run resend:configure-webhook -- --confirm-replace-webhook`. The command
+   subscribes only to sent/delivered/bounced/failed/complained events and stages
+   the returned signing secret in Fly for the next deployment.
+4. Put only approved test inboxes in `RESEND_SMOKE_RECIPIENTS`. For a controlled
+   operator smoke, set `EMAIL_DELIVERY_MODE=live` in the CLI environment and run
+   `npm run smoke:resend-email -- --confirm-email-smoke --recipient <allowlisted>
+   --expect delivered`. The synthetic message uses the production template,
+   client, idempotency key, tag and webhook reconciliation path; it cannot be
+   invoked through HTTP and refuses to run while Stripe live payments are enabled.
+5. Restore `EMAIL_DELIVERY_MODE=mock` after the smoke. Do not enable live sales
+   until the contractual copy, VAT/invoicing treatment and delivery/bounce smoke
+   have all been approved.
 
 ## Fulfillment safety modes
 
@@ -466,6 +520,11 @@ keys in Fly for the next deploy.
 
 - **Live Stripe payments** — `sk_live_...` keys and live webhook events are
   rejected while `STRIPE_ALLOW_LIVE_PAYMENTS=false`.
+- **Live transactional delivery** — email snapshots and mock outcomes are
+  durable, but `EMAIL_DELIVERY_MODE=mock` prevents ordinary jobs from contacting
+  Resend. Stripe test payments remain mocked in every mode. The verified sending
+  domain, signed webhook activation and controlled delivered/bounced smoke are
+  still launch gates.
 - **Real Printful fulfillment after test payments** — live countries and
   estimates are connected for the curated mug variants 1320, 4830 and 16586,
   coaster variant 15662, unframed poster variants 8948 and 8952, framed
@@ -500,22 +559,24 @@ keys in Fly for the next deploy.
 
 ## Next steps
 
-1. Implement verified buyer-email capture and durable Resend transactional
-   email jobs, including the Wolkenworte order confirmation (Phase 6).
-2. Register the separate hosted Stripe test webhook in Stripe Dashboard and
+1. Register the separate hosted Stripe test webhook in Stripe Dashboard and
    verify the complete test Checkout flow over the Fly HTTPS address.
-3. Verify the separate front/back SVG URLs in one controlled Printful draft
+2. Verify the separate front/back SVG URLs in one controlled Printful draft
    and inspect the resulting notebook and pillow mockups before enabling sales.
-4. Decide the business's VAT status, EU/OSS registrations and bookkeeping
+3. Decide the business's VAT status, EU/OSS registrations and bookkeeping
    export; then verify or replace the current customer-tax estimate with the
    reviewed Stripe Tax configuration.
-5. Confirm whether Printful's product print pipeline accepts the generated SVG
+4. Have the exact versioned order-confirmation/withdrawal wording reviewed
+   together with VAT, invoicing, refund and cancellation treatment.
+5. Verify the Resend sending domain, activate its signed webhook and run the
+   guarded delivered and bounced provider smokes.
+6. Confirm whether Printful's product print pipeline accepts the generated SVG
    directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
    is already available if so).
-6. Deliberately enable `draft` mode only for one controlled live-payment test,
+7. Deliberately enable `draft` mode only for one controlled live-payment test,
    verify Printful can download the immutable file and inspect the unconfirmed
    draft in the dashboard.
-7. Run the guarded Printful draft smoke for every materially different
+8. Run the guarded Printful draft smoke for every materially different
    placement type and retain the signed v2 webhook for shipment status.
-8. Add the Phase 8 external alert for stale maintenance heartbeats and pg_net
+9. Add the Phase 8 external alert for stale maintenance heartbeats and pg_net
    non-2xx/timeout results.

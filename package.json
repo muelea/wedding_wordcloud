@@ -13,6 +13,8 @@
     "maintenance:verify-cron": "node scripts/verify-maintenance-cron.js",
     "smoke:printful-draft": "node scripts/printful-draft-smoke.js",
     "printful:configure-webhook": "node scripts/configure-printful-webhook.js",
+    "resend:configure-webhook": "node scripts/configure-resend-webhook.js",
+    "smoke:resend-email": "node scripts/resend-email-smoke.js",
     "fly:secrets": "node scripts/configure-fly-secrets.js",
     "smoke:hosted": "node scripts/hosted-smoke.js",
     "test": "node --test test/*.test.js"
@@ -28,6 +30,7 @@
     "ipaddr.js": "^1.9.1",
     "pg": "^8.23.0",
     "qrcode": "^1.5.3",
+    "resend": "^6.24.0",
     "sharp": "^0.35.4",
     "socket.io": "^4.7.5",
     "stripe": "^16.9.0",

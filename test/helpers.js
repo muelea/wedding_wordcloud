@@ -15,6 +15,7 @@ const APPLICATION_MIGRATIONS = [
   '20260827000004_application_design_assets.sql',
   '20260827000007_application_lifecycle_abuse.sql',
   '20260827000009_application_fulfillment_jobs.sql',
+  '20260827000012_application_email_jobs.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -23,6 +24,9 @@ function clearApplicationModules() {
     '../src/routes/events',
     '../src/routes/webhook',
     '../src/fulfillment',
+    '../src/emailDelivery',
+    '../src/emailTemplates',
+    '../src/resend',
     '../src/privateStorage',
     '../src/designAssets',
     '../src/clientIdentity',

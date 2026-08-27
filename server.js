@@ -16,6 +16,7 @@ const { makeMaintenanceRouter } = require('./src/routes/maintenance');
 const { getBaseUrl } = require('./src/baseUrl');
 const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
+const emailDelivery = require('./src/emailDelivery');
 const printArtifacts = require('./src/printArtifacts');
 const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
@@ -183,6 +184,7 @@ server.on('listening', () => {
   acceptingTraffic = true;
   if (process.env.NODE_ENV === 'test') return;
   fulfillment.start();
+  emailDelivery.start();
 });
 
 server.on('close', () => {
@@ -243,13 +245,17 @@ function shutdown(signal = 'shutdown') {
   acceptingTraffic = false;
   console.log(`[server] ${signal} received; draining Socket.io, HTTP, workers and Postgres.`);
   shutdownPromise = (async () => {
-    const [transportClosed, worker] = await Promise.all([
+    const [transportClosed, fulfillmentWorker, emailWorker] = await Promise.all([
       closeHttpAndSockets(),
       fulfillment.stop({ timeoutMs: 15_000 }),
+      emailDelivery.stop({ timeoutMs: 15_000 }),
     ]);
     if (!transportClosed) console.warn('[server] transport drain reached its 10-second bound.');
-    if (!worker.drained) {
-      console.warn(`[server] ${worker.activeOrders} fulfillment job(s) remain recoverable after restart.`);
+    if (!fulfillmentWorker.drained) {
+      console.warn(`[server] ${fulfillmentWorker.activeOrders} fulfillment job(s) remain recoverable after restart.`);
+    }
+    if (!emailWorker.drained) {
+      console.warn(`[server] ${emailWorker.activeJobs} email job(s) remain recoverable after restart.`);
     }
     await db.closePool();
     console.log('[server] graceful shutdown complete.');
