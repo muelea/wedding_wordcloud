@@ -24,6 +24,9 @@
  * with no compiler toolchain needed in this environment.
  */
 
+// Registers the bundled Wolkenworte Classic serif before the measurement
+// context is created, so Linux/Fly and local exports use identical metrics.
+require('./designFonts');
 const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 

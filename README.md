@@ -101,13 +101,16 @@ dotted and dotless I.
 ## Current development status
 
 - The full product now runs on Postgres. Versioned migrations and a dedicated
-  least-privileged runtime role are configured in the Supabase project; there
-  is still no active public production deployment.
+  least-privileged runtime role are configured in the Supabase project.
+- The hosted test environment is active at `https://wolkenworte.fly.dev` on
+  one stateless Fly Machine in Frankfurt. It scales to zero while idle and
+  reconnects to durable Supabase Postgres on cold start. This is not yet the
+  public production launch or custom domain.
 - Stripe Checkout and signed Stripe webhooks run in test mode. Printful is
   already used for countries and live cost estimates when configured, but a
   Stripe test payment can only create a local `mocked` fulfillment record.
-- The empty Fly.io app exists, but Docker/Fly packaging and the first hosted
-  test deployment belong to the next work package.
+- The production container, readiness/liveness checks, cache rules, graceful
+  shutdown, Fly configuration and manual deployment workflow are in the repository.
 - The application data layer is fully asynchronous through one bounded `pg`
   pool. Application startup checks the required migration version and never
   creates or alters schema objects.
@@ -139,13 +142,13 @@ configuration-specific print route is addressed only by its opaque random id.
 
 ## Bundled design fonts
 
-The product editor ships Lora, Montserrat, Caveat and Baloo 2 locally alongside
-the existing Georgia default. Browser preview, server-side bounds checking and
-the immutable SVG use the same font definitions; non-default fonts are embedded
-directly into the print SVG so fulfillment does not depend on fonts installed at
-Printful. Each bundled font is distributed under the SIL Open Font License 1.1;
-the corresponding `OFL.txt` files live next to the font binaries in
-`public/assets/design-fonts/`.
+The product editor ships the OFL-licensed Gelasio font as its deterministic
+`Wolkenworte Classic` serif plus Lora, Montserrat, Caveat and Baloo 2. Browser
+preview, local rendering and the Linux container register the same files, and
+used fonts are embedded directly into immutable print SVGs. Rendering therefore
+does not depend on Georgia or another host font being installed. The existing
+design-font `OFL.txt` files live next to their binaries; Gelasio's license ships
+with its pinned `@fontsource/gelasio` package.
 
 ## Quick start
 
@@ -185,8 +188,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `DATABASE_URL` | yes | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
 | `DATABASE_CA_CERT_PATH` / `DATABASE_CA_CERT` | hosted database | Supabase database CA path or PEM contents used for full TLS and hostname verification |
 | `MIGRATION_DATABASE_URL` | deployment only | privileged Postgres migration connection; local/CI secret only and never available to the Fly web Machine |
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | after hosted Package 1 | private Storage API URL and backend-only secret key; the secret key must never reach browser code |
-| `SUPABASE_STORAGE_BUCKET` | after hosted Package 2 | private photo/print-artifact bucket name (defaults `wolkenworte-private`) |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | hosted runtime | private Storage API URL and backend-only secret key prepared for Package 3; the secret key must never reach browser code |
+| `SUPABASE_STORAGE_BUCKET` | Package 3 | private photo/print-artifact bucket name (defaults `wolkenworte-private`) |
 | `RATE_LIMIT_HMAC_SECRET`, `MAINTENANCE_SECRET` | hosted environment | independent secrets for privacy-preserving rate-limit identities and authenticated maintenance wake-ups |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | before transactional-email smoke test | backend-only sending key and verified Wolkenworte sender |
 | `RESEND_WEBHOOK_SECRET` | after the Resend webhook is deployed | verifies signed Resend delivery webhooks |
@@ -259,6 +262,10 @@ still need professional review before live payments are enabled.
 
 ```
 server.js                  Express + Socket.io bootstrap, route mounting
+Dockerfile                 Non-root Debian/Node 22 production image
+fly.toml                   Frankfurt hosted-test lifecycle and health config
+.github/workflows/         Manual test → migrate → deploy → smoke workflow
+scripts/hosted-smoke.js    Sanitized HTTPS/Postgres/Socket.io hosted smoke
 src/
   db.js                    async Postgres data boundary and transaction logic
   dbConfig.js              verified-TLS and bounded pg pool configuration
@@ -302,12 +309,13 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 75 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 78 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
 dynamic Stripe Checkout, price-change confirmation, webhook idempotency, immutable fulfillment
-payloads, live safety gates and Stripe/Printful stub behavior. Each test
+payloads, hosting health/cache/shutdown behavior, live safety gates and
+Stripe/Printful stub behavior. Each test
 server uses its own randomly named migrated Postgres schema and ephemeral port,
 then drops the schema in cleanup, so files remain isolated in parallel.
 
@@ -317,27 +325,36 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 ## Deployment notes
 
-- Repository: GitHub `muelea/wedding_wordcloud`, `main`. The app is currently
-  local-only; pushing `main` does not represent an approved production deploy.
-- The next staging step is the existing Fly.io app in Frankfurt with one web
-  Machine and no persistent volume; durable business data is already in
-  Supabase Postgres. Docker/Fly configuration has not been scaffolded yet.
+- Repository: GitHub `muelea/wedding_wordcloud`, `main`. Deployments remain
+  explicit; pushing `main` does not deploy automatically. The committed GitHub
+  workflow is manual-only (`workflow_dispatch`).
+- The hosted test app is `wolkenworte` in Fly's `fra` region with one
+  `shared-cpu-1x`/512 MiB stateless web Machine, no volume, automatic stop/start
+  and `https://wolkenworte.fly.dev`. Durable business data is in Supabase.
 - Fly receives only the least-privileged `DATABASE_URL`. Migrations run first
   from local/CI tooling with `MIGRATION_DATABASE_URL`, which must never be
   available to an ordinary web Machine.
-- `PUBLIC_URL` will initially use the Fly-provided HTTPS hostname. A later
+- `npm run fly:secrets` validates and stages the runtime-secret allowlist from
+  the ignored `.env`; it converts the trusted database CA to an inline Fly
+  secret and deliberately excludes `MIGRATION_DATABASE_URL`.
+- The release order is `npm test`, production image build, strict Fly config
+  validation, `npm run db:migrate`, `flyctl deploy --remote-only --ha=false`,
+  and `npm run smoke:hosted -- https://wolkenworte.fly.dev`. The manual GitHub
+  workflow encodes this same fail-fast order.
+- Before that GitHub workflow is first used, its protected `hosted-test`
+  environment needs `MIGRATION_DATABASE_URL`, `DATABASE_CA_CERT` and a scoped
+  `FLY_API_TOKEN`. These deployment-runner credentials are not Fly app secrets.
+- `PUBLIC_URL` currently uses the Fly-provided HTTPS hostname. A later
   custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
 - Hosted credentials (`ADMIN_TOKEN_SECRET`, Stripe and Printful) belong in Fly
   secrets or the eventual host's equivalent. Keep every live-payment and
   Printful order-write switch disabled in staging.
-- `node-canvas` (used for the print-file export) ships prebuilt binaries for
-  glibc Linux; if the host image is Alpine (musl), install will fall back to
-  a slow source build requiring `cairo`/`pango`/`libjpeg`/`giflib` headers.
-- `"Georgia"` (the app's serif font) is unlikely to be installed on a bare
-  Linux host — `node-canvas` will silently fall back to a generic serif for
-  the printed mug artwork unless a metric-compatible font (e.g. Google's
-  "Gelasio") is bundled and registered via `canvas.registerFont()` at
-  startup. Worth verifying before the first real mug order ships.
+- The Debian/glibc image installs only the runtime libraries needed by
+  `node-canvas`, runs as the non-root `node` user under `tini -s`, and bundles
+  and registers Gelasio as `Wolkenworte Classic`. Local and AMD64 container
+  font-metric probes are part of the Phase 2 verification record.
+- `/health/live` is process-only. `/health/ready` performs a bounded Postgres
+  and schema/role check and is the Fly service health check. Both are `no-store`.
 
 ## Test checkout setup
 
@@ -420,24 +437,24 @@ created draft is confirmed. Keep every switch false while developing locally.
 
 ## Next steps
 
-1. Verify the separate front/back SVG URLs in one controlled Printful draft
+1. Move personal-photo bytes from Postgres JSON into private Supabase Storage
+   while preserving immutable configuration isolation (Phase 3).
+2. Register the separate hosted Stripe test webhook in Stripe Dashboard and
+   verify the complete test Checkout flow over the Fly HTTPS address.
+3. Verify the separate front/back SVG URLs in one controlled Printful draft
    and inspect the resulting notebook and pillow mockups before enabling sales.
-2. Add the Docker/Fly configuration and hosted test secrets, then verify the
-   complete Stripe test flow over the Fly-provided public HTTPS address.
-3. Decide the business's VAT status, EU/OSS registrations and bookkeeping
+4. Decide the business's VAT status, EU/OSS registrations and bookkeeping
    export; then verify or replace the current customer-tax estimate with the
    reviewed Stripe Tax configuration.
-4. Confirm whether Printful's product print pipeline accepts the generated SVG
+5. Confirm whether Printful's product print pipeline accepts the generated SVG
    directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
    is already available if so).
-5. Once a public HTTPS deployment exists, deliberately enable `draft` mode
-   for one controlled live-payment test, verify Printful can download the
-   immutable file and inspect the unconfirmed draft in the dashboard.
-6. Configure signed Printful v2 webhooks for production/shipment status once
+6. Deliberately enable `draft` mode only for one controlled live-payment test,
+   verify Printful can download the immutable file and inspect the unconfirmed
+   draft in the dashboard.
+7. Configure signed Printful v2 webhooks for production/shipment status once
    the public callback URL exists; do not register a callback before its
    signing secret can be stored in the production environment.
-7. Move personal-photo bytes from Postgres JSON into private Supabase Storage
-   while preserving immutable configuration isolation.
 8. Define and implement retention/deletion for events, immutable designs,
    embedded personal photos, addresses and completed orders.
 9. Rate-limiting — no per-IP throttle yet on word submission or event

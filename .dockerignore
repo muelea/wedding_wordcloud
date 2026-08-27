@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules
+npm-debug.log*
+test
+scripts
+supabase
+.github
+.DS_Store
+coverage
+*.sqlite*
+

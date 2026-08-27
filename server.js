@@ -17,17 +17,45 @@ const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
 const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
+const { sendHtml, staticCacheMiddleware } = require('./src/httpCache');
 
 const PORT = process.env.PORT || 3000;
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+io.engine.on('headers', (headers) => {
+  // Socket.io transport responses are session-specific, including the
+  // unversioned client bundle path served by Engine.IO.
+  headers['Cache-Control'] = 'no-store';
+});
 
 // Behind a reverse proxy, this makes req.protocol correctly report "https".
 app.set('trust proxy', true);
 
 app.use(compression());
+
+let initialized = false;
+let acceptingTraffic = false;
+let shuttingDown = false;
+
+app.get('/health/live', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ status: 'ok' });
+});
+
+app.get('/health/ready', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!initialized || !acceptingTraffic || shuttingDown) {
+    return res.status(503).json({ status: 'not_ready' });
+  }
+  try {
+    await db.checkDatabaseReady(1_500);
+    return res.json({ status: 'ok' });
+  } catch {
+    return res.status(503).json({ status: 'not_ready' });
+  }
+});
 
 // Stripe webhook needs the raw, unparsed body for signature verification —
 // must be mounted BEFORE any express.json() body parser touches this path.
@@ -35,25 +63,20 @@ app.use('/webhook', makeWebhookRouter({ port: PORT }));
 
 // Serve the pinned Three.js module locally so the configurator's 3D preview
 // never depends on a third-party CDN being reachable from a wedding venue.
-app.get('/vendor/three.min.js', (req, res) => {
-  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+app.get('/vendor/three.min.js', staticCacheMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'three', 'build', 'three.min.js'));
 });
 
-app.get('/vendor/fabric.min.js', (req, res) => {
-  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+app.get('/vendor/fabric.min.js', staticCacheMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'fabric', 'dist', 'index.min.js'));
 });
 
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    // Vendored/shared libraries never change during an event — let phones
-    // cache them for a week instead of re-fetching every load.
-    if (filePath.endsWith('.js')) {
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-    }
-  },
-}));
+app.get('/vendor/fonts/gelasio-latin-ext-400-normal.woff', staticCacheMiddleware, (req, res) => {
+  res.type('font/woff');
+  res.sendFile(require.resolve('@fontsource/gelasio/files/gelasio-latin-ext-400-normal.woff'));
+});
+
+app.use(staticCacheMiddleware, express.static(path.join(__dirname, 'public')));
 
 app.use('/api', makeEventsRouter({ io, port: PORT }));
 
@@ -64,48 +87,48 @@ app.use('/api', makeEventsRouter({ io, port: PORT }));
 // being a dead-end mockup. See README "Public landing page" for the full
 // routing rationale.
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+  sendHtml(res, path.join(__dirname, 'public', 'landing.html'));
 });
 
 app.get('/start', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'create.html'));
+  sendHtml(res, path.join(__dirname, 'public', 'create.html'));
 });
 
 app.get('/impressum', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'impressum.html'));
+  sendHtml(res, path.join(__dirname, 'public', 'impressum.html'));
 });
 
 app.get('/datenschutz', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'datenschutz.html'));
+  sendHtml(res, path.join(__dirname, 'public', 'datenschutz.html'));
 });
 
 app.get('/e/:slug', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-  res.sendFile(path.join(__dirname, 'public', 'guest.html'));
+  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
+  sendHtml(res, path.join(__dirname, 'public', 'guest.html'));
 }));
 
 app.get('/e/:slug/display', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-  res.sendFile(path.join(__dirname, 'public', 'display.html'));
+  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
+  sendHtml(res, path.join(__dirname, 'public', 'display.html'));
 }));
 
 app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-  res.sendFile(path.join(__dirname, 'public', 'configure.html'));
+  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
+  sendHtml(res, path.join(__dirname, 'public', 'configure.html'));
 }));
 
 app.get('/e/:slug/shipping', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-  res.sendFile(path.join(__dirname, 'public', 'shipping.html'));
+  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
+  sendHtml(res, path.join(__dirname, 'public', 'shipping.html'));
 }));
 
 app.get('/e/:slug/order-confirmation', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
   res.set('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'public', 'order-confirmation.html'));
 }));
@@ -125,6 +148,7 @@ app.get('/e/:slug/export.svg', asyncRoute(async (req, res) => {
   if (!words.length) return res.status(404).send('no words submitted yet');
   const svg = layoutForExport(words, event.theme);
   res.set('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.set('Cache-Control', 'no-store');
   res.send(svg);
 }));
 
@@ -134,6 +158,7 @@ attachSocketHandlers(io);
 // in the database prevents duplicate processing when a Stripe retry arrives
 // at the same time.
 server.on('listening', async () => {
+  acceptingTraffic = true;
   if (process.env.NODE_ENV === 'test') return;
   try {
     const resumed = await fulfillment.resumePendingOrders();
@@ -143,15 +168,22 @@ server.on('listening', async () => {
   }
 });
 
+server.on('close', () => {
+  acceptingTraffic = false;
+});
+
 // Rejected async route promises end here. SQL text, credentials and driver
 // errors are logged server-side and never sent to a browser.
 app.use(sanitizedErrorHandler);
 
 let initialization = null;
-function initialize() {
+async function initialize() {
   if (!initialization) {
     validateRuntimeConfig();
-    initialization = db.assertDatabaseReady();
+    initialization = db.assertDatabaseReady().then(() => {
+      initialized = true;
+      return true;
+    });
   }
   return initialization;
 }
@@ -166,23 +198,67 @@ async function start() {
   });
 }
 
-async function shutdown(signal) {
-  console.log(`[server] ${signal} received; closing HTTP and Postgres cleanly.`);
-  await new Promise((resolve) => server.close(() => resolve()));
-  await db.closePool();
+let shutdownPromise = null;
+function closeHttpAndSockets(timeoutMs = 10_000) {
+  const closes = [];
+  if (server.listening) {
+    closes.push(new Promise((resolve) => server.close(() => resolve())));
+  }
+  closes.push(new Promise((resolve) => io.close(() => resolve())));
+  const cleanClose = Promise.allSettled(closes).then(() => true);
+  return Promise.race([
+    cleanClose,
+    new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        io.disconnectSockets(true);
+        server.closeAllConnections?.();
+        resolve(false);
+      }, timeoutMs);
+      timer.unref();
+      cleanClose.finally(() => clearTimeout(timer));
+    }),
+  ]);
+}
+
+function shutdown(signal = 'shutdown') {
+  if (shutdownPromise) return shutdownPromise;
+  shuttingDown = true;
+  acceptingTraffic = false;
+  console.log(`[server] ${signal} received; draining Socket.io, HTTP, workers and Postgres.`);
+  shutdownPromise = (async () => {
+    const [transportClosed, worker] = await Promise.all([
+      closeHttpAndSockets(),
+      fulfillment.stop({ timeoutMs: 15_000 }),
+    ]);
+    if (!transportClosed) console.warn('[server] transport drain reached its 10-second bound.');
+    if (!worker.drained) {
+      console.warn(`[server] ${worker.activeOrders} fulfillment job(s) remain recoverable after restart.`);
+    }
+    await db.closePool();
+    console.log('[server] graceful shutdown complete.');
+  })();
+  return shutdownPromise;
 }
 
 if (require.main === module) {
-  start().catch((error) => {
+  start().catch(async (error) => {
     console.error('[startup] Wolkenworte could not start:', error.message);
     process.exitCode = 1;
+    await db.closePool().catch(() => {});
   });
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => {
-      shutdown(signal).catch((error) => {
-        console.error('[shutdown] clean shutdown failed:', error.message);
-        process.exitCode = 1;
-      });
+      const forceExit = setTimeout(() => {
+        console.error('[shutdown] 28-second safety bound reached; forcing exit.');
+        process.exit(1);
+      }, 28_000);
+      forceExit.unref();
+      shutdown(signal)
+        .catch((error) => {
+          console.error('[shutdown] clean shutdown failed:', error.message);
+          process.exitCode = 1;
+        })
+        .finally(() => clearTimeout(forceExit));
     });
   }
 }

@@ -27,10 +27,10 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const FONT_FAMILY = 'Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif';
+  const FONT_FAMILY = '"Wolkenworte Classic", Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif';
   // Same font list, but with single quotes — FONT_FAMILY's double quotes
   // would prematurely close the SVG's font-family="..." XML attribute.
-  const SVG_FONT_FAMILY = "Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif";
+  const SVG_FONT_FAMILY = "'Wolkenworte Classic', Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif";
 
   const THEMES = {
     pastel: {

@@ -7,6 +7,10 @@ function flag(name) {
 function validateRuntimeConfig() {
   const errors = [];
   const production = process.env.NODE_ENV === 'production';
+  const port = Number(process.env.PORT || 3000);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    errors.push('PORT muss eine gültige TCP-Portnummer sein.');
+  }
   const emailMode = String(process.env.EMAIL_DELIVERY_MODE || 'mock').trim().toLowerCase();
   if (!['mock', 'live'].includes(emailMode)) {
     errors.push('EMAIL_DELIVERY_MODE muss mock oder live sein.');

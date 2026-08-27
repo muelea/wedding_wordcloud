@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (75 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (78 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
@@ -90,13 +90,14 @@ it — this file is about how to work in it safely.
 
 ## Where things deploy
 
-The repository is GitHub `muelea/wedding_wordcloud`, `main` branch. The app is
-currently developed and tested locally; there is no active public production
-deployment and pushing `main` must not be treated as a deployment action.
+The repository is GitHub `muelea/wedding_wordcloud`, `main` branch. Pushing
+`main` is not a deployment action; the repository deployment workflow is
+manual-only.
 
 The Supabase/Postgres foundation and least-privileged runtime role are active.
-The Fly.io app exists but is not deployed; Docker/Fly packaging is the next
-work package and needs explicit maintainer approval. Local secrets stay in
-`.env`; hosted runtime secrets belong in Fly Secrets, while the privileged
-`MIGRATION_DATABASE_URL` stays only in local/CI migration tooling, never Fly.
-Do not deploy or push branches without explicit maintainer approval.
+The hosted test app is active at `https://wolkenworte.fly.dev` on one stateless
+Fly Machine in Frankfurt with automatic stop/start; it is not the production
+launch or custom domain. Local secrets stay in `.env`; hosted runtime secrets
+belong in Fly Secrets, while the privileged `MIGRATION_DATABASE_URL` stays only
+in local/CI migration tooling, never Fly. Do not deploy again or push branches
+without explicit maintainer approval.

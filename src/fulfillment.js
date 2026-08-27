@@ -16,6 +16,9 @@ const { getProduct } = require('./products');
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [5_000, 30_000];
 const activeOrders = new Set();
+const retryTimers = new Set();
+const scheduledOrders = new Set();
+let stopping = false;
 
 class FulfillmentSafetyError extends Error {
   constructor(message) {
@@ -221,6 +224,7 @@ function parseStoredPayload(value) {
 }
 
 async function processOrder(orderId) {
+  if (stopping) return db.getOrderById(orderId);
   if (activeOrders.has(orderId)) return db.getOrderById(orderId);
   const order = await db.claimFulfillmentOrder(orderId);
   if (!order) return db.getOrderById(orderId);
@@ -343,9 +347,13 @@ async function processOrder(orderId) {
     const blocked = error?.code === 'FULFILLMENT_BLOCKED';
     const failed = await db.failFulfillment(order.id, error, { blocked });
     console.error(`[fulfillment:${blocked ? 'blocked' : 'failed'}] order ${order.id}:`, error.message);
-    if (!blocked && Number(failed.fulfillment_attempts) < MAX_ATTEMPTS) {
+    if (!stopping && !blocked && Number(failed.fulfillment_attempts) < MAX_ATTEMPTS) {
       const delay = RETRY_DELAYS_MS[Math.max(0, Number(failed.fulfillment_attempts) - 1)] || 30_000;
-      const retryTimer = setTimeout(() => scheduleOrder(order.id), delay);
+      const retryTimer = setTimeout(() => {
+        retryTimers.delete(retryTimer);
+        scheduleOrder(order.id);
+      }, delay);
+      retryTimers.add(retryTimer);
       retryTimer.unref();
     }
     return failed;
@@ -355,18 +363,39 @@ async function processOrder(orderId) {
 }
 
 function scheduleOrder(orderId) {
-  setImmediate(() => {
+  if (stopping) return false;
+  const scheduled = setImmediate(() => {
+    scheduledOrders.delete(scheduled);
+    if (stopping) return;
     processOrder(orderId).catch((error) => {
       console.error(`[fulfillment:worker] order ${orderId}:`, error);
     });
   });
+  scheduledOrders.add(scheduled);
+  scheduled.unref();
+  return true;
 }
 
 async function resumePendingOrders() {
+  if (stopping) return 0;
   await db.recoverStaleFulfillments();
   const orders = await db.getPendingFulfillmentOrders(20);
   for (const order of orders) scheduleOrder(order.id);
   return orders.length;
+}
+
+async function stop({ timeoutMs = 15_000 } = {}) {
+  stopping = true;
+  for (const timer of retryTimers) clearTimeout(timer);
+  retryTimers.clear();
+  for (const scheduled of scheduledOrders) clearImmediate(scheduled);
+  scheduledOrders.clear();
+
+  const deadline = Date.now() + timeoutMs;
+  while (activeOrders.size && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, Math.min(25, deadline - Date.now())));
+  }
+  return { drained: activeOrders.size === 0, activeOrders: activeOrders.size };
 }
 
 module.exports = {
@@ -378,4 +407,5 @@ module.exports = {
   processOrder,
   scheduleOrder,
   resumePendingOrders,
+  stop,
 };

@@ -66,7 +66,7 @@ async function startTestServer() {
   process.env.ADMIN_TOKEN_SECRET = 'test-secret';
   clearApplicationModules();
 
-  const { server, io, initialize } = require('../server');
+  const { server, io, initialize, shutdown } = require('../server');
   const database = require('../src/db');
   await initialize();
 
@@ -92,12 +92,13 @@ async function startTestServer() {
     baseUrl: `http://127.0.0.1:${port}`,
     server,
     io,
+    shutdown,
     schema,
     async query(sql, params = []) {
       return database.getPool().query(sql, params);
     },
     async close() {
-      await new Promise((resolve) => io.close(() => resolve()));
+      if (server.listening) await new Promise((resolve) => io.close(() => resolve()));
       if (server.listening) {
         await new Promise((resolve) => server.close(() => resolve()));
       }

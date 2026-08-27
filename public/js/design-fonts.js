@@ -13,10 +13,12 @@
       key: DEFAULT_FONT_KEY,
       label: 'Klassisch',
       description: 'Zeitlos und vertraut',
-      family: 'Georgia',
-      cssFamily: 'Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif',
-      svgFamily: "Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif",
-      file: null,
+      family: 'Wolkenworte Classic',
+      cssFamily: '"Wolkenworte Classic", Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif',
+      svgFamily: "'Wolkenworte Classic', Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif",
+      file: '/vendor/fonts/gelasio-latin-ext-400-normal.woff',
+      packageFile: '@fontsource/gelasio/files/gelasio-latin-ext-400-normal.woff',
+      format: 'woff',
     }),
     Object.freeze({
       key: 'lora',
@@ -26,6 +28,7 @@
       cssFamily: '"Wolkenworte Lora", Georgia, serif',
       svgFamily: "'Wolkenworte Lora', Georgia, serif",
       file: '/assets/design-fonts/lora/Lora.ttf',
+      format: 'truetype',
     }),
     Object.freeze({
       key: 'montserrat',
@@ -35,6 +38,7 @@
       cssFamily: '"Wolkenworte Montserrat", Arial, sans-serif',
       svgFamily: "'Wolkenworte Montserrat', Arial, sans-serif",
       file: '/assets/design-fonts/montserrat/Montserrat.ttf',
+      format: 'truetype',
     }),
     Object.freeze({
       key: 'caveat',
@@ -44,6 +48,7 @@
       cssFamily: '"Wolkenworte Caveat", cursive',
       svgFamily: "'Wolkenworte Caveat', cursive",
       file: '/assets/design-fonts/caveat/Caveat.ttf',
+      format: 'truetype',
     }),
     Object.freeze({
       key: 'baloo-2',
@@ -53,6 +58,7 @@
       cssFamily: '"Wolkenworte Baloo 2", sans-serif',
       svgFamily: "'Wolkenworte Baloo 2', sans-serif",
       file: '/assets/design-fonts/baloo-2/Baloo2.ttf',
+      format: 'truetype',
     }),
   ]);
   const FONT_BY_KEY = new Map(FONTS.map((font) => [font.key, font]));

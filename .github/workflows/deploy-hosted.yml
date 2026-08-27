@@ -1,0 +1,38 @@
+name: Deploy hosted test
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: wolkenworte-hosted-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-migrate-deploy:
+    runs-on: ubuntu-latest
+    environment: hosted-test
+    env:
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      DATABASE_CA_CERT: ${{ secrets.DATABASE_CA_CERT }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      PUBLIC_URL: https://wolkenworte.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: docker build --tag wolkenworte:${{ github.sha }} .
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl config validate --strict --config fly.toml --app wolkenworte
+      - run: npm run db:migrate
+      - run: flyctl deploy --remote-only --ha=false --config fly.toml --app wolkenworte --yes
+      - run: npm run smoke:hosted -- https://wolkenworte.fly.dev

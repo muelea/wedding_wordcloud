@@ -1,3 +1,14 @@
+/* The same OFL-licensed serif is registered with node-canvas on the server.
+   This keeps browser layout, hosted SVG measurements and printed output on
+   one deterministic font instead of depending on Georgia being installed. */
+@font-face {
+  font-family: 'Wolkenworte Classic';
+  src: url('/vendor/fonts/gelasio-latin-ext-400-normal.woff?v=5.3.0') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 .ww-language-picker {
   z-index: 10000;
   display: inline-flex;

@@ -96,6 +96,21 @@ async function assertDatabaseReady() {
   return true;
 }
 
+async function checkDatabaseReady(timeoutMs = 1_500) {
+  let timeout;
+  try {
+    return await Promise.race([
+      assertDatabaseReady(),
+      new Promise((resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error('Postgres readiness timed out.')), timeoutMs);
+        timeout.unref();
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── PIN hashing ─────────────────────────────────────────────────────────
 function hashPin(pin) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -1012,6 +1027,7 @@ module.exports = {
   getPool,
   closePool,
   assertDatabaseReady,
+  checkDatabaseReady,
   hashPin,
   verifyPin,
   createEvent,

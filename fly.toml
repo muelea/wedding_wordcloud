@@ -1,0 +1,49 @@
+app = "wolkenworte"
+primary_region = "fra"
+kill_signal = "SIGTERM"
+kill_timeout = 30
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  PUBLIC_URL = "https://wolkenworte.fly.dev"
+  DATABASE_APPLICATION_NAME = "wolkenworte-fly"
+  SUPABASE_STORAGE_BUCKET = "wolkenworte-private"
+  EMAIL_DELIVERY_MODE = "mock"
+  ALLOW_TEST_DATA_RESET = "false"
+  STRIPE_ALLOW_LIVE_PAYMENTS = "false"
+  CHECKOUT_QUOTE_TTL_MINUTES = "30"
+  PRINTFUL_FULFILLMENT_MODE = "mock"
+  PRINTFUL_ALLOW_ORDER_WRITES = "false"
+  PRINTFUL_CONFIRM_LIVE_ORDERS = "false"
+  SHOP_PRODUCT_MARKUP_PERCENT = "50"
+  SHOP_PAYMENT_RESERVE_PERCENT = "3.15"
+  SHOP_PAYMENT_RESERVE_FIXED_CENTS = "25"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 800
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "15s"
+    method = "GET"
+    timeout = "3s"
+    path = "/health/ready"
+    protocol = "http"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
