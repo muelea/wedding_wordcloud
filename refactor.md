@@ -529,10 +529,22 @@ equivalent hosted secret facility. Migrations may refer to the Vault secret by
 name but must never contain the value. Rotating the secret updates both Fly and
 the Cron caller in a coordinated hosted-test step.
 
-Set the endpoint's batch budget below the configured Cron HTTP timeout and
-Fly's shutdown grace period. If a job cannot finish within that budget, it must
-checkpoint safely under its lease and remain due/recoverable rather than
-leaving an untracked asynchronous promise after the response ends.
+Do not rely on `pg_net`'s short default HTTP timeout. The committed Cron SQL
+must call `net.http_post(..., timeout_milliseconds := 30000)` explicitly, with
+the Fly URL and `MAINTENANCE_SECRET` read from their configured secret sources
+rather than embedded in the migration. The maintenance handler has a hard
+15-second wall-clock work budget per request. This leaves headroom inside the
+30-second caller timeout for a stopped Fly Machine to start, routing and the
+HTTP response, and also keeps work below Fly's configured shutdown grace
+period. Storage and provider calls made by the batch need their own bounded
+timeouts within that 15-second budget.
+
+If a job cannot finish within the handler budget, it must checkpoint safely
+under its lease and remain due/recoverable rather than leaving an untracked
+asynchronous promise after the response ends. Tests must inspect the installed
+Cron definition and prove that the explicit 30-second timeout is present; a
+hosted smoke test must prove that a Cron request can wake a stopped Machine and
+complete a bounded batch within it.
 
 The maintenance operation must:
 
@@ -861,6 +873,7 @@ status                pending, processing, sent, delivered, bounced,
 provider_message_id   nullable unique text
 attempt_count         integer
 next_attempt_at       timestamptz
+first_send_attempt_at timestamptz
 locked_by             nullable text
 locked_until          nullable timestamptz
 lease_version         integer
@@ -872,13 +885,30 @@ created_at            timestamptz
 updated_at            timestamptz
 ```
 
-The permanent database `dedupe_key` is the primary duplicate guard. Also pass a
-stable Resend idempotency key for each send; provider-side idempotency is an
-additional safeguard, not a replacement for the unique database constraint.
-Claims, leases, retries, bounded batches and Cron wake-up follow the same rules
-as fulfillment jobs. Email failure never rolls back payment and never blocks
-Printful fulfillment, but exhausted order-confirmation retries become
-`blocked` and alert support.
+The permanent database `dedupe_key` is the primary duplicate-job guard. Pass
+that same stable value as the Resend idempotency key for every attempt and add
+the non-PII email-job id as a Resend tag so a signed webhook can reconcile a
+send whose API response was lost. Provider-side idempotency is an additional
+safeguard, not a replacement for the unique database constraint.
+
+Resend retains idempotency keys for 24 hours, so the application must not claim
+an unlimited exactly-once guarantee. Persist `first_send_attempt_at`
+immediately before the first provider request. Automatic retries after a
+timeout or other ambiguous response may reuse the same key only until 23 hours
+after that timestamp, leaving a one-hour safety margin inside Resend's window.
+A signed webhook carrying the email-job tag may reconcile the job, persist its
+`provider_message_id` and finish the appropriate state transition even when
+the original API response never arrived. If the delivery outcome is still
+unknown at the 23-hour boundary, set the job to `blocked`, record a sanitized
+`delivery_outcome_unknown` reason and alert for manual provider review. Never
+automatically issue a new idempotency key or blindly resend such a job after
+the boundary. A confirmed provider rejection before acceptance may follow the
+ordinary bounded retry policy.
+
+Claims, leases, retries, bounded batches and Cron wake-up otherwise follow the
+same rules as fulfillment jobs. Email failure never rolls back payment and
+never blocks Printful fulfillment, but exhausted or delivery-ambiguous order
+confirmation attempts become `blocked` and alert support.
 
 The order confirmation is sent after the verified payment is durably recorded;
 it does not wait for Printful to manufacture, accept or ship the product. The
@@ -907,16 +937,22 @@ cancellation creates the corresponding transactional notice exactly once.
 These messages use the buyer email; shipment recipients never receive email.
 
 Add one signature-verified Resend webhook endpoint. Deduplicate its
-at-least-once events by the provider event ID and use delivered, bounced,
-failed and complained events to update the email job and raise appropriate
-alerts. Do not track opens or clicks for these required transactional messages.
-Do not add newsletters, marketing consent or contact-list functionality.
+at-least-once deliveries by the Resend `svix-id` header. Resolve the email job
+by the stored `provider_message_id` or the non-PII email-job tag, then use sent,
+delivered, bounced, failed and complained events to reconcile the job and raise
+appropriate alerts. Webhook transitions must tolerate retries and out-of-order
+delivery without moving a terminal failure state backward. Do not track opens
+or clicks for these required transactional messages. Do not add newsletters,
+marketing consent or contact-list functionality.
 
-Tests must prove that duplicate Stripe, Printful and Resend events cannot send
-duplicate mail; a restart after claiming a job is recoverable; a stale lease
-owner cannot overwrite a successful retry; test payments never contact Resend;
-multiple shipment recipients do not create recipient-email fields; and email
-failure does not block fulfillment.
+Tests must prove that duplicate Stripe, Printful and Resend events cannot create
+duplicate jobs or provider requests; an accepted send with a lost API response
+is reconciled by its job tag or safely retried with the same key inside the
+23-hour window; an unresolved ambiguous send becomes `blocked` before that key
+can expire and is not automatically resent; a restart after claiming a job is
+recoverable; a stale lease owner cannot overwrite a successful retry; test
+payments never contact Resend; multiple shipment recipients do not create
+recipient-email fields; and email failure does not block fulfillment.
 
 ## Work package 7: Socket.io performance and future scale
 
@@ -1248,7 +1284,9 @@ These are release-blocking. Do not weaken them to make the refactor easier.
 22. The buyer email comes from the verified Stripe event, is never taken from
     a shipment recipient, and is never returned by the public order-status API.
 23. A successful payment durably creates one Wolkenworte order-confirmation
-    job; duplicate webhooks and job retries cannot send duplicate messages.
+    job. Automated retries reuse one stable Resend idempotency key only inside
+    its safe provider window; an unresolved ambiguous outcome becomes visibly
+    blocked and is never blindly resent with a new key.
 24. Transactional email failure never loses or rolls back payment and never
     blocks fulfillment; it remains retryable or becomes visibly blocked.
 
@@ -1285,8 +1323,12 @@ The final refactor is accepted only when all of the following are true:
   successful-payment event creates only one order-confirmation job;
 - the Wolkenworte order confirmation contains the immutable order totals,
   items, delivery addresses and versioned contractual information;
-- a Resend timeout/retry produces one externally sent message through the
-  database and provider idempotency guards;
+- a Resend timeout after provider acceptance is reconciled by the signed
+  webhook job tag or retried with the same idempotency key inside the 23-hour
+  automatic window without a second provider send;
+- an ambiguous Resend outcome that remains unresolved at the retry boundary
+  becomes `blocked`, alerts support and causes no automatic request with a new
+  idempotency key;
 - test payments and automated tests never contact the live Resend API;
 - a signed Printful shipment event updates the retained shipment and creates
   one buyer-addressed tracking email, including for replayed and split-shipment
@@ -1326,6 +1368,9 @@ The final refactor is accepted only when all of the following are true:
 - a Stripe test webhook after a cold start is persisted and fulfilled as mock;
 - a due retry created while Fly is stopped is claimed through the authenticated
   Cron maintenance request without a separate worker Machine;
+- the installed Supabase Cron request explicitly uses a 30-second `pg_net`
+  timeout and the maintenance handler stops or checkpoints work within its
+  15-second budget, including after a hosted cold start;
 - an unauthenticated maintenance request performs no work, and the Cron secret
   is absent from migrations, application logs and ordinary HTTP logs;
 - forced restart during fulfillment resumes without duplicate external work;
