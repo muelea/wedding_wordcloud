@@ -35,6 +35,21 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
 
   const { baseUrl, close } = await startTestServer();
   t.after(close);
+  const storage = require('../src/privateStorage');
+  const storedObjects = new Map();
+  storage.setAdapterForTests({
+    async upload(key, bytes) {
+      if (storedObjects.has(key)) throw new Error('already exists');
+      storedObjects.set(key, Buffer.from(bytes));
+    },
+    async download(key) {
+      if (!storedObjects.has(key)) throw new Error('not found');
+      return storedObjects.get(key);
+    },
+    async remove(key) { storedObjects.delete(key); },
+    async createSignedUrl() { throw new Error('not used'); },
+  });
+  t.after(() => storage.resetAdapterForTests());
   const createdEvent = await createEvent(baseUrl, { coupleName: 'Draft Dora & Sicher Sven' });
 
   const db = require('../src/db');
@@ -87,15 +102,15 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
 
   const printful = require('../src/printful');
   const fulfillment = require('../src/fulfillment');
-  const originalCreate = printful.createPrintfulOrder;
+  const originalReconcile = printful.reconcilePrintfulOrder;
   let calls = 0;
   let captured = null;
-  printful.createPrintfulOrder = async (options) => {
+  printful.reconcilePrintfulOrder = async (options) => {
     calls += 1;
     captured = options;
     return { printfulOrderId: '987654', status: 'draft', mocked: false, confirmed: false };
   };
-  t.after(() => { printful.createPrintfulOrder = originalCreate; });
+  t.after(() => { printful.reconcilePrintfulOrder = originalReconcile; });
 
   assert.equal(
     fulfillment.resolveMode({ mode: 'test', status: 'paid_test' }),
@@ -110,22 +125,24 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   assert.equal(completed.fulfillment_mode, 'draft');
   assert.equal(completed.printful_order_id, '987654');
   assert.equal(captured.confirm, false, 'draft mode must never confirm the Printful order');
-  const externalId = `weddingcloud-${order.id}-${quote.id}`;
+  const externalId = fulfillment.shipmentExternalId(order, 0);
   assert.equal(captured.payload.external_id, externalId);
   assert.deepEqual(captured.payload.recipient, {
     name: 'Dora Beispiel', address1: 'Blumenstraße 7', city: 'Berlin',
     zip: '10115', country_code: 'DE',
   });
   assert.deepEqual(captured.payload.items, [{
-    external_id: `${externalId}-item-1`,
+    external_id: fulfillment.itemExternalId(order, 0, 0),
     variant_id: 1320,
     quantity: 4,
     files: [{
       type: 'default',
-      url: `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
-        `/configurations/${configuration.id}/print.svg`,
+      url: captured.payload.items[0].files[0].url,
     }],
   }]);
+  assert.match(captured.payload.items[0].files[0].url,
+    /^https:\/\/shop\.weddingcloud\.example\/api\/print-files\/[A-Za-z0-9_-]{24}\/[A-Za-z0-9_-]{32}$/);
+  assert.equal((await db.getOrderPrintArtifacts(order.id)).length, 1);
 
   const splitQuote = await db.createCheckoutQuote({
     eventId: event.id,
@@ -178,7 +195,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   });
 
   const splitCalls = [];
-  printful.createPrintfulOrder = async (options) => {
+  printful.reconcilePrintfulOrder = async (options) => {
     splitCalls.push(options);
     return { printfulOrderId: `draft-${splitCalls.length}`, status: 'draft', mocked: false, confirmed: false };
   };
@@ -187,8 +204,8 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   assert.equal(completedSplit.fulfillment_status, 'draft');
   assert.equal(completedSplit.printful_order_id, 'draft-1,draft-2');
   assert.deepEqual(splitCalls.map((call) => call.payload.external_id), [
-    `weddingcloud-${splitOrder.id}-${splitQuote.id}-shipment-1`,
-    `weddingcloud-${splitOrder.id}-${splitQuote.id}-shipment-2`,
+    fulfillment.shipmentExternalId(splitOrder, 0),
+    fulfillment.shipmentExternalId(splitOrder, 1),
   ]);
   assert.deepEqual(splitCalls.map((call) => call.payload.items[0].quantity), [2, 1]);
   assert.deepEqual(splitCalls.map((call) => call.payload.recipient.name), ['Adresse A', 'Adresse B']);
@@ -249,7 +266,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   });
 
   const mixedCalls = [];
-  printful.createPrintfulOrder = async (options) => {
+  printful.reconcilePrintfulOrder = async (options) => {
     mixedCalls.push(options);
     return { printfulOrderId: 'draft-mixed', status: 'draft', mocked: false, confirmed: false };
   };
@@ -265,12 +282,12 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     {
       variant_id: 1320,
       quantity: 2,
-      external_id: `weddingcloud-${mixedOrder.id}-${mixedQuote.id}-item-1`,
+      external_id: fulfillment.itemExternalId(mixedOrder, 0, 0),
     },
     {
       variant_id: 15662,
       quantity: 1,
-      external_id: `weddingcloud-${mixedOrder.id}-${mixedQuote.id}-item-2`,
+      external_id: fulfillment.itemExternalId(mixedOrder, 0, 1),
     },
   ]);
 

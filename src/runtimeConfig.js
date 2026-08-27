@@ -65,6 +65,16 @@ function validateRuntimeConfig() {
       errors.push('Live-Zahlungen benötigen gültig konfigurierten Resend-Liveversand.');
     }
   }
+  const printfulMode = String(process.env.PRINTFUL_FULFILLMENT_MODE || 'mock').trim().toLowerCase();
+  const printfulWebhookSecret = String(process.env.PRINTFUL_WEBHOOK_SECRET || '');
+  const printfulWebhookPublicKey = String(process.env.PRINTFUL_WEBHOOK_PUBLIC_KEY || '');
+  if ((printfulWebhookSecret && !printfulWebhookPublicKey) ||
+      (!printfulWebhookSecret && printfulWebhookPublicKey)) {
+    errors.push('PRINTFUL_WEBHOOK_SECRET und PRINTFUL_WEBHOOK_PUBLIC_KEY müssen gemeinsam gesetzt werden.');
+  }
+  if (production && printfulMode !== 'mock' && (!printfulWebhookSecret || !printfulWebhookPublicKey)) {
+    errors.push('Printful draft/live benötigt den signierten v2-Webhook.');
+  }
   if (errors.length) throw new Error(`Ungültige Laufzeitkonfiguration: ${errors.join(' ')}`);
   return true;
 }

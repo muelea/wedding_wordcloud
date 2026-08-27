@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const DEFAULT_BUCKET = 'wolkenworte-private';
 const SIGNED_PREVIEW_TTL_SECONDS = 15 * 60;
+const STORAGE_TIMEOUT_MS = 3_500;
 
 let client = null;
 let clientSignature = '';
@@ -23,9 +24,19 @@ function storageClient() {
   }
   const signature = `${url}\0${secret}`;
   if (!client || clientSignature !== signature) {
+    const boundedFetch = (input, init = {}) => {
+      const timeoutSignal = AbortSignal.timeout(STORAGE_TIMEOUT_MS);
+      const signal = init.signal
+        ? AbortSignal.any([init.signal, timeoutSignal])
+        : timeoutSignal;
+      return fetch(input, { ...init, signal });
+    };
     client = createClient(url, secret, {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { 'X-Client-Info': 'wolkenworte-server' } },
+      global: {
+        headers: { 'X-Client-Info': 'wolkenworte-server' },
+        fetch: boundedFetch,
+      },
     });
     clientSignature = signature;
   }
@@ -88,6 +99,7 @@ function resetAdapterForTests() {
 module.exports = {
   DEFAULT_BUCKET,
   SIGNED_PREVIEW_TTL_SECONDS,
+  STORAGE_TIMEOUT_MS,
   bucketName,
   upload,
   createSignedUrl,

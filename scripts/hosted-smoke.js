@@ -1,11 +1,15 @@
 'use strict';
 
 const crypto = require('node:crypto');
+const path = require('node:path');
 const { io: ioClient } = require('socket.io-client');
 const sharp = require('sharp');
 
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
 const baseUrl = String(process.argv[2] || process.env.PUBLIC_URL || 'https://wolkenworte.fly.dev')
   .replace(/\/$/, '');
+const skipMaintenance = process.argv.includes('--skip-maintenance');
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -211,8 +215,35 @@ async function main() {
     throw new Error(`private print materialization smoke failed (${printResponse.status})`);
   }
 
+  const hiddenMaintenance = await fetchWithTimeout('/internal/maintenance/run', { method: 'POST' });
+  if (hiddenMaintenance.status !== 404) {
+    throw new Error(`unauthenticated maintenance is visible (${hiddenMaintenance.status})`);
+  }
+  if (!skipMaintenance) {
+    const maintenanceSecret = String(process.env.MAINTENANCE_SECRET || '');
+    if (maintenanceSecret.length < 32) throw new Error('MAINTENANCE_SECRET fehlt für den Hosted-Smoke.');
+    const maintenanceResponse = await fetchWithTimeout('/internal/maintenance/run', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${maintenanceSecret}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    }, 30_000);
+    const maintenanceResult = await maintenanceResponse.json();
+    if (maintenanceResponse.status !== 200 ||
+        !['ok', 'already_running'].includes(maintenanceResult.status)) {
+      throw new Error(`authenticated maintenance smoke failed (${maintenanceResponse.status})`);
+    }
+  }
+  const missingArtifact = await fetchWithTimeout(
+    `/api/print-files/${'x'.repeat(24)}/${'y'.repeat(32)}`
+  );
+  if (missingArtifact.status !== 404) {
+    throw new Error(`opaque print-artifact boundary failed (${missingArtifact.status})`);
+  }
+
   console.log(
-    `[smoke] hosted HTTP, Postgres, one-use PIN reset, private Storage, immutable photo print, cache and Socket.io checks passed ` +
+    `[smoke] hosted HTTP, Postgres, one-use PIN reset, private Storage, ` +
+    `${skipMaintenance ? 'maintenance auth boundary' : 'maintenance'}, artifact capability, ` +
+    `immutable photo print, cache and Socket.io checks passed ` +
     `in ${Date.now() - startedAt}ms.`
   );
 }

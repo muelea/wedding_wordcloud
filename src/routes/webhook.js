@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const express = require('express');
 const db = require('../db');
 const stripeIntegration = require('../stripe');
@@ -10,6 +11,59 @@ const { asyncRoute } = require('../asyncRoute');
 // requires the exact raw bytes, so this route owns its raw body parser.
 function makeWebhookRouter() {
   const router = express.Router();
+
+  router.post('/printful', express.raw({ type: 'application/json', limit: '256kb' }), asyncRoute(async (req, res) => {
+    let signatureValid;
+    try {
+      signatureValid = printfulIntegration().verifyWebhook(req.body, {
+        signature: req.get('x-pf-webhook-signature'),
+        publicKey: req.get('x-pf-webhook-public-key'),
+      });
+    } catch (error) {
+      if (error.code === 'PRINTFUL_WEBHOOK_NOT_CONFIGURED') {
+        return res.status(501).send('printful webhook not configured');
+      }
+      console.error('[webhook:printful] webhook configuration invalid:', error.message);
+      return res.status(500).send('printful webhook unavailable');
+    }
+    if (!signatureValid) return res.status(400).send('invalid webhook signature');
+
+    let event;
+    try { event = JSON.parse(req.body.toString('utf8')); } catch { return res.status(400).send('invalid webhook'); }
+    const supported = new Set([
+      'order_created', 'order_updated', 'order_failed', 'order_canceled',
+      'shipment_sent', 'shipment_returned',
+    ]);
+    if (!event || !supported.has(event.type) || !event.data?.order) {
+      return res.json({ received: true, ignored: 'unsupported_event' });
+    }
+    if (process.env.PRINTFUL_STORE_ID &&
+        String(event.store_id) !== String(process.env.PRINTFUL_STORE_ID)) {
+      return res.status(400).send('invalid webhook store');
+    }
+    const order = event.data.order;
+    const shipment = event.data.shipment || {};
+    const stableIdentity = JSON.stringify([
+      event.type,
+      event.store_id,
+      order.id,
+      order.external_id,
+      shipment.id || null,
+      event.occurred_at,
+      shipment.status || order.status || null,
+    ]);
+    const result = await db.recordPrintfulWebhook({
+      eventKey: crypto.createHash('sha256').update(stableIdentity).digest('hex'),
+      eventType: event.type,
+      providerOrderId: order.id == null ? null : String(order.id),
+      externalOrderId: order.external_id == null ? null : String(order.external_id),
+      providerShipmentId: shipment.id == null ? null : String(shipment.id),
+      providerStatus: shipment.status || order.status || event.type,
+      shippedAt: shipment.shipped_at || null,
+      deliveredAt: shipment.delivered_at || null,
+    });
+    return res.json({ received: true, duplicate: result.duplicate });
+  }));
 
   router.post('/stripe', express.raw({ type: 'application/json' }), asyncRoute(async (req, res) => {
     let event;
@@ -105,6 +159,11 @@ function makeWebhookRouter() {
   }));
 
   return router;
+}
+
+function printfulIntegration() {
+  // Lazy load keeps Stripe-only test stubs independent from Printful env state.
+  return require('../printful');
 }
 
 module.exports = { makeWebhookRouter };

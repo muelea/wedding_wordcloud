@@ -14,6 +14,7 @@ const APPLICATION_MIGRATIONS = [
   '20260827000001_application_schema.sql',
   '20260827000004_application_design_assets.sql',
   '20260827000007_application_lifecycle_abuse.sql',
+  '20260827000009_application_fulfillment_jobs.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -27,6 +28,9 @@ function clearApplicationModules() {
     '../src/clientIdentity',
     '../src/rateLimits',
     '../src/lifecycle',
+    '../src/maintenance',
+    '../src/printArtifacts',
+    '../src/routes/maintenance',
     '../src/socket',
     '../server',
   ]) {
@@ -69,6 +73,7 @@ async function startTestServer() {
   process.env.DATABASE_SCHEMA = schema;
   process.env.DATABASE_APPLICATION_NAME = `wolkenworte-test-${process.pid}`;
   process.env.RATE_LIMIT_HMAC_SECRET = 'test-rate-limit-secret-that-is-long-enough';
+  process.env.MAINTENANCE_SECRET = 'test-maintenance-secret-that-is-long-enough';
   clearApplicationModules();
 
   const { server, io, initialize, shutdown } = require('../server');

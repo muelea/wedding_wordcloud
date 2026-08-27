@@ -71,9 +71,11 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   const buildIndex = workflow.indexOf('docker build');
   const migrationIndex = workflow.indexOf('npm run db:migrate');
   const deployIndex = workflow.indexOf('flyctl deploy');
+  const cronIndex = workflow.indexOf('npm run maintenance:configure-cron');
   const smokeIndex = workflow.indexOf('npm run smoke:hosted');
   assert.ok(testIndex > -1 && testIndex < buildIndex);
-  assert.ok(buildIndex < migrationIndex && migrationIndex < deployIndex && deployIndex < smokeIndex);
+  assert.ok(buildIndex < migrationIndex && migrationIndex < deployIndex &&
+    deployIndex < cronIndex && cronIndex < smokeIndex);
   assert.match(workflow, /flyctl deploy --remote-only --ha=false/);
   assert.match(secretScript, /MIGRATION_DATABASE_URL darf niemals an Fly übertragen/);
   assert.doesNotMatch(secretScript.match(/const REQUIRED = \[[\s\S]*?\];/)?.[0] || '', /MIGRATION_DATABASE_URL/);

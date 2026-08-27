@@ -1,5 +1,7 @@
 'use strict';
 
+const crypto = require('crypto');
+
 /**
  * Printful catalog, pricing and safely gated order creation.
  *
@@ -53,12 +55,13 @@ async function printfulRequest(path, options = {}) {
     );
   }
 
+  const { allowNotFound = false, timeoutMs = 10_000, ...fetchOptions } = options;
   let response;
   try {
     response = await fetch(`https://api.printful.com${path}`, {
-      ...options,
-      headers: { ...getPrintfulHeaders(), ...(options.headers || {}) },
-      signal: options.signal || AbortSignal.timeout(12000),
+      ...fetchOptions,
+      headers: { ...getPrintfulHeaders(), ...(fetchOptions.headers || {}) },
+      signal: fetchOptions.signal || AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     throw new PrintfulApiError(
@@ -75,6 +78,7 @@ async function printfulRequest(path, options = {}) {
     // The status code below still gives callers a useful, sanitized error.
   }
 
+  if (allowNotFound && response.status === 404) return null;
   if (!response.ok || !data || data.code >= 400) {
     const apiStatus = Number(data?.code) >= 400 ? Number(data.code) : response.status;
     const message = typeof data?.error?.message === 'string'
@@ -161,7 +165,7 @@ async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
  * src/fulfillment.js; browser-supplied variants, quantities and URLs never
  * reach this trust boundary.
  */
-async function createPrintfulOrder({ payload, confirm = false }) {
+async function createPrintfulOrder({ payload, confirm = false, timeoutMs = 10_000 }) {
   if (!isConfigured()) {
     const externalId = payload?.external_id || `unconfigured-${Date.now()}`;
     const mockId = `MOCK-${externalId}`;
@@ -175,6 +179,7 @@ async function createPrintfulOrder({ payload, confirm = false }) {
   const draft = await printfulRequest('/orders?confirm=false&update_existing=true', {
     method: 'POST',
     body: JSON.stringify(payload),
+    timeoutMs,
   });
   if (!draft?.id) {
     throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine Bestell-ID geliefert.', 502);
@@ -191,7 +196,7 @@ async function createPrintfulOrder({ payload, confirm = false }) {
 
   const confirmed = await printfulRequest(
     `/orders/${encodeURIComponent(String(draft.id))}/confirm`,
-    { method: 'POST' }
+    { method: 'POST', timeoutMs }
   );
   return {
     printfulOrderId: String(confirmed?.id || draft.id),
@@ -201,10 +206,144 @@ async function createPrintfulOrder({ payload, confirm = false }) {
   };
 }
 
+async function getPrintfulOrderByExternalId(externalId, options = {}) {
+  if (typeof externalId !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(externalId)) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_ORDER', 'Die externe Printful-ID ist ungültig.', 500);
+  }
+  return printfulRequest(`/orders/${encodeURIComponent(`@${externalId}`)}`, {
+    method: 'GET',
+    allowNotFound: true,
+    timeoutMs: options.timeoutMs || 10_000,
+  });
+}
+
+async function confirmPrintfulOrder(printfulOrderId, options = {}) {
+  const id = String(printfulOrderId || '');
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_ORDER', 'Die Printful-Bestell-ID ist ungültig.', 500);
+  }
+  const confirmed = await printfulRequest(`/orders/${encodeURIComponent(id)}/confirm`, {
+    method: 'POST',
+    timeoutMs: options.timeoutMs || 10_000,
+  });
+  if (!confirmed?.id) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine Bestell-ID geliefert.', 502);
+  }
+  return {
+    printfulOrderId: String(confirmed.id),
+    status: String(confirmed.status || 'pending'),
+    mocked: false,
+    confirmed: true,
+  };
+}
+
+async function reconcilePrintfulOrder({ payload, confirm = false, timeoutMs = 10_000 }) {
+  let existing = await getPrintfulOrderByExternalId(payload.external_id, { timeoutMs });
+  if (!existing) {
+    const created = await createPrintfulOrder({ payload, confirm: false, timeoutMs });
+    if (created.mocked || !confirm) return created;
+    return confirmPrintfulOrder(created.printfulOrderId, { timeoutMs });
+  }
+
+  const status = String(existing.status || 'draft').toLowerCase();
+  if (['canceled', 'cancelled', 'failed'].includes(status)) {
+    throw new PrintfulApiError(
+      'PRINTFUL_ORDER_TERMINAL',
+      'Die vorhandene Printful-Bestellung benötigt eine manuelle Prüfung.',
+      409
+    );
+  }
+  if (confirm && status === 'draft') {
+    return confirmPrintfulOrder(existing.id, { timeoutMs });
+  }
+  return {
+    printfulOrderId: String(existing.id),
+    status,
+    mocked: false,
+    confirmed: status !== 'draft',
+    reconciled: true,
+  };
+}
+
+function constantTimeEqual(left, right) {
+  const leftDigest = crypto.createHash('sha256').update(String(left || '')).digest();
+  const rightDigest = crypto.createHash('sha256').update(String(right || '')).digest();
+  return crypto.timingSafeEqual(leftDigest, rightDigest);
+}
+
+function verifyWebhook(rawBody, { signature, publicKey }) {
+  const configuredSecret = String(process.env.PRINTFUL_WEBHOOK_SECRET || '').trim();
+  if (!configuredSecret) {
+    throw new PrintfulApiError('PRINTFUL_WEBHOOK_NOT_CONFIGURED', 'Printful-Webhook ist nicht eingerichtet.', 501);
+  }
+  if (!/^[a-f0-9]+$/i.test(configuredSecret) || configuredSecret.length % 2 !== 0) {
+    throw new PrintfulApiError('PRINTFUL_WEBHOOK_SECRET_INVALID', 'Printful-Webhook-Konfiguration ist ungültig.', 500);
+  }
+  const expected = crypto.createHmac('sha256', Buffer.from(configuredSecret, 'hex'))
+    .update(rawBody)
+    .digest('hex');
+  if (!/^[a-f0-9]{64}$/i.test(String(signature || '')) ||
+      !constantTimeEqual(expected.toLowerCase(), String(signature).toLowerCase())) {
+    return false;
+  }
+  const configuredPublicKey = String(process.env.PRINTFUL_WEBHOOK_PUBLIC_KEY || '').trim();
+  return !configuredPublicKey || constantTimeEqual(configuredPublicKey, publicKey);
+}
+
+async function getWebhookConfiguration() {
+  return printfulRequest('/v2/webhooks?show_expired=true', {
+    method: 'GET',
+    allowNotFound: true,
+  });
+}
+
+async function getTokenScopes() {
+  const result = await printfulRequest('/oauth/scopes', { method: 'GET' });
+  return Array.isArray(result?.scopes)
+    ? result.scopes.map((entry) => String(entry.scope || '')).filter(Boolean)
+    : [];
+}
+
+async function configureSignedWebhooks(defaultUrl) {
+  const url = new URL(defaultUrl);
+  if (url.protocol !== 'https:') {
+    throw new PrintfulApiError('PRINTFUL_INVALID_WEBHOOK_URL', 'Printful-Webhook benötigt HTTPS.', 500);
+  }
+  const result = await printfulRequest('/v2/webhooks', {
+    method: 'POST',
+    body: JSON.stringify({
+      default_url: url.toString(),
+      events: [
+        { type: 'order_created' },
+        { type: 'order_updated' },
+        { type: 'order_failed' },
+        { type: 'order_canceled' },
+        { type: 'shipment_sent' },
+        { type: 'shipment_returned' },
+      ],
+    }),
+  });
+  if (!result?.public_key || !result?.secret_key) {
+    throw new PrintfulApiError(
+      'PRINTFUL_INVALID_RESPONSE',
+      'Printful hat keine Webhook-Schlüssel geliefert.',
+      502
+    );
+  }
+  return { publicKey: String(result.public_key), secretKey: String(result.secret_key) };
+}
+
 module.exports = {
   PrintfulApiError,
   isConfigured,
   getShippingCountries,
   estimateOrderCosts,
   createPrintfulOrder,
+  getPrintfulOrderByExternalId,
+  confirmPrintfulOrder,
+  reconcilePrintfulOrder,
+  verifyWebhook,
+  getWebhookConfiguration,
+  getTokenScopes,
+  configureSignedWebhooks,
 };

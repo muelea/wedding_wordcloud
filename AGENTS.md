@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (97 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (105 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
@@ -69,6 +69,18 @@ it — this file is about how to work in it safely.
   Paid configurations and assets must detach before an event is deleted, and
   Storage objects must be removed before their last metadata row. A failed
   object deletion retains a retryable key.
+- **Paid Printful files are frozen private artifacts.** Draft/live work uses
+  only the opaque artifact-id/nonce application URL, never the editable
+  configuration route or a Supabase object URL. Failed object operations keep
+  retryable metadata, and support holds prevent deletion.
+- **Fulfillment commits are lease-owned.** Claims persist `locked_by`,
+  `locked_until` and a lease version. Shipment/order success or failure must
+  match the current unexpired lease; provider ambiguity is reconciled by the
+  same deterministic external ID before any retry write.
+- **Maintenance is a bounded authenticated wake-up.** Never expose target IDs
+  on `/internal/maintenance/run`, weaken its constant-time bearer check, or
+  replace its completion heartbeat with an in-process-only timer. Printful
+  callbacks verify the exact raw body and remain replay-safe.
 - **`.env` is never committed.** It's gitignored and holds real Stripe/
   Printful keys in some environments. If you need a new env var, add it to
   `.env.example` with an empty/placeholder value and document it in

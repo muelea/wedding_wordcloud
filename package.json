@@ -9,6 +9,10 @@
     "dev": "node --watch server.js",
     "db:migrate": "node scripts/db-migrate.js",
     "db:provision-runtime": "node scripts/provision-runtime-role.js",
+    "maintenance:configure-cron": "node scripts/configure-maintenance-cron.js",
+    "maintenance:verify-cron": "node scripts/verify-maintenance-cron.js",
+    "smoke:printful-draft": "node scripts/printful-draft-smoke.js",
+    "printful:configure-webhook": "node scripts/configure-printful-webhook.js",
     "fly:secrets": "node scripts/configure-fly-secrets.js",
     "smoke:hosted": "node scripts/hosted-smoke.js",
     "test": "node --test test/*.test.js"

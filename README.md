@@ -109,6 +109,9 @@ dotted and dotless I.
 - Stripe Checkout and signed Stripe webhooks run in test mode. Printful is
   already used for countries and live cost estimates when configured, but a
   Stripe test payment can only create a local `mocked` fulfillment record.
+  Paid live-mode work uses frozen private print artifacts and a
+  single-concurrency, Postgres-leased worker that reconciles the same
+  deterministic external ID before any provider retry write.
 - The production container, readiness/liveness checks, cache rules, graceful
   shutdown, Fly configuration and manual deployment workflow are in the repository.
 - Personal photos are normalized by the server and stored once in a private
@@ -118,11 +121,12 @@ dotted and dotless I.
 - The application data layer is fully asynchronous through one bounded `pg`
   pool. Application startup checks the required migration version and never
   creates or alters schema objects.
-- Event/configuration expiration, safe paid-data retention, one-use reset PINs
-  and the complete initial abuse-control boundary are implemented. Customer
-  VAT/Stripe Tax treatment, scheduled maintenance/job leasing,
-  signed Printful status webhooks and the first controlled Printful draft are
-  intentionally still pending before live sales.
+- Event/configuration expiration, safe paid-data retention, one-use reset PINs,
+  abuse controls, bounded authenticated maintenance, Supabase Cron wake-ups,
+  leased fulfillment and signed replay-safe Printful status webhooks are
+  implemented. Customer VAT/Stripe Tax treatment, transactional email and the
+  first explicitly approved controlled Printful draft remain pending before
+  live sales.
 
 ## Guest ownership and personal photo designs
 
@@ -151,10 +155,11 @@ Editable configurations receive a fresh 15-minute signed preview URL. The
 configuration-specific print route verifies and embeds the private bytes on
 demand and uses `private, no-store`; its opaque random configuration id remains
 the public handle. Failed upload/deletion transitions retain a retryable object
-key instead of silently orphaning Storage bytes. Phase 4 provides race-safe,
-object-first cleanup primitives: paid configurations/assets detach from expired
-events, while a failed object deletion retains its key for retry. Phase 5 adds
-the authenticated scheduled maintenance runner that invokes these primitives.
+key instead of silently orphaning Storage bytes. The authenticated 15-second
+maintenance runner invokes the race-safe, object-first cleanup primitives in
+bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
+so due work wakes a stopped Machine; completion is recorded separately from
+pg_net merely queueing a request.
 
 ## Bundled design fonts
 
@@ -213,7 +218,8 @@ Everything in `.env.example` is documented inline. Summary:
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | only for test checkout | Stripe test secret and local/Dashboard webhook signing secret; unset → checkout/webhook return a clean 501 |
 | `STRIPE_ALLOW_LIVE_PAYMENTS` | no (must remain `false`) | rejects live Stripe keys and live webhook events during this test-only phase |
 | `CHECKOUT_QUOTE_TTL_MINUTES` | no (defaults 30) | lifetime of a saved address/price quote; accepted range 5–120 minutes |
-| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID` | for live quotes and later fulfillment | unset → quote returns a clear 501; direct order creation degrades safely to a mock |
+| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID` | for live quotes and later fulfillment | token needs `orders` + `webhooks`; unset → quote returns 501 and direct creation safely mocks |
+| `PRINTFUL_WEBHOOK_SECRET`, `PRINTFUL_WEBHOOK_PUBLIC_KEY` | before Printful draft/live mode | verify the exact raw signed Printful v2 callback and pin its configuration key |
 | `PRINTFUL_FULFILLMENT_MODE` | no (defaults `mock`) | `mock`, `draft` or `live`; Stripe test payments ignore this and always remain mocked |
 | `PRINTFUL_ALLOW_ORDER_WRITES` | no (must remain `false`) | second safety switch required before a live payment may create a Printful draft |
 | `PRINTFUL_CONFIRM_LIVE_ORDERS` | no (must remain `false`) | third safety switch required before a draft may be confirmed, charged and submitted |
@@ -287,6 +293,8 @@ src/
   designAssets.js          bounded image normalization + private asset lifecycle
   privateStorage.js        backend-only Supabase Storage boundary
   lifecycle.js             expired-event cleanup + paid-data detachment
+  maintenance.js           bounded fulfillment/retention orchestration + heartbeat
+  printArtifacts.js        frozen paid SVG upload, capability URL + integrity checks
   clientIdentity.js        trusted normalized/HMAC source identity
   rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
   asyncRoute.js            rejected-promise boundary for Express routes
@@ -296,14 +304,15 @@ src/
   socket.js                Socket.io connection handling — room isolation lives here
   stripe.js                Stripe Checkout session creation + webhook verification
   printful.js              Printful estimates plus draft/confirm API primitives
-  fulfillment.js           idempotent paid-order worker and mock/draft/live safety gates
+  fulfillment.js           leased single-concurrency worker + mock/draft/live gates
   pricing.js               integer-cent quote + catalog-wide markup rule
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
   mugPrint.js              Product-sized SVG print-file renderer
   products.js              Curated, API-verified Printful variants and geometry
   routes/
     events.js              Event/configuration CRUD, personal photos, pricing and checkout
-    webhook.js             POST /webhook/stripe (raw body, signature-verified)
+    maintenance.js         secret-authenticated synchronous Cron wake-up
+    webhook.js             raw-body Stripe and signed Printful callbacks
 public/
   landing.html             Marketing landing page, served at '/'
   create.html              Event creation form, served at '/start'
@@ -328,12 +337,13 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 97 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 105 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
-dynamic Stripe Checkout, price-change confirmation, webhook idempotency, immutable fulfillment
-payloads, private Storage normalization/deduplication/deletion recovery,
+dynamic Stripe Checkout, price-change confirmation, webhook idempotency,
+immutable artifacts, lease recovery/stale-owner rejection, provider ambiguity
+reconciliation, signed callbacks, authenticated maintenance, private Storage normalization/deduplication/deletion recovery,
 expiration privacy, safe paid-data retention, one-use async PIN reset and
 database/process abuse ceilings,
 hosting health/cache/shutdown behavior, live safety gates and
@@ -359,13 +369,25 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - `npm run fly:secrets` validates and stages the runtime-secret allowlist from
   the ignored `.env`; it converts the trusted database CA to an inline Fly
   secret and deliberately excludes `MIGRATION_DATABASE_URL`.
+- `npm run maintenance:configure-cron` stores the Fly maintenance URL and
+  independent bearer secret in Supabase Vault, then installs the committed
+  five-minute request with an explicit 30-second pg_net timeout. The migration
+  contains neither hosted value.
+  When local `.env` deliberately leaves `PUBLIC_URL` blank, pass
+  `-- --url https://wolkenworte.fly.dev` explicitly.
+- `npm run maintenance:verify-cron -- --confirm-maintenance-run` queues the
+  exact Vault-backed pg_net request and succeeds only after a new Fly-completed
+  maintenance heartbeat appears. The explicit flag is required because this
+  invokes real retention work.
 - The release order is `npm test`, production image build, strict Fly config
   validation, `npm run db:migrate`, `flyctl deploy --remote-only --ha=false`,
-  and `npm run smoke:hosted -- https://wolkenworte.fly.dev`. The manual GitHub
+  `npm run maintenance:configure-cron`, and
+  `npm run smoke:hosted -- https://wolkenworte.fly.dev`. The manual GitHub
   workflow encodes this same fail-fast order.
 - Before that GitHub workflow is first used, its protected `hosted-test`
-  environment needs `MIGRATION_DATABASE_URL`, `DATABASE_CA_CERT` and a scoped
-  `FLY_API_TOKEN`. These deployment-runner credentials are not Fly app secrets.
+  environment needs `MIGRATION_DATABASE_URL`, `DATABASE_CA_CERT`,
+  `MAINTENANCE_SECRET` and a scoped `FLY_API_TOKEN`. These deployment-runner
+  credentials are not Fly app secrets.
 - `PUBLIC_URL` currently uses the Fly-provided HTTPS hostname. A later
   custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
 - Hosted credentials (Stripe, Printful and the HMAC/maintenance secrets) belong in Fly
@@ -377,8 +399,9 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   font-metric probes are part of the Phase 2 verification record.
 - `/health/live` is process-only. `/health/ready` performs a bounded Postgres
   and schema/role check and is the Fly service health check. Both are `no-store`.
-- The Supabase bucket is private and limited to the three normalized image MIME
-  types and 6 MiB objects. Fly holds the backend-only Storage key; browser
+- The Supabase bucket is private. Personal-photo validation remains limited to
+  JPEG/PNG/WebP and 6 MiB per complete design; the bucket also accepts frozen
+  SVG print artifacts up to 24 MiB. Fly holds the backend-only Storage key; browser
   previews are signed for 15 minutes and immutable designs store no signed URL.
 
 ## Test checkout setup
@@ -405,11 +428,18 @@ switches were accidentally enabled.
 ## Fulfillment safety modes
 
 The payment state and fulfillment state are stored separately. A successful
-payment atomically queues one immutable fulfillment snapshot; a conditional
-database claim makes retries, duplicate Stripe events and server restarts
-idempotent. A stable `external_id` derived from the internal order and opaque
-quote ids gives the same purchase one identity at Printful as an additional
-duplicate guard.
+payment atomically queues one immutable fulfillment snapshot. Claims persist a
+worker owner, expiry and monotonically increasing lease version; only that
+owner/version can commit a shipment or order result. An expired lease is safely
+claimable after restart. Before a real provider call, every surface is frozen
+in private Storage and exposed through a high-entropy
+`/api/print-files/<artifact>/<nonce>` capability. Invalid, expired and deleted
+capabilities all return 404.
+
+Printful order/shipment and item IDs are deterministic 27-character SHA-256
+references. Every attempt first retrieves the provider order by that external
+ID. A lost create/confirm response is reconciled before another write; draft
+creation retains `update_existing=true` as a second guard.
 
 | Stripe payment | Requested Printful mode | Result |
 |---|---|---|
@@ -423,6 +453,14 @@ Draft and live writes additionally require `STRIPE_ALLOW_LIVE_PAYMENTS=true`,
 `PUBLIC_URL`. `live` also requires `PRINTFUL_CONFIRM_LIVE_ORDERS=true`.
 Printful charges the account and starts fulfillment only when the separately
 created draft is confirmed. Keep every switch false while developing locally.
+
+`npm run smoke:printful-draft -- --confirm-draft-smoke --recipient-file <json>
+--product <key>` is the only non-payment provider smoke path. It refuses live
+Stripe mode, requires draft-only writes, creates marked synthetic data, never
+confirms the draft and verifies Printful processed the frozen capability URL.
+`npm run printful:configure-webhook -- --confirm-replace-webhook` deliberately
+replaces the store's signed v2 webhook configuration and stages its returned
+keys in Fly for the next deploy.
 
 ## What's intentionally disabled
 
@@ -462,8 +500,8 @@ created draft is confirmed. Keep every switch false while developing locally.
 
 ## Next steps
 
-1. Implement deterministic paid print artifacts, leased durable jobs and the
-   authenticated bounded maintenance endpoint/schedule (Phase 5).
+1. Implement verified buyer-email capture and durable Resend transactional
+   email jobs, including the Wolkenworte order confirmation (Phase 6).
 2. Register the separate hosted Stripe test webhook in Stripe Dashboard and
    verify the complete test Checkout flow over the Fly HTTPS address.
 3. Verify the separate front/back SVG URLs in one controlled Printful draft
@@ -477,8 +515,7 @@ created draft is confirmed. Keep every switch false while developing locally.
 6. Deliberately enable `draft` mode only for one controlled live-payment test,
    verify Printful can download the immutable file and inspect the unconfirmed
    draft in the dashboard.
-7. Configure signed Printful v2 webhooks for production/shipment status once
-   the public callback URL exists; do not register a callback before its
-   signing secret can be stored in the production environment.
-8. Complete the scheduled invocation and monitoring for the implemented
-   event/configuration cleanup primitives as part of Phase 5 maintenance.
+7. Run the guarded Printful draft smoke for every materially different
+   placement type and retain the signed v2 webhook for shipment status.
+8. Add the Phase 8 external alert for stale maintenance heartbeats and pg_net
+   non-2xx/timeout results.

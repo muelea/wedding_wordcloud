@@ -5,7 +5,7 @@ const { Pool } = require('pg');
 const { connectionOptions } = require('./dbConfig');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const REQUIRED_SCHEMA_VERSION = '3';
+const REQUIRED_SCHEMA_VERSION = '4';
 const MAX_CONFIGURATION_ASSETS = 6;
 const MAX_CONFIGURATION_ASSET_BYTES = 6 * 1024 * 1024;
 const MAX_UNATTACHED_OWNER_ASSETS = 12;
@@ -28,6 +28,7 @@ const JSON_COLUMNS = new Set([
   'printful_costs_json',
   'items_json',
   'configuration_snapshot_json',
+  'summary_json',
 ]);
 
 let pool = null;
@@ -895,34 +896,84 @@ async function recordTestPayment(options) {
   return recordSuccessfulPayment({ ...options, livemode: false });
 }
 
-async function claimFulfillmentOrder(orderId) {
+async function claimFulfillmentOrder({ orderId = null, lockedBy, leaseMs = 60_000 } = {}) {
+  if (!lockedBy || String(lockedBy).length > 120) throw new Error('invalid fulfillment lease owner');
+  const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
+    ? leaseMs
+    : 60_000;
   const result = await getPool().query(`
-    UPDATE orders
+    WITH candidate AS (
+      SELECT id
+      FROM orders
+      WHERE ($1::bigint IS NULL OR id = $1)
+        AND status IN ('paid_test', 'paid')
+        AND fulfillment_attempts < 3
+        AND fulfillment_next_attempt_at <= transaction_timestamp()
+        AND (
+          fulfillment_status IN ('pending', 'failed') OR
+          (fulfillment_status = 'processing' AND fulfillment_locked_until <= transaction_timestamp())
+        )
+        AND (fulfillment_locked_until IS NULL OR fulfillment_locked_until <= transaction_timestamp())
+      ORDER BY fulfillment_next_attempt_at ASC, id ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    )
+    UPDATE orders target
     SET fulfillment_status = 'processing',
-        fulfillment_attempts = fulfillment_attempts + 1,
+        fulfillment_attempts = target.fulfillment_attempts + 1,
         fulfillment_error = null,
+        fulfillment_locked_by = $2,
+        fulfillment_locked_until = transaction_timestamp() + ($3::integer * interval '1 millisecond'),
+        fulfillment_lease_version = target.fulfillment_lease_version + 1,
         fulfillment_updated_at = transaction_timestamp(),
         updated_at = transaction_timestamp()
-    WHERE id = $1
-      AND fulfillment_status IN ('pending', 'failed')
-      AND fulfillment_attempts < 3
-      AND status IN ('paid_test', 'paid')
-    RETURNING *
-  `, [orderId]);
+    FROM candidate
+    WHERE target.id = candidate.id
+    RETURNING target.*
+  `, [orderId, String(lockedBy), safeLeaseMs]);
   return rowToBoundary(result.rows[0]);
 }
 
-async function completeFulfillment(orderId, { mode, payload, printfulOrderId, printfulStatus }) {
+async function renewFulfillmentLease(orderId, { lockedBy, leaseVersion }, leaseMs = 60_000) {
+  const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
+    ? leaseMs
+    : 60_000;
+  const result = await getPool().query(`
+    UPDATE orders
+    SET fulfillment_locked_until = transaction_timestamp() + ($1::integer * interval '1 millisecond'),
+        fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
+    WHERE id = $2 AND fulfillment_status = 'processing'
+      AND fulfillment_locked_by = $3 AND fulfillment_lease_version = $4
+      AND fulfillment_locked_until > transaction_timestamp()
+    RETURNING id
+  `, [safeLeaseMs, orderId, lockedBy, leaseVersion]);
+  return result.rowCount === 1;
+}
+
+async function completeFulfillment(
+  orderId,
+  { lockedBy, leaseVersion },
+  { mode, payload, printfulOrderId, printfulStatus }
+) {
   const status = mode === 'mock' ? 'mocked' : mode === 'draft' ? 'draft' : 'submitted';
   const result = await getPool().query(`
     UPDATE orders
     SET fulfillment_status = $1, fulfillment_mode = $2,
         fulfillment_payload_json = $3::jsonb, printful_order_id = $4,
         printful_order_status = $5, fulfillment_error = null,
+        fulfillment_submitted_at = CASE WHEN $1 = 'submitted'
+          THEN coalesce(fulfillment_submitted_at, transaction_timestamp())
+          ELSE fulfillment_submitted_at END,
+        fulfillment_locked_by = null, fulfillment_locked_until = null,
         fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
     WHERE id = $6 AND fulfillment_status = 'processing'
+      AND fulfillment_locked_by = $7 AND fulfillment_lease_version = $8
+      AND fulfillment_locked_until > transaction_timestamp()
     RETURNING *
-  `, [status, mode, jsonValue(payload), printfulOrderId || null, printfulStatus || status, orderId]);
+  `, [
+    status, mode, jsonValue(payload), printfulOrderId || null, printfulStatus || status,
+    orderId, lockedBy, leaseVersion,
+  ]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -944,37 +995,69 @@ async function getOrderItems(orderId) {
   return rowsToBoundary(result.rows);
 }
 
-async function completeOrderShipment(shipmentId, { mode, payload, printfulOrderId, printfulStatus }) {
+async function completeOrderShipment(
+  shipmentId,
+  orderId,
+  { lockedBy, leaseVersion },
+  { mode, payload, printfulOrderId, printfulStatus }
+) {
   const status = mode === 'mock' ? 'mocked' : mode === 'draft' ? 'draft' : 'submitted';
-  await getPool().query(`
-    UPDATE checkout_order_shipments
+  const result = await getPool().query(`
+    UPDATE checkout_order_shipments shipment
     SET fulfillment_status = $1, fulfillment_mode = $2,
         fulfillment_payload_json = $3::jsonb, printful_order_id = $4,
         printful_order_status = $5, fulfillment_error = null,
+        fulfillment_submitted_at = CASE WHEN $1 = 'submitted'
+          THEN coalesce(shipment.fulfillment_submitted_at, transaction_timestamp())
+          ELSE shipment.fulfillment_submitted_at END,
         updated_at = transaction_timestamp()
-    WHERE id = $6
-  `, [status, mode, jsonValue(payload), printfulOrderId || null, printfulStatus || status, shipmentId]);
+    FROM orders lease
+    WHERE shipment.id = $6 AND shipment.order_id = $7 AND lease.id = shipment.order_id
+      AND lease.fulfillment_status = 'processing'
+      AND lease.fulfillment_locked_by = $8 AND lease.fulfillment_lease_version = $9
+      AND lease.fulfillment_locked_until > transaction_timestamp()
+    RETURNING shipment.*
+  `, [
+    status, mode, jsonValue(payload), printfulOrderId || null, printfulStatus || status,
+    shipmentId, orderId, lockedBy, leaseVersion,
+  ]);
+  return rowToBoundary(result.rows[0]);
 }
 
-async function failOrderShipment(shipmentId, error) {
+async function failOrderShipment(shipmentId, orderId, { lockedBy, leaseVersion }, error) {
   const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
-  await getPool().query(`
-    UPDATE checkout_order_shipments
+  const result = await getPool().query(`
+    UPDATE checkout_order_shipments shipment
     SET fulfillment_status = 'failed', fulfillment_attempts = fulfillment_attempts + 1,
         fulfillment_error = $1, updated_at = transaction_timestamp()
-    WHERE id = $2
-  `, [safeError, shipmentId]);
+    FROM orders lease
+    WHERE shipment.id = $2 AND shipment.order_id = $3 AND lease.id = shipment.order_id
+      AND lease.fulfillment_status = 'processing'
+      AND lease.fulfillment_locked_by = $4 AND lease.fulfillment_lease_version = $5
+      AND lease.fulfillment_locked_until > transaction_timestamp()
+    RETURNING shipment.*
+  `, [safeError, shipmentId, orderId, lockedBy, leaseVersion]);
+  return rowToBoundary(result.rows[0]);
 }
 
-async function failFulfillment(orderId, error, { blocked = false } = {}) {
+async function failFulfillment(orderId, { lockedBy, leaseVersion }, error, { blocked = false } = {}) {
   const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
   const result = await getPool().query(`
     UPDATE orders
-    SET fulfillment_status = $1, fulfillment_error = $2,
+    SET fulfillment_status = CASE WHEN $1 OR fulfillment_attempts >= 3 THEN 'blocked' ELSE 'failed' END,
+        fulfillment_error = $2,
+        fulfillment_next_attempt_at = CASE
+          WHEN $1 OR fulfillment_attempts >= 3 THEN fulfillment_next_attempt_at
+          WHEN fulfillment_attempts = 1 THEN transaction_timestamp() + interval '5 seconds'
+          ELSE transaction_timestamp() + interval '30 seconds'
+        END,
+        fulfillment_locked_by = null, fulfillment_locked_until = null,
         fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
     WHERE id = $3 AND fulfillment_status = 'processing'
+      AND fulfillment_locked_by = $4 AND fulfillment_lease_version = $5
+      AND fulfillment_locked_until > transaction_timestamp()
     RETURNING *
-  `, [blocked ? 'blocked' : 'failed', safeError, orderId]);
+  `, [blocked, safeError, orderId, lockedBy, leaseVersion]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -982,10 +1065,12 @@ async function getPendingFulfillmentOrders(limit = 20) {
   const safeLimit = Number.isSafeInteger(limit) && limit > 0 && limit <= 100 ? limit : 20;
   const result = await getPool().query(`
     SELECT * FROM orders
-    WHERE fulfillment_status IN ('pending', 'failed')
+    WHERE fulfillment_status IN ('pending', 'failed', 'processing')
       AND fulfillment_attempts < 3
       AND status IN ('paid_test', 'paid')
-    ORDER BY id ASC
+      AND fulfillment_next_attempt_at <= transaction_timestamp()
+      AND (fulfillment_locked_until IS NULL OR fulfillment_locked_until <= transaction_timestamp())
+    ORDER BY fulfillment_next_attempt_at ASC, id ASC
     LIMIT $1
   `, [safeLimit]);
   return rowsToBoundary(result.rows);
@@ -996,9 +1081,11 @@ async function recoverStaleFulfillments() {
     UPDATE orders
     SET fulfillment_status = 'failed',
         fulfillment_error = 'Verarbeitung wurde durch einen Serverneustart unterbrochen.',
+        fulfillment_locked_by = null, fulfillment_locked_until = null,
+        fulfillment_next_attempt_at = transaction_timestamp(),
         fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
     WHERE fulfillment_status = 'processing'
-      AND fulfillment_updated_at < transaction_timestamp() - interval '15 minutes'
+      AND fulfillment_locked_until <= transaction_timestamp()
   `);
   return result.rowCount;
 }
@@ -1598,6 +1685,425 @@ async function finishExpiredEventDeletion(eventId) {
   });
 }
 
+// ── Frozen paid print artifacts ─────────────────────────────────────────
+async function getOrCreatePrintArtifact({
+  id,
+  orderId,
+  orderItemId,
+  configurationId,
+  surfaceKey,
+  objectKey,
+  mimeType,
+  byteSize,
+  sha256,
+  accessNonce,
+  expiresAt,
+}) {
+  const result = await getPool().query(`
+    INSERT INTO print_artifacts (
+      id, order_id, order_item_id, configuration_id, surface_key, object_key,
+      mime_type, byte_size, sha256, access_nonce, expires_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    ON CONFLICT (order_item_id, surface_key) DO UPDATE
+      SET order_item_id = excluded.order_item_id
+    RETURNING *
+  `, [
+    id, orderId, orderItemId, configurationId || null, surfaceKey, objectKey,
+    mimeType, byteSize, sha256, accessNonce, expiresAt,
+  ]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function activatePrintArtifact(id, { byteSize, sha256 }) {
+  const result = await getPool().query(`
+    UPDATE print_artifacts
+    SET storage_status = 'active', last_upload_error = null
+    WHERE id = $1 AND storage_status = 'uploading'
+      AND byte_size = $2 AND sha256 = $3
+    RETURNING *
+  `, [id, byteSize, sha256]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function failPrintArtifactUpload(id, errorCode = 'storage_upload_failed') {
+  const result = await getPool().query(`
+    UPDATE print_artifacts
+    SET storage_status = 'uploading', last_upload_error = $1
+    WHERE id = $2 AND storage_status = 'uploading'
+    RETURNING *
+  `, [String(errorCode).slice(0, 240), id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getPrintArtifact(id) {
+  const result = await getPool().query('SELECT * FROM print_artifacts WHERE id = $1', [id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getActivePrintArtifact(id, accessNonce) {
+  const result = await getPool().query(`
+    SELECT * FROM print_artifacts
+    WHERE id = $1 AND access_nonce = $2 AND storage_status = 'active'
+      AND expires_at > transaction_timestamp()
+  `, [id, accessNonce]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getOrderPrintArtifacts(orderId) {
+  const result = await getPool().query(`
+    SELECT * FROM print_artifacts
+    WHERE order_id = $1
+    ORDER BY order_item_id, surface_key
+  `, [orderId]);
+  return rowsToBoundary(result.rows);
+}
+
+async function extendOrderArtifactRetention(orderId, expiresAt) {
+  const result = await getPool().query(`
+    UPDATE print_artifacts
+    SET expires_at = greatest(expires_at, $2::timestamptz)
+    WHERE order_id = $1 AND storage_status = 'active'
+  `, [orderId, expiresAt]);
+  return result.rowCount;
+}
+
+async function claimExpiredPrintArtifact(excludeIds = []) {
+  return withTransaction(async (client) => {
+    const selected = await client.query(`
+      SELECT id FROM print_artifacts
+      WHERE support_hold = false AND expires_at <= transaction_timestamp()
+        AND storage_status IN ('active', 'delete_failed')
+        AND NOT (id = ANY($1::text[]))
+      ORDER BY expires_at, id
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    `, [excludeIds]);
+    if (!selected.rowCount) return null;
+    const claimed = await client.query(`
+      UPDATE print_artifacts
+      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
+          last_delete_error = null
+      WHERE id = $1
+      RETURNING *
+    `, [selected.rows[0].id]);
+    return rowToBoundary(claimed.rows[0]);
+  });
+}
+
+async function finishPrintArtifactDeletion(id) {
+  const result = await getPool().query(`
+    DELETE FROM print_artifacts WHERE id = $1 AND storage_status = 'deleting'
+  `, [id]);
+  return result.rowCount === 1;
+}
+
+async function failPrintArtifactDeletion(id, errorCode = 'storage_delete_failed') {
+  const result = await getPool().query(`
+    UPDATE print_artifacts
+    SET storage_status = 'delete_failed', last_delete_error = $1
+    WHERE id = $2 AND storage_status = 'deleting'
+    RETURNING *
+  `, [String(errorCode).slice(0, 240), id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+// ── Bounded retention claims and maintenance heartbeat ─────────────────
+async function getExpiredEventIds(limit = 5) {
+  const safeLimit = Number.isSafeInteger(limit) && limit > 0 && limit <= 20 ? limit : 5;
+  const result = await getPool().query(`
+    SELECT id FROM events
+    WHERE expires_at <= transaction_timestamp()
+    ORDER BY expires_at, id
+    LIMIT $1
+  `, [safeLimit]);
+  return result.rows.map((row) => String(row.id));
+}
+
+async function prepareExpiredPersonalConfigurationCleanup() {
+  return withTransaction(async (client) => {
+    const selected = await client.query(`
+      SELECT configuration.id
+      FROM configurations configuration
+      WHERE configuration.configuration_type = 'personal_memory'
+        AND configuration.expires_at <= transaction_timestamp()
+        AND NOT EXISTS (
+          SELECT 1 FROM order_items item
+          JOIN orders retained_order ON retained_order.id = item.order_id
+          WHERE item.configuration_id = configuration.id
+            AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
+        )
+      ORDER BY configuration.expires_at, configuration.id
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    `);
+    if (!selected.rowCount) return null;
+    const configurationId = selected.rows[0].id;
+    const assetResult = await client.query(`
+      SELECT asset.id
+      FROM design_assets asset
+      JOIN configuration_assets reference ON reference.asset_id = asset.id
+      WHERE reference.configuration_id = $1
+      FOR UPDATE OF asset
+    `, [configurationId]);
+    await client.query('DELETE FROM configurations WHERE id = $1', [configurationId]);
+    const assetIds = assetResult.rows.map((row) => row.id);
+    if (!assetIds.length) return { configurationId, assets: [] };
+    const unreferenced = await client.query(`
+      SELECT asset.* FROM design_assets asset
+      WHERE asset.id = ANY($1::text[])
+        AND NOT EXISTS (
+          SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
+        )
+    `, [assetIds]);
+    return { configurationId, assets: rowsToBoundary(unreferenced.rows) };
+  });
+}
+
+async function claimExpiredDesignAsset(excludeIds = []) {
+  return withTransaction(async (client) => {
+    const selected = await client.query(`
+      SELECT asset.id
+      FROM design_assets asset
+      WHERE asset.expires_at <= transaction_timestamp()
+        AND NOT (asset.id = ANY($1::text[]))
+        AND (
+          asset.storage_status IN ('active', 'delete_failed') OR
+          (asset.storage_status = 'uploading'
+            AND asset.created_at < transaction_timestamp() - interval '10 minutes')
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
+        )
+      ORDER BY asset.expires_at, asset.id
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    `, [excludeIds]);
+    if (!selected.rowCount) return null;
+    const claimed = await client.query(`
+      UPDATE design_assets
+      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
+          last_delete_error = null
+      WHERE id = $1
+      RETURNING *
+    `, [selected.rows[0].id]);
+    return rowToBoundary(claimed.rows[0]);
+  });
+}
+
+async function startMaintenanceRun(triggerKind = 'http') {
+  const result = await getPool().query(`
+    INSERT INTO maintenance_runs (trigger_kind) VALUES ($1) RETURNING *
+  `, [triggerKind]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function finishMaintenanceRun(id, summary) {
+  const result = await getPool().query(`
+    UPDATE maintenance_runs
+    SET status = 'succeeded', summary_json = $1::jsonb,
+        error_code = null, completed_at = transaction_timestamp()
+    WHERE id = $2 AND status = 'running'
+    RETURNING *
+  `, [jsonValue(summary), id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function failMaintenanceRun(id, errorCode = 'maintenance_failed') {
+  const result = await getPool().query(`
+    UPDATE maintenance_runs
+    SET status = 'failed', error_code = $1, completed_at = transaction_timestamp()
+    WHERE id = $2 AND status = 'running'
+    RETURNING *
+  `, [String(errorCode).slice(0, 120), id]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function getLatestMaintenanceRun() {
+  const result = await getPool().query(`
+    SELECT * FROM maintenance_runs ORDER BY id DESC LIMIT 1
+  `);
+  return rowToBoundary(result.rows[0]);
+}
+
+// ── Replay-safe Printful provider status updates ────────────────────────
+async function recordPrintfulWebhook({
+  eventKey,
+  eventType,
+  providerOrderId = null,
+  externalOrderId = null,
+  providerShipmentId = null,
+  providerStatus = null,
+  shippedAt = null,
+  deliveredAt = null,
+}) {
+  return withTransaction(async (client) => {
+    const inserted = await client.query(`
+      INSERT INTO printful_webhook_events (
+        event_key, event_type, provider_order_id, external_order_id
+      ) VALUES ($1, $2, $3, $4)
+      ON CONFLICT (event_key) DO NOTHING
+      RETURNING event_key
+    `, [eventKey, eventType, providerOrderId, externalOrderId]);
+    if (!inserted.rowCount) return { duplicate: true, matched: false };
+
+    const shipmentResult = await client.query(`
+      SELECT shipment.id, shipment.order_id
+      FROM checkout_order_shipments shipment
+      WHERE ($1::text IS NOT NULL AND shipment.fulfillment_payload_json->>'external_id' = $1)
+         OR ($2::text IS NOT NULL AND shipment.printful_order_id = $2)
+      ORDER BY shipment.id
+      LIMIT 1
+      FOR UPDATE
+    `, [externalOrderId, providerOrderId]);
+    const shipment = shipmentResult.rows[0];
+    if (!shipment) return { duplicate: false, matched: false };
+
+    const safeStatus = String(providerStatus || eventType).slice(0, 80);
+    await client.query(`
+      UPDATE checkout_order_shipments
+      SET printful_order_status = CASE
+            WHEN $6 IN ('order_created', 'order_updated')
+              AND printful_order_status IN ('shipped', 'delivered', 'returned')
+              THEN printful_order_status
+            ELSE $1
+          END,
+          provider_shipment_id = coalesce(provider_shipment_id, $2),
+          shipped_at = coalesce(shipped_at, $3::timestamptz),
+          delivered_at = coalesce(delivered_at, $4::timestamptz),
+          fulfillment_status = CASE
+            WHEN $6 IN ('order_failed', 'order_canceled') THEN 'blocked'
+            ELSE fulfillment_status
+          END,
+          fulfillment_error = CASE
+            WHEN $6 IN ('order_failed', 'order_canceled') THEN 'printful_' || $6
+            ELSE fulfillment_error
+          END,
+          updated_at = transaction_timestamp()
+      WHERE id = $5
+    `, [safeStatus, providerShipmentId, shippedAt, deliveredAt, shipment.id, eventType]);
+
+    if (['order_failed', 'order_canceled'].includes(eventType)) {
+      await client.query(`
+        UPDATE orders
+        SET fulfillment_status = 'blocked', fulfillment_error = 'printful_' || $2,
+            fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
+        WHERE id = $1 AND fulfillment_status IN ('draft', 'submitted')
+      `, [shipment.order_id, eventType]);
+    }
+
+    const orderResult = await client.query(`
+      SELECT fulfillment_submitted_at FROM orders WHERE id = $1 FOR UPDATE
+    `, [shipment.order_id]);
+    const orderSubmittedAt = orderResult.rows[0]?.fulfillment_submitted_at;
+    const retentionBase = deliveredAt
+      ? new Date(new Date(deliveredAt).getTime() + 60 * 24 * 60 * 60 * 1000)
+      : new Date(new Date(orderSubmittedAt || Date.now()).getTime() + 90 * 24 * 60 * 60 * 1000);
+    await client.query(`
+      UPDATE print_artifacts
+      SET expires_at = greatest(expires_at, $2::timestamptz)
+      WHERE order_id = $1
+    `, [shipment.order_id, retentionBase]);
+
+    const pending = await client.query(`
+      SELECT 1 FROM checkout_order_shipments
+      WHERE order_id = $1 AND shipped_at IS NULL
+      LIMIT 1
+    `, [shipment.order_id]);
+    if (!pending.rowCount && eventType === 'shipment_sent') {
+      await client.query(`
+        UPDATE orders SET status = 'fulfilled', updated_at = transaction_timestamp()
+        WHERE id = $1 AND status = 'paid'
+      `, [shipment.order_id]);
+    }
+    return { duplicate: false, matched: true, orderId: String(shipment.order_id) };
+  });
+}
+
+// ── Explicit operator-only provider smoke data ──────────────────────────
+async function createProviderSmokeOrder({ productKey, recipient }) {
+  const product = resolveProductOrientation(getProduct(productKey), 'default');
+  if (!product) throw new Error('provider smoke product is invalid');
+  const configurationId = crypto.randomBytes(12).toString('base64url');
+  const quoteId = `smoke_${crypto.randomBytes(12).toString('base64url')}`;
+  const design = {
+    version: 2,
+    surfaces: Object.fromEntries(product.printSurfaces.map((surface, index) => [
+      surface.key,
+      [{
+        id: `smoke-${index + 1}`,
+        type: 'text',
+        text: 'Wolkenworte Test',
+        x: product.printFile.width / 2,
+        y: product.printFile.height / 2,
+        angle: 0,
+        color: '#a40e4c',
+        fontSize: Math.max(24, Math.min(96, product.printFile.height / 6)),
+        fontFamily: 'classic',
+      }],
+    ])),
+  };
+  return withTransaction(async (client) => {
+    const configurationResult = await client.query(`
+      INSERT INTO configurations (
+        id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
+        theme, words_json, design_json, configuration_type, orientation,
+        print_width, print_height, expires_at
+      ) VALUES (
+        $1, null, $2, $3, 1, 0, 'pastel', '[]'::jsonb, $4::jsonb,
+        'personal_memory', 'default', $5, $6,
+        transaction_timestamp() + interval '30 days'
+      ) RETURNING *
+    `, [
+      configurationId, product.key, product.printful.variantId, jsonValue(design),
+      product.printFile.width, product.printFile.height,
+    ]);
+    const configuration = rowToBoundary(configurationResult.rows[0]);
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        event_id, event_slug_snapshot, event_label_snapshot, configuration_id,
+        configuration_ids_json, quote_id, status, shipping_json, currency,
+        items_cents, shipping_cents, tax_cents, total_cents, mode, paid_at,
+        fulfillment_status, fulfillment_next_attempt_at, provider_smoke
+      ) VALUES (
+        null, 'provider-smoke', 'Wolkenworte Provider Smoke', $1, $2::jsonb,
+        $3, 'paid', $4::jsonb, 'EUR', 0, 0, 0, 0, 'live',
+        transaction_timestamp(), 'pending', transaction_timestamp(), true
+      ) RETURNING *
+    `, [configuration.id, jsonValue([configuration.id]), quoteId, jsonValue(recipient)]);
+    const order = rowToBoundary(orderResult.rows[0]);
+    await client.query(`
+      INSERT INTO checkout_order_shipments (
+        order_id, shipment_index, quantity, items_json, recipient_json,
+        printful_costs_json, currency, shipping_cents, tax_cents
+      ) VALUES ($1, 0, 1, $2::jsonb, $3::jsonb, '{}'::jsonb, 'EUR', 0, 0)
+    `, [order.id, jsonValue([{ configurationId: configuration.id, quantity: 1 }]), jsonValue(recipient)]);
+    await client.query(`
+      INSERT INTO order_items (
+        order_id, configuration_id, shipment_index, item_index, product_key,
+        printful_variant_id, quantity, configuration_snapshot_json
+      ) VALUES ($1, $2, 0, 0, $3, $4, 1, $5::jsonb)
+    `, [
+      order.id, configuration.id, configuration.product_key,
+      configuration.printful_variant_id, jsonValue(configurationSnapshot(configuration)),
+    ]);
+    const smokeResult = await client.query(`
+      INSERT INTO provider_smoke_runs (order_id, product_key, status)
+      VALUES ($1, $2, 'running') RETURNING *
+    `, [order.id, product.key]);
+    return { order, smokeRun: rowToBoundary(smokeResult.rows[0]) };
+  });
+}
+
+async function finishProviderSmokeRun(id, { succeeded, outcomeCode }) {
+  const result = await getPool().query(`
+    UPDATE provider_smoke_runs
+    SET status = $1, outcome_code = $2, completed_at = transaction_timestamp()
+    WHERE id = $3 AND status = 'running'
+    RETURNING *
+  `, [succeeded ? 'succeeded' : 'failed', String(outcomeCode || '').slice(0, 120) || null, id]);
+  return rowToBoundary(result.rows[0]);
+}
+
 module.exports = {
   get pool() { return getPool(); },
   getPool,
@@ -1641,6 +2147,7 @@ module.exports = {
   recordSuccessfulPayment,
   recordTestPayment,
   claimFulfillmentOrder,
+  renewFulfillmentLease,
   completeFulfillment,
   getOrderShipments,
   getOrderItems,
@@ -1669,4 +2176,24 @@ module.exports = {
   getEventConfigurations,
   prepareExpiredEventCleanup,
   finishExpiredEventDeletion,
+  getOrCreatePrintArtifact,
+  activatePrintArtifact,
+  failPrintArtifactUpload,
+  getPrintArtifact,
+  getActivePrintArtifact,
+  getOrderPrintArtifacts,
+  extendOrderArtifactRetention,
+  claimExpiredPrintArtifact,
+  finishPrintArtifactDeletion,
+  failPrintArtifactDeletion,
+  getExpiredEventIds,
+  prepareExpiredPersonalConfigurationCleanup,
+  claimExpiredDesignAsset,
+  startMaintenanceRun,
+  finishMaintenanceRun,
+  failMaintenanceRun,
+  getLatestMaintenanceRun,
+  recordPrintfulWebhook,
+  createProviderSmokeOrder,
+  finishProviderSmokeRun,
 };

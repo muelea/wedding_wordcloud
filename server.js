@@ -12,9 +12,11 @@ const db = require('./src/db');
 const { attachSocketHandlers } = require('./src/socket');
 const { makeRouter: makeEventsRouter } = require('./src/routes/events');
 const { makeWebhookRouter } = require('./src/routes/webhook');
+const { makeMaintenanceRouter } = require('./src/routes/maintenance');
 const { getBaseUrl } = require('./src/baseUrl');
 const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
+const printArtifacts = require('./src/printArtifacts');
 const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
 const { sendHtml, staticCacheMiddleware } = require('./src/httpCache');
@@ -61,6 +63,7 @@ app.get('/health/ready', async (req, res) => {
 // Stripe webhook needs the raw, unparsed body for signature verification —
 // must be mounted BEFORE any express.json() body parser touches this path.
 app.use('/webhook', makeWebhookRouter({ port: PORT }));
+app.use('/internal/maintenance', makeMaintenanceRouter());
 
 // Serve the pinned Three.js module locally so the configurator's 3D preview
 // never depends on a third-party CDN being reachable from a wedding venue.
@@ -80,6 +83,24 @@ app.get('/vendor/fonts/gelasio-latin-ext-400-normal.woff', staticCacheMiddleware
 app.use(staticCacheMiddleware, express.static(path.join(__dirname, 'public')));
 
 app.use('/api', makeEventsRouter({ io, port: PORT }));
+
+app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const artifactId = String(req.params.artifactId || '');
+  const nonce = String(req.params.nonce || '');
+  if (!/^[A-Za-z0-9_-]{24}$/.test(artifactId) || !/^[A-Za-z0-9_-]{32}$/.test(nonce)) {
+    return res.status(404).send('print file not found');
+  }
+  let stored;
+  try {
+    stored = await printArtifacts.loadActiveArtifactBytes(artifactId, nonce);
+  } catch {
+    return res.status(503).send('print file temporarily unavailable');
+  }
+  if (!stored) return res.status(404).send('print file not found');
+  res.set('Content-Type', stored.artifact.mime_type);
+  return res.send(stored.bytes);
+}));
 
 // ── Public pages ─────────────────────────────────────────────────────────
 // '/' is the marketing landing page (hero, how-it-works, FAQ, mug preview
@@ -158,15 +179,10 @@ attachSocketHandlers(io);
 // Resume paid orders that were safely persisted before a restart. Claiming
 // in the database prevents duplicate processing when a Stripe retry arrives
 // at the same time.
-server.on('listening', async () => {
+server.on('listening', () => {
   acceptingTraffic = true;
   if (process.env.NODE_ENV === 'test') return;
-  try {
-    const resumed = await fulfillment.resumePendingOrders();
-    if (resumed) console.log(`[fulfillment] ${resumed} wartende Bestellung(en) wieder aufgenommen.`);
-  } catch (error) {
-    console.error('[fulfillment] pending-order recovery failed:', error.message);
-  }
+  fulfillment.start();
 });
 
 server.on('close', () => {
