@@ -15,6 +15,7 @@ state durable outside a single process or Machine. The result must:
   when hosted;
 - preserve strict event isolation and receipt-bound word removal;
 - support Stripe Checkout and durable, idempotent Printful fulfillment;
+- send durable, duplicate-safe transactional order and shipment email;
 - avoid storing image bytes repeatedly in Postgres;
 - allow the hosted Fly.io Machine to scale to zero before live launch;
 - keep scheduled cleanup and due-job recovery working while that Machine is
@@ -87,6 +88,19 @@ shows that a decision is technically impossible.
     only as a fallback for an IPv4-only environment; do not use transaction
     pooling for functionality that depends on session state or
     `LISTEN`/`NOTIFY`.
+20. **Buyer email:** keep the current single buyer-email field in Stripe-hosted
+    Checkout. Do not add email fields for shipment recipients or duplicate the
+    buyer-email input on Wolkenworte's shipping page. After payment, take the
+    buyer email only from the verified Stripe Checkout event's
+    `customer_details.email` and persist it on the order.
+21. **Transactional email:** use Resend for Wolkenworte order confirmations,
+    shipment notifications and refund/cancellation notices. Stripe's optional
+    payment receipt remains a separate payment document and is never treated
+    as the Wolkenworte contract/order confirmation.
+22. **Email execution:** transactional email uses the same Postgres-backed
+    durable-job loop and authenticated maintenance wake-up as fulfillment. Do
+    not add a separate email worker service, queue product or customer-account
+    system.
 
 ## Current application assessment
 
@@ -128,6 +142,9 @@ The current blockers are:
   32-character maximum;
 - fulfillment state is durable, but retry scheduling still relies partly on
   in-process timers;
+- Stripe Checkout collects the buyer email, but the verified payment webhook
+  does not yet persist it and Wolkenworte sends no durable order, shipment or
+  refund confirmation;
 - paid orders are linked to events with cascading deletion, which conflicts
   with deleting expired event data while retaining required commerce records;
 - all application JavaScript is currently served with `immutable` caching even
@@ -157,6 +174,8 @@ One Wolkenworte Node.js Machine
            +----> Stripe Checkout API
            |
            +----> Printful API
+           |
+           +----> Resend API
 
 Supabase Cron
            |
@@ -176,6 +195,7 @@ Add only the dependencies needed for the selected approach:
 
 - `pg` for Postgres access;
 - `@supabase/supabase-js` for private Storage operations;
+- `resend` for transactional customer email;
 - a small established Express rate-limit package if preferred over a local
   middleware implementation.
 
@@ -189,6 +209,10 @@ SUPABASE_SECRET_KEY=
 SUPABASE_STORAGE_BUCKET=wolkenworte-private
 RATE_LIMIT_HMAC_SECRET=
 MAINTENANCE_SECRET=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+RESEND_WEBHOOK_SECRET=
+EMAIL_DELIVERY_MODE=mock
 ALLOW_TEST_DATA_RESET=false
 ```
 
@@ -211,6 +235,13 @@ Rules:
   hosted-test cleanup window; it is never enabled in live operation.
 - Hosted secrets belong in Fly secrets. Local secrets remain in `.env`.
 - Keep all existing Stripe and Printful safety variables.
+- `EMAIL_DELIVERY_MODE` is `mock` or `live` and defaults to `mock`. A Stripe
+  test payment always produces a mocked email result even if the hosted
+  delivery mode is accidentally `live`. Missing Resend configuration degrades
+  clearly to mock locally, but enabling live payments must fail readiness when
+  live transactional email is not validly configured.
+- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are backend-only. Never expose
+  them, full email bodies or buyer addresses in browser responses or logs.
 - Validate hosted-required configuration once during startup and fail with a
   clear message for an invalid production configuration. Continue to degrade
   gracefully when Stripe or Printful is intentionally unconfigured locally.
@@ -334,6 +365,13 @@ gone. Keep the configuration reference while re-rendering or support may still
 need it. Once that retention window ends, an explicit cleanup step may set the
 reference to null before deleting the configuration; it must never disappear
 through an accidental cascade.
+
+`orders` also stores one nullable `buyer_email` obtained from
+`session.customer_details.email` in the verified successful Stripe webhook.
+It is the purchaser/contact address for the complete order, not an address for
+any individual shipment recipient. Validate and length-bound it before storage.
+Never accept a browser-supplied email during the post-payment status request,
+and do not require a Stripe Customer object for one-time guest checkout.
 
 Postgres word operations must preserve the exact current semantics. The
 aggregate upsert remains atomic. Contribution insert plus aggregate increment
@@ -777,10 +815,110 @@ with explicit maintainer approval:
 - confirmation that Printful successfully downloads the frozen artifact URL;
 - signed Printful v2 webhook implementation and replay-safe status handling;
 - VAT/OSS, invoicing, refund, and customer-tax review;
+- verified Resend sending domain, durable Wolkenworte order confirmation and
+  a successful delivered/bounced email smoke test;
+- verification that Stripe's successful-payment and refund receipts are
+  configured as the separate payment receipts intended by the maintainer;
 - real product-margin review;
 - live Stripe webhook and fulfillment alerting.
 
-## Work package 6: Socket.io performance and future scale
+## Work package 6: buyer contact and transactional email
+
+Keep one buyer contact address per order. Stripe-hosted Checkout continues to
+ask the purchaser for it; Wolkenworte's shipping form continues to collect only
+recipient names and postal addresses. Apple Pay, Link and card checkout may
+prefill the buyer address, but the authoritative value is always
+`session.customer_details.email` from a signature-verified successful Stripe
+event.
+
+Extend the successful-payment transaction so it:
+
+1. records the payment and normalized, length-bounded buyer email on the order;
+2. creates the pending fulfillment job; and
+3. creates exactly one pending `order_confirmation` email job.
+
+Commit all three before acknowledging the Stripe webhook. Do not call Resend or
+Printful inside the webhook request. A missing buyer email must not undo an
+already verified payment or cause endless Stripe retries: persist the payment,
+mark the email task `blocked`, alert for manual review, and continue fulfillment.
+
+Add an `email_jobs` table with at least:
+
+```text
+id                    bigint identity primary key
+order_id              retained order foreign key with restrict deletion
+shipment_id           nullable retained shipment foreign key with restrict deletion
+kind                  order_confirmation, shipment_confirmation,
+                      refund_confirmation or cancellation_confirmation
+dedupe_key            unique stable text
+recipient_email       text
+locale                supported locale snapshot
+subject               text snapshot
+html_body             text snapshot
+text_body             text snapshot
+status                pending, processing, sent, delivered, bounced,
+                      failed or blocked
+provider_message_id   nullable unique text
+attempt_count         integer
+next_attempt_at       timestamptz
+locked_by             nullable text
+locked_until          nullable timestamptz
+lease_version         integer
+last_error            nullable sanitized text
+sent_at               nullable timestamptz
+delivered_at          nullable timestamptz
+bounced_at            nullable timestamptz
+created_at            timestamptz
+updated_at            timestamptz
+```
+
+The permanent database `dedupe_key` is the primary duplicate guard. Also pass a
+stable Resend idempotency key for each send; provider-side idempotency is an
+additional safeguard, not a replacement for the unique database constraint.
+Claims, leases, retries, bounded batches and Cron wake-up follow the same rules
+as fulfillment jobs. Email failure never rolls back payment and never blocks
+Printful fulfillment, but exhausted order-confirmation retries become
+`blocked` and alert support.
+
+The order confirmation is sent after the verified payment is durably recorded;
+it does not wait for Printful to manufacture, accept or ship the product. The
+German canonical version and every translation must include at least:
+
+- Wolkenworte order number, order/payment date and buyer contact address;
+- immutable products, variants, quantities and a clear design/order reference;
+- item subtotal, shipping, tax/VAT, currency and total;
+- every delivery address represented by the order;
+- Wolkenworte seller identity and support contact;
+- the reviewed contract-formation wording and personalization/withdrawal
+  information; and
+- the exact applicable contractual information in the message or an attached
+  immutable document, not only links to web pages whose content can change.
+
+Whether a tax invoice is attached to the same message or sent separately is
+decided by the invoicing/tax review. A Stripe payment receipt may also be sent,
+but it proves payment and does not replace this Wolkenworte confirmation.
+
+The signed, replay-safe Printful webhook creates one
+`shipment_confirmation` job per actual shipment when tracking is available.
+The message contains the Wolkenworte order number, shipped items, carrier and
+tracking link. Split shipments may therefore create more than one shipping
+email, each with a shipment-specific dedupe key. A recorded refund or
+cancellation creates the corresponding transactional notice exactly once.
+These messages use the buyer email; shipment recipients never receive email.
+
+Add one signature-verified Resend webhook endpoint. Deduplicate its
+at-least-once events by the provider event ID and use delivered, bounced,
+failed and complained events to update the email job and raise appropriate
+alerts. Do not track opens or clicks for these required transactional messages.
+Do not add newsletters, marketing consent or contact-list functionality.
+
+Tests must prove that duplicate Stripe, Printful and Resend events cannot send
+duplicate mail; a restart after claiming a job is recoverable; a stale lease
+owner cannot overwrite a successful retry; test payments never contact Resend;
+multiple shipment recipients do not create recipient-email fields; and email
+failure does not block fulfillment.
+
+## Work package 7: Socket.io performance and future scale
 
 Keep one Machine initially. Preserve HTTP long-polling fallback because wedding
 venue networks may be restrictive.
@@ -841,7 +979,7 @@ event maximum, introduce delta updates plus reconnect snapshots before adding
 another Machine. Any later change to these targets must be justified by an
 explicit product/SLO decision, not merely adjusted to make a failing test pass.
 
-## Work package 7: Fly packaging and hosted test mode
+## Work package 8: Fly packaging and hosted test mode
 
 This package is brought forward immediately after the Postgres/async foundation
 is green. Do not wait for every Storage, fulfillment and lifecycle package
@@ -949,7 +1087,7 @@ Fix caching rules:
 
 Do not add a CDN until measurements show that it is needed.
 
-## Work package 8: hosted test-to-live cutover
+## Work package 9: hosted test-to-live cutover
 
 There is no separate staging environment for this phase. The one hosted Fly app
 and Supabase project are first used as a hosted test environment and then
@@ -1012,19 +1150,21 @@ data migration, or sustained release cadence that can no longer be exercised
 safely against local Supabase alone. Never switch the live application back to
 Stripe test credentials or use customer production data as staging fixtures.
 
-## Work package 9: observability and recovery
+## Work package 10: observability and recovery
 
 Before live launch add:
 
 - structured JSON logs with request/order/event correlation IDs and no secrets,
-  photo data, PINs, full addresses, or Stripe signatures;
+  photo data, PINs, full addresses, full email addresses, message bodies, or
+  Stripe/Resend signatures;
 - error tracking for unhandled exceptions, webhook failures, Storage failures,
-  and blocked fulfillment;
+  blocked fulfillment and blocked transactional email;
 - alerts for paid orders pending fulfillment beyond five minutes, repeated
-  Printful failure, health-check failure, and database/storage quota pressure;
+  Printful failure, failed/bounced order confirmation, health-check failure,
+  and database/storage quota pressure;
 - metrics for active sockets, rooms, word submissions, rate-limit rejections,
   quote/checkout failures, job depth, job age, lease expiry, maintenance/Cron
-  runs, event-loop delay and external API latency;
+  runs, transactional email state, event-loop delay and external API latency;
 - a documented manual retry operation for blocked fulfillment;
 - Supabase database backups appropriate for production;
 - a separate Storage object backup/export strategy, because database backups
@@ -1032,12 +1172,13 @@ Before live launch add:
 - a tested restoration exercise before live payments.
 
 Document retention separately for event content, personal photos, print
-artifacts, abandoned quotes, full shipping addresses, payment identifiers and
+artifacts, abandoned quotes, full shipping addresses, buyer email, exact sent
+message bodies, Resend delivery metadata, payment identifiers and
 commerce/accounting records. The 60/90-day asset policy does not by itself
-define how long address or order PII may be kept. Complete the applicable
-German/EU tax and privacy review before live sales and encode the approved
-retention deadlines in cleanup queries rather than leaving them as operational
-tribal knowledge.
+define how long address, email or order PII may be kept. Complete the
+applicable German/EU tax and privacy review before live sales and encode the
+approved retention deadlines in cleanup queries rather than leaving them as
+operational tribal knowledge.
 
 ## Required API and behavior compatibility
 
@@ -1104,6 +1245,12 @@ These are release-blocking. Do not weaken them to make the refactor easier.
     configuration state.
 21. A claimed fulfillment attempt has a persisted lease, and only the current
     lease owner may commit its result.
+22. The buyer email comes from the verified Stripe event, is never taken from
+    a shipment recipient, and is never returned by the public order-status API.
+23. A successful payment durably creates one Wolkenworte order-confirmation
+    job; duplicate webhooks and job retries cannot send duplicate messages.
+24. Transactional email failure never loses or rolls back payment and never
+    blocks fulfillment; it remains retryable or becomes visibly blocked.
 
 ## Verification and acceptance criteria
 
@@ -1134,6 +1281,20 @@ The final refactor is accepted only when all of the following are true:
 - archive plus reset is atomic under a concurrent submission;
 - concurrent checkout attempts produce one Stripe Session/order;
 - duplicate Stripe events produce one payment transition and one fulfillment;
+- the verified Stripe buyer email is stored on the order and a duplicate
+  successful-payment event creates only one order-confirmation job;
+- the Wolkenworte order confirmation contains the immutable order totals,
+  items, delivery addresses and versioned contractual information;
+- a Resend timeout/retry produces one externally sent message through the
+  database and provider idempotency guards;
+- test payments and automated tests never contact the live Resend API;
+- a signed Printful shipment event updates the retained shipment and creates
+  one buyer-addressed tracking email, including for replayed and split-shipment
+  events;
+- signed Resend delivered/bounced events are replay-safe and update the matching
+  email job without exposing its recipient or body publicly;
+- exhausted email retries alert support while the paid fulfillment job remains
+  independently processable;
 - personal configuration JSON contains asset IDs and no `data:image/...` bytes;
 - saving five revisions with the same photos stores one copy of each photo;
 - foreign-event asset IDs are rejected;
@@ -1196,12 +1357,15 @@ be localized:
 5. Deterministic Printful IDs, normalized frozen paid artifacts, artifact
    streaming, leased Postgres job scheduling, authenticated Cron maintenance
    endpoint, cleanup and signed Printful status webhooks.
-6. Socket broadcast coalescing, event ceilings, load/reconnect tooling and the
+6. Verified Stripe buyer-email capture, Resend configuration, durable
+   transactional-email jobs, Wolkenworte order confirmation, shipment/refund
+   notices, signed Resend delivery webhooks and duplicate/retry tests.
+7. Socket broadcast coalescing, event ceilings, load/reconnect tooling and the
    measured single-Machine capacity test.
-7. Structured observability, external alerts, PII retention schedule,
+8. Structured observability, external alerts, PII retention schedule,
    database/Storage backup and restore runbook, and guarded pre-live cleanup
    command.
-8. README and `.env.example` final synchronization plus the complete hosted
+9. README and `.env.example` final synchronization plus the complete hosted
    test-to-live checklist.
 
 Prefer one coherent commit per numbered boundary. Every boundary must leave the
@@ -1225,6 +1389,7 @@ Do not add any of these during this refactor:
 - Redis before a second Socket.io Machine is required;
 - Supabase client-side direct database access or public RLS-based app logic;
 - Supabase Auth;
+- newsletters, marketing campaigns, contact lists or marketing-consent flows;
 - a frontend framework, bundler, TypeScript, or ORM;
 - a new login/session cookie system;
 - admin bearer tokens, PIN session tokens, or remembered PINs;
@@ -1239,7 +1404,9 @@ Do not add any of these during this refactor:
 The refactor is done when Wolkenworte runs locally and on the hosted test app
 from the same code, migrations, Postgres behavior, and private Storage model;
 all tests and load/isolation checks pass; paid orders are durable and
-idempotently fulfillable; image and print assets follow the defined temporary
+idempotently fulfillable; every verified paid order has one durable
+Wolkenworte confirmation outcome and Printful shipments can produce replay-safe
+tracking notices through Resend; image, print and email data follow the defined
 retention rules; events use the single 365-day expiry; the hosted Machine can
 scale to zero in test mode while authenticated Cron requests still recover due
 work and cleanup; and the project has a reviewed, guarded path for the one-time
