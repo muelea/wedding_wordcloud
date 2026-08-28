@@ -33,6 +33,7 @@ function makeWebhookRouter() {
     }
     const supported = new Set([
       'email.sent', 'email.delivered', 'email.bounced', 'email.failed', 'email.complained',
+      'email.suppressed',
     ]);
     if (!event || !supported.has(event.type) || !event.data) {
       return res.json({ received: true, ignored: 'unsupported_event' });
@@ -44,7 +45,9 @@ function makeWebhookRouter() {
       providerMessageId: event.data.email_id == null ? null : String(event.data.email_id),
       emailJobTag: event.data.tags?.email_job_id,
     });
-    if (result.job && ['email.bounced', 'email.failed', 'email.complained'].includes(event.type)) {
+    if (result.job && [
+      'email.bounced', 'email.failed', 'email.complained', 'email.suppressed',
+    ].includes(event.type)) {
       log.error('email_provider_failure_recorded', {
         jobId: result.job.id,
         outcome: result.job.status,

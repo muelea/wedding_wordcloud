@@ -23,7 +23,7 @@ function validateSafety() {
   if (String(process.env.EMAIL_DELIVERY_MODE || '').trim().toLowerCase() !== 'live') {
     throw new Error('Der Smoke benötigt EMAIL_DELIVERY_MODE=live.');
   }
-  for (const name of ['RESEND_API_KEY', 'RESEND_FROM_EMAIL', 'RESEND_WEBHOOK_SECRET']) {
+  for (const name of ['RESEND_API_KEY', 'RESEND_FROM_EMAIL']) {
     if (!String(process.env[name] || '').trim()) throw new Error(`${name} fehlt.`);
   }
   const recipient = String(argument('--recipient') || '').trim().toLowerCase();
@@ -34,8 +34,8 @@ function validateSafety() {
     throw new Error('Der explizite Empfänger steht nicht in RESEND_SMOKE_RECIPIENTS.');
   }
   const expected = String(argument('--expect') || 'none').trim().toLowerCase();
-  if (!['none', 'delivered', 'bounced'].includes(expected)) {
-    throw new Error('--expect muss none, delivered oder bounced sein.');
+  if (!['none', 'delivered', 'bounced', 'complained', 'suppressed'].includes(expected)) {
+    throw new Error('--expect muss none, delivered, bounced, complained oder suppressed sein.');
   }
   return { recipient, expected };
 }
@@ -44,7 +44,10 @@ async function waitForOutcome(db, jobId, expected) {
   if (expected === 'none') return db.getEmailJobById(jobId);
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const job = await db.getEmailJobById(jobId);
-    if (job?.status === expected) return job;
+    if (job?.status === expected ||
+        (expected === 'suppressed' && job?.status === 'failed' && job.last_error === 'provider_suppressed')) {
+      return job;
+    }
     if (['blocked', 'failed', 'complained'].includes(job?.status)) {
       throw new Error(`Unerwarteter Resend-Status: ${job.status}`);
     }
@@ -69,9 +72,9 @@ async function main() {
     const finalJob = await waitForOutcome(db, smoke.emailJob.id, expected);
     await db.finishEmailSmokeRun(smoke.smokeRun.id, {
       succeeded: true,
-      outcomeCode: expected === 'none' ? 'provider_accepted' : `provider_${finalJob.status}`,
+      outcomeCode: expected === 'none' ? 'provider_accepted' : `provider_${expected}`,
     });
-    console.log(`[resend-smoke] Synthetische Bestellbestätigung erfolgreich geprüft (${finalJob.status}).`);
+    console.log(`[resend-smoke] Synthetische Bestellbestätigung erfolgreich geprüft (${expected === 'none' ? finalJob.status : expected}).`);
   } catch (error) {
     if (smoke?.smokeRun?.id) {
       await db.finishEmailSmokeRun(smoke.smokeRun.id, {

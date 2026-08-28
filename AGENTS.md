@@ -102,7 +102,12 @@ it — this file is about how to work in it safely.
   roll back payment/block fulfillment. Test payments always use email `mock`.
   Live retries reuse the permanent job dedupe key only inside the 23-hour
   safety window; signed raw-body Resend callbacks dedupe by `svix-id`, and
-  stale lease owners cannot commit.
+  stale lease owners cannot commit. Bounce, failure, complaint and suppression
+  are terminal; late events cannot erase their exact reason. Each monotonic
+  increase in Stripe's cumulative refund amount creates one notice for only
+  the new amount, while duplicate or stale refund events create none. Provider
+  messages explicitly reply to the canonical seller contact in
+  `src/emailTemplates.js`.
 - **`.env` is never committed.** It's gitignored and holds real Stripe/
   Printful keys in some environments. If you need a new env var, add it to
   `.env.example` with an empty/placeholder value and document it in

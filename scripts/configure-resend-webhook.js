@@ -1,48 +1,128 @@
 'use strict';
 
-const path = require('path');
-const { spawnSync } = require('child_process');
+const path = require('node:path');
+const { Resend } = require('resend');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { importSecrets } = require('./configure-fly-secrets');
 
-function enabled(name) {
-  return String(process.env[name] || '').trim().toLowerCase() === 'true';
+const RESEND_WEBHOOK_URL = 'https://wolkenworte.io/webhook/resend';
+const RESEND_WEBHOOK_EVENTS = Object.freeze([
+  'email.sent',
+  'email.delivered',
+  'email.bounced',
+  'email.failed',
+  'email.complained',
+  'email.suppressed',
+]);
+
+function enabled(value) {
+  return String(value || '').trim().toLowerCase() === 'true';
 }
 
-async function main() {
-  if (!process.argv.includes('--confirm-replace-webhook')) {
-    throw new Error('Explizite Freigabe fehlt: --confirm-replace-webhook');
+function assertResendSetupSafety(env = process.env) {
+  if (String(env.APP_ENVIRONMENT || '').trim().toLowerCase() !== 'local') {
+    throw new Error('Das Operator-Skript muss aus APP_ENVIRONMENT=local gestartet werden.');
   }
-  if (enabled('STRIPE_LIVE_PAYMENTS_ENABLED')) {
+  if (String(env.EMAIL_DELIVERY_MODE || 'mock').trim().toLowerCase() !== 'mock') {
+    throw new Error('Der Resend-Webhook wird nur bei EMAIL_DELIVERY_MODE=mock ersetzt.');
+  }
+  if (enabled(env.STRIPE_LIVE_PAYMENTS_ENABLED)) {
     throw new Error('Der Resend-Webhook wird nicht bei freigeschalteten Live-Zahlungen ersetzt.');
   }
-  const publicUrl = new URL(process.env.PUBLIC_URL || '');
-  if (publicUrl.protocol !== 'https:') throw new Error('PUBLIC_URL muss öffentliches HTTPS verwenden.');
-  const resend = require('../src/resend');
-  if (!resend.isConfigured()) throw new Error('RESEND_API_KEY und RESEND_FROM_EMAIL fehlen.');
-  const webhookUrl = new URL('/webhook/resend', publicUrl).toString();
-  const existing = await resend.listWebhooks();
-  for (const webhook of existing.filter((entry) => entry.endpoint === webhookUrl)) {
-    await resend.removeWebhook(webhook.id);
+  const runtimeKey = String(env.RESEND_API_KEY || '').trim();
+  const managementKey = String(env.RESEND_MANAGEMENT_API_KEY || '').trim();
+  if (!runtimeKey.startsWith('re_')) {
+    throw new Error('RESEND_API_KEY muss der domainbeschränkte Sending-access-Key sein.');
   }
-  const webhook = await resend.createWebhook(webhookUrl);
-  if (!webhook?.signing_secret) throw new Error('Resend hat kein Webhook-Signatursecret geliefert.');
-  const app = process.env.FLY_APP_NAME || 'wolkenworte';
-  const fly = spawnSync('flyctl', [
-    'secrets', 'set', '--stage', '--app', app,
-    `RESEND_WEBHOOK_SECRET=${webhook.signing_secret}`,
-  ], { stdio: ['ignore', 'inherit', 'inherit'] });
-  if (fly.status !== 0) {
-    throw new Error('Webhook wurde bei Resend ersetzt, aber das Fly-Secret konnte nicht vorgemerkt werden.');
+  if (!managementKey.startsWith('re_')) {
+    throw new Error('RESEND_MANAGEMENT_API_KEY muss der temporäre Full-access-Key sein.');
   }
-  console.log('[resend-webhook] Signierte Zustellereignisse konfiguriert; das Secret ist für den nächsten Deploy vorgemerkt.');
+  if (managementKey === runtimeKey) {
+    throw new Error('Runtime- und Management-Key müssen getrennte Resend-Schlüssel sein.');
+  }
+  const from = String(env.RESEND_FROM_EMAIL || '').trim();
+  if (!/<[^<>@\s]+@mail\.wolkenworte\.io>$/i.test(from)) {
+    throw new Error('RESEND_FROM_EMAIL muss die verifizierte Domain mail.wolkenworte.io verwenden.');
+  }
+  return { managementKey, runtimeKey, from, webhookUrl: RESEND_WEBHOOK_URL };
+}
+
+function providerData(result) {
+  if (result?.error) {
+    const error = new Error(result.error.message || result.error.name || 'Resend request failed');
+    error.code = result.error.name || 'resend_request_failed';
+    throw error;
+  }
+  return result?.data;
+}
+
+function listedWebhooks(result) {
+  const data = providerData(result);
+  if (Array.isArray(data?.data)) return data.data;
+  return Array.isArray(data) ? data : [];
+}
+
+async function run({
+  argv = process.argv,
+  env = process.env,
+  managementClient,
+  stageSecret = importSecrets,
+  output = console.log,
+} = {}) {
+  if (!argv.includes('--confirm-replace-webhook')) {
+    throw new Error('Explizite Freigabe fehlt: --confirm-replace-webhook');
+  }
+  const { managementKey, runtimeKey, from, webhookUrl } = assertResendSetupSafety(env);
+  const resend = managementClient || new Resend(managementKey);
+  const existing = listedWebhooks(await resend.webhooks.list())
+    .filter((entry) => entry.endpoint === webhookUrl);
+  for (const webhook of existing) providerData(await resend.webhooks.remove(webhook.id));
+
+  let created;
+  let staged = false;
+  try {
+    created = providerData(await resend.webhooks.create({
+      endpoint: webhookUrl,
+      events: [...RESEND_WEBHOOK_EVENTS],
+    }));
+    if (!created?.id || !created?.signing_secret) {
+      throw new Error('Resend hat keinen vollständig konfigurierten Webhook geliefert.');
+    }
+    await stageSecret({
+      RESEND_API_KEY: runtimeKey,
+      RESEND_FROM_EMAIL: from,
+      RESEND_WEBHOOK_SECRET: created.signing_secret,
+    });
+    staged = true;
+  } catch (error) {
+    if (created?.id && !staged) await resend.webhooks.remove(created.id).catch(() => {});
+    throw error;
+  }
+
+  const result = {
+    webhookId: created.id,
+    url: webhookUrl,
+    events: [...RESEND_WEBHOOK_EVENTS],
+    replaced: existing.length,
+    flySecret: 'staged',
+  };
+  output(JSON.stringify(result, null, 2));
+  return result;
 }
 
 if (require.main === module) {
-  main().catch((error) => {
+  run().catch((error) => {
     console.error('[resend-webhook] Einrichtung fehlgeschlagen:', error.message);
     process.exitCode = 1;
   });
 }
 
-module.exports = { main };
+module.exports = {
+  RESEND_WEBHOOK_EVENTS,
+  RESEND_WEBHOOK_URL,
+  assertResendSetupSafety,
+  listedWebhooks,
+  providerData,
+  run,
+};

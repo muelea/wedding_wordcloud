@@ -2,6 +2,7 @@
 
 const { Resend } = require('resend');
 const performanceProbe = require('./performanceProbe');
+const { SELLER } = require('./emailTemplates');
 
 let client = null;
 let clientKey = null;
@@ -62,6 +63,7 @@ async function sendEmail(job, { timeoutMs = 10_000 } = {}) {
   const payload = {
     from,
     to: [job.recipient_email],
+    replyTo: SELLER.email,
     subject: job.subject,
     html: job.html_body,
     text: job.text_body,
@@ -132,33 +134,6 @@ function verifyWebhook(rawBody, headers) {
   return verifier.webhooks.verify({ payload, headers: normalized, webhookSecret });
 }
 
-async function listWebhooks() {
-  const active = getClient();
-  if (!active) throw new ResendDeliveryError('resend_not_configured');
-  const result = await active.webhooks.list();
-  if (result.error) throw classifyProviderError(result.error);
-  return Array.isArray(result.data?.data) ? result.data.data : Array.isArray(result.data) ? result.data : [];
-}
-
-async function createWebhook(endpoint) {
-  const active = getClient();
-  if (!active) throw new ResendDeliveryError('resend_not_configured');
-  const result = await active.webhooks.create({
-    endpoint,
-    events: ['email.sent', 'email.delivered', 'email.bounced', 'email.failed', 'email.complained'],
-  });
-  if (result.error) throw classifyProviderError(result.error);
-  return result.data;
-}
-
-async function removeWebhook(id) {
-  const active = getClient();
-  if (!active) throw new ResendDeliveryError('resend_not_configured');
-  const result = await active.webhooks.remove(id);
-  if (result.error) throw classifyProviderError(result.error);
-  return result.data;
-}
-
 function setAdapterForTests(adapter) {
   testAdapter = adapter;
 }
@@ -179,9 +154,6 @@ module.exports = {
   classifyProviderError,
   sendEmail,
   verifyWebhook,
-  listWebhooks,
-  createWebhook,
-  removeWebhook,
   hasTestAdapter,
   setAdapterForTests,
   resetAdapterForTests,

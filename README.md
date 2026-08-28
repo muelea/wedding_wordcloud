@@ -253,10 +253,11 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `RATE_LIMIT_HMAC_SECRET` | local/Fly secret | HMACs normalized source addresses so durable abuse data never stores raw IP addresses. |
 | `MAINTENANCE_SECRET` | local/Fly secret | Independent bearer secret for bounded Supabase Cron maintenance wake-ups. |
 | `MAINTENANCE_MODE` | shared setting | Temporarily blocks public HTTP/socket traffic during the guarded pre-live cleanup while health/operator checks remain available. |
-| `RESEND_API_KEY` | operator/future-live secret | Backend sending key for required transactional messages. |
-| `RESEND_FROM_EMAIL` | operator/future-live setting | Verified sender identity displayed to customers. |
-| `RESEND_WEBHOOK_SECRET` | future-live secret | Verifies exact signed Resend delivery callbacks. |
-| `RESEND_SMOKE_RECIPIENTS` | controlled operator/Fly setting | Restricts the provider smoke command to explicit maintainer inboxes. |
+| `RESEND_API_KEY` | local operator/Fly runtime secret | Long-lived Sending-access key restricted to `mail.wolkenworte.io`; the dedicated webhook setup command stages it in Fly. |
+| `RESEND_MANAGEMENT_API_KEY` | temporary local operator secret | Separate Full-access key used only to register the Resend webhook; never staged to Fly and revoked immediately afterward. |
+| `RESEND_FROM_EMAIL` | local operator/Fly runtime setting | Verified `Wolkenworte <bestellung@mail.wolkenworte.io>` sender. Replies explicitly go to the canonical seller contact `kontakt@jusa.io`. |
+| `RESEND_WEBHOOK_SECRET` | Fly runtime secret managed by setup | Verifies signed Resend delivery callbacks. The setup command stages it directly; it stays empty in local `.env`. |
+| `RESEND_SMOKE_RECIPIENTS` | local operator only | Restricts the provider smoke command to explicit maintainer or Resend test inboxes and is never staged to Fly. |
 | `EMAIL_DELIVERY_MODE` | shared setting | `mock` or `live`; test payments are mocked regardless, preventing sandbox purchases from emailing real recipients. |
 | `ALLOW_TEST_DATA_RESET` | temporary operator/Fly setting | Second irreversible guard for the one-time hosted-test cleanup. |
 | `STRIPE_PAYMENT_MODE` | shared setting | Selects only the explicitly named `test` or `live` Stripe credential set. |
@@ -614,31 +615,47 @@ permanent dedupe key is also the Resend `Idempotency-Key`; a non-PII job id is
 sent as a tag. An ambiguous provider response can reuse only that exact key for
 23 hours. If a signed webhook has not resolved the outcome by then, the job is
 blocked for manual review instead of risking a duplicate send. Signed Resend
-events are deduplicated by `svix-id` and terminal bounce/failure/complaint states
-cannot be moved backward by a late delivery event. Email failure never rolls
-back payment or blocks Printful fulfillment.
+events are deduplicated by `svix-id` and terminal
+bounce/failure/complaint/suppression states cannot be moved backward by a late
+delivery event. Each increase in Stripe's cumulative refunded amount creates
+one notice for exactly the newly refunded amount; duplicate or stale events do
+not create mail. Every provider request sets Reply-To to the canonical seller
+contact `kontakt@jusa.io`. Email failure never rolls back payment or blocks
+Printful fulfillment.
 
 `EMAIL_DELIVERY_MODE=mock` is the safe default. Stripe test payments are always
 mocked even if another value is accidentally configured. Real provider
 activation can therefore wait until the sending domain is available:
 
-1. Verify the Wolkenworte sending subdomain in Resend and create a domain-scoped
-   sending key.
-2. Set `RESEND_API_KEY` and the verified `RESEND_FROM_EMAIL` in the ignored
-   local `.env`; keep `EMAIL_DELIVERY_MODE=mock` in Fly.
-3. Deploy the `/webhook/resend` endpoint, then run
-   `npm run resend:configure-webhook -- --confirm-replace-webhook`. The command
-   subscribes only to sent/delivered/bounced/failed/complained events and stages
-   the returned signing secret in Fly for the next deployment.
-4. Put only approved test inboxes in `RESEND_SMOKE_RECIPIENTS`. For a controlled
-   operator smoke, set `EMAIL_DELIVERY_MODE=live` in the CLI environment and run
-   `npm run smoke:resend-email -- --confirm-email-smoke --recipient <allowlisted>
-   --expect delivered`. The synthetic message uses the production template,
-   client, idempotency key, tag and webhook reconciliation path; it cannot be
+1. Add `mail.wolkenworte.io` in Resend with region `eu-west-1`, publish the exact
+   SPF, DKIM and Return-Path/MX records supplied by Resend in Porkbun DNS, and
+   wait until the domain is verified. Keep open/click tracking disabled.
+2. Create a long-lived Sending-access key restricted to that domain and a
+   separate temporary Full-access setup key. Put them in the ignored local
+   `.env` as `RESEND_API_KEY` and `RESEND_MANAGEMENT_API_KEY`; use the committed
+   `RESEND_FROM_EMAIL` value and keep `EMAIL_DELIVERY_MODE=mock`.
+3. Run `npm run resend:configure-webhook -- --confirm-replace-webhook`. It
+   registers the fixed `https://wolkenworte.io/webhook/resend` endpoint for
+   sent/delivered/bounced/failed/complained/suppressed events and stages only the
+   runtime sending key, From identity and returned signing secret in Fly. Revoke
+   the temporary Full-access key and clear `RESEND_MANAGEMENT_API_KEY` immediately.
+4. Deploy the staged secrets while Fly remains in email `mock` mode. Put only a
+   maintainer inbox or Resend's `delivered@resend.dev`, `bounced@resend.dev`,
+   `complained@resend.dev` and `suppressed@resend.dev` addresses in the local
+   `RESEND_SMOKE_RECIPIENTS`. For each controlled smoke, override only the local
+   CLI process to `EMAIL_DELIVERY_MODE=live` and run:
+
+   ```sh
+   EMAIL_DELIVERY_MODE=live npm run smoke:resend-email -- \
+     --confirm-email-smoke --recipient <allowlisted> --expect <delivered|bounced|complained|suppressed>
+   ```
+
+   The synthetic message uses the production template, Reply-To, client,
+   idempotency key, tag and signed webhook reconciliation path. It cannot be
    invoked through HTTP and refuses to run while Stripe live payments are enabled.
-5. Restore `EMAIL_DELIVERY_MODE=mock` after the smoke. Do not enable live sales
-   until the contractual copy, VAT/invoicing treatment and delivery/bounce smoke
-   have all been approved.
+5. Fly remains at `EMAIL_DELIVERY_MODE=mock` after testing. Do not enable live
+   sales until the contractual copy, VAT/invoicing treatment and all provider
+   smokes have been approved.
 
 ## Fulfillment safety modes
 

@@ -165,6 +165,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.equal(ambiguous.delivery_ambiguous, true);
     assert.ok(ambiguous.first_send_attempt_at);
     assert.equal(calls.length, 1);
+    assert.equal(calls[0].payload.replyTo, 'kontakt@jusa.io');
     assert.equal(calls[0].options.idempotencyKey, smoke.emailJob.dedupe_key);
     assert.deepEqual(calls[0].payload.tags.find((tag) => tag.name === 'email_job_id'), {
       name: 'email_job_id', value: String(smoke.emailJob.id),
@@ -284,18 +285,36 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     const storedShipment = (await db.getOrderShipments(prepared.order.id))[0];
     assert.equal(Object.hasOwn(JSON.parse(storedShipment.recipient_json), 'email'), false);
 
-    const refund = await db.recordStripeRefund({
-      stripeEventId: 'evt_email_refund', eventType: 'charge.refunded',
+    const firstRefundCents = 1000;
+    const firstRefund = await db.recordStripeRefund({
+      stripeEventId: 'evt_email_refund_partial', eventType: 'charge.refunded',
+      paymentIntentId: 'pi_email_notices', livemode: true,
+      amountRefunded: firstRefundCents, currency: prepared.order.currency,
+    });
+    assert.equal(firstRefund.emailJob.kind, 'refund_confirmation');
+    assert.equal(firstRefund.emailJob.recipient_email, paid.order.buyer_email);
+    assert.match(firstRefund.emailJob.text_body, /10,00\s*€/);
+    assert.equal((await db.recordStripeRefund({
+      stripeEventId: 'evt_email_refund_partial', eventType: 'charge.refunded',
+      paymentIntentId: 'pi_email_notices', livemode: true,
+      amountRefunded: firstRefundCents, currency: prepared.order.currency,
+    })).duplicate, true);
+
+    const finalRefund = await db.recordStripeRefund({
+      stripeEventId: 'evt_email_refund_final', eventType: 'charge.refunded',
       paymentIntentId: 'pi_email_notices', livemode: true,
       amountRefunded: prepared.order.total_cents, currency: prepared.order.currency,
     });
-    assert.equal(refund.emailJob.kind, 'refund_confirmation');
-    assert.equal(refund.emailJob.recipient_email, paid.order.buyer_email);
-    assert.equal((await db.recordStripeRefund({
-      stripeEventId: 'evt_email_refund', eventType: 'charge.refunded',
+    assert.equal(finalRefund.emailJob.kind, 'refund_confirmation');
+    assert.notEqual(finalRefund.emailJob.dedupe_key, firstRefund.emailJob.dedupe_key);
+    assert.match(finalRefund.emailJob.text_body, /19,75\s*€/);
+    const staleRefund = await db.recordStripeRefund({
+      stripeEventId: 'evt_email_refund_stale', eventType: 'charge.refunded',
       paymentIntentId: 'pi_email_notices', livemode: true,
-      amountRefunded: prepared.order.total_cents, currency: prepared.order.currency,
-    })).duplicate, true);
+      amountRefunded: firstRefundCents, currency: prepared.order.currency,
+    });
+    assert.equal(staleRefund.matched, true);
+    assert.equal(staleRefund.emailJob, null);
 
     const canceled = await db.recordPrintfulWebhook({
       ...shipmentEvent,
@@ -306,8 +325,45 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.equal(canceled.emailJob.recipient_email, paid.order.buyer_email);
     const notices = await db.getEmailJobsForOrder(prepared.order.id);
     assert.deepEqual(notices.map((job) => job.kind), [
-      'order_confirmation', 'shipment_confirmation', 'refund_confirmation', 'cancellation_confirmation',
+      'order_confirmation', 'shipment_confirmation', 'refund_confirmation', 'refund_confirmation',
+      'cancellation_confirmation',
     ]);
+  });
+
+  await t.test('a signed suppression is a terminal provider failure with its exact reason', async () => {
+    const smoke = await db.createEmailSmokeJob({
+      recipientEmail: 'maintainer@example.test', locale: 'de',
+    });
+    await hosted.query(`
+      UPDATE email_jobs SET status = 'sent', provider_message_id = 'resend-suppressed-test',
+        sent_at = transaction_timestamp()
+      WHERE id = $1
+    `, [smoke.emailJob.id]);
+    const eventBody = (type, svixId) => {
+      const body = JSON.stringify({
+        type, created_at: new Date().toISOString(),
+        data: {
+          email_id: 'resend-suppressed-test', created_at: new Date().toISOString(),
+          from: process.env.RESEND_FROM_EMAIL, to: ['maintainer@example.test'],
+          subject: smoke.emailJob.subject, tags: { email_job_id: String(smoke.emailJob.id) },
+        },
+      });
+      return { body, headers: signedResendHeaders(webhookSecret, svixId, body) };
+    };
+    const suppressed = eventBody('email.suppressed', 'msg_email_suppressed');
+    assert.equal((await fetch(`${hosted.baseUrl}/webhook/resend`, {
+      method: 'POST', headers: suppressed.headers, body: suppressed.body,
+    })).status, 200);
+    const stored = await db.getEmailJobById(smoke.emailJob.id);
+    assert.equal(stored.status, 'failed');
+    assert.equal(stored.last_error, 'provider_suppressed');
+    assert.equal(stored.provider_terminal, true);
+
+    const deliveredLate = eventBody('email.delivered', 'msg_email_suppressed_delivered_late');
+    assert.equal((await fetch(`${hosted.baseUrl}/webhook/resend`, {
+      method: 'POST', headers: deliveredLate.headers, body: deliveredLate.body,
+    })).status, 200);
+    assert.equal((await db.getEmailJobById(smoke.emailJob.id)).last_error, 'provider_suppressed');
   });
 
   await t.test('signed terminal events never move backward and unsigned events change nothing', async () => {

@@ -2384,6 +2384,7 @@ async function recordResendWebhook({
     'email.bounced': 'bounced',
     'email.failed': 'failed',
     'email.complained': 'complained',
+    'email.suppressed': 'failed',
   };
   const nextStatus = statusByEvent[eventType];
   if (!nextStatus) return { duplicate: false, matched: false, ignored: true };
@@ -2426,6 +2427,11 @@ async function recordResendWebhook({
       failed: 'provider_failed',
       complained: 'provider_complained',
     };
+    const providerError = eventType === 'email.suppressed'
+      ? 'provider_suppressed'
+      : job.provider_terminal && resolvedStatus === job.status
+        ? job.last_error
+        : errorByStatus[resolvedStatus] || null;
     const updated = await client.query(`
       UPDATE email_jobs
       SET status = $1,
@@ -2450,7 +2456,7 @@ async function recordResendWebhook({
       RETURNING *
     `, [
       resolvedStatus, providerMessageId, terminal, eventCreatedAt,
-      errorByStatus[resolvedStatus] || null, job.id,
+      providerError, job.id,
     ]);
     await client.query(`
       UPDATE resend_webhook_events SET email_job_id = $1 WHERE svix_id = $2
@@ -2481,6 +2487,7 @@ async function recordStripeRefund({
     const order = orderResult.rows[0];
     if (!order) return { duplicate: false, matched: false };
     const expectedMode = livemode ? 'live' : 'test';
+    const previousRefundedCents = Number(order.refunded_cents || 0);
     if (order.mode !== expectedMode || String(currency || '').toUpperCase() !== order.currency ||
         !Number.isSafeInteger(Number(amountRefunded)) || Number(amountRefunded) < 0 ||
         Number(amountRefunded) > Number(order.total_cents)) {
@@ -2496,18 +2503,21 @@ async function recordStripeRefund({
     await client.query(`
       UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2
     `, [order.id, stripeEventId]);
-    const email = await insertEmailJobForOrder(client, {
-      order: updated.rows[0],
-      kind: 'refund_confirmation',
-      dedupeKey: `refund_confirmation:order:${order.id}`,
-      noticeAmountCents: Number(amountRefunded),
-    });
+    const increasedByCents = Number(amountRefunded) - previousRefundedCents;
+    const email = increasedByCents > 0
+      ? await insertEmailJobForOrder(client, {
+        order: updated.rows[0],
+        kind: 'refund_confirmation',
+        dedupeKey: `refund_confirmation:order:${order.id}:cumulative:${Number(amountRefunded)}`,
+        noticeAmountCents: increasedByCents,
+      })
+      : null;
     return {
       duplicate: false,
       matched: true,
       order: rowToBoundary(updated.rows[0]),
-      emailJob: email.job,
-      emailJobCreated: email.created,
+      emailJob: email?.job || null,
+      emailJobCreated: Boolean(email?.created),
     };
   });
 }
