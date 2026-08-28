@@ -1,4 +1,4 @@
--- Operator-only recovery audit records. This migration remains
+-- Operator-only recovery audit records for Phase 8. This migration remains
 -- schema-relative so the integration suite can apply it to isolated schemas.
 
 insert into app_schema_versions (version) values (6);

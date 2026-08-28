@@ -1,4 +1,4 @@
--- Project-global runtime grants and RLS policies for transactional-email tables.
+-- Project-global runtime grants and RLS policies for Phase 6 tables.
 
 grant select, insert, update, delete on table public.email_jobs to wolkenworte_runtime;
 grant select, insert, update, delete on table public.resend_webhook_events to wolkenworte_runtime;
