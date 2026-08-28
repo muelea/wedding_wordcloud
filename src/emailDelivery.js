@@ -5,6 +5,7 @@
 const crypto = require('crypto');
 const db = require('./db');
 const resend = require('./resend');
+const log = require('./structuredLog');
 
 const MAX_ATTEMPTS = 4;
 const LEASE_MS = 120_000;
@@ -90,13 +91,18 @@ async function executeClaimedJob(job, { deadline = null, providerSmoke = false }
     if (mode === 'mock') {
       const completed = await db.completeMockEmail(job.id, lease);
       if (!completed) throw new EmailLeaseLostError();
-      console.log(`[email:mock] E-Mail-Job ${job.id} sicher simuliert; es wurde keine Anfrage an Resend gesendet.`);
+      log.info('email_mock_completed', {
+        jobId: job.id, orderId: job.order_id, outcome: 'mocked', mode: 'mock',
+      });
       return completed;
     }
     if (retryWindowExpired(job)) {
       const blocked = await db.blockExpiredAmbiguousEmail(job.id, lease);
       if (!blocked) throw new EmailLeaseLostError();
-      console.error(`[email:blocked] job ${job.id}: delivery_outcome_unknown`);
+      log.error('email_blocked', {
+        jobId: job.id, orderId: job.order_id, outcome: 'blocked',
+        errorCode: 'delivery_outcome_unknown',
+      });
       return blocked;
     }
     if (deadline && Date.now() + 1_500 >= deadline) {
@@ -117,9 +123,16 @@ async function executeClaimedJob(job, { deadline = null, providerSmoke = false }
         blocked: boundaryExpired || !error.retryable,
       });
       if (failed?.status === 'blocked') {
-        console.error(`[email:blocked] job ${job.id}: ${failed.last_error}`);
+        log.error('email_blocked', {
+          jobId: job.id, orderId: job.order_id, outcome: 'blocked',
+          errorCode: failed.last_error || 'email_delivery_blocked',
+        });
       } else {
-        console.warn(`[email:retry] job ${job.id}: ${error.code || 'email_delivery_failed'}`);
+        log.warn('email_retry_scheduled', {
+          jobId: job.id, orderId: job.order_id, outcome: 'retry',
+          errorCode: log.errorCode(error, 'email_delivery_failed'),
+          attempt: job.attempt_count,
+        });
       }
       return failed || db.getEmailJobById(job.id);
     }
@@ -131,7 +144,10 @@ async function executeClaimedJob(job, { deadline = null, providerSmoke = false }
     const failed = await db.failEmailJob(job.id, lease, error.code || 'email_delivery_failed', {
       blocked: error instanceof EmailSafetyError,
     });
-    if (failed?.status === 'blocked') console.error(`[email:blocked] job ${job.id}: ${failed.last_error}`);
+    if (failed?.status === 'blocked') log.error('email_blocked', {
+      jobId: job.id, orderId: job.order_id, outcome: 'blocked',
+      errorCode: failed.last_error || 'email_delivery_blocked',
+    });
     return failed || db.getEmailJobById(job.id);
   }
 }
@@ -182,7 +198,9 @@ function scheduleKick() {
   if (stopping || scheduledKick) return false;
   scheduledKick = setImmediate(() => {
     scheduledKick = null;
-    drainRequested().catch((error) => console.error('[email:worker]', error.message));
+    drainRequested().catch((error) => log.error('email_worker_failed', {
+      errorCode: log.errorCode(error, 'email_worker_failed'),
+    }));
   });
   scheduledKick.unref();
   return true;
@@ -206,10 +224,14 @@ async function resumePendingJobs() {
 function start() {
   if (stopping || pollTimer) return false;
   pollTimer = setInterval(() => {
-    drainDueJobs({ maxJobs: 1 }).catch((error) => console.error('[email:poll]', error.message));
+    drainDueJobs({ maxJobs: 1 }).catch((error) => log.error('email_poll_failed', {
+      errorCode: log.errorCode(error, 'email_poll_failed'),
+    }));
   }, POLL_MS);
   pollTimer.unref();
-  resumePendingJobs().catch((error) => console.error('[email:resume]', error.message));
+  resumePendingJobs().catch((error) => log.error('email_resume_failed', {
+    errorCode: log.errorCode(error, 'email_resume_failed'),
+  }));
   return true;
 }
 

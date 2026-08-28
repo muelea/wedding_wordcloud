@@ -4,6 +4,7 @@ const db = require('./db');
 const fulfillment = require('./fulfillment');
 const emailDelivery = require('./emailDelivery');
 const lifecycle = require('./lifecycle');
+const log = require('./structuredLog');
 
 const WALL_CLOCK_BUDGET_MS = 15_000;
 const FULFILLMENT_BUDGET_MS = 7_000;
@@ -18,6 +19,9 @@ function sanitizedCode(error) {
 async function execute(triggerKind) {
   const startedAt = Date.now();
   const run = await db.startMaintenanceRun(triggerKind);
+  log.info('maintenance_started', {
+    maintenanceRunId: run.id, operation: 'maintenance', outcome: 'running',
+  });
   try {
     const fulfillmentSummary = await fulfillment.drainDueJobs({
       maxJobs: 1,
@@ -42,9 +46,24 @@ async function execute(triggerKind) {
       artifactsCleaned: retentionSummary.artifacts,
     };
     await db.finishMaintenanceRun(run.id, summary);
+    log.info('maintenance_completed', {
+      maintenanceRunId: run.id,
+      operation: 'maintenance',
+      outcome: 'succeeded',
+      durationMs: Date.now() - startedAt,
+      count: Object.values(summary).reduce((total, value) => total + Number(value || 0), 0),
+    });
     return { status: 'ok', summary };
   } catch (error) {
-    await db.failMaintenanceRun(run.id, sanitizedCode(error));
+    const code = sanitizedCode(error);
+    await db.failMaintenanceRun(run.id, code);
+    log.error('maintenance_failed', {
+      maintenanceRunId: run.id,
+      operation: 'maintenance',
+      outcome: 'failed',
+      durationMs: Date.now() - startedAt,
+      errorCode: code,
+    });
     throw error;
   }
 }

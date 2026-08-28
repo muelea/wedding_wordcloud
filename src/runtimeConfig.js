@@ -22,6 +22,7 @@ function validateRuntimeConfig() {
   );
   for (const name of [
     'ALLOW_TEST_DATA_RESET',
+    'MAINTENANCE_MODE',
     'STRIPE_ALLOW_LIVE_PAYMENTS',
     'PRINTFUL_ALLOW_ORDER_WRITES',
     'PRINTFUL_CONFIRM_LIVE_ORDERS',

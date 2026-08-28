@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('./structuredLog');
+
 function asyncRoute(handler) {
   return function asyncExpressBoundary(req, res, next) {
     Promise.resolve(handler(req, res, next)).catch(next);
@@ -14,7 +16,11 @@ function sanitizedErrorHandler(error, req, res, next) {
   if (error instanceof SyntaxError && error?.status === 400 && Object.hasOwn(error, 'body')) {
     return res.status(400).json({ error: 'invalid_json' });
   }
-  console.error(`[http] ${req.method} ${req.path}:`, error?.message || error);
+  log.error('http_request_failed', {
+    operation: 'express_route',
+    errorCode: log.errorCode(error, 'internal_server_error'),
+    statusCode: 500,
+  });
   return res.status(500).json({ error: 'internal_server_error' });
 }
 

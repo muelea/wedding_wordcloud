@@ -18,6 +18,9 @@
     "fly:secrets": "node scripts/configure-fly-secrets.js",
     "smoke:hosted": "node scripts/hosted-smoke.js",
     "load:socket:capacity": "node scripts/socket-capacity.js",
+    "ops:status": "node scripts/operations-status.js",
+    "ops:retry-fulfillment": "node scripts/retry-blocked-fulfillment.js",
+    "ops:prelive-cleanup": "node scripts/prelive-cleanup.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {

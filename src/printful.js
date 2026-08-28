@@ -1,6 +1,8 @@
 'use strict';
 
 const crypto = require('crypto');
+const log = require('./structuredLog');
+const performanceProbe = require('./performanceProbe');
 
 /**
  * Printful catalog, pricing and safely gated order creation.
@@ -56,6 +58,7 @@ async function printfulRequest(path, options = {}) {
   }
 
   const { allowNotFound = false, timeoutMs = 10_000, ...fetchOptions } = options;
+  const startedAt = Date.now();
   let response;
   try {
     response = await fetch(`https://api.printful.com${path}`, {
@@ -64,6 +67,9 @@ async function printfulRequest(path, options = {}) {
       signal: fetchOptions.signal || AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
+    performanceProbe.recordExternalCall('printful', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
     throw new PrintfulApiError(
       'PRINTFUL_UNAVAILABLE',
       `Printful ist momentan nicht erreichbar: ${error.message}`,
@@ -78,8 +84,16 @@ async function printfulRequest(path, options = {}) {
     // The status code below still gives callers a useful, sanitized error.
   }
 
-  if (allowNotFound && response.status === 404) return null;
+  if (allowNotFound && response.status === 404) {
+    performanceProbe.recordExternalCall('printful', {
+      durationMs: Date.now() - startedAt, succeeded: true,
+    });
+    return null;
+  }
   if (!response.ok || !data || data.code >= 400) {
+    performanceProbe.recordExternalCall('printful', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
     const apiStatus = Number(data?.code) >= 400 ? Number(data.code) : response.status;
     const message = typeof data?.error?.message === 'string'
       ? data.error.message
@@ -92,6 +106,9 @@ async function printfulRequest(path, options = {}) {
     throw new PrintfulApiError(code, message, apiStatus >= 500 ? 502 : apiStatus);
   }
 
+  performanceProbe.recordExternalCall('printful', {
+    durationMs: Date.now() - startedAt, succeeded: true,
+  });
   return data.result;
 }
 
@@ -169,7 +186,7 @@ async function createPrintfulOrder({ payload, confirm = false, timeoutMs = 10_00
   if (!isConfigured()) {
     const externalId = payload?.external_id || `unconfigured-${Date.now()}`;
     const mockId = `MOCK-${externalId}`;
-    console.log(`[printful:mock] ${externalId} was not sent; PRINTFUL_API_KEY is not set.`);
+    log.info('printful_order_mocked', { outcome: 'mocked', mode: 'mock', provider: 'printful' });
     return { printfulOrderId: mockId, status: 'mocked', mocked: true, confirmed: false };
   }
 

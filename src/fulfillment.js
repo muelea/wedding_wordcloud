@@ -7,6 +7,7 @@ const db = require('./db');
 const printful = require('./printful');
 const printArtifacts = require('./printArtifacts');
 const { getProduct, resolveProductOrientation } = require('./products');
+const log = require('./structuredLog');
 
 const MAX_ATTEMPTS = 3;
 const LEASE_MS = 120_000;
@@ -309,16 +310,31 @@ async function executeClaimedOrder(order, { deadline = null, providerSmoke = fal
       await db.extendOrderArtifactRetention(order.id, new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
     }
     if (completedMode === 'mock') {
-      console.log(`[fulfillment:mock] Bestellung ${order.id} sicher simuliert; es wurde keine Anfrage an Printful gesendet.`);
+      log.info('fulfillment_mock_completed', {
+        orderId: order.id, outcome: 'mocked', mode: 'mock',
+      });
     }
     return completed;
   } catch (error) {
     if (error.code === 'FULFILLMENT_LEASE_LOST') return db.getOrderById(order.id);
     const blocked = error.code === 'FULFILLMENT_BLOCKED' || error.code === 'PRINTFUL_ORDER_TERMINAL';
     const failed = await db.failFulfillment(order.id, lease, error, { blocked });
-    console.error(`[fulfillment:${blocked ? 'blocked' : 'failed'}] order ${order.id}:`, error.message);
+    log.error(blocked ? 'fulfillment_blocked' : 'fulfillment_failed', {
+      orderId: order.id,
+      outcome: blocked ? 'blocked' : 'failed',
+      errorCode: log.errorCode(error, blocked ? 'fulfillment_blocked' : 'fulfillment_failed'),
+      mode: order.mode,
+    });
     return failed || db.getOrderById(order.id);
   }
+}
+
+async function processClaimedOrder(order, options = {}) {
+  if (!order || order.fulfillment_status !== 'processing' ||
+      !order.fulfillment_locked_by || !order.fulfillment_locked_until) {
+    throw new Error('manual fulfillment retry requires a claimed order');
+  }
+  return executeClaimedOrder(order, options);
 }
 
 async function processOrder(orderId, options = {}) {
@@ -365,7 +381,9 @@ function scheduleKick() {
   if (stopping || scheduledKick) return false;
   scheduledKick = setImmediate(() => {
     scheduledKick = null;
-    drainRequested().catch((error) => console.error('[fulfillment:worker]', error.message));
+    drainRequested().catch((error) => log.error('fulfillment_worker_failed', {
+      errorCode: log.errorCode(error, 'fulfillment_worker_failed'),
+    }));
   });
   scheduledKick.unref();
   return true;
@@ -389,10 +407,14 @@ async function resumePendingOrders() {
 function start() {
   if (stopping || pollTimer) return false;
   pollTimer = setInterval(() => {
-    drainDueJobs({ maxJobs: 1 }).catch((error) => console.error('[fulfillment:poll]', error.message));
+    drainDueJobs({ maxJobs: 1 }).catch((error) => log.error('fulfillment_poll_failed', {
+      errorCode: log.errorCode(error, 'fulfillment_poll_failed'),
+    }));
   }, POLL_MS);
   pollTimer.unref();
-  resumePendingOrders().catch((error) => console.error('[fulfillment:resume]', error.message));
+  resumePendingOrders().catch((error) => log.error('fulfillment_resume_failed', {
+    errorCode: log.errorCode(error, 'fulfillment_resume_failed'),
+  }));
   return true;
 }
 
@@ -421,6 +443,7 @@ module.exports = {
   itemExternalId,
   buildPrintfulPayload,
   processOrder,
+  processClaimedOrder,
   drainDueJobs,
   scheduleOrder,
   resumePendingOrders,

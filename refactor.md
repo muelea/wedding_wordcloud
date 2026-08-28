@@ -1585,11 +1585,13 @@ be localized:
    notices, signed Resend delivery webhooks and duplicate/retry tests.
 7. Socket broadcast coalescing, event ceilings, load/reconnect tooling and the
    measured single-Machine capacity test.
-8. Structured observability, external alerts, PII retention schedule,
-   database/Storage backup and restore runbook, and guarded pre-live cleanup
-   command.
-9. README and `.env.example` final synchronization plus the complete hosted
-   test-to-live checklist.
+8. Structured privacy-safe logs and request correlation, built-in aggregate
+   metrics/status, documented manual blocked-fulfillment retry, PII retention
+   decision record, and guarded pre-live cleanup command. Use only the current
+   Node/Fly/Supabase stack in this phase.
+9. One external error/uptime notification path, database backup, separate
+   Storage-object export, tested restoration, README and `.env.example` final
+   synchronization, and the complete hosted test-to-live checklist.
 
 Prefer one coherent commit per numbered boundary. Every boundary must leave the
 application bootable and `npm test` green; do not split the async database layer

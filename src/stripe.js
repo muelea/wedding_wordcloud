@@ -1,6 +1,7 @@
 'use strict';
 
 const I18n = require('./i18n');
+const performanceProbe = require('./performanceProbe');
 
 /**
  * Stripe-hosted Checkout for trusted, server-side EUR quotes.
@@ -186,34 +187,46 @@ async function createCheckoutSession({
     throw error;
   }
 
-  const session = await client.checkout.sessions.create({
-    mode: 'payment',
-    locale: checkoutLocale,
-    payment_method_types: ['card'],
-    client_reference_id: String(order.id),
-    line_items: [{
-      quantity: 1,
-      price_data: {
-        currency,
-        unit_amount: totalCents,
-        product_data: {
-          name: quantityLabel,
-          description,
-          metadata: {
-            productKey: singleProduct?.key || 'mixed',
-            configurationId: cartConfigurationIds[0] || configurationId || '',
-            configurationIds: cartConfigurationIds.join(','),
+  const startedAt = Date.now();
+  let session;
+  try {
+    session = await client.checkout.sessions.create({
+      mode: 'payment',
+      locale: checkoutLocale,
+      payment_method_types: ['card'],
+      client_reference_id: String(order.id),
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency,
+          unit_amount: totalCents,
+          product_data: {
+            name: quantityLabel,
+            description,
+            metadata: {
+              productKey: singleProduct?.key || 'mixed',
+              configurationId: cartConfigurationIds[0] || configurationId || '',
+              configurationIds: cartConfigurationIds.join(','),
+            },
           },
         },
-      },
-    }],
-    metadata,
-    payment_intent_data: { metadata },
-    success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: cancelUrl,
-    expires_at: expiresAt,
-  }, {
-    idempotencyKey,
+      }],
+      metadata,
+      payment_intent_data: { metadata },
+      success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl,
+      expires_at: expiresAt,
+    }, {
+      idempotencyKey,
+    });
+  } catch (error) {
+    performanceProbe.recordExternalCall('stripe', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
+    throw error;
+  }
+  performanceProbe.recordExternalCall('stripe', {
+    durationMs: Date.now() - startedAt, succeeded: true,
   });
 
   return { url: session.url, id: session.id };

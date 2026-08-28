@@ -219,6 +219,7 @@ Everything in `.env.example` is documented inline. Summary:
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | hosted runtime | active private Storage API URL and backend-only secret key; the secret key never reaches browser code |
 | `SUPABASE_STORAGE_BUCKET` | hosted runtime | private photo/print-artifact bucket name (currently `wolkenworte-private`) |
 | `RATE_LIMIT_HMAC_SECRET`, `MAINTENANCE_SECRET` | hosted environment | independent secrets for privacy-preserving rate-limit identities and authenticated maintenance wake-ups |
+| `MAINTENANCE_MODE` | no (defaults `false`) | temporary stop-the-world switch for the guarded pre-live cleanup; public HTTP receives 503 and Socket.io connections are rejected while health checks remain reachable |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | before transactional-email smoke test | backend-only sending key and verified Wolkenworte sender |
 | `RESEND_WEBHOOK_SECRET` | after the Resend webhook is deployed | verifies signed Resend delivery webhooks |
 | `RESEND_SMOKE_RECIPIENTS` | only for controlled provider smoke | comma-separated allowlist of maintainer/test recipients accepted by the guarded live-email smoke command |
@@ -243,6 +244,12 @@ activated; hosted Stripe test payments cannot contact the live Resend API.
 **Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
 future hosted secrets must be set in the provider's encrypted secret store,
 not copied into the repository or a deployment manifest.
+
+Phase 8's built-in status, manual fulfillment retry and guarded hosted-test
+cleanup procedures are documented in [docs/operations.md](docs/operations.md).
+The current enforced and pending PII-retention decisions are recorded in
+[docs/data-retention.md](docs/data-retention.md). Backups, restoration testing
+and every external alert/error-notification service are explicitly Phase 9.
 
 ## Provisional test pricing
 
@@ -636,5 +643,6 @@ keys in Fly for the next deploy.
    draft in the dashboard.
 8. Run the guarded Printful draft smoke for every materially different
    placement type and retain the signed v2 webhook for shipment status.
-9. Add the Phase 8 external alert for stale maintenance heartbeats and pg_net
-   non-2xx/timeout results.
+9. In Phase 9, add one external error/uptime notification path for stale
+   maintenance heartbeats and pg_net non-2xx/timeout results, then configure
+   database and separate Storage-object backups and run the restoration test.

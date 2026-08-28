@@ -25,6 +25,8 @@ const designAssets = require('../designAssets');
 const MugIcons = require('../../public/js/mug-icons.js');
 const I18n = require('../i18n');
 const { asyncRoute } = require('../asyncRoute');
+const log = require('../structuredLog');
+const performanceProbe = require('../performanceProbe');
 
 const PIN_RE = /^\d{4,6}$/;
 const MAX_NAME_LENGTH = 80;
@@ -246,10 +248,13 @@ function sendPrintfulError(res, error) {
     });
   }
   if (error?.code === 'PRINTFUL_AUTH_FAILED') {
-    console.error('Printful authentication failed while estimating costs.');
+    log.error('printful_quote_failed', { errorCode: 'printful_auth_failed', provider: 'printful' });
   } else {
-    console.error('Printful cost estimate failed:', error?.message || error);
+    log.error('printful_quote_failed', {
+      errorCode: log.errorCode(error, 'printful_quote_failed'), provider: 'printful',
+    });
   }
+  performanceProbe.recordOperation('quoteFailed');
   return res.status(502).json({
     error: 'pricing_unavailable',
     message: 'Die Preisberechnung ist gerade nicht erreichbar. Bitte versucht es gleich noch einmal.',
@@ -594,6 +599,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   }
 
   function rateLimited(res) {
+    performanceProbe.recordOperation('httpRateLimited');
     return res.status(429).json({ error: 'rate_limited' });
   }
 
@@ -944,7 +950,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           customerCosts: calculatedQuote.shipmentQuotes[index],
         }));
         if (calculatedQuote.currency !== 'EUR') {
-          console.error(`Printful returned ${calculatedQuote.currency}; dynamic checkout requires EUR.`);
+          performanceProbe.recordOperation('quoteFailed');
+          log.error('printful_quote_currency_mismatch', { errorCode: 'pricing_currency_mismatch' });
           return res.status(502).json({
             error: 'pricing_currency_mismatch',
             message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
@@ -956,10 +963,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           shipments: quotedShipments,
           quote: calculatedQuote,
         });
+        performanceProbe.recordOperation('quoteSucceeded');
         res.json({ quote: checkoutQuoteResponse(savedQuote) });
       } catch (error) {
         if (error?.message?.startsWith('invalid Printful') || error?.message?.startsWith('invalid negative')) {
-          console.error('Invalid Printful pricing response:', error.message);
+          performanceProbe.recordOperation('quoteFailed');
+          log.error('printful_quote_invalid', { errorCode: 'invalid_pricing_response' });
           return res.status(502).json({
             error: 'pricing_unavailable',
             message: 'Printful hat gerade keinen gültigen Preis geliefert. Bitte versucht es erneut.',
@@ -998,7 +1007,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         });
       }
       if (calculatedQuote.currency !== 'EUR') {
-        console.error(`Printful returned ${calculatedQuote.currency}; dynamic checkout requires EUR.`);
+        performanceProbe.recordOperation('quoteFailed');
+        log.error('printful_quote_currency_mismatch', { errorCode: 'pricing_currency_mismatch' });
         return res.status(502).json({
           error: 'pricing_currency_mismatch',
           message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
@@ -1011,10 +1021,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         shipments: pricedShipments,
         quote: calculatedQuote,
       });
+      performanceProbe.recordOperation('quoteSucceeded');
       res.json({ quote: { ...checkoutQuoteResponse(savedQuote), ...cartSummary(configurations) } });
     } catch (error) {
       if (error?.message?.startsWith('invalid Printful') || error?.message?.startsWith('invalid negative')) {
-        console.error('Invalid Printful pricing response:', error.message);
+        performanceProbe.recordOperation('quoteFailed');
+        log.error('printful_quote_invalid', { errorCode: 'invalid_pricing_response' });
         return res.status(502).json({
           error: 'pricing_unavailable',
           message: 'Printful hat gerade keinen gültigen Preis geliefert. Bitte versucht es erneut.',
@@ -1158,7 +1170,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         if (error?.code === 'STRIPE_NOT_CONFIGURED') {
           return res.status(501).json({ error: 'checkout_not_configured' });
         }
-        console.error('Cart checkout recovery failed:', error.message);
+        performanceProbe.recordOperation('checkoutFailed');
+        log.error('stripe_checkout_recovery_failed', {
+          orderId: order.id, errorCode: log.errorCode(error, 'checkout_recovery_failed'),
+        });
       }
       return res.status(409).json({
         error: 'checkout_in_progress',
@@ -1250,6 +1265,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
         });
       }
+      performanceProbe.recordOperation('checkoutSucceeded');
       return res.json({ url: session.url });
     } catch (error) {
       if (error?.code === 'STRIPE_NOT_CONFIGURED') {
@@ -1262,7 +1278,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         return res.status(503).json({ error: 'stripe_live_mode_blocked', message: error.message });
       }
       if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
-      console.error('Cart checkout creation failed:', error);
+      performanceProbe.recordOperation('checkoutFailed');
+      log.error('stripe_checkout_creation_failed', {
+        orderId: order?.id, errorCode: log.errorCode(error, 'checkout_creation_failed'),
+      });
       return res.status(500).json({
         error: 'checkout_failed',
         message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',
@@ -1319,7 +1338,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           if (error?.code === 'STRIPE_NOT_CONFIGURED') {
             return res.status(501).json({ error: 'checkout_not_configured' });
           }
-          console.error('Dynamic checkout recovery failed:', error.message);
+          performanceProbe.recordOperation('checkoutFailed');
+          log.error('stripe_checkout_recovery_failed', {
+            orderId: order.id, errorCode: log.errorCode(error, 'checkout_recovery_failed'),
+          });
         }
         return res.status(409).json({
           error: 'checkout_in_progress',
@@ -1413,6 +1435,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
             message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
           });
         }
+        performanceProbe.recordOperation('checkoutSucceeded');
         return res.json({ url: session.url });
       } catch (error) {
         if (error?.code === 'STRIPE_NOT_CONFIGURED') {
@@ -1425,7 +1448,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           return res.status(503).json({ error: 'stripe_live_mode_blocked', message: error.message });
         }
         if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
-        console.error('Dynamic checkout creation failed:', error);
+        performanceProbe.recordOperation('checkoutFailed');
+        log.error('stripe_checkout_creation_failed', {
+          orderId: order?.id, errorCode: log.errorCode(error, 'checkout_creation_failed'),
+        });
         return res.status(500).json({
           error: 'checkout_failed',
           message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',

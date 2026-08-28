@@ -7,6 +7,8 @@ const stripeIntegration = require('../stripe');
 const fulfillment = require('../fulfillment');
 const emailDelivery = require('../emailDelivery');
 const { asyncRoute } = require('../asyncRoute');
+const log = require('../structuredLog');
+const performanceProbe = require('../performanceProbe');
 
 // Mounted before express.json() in server.js. Stripe signature verification
 // requires the exact raw bytes, so this route owns its raw body parser.
@@ -25,7 +27,8 @@ function makeWebhookRouter() {
       if (error.code === 'RESEND_WEBHOOK_NOT_CONFIGURED') {
         return res.status(501).send('resend webhook not configured');
       }
-      console.warn('[webhook:resend] signature verification failed');
+      performanceProbe.recordOperation('webhookFailed');
+      log.warn('resend_webhook_rejected', { errorCode: 'signature_verification_failed' });
       return res.status(400).send('invalid webhook signature');
     }
     const supported = new Set([
@@ -42,7 +45,11 @@ function makeWebhookRouter() {
       emailJobTag: event.data.tags?.email_job_id,
     });
     if (result.job && ['email.bounced', 'email.failed', 'email.complained'].includes(event.type)) {
-      console.error(`[email:provider-alert] job ${result.job.id}: ${result.job.status}`);
+      log.error('email_provider_failure_recorded', {
+        jobId: result.job.id,
+        outcome: result.job.status,
+        errorCode: 'provider_delivery_failed',
+      });
     }
     return res.json({ received: true, duplicate: result.duplicate, matched: result.matched });
   }));
@@ -58,7 +65,10 @@ function makeWebhookRouter() {
       if (error.code === 'PRINTFUL_WEBHOOK_NOT_CONFIGURED') {
         return res.status(501).send('printful webhook not configured');
       }
-      console.error('[webhook:printful] webhook configuration invalid:', error.message);
+      performanceProbe.recordOperation('webhookFailed');
+      log.error('printful_webhook_unavailable', {
+        errorCode: log.errorCode(error, 'webhook_configuration_invalid'),
+      });
       return res.status(500).send('printful webhook unavailable');
     }
     if (!signatureValid) return res.status(400).send('invalid webhook signature');
@@ -114,17 +124,20 @@ function makeWebhookRouter() {
       if (error.code === 'STRIPE_NOT_CONFIGURED' ||
           error.code === 'STRIPE_WEBHOOK_SECRET_MISSING' ||
           error.code === 'STRIPE_LIVE_MODE_BLOCKED') {
-        console.warn('[webhook:stripe]', error.message);
+        log.warn('stripe_webhook_unconfigured', {
+          errorCode: log.errorCode(error, 'stripe_not_configured'),
+        });
         return res.status(501).send('stripe not configured');
       }
-      console.warn('[webhook:stripe] signature verification failed:', error.message);
-      return res.status(400).send(`Webhook Error: ${error.message}`);
+      performanceProbe.recordOperation('webhookFailed');
+      log.warn('stripe_webhook_rejected', { errorCode: 'signature_verification_failed' });
+      return res.status(400).send('Webhook Error: signature verification failed');
     }
 
     // Hard safety switch for this phase: even a correctly signed live event
     // cannot transition an order until live payments are deliberately enabled.
     if (event.livemode && !stripeIntegration.isLiveModeAllowed()) {
-      console.error(`[webhook:stripe] ignored live event ${event.id}; live payments are blocked.`);
+      log.error('stripe_live_event_blocked', { errorCode: 'live_mode_blocked' });
       return res.json({ received: true, ignored: 'live_mode_blocked' });
     }
 
@@ -146,7 +159,10 @@ function makeWebhookRouter() {
         }
         return res.json({ received: true, duplicate: result.duplicate, matched: result.matched });
       } catch (error) {
-        console.error('[webhook:stripe] could not persist refund:', error);
+        performanceProbe.recordOperation('webhookFailed');
+        log.error('stripe_refund_persist_failed', {
+          errorCode: log.errorCode(error, 'refund_persist_failed'),
+        });
         return res.status(500).send('could not persist refund');
       }
     }
@@ -168,7 +184,7 @@ function makeWebhookRouter() {
       }
     }
     if (!order) {
-      console.warn(`[webhook:stripe] completed unknown Checkout Session ${session.id}`);
+      log.warn('stripe_checkout_session_unknown', { errorCode: 'order_not_found' });
       return res.json({ received: true, ignored: 'order_not_found' });
     }
 
@@ -184,11 +200,9 @@ function makeWebhookRouter() {
     const amountMatches = Number(session.amount_total) === Number(order.total_cents) &&
       String(session.currency || '').toUpperCase() === order.currency;
     if (!metadataMatches || !amountMatches || session.payment_status !== 'paid') {
-      console.error('[webhook:stripe] ignored Checkout Session with mismatched trusted order data', {
-        stripeSessionId: session.id,
-        metadataMatches,
-        amountMatches,
-        paymentStatus: session.payment_status,
+      log.error('stripe_checkout_session_mismatch', {
+        orderId: order.id,
+        errorCode: 'trusted_order_mismatch',
       });
       return res.json({ received: true, ignored: 'order_mismatch' });
     }
@@ -211,17 +225,26 @@ function makeWebhookRouter() {
       if (result.emailJob?.id && result.emailJob.status === 'pending') {
         emailDelivery.scheduleJob(result.emailJob.id);
       } else if (result.emailJob?.status === 'blocked') {
-        console.error(`[email:blocked] order ${result.order?.id}: buyer_email_missing`);
+        log.error('email_job_blocked', {
+          orderId: result.order?.id,
+          errorCode: 'buyer_email_missing',
+          outcome: 'blocked',
+        });
       }
       if (!result.duplicate) {
-        const message = event.livemode
-          ? 'Live-Zahlung gespeichert; Fulfillment wurde sicher vorgemerkt.'
-          : 'Testzahlung gespeichert; Fulfillment läuft ausschließlich als lokaler Mock.';
-        console.log(`[webhook:stripe] Bestellung ${order.id}: ${message}`);
+        log.info('stripe_payment_recorded', {
+          orderId: order.id,
+          outcome: 'succeeded',
+          mode: event.livemode ? 'live' : 'test',
+        });
       }
       return res.json({ received: true, duplicate: result.duplicate });
     } catch (error) {
-      console.error('[webhook:stripe] could not persist successful payment:', error);
+      performanceProbe.recordOperation('webhookFailed');
+      log.error('stripe_payment_persist_failed', {
+        orderId: order.id,
+        errorCode: log.errorCode(error, 'payment_persist_failed'),
+      });
       // A temporary database error should be retried by Stripe.
       return res.status(500).send('could not persist payment');
     }

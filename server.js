@@ -24,6 +24,8 @@ const { validateRuntimeConfig } = require('./src/runtimeConfig');
 const { sendHtml, staticCacheMiddleware } = require('./src/httpCache');
 const performanceProbe = require('./src/performanceProbe');
 const { createWordUpdateBroadcaster } = require('./src/wordBroadcasts');
+const log = require('./src/structuredLog');
+const maintenanceMode = require('./src/maintenanceMode');
 
 const PORT = process.env.PORT || 3000;
 
@@ -41,6 +43,7 @@ io.engine.on('headers', (headers) => {
 app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
 app.use(compression());
+app.use(log.requestContext);
 
 let initialized = false;
 let acceptingTraffic = false;
@@ -64,11 +67,20 @@ app.get('/health/ready', async (req, res) => {
   }
 });
 
+// Secret-bound operator status/fingerprint remains available while public
+// traffic is paused, so a destructive cleanup can verify its exact target.
+app.use('/internal/performance', makePerformanceRouter());
+
+// The one-time pre-live cleanup requires a verifiable stop-the-world window.
+// Liveness/readiness remain reachable, while every public HTTP and Socket.io
+// operation is rejected before it can write business data.
+app.use(maintenanceMode.middleware);
+io.use(maintenanceMode.socketGuard);
+
 // Stripe webhook needs the raw, unparsed body for signature verification —
 // must be mounted BEFORE any express.json() body parser touches this path.
 app.use('/webhook', makeWebhookRouter({ port: PORT }));
 app.use('/internal/maintenance', makeMaintenanceRouter());
-app.use('/internal/performance', makePerformanceRouter());
 
 // Serve the pinned Three.js module locally so the configurator's 3D preview
 // never depends on a third-party CDN being reachable from a wedding venue.
@@ -220,9 +232,13 @@ async function start() {
   await initialize();
   server.listen(PORT, () => {
     const base = getBaseUrl(null, PORT);
-    console.log('\n  ♡  WeddingCloud is running!\n');
-    console.log(`  Create an event →  ${base}/`);
-    console.log(`  (each event then gets its own /e/<slug> and /e/<slug>/display URLs)\n`);
+    if (process.env.NODE_ENV === 'production') {
+      log.info('server_started', { outcome: 'ready' });
+    } else {
+      console.log('\n  ♡  WeddingCloud is running!\n');
+      console.log(`  Create an event →  ${base}/`);
+      console.log(`  (each event then gets its own /e/<slug> and /e/<slug>/display URLs)\n`);
+    }
   });
 }
 
@@ -270,7 +286,7 @@ function shutdown(signal = 'shutdown') {
   if (shutdownPromise) return shutdownPromise;
   shuttingDown = true;
   acceptingTraffic = false;
-  console.log(`[server] ${signal} received; draining Socket.io, HTTP, workers and Postgres.`);
+  log.info('server_shutdown_started', { signal });
   shutdownPromise = (async () => {
     const [transportClosed, fulfillmentWorker, emailWorker] = await Promise.all([
       closeHttpAndSockets(),
@@ -280,35 +296,35 @@ function shutdown(signal = 'shutdown') {
     wordBroadcasts.stop();
     socketRuntime.stop();
     performanceProbe.stop();
-    if (!transportClosed) console.warn('[server] transport drain reached its 10-second bound.');
+    if (!transportClosed) log.warn('server_transport_drain_timeout', { durationMs: 10_000 });
     if (!fulfillmentWorker.drained) {
-      console.warn(`[server] ${fulfillmentWorker.activeOrders} fulfillment job(s) remain recoverable after restart.`);
+      log.warn('server_fulfillment_drain_incomplete', { count: fulfillmentWorker.activeOrders });
     }
     if (!emailWorker.drained) {
-      console.warn(`[server] ${emailWorker.activeJobs} email job(s) remain recoverable after restart.`);
+      log.warn('server_email_drain_incomplete', { count: emailWorker.activeJobs });
     }
     await db.closePool();
-    console.log('[server] graceful shutdown complete.');
+    log.info('server_shutdown_completed', { outcome: 'succeeded' });
   })();
   return shutdownPromise;
 }
 
 if (require.main === module) {
   start().catch(async (error) => {
-    console.error('[startup] Wolkenworte could not start:', error.message);
+    log.error('server_startup_failed', { errorCode: log.errorCode(error, 'startup_failed') });
     process.exitCode = 1;
     await db.closePool().catch(() => {});
   });
   for (const signal of ['SIGTERM', 'SIGINT']) {
     process.once(signal, () => {
       const forceExit = setTimeout(() => {
-        console.error('[shutdown] 28-second safety bound reached; forcing exit.');
+        log.error('server_shutdown_forced', { durationMs: 28_000 });
         process.exit(1);
       }, 28_000);
       forceExit.unref();
       shutdown(signal)
         .catch((error) => {
-          console.error('[shutdown] clean shutdown failed:', error.message);
+          log.error('server_shutdown_failed', { errorCode: log.errorCode(error, 'shutdown_failed') });
           process.exitCode = 1;
         })
         .finally(() => clearTimeout(forceExit));

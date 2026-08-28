@@ -49,7 +49,7 @@ async function main() {
         SELECT current_user AS current_user,
                (SELECT max(version)::text FROM app_schema_versions) AS schema_version
       `);
-      if (identity.rows[0]?.current_user !== 'wolkenworte_app' || identity.rows[0]?.schema_version !== '4') {
+      if (identity.rows[0]?.current_user !== 'wolkenworte_app' || identity.rows[0]?.schema_version !== '6') {
         throw new Error(
           'Runtime-Rolle kann das Wolkenworte-Schema nicht korrekt lesen ' +
           `(user=${identity.rows[0]?.current_user || 'unknown'}, ` +

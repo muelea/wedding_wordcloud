@@ -5,8 +5,9 @@ const { Pool } = require('pg');
 const { connectionOptions } = require('./dbConfig');
 const { getProduct, resolveProductOrientation } = require('./products');
 const { buildEmailSnapshot } = require('./emailTemplates');
+const log = require('./structuredLog');
 
-const REQUIRED_SCHEMA_VERSION = '5';
+const REQUIRED_SCHEMA_VERSION = '6';
 const MAX_CONFIGURATION_ASSETS = 6;
 const MAX_CONFIGURATION_ASSET_BYTES = 6 * 1024 * 1024;
 const MAX_UNATTACHED_OWNER_ASSETS = 12;
@@ -38,7 +39,9 @@ function getPool() {
   if (pool) return pool;
   pool = new Pool(connectionOptions(process.env.DATABASE_URL));
   pool.on('error', (error) => {
-    console.error('[database] idle Postgres client failed:', error.message);
+    log.error('database_idle_client_failed', {
+      operation: 'postgres_pool', errorCode: log.errorCode(error, 'database_client_failed'),
+    });
   });
   return pool;
 }
@@ -2191,6 +2194,181 @@ async function getLatestMaintenanceRun() {
   return rowToBoundary(result.rows[0]);
 }
 
+// ── Phase 8 operational status and guarded operator actions ───────────
+async function getOperationalStatus() {
+  const result = await getPool().query(`
+    SELECT
+      (SELECT status FROM maintenance_runs ORDER BY id DESC LIMIT 1) AS latest_maintenance_status,
+      (SELECT extract(epoch from transaction_timestamp() - max(completed_at))::bigint
+       FROM maintenance_runs WHERE status = 'succeeded') AS maintenance_success_age_seconds,
+      (SELECT count(*)::integer FROM orders
+       WHERE status IN ('paid_test', 'paid')
+         AND fulfillment_status IN ('pending', 'failed', 'processing')) AS fulfillment_actionable,
+      (SELECT count(*)::integer FROM orders
+       WHERE status IN ('paid_test', 'paid') AND fulfillment_status = 'blocked') AS fulfillment_blocked,
+      (SELECT count(*)::integer FROM orders
+       WHERE status IN ('paid_test', 'paid') AND fulfillment_status = 'processing'
+         AND fulfillment_locked_until <= transaction_timestamp()) AS fulfillment_expired_leases,
+      (SELECT count(*)::integer FROM orders
+       WHERE status IN ('paid_test', 'paid')
+         AND fulfillment_status IN ('pending', 'failed', 'processing')
+         AND paid_at < transaction_timestamp() - interval '5 minutes') AS fulfillment_over_five_minutes,
+      (SELECT coalesce(extract(epoch from transaction_timestamp() - min(coalesce(fulfillment_updated_at, paid_at)))::bigint, 0)
+       FROM orders WHERE status IN ('paid_test', 'paid')
+         AND fulfillment_status IN ('pending', 'failed', 'processing')) AS oldest_fulfillment_age_seconds,
+      (SELECT count(*)::integer FROM email_jobs
+       WHERE status IN ('pending', 'failed', 'processing')) AS email_actionable,
+      (SELECT count(*)::integer FROM email_jobs WHERE status = 'blocked') AS email_blocked,
+      (SELECT count(*)::integer FROM email_jobs
+       WHERE status = 'processing' AND locked_until <= transaction_timestamp()) AS email_expired_leases,
+      (SELECT count(*)::integer FROM email_jobs WHERE status = 'bounced') AS email_bounced,
+      (SELECT count(*)::integer FROM email_jobs WHERE status = 'complained') AS email_complained,
+      (SELECT coalesce(extract(epoch from transaction_timestamp() - min(created_at))::bigint, 0)
+       FROM email_jobs WHERE status IN ('pending', 'failed', 'processing')) AS oldest_email_age_seconds,
+      (SELECT count(*)::integer FROM design_assets
+       WHERE storage_status = 'delete_failed'
+          OR (storage_status = 'uploading'
+              AND created_at < transaction_timestamp() - interval '10 minutes')) AS design_asset_failures,
+      (SELECT count(*)::integer FROM print_artifacts
+       WHERE storage_status IN ('uploading', 'delete_failed')
+         AND created_at < transaction_timestamp() - interval '10 minutes') AS print_artifact_failures,
+      (SELECT count(*)::integer FROM checkout_quotes
+       WHERE expires_at <= transaction_timestamp()) AS expired_quotes,
+      (SELECT count(*)::integer FROM events
+       WHERE expires_at <= transaction_timestamp()) AS expired_events
+  `);
+  const row = result.rows[0] || {};
+  return {
+    sampledAt: new Date().toISOString(),
+    maintenance: {
+      latestStatus: row.latest_maintenance_status || 'missing',
+      successfulAgeSeconds: row.maintenance_success_age_seconds == null
+        ? null : Number(row.maintenance_success_age_seconds),
+    },
+    fulfillment: {
+      actionable: Number(row.fulfillment_actionable || 0),
+      blocked: Number(row.fulfillment_blocked || 0),
+      expiredLeases: Number(row.fulfillment_expired_leases || 0),
+      overFiveMinutes: Number(row.fulfillment_over_five_minutes || 0),
+      oldestAgeSeconds: Number(row.oldest_fulfillment_age_seconds || 0),
+    },
+    email: {
+      actionable: Number(row.email_actionable || 0),
+      blocked: Number(row.email_blocked || 0),
+      expiredLeases: Number(row.email_expired_leases || 0),
+      bounced: Number(row.email_bounced || 0),
+      complained: Number(row.email_complained || 0),
+      oldestAgeSeconds: Number(row.oldest_email_age_seconds || 0),
+    },
+    storage: {
+      designAssetFailures: Number(row.design_asset_failures || 0),
+      printArtifactFailures: Number(row.print_artifact_failures || 0),
+    },
+    retention: {
+      expiredQuotes: Number(row.expired_quotes || 0),
+      expiredEvents: Number(row.expired_events || 0),
+    },
+  };
+}
+
+async function claimBlockedFulfillmentForManualRetry({ orderId, lockedBy, leaseMs = 120_000 }) {
+  if (!/^\d+$/.test(String(orderId || ''))) throw new Error('invalid order id');
+  if (!/^operator-[A-Za-z0-9_-]{8,100}$/.test(String(lockedBy || ''))) {
+    throw new Error('invalid operator lease owner');
+  }
+  const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
+    ? leaseMs : 120_000;
+  return withTransaction(async (client) => {
+    const selected = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
+    const current = selected.rows[0];
+    if (!current || !['paid_test', 'paid'].includes(current.status)) return { outcome: 'not_found' };
+    if (current.fulfillment_status !== 'blocked') {
+      return { outcome: 'not_blocked', order: rowToBoundary(current) };
+    }
+    const actionResult = await client.query(`
+      INSERT INTO operator_actions (
+        action_type, order_id, before_state, status
+      ) VALUES ('manual_fulfillment_retry', $1, $2, 'running')
+      RETURNING *
+    `, [current.id, current.fulfillment_status]);
+    const claimed = await client.query(`
+      UPDATE orders
+      SET fulfillment_status = 'processing', fulfillment_attempts = 1,
+          fulfillment_error = null, fulfillment_next_attempt_at = transaction_timestamp(),
+          fulfillment_locked_by = $2,
+          fulfillment_locked_until = transaction_timestamp() + ($3::integer * interval '1 millisecond'),
+          fulfillment_lease_version = fulfillment_lease_version + 1,
+          fulfillment_updated_at = transaction_timestamp(), updated_at = transaction_timestamp()
+      WHERE id = $1 AND fulfillment_status = 'blocked'
+      RETURNING *
+    `, [current.id, lockedBy, safeLeaseMs]);
+    return {
+      outcome: 'claimed',
+      action: rowToBoundary(actionResult.rows[0]),
+      order: rowToBoundary(claimed.rows[0]),
+    };
+  });
+}
+
+async function finishOperatorAction(id, { succeeded, afterState = null, errorCode = null, summary = null } = {}) {
+  const result = await getPool().query(`
+    UPDATE operator_actions
+    SET status = $1, after_state = $2, error_code = $3,
+        summary_json = $4::jsonb, completed_at = transaction_timestamp()
+    WHERE id = $5 AND status = 'running'
+    RETURNING *
+  `, [
+    succeeded ? 'succeeded' : 'failed',
+    afterState == null ? null : String(afterState).slice(0, 80),
+    errorCode == null ? null : String(errorCode).slice(0, 120),
+    jsonValue(summary), id,
+  ]);
+  return rowToBoundary(result.rows[0]);
+}
+
+const PRELIVE_BUSINESS_TABLES = Object.freeze([
+  'email_smoke_runs', 'provider_smoke_runs', 'resend_webhook_events',
+  'printful_webhook_events', 'stripe_webhook_events', 'email_jobs',
+  'print_artifacts', 'order_items', 'checkout_order_shipments', 'orders',
+  'checkout_quotes', 'configuration_assets', 'design_assets', 'configurations',
+  'admin_pin_failures', 'archives', 'word_contributions', 'words', 'events',
+  'reserved_event_slugs', 'maintenance_runs',
+]);
+
+async function getPreliveCleanupCounts() {
+  const selections = PRELIVE_BUSINESS_TABLES
+    .map((table) => `(SELECT count(*)::integer FROM ${table}) AS ${table}`)
+    .join(',\n');
+  const result = await getPool().query(`SELECT ${selections}`);
+  return Object.fromEntries(PRELIVE_BUSINESS_TABLES.map((table) => [
+    table, Number(result.rows[0]?.[table] || 0),
+  ]));
+}
+
+async function clearPreliveBusinessData() {
+  return withTransaction(async (client) => {
+    const beforeSelections = PRELIVE_BUSINESS_TABLES
+      .map((table) => `(SELECT count(*)::integer FROM ${table}) AS ${table}`)
+      .join(',\n');
+    const beforeResult = await client.query(`SELECT ${beforeSelections}`);
+    const before = Object.fromEntries(PRELIVE_BUSINESS_TABLES.map((table) => [
+      table, Number(beforeResult.rows[0]?.[table] || 0),
+    ]));
+    for (const table of PRELIVE_BUSINESS_TABLES) {
+      await client.query(`DELETE FROM ${table}`);
+    }
+    await client.query('DELETE FROM operator_actions');
+    const actionResult = await client.query(`
+      INSERT INTO operator_actions (
+        action_type, before_state, after_state, status, summary_json, completed_at
+      ) VALUES ('prelive_cleanup', 'hosted_test_data', 'empty', 'succeeded', $1::jsonb,
+                transaction_timestamp())
+      RETURNING *
+    `, [jsonValue({ deletedRows: before })]);
+    return { before, action: rowToBoundary(actionResult.rows[0]) };
+  });
+}
+
 // ── Replay-safe Resend provider status updates ─────────────────────────
 async function recordResendWebhook({
   svixId,
@@ -2735,6 +2913,12 @@ module.exports = {
   finishMaintenanceRun,
   failMaintenanceRun,
   getLatestMaintenanceRun,
+  getOperationalStatus,
+  claimBlockedFulfillmentForManualRetry,
+  finishOperatorAction,
+  PRELIVE_BUSINESS_TABLES,
+  getPreliveCleanupCounts,
+  clearPreliveBusinessData,
   recordResendWebhook,
   recordStripeRefund,
   recordPrintfulWebhook,

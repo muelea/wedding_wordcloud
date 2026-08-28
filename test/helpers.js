@@ -16,6 +16,7 @@ const APPLICATION_MIGRATIONS = [
   '20260827000007_application_lifecycle_abuse.sql',
   '20260827000009_application_fulfillment_jobs.sql',
   '20260827000012_application_email_jobs.sql',
+  '20260827000014_application_operations.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -27,11 +28,17 @@ function clearApplicationModules() {
     '../src/emailDelivery',
     '../src/emailTemplates',
     '../src/resend',
+    '../src/stripe',
+    '../src/printful',
     '../src/privateStorage',
     '../src/designAssets',
     '../src/clientIdentity',
     '../src/rateLimits',
     '../src/performanceProbe',
+    '../src/structuredLog',
+    '../src/maintenanceMode',
+    '../src/cleanupTarget',
+    '../src/preliveCleanup',
     '../src/wordBroadcasts',
     '../src/socketEventCache',
     '../src/socketOwnershipLoader',
@@ -40,6 +47,9 @@ function clearApplicationModules() {
     '../src/printArtifacts',
     '../src/routes/maintenance',
     '../src/routes/performance',
+    '../scripts/operations-status',
+    '../scripts/retry-blocked-fulfillment',
+    '../scripts/prelive-cleanup',
     '../src/socket',
     '../server',
   ]) {

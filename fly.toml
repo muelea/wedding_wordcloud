@@ -13,6 +13,7 @@ kill_timeout = 30
   DATABASE_APPLICATION_NAME = "wolkenworte-fly"
   SUPABASE_STORAGE_BUCKET = "wolkenworte-private"
   EMAIL_DELIVERY_MODE = "mock"
+  MAINTENANCE_MODE = "false"
   ALLOW_TEST_DATA_RESET = "false"
   STRIPE_ALLOW_LIVE_PAYMENTS = "false"
   CHECKOUT_QUOTE_TTL_MINUTES = "30"

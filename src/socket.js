@@ -23,6 +23,7 @@ const { normalizeWord } = require('./words');
 const { sourceHashForSocket } = require('./clientIdentity');
 const rateLimits = require('./rateLimits');
 const performanceProbe = require('./performanceProbe');
+const log = require('./structuredLog');
 const { createWordUpdateBroadcaster } = require('./wordBroadcasts');
 const { createSocketEventCache } = require('./socketEventCache');
 const { createSocketOwnershipLoader } = require('./socketOwnershipLoader');
@@ -54,7 +55,9 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
         return;
       }
     } catch (error) {
-      console.error(`[socket:${slug}] Could not load event:`, error.message);
+      log.error('socket_event_lookup_failed', {
+        errorCode: log.errorCode(error, 'event_lookup_failed'),
+      });
       socket.emit('fatal-error', 'event unavailable');
       socket.disconnect(true);
       return;
@@ -72,14 +75,15 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
     socket.data.sourceHash = sourceHashForSocket(socket);
     const releaseSocket = rateLimits.acquireSocket(event.id, socket.data.sourceHash);
     if (!releaseSocket) {
+      performanceProbe.recordOperation('socketRateLimited');
       socket.emit('fatal-error', 'rate_limited');
       socket.disconnect(true);
       return;
     }
-    performanceProbe.recordSocketConnected();
+    performanceProbe.recordSocketConnected(event.id);
     socket.once('disconnect', () => {
       releaseSocket();
-      performanceProbe.recordSocketDisconnected();
+      performanceProbe.recordSocketDisconnected(event.id);
     });
 
     // Send current state to the newly connected client only (not the room —
@@ -92,7 +96,10 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       socket.emit('word-update', words);
       socket.emit('own-word-update', contributions);
     } catch (error) {
-      console.error(`[socket:${event.slug}] Could not load current state:`, error.message);
+      log.error('socket_state_load_failed', {
+        eventId: event.id,
+        errorCode: log.errorCode(error, 'state_load_failed'),
+      });
       socket.emit('fatal-error', 'event unavailable');
       socket.disconnect(true);
       return;
@@ -111,6 +118,7 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
           ...rateLimits.LIMITS.wordSource,
         },
       ])) {
+        performanceProbe.recordOperation('wordRateLimited');
         socket.emit('word-error', { error: 'rate_limited' });
         return;
       }
@@ -119,7 +127,11 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       try {
         receipt = await db.addWordContribution(event.id, word, socket.data.guestId);
       } catch (error) {
-        console.error(`[socket:${event.slug}] Could not save word contribution:`, error);
+        performanceProbe.recordOperation('wordFailed');
+        log.error('socket_word_submit_failed', {
+          eventId: event.id,
+          errorCode: log.errorCode(error, 'word_submit_failed'),
+        });
         const limited = new Set([
           'guest_contribution_limit',
           'event_contribution_limit',
@@ -133,6 +145,7 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       // for the whole 100 ms burst instead of querying and broadcasting once
       // per accepted contribution.
       broadcasts.schedule(event);
+      performanceProbe.recordOperation('wordAccepted');
       // Keep the normalized word as the first argument for backwards
       // compatibility; the private receipt is only sent to its submitter.
       socket.emit('word-accepted', word, receipt);
@@ -145,11 +158,13 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
         key: `${event.id}:${socket.data.guestId}`,
         ...rateLimits.LIMITS.wordRemoveGuest,
       }])) {
+        performanceProbe.recordOperation('wordRemoveRateLimited');
         respond({ ok: false, error: 'rate_limited' });
         return;
       }
       const receipt = payload && typeof payload === 'object' ? payload.receipt : payload;
       if (typeof receipt !== 'string' || !RECEIPT_RE.test(receipt)) {
+        performanceProbe.recordOperation('wordRemoveNotFound');
         respond({ ok: false, error: 'not_found' });
         return;
       }
@@ -162,11 +177,16 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
           socket.data.guestId
         );
       } catch (error) {
-        console.error(`[socket:${event.slug}] Could not remove word contribution:`, error);
+        performanceProbe.recordOperation('wordRemoveFailed');
+        log.error('socket_word_remove_failed', {
+          eventId: event.id,
+          errorCode: log.errorCode(error, 'word_remove_failed'),
+        });
         respond({ ok: false, error: 'server_error' });
         return;
       }
       if (!removedWord) {
+        performanceProbe.recordOperation('wordRemoveNotFound');
         // Do not reveal whether the receipt exists for a different guest or
         // event; both cases intentionally look identical to the caller.
         respond({ ok: false, error: 'not_found' });
@@ -174,6 +194,7 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       }
 
       broadcasts.schedule(event);
+      performanceProbe.recordOperation('wordRemoved');
       respond({ ok: true, word: removedWord });
     });
 
@@ -188,14 +209,20 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
         },
         { name: 'theme:event', key: event.id, ...rateLimits.LIMITS.themeEvent },
       ])) {
+        performanceProbe.recordOperation('themeRateLimited');
         socket.emit('theme-error', { error: 'rate_limited' });
         return;
       }
       try {
         await db.setEventTheme(event.id, theme);
+        performanceProbe.recordOperation('themeChanged');
         socket.to(event.slug).emit('theme-change', theme);
       } catch (error) {
-        console.error(`[socket:${event.slug}] Could not save theme:`, error.message);
+        performanceProbe.recordOperation('themeFailed');
+        log.error('socket_theme_change_failed', {
+          eventId: event.id,
+          errorCode: log.errorCode(error, 'theme_change_failed'),
+        });
         socket.emit('theme-error');
       }
     });

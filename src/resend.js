@@ -1,6 +1,7 @@
 'use strict';
 
 const { Resend } = require('resend');
+const performanceProbe = require('./performanceProbe');
 
 let client = null;
 let clientKey = null;
@@ -74,22 +75,37 @@ async function sendEmail(job, { timeoutMs = 10_000 } = {}) {
     signal: AbortSignal.timeout(Math.max(1_000, Math.min(15_000, Number(timeoutMs) || 10_000))),
   };
   let result;
+  const startedAt = Date.now();
   try {
     result = testAdapter
       ? await testAdapter.send(payload, requestOptions)
       : await getClient().emails.send(payload, requestOptions);
   } catch (error) {
+    performanceProbe.recordExternalCall('resend', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
     throw new ResendDeliveryError('resend_delivery_outcome_unknown', {
       ambiguous: true, retryable: true, statusCode: null,
     });
   }
-  if (result?.error) throw classifyProviderError(result.error);
+  if (result?.error) {
+    performanceProbe.recordExternalCall('resend', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
+    throw classifyProviderError(result.error);
+  }
   const messageId = String(result?.data?.id || result?.id || '').trim();
   if (!messageId || messageId.length > 200) {
+    performanceProbe.recordExternalCall('resend', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
     throw new ResendDeliveryError('resend_invalid_response', {
       ambiguous: true, retryable: true, statusCode: null,
     });
   }
+  performanceProbe.recordExternalCall('resend', {
+    durationMs: Date.now() - startedAt, succeeded: true,
+  });
   return { messageId };
 }
 
