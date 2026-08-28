@@ -135,8 +135,8 @@ function makeWebhookRouter() {
       return res.status(400).send('Webhook Error: signature verification failed');
     }
 
-    // Hard safety switch for this phase: even a correctly signed live event
-    // cannot transition an order until live payments are deliberately enabled.
+    // Hard safety switch: even a correctly signed live event cannot transition
+    // an order until live payments are deliberately enabled.
     if (event.livemode && !stripeIntegration.isLiveModeAllowed()) {
       log.error('stripe_live_event_blocked', { errorCode: 'live_mode_blocked' });
       return res.json({ received: true, ignored: 'live_mode_blocked' });

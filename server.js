@@ -235,7 +235,7 @@ async function start() {
     if (process.env.NODE_ENV === 'production') {
       log.info('server_started', { outcome: 'ready' });
     } else {
-      console.log('\n  ♡  WeddingCloud is running!\n');
+      console.log('\n  ♡  Wolkenworte is running!\n');
       console.log(`  Create an event →  ${base}/`);
       console.log(`  (each event then gets its own /e/<slug> and /e/<slug>/display URLs)\n`);
     }

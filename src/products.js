@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Curated products offered by WeddingCloud.
+ * Curated products offered by Wolkenworte.
  *
  * Keep this deliberately small. Printful's full catalog is large and changes
  * frequently; the storefront only exposes products whose print geometry and

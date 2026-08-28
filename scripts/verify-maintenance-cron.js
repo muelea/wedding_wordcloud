@@ -29,7 +29,7 @@ async function main() {
     if (!job || job.schedule !== '*/5 * * * *' ||
         !job.command.includes('timeout_milliseconds := 30000') ||
         !job.command.includes('vault.decrypted_secrets')) {
-      throw new Error('Die installierte Cron-Definition ist nicht die geprüfte Phase-5-Version.');
+      throw new Error('Die installierte Cron-Definition entspricht nicht der geprüften Wartungskonfiguration.');
     }
     const before = await pool.query('SELECT coalesce(max(id), 0)::bigint AS id FROM maintenance_runs');
     const request = await pool.query(`

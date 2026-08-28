@@ -1,6 +1,6 @@
 # Wolkenworte data-retention record
 
-Last reviewed: 2026-08-27
+Last reviewed: 2026-08-28
 
 This document records what the application enforces today and which commerce
 retention periods still require a German/EU legal and tax decision before live
@@ -36,9 +36,8 @@ tax, bookkeeping, consumer-law and privacy review defines exact deadlines:
 Once those periods are approved, they must be encoded in bounded, tested cleanup
 queries. They must not exist only as an informal operator convention.
 
-## Explicitly deferred to Phase 9
+## Related launch-readiness work
 
-Database backups, private Storage-object exports and the restoration exercise
-are not part of Phase 8. External error tracking, uptime checks and notification
-delivery are also Phase 9. This separation is deliberate: Phase 8 adds no new
-provider, SDK, account, secret or runtime dependency.
+Database backups, private Storage-object exports, restoration testing and one
+external error/uptime notification path remain required before live sales.
+They are tracked in `docs/launch-readiness.md` rather than duplicated here.

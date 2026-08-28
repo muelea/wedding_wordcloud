@@ -1,7 +1,8 @@
 # Built-in operations runbook
 
-Phase 8 uses only Node.js, Fly and Supabase/Postgres. It adds no monitoring,
-notification or backup provider.
+These operations use the existing Node.js, Fly and Supabase/Postgres stack.
+External notification and backup providers are deliberately separate launch
+readiness items tracked in `docs/launch-readiness.md`.
 
 ## Read aggregate operational status
 
@@ -73,7 +74,7 @@ least-privileged runtime role remain intact.
 
 Do not run it during ordinary development. At the approved pre-live cutover:
 
-1. Deploy the tested Phase 8 code and migrations.
+1. Deploy the tested application code and migrations.
 2. Keep payments, email and fulfillment in their safe modes: live Stripe off,
    email mock, Printful mock, order writes off and confirmations off.
 3. Temporarily set `MAINTENANCE_MODE=true` on Fly. Verify `/` returns `503` and

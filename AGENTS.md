@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (137 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (`node --test`). All tests must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
@@ -15,7 +15,7 @@ it — this file is about how to work in it safely.
   below.
 - If you touched `src/wordBroadcasts.js`, `src/socketEventCache.js`,
   `src/socketOwnershipLoader.js`, `src/performanceProbe.js` or the Socket.io
-  shutdown path in `server.js`, `test/phase7-socket-performance.test.js` must
+  shutdown path in `server.js`, `test/socket-performance.test.js` must
   pass as well.
 - If you touched guest contribution ownership in `src/socket.js` or
   `src/db.js`, both `test/isolation.test.js` and `test/words.test.js` must
@@ -134,6 +134,9 @@ it — this file is about how to work in it safely.
 - No accounts/login system for guests or couples. The admin PIN authorizes only
   one reset request at a time; it is not a session/cookie/JWT mechanism. Don't
   add a login system as a "nice to have."
+- The architecture refactor is complete. Current launch blockers and the
+  production cutover order live in `docs/launch-readiness.md`; do not recreate
+  historical numbered plans or duplicate that checklist in other documents.
 
 ## Where things deploy
 

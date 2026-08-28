@@ -1,5 +1,5 @@
 {
-  "name": "weddingcloud-business",
+  "name": "wolkenworte",
   "version": "0.1.0",
   "description": "Multi-tenant wedding word cloud with personal photo designs and safe print-on-demand checkout",
   "main": "server.js",

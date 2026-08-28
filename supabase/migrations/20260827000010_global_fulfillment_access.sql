@@ -1,4 +1,4 @@
--- Project-global access for the schema-relative Phase 5 tables and SVG
+-- Project-global access for the schema-relative fulfillment tables and SVG
 -- support in the existing private Storage bucket.
 
 grant select, insert, update, delete on table public.print_artifacts to wolkenworte_runtime;

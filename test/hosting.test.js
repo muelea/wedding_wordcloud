@@ -45,7 +45,7 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   assert.ok((await bundledSerif.arrayBuffer()).byteLength > 10_000);
 });
 
-test('container, Fly config and deployment workflow enforce the Phase 2 boundary', () => {
+test('container, Fly config and deployment workflow enforce the hosting boundary', () => {
   const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8');
   const dockerignore = fs.readFileSync(path.join(ROOT, '.dockerignore'), 'utf8');
   const fly = fs.readFileSync(path.join(ROOT, 'fly.toml'), 'utf8');

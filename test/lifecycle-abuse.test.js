@@ -62,7 +62,7 @@ async function expireEvent(query, eventId) {
   `, [eventId]);
 }
 
-test('Phase 4 lifecycle and abuse boundaries', async (t) => {
+test('lifecycle and abuse boundaries', async (t) => {
   const app = await startTestServer();
   t.after(app.close);
   const db = require('../src/db');

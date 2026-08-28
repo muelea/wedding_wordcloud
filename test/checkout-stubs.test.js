@@ -24,7 +24,7 @@ test('stripe.isConfigured() is false and createCheckoutSession() rejects clearly
   );
 });
 
-test('Stripe live keys are hard-blocked during the test-only checkout phase', async () => {
+test('Stripe live keys are hard-blocked while checkout is configured for testing', async () => {
   process.env.STRIPE_PAYMENT_MODE = 'live';
   process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_must_not_be_used';
   process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'false';
@@ -59,7 +59,7 @@ test('printful.createPrintfulOrder() returns a mocked order instead of throwing 
 
   const result = await printful.createPrintfulOrder({
     payload: {
-      external_id: 'weddingcloud-123',
+      external_id: 'wolkenworte-123',
       recipient: { name: 'Anna Beispiel' },
       items: [],
     },
@@ -109,7 +109,7 @@ test('Printful fulfillment creates a draft first and confirms it only when expli
   });
   const printful = require('../src/printful');
   const payload = {
-    external_id: 'weddingcloud-451',
+    external_id: 'wolkenworte-451',
     recipient: { name: 'Test' },
     items: [{ variant_id: 1320, quantity: 1, files: [{ url: 'https://example.test/print.svg' }] }],
   };

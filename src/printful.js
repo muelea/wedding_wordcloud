@@ -23,8 +23,9 @@ const performanceProbe = require('./performanceProbe');
  * Printful's print-file upload expects a URL it can fetch (or a base64
  * payload for some endpoints) — not raw SVG text. Whether Printful's
  * pipeline accepts SVG directly or needs a print-resolution raster (PNG)
- * instead is still unverified against a real sandbox — see README "Next
- * phase" — but the immutable URL itself is real, not a placeholder.
+ * instead is still unverified against a real provider draft — see
+ * docs/launch-readiness.md — but the immutable URL itself is real, not a
+ * placeholder.
  */
 
 function isConfigured() {

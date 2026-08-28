@@ -26,5 +26,5 @@ if [[ ! -d node_modules ]]; then
   npm install
 fi
 
-echo "WeddingCloud startet auf http://localhost:${PORT:-3000}"
+echo "Wolkenworte startet auf http://localhost:${PORT:-3000}"
 exec npm start

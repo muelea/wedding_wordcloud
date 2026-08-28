@@ -24,7 +24,7 @@ async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
     eventId: event.id,
     configurationId: configuration.id,
     recipient: {
-      name: 'Phase Fünf Test', address1: 'Testweg 5', city: 'Berlin',
+      name: 'Fulfillment Test', address1: 'Testweg 5', city: 'Berlin',
       zip: '10115', country_code: 'DE',
     },
     printfulCosts: { currency: 'EUR', subtotal: 10, shipping: 5, vat: 3, total: 18 },
@@ -48,7 +48,7 @@ async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
   return { order: await db.getOrderById(order.id), configuration, quote };
 }
 
-test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliation', async (t) => {
+test('paid artifacts, leased work, maintenance and Printful reconciliation', async (t) => {
   const previous = {};
   for (const name of [
     'PUBLIC_URL', 'STRIPE_PAYMENT_MODE', 'STRIPE_LIVE_SECRET_KEY',
@@ -59,7 +59,7 @@ test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliati
     'RESEND_FROM_EMAIL', 'RESEND_WEBHOOK_SECRET',
   ]) previous[name] = process.env[name];
   process.env.STRIPE_PAYMENT_MODE = 'live';
-  process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_phase_five_fixture';
+  process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_fulfillment_fixture';
   process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'true';
   process.env.PRINTFUL_FULFILLMENT_MODE = 'draft';
   process.env.PRINTFUL_ALLOW_ORDER_WRITES = 'true';
@@ -67,9 +67,9 @@ test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliati
   process.env.PRINTFUL_API_KEY = 'printful_test_key';
   process.env.PRINTFUL_STORE_ID = '12345';
   process.env.PRINTFUL_WEBHOOK_SECRET = crypto.randomBytes(32).toString('hex');
-  process.env.PRINTFUL_WEBHOOK_PUBLIC_KEY = Buffer.from('phase-five-public-key').toString('base64');
+  process.env.PRINTFUL_WEBHOOK_PUBLIC_KEY = Buffer.from('fulfillment-public-key').toString('base64');
   process.env.EMAIL_DELIVERY_MODE = 'live';
-  process.env.RESEND_API_KEY = 're_phase_five_test';
+  process.env.RESEND_API_KEY = 're_fulfillment_test';
   process.env.RESEND_FROM_EMAIL = 'Wolkenworte <test@example.test>';
   process.env.RESEND_WEBHOOK_SECRET = 'whsec_cGhhc2UtZml2ZS13ZWJob29rLXNlY3JldA==';
   t.after(() => {
@@ -129,7 +129,7 @@ test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliati
   const providerCalls = [];
   printful.reconcilePrintfulOrder = async (options) => {
     providerCalls.push(options);
-    return { printfulOrderId: 'draft-phase-five', status: 'draft', mocked: false, confirmed: false };
+    return { printfulOrderId: 'draft-fulfillment', status: 'draft', mocked: false, confirmed: false };
   };
   t.after(() => { printful.reconcilePrintfulOrder = originalReconcile; });
 
@@ -240,7 +240,7 @@ test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliati
       global.fetch = originalFetch;
       printful.reconcilePrintfulOrder = async (options) => {
         providerCalls.push(options);
-        return { printfulOrderId: 'draft-phase-five', status: 'draft', mocked: false };
+        return { printfulOrderId: 'draft-fulfillment', status: 'draft', mocked: false };
       };
     }
   });

@@ -1851,8 +1851,8 @@ async function getEventConfigurations(slug, configurationIds) {
 }
 
 // ── Expired event cleanup ───────────────────────────────────────────────
-// Scheduling and bounded batch orchestration belong to Phase 5. These
-// primitives establish the race-safe object-first cleanup boundary now.
+// These primitives establish the race-safe object-first cleanup boundary;
+// scheduling and bounded batch orchestration live in the maintenance worker.
 async function prepareExpiredEventCleanup(eventId) {
   return withTransaction(async (client) => {
     const eventResult = await client.query(`
@@ -2195,7 +2195,7 @@ async function getLatestMaintenanceRun() {
   return rowToBoundary(result.rows[0]);
 }
 
-// ── Phase 8 operational status and guarded operator actions ───────────
+// ── Operational status and guarded operator actions ───────────────────
 async function getOperationalStatus() {
   const result = await getPool().query(`
     SELECT

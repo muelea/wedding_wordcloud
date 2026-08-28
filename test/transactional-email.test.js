@@ -35,17 +35,17 @@ async function createPreparedOrder(db, event, suffix, { mode = 'test' } = {}) {
   const { order } = await db.createCheckoutOrder({
     eventId: event.id, configurationId: configuration.id, quote, mode,
   });
-  const sessionId = `cs_phase6_${suffix}`;
+  const sessionId = `cs_email_${suffix}`;
   await db.attachStripeSession(order.id, { id: sessionId, url: `https://checkout.test/${suffix}` });
   return { order: await db.getOrderById(order.id), configuration, quote, sessionId };
 }
 
 async function payPreparedOrder(db, prepared, suffix, { mode = 'test', buyerEmail = 'buyer@example.test' } = {}) {
   return db.recordSuccessfulPayment({
-    stripeEventId: `evt_phase6_${suffix}`,
+    stripeEventId: `evt_email_${suffix}`,
     eventType: 'checkout.session.completed',
     stripeSessionId: prepared.sessionId,
-    paymentIntentId: `pi_phase6_${suffix}`,
+    paymentIntentId: `pi_email_${suffix}`,
     livemode: mode === 'live',
     amountTotal: prepared.order.total_cents,
     currency: prepared.order.currency,
@@ -64,7 +64,7 @@ function signedResendHeaders(secret, svixId, body) {
   };
 }
 
-test('Phase 6 buyer contact, durable email jobs and provider reconciliation', async (t) => {
+test('buyer contact, durable email jobs and provider reconciliation', async (t) => {
   const previous = {};
   for (const name of [
     'EMAIL_DELIVERY_MODE', 'RESEND_API_KEY', 'RESEND_FROM_EMAIL',
@@ -122,7 +122,7 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
     let providerCalls = 0;
     resend.setAdapterForTests({ async send() { providerCalls += 1; throw new Error('must not send'); } });
     process.env.EMAIL_DELIVERY_MODE = 'live';
-    process.env.RESEND_API_KEY = 're_phase6_fake';
+    process.env.RESEND_API_KEY = 're_email_fake';
     process.env.RESEND_FROM_EMAIL = 'Wolkenworte <bestellung@mail.example.test>';
     const delivered = await emailDelivery.processJob(paid.emailJob.id);
     assert.equal(delivered.status, 'delivered');
@@ -143,7 +143,7 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
   });
 
   process.env.EMAIL_DELIVERY_MODE = 'live';
-  process.env.RESEND_API_KEY = 're_phase6_fake';
+  process.env.RESEND_API_KEY = 're_email_fake';
   process.env.RESEND_FROM_EMAIL = 'Wolkenworte <bestellung@mail.example.test>';
   process.env.RESEND_SMOKE_RECIPIENTS = 'maintainer@example.test';
   const webhookSecret = `whsec_${crypto.randomBytes(32).toString('base64')}`;
@@ -181,7 +181,7 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
     for (const duplicate of [false, true]) {
       const response = await fetch(`${hosted.baseUrl}/webhook/resend`, {
         method: 'POST',
-        headers: signedResendHeaders(webhookSecret, 'msg_phase6_lost_response', body),
+        headers: signedResendHeaders(webhookSecret, 'msg_email_lost_response', body),
         body,
       });
       assert.equal(response.status, 200);
@@ -262,14 +262,14 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
     const shipment = (await db.getOrderShipments(prepared.order.id))[0];
     await hosted.query(`
       UPDATE checkout_order_shipments
-      SET fulfillment_payload_json = $1::jsonb, printful_order_id = 'pf-phase6',
+      SET fulfillment_payload_json = $1::jsonb, printful_order_id = 'pf-email',
           fulfillment_status = 'submitted', fulfillment_mode = 'live'
       WHERE id = $2
-    `, [JSON.stringify({ external_id: 'ww_phase6_notice' }), shipment.id]);
+    `, [JSON.stringify({ external_id: 'ww_email_notice' }), shipment.id]);
     const shipmentEvent = {
-      eventKey: crypto.createHash('sha256').update('phase6-shipment').digest('hex'),
-      eventType: 'shipment_sent', providerOrderId: 'pf-phase6',
-      externalOrderId: 'ww_phase6_notice', providerShipmentId: 'shipment-6001',
+      eventKey: crypto.createHash('sha256').update('email-shipment').digest('hex'),
+      eventType: 'shipment_sent', providerOrderId: 'pf-email',
+      externalOrderId: 'ww_email_notice', providerShipmentId: 'shipment-6001',
       providerStatus: 'shipped', carrier: 'DHL', trackingNumber: 'TRACK-6001',
       trackingUrl: 'https://tracking.example.test/TRACK-6001',
       shippedAt: '2026-08-27T12:00:00Z',
@@ -285,21 +285,21 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
     assert.equal(Object.hasOwn(JSON.parse(storedShipment.recipient_json), 'email'), false);
 
     const refund = await db.recordStripeRefund({
-      stripeEventId: 'evt_phase6_refund', eventType: 'charge.refunded',
-      paymentIntentId: 'pi_phase6_notices', livemode: true,
+      stripeEventId: 'evt_email_refund', eventType: 'charge.refunded',
+      paymentIntentId: 'pi_email_notices', livemode: true,
       amountRefunded: prepared.order.total_cents, currency: prepared.order.currency,
     });
     assert.equal(refund.emailJob.kind, 'refund_confirmation');
     assert.equal(refund.emailJob.recipient_email, paid.order.buyer_email);
     assert.equal((await db.recordStripeRefund({
-      stripeEventId: 'evt_phase6_refund', eventType: 'charge.refunded',
-      paymentIntentId: 'pi_phase6_notices', livemode: true,
+      stripeEventId: 'evt_email_refund', eventType: 'charge.refunded',
+      paymentIntentId: 'pi_email_notices', livemode: true,
       amountRefunded: prepared.order.total_cents, currency: prepared.order.currency,
     })).duplicate, true);
 
     const canceled = await db.recordPrintfulWebhook({
       ...shipmentEvent,
-      eventKey: crypto.createHash('sha256').update('phase6-cancel').digest('hex'),
+      eventKey: crypto.createHash('sha256').update('email-cancel').digest('hex'),
       eventType: 'order_canceled', providerStatus: 'canceled',
     });
     assert.equal(canceled.emailJob.kind, 'cancellation_confirmation');
@@ -330,21 +330,21 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
       });
       return { body, headers: signedResendHeaders(webhookSecret, svixId, body) };
     };
-    const bounced = eventBody('email.bounced', 'msg_phase6_bounced');
+    const bounced = eventBody('email.bounced', 'msg_email_bounced');
     assert.equal((await fetch(`${hosted.baseUrl}/webhook/resend`, {
       method: 'POST', headers: bounced.headers, body: bounced.body,
     })).status, 200);
-    const deliveredLate = eventBody('email.delivered', 'msg_phase6_delivered_late');
+    const deliveredLate = eventBody('email.delivered', 'msg_email_delivered_late');
     assert.equal((await fetch(`${hosted.baseUrl}/webhook/resend`, {
       method: 'POST', headers: deliveredLate.headers, body: deliveredLate.body,
     })).status, 200);
     assert.equal((await db.getEmailJobById(smoke.emailJob.id)).status, 'bounced');
 
-    const complained = eventBody('email.complained', 'msg_phase6_complained');
+    const complained = eventBody('email.complained', 'msg_email_complained');
     assert.equal((await fetch(`${hosted.baseUrl}/webhook/resend`, {
       method: 'POST', headers: complained.headers, body: complained.body,
     })).status, 200);
-    const sentLate = eventBody('email.sent', 'msg_phase6_sent_late');
+    const sentLate = eventBody('email.sent', 'msg_email_sent_late');
     assert.equal((await fetch(`${hosted.baseUrl}/webhook/resend`, {
       method: 'POST', headers: sentLate.headers, body: sentLate.body,
     })).status, 200);
@@ -353,7 +353,7 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
     const invalid = await fetch(`${hosted.baseUrl}/webhook/resend`, {
       method: 'POST', headers: {
         ...sentLate.headers,
-        'svix-id': 'msg_phase6_invalid',
+        'svix-id': 'msg_email_invalid',
         'svix-signature': 'v1,invalid',
       }, body: sentLate.body,
     });

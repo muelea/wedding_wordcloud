@@ -1,4 +1,4 @@
-# WeddingCloud
+# Wolkenworte
 
 A live word cloud for weddings. Any couple creates their own event, guests
 scan a QR code and submit a word from their phone (no account, no app), and
@@ -77,7 +77,7 @@ add their own photos, words and motifs, and purchase it independently.
    fulfillment snapshot. Test payments are then completed by the local `mock`
    worker without making any Printful order request; the confirmation page
    clearly states that no real fulfillment was created. Live payments and real
-   Printful orders remain hard-disabled until the tax phase is signed off.
+   Printful orders remain hard-disabled until the tax review is signed off.
 
 ## Languages
 
@@ -290,11 +290,12 @@ credentials and privileged operator credentials. Hosted runtime secrets must
 be set in the provider's encrypted secret store, not copied into the repository
 or a deployment manifest.
 
-Phase 8's built-in status, manual fulfillment retry and guarded hosted-test
-cleanup procedures are documented in [docs/operations.md](docs/operations.md).
-The current enforced and pending PII-retention decisions are recorded in
-[docs/data-retention.md](docs/data-retention.md). Backups, restoration testing
-and every external alert/error-notification service are explicitly Phase 9.
+Built-in status, manual fulfillment retry and guarded hosted-test cleanup
+procedures are documented in [docs/operations.md](docs/operations.md). The
+current enforced and pending PII-retention decisions are recorded in
+[docs/data-retention.md](docs/data-retention.md). The remaining provider,
+backup, restoration, alerting and production-cutover work is tracked in the
+single [launch-readiness checklist](docs/launch-readiness.md).
 
 ## Provisional test pricing
 
@@ -409,7 +410,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 137 tests covering multi-tenant
+Runs `node --test test/*.test.js`. The suite covers multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
@@ -473,7 +474,7 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - The Debian/glibc image installs only the runtime libraries needed by
   `node-canvas`, runs as the non-root `node` user under `tini -s`, and bundles
   and registers Gelasio as `Wolkenworte Classic`. Local and AMD64 container
-  font-metric probes are part of the Phase 2 verification record.
+  font-metric probes are part of the container verification suite.
 - `/health/live` is process-only. `/health/ready` performs a bounded Postgres
   and schema/role check and is the Fly service health check. Both are `no-store`.
 - Keep one web Machine until both an official Socket.io cross-Machine adapter
@@ -486,7 +487,7 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 ## Socket capacity qualification
 
-Phase 7 has a guarded staging-only runner:
+Socket capacity has a guarded hosted-test-only runner:
 
 ```bash
 npm run load:socket:capacity -- --confirm-capacity-test
@@ -508,7 +509,7 @@ production abuse ceilings, recovery after a real Machine restart and takeover
 of one synthetic mock fulfillment whose old lease expires across that restart.
 The fulfillment probe never creates a Printful order.
 
-The result is written to `reports/phase7-capacity-latest.json`. It includes
+The result is written to `reports/socket-capacity-latest.json`. It includes
 p50/p95/p99 acknowledgement, room-update and API latency; steady and reconnect
 CPU, memory, event-loop and Postgres-pool measurements; outbound bytes; hot
 snapshot size; and transport-versus-snapshot reconnect timing. Supported
@@ -524,7 +525,7 @@ disconnect. Reconnect p99 was 14.6 seconds and post-connect snapshot p99 was
 pool had no waiter, tenant/receipt isolation had no violation, and the
 interrupted mock fulfillment recovered after the restart. The complete
 sanitized measurements are retained in
-`reports/phase7-capacity-latest.json`.
+`reports/socket-capacity-latest.json`.
 
 ## Test checkout setup
 
@@ -540,7 +541,7 @@ this flow.
 3. In a second terminal run `./run_stripe_webhook.sh`. Copy the printed
    `whsec_...` into `STRIPE_TEST_LOCAL_WEBHOOK_SECRET` in `.env` and restart
    the app. This secret belongs only to that local CLI listener.
-4. Start WeddingCloud with `./run_local.sh` and complete Checkout with a
+4. Start Wolkenworte with `./run_local.sh` and complete Checkout with a
    Stripe test card such as `4242 4242 4242 4242`, any future expiry date and
    any three-digit CVC.
 
@@ -713,27 +714,11 @@ keys in Fly for the next deploy.
   display. `test/isolation.test.js` catches this — don't disable it to make
   a change pass.
 
-## Next steps
+## Remaining launch work
 
-1. Register the separate hosted Stripe test webhook in Stripe Dashboard and
-   verify the complete test Checkout flow over the Fly HTTPS address.
-2. Verify the separate front/back SVG URLs in one controlled Printful draft
-   and inspect the resulting notebook and pillow mockups before enabling sales.
-3. Decide the business's VAT status, EU/OSS registrations and bookkeeping
-   export; then verify or replace the current customer-tax estimate with the
-   reviewed Stripe Tax configuration.
-4. Have the exact versioned order-confirmation/withdrawal wording reviewed
-   together with VAT, invoicing, refund and cancellation treatment.
-5. Verify the Resend sending domain, activate its signed webhook and run the
-   guarded delivered and bounced provider smokes.
-6. Confirm whether Printful's product print pipeline accepts the generated SVG
-   directly or needs a rasterized PNG (`node-canvas`'s `toBuffer('image/png')`
-   is already available if so).
-7. Deliberately enable `draft` mode only for one controlled live-payment test,
-   verify Printful can download the immutable file and inspect the unconfirmed
-   draft in the dashboard.
-8. Run the guarded Printful draft smoke for every materially different
-   placement type and retain the signed v2 webhook for shipment status.
-9. In Phase 9, add one external error/uptime notification path for stale
-   maintenance heartbeats and pg_net non-2xx/timeout results, then configure
-   database and separate Storage-object backups and run the restoration test.
+The architecture refactor is complete. Live sales are still intentionally
+disabled until the external provider checks, legal/tax decisions, alerting,
+backup/restoration exercise and controlled cutover are complete. The ordered,
+up-to-date list lives only in
+[docs/launch-readiness.md](docs/launch-readiness.md); do not maintain a second
+historical implementation checklist here.

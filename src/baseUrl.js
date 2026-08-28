@@ -17,7 +17,7 @@ function getLocalIP() {
 // Works locally (LAN IP + QR), and with a custom domain (PUBLIC_URL
 // override, or auto-detected from the request's Host header once DNS
 // points at it) — ported from the prototype, generalized (dropped the
-// Render-specific env var since hosting choice is a later-phase decision).
+// Render-specific env var because hosting is selected through PUBLIC_URL).
 function getBaseUrl(req, port) {
   if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/$/, '');
   const host = req && req.get && req.get('host');

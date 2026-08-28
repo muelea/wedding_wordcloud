@@ -35,20 +35,20 @@ async function createPaidTestOrder(db, event, suffix) {
   const { order } = await db.createCheckoutOrder({
     eventId: event.id, configurationId: configuration.id, quote, mode: 'test',
   });
-  const sessionId = `cs_test_phase8_${suffix}`;
+  const sessionId = `cs_test_operations_${suffix}`;
   await db.attachStripeSession(order.id, { id: sessionId, url: `https://checkout.test/${suffix}` });
   await db.recordSuccessfulPayment({
-    stripeEventId: `evt_test_phase8_${suffix}`,
+    stripeEventId: `evt_test_operations_${suffix}`,
     eventType: 'checkout.session.completed',
     stripeSessionId: sessionId,
-    paymentIntentId: `pi_test_phase8_${suffix}`,
+    paymentIntentId: `pi_test_operations_${suffix}`,
     livemode: false,
     buyerEmail: 'private-person@example.test',
   });
   return db.getOrderById(order.id);
 }
 
-test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) => {
+test('built-in observability, recovery and pre-live cleanup', async (t) => {
   const environmentNames = [
     'PUBLIC_URL', 'ALLOW_TEST_DATA_RESET', 'MAINTENANCE_MODE',
     'STRIPE_LIVE_PAYMENTS_ENABLED', 'PRINTFUL_FULFILLMENT_MODE',
@@ -100,7 +100,7 @@ test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) 
   t.after(() => storage.resetAdapterForTests());
 
   const eventPublic = await createEvent(hosted.baseUrl, {
-    coupleName: 'Privatname Phase Acht', clientIp: '192.0.2.88',
+    coupleName: 'Privatname Betrieb Test', clientIp: '192.0.2.88',
   });
   const event = await db.getEventBySlug(eventPublic.slug);
 
@@ -263,7 +263,7 @@ test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) 
     assert.equal(audit.rows[0].status, 'succeeded');
   });
 
-  await t.test('Phase 8 uses no new runtime package and the global grant follows the schema migration', () => {
+  await t.test('operations tooling uses no new runtime package and the global grant follows the schema migration', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     assert.equal(Object.hasOwn(packageJson.dependencies, '@sentry/node'), false);
     assert.equal(Object.hasOwn(packageJson.dependencies, 'prom-client'), false);

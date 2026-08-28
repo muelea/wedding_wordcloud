@@ -1,4 +1,4 @@
--- Project-global least-privilege access for Phase 8 operator audit records.
+-- Project-global least-privilege access for operator audit records.
 
 grant select, insert, update, delete on table public.operator_actions to wolkenworte_runtime;
 grant usage, select on all sequences in schema public to wolkenworte_runtime;

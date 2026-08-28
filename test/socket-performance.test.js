@@ -77,7 +77,7 @@ function connectSocket(baseUrl, slug, guestId, options = {}) {
   });
 }
 
-test('Phase 7 coalescing, bounded snapshots and performance probe', async (t) => {
+test('Socket.io coalescing, bounded snapshots and performance probe', async (t) => {
   await t.test('capacity tooling is guarded and cannot silently lower the qualifying target', () => {
     const env = {
       DATABASE_URL: 'postgresql://runtime@example.invalid/postgres',

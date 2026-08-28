@@ -131,7 +131,7 @@ function hashPin(pin, salt) {
 
 function makePool() {
   return new Pool(connectionOptions(process.env.DATABASE_URL, {
-    applicationName: 'wolkenworte-phase7-load-runner',
+    applicationName: 'wolkenworte-socket-capacity-runner',
     requireDirect: false,
   }));
 }
@@ -156,7 +156,7 @@ async function seedFixtures(pool, options, runId) {
       INSERT INTO events (
         slug, couple_name, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
       )
-      SELECT fixture.slug, 'Phase 7 Capacity ' || fixture.room_index,
+      SELECT fixture.slug, 'Socket Capacity ' || fixture.room_index,
              $2, $3, 'de', transaction_timestamp(), transaction_timestamp() + interval '365 days'
       FROM fixture JOIN reserved USING (slug)
       ORDER BY fixture.room_index
@@ -437,7 +437,7 @@ async function runApiWork(baseUrl, rooms, options, state) {
         },
         body: JSON.stringify({
           recipient: {
-            name: 'Phase Sieben Test', address1: 'Testweg 7', city: 'Berlin',
+            name: 'Socket Lasttest', address1: 'Testweg 7', city: 'Berlin',
             zip: '10115', country_code: 'DE',
           },
         }),
@@ -479,7 +479,7 @@ function interruptedFulfillmentSnapshot(configuration) {
 
 async function seedInterruptedFulfillment(pool, room, configurationId, runId) {
   const recipient = {
-    name: 'Phase Sieben Test', address1: 'Testweg 7', city: 'Berlin',
+    name: 'Socket Lasttest', address1: 'Testweg 7', city: 'Berlin',
     zip: '10115', country_code: 'DE',
   };
   const client = await pool.connect();
@@ -492,7 +492,7 @@ async function seedInterruptedFulfillment(pool, room, configurationId, runId) {
     const configuration = configurationResult.rows[0];
     if (!configuration) throw new Error('The interrupted-fulfillment configuration is missing.');
     const snapshot = interruptedFulfillmentSnapshot(configuration);
-    const quoteId = `phase7_capacity_${runId}`;
+    const quoteId = `socket_capacity_${runId}`;
     const orderResult = await client.query(`
       INSERT INTO orders (
         event_id, event_slug_snapshot, event_label_snapshot, configuration_id,
@@ -502,14 +502,14 @@ async function seedInterruptedFulfillment(pool, room, configurationId, runId) {
         fulfillment_next_attempt_at, fulfillment_locked_by,
         fulfillment_locked_until, fulfillment_lease_version
       ) VALUES (
-        $1, $2, 'Phase 7 Capacity', $3, $4::jsonb, $5, 'paid_test',
+        $1, $2, 'Socket Capacity', $3, $4::jsonb, $5, 'paid_test',
         $6::jsonb, 'EUR', 0, 0, 0, 0, 'test', transaction_timestamp(),
         'processing', 'mock', 1, transaction_timestamp(), $7,
         transaction_timestamp() + interval '15 seconds', 1
       ) RETURNING id, fulfillment_status, fulfillment_locked_until
     `, [
       room.id, room.slug, configuration.id, JSON.stringify([configuration.id]),
-      quoteId, JSON.stringify(recipient), `phase7-${runId}`,
+      quoteId, JSON.stringify(recipient), `socket-capacity-${runId}`,
     ]);
     const order = orderResult.rows[0];
     await client.query(`
@@ -987,7 +987,7 @@ async function main(argv = process.argv.slice(2)) {
       passed: Object.values(passes).every(Boolean),
     };
     const reportPath = path.resolve(
-      options.report || path.join(__dirname, '..', 'reports', 'phase7-capacity-latest.json')
+      options.report || path.join(__dirname, '..', 'reports', 'socket-capacity-latest.json')
     );
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
