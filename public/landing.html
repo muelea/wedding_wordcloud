@@ -177,9 +177,8 @@
     .quote { text-align: center; }
     .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-style: italic; font-weight: 500; letter-spacing: -.02em; line-height: 1.35; }
     .quote cite { color: var(--muted); font-size: .82rem; font-style: normal; letter-spacing: .01em; }
-    /* A real 3D mesh (public/assets/mug.glb), rendered with Three.js/WebGL
-       — not a hand-built CSS approximation. See the module script near
-       the end of the page. */
+    /* The shared procedural mug renderer uses the locally served Three.js
+       browser build; the homepage and configurator render the same geometry. */
     .cup-stage { min-height: 400px; display: grid; place-items: center; position: relative; gap: 4px; }
     #mug-canvas { width: 480px; height: 430px; touch-action: none; cursor: grab; }
     #mug-canvas.dragging { cursor: grabbing; }
