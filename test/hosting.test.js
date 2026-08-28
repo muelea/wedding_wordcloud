@@ -82,6 +82,7 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   assert.match(workflow, /flyctl deploy --remote-only --ha=false/);
   assert.match(secretScript, /MIGRATION_DATABASE_URL darf niemals an Fly übertragen/);
   assert.doesNotMatch(secretScript.match(/const REQUIRED = \[[\s\S]*?\];/)?.[0] || '', /MIGRATION_DATABASE_URL/);
+  assert.doesNotMatch(secretScript.match(/const OPTIONAL = \[[\s\S]*?\];/)?.[0] || '', /STRIPE_WEBHOOK_SECRET/);
 });
 
 test('graceful shutdown disconnects Socket.io and closes the listener within its bound', async (t) => {

@@ -522,7 +522,9 @@ The guarded command creates exactly one sandbox destination for
 `https://wolkenworte.fly.dev/webhook/stripe`, subscribes only to
 `checkout.session.completed`, `checkout.session.async_payment_succeeded` and
 `charge.refunded`, and stages its destination-specific signing secret directly
-in Fly. It never writes or prints that secret. The deploy activates it.
+in Fly. It never writes or prints that secret, and the generic `npm run
+fly:secrets` command deliberately cannot overwrite it from the local `.env`.
+The deploy activates it.
 
 Complete one real hosted Checkout with Stripe test card data. Copy the
 `cs_test_...` value from the resulting confirmation-page URL and run:
