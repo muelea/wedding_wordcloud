@@ -1275,7 +1275,8 @@ cleaned once before live launch.
 - use the Fly-provided `*.fly.dev` HTTPS hostname;
 - use a separate local Supabase stack for local development;
 - hosted Stripe remains in test mode;
-- `STRIPE_ALLOW_LIVE_PAYMENTS=false`;
+- `APP_ENVIRONMENT=hosted-test`, `STRIPE_PAYMENT_MODE=test` and
+  `STRIPE_LIVE_PAYMENTS_ENABLED=false`;
 - Printful fulfillment remains `mock` except for an explicitly approved
   controlled draft;
 - all real Printful confirmation switches remain false;

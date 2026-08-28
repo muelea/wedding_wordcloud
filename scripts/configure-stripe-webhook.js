@@ -22,11 +22,17 @@ function hostedWebhookUrl(env = process.env) {
 }
 
 function assertHostedStripeSafety(env = process.env) {
-  const key = String(env.STRIPE_SECRET_KEY || '');
-  if (!key.startsWith('sk_test_')) {
-    throw new Error('Die Hosted-Aktivierung akzeptiert nur einen Stripe sk_test_-Key.');
+  if (String(env.APP_ENVIRONMENT || '').trim().toLowerCase() !== 'local') {
+    throw new Error('Das Operator-Skript muss aus APP_ENVIRONMENT=local gestartet werden.');
   }
-  if (String(env.STRIPE_ALLOW_LIVE_PAYMENTS || 'false').toLowerCase() === 'true') {
+  if (String(env.STRIPE_PAYMENT_MODE || '').trim().toLowerCase() !== 'test') {
+    throw new Error('Die Hosted-Aktivierung verlangt STRIPE_PAYMENT_MODE=test.');
+  }
+  const key = String(env.STRIPE_TEST_SECRET_KEY || '');
+  if (!key.startsWith('sk_test_')) {
+    throw new Error('STRIPE_TEST_SECRET_KEY muss für die Hosted-Aktivierung ein sk_test_-Key sein.');
+  }
+  if (String(env.STRIPE_LIVE_PAYMENTS_ENABLED || 'false').toLowerCase() === 'true') {
     throw new Error('Stripe-Live-Zahlungen müssen für den Hosted-Test deaktiviert bleiben.');
   }
   return { key, webhookUrl: hostedWebhookUrl(env) };
@@ -63,7 +69,7 @@ async function run({
     if (!created?.secret || created.status !== 'enabled' || !hasExactEvents(created)) {
       throw new Error('Stripe hat keinen vollständig konfigurierten Webhook geliefert.');
     }
-    await stageSecret({ STRIPE_WEBHOOK_SECRET: created.secret });
+    await stageSecret({ STRIPE_TEST_HOSTED_WEBHOOK_SECRET: created.secret });
     staged = true;
     for (const endpoint of replaced) await stripe.webhookEndpoints.del(endpoint.id);
   } catch (error) {

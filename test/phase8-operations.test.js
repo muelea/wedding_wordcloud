@@ -51,7 +51,7 @@ async function createPaidTestOrder(db, event, suffix) {
 test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) => {
   const environmentNames = [
     'PUBLIC_URL', 'ALLOW_TEST_DATA_RESET', 'MAINTENANCE_MODE',
-    'STRIPE_ALLOW_LIVE_PAYMENTS', 'PRINTFUL_FULFILLMENT_MODE',
+    'STRIPE_LIVE_PAYMENTS_ENABLED', 'PRINTFUL_FULFILLMENT_MODE',
     'PRINTFUL_ALLOW_ORDER_WRITES', 'PRINTFUL_CONFIRM_LIVE_ORDERS',
     'EMAIL_DELIVERY_MODE', 'PRINTFUL_API_KEY',
   ];
@@ -64,7 +64,7 @@ test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) 
   });
   process.env.ALLOW_TEST_DATA_RESET = 'false';
   process.env.MAINTENANCE_MODE = 'false';
-  process.env.STRIPE_ALLOW_LIVE_PAYMENTS = 'false';
+  process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'false';
   process.env.PRINTFUL_FULFILLMENT_MODE = 'mock';
   process.env.PRINTFUL_ALLOW_ORDER_WRITES = 'false';
   process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'false';
@@ -210,7 +210,7 @@ test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) 
       ...process.env,
       NODE_ENV: 'test',
       ALLOW_TEST_DATA_RESET: 'true',
-      STRIPE_ALLOW_LIVE_PAYMENTS: 'false',
+      STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
       PRINTFUL_FULFILLMENT_MODE: 'mock',
       PRINTFUL_ALLOW_ORDER_WRITES: 'false',
       PRINTFUL_CONFIRM_LIVE_ORDERS: 'false',
@@ -218,7 +218,7 @@ test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) 
       PUBLIC_URL: hosted.baseUrl,
     };
     assert.throws(
-      () => cleanup.assertSafetyConfiguration({ ...safeEnv, STRIPE_ALLOW_LIVE_PAYMENTS: 'true' }),
+      () => cleanup.assertSafetyConfiguration({ ...safeEnv, STRIPE_LIVE_PAYMENTS_ENABLED: 'true' }),
       (error) => error.code === 'unsafe_runtime_configuration'
     );
     await assert.rejects(

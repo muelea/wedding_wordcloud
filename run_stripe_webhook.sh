@@ -12,7 +12,7 @@ fi
 APP_PORT="${PORT:-3000}"
 
 echo "Leite Stripe-Testwebhooks an http://localhost:${APP_PORT}/webhook/stripe weiter."
-echo "Kopiere das angezeigte whsec_... als STRIPE_WEBHOOK_SECRET in .env"
+echo "Kopiere das angezeigte whsec_... als STRIPE_TEST_LOCAL_WEBHOOK_SECRET in .env"
 echo "und starte WeddingCloud danach neu, falls es bereits läuft."
 echo
 

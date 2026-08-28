@@ -22,15 +22,17 @@ async function saveConfiguration(baseUrl, slug) {
 }
 
 test('signed Stripe test webhook marks one trusted order paid exactly once and never calls Printful', async (t) => {
-  process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
-  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_dummy';
+  process.env.APP_ENVIRONMENT = 'local';
+  process.env.STRIPE_PAYMENT_MODE = 'test';
+  process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_dummy';
+  process.env.STRIPE_TEST_LOCAL_WEBHOOK_SECRET = 'whsec_test_dummy';
   process.env.PRINTFUL_FULFILLMENT_MODE = 'live';
   process.env.PRINTFUL_ALLOW_ORDER_WRITES = 'true';
   process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'true';
   delete require.cache[require.resolve('../src/stripe')];
   t.after(() => {
-    delete process.env.STRIPE_SECRET_KEY;
-    delete process.env.STRIPE_WEBHOOK_SECRET;
+    delete process.env.STRIPE_TEST_SECRET_KEY;
+    delete process.env.STRIPE_TEST_LOCAL_WEBHOOK_SECRET;
     delete process.env.PRINTFUL_FULFILLMENT_MODE;
     delete process.env.PRINTFUL_ALLOW_ORDER_WRITES;
     delete process.env.PRINTFUL_CONFIRM_LIVE_ORDERS;
@@ -112,10 +114,10 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
       },
     },
   });
-  const signer = Stripe(process.env.STRIPE_SECRET_KEY);
+  const signer = Stripe(process.env.STRIPE_TEST_SECRET_KEY);
   const signature = signer.webhooks.generateTestHeaderString({
     payload,
-    secret: process.env.STRIPE_WEBHOOK_SECRET,
+    secret: process.env.STRIPE_TEST_LOCAL_WEBHOOK_SECRET,
   });
 
   for (const expectedDuplicate of [false, true]) {

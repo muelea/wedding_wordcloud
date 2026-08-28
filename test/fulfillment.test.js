@@ -8,7 +8,9 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   const previous = {};
   for (const name of [
     'PUBLIC_URL',
-    'STRIPE_ALLOW_LIVE_PAYMENTS',
+    'STRIPE_PAYMENT_MODE',
+    'STRIPE_LIVE_SECRET_KEY',
+    'STRIPE_LIVE_PAYMENTS_ENABLED',
     'PRINTFUL_FULFILLMENT_MODE',
     'PRINTFUL_ALLOW_ORDER_WRITES',
     'PRINTFUL_CONFIRM_LIVE_ORDERS',
@@ -20,7 +22,9 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     previous[name] = process.env[name];
   }
   process.env.PUBLIC_URL = 'https://shop.weddingcloud.example';
-  process.env.STRIPE_ALLOW_LIVE_PAYMENTS = 'true';
+  process.env.STRIPE_PAYMENT_MODE = 'live';
+  process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_fulfillment_fixture';
+  process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'true';
   process.env.PRINTFUL_FULFILLMENT_MODE = 'draft';
   process.env.PRINTFUL_ALLOW_ORDER_WRITES = 'true';
   process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'false';

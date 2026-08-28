@@ -1,5 +1,7 @@
 'use strict';
 
+const stripeConfig = require('./stripeConfig');
+
 function flag(name) {
   return String(process.env[name] || 'false').trim().toLowerCase();
 }
@@ -23,12 +25,22 @@ function validateRuntimeConfig() {
   for (const name of [
     'ALLOW_TEST_DATA_RESET',
     'MAINTENANCE_MODE',
-    'STRIPE_ALLOW_LIVE_PAYMENTS',
+    'STRIPE_LIVE_PAYMENTS_ENABLED',
     'PRINTFUL_ALLOW_ORDER_WRITES',
     'PRINTFUL_CONFIRM_LIVE_ORDERS',
   ]) {
     if (!['true', 'false'].includes(flag(name))) errors.push(`${name} muss true oder false sein.`);
   }
+  errors.push(...stripeConfig.validationErrors());
+  try {
+    const appEnvironment = stripeConfig.appEnvironment();
+    if (production && appEnvironment === 'local') {
+      errors.push('NODE_ENV=production darf nicht mit APP_ENVIRONMENT=local laufen.');
+    }
+    if (!production && appEnvironment !== 'local') {
+      errors.push('APP_ENVIRONMENT=hosted-test/production verlangt NODE_ENV=production.');
+    }
+  } catch { /* The precise APP_ENVIRONMENT error is already included above. */ }
 
   if (production) {
     if (process.env.MIGRATION_DATABASE_URL) {
@@ -69,7 +81,7 @@ function validateRuntimeConfig() {
     }
   }
 
-  if (flag('STRIPE_ALLOW_LIVE_PAYMENTS') === 'true') {
+  if (flag('STRIPE_LIVE_PAYMENTS_ENABLED') === 'true') {
     if (emailMode !== 'live' || !resendConfigured) {
       errors.push('Live-Zahlungen benötigen gültig konfigurierten Resend-Liveversand.');
     }

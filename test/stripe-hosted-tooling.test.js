@@ -5,11 +5,14 @@ const assert = require('node:assert/strict');
 
 const configure = require('../scripts/configure-stripe-webhook');
 const verify = require('../scripts/verify-hosted-stripe-payment');
+const stripeConfig = require('../src/stripeConfig');
 
 const SAFE_ENV = {
+  APP_ENVIRONMENT: 'local',
   PUBLIC_URL: 'https://wolkenworte.fly.dev',
-  STRIPE_SECRET_KEY: 'sk_test_fixture',
-  STRIPE_ALLOW_LIVE_PAYMENTS: 'false',
+  STRIPE_PAYMENT_MODE: 'test',
+  STRIPE_TEST_SECRET_KEY: 'sk_test_fixture',
+  STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
 };
 
 function endpoint(overrides = {}) {
@@ -32,11 +35,11 @@ test('hosted Stripe tooling is sandbox-bound and requires one exact destination'
     'https://wolkenworte.fly.dev/webhook/stripe'
   );
   assert.throws(
-    () => configure.assertHostedStripeSafety({ ...SAFE_ENV, STRIPE_SECRET_KEY: 'sk_live_forbidden' }),
+    () => configure.assertHostedStripeSafety({ ...SAFE_ENV, STRIPE_TEST_SECRET_KEY: 'sk_live_forbidden' }),
     /sk_test_/
   );
   assert.throws(
-    () => configure.assertHostedStripeSafety({ ...SAFE_ENV, STRIPE_ALLOW_LIVE_PAYMENTS: 'true' }),
+    () => configure.assertHostedStripeSafety({ ...SAFE_ENV, STRIPE_LIVE_PAYMENTS_ENABLED: 'true' }),
     /deaktiviert/
   );
   assert.throws(
@@ -49,6 +52,41 @@ test('hosted Stripe tooling is sandbox-bound and requires one exact destination'
   assert.equal(verify.validateDestination([endpoint()], endpoint().url).id, 'we_fixture');
   assert.throws(() => verify.validateDestination([], endpoint().url), /fehlt/);
   assert.throws(() => verify.validateDestination([endpoint(), endpoint({ id: 'we_2' })], endpoint().url), /doppelt/);
+});
+
+test('Stripe credential selection is explicit for local, hosted-test and production', () => {
+  const secrets = {
+    STRIPE_TEST_LOCAL_WEBHOOK_SECRET: 'whsec_local',
+    STRIPE_TEST_HOSTED_WEBHOOK_SECRET: 'whsec_hosted',
+    STRIPE_LIVE_WEBHOOK_SECRET: 'whsec_live',
+  };
+  assert.equal(stripeConfig.configuredWebhookSecret({
+    ...secrets, APP_ENVIRONMENT: 'local', STRIPE_PAYMENT_MODE: 'test',
+  }), 'whsec_local');
+  assert.equal(stripeConfig.configuredWebhookSecret({
+    ...secrets, APP_ENVIRONMENT: 'hosted-test', STRIPE_PAYMENT_MODE: 'test',
+  }), 'whsec_hosted');
+  assert.equal(stripeConfig.configuredWebhookSecret({
+    ...secrets, APP_ENVIRONMENT: 'production', STRIPE_PAYMENT_MODE: 'live',
+  }), 'whsec_live');
+  assert.deepEqual(stripeConfig.validationErrors({
+    APP_ENVIRONMENT: 'hosted-test',
+    STRIPE_PAYMENT_MODE: 'test',
+    STRIPE_TEST_SECRET_KEY: 'sk_test_fixture',
+    STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
+  }), []);
+  assert.match(stripeConfig.validationErrors({
+    APP_ENVIRONMENT: 'hosted-test',
+    STRIPE_PAYMENT_MODE: 'live',
+    STRIPE_LIVE_SECRET_KEY: 'sk_live_fixture',
+    STRIPE_LIVE_PAYMENTS_ENABLED: 'true',
+  }).join(' '), /hosted-test erlaubt nur/);
+  assert.match(stripeConfig.validationErrors({
+    APP_ENVIRONMENT: 'local',
+    STRIPE_PAYMENT_MODE: 'test',
+    STRIPE_TEST_HOSTED_WEBHOOK_SECRET: 'whsec_wrong_scope',
+    STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
+  }).join(' '), /nur in Fly Secrets/);
 });
 
 test('webhook configuration stages the returned secret and replaces only the hosted URL', async () => {
@@ -74,7 +112,7 @@ test('webhook configuration stages the returned secret and replaces only the hos
     stageSecret: async (values) => { staged = values; },
     output() {},
   });
-  assert.deepEqual(staged, { STRIPE_WEBHOOK_SECRET: 'whsec_fixture' });
+  assert.deepEqual(staged, { STRIPE_TEST_HOSTED_WEBHOOK_SECRET: 'whsec_fixture' });
   assert.deepEqual(removed, ['we_old']);
   assert.equal(result.endpointId, 'we_new');
   assert.equal(result.replaced, 1);

@@ -8,6 +8,7 @@ kill_timeout = 30
 
 [env]
   NODE_ENV = "production"
+  APP_ENVIRONMENT = "hosted-test"
   PORT = "8080"
   PUBLIC_URL = "https://wolkenworte.fly.dev"
   DATABASE_APPLICATION_NAME = "wolkenworte-fly"
@@ -15,7 +16,8 @@ kill_timeout = 30
   EMAIL_DELIVERY_MODE = "mock"
   MAINTENANCE_MODE = "false"
   ALLOW_TEST_DATA_RESET = "false"
-  STRIPE_ALLOW_LIVE_PAYMENTS = "false"
+  STRIPE_PAYMENT_MODE = "test"
+  STRIPE_LIVE_PAYMENTS_ENABLED = "false"
   CHECKOUT_QUOTE_TTL_MINUTES = "30"
   PRINTFUL_FULFILLMENT_MODE = "mock"
   PRINTFUL_ALLOW_ORDER_WRITES = "false"

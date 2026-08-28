@@ -123,6 +123,7 @@ function makeWebhookRouter() {
     } catch (error) {
       if (error.code === 'STRIPE_NOT_CONFIGURED' ||
           error.code === 'STRIPE_WEBHOOK_SECRET_MISSING' ||
+          error.code === 'STRIPE_CONFIG_INVALID' ||
           error.code === 'STRIPE_LIVE_MODE_BLOCKED') {
         log.warn('stripe_webhook_unconfigured', {
           errorCode: log.errorCode(error, 'stripe_not_configured'),

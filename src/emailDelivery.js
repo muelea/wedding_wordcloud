@@ -52,7 +52,7 @@ function smokeAllowlist() {
 
 function resolveMode(order, job, { providerSmoke = false } = {}) {
   if (providerSmoke) {
-    if (!order?.provider_smoke || !job?.provider_smoke || envFlag('STRIPE_ALLOW_LIVE_PAYMENTS') ||
+    if (!order?.provider_smoke || !job?.provider_smoke || envFlag('STRIPE_LIVE_PAYMENTS_ENABLED') ||
         configuredMode() !== 'live' || !resend.isConfigured() ||
         !smokeAllowlist().has(String(job.recipient_email || '').toLowerCase()) ||
         (process.env.NODE_ENV === 'test' && !resend.hasTestAdapter())) {

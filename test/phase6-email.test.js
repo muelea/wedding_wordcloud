@@ -68,10 +68,10 @@ test('Phase 6 buyer contact, durable email jobs and provider reconciliation', as
   const previous = {};
   for (const name of [
     'EMAIL_DELIVERY_MODE', 'RESEND_API_KEY', 'RESEND_FROM_EMAIL',
-    'RESEND_WEBHOOK_SECRET', 'RESEND_SMOKE_RECIPIENTS', 'STRIPE_ALLOW_LIVE_PAYMENTS',
+    'RESEND_WEBHOOK_SECRET', 'RESEND_SMOKE_RECIPIENTS', 'STRIPE_LIVE_PAYMENTS_ENABLED',
   ]) previous[name] = process.env[name];
   process.env.EMAIL_DELIVERY_MODE = 'mock';
-  process.env.STRIPE_ALLOW_LIVE_PAYMENTS = 'false';
+  process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'false';
   delete process.env.RESEND_API_KEY;
   delete process.env.RESEND_FROM_EMAIL;
   delete process.env.RESEND_WEBHOOK_SECRET;

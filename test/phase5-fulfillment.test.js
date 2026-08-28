@@ -51,13 +51,16 @@ async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
 test('Phase 5 paid artifacts, leased work, maintenance and Printful reconciliation', async (t) => {
   const previous = {};
   for (const name of [
-    'PUBLIC_URL', 'STRIPE_ALLOW_LIVE_PAYMENTS', 'PRINTFUL_FULFILLMENT_MODE',
+    'PUBLIC_URL', 'STRIPE_PAYMENT_MODE', 'STRIPE_LIVE_SECRET_KEY',
+    'STRIPE_LIVE_PAYMENTS_ENABLED', 'PRINTFUL_FULFILLMENT_MODE',
     'PRINTFUL_ALLOW_ORDER_WRITES', 'PRINTFUL_CONFIRM_LIVE_ORDERS',
     'PRINTFUL_API_KEY', 'PRINTFUL_STORE_ID', 'PRINTFUL_WEBHOOK_SECRET',
     'PRINTFUL_WEBHOOK_PUBLIC_KEY', 'EMAIL_DELIVERY_MODE', 'RESEND_API_KEY',
     'RESEND_FROM_EMAIL', 'RESEND_WEBHOOK_SECRET',
   ]) previous[name] = process.env[name];
-  process.env.STRIPE_ALLOW_LIVE_PAYMENTS = 'true';
+  process.env.STRIPE_PAYMENT_MODE = 'live';
+  process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_phase_five_fixture';
+  process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'true';
   process.env.PRINTFUL_FULFILLMENT_MODE = 'draft';
   process.env.PRINTFUL_ALLOW_ORDER_WRITES = 'true';
   process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'false';

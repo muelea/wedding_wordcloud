@@ -18,7 +18,7 @@ function validateSafety() {
   if (!process.argv.includes('--confirm-draft-smoke')) {
     throw new Error('Explizite Freigabe fehlt: --confirm-draft-smoke');
   }
-  if (enabled('STRIPE_ALLOW_LIVE_PAYMENTS')) {
+  if (enabled('STRIPE_LIVE_PAYMENTS_ENABLED')) {
     throw new Error('Der Provider-Smoke läuft nicht bei freigeschalteten Live-Zahlungen.');
   }
   if (String(process.env.PRINTFUL_FULFILLMENT_MODE || '') !== 'draft' ||

@@ -210,43 +210,88 @@ local `.env`. Never put `MIGRATION_DATABASE_URL` in Fly Secrets.
 
 ## Environment variables
 
-Everything in `.env.example` is documented inline. Summary:
+`.env.example` is the canonical, fully commented configuration contract. The
+ignored `.env` is a **workstation file** for local processes and operator
+commands; it is not a dump of the hosted environment. Fly runtime secrets are
+stored independently in Fly Secrets. `fly.toml` contains only non-secret hosted
+settings. The scope labels in both env files mean:
 
-| Variable | Required? | Purpose |
+| Scope | Where the value belongs |
+|---|---|
+| local process | ignored `.env`, loaded by a process on the developer workstation |
+| operator | ignored `.env`, used by a workstation command that configures or verifies a hosted provider |
+| Fly runtime | Fly Secrets for secrets, or `fly.toml` for non-secret settings |
+| future live | intentionally empty until the reviewed production cutover |
+
+The application context and Stripe mode are independent and explicit:
+
+| Deployment | `APP_ENVIRONMENT` | `STRIPE_PAYMENT_MODE` | Webhook secret selected by the server |
+|---|---|---|---|
+| local development | `local` | `test` | `STRIPE_TEST_LOCAL_WEBHOOK_SECRET` from `.env` |
+| current Fly sandbox | `hosted-test` | `test` | `STRIPE_TEST_HOSTED_WEBHOOK_SECRET` from Fly Secrets |
+| future production | `production` | `live` | `STRIPE_LIVE_WEBHOOK_SECRET` from the production secret store |
+
+Runtime validation rejects contradictory combinations and the retired ambiguous
+names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
+`STRIPE_ALLOW_LIVE_PAYMENTS`; they are never guessed or silently mapped.
+
+| Variable | Scope | Purpose / why it exists |
 |---|---|---|
-| `PORT` | no (defaults 3000) | server port |
-| `PUBLIC_URL` | only in production | overrides auto-detected base URL used in QR codes / links |
-| `DATABASE_URL` | yes | least-privileged Postgres runtime connection; the hosted value belongs in Fly Secrets |
-| `DATABASE_CA_CERT_PATH` / `DATABASE_CA_CERT` | hosted database | Supabase database CA path or PEM contents used for full TLS and hostname verification |
-| `MIGRATION_DATABASE_URL` | deployment only | privileged Postgres migration connection; local/CI secret only and never available to the Fly web Machine |
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | hosted runtime | active private Storage API URL and backend-only secret key; the secret key never reaches browser code |
-| `SUPABASE_STORAGE_BUCKET` | hosted runtime | private photo/print-artifact bucket name (currently `wolkenworte-private`) |
-| `RATE_LIMIT_HMAC_SECRET`, `MAINTENANCE_SECRET` | hosted environment | independent secrets for privacy-preserving rate-limit identities and authenticated maintenance wake-ups |
-| `MAINTENANCE_MODE` | no (defaults `false`) | temporary stop-the-world switch for the guarded pre-live cleanup; public HTTP receives 503 and Socket.io connections are rejected while health checks remain reachable |
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | before transactional-email smoke test | backend-only sending key and verified Wolkenworte sender |
-| `RESEND_WEBHOOK_SECRET` | after the Resend webhook is deployed | verifies signed Resend delivery webhooks |
-| `RESEND_SMOKE_RECIPIENTS` | only for controlled provider smoke | comma-separated allowlist of maintainer/test recipients accepted by the guarded live-email smoke command |
-| `EMAIL_DELIVERY_MODE` | no (defaults `mock`) | `mock` or `live`; Stripe test payments always remain mocked |
-| `ALLOW_TEST_DATA_RESET` | no (must remain `false`) | second guard for the approved one-time pre-live hosted-test cleanup |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | only for test checkout | Stripe test secret and local/Dashboard webhook signing secret; unset → checkout/webhook return a clean 501 |
-| `STRIPE_ALLOW_LIVE_PAYMENTS` | no (must remain `false`) | rejects live Stripe keys and live webhook events during this test-only phase |
-| `CHECKOUT_QUOTE_TTL_MINUTES` | no (defaults 30) | lifetime of a saved address/price quote; accepted range 5–120 minutes |
-| `PRINTFUL_API_KEY`, `PRINTFUL_STORE_ID` | for live quotes and later fulfillment | token needs `orders` + `webhooks`; unset → quote returns 501 and direct creation safely mocks |
-| `PRINTFUL_WEBHOOK_SECRET`, `PRINTFUL_WEBHOOK_PUBLIC_KEY` | before Printful draft/live mode | verify the exact raw signed Printful v2 callback and pin its configuration key |
-| `PRINTFUL_FULFILLMENT_MODE` | no (defaults `mock`) | `mock`, `draft` or `live`; Stripe test payments ignore this and always remain mocked |
-| `PRINTFUL_ALLOW_ORDER_WRITES` | no (must remain `false`) | second safety switch required before a live payment may create a Printful draft |
-| `PRINTFUL_CONFIRM_LIVE_ORDERS` | no (must remain `false`) | third safety switch required before a draft may be confirmed, charged and submitted |
-| `SHOP_PRODUCT_MARKUP_PERCENT` | no (defaults 50) | provisional catalog-wide markup added to Printful's current product costs |
-| `SHOP_PAYMENT_RESERVE_PERCENT` | no (defaults 3.15) | internal payment-cost reserve percentage folded into the product subtotal |
-| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | no (defaults 25) | internal fixed payment-cost reserve in cents, also folded into the product subtotal |
+| `APP_ENVIRONMENT` | local + hosted setting | Declares `local`, `hosted-test` or `production`, so environment-specific credentials are selected intentionally. |
+| `NODE_ENV` | local + hosted setting | Node behavior profile (`development`, `test`, `production`); it does not select payment credentials. |
+| `FLY_APP_NAME` | operator | Names the Fly app targeted by repository operator scripts; defaults to `wolkenworte`. |
+| `PORT` | local + hosted setting | TCP port for Express and Socket.io; 3000 locally and 8080 on Fly. |
+| `PUBLIC_URL` | local + hosted setting | Canonical origin for QR codes, links, redirects and immutable print capability URLs; empty locally allows LAN detection. |
+| `DATABASE_URL` | local/Fly runtime secret | Least-privileged Postgres connection used by the running process. The `.env` and Fly values are independently managed. |
+| `DATABASE_CA_CERT_PATH` | local/operator | Workstation path to the trusted Supabase CA used for verified hosted Postgres TLS. |
+| `DATABASE_CA_CERT` | Fly runtime secret | Same trusted CA as inline PEM for a host that cannot use the workstation file path. |
+| `MIGRATION_DATABASE_URL` | operator/CI only | Privileged connection for migrations and role provisioning; forbidden in the Fly web process. |
+| `TEST_DATABASE_URL` | optional test operator | Overrides the admin connection used to create isolated test schemas; otherwise tests fall back to migration/runtime URLs. |
+| `SUPABASE_URL` | local/operator/Fly runtime | Supabase API origin used by the backend for private Storage; browsers never call it directly. |
+| `SUPABASE_SECRET_KEY` | local/operator/Fly secret | Backend-only `sb_secret_...` key for private Storage operations; never exposed to clients. |
+| `SUPABASE_STORAGE_BUCKET` | shared setting | Private bucket containing normalized personal photos and frozen paid print artifacts. |
+| `RATE_LIMIT_HMAC_SECRET` | local/Fly secret | HMACs normalized source addresses so durable abuse data never stores raw IP addresses. |
+| `MAINTENANCE_SECRET` | local/Fly secret | Independent bearer secret for bounded Supabase Cron maintenance wake-ups. |
+| `MAINTENANCE_MODE` | shared setting | Temporarily blocks public HTTP/socket traffic during the guarded pre-live cleanup while health/operator checks remain available. |
+| `RESEND_API_KEY` | operator/future-live secret | Backend sending key for required transactional messages. |
+| `RESEND_FROM_EMAIL` | operator/future-live setting | Verified sender identity displayed to customers. |
+| `RESEND_WEBHOOK_SECRET` | future-live secret | Verifies exact signed Resend delivery callbacks. |
+| `RESEND_SMOKE_RECIPIENTS` | controlled operator/Fly setting | Restricts the provider smoke command to explicit maintainer inboxes. |
+| `EMAIL_DELIVERY_MODE` | shared setting | `mock` or `live`; test payments are mocked regardless, preventing sandbox purchases from emailing real recipients. |
+| `ALLOW_TEST_DATA_RESET` | temporary operator/Fly setting | Second irreversible guard for the one-time hosted-test cleanup. |
+| `STRIPE_PAYMENT_MODE` | shared setting | Selects only the explicitly named `test` or `live` Stripe credential set. |
+| `STRIPE_TEST_SECRET_KEY` | local/operator/Fly secret | Sandbox server key for test Checkout and hosted-test provider tooling. |
+| `STRIPE_TEST_LOCAL_WEBHOOK_SECRET` | local only | Stripe CLI listener secret that verifies callbacks forwarded to localhost. |
+| `STRIPE_TEST_HOSTED_WEBHOOK_SECRET` | Fly secret only | Signing secret for the current Stripe Dashboard destination at the Fly sandbox URL. |
+| `STRIPE_LIVE_SECRET_KEY` | future-live secret | Production Stripe server key; deliberately empty during sandbox development. |
+| `STRIPE_LIVE_WEBHOOK_SECRET` | future-live secret | Signing secret for the future production webhook destination. |
+| `STRIPE_LIVE_PAYMENTS_ENABLED` | shared safety setting | Independent gate required in addition to live mode; must remain `false` locally and on hosted-test. |
+| `CHECKOUT_QUOTE_TTL_MINUTES` | shared setting | Bounds saved address/price quote lifetime to 5–120 minutes (default 30). |
+| `PRINTFUL_API_KEY` | local/operator/Fly secret | Backend token for live quotes and gated fulfillment; needs `orders` and `webhooks`. |
+| `PRINTFUL_STORE_ID` | local/operator/Fly secret | Pins requests and callbacks to the intended Printful store. |
+| `PRINTFUL_WEBHOOK_SECRET` | Fly secret | Verifies the exact raw Printful v2 callback body. |
+| `PRINTFUL_WEBHOOK_PUBLIC_KEY` | Fly secret | Pins the Printful webhook configuration that owns the signing secret. |
+| `PRINTFUL_FULFILLMENT_MODE` | shared setting | Selects `mock`, `draft` or `live`; test Stripe payments always resolve to mock. |
+| `PRINTFUL_ALLOW_ORDER_WRITES` | shared safety setting | Independent gate required before creating any Printful draft. |
+| `PRINTFUL_CONFIRM_LIVE_ORDERS` | shared safety setting | Final gate before confirming/charging/submitting a Printful order. |
+| `SHOP_PRODUCT_MARKUP_PERCENT` | shared setting | Product-cost markup used in server-side retail quotes. |
+| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Percentage payment-cost reserve folded into product prices. |
+| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed payment-cost reserve in euro cents folded into product prices. |
+
+`DATABASE_APPLICATION_NAME` is set by `fly.toml`/test helpers for Postgres
+observability. `DATABASE_SCHEMA` is generated only by isolated tests, and
+`PGSSLROOTCERT` is accepted as a standard compatibility alias for
+`DATABASE_CA_CERT_PATH`; developers normally should not add any of these to
+`.env`.
 
 Postgres, Supabase Storage and durable email jobs are active now. Resend remains
 in `mock` mode until its sending domain and signed webhook are deliberately
 activated; hosted Stripe test payments cannot contact the live Resend API.
 
-**Never commit `.env`** — it's gitignored. Local credentials stay in `.env`;
-future hosted secrets must be set in the provider's encrypted secret store,
-not copied into the repository or a deployment manifest.
+**Never commit `.env`** — it is gitignored and may contain both local runtime
+credentials and privileged operator credentials. Hosted runtime secrets must
+be set in the provider's encrypted secret store, not copied into the repository
+or a deployment manifest.
 
 Phase 8's built-in status, manual fulfillment retry and guarded hosted-test
 cleanup procedures are documented in [docs/operations.md](docs/operations.md).
@@ -491,11 +536,13 @@ this flow.
 
 ### Local Checkout
 
-1. Put `sk_test_...` into `STRIPE_SECRET_KEY` in `.env`.
+1. Keep `APP_ENVIRONMENT=local` and `STRIPE_PAYMENT_MODE=test`, then put the
+   sandbox `sk_test_...` key into `STRIPE_TEST_SECRET_KEY` in `.env`.
 2. Install/login to the Stripe CLI once (`brew install stripe/stripe-cli/stripe`,
    then `stripe login`).
 3. In a second terminal run `./run_stripe_webhook.sh`. Copy the printed
-   `whsec_...` into `STRIPE_WEBHOOK_SECRET` in `.env` and restart the app.
+   `whsec_...` into `STRIPE_TEST_LOCAL_WEBHOOK_SECRET` in `.env` and restart
+   the app. This secret belongs only to that local CLI listener.
 4. Start WeddingCloud with `./run_local.sh` and complete Checkout with a
    Stripe test card such as `4242 4242 4242 4242`, any future expiry date and
    any three-digit CVC.
@@ -521,10 +568,12 @@ flyctl deploy --app wolkenworte
 The guarded command creates exactly one sandbox destination for
 `https://wolkenworte.fly.dev/webhook/stripe`, subscribes only to
 `checkout.session.completed`, `checkout.session.async_payment_succeeded` and
-`charge.refunded`, and stages its destination-specific signing secret directly
-in Fly. It never writes or prints that secret, and the generic `npm run
+`charge.refunded`, and stages it as `STRIPE_TEST_HOSTED_WEBHOOK_SECRET`
+directly in Fly. It never writes or prints that secret, and the generic `npm run
 fly:secrets` command deliberately cannot overwrite it from the local `.env`.
-The deploy activates it.
+The hosted app selects it because `fly.toml` explicitly declares
+`APP_ENVIRONMENT=hosted-test` and `STRIPE_PAYMENT_MODE=test`. The deploy
+activates it.
 
 Complete one real hosted Checkout with Stripe test card data. Copy the
 `cs_test_...` value from the resulting confirmation-page URL and run:
@@ -604,7 +653,8 @@ creation retains `update_existing=true` as a second guard.
 | live | `draft` + order-write switch | unconfirmed Printful draft |
 | live | `live` + both write/confirm switches | draft creation followed by explicit confirmation |
 
-Draft and live writes additionally require `STRIPE_ALLOW_LIVE_PAYMENTS=true`,
+Draft and live writes additionally require `STRIPE_PAYMENT_MODE=live`,
+`STRIPE_LIVE_PAYMENTS_ENABLED=true`,
 `PRINTFUL_ALLOW_ORDER_WRITES=true`, a configured token, and a public HTTPS
 `PUBLIC_URL`. `live` also requires `PRINTFUL_CONFIRM_LIVE_ORDERS=true`.
 Printful charges the account and starts fulfillment only when the separately
@@ -620,8 +670,9 @@ keys in Fly for the next deploy.
 
 ## What's intentionally disabled
 
-- **Live Stripe payments** — `sk_live_...` keys and live webhook events are
-  rejected while `STRIPE_ALLOW_LIVE_PAYMENTS=false`.
+- **Live Stripe payments** — `STRIPE_LIVE_SECRET_KEY` and live webhook events
+  remain unreachable while `STRIPE_PAYMENT_MODE=test` and
+  `STRIPE_LIVE_PAYMENTS_ENABLED=false`.
 - **Live transactional delivery** — email snapshots and mock outcomes are
   durable, but `EMAIL_DELIVERY_MODE=mock` prevents ordinary jobs from contacting
   Resend. Stripe test payments remain mocked in every mode. The verified sending

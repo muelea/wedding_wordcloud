@@ -16,7 +16,7 @@ const REQUIRED = [
   'MAINTENANCE_SECRET',
 ];
 const OPTIONAL = [
-  'STRIPE_SECRET_KEY',
+  'STRIPE_TEST_SECRET_KEY',
   'RESEND_API_KEY',
   'RESEND_FROM_EMAIL',
   'RESEND_WEBHOOK_SECRET',
@@ -43,8 +43,8 @@ function runtimeSecrets() {
   if (databaseUrl.username !== 'wolkenworte_app') {
     throw new Error('DATABASE_URL muss die eingeschränkte wolkenworte_app-Rolle verwenden.');
   }
-  if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')) {
-    throw new Error('Die Hosted-Testumgebung akzeptiert nur einen Stripe sk_test_-Key.');
+  if (process.env.STRIPE_TEST_SECRET_KEY && !process.env.STRIPE_TEST_SECRET_KEY.startsWith('sk_test_')) {
+    throw new Error('Die Hosted-Testumgebung akzeptiert für STRIPE_TEST_SECRET_KEY nur einen sk_test_-Key.');
   }
 
   const values = Object.fromEntries(REQUIRED.map((name) => [name, process.env[name]]));

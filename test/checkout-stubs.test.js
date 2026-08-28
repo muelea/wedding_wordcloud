@@ -12,7 +12,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 test('stripe.isConfigured() is false and createCheckoutSession() rejects clearly without env vars', async () => {
-  delete process.env.STRIPE_SECRET_KEY;
+  delete process.env.STRIPE_TEST_SECRET_KEY;
+  process.env.STRIPE_PAYMENT_MODE = 'test';
   delete require.cache[require.resolve('../src/stripe')];
   const stripe = require('../src/stripe');
 
@@ -24,8 +25,9 @@ test('stripe.isConfigured() is false and createCheckoutSession() rejects clearly
 });
 
 test('Stripe live keys are hard-blocked during the test-only checkout phase', async () => {
-  process.env.STRIPE_SECRET_KEY = 'sk_live_must_not_be_used';
-  delete process.env.STRIPE_ALLOW_LIVE_PAYMENTS;
+  process.env.STRIPE_PAYMENT_MODE = 'live';
+  process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_must_not_be_used';
+  process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'false';
   delete require.cache[require.resolve('../src/stripe')];
   const stripe = require('../src/stripe');
 
@@ -35,8 +37,17 @@ test('Stripe live keys are hard-blocked during the test-only checkout phase', as
     (error) => error.code === 'STRIPE_LIVE_MODE_BLOCKED'
   );
 
-  delete process.env.STRIPE_SECRET_KEY;
+  process.env.STRIPE_PAYMENT_MODE = 'test';
+  delete process.env.STRIPE_LIVE_SECRET_KEY;
+  process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'false';
   delete require.cache[require.resolve('../src/stripe')];
+});
+
+test('ambiguous legacy Stripe variable names are rejected instead of guessed', () => {
+  process.env.STRIPE_SECRET_KEY = 'sk_test_legacy';
+  const config = require('../src/stripeConfig');
+  assert.match(config.validationErrors().join(' '), /STRIPE_SECRET_KEY.*mehrdeutig/);
+  delete process.env.STRIPE_SECRET_KEY;
 });
 
 test('printful.createPrintfulOrder() returns a mocked order instead of throwing when unconfigured', async () => {

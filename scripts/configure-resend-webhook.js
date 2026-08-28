@@ -13,7 +13,7 @@ async function main() {
   if (!process.argv.includes('--confirm-replace-webhook')) {
     throw new Error('Explizite Freigabe fehlt: --confirm-replace-webhook');
   }
-  if (enabled('STRIPE_ALLOW_LIVE_PAYMENTS')) {
+  if (enabled('STRIPE_LIVE_PAYMENTS_ENABLED')) {
     throw new Error('Der Resend-Webhook wird nicht bei freigeschalteten Live-Zahlungen ersetzt.');
   }
   const publicUrl = new URL(process.env.PUBLIC_URL || '');

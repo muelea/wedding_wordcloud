@@ -2,13 +2,14 @@
 
 const I18n = require('./i18n');
 const performanceProbe = require('./performanceProbe');
+const stripeConfig = require('./stripeConfig');
 
 /**
  * Stripe-hosted Checkout for trusted, server-side EUR quotes.
  *
- * This phase is intentionally test-only. A live secret key is rejected
- * unless STRIPE_ALLOW_LIVE_PAYMENTS=true is set explicitly in a later,
- * reviewed production phase. No static Stripe Price is needed: every
+ * Test and live credentials are separate. Live mode is rejected unless the
+ * dedicated payment mode and live safety gate both select it. No static Stripe
+ * Price is needed: every
  * Checkout Session gets the revalidated order total as integer cents.
  */
 
@@ -16,33 +17,35 @@ let stripeClient = null;
 let stripeClientKey = null;
 
 function isConfigured() {
-  return Boolean(process.env.STRIPE_SECRET_KEY);
+  return Boolean(stripeConfig.configuredSecretKey());
 }
 
 function isLiveModeAllowed() {
-  return String(process.env.STRIPE_ALLOW_LIVE_PAYMENTS || '').toLowerCase() === 'true';
+  return stripeConfig.livePaymentsEnabled();
 }
 
 function getCheckoutMode() {
-  const key = String(process.env.STRIPE_SECRET_KEY || '');
-  assertSafeKey(key);
-  return key.startsWith('sk_live_') ? 'live' : 'test';
+  assertSafeConfiguration();
+  return stripeConfig.paymentMode();
 }
 
-function assertSafeKey(key) {
-  if (String(key).startsWith('sk_live_') && !isLiveModeAllowed()) {
+function assertSafeConfiguration() {
+  const errors = stripeConfig.validationErrors();
+  if (errors.length) {
     const error = new Error(
-      'Ein Stripe-Live-Key ist gesetzt, Live-Zahlungen sind für diese Testphase aber gesperrt.'
+      `Stripe-Konfiguration ist ungültig: ${errors.join(' ')}`
     );
-    error.code = 'STRIPE_LIVE_MODE_BLOCKED';
+    error.code = errors.some((message) => message.includes('live') || message.includes('Live'))
+      ? 'STRIPE_LIVE_MODE_BLOCKED'
+      : 'STRIPE_CONFIG_INVALID';
     throw error;
   }
 }
 
 function getClient() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  assertSafeConfiguration();
+  const key = stripeConfig.configuredSecretKey();
   if (!key) return null;
-  assertSafeKey(key);
   if (!stripeClient || stripeClientKey !== key) {
     const Stripe = require('stripe');
     stripeClient = new Stripe(key);
@@ -53,7 +56,7 @@ function getClient() {
 
 function notConfiguredError() {
   const error = new Error(
-    'Stripe ist noch nicht eingerichtet. Bitte STRIPE_SECRET_KEY in .env ergänzen.'
+    'Stripe ist für den gewählten Modus nicht eingerichtet. Bitte den passenden STRIPE_TEST_*- oder STRIPE_LIVE_*-Key ergänzen.'
   );
   error.code = 'STRIPE_NOT_CONFIGURED';
   return error;
@@ -236,9 +239,9 @@ async function createCheckoutSession({
 function constructWebhookEvent(rawBody, signatureHeader) {
   const client = getClient();
   if (!client) throw notConfiguredError();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = stripeConfig.configuredWebhookSecret();
   if (!webhookSecret) {
-    const error = new Error('STRIPE_WEBHOOK_SECRET ist nicht gesetzt.');
+    const error = new Error('Das Stripe-Webhook-Secret für die gewählte Umgebung ist nicht gesetzt.');
     error.code = 'STRIPE_WEBHOOK_SECRET_MISSING';
     throw error;
   }

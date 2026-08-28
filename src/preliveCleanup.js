@@ -14,7 +14,7 @@ function normalizedFlag(env, name, fallback = 'false') {
 function assertSafetyConfiguration(env = process.env) {
   const required = {
     ALLOW_TEST_DATA_RESET: 'true',
-    STRIPE_ALLOW_LIVE_PAYMENTS: 'false',
+    STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
     PRINTFUL_FULFILLMENT_MODE: 'mock',
     PRINTFUL_ALLOW_ORDER_WRITES: 'false',
     PRINTFUL_CONFIRM_LIVE_ORDERS: 'false',

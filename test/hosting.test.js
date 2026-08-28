@@ -49,6 +49,7 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8');
   const dockerignore = fs.readFileSync(path.join(ROOT, '.dockerignore'), 'utf8');
   const fly = fs.readFileSync(path.join(ROOT, 'fly.toml'), 'utf8');
+  const envExample = fs.readFileSync(path.join(ROOT, '.env.example'), 'utf8');
   const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'deploy-hosted.yml'), 'utf8');
   const secretScript = fs.readFileSync(path.join(ROOT, 'scripts', 'configure-fly-secrets.js'), 'utf8');
 
@@ -59,6 +60,9 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   assert.match(dockerignore, /^\.env$/m);
 
   assert.match(fly, /primary_region = "fra"/);
+  assert.match(fly, /APP_ENVIRONMENT = "hosted-test"/);
+  assert.match(fly, /STRIPE_PAYMENT_MODE = "test"/);
+  assert.match(fly, /STRIPE_LIVE_PAYMENTS_ENABLED = "false"/);
   assert.match(fly, /kill_signal = "SIGTERM"/);
   assert.match(fly, /kill_timeout = 30/);
   assert.match(fly, /auto_stop_machines = "stop"/);
@@ -69,6 +73,14 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   assert.match(fly, /size = "shared-cpu-2x"/);
   assert.match(fly, /path = "\/health\/ready"/);
   assert.doesNotMatch(fly, /MIGRATION_DATABASE_URL|release_command/);
+  for (const name of [
+    'STRIPE_TEST_SECRET_KEY',
+    'STRIPE_TEST_LOCAL_WEBHOOK_SECRET',
+    'STRIPE_TEST_HOSTED_WEBHOOK_SECRET',
+    'STRIPE_LIVE_SECRET_KEY',
+    'STRIPE_LIVE_WEBHOOK_SECRET',
+  ]) assert.match(envExample, new RegExp(`^${name}=`, 'm'));
+  assert.doesNotMatch(envExample, /^STRIPE_(?:SECRET_KEY|WEBHOOK_SECRET|ALLOW_LIVE_PAYMENTS)=/m);
 
   const testIndex = workflow.indexOf('npm test');
   const buildIndex = workflow.indexOf('docker build');
@@ -82,7 +94,10 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   assert.match(workflow, /flyctl deploy --remote-only --ha=false/);
   assert.match(secretScript, /MIGRATION_DATABASE_URL darf niemals an Fly übertragen/);
   assert.doesNotMatch(secretScript.match(/const REQUIRED = \[[\s\S]*?\];/)?.[0] || '', /MIGRATION_DATABASE_URL/);
-  assert.doesNotMatch(secretScript.match(/const OPTIONAL = \[[\s\S]*?\];/)?.[0] || '', /STRIPE_WEBHOOK_SECRET/);
+  assert.doesNotMatch(
+    secretScript.match(/const OPTIONAL = \[[\s\S]*?\];/)?.[0] || '',
+    /STRIPE_TEST_HOSTED_WEBHOOK_SECRET|STRIPE_LIVE_WEBHOOK_SECRET/
+  );
 });
 
 test('graceful shutdown disconnects Socket.io and closes the listener within its bound', async (t) => {

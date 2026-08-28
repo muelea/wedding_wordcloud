@@ -50,7 +50,7 @@ function configuredMode() {
 
 function resolveMode(order, { providerSmoke = false } = {}) {
   if (providerSmoke) {
-    if (!order.provider_smoke || envFlag('STRIPE_ALLOW_LIVE_PAYMENTS') ||
+    if (!order.provider_smoke || envFlag('STRIPE_LIVE_PAYMENTS_ENABLED') ||
         configuredMode() !== 'draft' || !envFlag('PRINTFUL_ALLOW_ORDER_WRITES') ||
         envFlag('PRINTFUL_CONFIRM_LIVE_ORDERS')) {
       throw new FulfillmentSafetyError('Der kontrollierte Printful-Draft-Smoke ist nicht sicher freigeschaltet.');
@@ -61,7 +61,7 @@ function resolveMode(order, { providerSmoke = false } = {}) {
   if (order.mode !== 'live' || order.status === 'paid_test') return 'mock';
   const mode = configuredMode();
   if (mode === 'mock') return mode;
-  if (!envFlag('STRIPE_ALLOW_LIVE_PAYMENTS')) {
+  if (!envFlag('STRIPE_LIVE_PAYMENTS_ENABLED')) {
     throw new FulfillmentSafetyError('Live-Zahlungen sind nicht freigeschaltet.');
   }
   if (!envFlag('PRINTFUL_ALLOW_ORDER_WRITES')) {

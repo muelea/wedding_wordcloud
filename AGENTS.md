@@ -109,7 +109,8 @@ it — this file is about how to work in it safely.
   `README.md`'s env var table — never put a real secret in a file that gets
   committed.
 - **Stripe/Printful must degrade gracefully when unconfigured**, not throw.
-  Missing `STRIPE_SECRET_KEY` → checkout route returns a clear 501, not a
+  Missing `STRIPE_TEST_SECRET_KEY`/`STRIPE_LIVE_SECRET_KEY` for the selected
+  `STRIPE_PAYMENT_MODE` → checkout route returns a clear 501, not a
   crash. Missing `PRINTFUL_API_KEY` → `createPrintfulOrder()` logs
   `[printful:mock]` and returns a fake order id. Keep this behavior — it's
   what lets the rest of the app be tested/demoed without real payment
