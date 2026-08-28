@@ -3,6 +3,7 @@
 .env
 .env.*
 !.env.example
+.local
 node_modules
 npm-debug.log*
 test
@@ -12,4 +13,3 @@ supabase
 .DS_Store
 coverage
 *.sqlite*
-
