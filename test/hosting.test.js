@@ -64,6 +64,9 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   assert.match(fly, /auto_stop_machines = "stop"/);
   assert.match(fly, /min_machines_running = 0/);
   assert.match(fly, /type = "connections"/);
+  assert.match(fly, /soft_limit = 3500/);
+  assert.match(fly, /hard_limit = 5000/);
+  assert.match(fly, /size = "shared-cpu-2x"/);
   assert.match(fly, /path = "\/health\/ready"/);
   assert.doesNotMatch(fly, /MIGRATION_DATABASE_URL|release_command/);
 

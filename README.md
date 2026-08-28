@@ -114,6 +114,11 @@ dotted and dotless I.
   deterministic external ID before any provider retry write.
 - The production container, readiness/liveness checks, cache rules, graceful
   shutdown, Fly configuration and manual deployment workflow are in the repository.
+- Socket.io room updates are transaction-after-commit and coalesced per event
+  into complete snapshots at most once per 100 milliseconds. Initial room and
+  private receipt hydration deduplicate connection storms without caching
+  stale or cross-owner state. A guarded hosted capacity runner records
+  application, transport, Postgres and Fly metrics against explicit gates.
 - Personal photos are normalized by the server and stored once in a private
   Supabase Storage bucket. Immutable configurations contain only opaque asset
   IDs; editable responses use short-lived signed previews and print SVGs
@@ -292,6 +297,8 @@ Dockerfile                 Non-root Debian/Node 22 production image
 fly.toml                   Frankfurt hosted-test lifecycle and health config
 .github/workflows/         Manual test → migrate → deploy → smoke workflow
 scripts/hosted-smoke.js    Sanitized HTTPS/Postgres/Socket.io hosted smoke
+scripts/socket-capacity.js Guarded 100-room/2,000-socket staging qualification
+reports/                   Sanitized retained capacity evidence
 src/
   db.js                    async Postgres data boundary and transaction logic
   dbConfig.js              verified-TLS and bounded pg pool configuration
@@ -307,6 +314,10 @@ src/
   words.js                 Word normalization (trim/case-fold/emoji-strip)
   baseUrl.js               LAN-IP / PUBLIC_URL resolution
   socket.js                Socket.io connection handling — room isolation lives here
+  socketEventCache.js      bounded active-event lookup deduplication
+  socketOwnershipLoader.js exact event/owner receipt batch hydration
+  wordBroadcasts.js        bounded 100-ms per-room complete-snapshot coalescing
+  performanceProbe.js      aggregate process/loop/pool/socket instrumentation
   stripe.js                Stripe Checkout session creation + webhook verification
   printful.js              Printful estimates plus draft/confirm API primitives
   fulfillment.js           leased single-concurrency worker + mock/draft/live gates
@@ -320,6 +331,7 @@ src/
   routes/
     events.js              Event/configuration CRUD, personal photos, pricing and checkout
     maintenance.js         secret-authenticated synchronous Cron wake-up
+    performance.js         secret-authenticated aggregate capacity snapshot
     webhook.js             raw-body Stripe, signed Printful and signed Resend callbacks
 public/
   landing.html             Marketing landing page, served at '/'
@@ -345,7 +357,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 113 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 126 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
@@ -357,7 +369,8 @@ authenticated maintenance, private Storage normalization/deduplication/deletion 
 expiration privacy, safe paid-data retention, one-use async PIN reset and
 database/process abuse ceilings,
 hosting health/cache/shutdown behavior, live safety gates and
-Stripe/Printful stub behavior. Each test
+Stripe/Printful stub behavior, per-room broadcast coalescing, bounded
+connection-storm hydration, polling fallback and restart-safe reconnects. Each test
 server uses its own randomly named migrated Postgres schema and ephemeral port,
 then drops the schema in cleanup, so files remain isolated in parallel.
 
@@ -371,7 +384,7 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   explicit; pushing `main` does not deploy automatically. The committed GitHub
   workflow is manual-only (`workflow_dispatch`).
 - The hosted test app is `wolkenworte` in Fly's `fra` region with one
-  `shared-cpu-1x`/512 MiB stateless web Machine, no volume, automatic stop/start
+  `shared-cpu-2x`/512 MiB stateless web Machine, no volume, automatic stop/start
   and `https://wolkenworte.fly.dev`. Durable business data is in Supabase.
 - Fly receives only the least-privileged `DATABASE_URL`. Migrations run first
   from local/CI tooling with `MIGRATION_DATABASE_URL`, which must never be
@@ -411,10 +424,55 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   font-metric probes are part of the Phase 2 verification record.
 - `/health/live` is process-only. `/health/ready` performs a bounded Postgres
   and schema/role check and is the Fly service health check. Both are `no-store`.
+- Keep one web Machine until both an official Socket.io cross-Machine adapter
+  and tested Fly affinity/replay for long-polling exist. Increasing the Machine
+  count with the current in-memory adapter would split rooms and is unsupported.
 - The Supabase bucket is private. Personal-photo validation remains limited to
   JPEG/PNG/WebP and 6 MiB per complete design; the bucket also accepts frozen
   SVG print artifacts up to 24 MiB. Fly holds the backend-only Storage key; browser
   previews are signed for 15 minutes and immutable designs store no signed URL.
+
+## Socket capacity qualification
+
+Phase 7 has a guarded staging-only runner:
+
+```bash
+npm run load:socket:capacity -- --confirm-capacity-test
+```
+
+The explicit flag authorizes a synthetic hosted load and real restart of the
+`wolkenworte` staging Machine. The runner accepts only
+`https://wolkenworte.fly.dev`, creates run-scoped events directly in Postgres,
+and removes those fixtures in a `finally` cleanup. It never enables live
+Stripe payments, Resend delivery or Printful order writes.
+
+A qualifying run uses 100 rooms and 2,000 Socket.io clients, including 300 in
+one near-maximum hot room and 20 permanently polling-only clients. The other
+clients use the same WebSocket-first connection with real polling fallback and
+randomized reconnect backoff as the shipped guest/display pages. During 30 seconds it offers and
+requires 1,500 accepted submissions at 50 per second alongside configuration
+saves and Printful estimates, then verifies word/theme/reset/receipt isolation,
+production abuse ceilings, recovery after a real Machine restart and takeover
+of one synthetic mock fulfillment whose old lease expires across that restart.
+The fulfillment probe never creates a Printful order.
+
+The result is written to `reports/phase7-capacity-latest.json`. It includes
+p50/p95/p99 acknowledgement, room-update and API latency; steady and reconnect
+CPU, memory, event-loop and Postgres-pool measurements; outbound bytes; hot
+snapshot size; and transport-versus-snapshot reconnect timing. Supported
+capacity must not be claimed unless the report's top-level `passed` value and
+every individual gate are `true`.
+
+The retained qualifying run from 28 August 2026 passed every gate on one
+`shared-cpu-2x`/512 MiB Machine: acknowledgement p95 was 203 ms, visible
+room-update p95 was 303 ms, unexpected error rate was 0%, and 99.65% of all
+2,000 clients reconnected with the correct snapshot within 15 seconds of their
+disconnect. Reconnect p99 was 14.6 seconds and post-connect snapshot p99 was
+345 ms. Steady Fly CPU peaked at 16.1%, memory peaked at 34.3%, the Postgres
+pool had no waiter, tenant/receipt isolation had no violation, and the
+interrupted mock fulfillment recovered after the restart. The complete
+sanitized measurements are retained in
+`reports/phase7-capacity-latest.json`.
 
 ## Test checkout setup
 

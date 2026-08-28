@@ -17,6 +17,7 @@
     "smoke:resend-email": "node scripts/resend-email-smoke.js",
     "fly:secrets": "node scripts/configure-fly-secrets.js",
     "smoke:hosted": "node scripts/hosted-smoke.js",
+    "load:socket:capacity": "node scripts/socket-capacity.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {

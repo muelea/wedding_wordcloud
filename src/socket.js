@@ -22,11 +22,20 @@ const crypto = require('crypto');
 const { normalizeWord } = require('./words');
 const { sourceHashForSocket } = require('./clientIdentity');
 const rateLimits = require('./rateLimits');
+const performanceProbe = require('./performanceProbe');
+const { createWordUpdateBroadcaster } = require('./wordBroadcasts');
+const { createSocketEventCache } = require('./socketEventCache');
+const { createSocketOwnershipLoader } = require('./socketOwnershipLoader');
 
 const GUEST_ID_RE = /^[a-f0-9]{32}$/;
 const RECEIPT_RE = /^[A-Za-z0-9_-]{24}$/;
 
-function attachSocketHandlers(io) {
+function attachSocketHandlers(io, { wordBroadcasts } = {}) {
+  const broadcasts = wordBroadcasts || createWordUpdateBroadcaster({ io, getWords: db.getWords });
+  const eventCache = createSocketEventCache({ getEventBySlug: db.getEventBySlug });
+  const ownershipLoader = createSocketOwnershipLoader({
+    loadBatch: db.getWordContributionsForOwners,
+  });
   io.on('connection', async (socket) => {
     const slug = socket.handshake.query && socket.handshake.query.slug;
 
@@ -38,7 +47,7 @@ function attachSocketHandlers(io) {
 
     let event;
     try {
-      event = await db.getEventBySlug(slug);
+      event = await eventCache.get(slug);
       if (!event) {
         socket.emit('fatal-error', 'unknown event');
         socket.disconnect(true);
@@ -67,14 +76,18 @@ function attachSocketHandlers(io) {
       socket.disconnect(true);
       return;
     }
-    socket.once('disconnect', releaseSocket);
+    performanceProbe.recordSocketConnected();
+    socket.once('disconnect', () => {
+      releaseSocket();
+      performanceProbe.recordSocketDisconnected();
+    });
 
     // Send current state to the newly connected client only (not the room —
     // no need to re-broadcast to everyone else just because one client joined).
     try {
       const [words, contributions] = await Promise.all([
-        db.getWords(event.id),
-        db.getWordContributions(event.id, socket.data.guestId),
+        broadcasts.loadInitial(event),
+        ownershipLoader.load(event.id, socket.data.guestId),
       ]);
       socket.emit('word-update', words);
       socket.emit('own-word-update', contributions);
@@ -103,10 +116,8 @@ function attachSocketHandlers(io) {
       }
 
       let receipt;
-      let words;
       try {
         receipt = await db.addWordContribution(event.id, word, socket.data.guestId);
-        words = await db.getWords(event.id);
       } catch (error) {
         console.error(`[socket:${event.slug}] Could not save word contribution:`, error);
         const limited = new Set([
@@ -118,7 +129,10 @@ function attachSocketHandlers(io) {
         return;
       }
 
-      io.to(event.slug).emit('word-update', words);
+      // The transaction has committed. Schedule one complete room snapshot
+      // for the whole 100 ms burst instead of querying and broadcasting once
+      // per accepted contribution.
+      broadcasts.schedule(event);
       // Keep the normalized word as the first argument for backwards
       // compatibility; the private receipt is only sent to its submitter.
       socket.emit('word-accepted', word, receipt);
@@ -141,14 +155,12 @@ function attachSocketHandlers(io) {
       }
 
       let removedWord;
-      let words;
       try {
         removedWord = await db.removeWordContribution(
           event.id,
           receipt,
           socket.data.guestId
         );
-        if (removedWord) words = await db.getWords(event.id);
       } catch (error) {
         console.error(`[socket:${event.slug}] Could not remove word contribution:`, error);
         respond({ ok: false, error: 'server_error' });
@@ -161,7 +173,7 @@ function attachSocketHandlers(io) {
         return;
       }
 
-      io.to(event.slug).emit('word-update', words);
+      broadcasts.schedule(event);
       respond({ ok: true, word: removedWord });
     });
 
@@ -188,6 +200,13 @@ function attachSocketHandlers(io) {
       }
     });
   });
+  return {
+    stop() {
+      eventCache.stop();
+      ownershipLoader.stop();
+      if (!wordBroadcasts) broadcasts.stop();
+    },
+  };
 }
 
 module.exports = { attachSocketHandlers };

@@ -7,7 +7,8 @@ const sharp = require('sharp');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const baseUrl = String(process.argv[2] || process.env.PUBLIC_URL || 'https://wolkenworte.fly.dev')
+const requestedBaseUrl = process.argv.slice(2).find((argument) => !argument.startsWith('--'));
+const baseUrl = String(requestedBaseUrl || process.env.PUBLIC_URL || 'https://wolkenworte.fly.dev')
   .replace(/\/$/, '');
 const skipMaintenance = process.argv.includes('--skip-maintenance');
 

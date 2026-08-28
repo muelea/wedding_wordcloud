@@ -369,6 +369,38 @@ async function getWordContributions(eventId, ownerId) {
   return result.rows.map((row) => ({ receipt: row.receipt_id, word: row.word }));
 }
 
+async function getWordContributionsForOwners(requests) {
+  if (!Array.isArray(requests) || !requests.length) return new Map();
+  if (requests.length > 1_000) throw new RangeError('ownership batch exceeds 1000 requests');
+  const eventIds = requests.map((request) => request.eventId);
+  const ownerIds = requests.map((request) => request.ownerId);
+  const result = await getPool().query(`
+    WITH requested(event_id, owner_id) AS (
+      SELECT * FROM unnest($1::bigint[], $2::text[])
+    )
+    SELECT requested.event_id, requested.owner_id,
+           contribution.receipt_id, contribution.word
+    FROM requested
+    LEFT JOIN word_contributions contribution
+      ON contribution.event_id = requested.event_id
+     AND contribution.owner_id = requested.owner_id
+    ORDER BY requested.event_id ASC, requested.owner_id ASC,
+             contribution.created_at ASC, contribution.receipt_id ASC
+  `, [eventIds, ownerIds]);
+  const contributions = new Map(requests.map((request) => [
+    `${request.eventId}:${request.ownerId}`,
+    [],
+  ]));
+  for (const row of result.rows) {
+    if (!row.receipt_id) continue;
+    contributions.get(`${row.event_id}:${row.owner_id}`).push({
+      receipt: row.receipt_id,
+      word: row.word,
+    });
+  }
+  return contributions;
+}
+
 async function removeWordContribution(eventId, receiptId, ownerId) {
   return withTransaction(async (client) => {
     const event = await client.query(`
@@ -2622,6 +2654,7 @@ module.exports = {
   upsertWord,
   addWordContribution,
   getWordContributions,
+  getWordContributionsForOwners,
   removeWordContribution,
   getWords,
   clearWords,

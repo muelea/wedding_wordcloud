@@ -6,13 +6,17 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (113 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (126 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
   optional — it's the test that proves one couple's event never leaks words
   or theme changes into another couple's display. See "Hard invariants"
   below.
+- If you touched `src/wordBroadcasts.js`, `src/socketEventCache.js`,
+  `src/socketOwnershipLoader.js`, `src/performanceProbe.js` or the Socket.io
+  shutdown path in `server.js`, `test/phase7-socket-performance.test.js` must
+  pass as well.
 - If you touched guest contribution ownership in `src/socket.js` or
   `src/db.js`, both `test/isolation.test.js` and `test/words.test.js` must
   pass; they cover cross-event isolation and receipt-bound removal.
@@ -34,6 +38,16 @@ it — this file is about how to work in it safely.
   broadcast — that leaks one couple's words into every other couple's
   display. This is the single most important thing in the codebase not to
   regress.
+- **Word broadcasts are committed, complete and bounded.** Successful submit
+  and removal handlers schedule the shared `wordBroadcasts` coalescer only
+  after Postgres commits; they do not query/broadcast independently. Each
+  event has at most one complete update per 100 ms, reset fencing prevents a
+  stale in-flight snapshot, and pending maps/timers stay explicitly bounded.
+  Initial snapshot sharing is in-flight only, never a stale state cache.
+- **Receipt hydration remains exact despite batching.** Connection storms may
+  batch Postgres reads, but every result is keyed to the exact `(event_id,
+  owner_id)` pair and is not cached after completion. Never return one
+  browser's private removal receipts to another owner or event.
 - **A guest can remove only that browser session's own contributions.** Each
   submitted word creates an unguessable receipt in `word_contributions`,
   bound to both the event and the anonymous `guestId`. Removal must continue

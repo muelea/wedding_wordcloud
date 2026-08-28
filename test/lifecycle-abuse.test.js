@@ -432,12 +432,19 @@ test('Phase 4 lifecycle and abuse boundaries', async (t) => {
     });
     await waitFor(socket, 'word-update');
     const limited = waitFor(socket, 'word-error');
+    let acceptedCount = 0;
+    const accepted = new Promise((resolve) => {
+      socket.on('word-accepted', () => {
+        acceptedCount += 1;
+        if (acceptedCount === 3) resolve();
+      });
+    });
     socket.emit('submit-word', 'eins');
     socket.emit('submit-word', 'zwei');
     socket.emit('submit-word', 'drei');
     socket.emit('submit-word', 'vier');
     assert.deepEqual(await limited, { error: 'rate_limited' });
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await accepted;
     const stored = await app.query(`
       SELECT count(*)::integer AS count FROM word_contributions WHERE event_id = $1
     `, [event.id]);

@@ -30,4 +30,4 @@ function makeMaintenanceRouter() {
   return router;
 }
 
-module.exports = { constantTimeSecretMatch, makeMaintenanceRouter };
+module.exports = { bearerToken, constantTimeSecretMatch, makeMaintenanceRouter };

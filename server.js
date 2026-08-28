@@ -13,6 +13,7 @@ const { attachSocketHandlers } = require('./src/socket');
 const { makeRouter: makeEventsRouter } = require('./src/routes/events');
 const { makeWebhookRouter } = require('./src/routes/webhook');
 const { makeMaintenanceRouter } = require('./src/routes/maintenance');
+const { makePerformanceRouter } = require('./src/routes/performance');
 const { getBaseUrl } = require('./src/baseUrl');
 const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
@@ -21,6 +22,8 @@ const printArtifacts = require('./src/printArtifacts');
 const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
 const { sendHtml, staticCacheMiddleware } = require('./src/httpCache');
+const performanceProbe = require('./src/performanceProbe');
+const { createWordUpdateBroadcaster } = require('./src/wordBroadcasts');
 
 const PORT = process.env.PORT || 3000;
 
@@ -65,6 +68,7 @@ app.get('/health/ready', async (req, res) => {
 // must be mounted BEFORE any express.json() body parser touches this path.
 app.use('/webhook', makeWebhookRouter({ port: PORT }));
 app.use('/internal/maintenance', makeMaintenanceRouter());
+app.use('/internal/performance', makePerformanceRouter());
 
 // Serve the pinned Three.js module locally so the configurator's 3D preview
 // never depends on a third-party CDN being reachable from a wedding venue.
@@ -83,7 +87,8 @@ app.get('/vendor/fonts/gelasio-latin-ext-400-normal.woff', staticCacheMiddleware
 
 app.use(staticCacheMiddleware, express.static(path.join(__dirname, 'public')));
 
-app.use('/api', makeEventsRouter({ io, port: PORT }));
+const wordBroadcasts = createWordUpdateBroadcaster({ io, getWords: db.getWords });
+app.use('/api', makeEventsRouter({ io, port: PORT, wordBroadcasts }));
 
 app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
   res.set('Cache-Control', 'private, no-store');
@@ -175,7 +180,7 @@ app.get('/e/:slug/export.svg', asyncRoute(async (req, res) => {
   res.send(svg);
 }));
 
-attachSocketHandlers(io);
+const socketRuntime = attachSocketHandlers(io, { wordBroadcasts });
 
 // Resume paid orders that were safely persisted before a restart. Claiming
 // in the database prevents duplicate processing when a Stripe retry arrives
@@ -189,6 +194,9 @@ server.on('listening', () => {
 
 server.on('close', () => {
   acceptingTraffic = false;
+  socketRuntime.stop();
+  wordBroadcasts.stop();
+  performanceProbe.stop();
 });
 
 // Rejected async route promises end here. SQL text, credentials and driver
@@ -201,6 +209,7 @@ async function initialize() {
     validateRuntimeConfig();
     initialization = db.assertDatabaseReady().then(() => {
       initialized = true;
+      performanceProbe.start();
       return true;
     });
   }
@@ -218,13 +227,31 @@ async function start() {
 }
 
 let shutdownPromise = null;
-function closeHttpAndSockets(timeoutMs = 10_000) {
-  const closes = [];
-  if (server.listening) {
-    closes.push(new Promise((resolve) => server.close(() => resolve())));
+function closeSocketTransports() {
+  for (const client of Object.values(io.engine.clients || {})) {
+    const transport = client.transport;
+    client.close(true);
+    // Engine.IO's WebSocket transport uses ws.close(), which waits for a
+    // closing handshake. Thousands of remote clients can keep those upgraded
+    // TCP sockets attached to Node (and counted by Fly Proxy) for seconds.
+    // The Machine is being replaced and socket state is disposable, so end
+    // the underlying transport immediately; clients still observe a transport
+    // loss and retain normal automatic reconnection semantics.
+    transport?.socket?.terminate?.();
   }
-  closes.push(new Promise((resolve) => io.close(() => resolve())));
-  const cleanClose = Promise.allSettled(closes).then(() => true);
+}
+
+function closeHttpAndSockets(timeoutMs = 10_000) {
+  // Socket sessions contain no authoritative state. Disconnect immediately so
+  // clients begin reconnecting while Fly replaces the Machine instead of
+  // holding the restart at the full transport-drain timeout. Close the
+  // Engine.IO transports—not the Socket.IO namespaces—because a server-side
+  // namespace disconnect deliberately disables client auto-reconnection.
+  closeSocketTransports();
+  // io.close() also closes its attached HTTP server. Calling server.close()
+  // concurrently creates two drain waiters for the same listener and kept a
+  // loaded Fly Machine alive until this fallback timer elapsed.
+  const cleanClose = new Promise((resolve) => io.close(() => resolve(true)));
   return Promise.race([
     cleanClose,
     new Promise((resolve) => {
@@ -250,6 +277,9 @@ function shutdown(signal = 'shutdown') {
       fulfillment.stop({ timeoutMs: 15_000 }),
       emailDelivery.stop({ timeoutMs: 15_000 }),
     ]);
+    wordBroadcasts.stop();
+    socketRuntime.stop();
+    performanceProbe.stop();
     if (!transportClosed) console.warn('[server] transport drain reached its 10-second bound.');
     if (!fulfillmentWorker.drained) {
       console.warn(`[server] ${fulfillmentWorker.activeOrders} fulfillment job(s) remain recoverable after restart.`);
@@ -286,4 +316,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { app, server, io, initialize, start, shutdown };
+module.exports = { app, server, io, initialize, start, shutdown, closeSocketTransports };

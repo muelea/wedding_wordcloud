@@ -867,7 +867,20 @@
   const displayUrl = `/e/${encodeURIComponent(slug)}/display`;
   const guestUrl = `${location.origin}/e/${encodeURIComponent(slug)}`;
   const guestId = getOrCreateGuestId();
-  const socket = io({ query: { slug, guestId } });
+  const socket = io({
+    query: { slug, guestId },
+    transports: ['websocket', 'polling'],
+    tryAllTransports: true,
+    timeout: 7000,
+  });
+  let socketHasConnected = false;
+  socket.on('connect_error', () => {
+    if (!socketHasConnected) socket.io.opts.transports = ['polling', 'websocket'];
+  });
+  socket.on('connect', () => {
+    socketHasConnected = true;
+    socket.io.opts.transports = ['websocket', 'polling'];
+  });
   const input   = document.getElementById('word-input');
   const btn     = document.getElementById('submit-btn');
   const flash   = document.getElementById('flash');

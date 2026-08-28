@@ -568,7 +568,7 @@ async function estimateCartShipments({ body, countries, configurations }) {
   };
 }
 
-function makeRouter({ io, port }) {
+function makeRouter({ io, port, wordBroadcasts = null }) {
   const router = express.Router();
 
   function requestIdentities(req) {
@@ -717,7 +717,8 @@ function makeRouter({ io, port }) {
     if (authorization.blocked) return rateLimited(res);
     if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
     await db.archiveAndClearWords(event.id);
-    io.to(event.slug).emit('word-update', []);
+    if (wordBroadcasts) wordBroadcasts.resetRoom(event, []);
+    else io.to(event.slug).emit('word-update', []);
     io.to(event.slug).emit('round-reset');
     res.json({ ok: true });
   }));

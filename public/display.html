@@ -434,7 +434,20 @@
   applyTheme(currentTheme);
 
   // ── Socket (room-scoped to this event via ?slug=) ───────────────────────
-  const socket = io({ query: { slug } });
+  const socket = io({
+    query: { slug },
+    transports: ['websocket', 'polling'],
+    tryAllTransports: true,
+    timeout: 7000,
+  });
+  let socketHasConnected = false;
+  socket.on('connect_error', () => {
+    if (!socketHasConnected) socket.io.opts.transports = ['polling', 'websocket'];
+  });
+  socket.on('connect', () => {
+    socketHasConnected = true;
+    socket.io.opts.transports = ['websocket', 'polling'];
+  });
 
   socket.on('word-update', (words) => {
     currentWords = words;

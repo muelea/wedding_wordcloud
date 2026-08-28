@@ -69,7 +69,10 @@ function connectionOptions(connectionString, {
   return {
     connectionString: parsed.toString(),
     ssl,
-    max: process.env.NODE_ENV === 'test' ? 10 : 5,
+    // One hosted Machine is intentionally bounded to 20 direct connections.
+    // This leaves ample Supabase headroom while allowing a reconnect storm to
+    // hydrate per-browser contribution ownership without a long five-lane queue.
+    max: process.env.NODE_ENV === 'test' ? 10 : 20,
     connectionTimeoutMillis: process.env.NODE_ENV === 'test' ? 30_000 : 5_000,
     idleTimeoutMillis: 10_000,
     query_timeout: 10_000,

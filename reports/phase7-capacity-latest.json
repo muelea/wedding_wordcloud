@@ -1,0 +1,258 @@
+{
+  "version": 2,
+  "runId": "mtc9uijn-8e3cd51f",
+  "target": "https://wolkenworte.fly.dev",
+  "startedAt": "2026-08-28T01:27:50.324Z",
+  "endedAt": "2026-08-28T01:28:20.610Z",
+  "workload": {
+    "rooms": 100,
+    "sockets": 2000,
+    "hotRoomSockets": 300,
+    "hotRoomSeed": {
+      "uniqueWords": 495,
+      "contributions": 4950
+    },
+    "pollingSockets": 20,
+    "offeredSubmissions": 1500,
+    "offeredPerSecond": 50,
+    "acceptedSubmissions": 1500,
+    "configurationSaves": 10,
+    "estimates": 5,
+    "interruptedFulfillments": 1
+  },
+  "latencyMs": {
+    "acknowledgement": {
+      "count": 1500,
+      "p50": 170.652,
+      "p95": 203.034,
+      "p99": 225.361,
+      "max": 959.804
+    },
+    "roomUpdate": {
+      "count": 1500,
+      "p50": 274.619,
+      "p95": 302.828,
+      "p99": 351.14,
+      "max": 1053.359
+    },
+    "applicationApi": {
+      "count": 10,
+      "p50": 212.538,
+      "p95": 435.408,
+      "p99": 435.408,
+      "max": 435.408
+    },
+    "externalPrintfulEstimate": {
+      "count": 5,
+      "p50": 1071.274,
+      "p95": 1100.503,
+      "p99": 1100.503,
+      "max": 1100.503
+    }
+  },
+  "resources": {
+    "steady": {
+      "internal": {
+        "processCpuPercent": {
+          "count": 26,
+          "p50": 16.12,
+          "p95": 29.16,
+          "p99": 70.74,
+          "max": 70.74
+        },
+        "rssBytes": {
+          "count": 26,
+          "p50": 150798336,
+          "p95": 152502272,
+          "p99": 152502272,
+          "max": 152502272
+        },
+        "eventLoopP95Ms": {
+          "count": 26,
+          "p50": 11.059,
+          "p95": 13.951,
+          "p99": 15.475,
+          "max": 15.475
+        },
+        "eventLoopP99Ms": {
+          "count": 26,
+          "p50": 12.657,
+          "p95": 20.939,
+          "p99": 30.032,
+          "max": 30.032
+        },
+        "maxPoolTotal": 9,
+        "maxPoolWaiting": 0,
+        "finalBroadcastCounters": {
+          "snapshots": 1500,
+          "serializedBytes": 292380,
+          "estimatedRecipientBytes": 5025450
+        }
+      },
+      "fly": {
+        "cpuPercent": {
+          "count": 7,
+          "p50": 15.557,
+          "p95": 16.119,
+          "p99": 16.119,
+          "max": 16.119
+        },
+        "memoryPercent": {
+          "count": 7,
+          "p50": 33.782,
+          "p95": 34.269,
+          "p99": 34.269,
+          "max": 34.269
+        },
+        "outboundBytesPerSecond": {
+          "count": 7,
+          "p50": 190254.709,
+          "p95": 291829.162,
+          "p99": 291829.162,
+          "max": 291829.162
+        },
+        "approximateOutboundBytes": 6988412
+      }
+    },
+    "reconnect": {
+      "internal": {
+        "processCpuPercent": {
+          "count": 7,
+          "p50": 42.52,
+          "p95": 121.91,
+          "p99": 121.91,
+          "max": 121.91
+        },
+        "rssBytes": {
+          "count": 7,
+          "p50": 138969088,
+          "p95": 152596480,
+          "p99": 152596480,
+          "max": 152596480
+        },
+        "eventLoopP95Ms": {
+          "count": 7,
+          "p50": 14.098,
+          "p95": 35.029,
+          "p99": 35.029,
+          "max": 35.029
+        },
+        "eventLoopP99Ms": {
+          "count": 7,
+          "p50": 21.217,
+          "p95": 55.017,
+          "p99": 55.017,
+          "max": 55.017
+        },
+        "maxPoolTotal": 20,
+        "maxPoolWaiting": 0,
+        "finalBroadcastCounters": {
+          "snapshots": 0,
+          "serializedBytes": 0,
+          "estimatedRecipientBytes": 0
+        }
+      },
+      "fly": {
+        "cpuPercent": {
+          "count": 5,
+          "p50": 13.603,
+          "p95": 15.557,
+          "p99": 15.557,
+          "max": 15.557
+        },
+        "memoryPercent": {
+          "count": 5,
+          "p50": 31.767,
+          "p95": 33.782,
+          "p99": 33.782,
+          "max": 33.782
+        },
+        "outboundBytesPerSecond": {
+          "count": 5,
+          "p50": 332206.747,
+          "p95": 332206.747,
+          "p99": 332206.747,
+          "max": 332206.747
+        },
+        "approximateOutboundBytes": 8103281
+      }
+    }
+  },
+  "transport": {
+    "inboundApplicationBytes": 11887728,
+    "hotRoomSnapshotBytes": 10396
+  },
+  "reconnect": {
+    "skipped": false,
+    "startedAt": "2026-08-28T01:28:25.965Z",
+    "endedAt": "2026-08-28T01:28:47.453Z",
+    "within15Seconds": 99.65,
+    "eventual": 100,
+    "latencyFromDisconnectMs": {
+      "count": 2000,
+      "p50": 11680,
+      "p95": 13258,
+      "p99": 14625,
+      "max": 15261
+    },
+    "latencyFromCommandMs": {
+      "count": 2000,
+      "p50": 19207,
+      "p95": 20614,
+      "p99": 20705,
+      "max": 20784
+    },
+    "transportConnectFromDisconnectMs": {
+      "count": 2000,
+      "p50": 11480,
+      "p95": 13224,
+      "p99": 14607,
+      "max": 14967
+    },
+    "snapshotAfterTransportConnectMs": {
+      "count": 2000,
+      "p50": 13,
+      "p95": 344,
+      "p99": 345,
+      "max": 864
+    }
+  },
+  "fulfillmentRecovery": {
+    "initialStatus": "processing",
+    "finalStatus": "mocked",
+    "leaseCleared": true,
+    "attempts": 2,
+    "recoveryMs": 22859,
+    "recovered": true
+  },
+  "isolationErrors": [],
+  "unexpectedErrors": [],
+  "capacityWordErrors": [],
+  "unexpectedErrorRatePercent": 0,
+  "productionRateLimits": {
+    "burstAccepted": 3,
+    "burstRateLimited": 1,
+    "sourceSocketOverflow": {
+      "attempted": 220,
+      "hotConnectedBeforeProbe": 300,
+      "accepted": 0,
+      "rateLimited": 220,
+      "other": []
+    },
+    "passed": true
+  },
+  "gates": {
+    "acknowledgementLatency": true,
+    "roomUpdateLatency": true,
+    "applicationErrorRate": true,
+    "reconnect": true,
+    "cpu": true,
+    "memory": true,
+    "databasePool": true,
+    "acceptedLoad": true,
+    "isolation": true,
+    "fulfillmentRecovery": true,
+    "productionLimits": true
+  },
+  "passed": true
+}

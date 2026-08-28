@@ -32,8 +32,8 @@ kill_timeout = 30
 
   [http_service.concurrency]
     type = "connections"
-    soft_limit = 800
-    hard_limit = 1000
+    soft_limit = 3500
+    hard_limit = 5000
 
   [[http_service.checks]]
     grace_period = "15s"
@@ -44,6 +44,5 @@ kill_timeout = 30
     protocol = "http"
 
 [[vm]]
-  size = "shared-cpu-1x"
+  size = "shared-cpu-2x"
   memory = "512mb"
-
