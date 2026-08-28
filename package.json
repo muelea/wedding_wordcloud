@@ -12,6 +12,8 @@
     "maintenance:configure-cron": "node scripts/configure-maintenance-cron.js",
     "maintenance:verify-cron": "node scripts/verify-maintenance-cron.js",
     "smoke:printful-draft": "node scripts/printful-draft-smoke.js",
+    "stripe:configure-webhook": "node scripts/configure-stripe-webhook.js",
+    "stripe:verify-hosted-payment": "node scripts/verify-hosted-stripe-payment.js",
     "printful:configure-webhook": "node scripts/configure-printful-webhook.js",
     "resend:configure-webhook": "node scripts/configure-resend-webhook.js",
     "smoke:resend-email": "node scripts/resend-email-smoke.js",

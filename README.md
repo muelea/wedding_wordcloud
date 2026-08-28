@@ -106,9 +106,12 @@ dotted and dotless I.
   one stateless Fly Machine in Frankfurt. It scales to zero while idle and
   reconnects to durable Supabase Postgres on cold start. This is not yet the
   public production launch or custom domain.
-- Stripe Checkout and signed Stripe webhooks run in test mode. Printful is
-  already used for countries and live cost estimates when configured, but a
-  Stripe test payment can only create a local `mocked` fulfillment record.
+- Stripe Checkout and the registered Fly webhook destination run in Stripe's
+  sandbox. A real hosted test Checkout has been verified through signed Stripe
+  delivery, durable `paid_test` storage, mock email and mock fulfillment.
+  Printful is already used for countries and live cost estimates when
+  configured, but a Stripe test payment can only create a local `mocked`
+  fulfillment record.
   Paid live-mode work uses frozen private print artifacts and a
   single-concurrency, Postgres-leased worker that reconciles the same
   deterministic external ID before any provider retry write.
@@ -364,7 +367,7 @@ test/                      node:test suite — see "Testing" below
 npm test
 ```
 
-Runs `node --test test/*.test.js` — 126 tests covering multi-tenant
+Runs `node --test test/*.test.js` — 137 tests covering multi-tenant
 isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
@@ -483,8 +486,10 @@ sanitized measurements are retained in
 
 ## Test checkout setup
 
-The hosted Checkout page needs only Stripe's secret test key. There is no
-static Stripe Product/Price and no browser-side publishable key in this flow.
+There is no static Stripe Product/Price and no browser-side publishable key in
+this flow.
+
+### Local Checkout
 
 1. Put `sk_test_...` into `STRIPE_SECRET_KEY` in `.env`.
 2. Install/login to the Stripe CLI once (`brew install stripe/stripe-cli/stripe`,
@@ -501,6 +506,36 @@ Checkout button is safe. The durable fulfillment worker records a local
 `mocked` result and the exact payload it would use later, but no code path in
 this test flow calls Printful's order endpoints — even if all Printful live
 switches were accidentally enabled.
+
+### Hosted sandbox Checkout
+
+The public Fly callback must be registered separately from the local Stripe CLI
+listener. With the Stripe test key and Fly authentication available locally,
+run (the hosted-only command safely defaults to the fixed Fly test origin):
+
+```bash
+npm run stripe:configure-webhook -- --confirm-replace-webhook
+flyctl deploy --app wolkenworte
+```
+
+The guarded command creates exactly one sandbox destination for
+`https://wolkenworte.fly.dev/webhook/stripe`, subscribes only to
+`checkout.session.completed`, `checkout.session.async_payment_succeeded` and
+`charge.refunded`, and stages its destination-specific signing secret directly
+in Fly. It never writes or prints that secret. The deploy activates it.
+
+Complete one real hosted Checkout with Stripe test card data. Copy the
+`cs_test_...` value from the resulting confirmation-page URL and run:
+
+```bash
+npm run stripe:verify-hosted-payment -- --session cs_test_...
+```
+
+This is the external end-to-end acceptance check. It requires one enabled exact
+Stripe destination, a paid sandbox Session whose delivery is complete, the
+matching durable `paid_test` order, mock fulfillment, mock transactional email
+and a successful public confirmation response. Unit tests still use signed
+fixtures and deliberately do not pretend to exercise Stripe's network.
 
 ## Transactional email safety and activation
 

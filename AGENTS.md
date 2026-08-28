@@ -6,7 +6,7 @@ it — this file is about how to work in it safely.
 
 ## Before you're done with any change
 
-- Run `npm test` (126 tests, `node --test`). All must pass. Database-backed
+- Run `npm test` (137 tests, `node --test`). All must pass. Database-backed
   tests use isolated migrated Postgres schemas plus ephemeral ports and clean
   them up afterward, so they are safe to run repeatedly.
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not

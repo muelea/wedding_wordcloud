@@ -19,6 +19,33 @@ addresses, email addresses, provider payloads or object keys. The existing
 `/internal/performance/snapshot` adds process, event-loop, Postgres pool,
 Socket.io room and accepted/rejected operation counters.
 
+## Verify hosted Stripe payment delivery
+
+Local signed-webhook fixtures prove the handler but not Stripe's external
+delivery configuration. After completing one Fly-hosted sandbox Checkout, copy
+the `cs_test_...` query value from the confirmation URL and run:
+
+```bash
+npm run stripe:verify-hosted-payment -- --session cs_test_...
+```
+
+The read-only command verifies the exact enabled Stripe destination and events,
+the paid sandbox Session, completed Stripe delivery, the corresponding
+`paid_test` database order, mock fulfillment, mock confirmation email and the
+public order-confirmation API. It rejects live keys and every target other than
+`https://wolkenworte.fly.dev`.
+
+If the destination must be created or its signing secret rotated, use the
+separate mutation command and deploy the staged Fly secret:
+
+```bash
+npm run stripe:configure-webhook -- --confirm-replace-webhook
+flyctl deploy --app wolkenworte
+```
+
+This replaces only the destination for Wolkenworte's hosted-test callback. It
+does not modify unrelated Stripe endpoints and never prints the signing secret.
+
 ## Retry one blocked fulfillment
 
 First inspect the blocked order in Supabase using only its internal numeric ID
