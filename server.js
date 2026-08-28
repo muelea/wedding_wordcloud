@@ -26,6 +26,7 @@ const performanceProbe = require('./src/performanceProbe');
 const { createWordUpdateBroadcaster } = require('./src/wordBroadcasts');
 const log = require('./src/structuredLog');
 const maintenanceMode = require('./src/maintenanceMode');
+const { redirectWwwAlias } = require('./src/canonicalOrigin');
 
 const PORT = process.env.PORT || 3000;
 
@@ -66,6 +67,11 @@ app.get('/health/ready', async (req, res) => {
     return res.status(503).json({ status: 'not_ready' });
   }
 });
+
+// Keep one public origin for browser traffic. The Fly hostname remains a
+// stable infrastructure endpoint for existing provider callbacks and guarded
+// operator tooling; only the public www alias redirects to the canonical apex.
+app.use(redirectWwwAlias);
 
 // Secret-bound operator status/fingerprint remains available while public
 // traffic is paused, so a destructive cleanup can verify its exact target.

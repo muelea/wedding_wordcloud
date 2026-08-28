@@ -102,10 +102,11 @@ dotted and dotless I.
 
 - The full product now runs on Postgres. Versioned migrations and a dedicated
   least-privileged runtime role are configured in the Supabase project.
-- The hosted test environment is active at `https://wolkenworte.fly.dev` on
-  one stateless Fly Machine in Frankfurt. It scales to zero while idle and
-  reconnects to durable Supabase Postgres on cold start. This is not yet the
-  public production launch or custom domain.
+- The hosted test environment is active at `https://wolkenworte.io` on one
+  stateless Fly Machine in Frankfurt. `https://www.wolkenworte.io` redirects to
+  that canonical apex origin. The Machine scales to zero while idle and
+  reconnects to durable Supabase Postgres on cold start; this is still the
+  hosted test environment, not the live-sales launch.
 - Stripe Checkout and the registered Fly webhook destination run in Stripe's
   sandbox. A real hosted test Checkout has been verified through signed Stripe
   delivery, durable `paid_test` storage, mock email and mock fulfillment.
@@ -438,7 +439,10 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   workflow is manual-only (`workflow_dispatch`).
 - The hosted test app is `wolkenworte` in Fly's `fra` region with one
   `shared-cpu-2x`/512 MiB stateless web Machine, no volume, automatic stop/start
-  and `https://wolkenworte.fly.dev`. Durable business data is in Supabase.
+  and the public origin `https://wolkenworte.io`. Durable business data is in
+  Supabase. The Fly-provided `https://wolkenworte.fly.dev` hostname remains a
+  stable infrastructure endpoint for the existing Stripe sandbox webhook,
+  Supabase maintenance Cron and explicitly guarded hosted-test tools.
 - Fly receives only the least-privileged `DATABASE_URL`. Migrations run first
   from local/CI tooling with `MIGRATION_DATABASE_URL`, which must never be
   available to an ordinary web Machine.
@@ -459,13 +463,15 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - The release order is `npm test`, production image build, strict Fly config
   validation, `npm run db:migrate`, `flyctl deploy --remote-only --ha=false`,
   `npm run maintenance:configure-cron`, and
-  `npm run smoke:hosted -- https://wolkenworte.fly.dev`. The manual GitHub
+  `npm run smoke:hosted -- https://wolkenworte.io`. The manual GitHub
   workflow encodes this same fail-fast order.
 - Before that GitHub workflow is first used, its protected `hosted-test`
   environment needs `MIGRATION_DATABASE_URL`, `MAINTENANCE_SECRET` and a scoped
   `FLY_API_TOKEN`. These deployment-runner credentials are not Fly app secrets.
-- `PUBLIC_URL` currently uses the Fly-provided HTTPS hostname. A later
-  custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
+- `PUBLIC_URL` is `https://wolkenworte.io`. Porkbun hosts the authoritative DNS;
+  Fly terminates HTTPS for the apex and `www`, and the application redirects
+  only the `www` alias to the apex. Existing infrastructure callbacks keep
+  their explicit Fly hostname instead of depending on the public alias.
 - Hosted credentials (Stripe, Printful and the HMAC/maintenance secrets) belong in Fly
   secrets or the eventual host's equivalent. Resend API/webhook credentials are
   handled the same way. Keep every live-payment, live-email and Printful

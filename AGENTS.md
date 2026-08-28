@@ -145,9 +145,12 @@ The repository is GitHub `muelea/wedding_wordcloud`, `main` branch. Pushing
 manual-only.
 
 The Supabase/Postgres foundation and least-privileged runtime role are active.
-The hosted test app is active at `https://wolkenworte.fly.dev` on one stateless
-Fly Machine in Frankfurt with automatic stop/start; it is not the production
-launch or custom domain. Local secrets stay in `.env`; hosted runtime secrets
-belong in Fly Secrets, while the privileged `MIGRATION_DATABASE_URL` stays only
-in local/CI migration tooling, never Fly. Do not deploy again or push branches
-without explicit maintainer approval.
+The hosted test app is active at the canonical public origin
+`https://wolkenworte.io` on one stateless Fly Machine in Frankfurt with
+automatic stop/start; `www` redirects to the apex. The stable
+`https://wolkenworte.fly.dev` hostname remains in use for existing Stripe
+sandbox and maintenance callbacks. This is not the live-sales launch. Local
+secrets stay in `.env`; hosted runtime secrets belong in Fly Secrets, while the
+privileged `MIGRATION_DATABASE_URL` stays only in local/CI migration tooling,
+never Fly. Do not deploy again or push branches without explicit maintainer
+approval.

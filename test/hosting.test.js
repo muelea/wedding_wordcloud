@@ -3,11 +3,28 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
 
 const ROOT = path.join(__dirname, '..');
+
+function requestWithHost(baseUrl, pathname, host) {
+  const target = new URL(baseUrl);
+  return new Promise((resolve, reject) => {
+    const request = http.get({
+      hostname: target.hostname,
+      port: target.port,
+      path: pathname,
+      headers: { Host: host },
+    }, (response) => {
+      response.resume();
+      response.on('end', () => resolve(response));
+    });
+    request.on('error', reject);
+  });
+}
 
 test('health endpoints and static cache policy are deployment-safe', async (t) => {
   const { baseUrl, close } = await startTestServer();
@@ -43,6 +60,20 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   assert.equal(bundledSerif.status, 200);
   assert.equal(bundledSerif.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.ok((await bundledSerif.arrayBuffer()).byteLength > 10_000);
+
+  const previousPublicUrl = process.env.PUBLIC_URL;
+  process.env.PUBLIC_URL = 'https://wolkenworte.io';
+  try {
+    const www = await requestWithHost(baseUrl, '/start?locale=de', 'www.wolkenworte.io');
+    assert.equal(www.statusCode, 308);
+    assert.equal(www.headers.location, 'https://wolkenworte.io/start?locale=de');
+
+    const infrastructureHost = await requestWithHost(baseUrl, '/', 'wolkenworte.fly.dev');
+    assert.equal(infrastructureHost.statusCode, 200);
+  } finally {
+    if (previousPublicUrl == null) delete process.env.PUBLIC_URL;
+    else process.env.PUBLIC_URL = previousPublicUrl;
+  }
 });
 
 test('container, Fly config and deployment workflow enforce the hosting boundary', () => {
@@ -66,6 +97,7 @@ test('container, Fly config and deployment workflow enforce the hosting boundary
 
   assert.match(fly, /primary_region = "fra"/);
   assert.match(fly, /APP_ENVIRONMENT = "hosted-test"/);
+  assert.match(fly, /PUBLIC_URL = "https:\/\/wolkenworte\.io"/);
   assert.match(fly, /STRIPE_PAYMENT_MODE = "test"/);
   assert.match(fly, /STRIPE_LIVE_PAYMENTS_ENABLED = "false"/);
   assert.match(fly, /DATABASE_CA_CERT_PATH = "certs\/supabase-prod-ca-2021\.crt"/);

@@ -18,6 +18,9 @@ implementation history is intentionally not maintained as a step-by-step diary.
   dedicated `wolkenworte_app` runtime role are active.
 - [x] The stateless Fly hosted test app is healthy in Frankfurt and can safely
   stop when idle. Durable state remains in Supabase.
+- [x] The Porkbun-managed `wolkenworte.io` domain is attached to Fly with the
+  apex as the canonical public origin and `www` redirecting to it. The stable
+  Fly hostname remains available for infrastructure callbacks.
 - [x] Private Storage holds normalized personal photos and frozen paid print
   artifacts; application records contain opaque identifiers rather than public
   object URLs.
@@ -114,8 +117,8 @@ provider activation each require explicit maintainer approval at action time.
    secret. Never reuse the sandbox or local Stripe CLI webhook secret.
 7. Configure the approved Resend and Printful production values while their
    independent live/write/confirmation gates remain disabled.
-8. Attach the custom domain through DNS and Fly certificates, update
-   `PUBLIC_URL`, and set at least one Machine to remain running.
+8. Reconfirm the custom-domain certificates and canonical redirect, then set at
+   least one Machine to remain running.
 9. Run production health and read-only smoke checks that create no real charge,
    email or Printful order.
 10. Enable live email, payment and fulfillment gates in the reviewed order,
