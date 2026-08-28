@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 
@@ -27,14 +26,6 @@ const OPTIONAL = [
   'PRINTFUL_WEBHOOK_PUBLIC_KEY',
 ];
 
-function databaseCa() {
-  const inline = String(process.env.DATABASE_CA_CERT || '').trim();
-  if (inline) return inline.replace(/\\n/g, '\n');
-  const certPath = String(process.env.DATABASE_CA_CERT_PATH || '').trim();
-  if (!certPath) throw new Error('DATABASE_CA_CERT oder DATABASE_CA_CERT_PATH fehlt.');
-  return fs.readFileSync(certPath, 'utf8').trim();
-}
-
 function runtimeSecrets() {
   const missing = REQUIRED.filter((name) => !String(process.env[name] || '').trim());
   if (missing.length) throw new Error(`Fehlende Fly-Laufzeitwerte: ${missing.join(', ')}`);
@@ -48,7 +39,6 @@ function runtimeSecrets() {
   }
 
   const values = Object.fromEntries(REQUIRED.map((name) => [name, process.env[name]]));
-  values.DATABASE_CA_CERT = databaseCa();
   for (const name of OPTIONAL) {
     if (String(process.env[name] || '').trim()) values[name] = process.env[name];
   }
@@ -89,4 +79,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { databaseCa, importSecrets, main, runtimeSecrets };
+module.exports = { importSecrets, main, runtimeSecrets };

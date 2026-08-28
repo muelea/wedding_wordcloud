@@ -52,17 +52,23 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   const envExample = fs.readFileSync(path.join(ROOT, '.env.example'), 'utf8');
   const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'deploy-hosted.yml'), 'utf8');
   const secretScript = fs.readFileSync(path.join(ROOT, 'scripts', 'configure-fly-secrets.js'), 'utf8');
+  const dbConfig = fs.readFileSync(path.join(ROOT, 'src', 'dbConfig.js'), 'utf8');
+  const databaseCa = path.join(ROOT, 'certs', 'supabase-prod-ca-2021.crt');
 
   assert.match(dockerfile, /FROM node:22-bookworm-slim AS runtime/);
   assert.match(dockerfile, /USER node/);
+  assert.match(dockerfile, /COPY --chown=node:node certs \.\/certs/);
   assert.match(dockerfile, /ENTRYPOINT \["\/usr\/bin\/tini", "-s", "--"\]/);
   assert.doesNotMatch(dockerfile, /COPY\s+\.\s+\./);
   assert.match(dockerignore, /^\.env$/m);
+  assert.equal(fs.readFileSync(databaseCa, 'utf8').includes('BEGIN CERTIFICATE'), true);
+  assert.doesNotMatch(dbConfig, /process\.env\.(?:DATABASE_CA_CERT|PGSSLROOTCERT)\b/);
 
   assert.match(fly, /primary_region = "fra"/);
   assert.match(fly, /APP_ENVIRONMENT = "hosted-test"/);
   assert.match(fly, /STRIPE_PAYMENT_MODE = "test"/);
   assert.match(fly, /STRIPE_LIVE_PAYMENTS_ENABLED = "false"/);
+  assert.match(fly, /DATABASE_CA_CERT_PATH = "certs\/supabase-prod-ca-2021\.crt"/);
   assert.match(fly, /kill_signal = "SIGTERM"/);
   assert.match(fly, /kill_timeout = 30/);
   assert.match(fly, /auto_stop_machines = "stop"/);
@@ -76,10 +82,14 @@ test('container, Fly config and deployment workflow enforce the Phase 2 boundary
   for (const name of [
     'STRIPE_TEST_SECRET_KEY',
     'STRIPE_TEST_LOCAL_WEBHOOK_SECRET',
-    'STRIPE_TEST_HOSTED_WEBHOOK_SECRET',
     'STRIPE_LIVE_SECRET_KEY',
     'STRIPE_LIVE_WEBHOOK_SECRET',
   ]) assert.match(envExample, new RegExp(`^${name}=`, 'm'));
+  assert.match(envExample, /`STRIPE_TEST_HOSTED_WEBHOOK_SECRET`/);
+  assert.doesNotMatch(envExample, /^STRIPE_TEST_HOSTED_WEBHOOK_SECRET=/m);
+  assert.match(envExample, /^DATABASE_CA_CERT_PATH=certs\/supabase-prod-ca-2021\.crt$/m);
+  assert.doesNotMatch(envExample, /^DATABASE_CA_CERT=/m);
+  assert.doesNotMatch(secretScript, /DATABASE_CA_CERT/);
   assert.doesNotMatch(envExample, /^STRIPE_(?:SECRET_KEY|WEBHOOK_SECRET|ALLOW_LIVE_PAYMENTS)=/m);
 
   const testIndex = workflow.indexOf('npm test');

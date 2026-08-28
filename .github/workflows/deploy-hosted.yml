@@ -16,7 +16,7 @@ jobs:
     environment: hosted-test
     env:
       MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
-      DATABASE_CA_CERT: ${{ secrets.DATABASE_CA_CERT }}
+      DATABASE_CA_CERT_PATH: certs/supabase-prod-ca-2021.crt
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       MAINTENANCE_SECRET: ${{ secrets.MAINTENANCE_SECRET }}
       PUBLIC_URL: https://wolkenworte.fly.dev

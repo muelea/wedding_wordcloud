@@ -28,6 +28,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node package.json package-lock.json server.js ./
+COPY --chown=node:node certs ./certs
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
 

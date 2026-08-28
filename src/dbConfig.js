@@ -19,11 +19,7 @@ function isLocalDatabaseUrl(connectionString) {
 }
 
 function readDatabaseCa() {
-  const inline = String(process.env.DATABASE_CA_CERT || '').trim();
-  if (inline) return inline.replace(/\\n/g, '\n');
-  const certPath = String(
-    process.env.DATABASE_CA_CERT_PATH || process.env.PGSSLROOTCERT || ''
-  ).trim();
+  const certPath = String(process.env.DATABASE_CA_CERT_PATH || '').trim();
   if (!certPath) return null;
   try {
     return fs.readFileSync(certPath, 'utf8');
@@ -60,7 +56,7 @@ function connectionOptions(connectionString, {
     const ca = readDatabaseCa();
     if (!ca) {
       throw new Error(
-        'Für Hosted Postgres fehlt DATABASE_CA_CERT_PATH (oder DATABASE_CA_CERT).'
+        'Für Hosted Postgres fehlt DATABASE_CA_CERT_PATH.'
       );
     }
     ssl = { ca, rejectUnauthorized: true };

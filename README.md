@@ -243,8 +243,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `PORT` | local + hosted setting | TCP port for Express and Socket.io; 3000 locally and 8080 on Fly. |
 | `PUBLIC_URL` | local + hosted setting | Canonical origin for QR codes, links, redirects and immutable print capability URLs; empty locally allows LAN detection. |
 | `DATABASE_URL` | local/Fly runtime secret | Least-privileged Postgres connection used by the running process. The `.env` and Fly values are independently managed. |
-| `DATABASE_CA_CERT_PATH` | local/operator | Workstation path to the trusted Supabase CA used for verified hosted Postgres TLS. |
-| `DATABASE_CA_CERT` | Fly runtime secret | Same trusted CA as inline PEM for a host that cannot use the workstation file path. |
+| `DATABASE_CA_CERT_PATH` | shared setting | Path to the committed public Supabase CA used by local processes, CI and the Fly container for verified hosted Postgres TLS. |
 | `MIGRATION_DATABASE_URL` | operator/CI only | Privileged connection for migrations and role provisioning; forbidden in the Fly web process. |
 | `TEST_DATABASE_URL` | optional test operator | Overrides the admin connection used to create isolated test schemas; otherwise tests fall back to migration/runtime URLs. |
 | `SUPABASE_URL` | local/operator/Fly runtime | Supabase API origin used by the backend for private Storage; browsers never call it directly. |
@@ -279,10 +278,8 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed payment-cost reserve in euro cents folded into product prices. |
 
 `DATABASE_APPLICATION_NAME` is set by `fly.toml`/test helpers for Postgres
-observability. `DATABASE_SCHEMA` is generated only by isolated tests, and
-`PGSSLROOTCERT` is accepted as a standard compatibility alias for
-`DATABASE_CA_CERT_PATH`; developers normally should not add any of these to
-`.env`.
+observability, and `DATABASE_SCHEMA` is generated only by isolated tests.
+Developers normally should not add either one to `.env`.
 
 Postgres, Supabase Storage and durable email jobs are active now. Resend remains
 in `mock` mode until its sending domain and signed webhook are deliberately
@@ -445,8 +442,9 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   from local/CI tooling with `MIGRATION_DATABASE_URL`, which must never be
   available to an ordinary web Machine.
 - `npm run fly:secrets` validates and stages the runtime-secret allowlist from
-  the ignored `.env`; it converts the trusted database CA to an inline Fly
-  secret and deliberately excludes `MIGRATION_DATABASE_URL`.
+  the ignored `.env` and deliberately excludes `MIGRATION_DATABASE_URL`. The
+  public Supabase CA is committed at `certs/supabase-prod-ca-2021.crt`, copied
+  into the image and referenced by the one `DATABASE_CA_CERT_PATH` setting.
 - `npm run maintenance:configure-cron` stores the Fly maintenance URL and
   independent bearer secret in Supabase Vault, then installs the committed
   five-minute request with an explicit 30-second pg_net timeout. The migration
@@ -463,9 +461,8 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   `npm run smoke:hosted -- https://wolkenworte.fly.dev`. The manual GitHub
   workflow encodes this same fail-fast order.
 - Before that GitHub workflow is first used, its protected `hosted-test`
-  environment needs `MIGRATION_DATABASE_URL`, `DATABASE_CA_CERT`,
-  `MAINTENANCE_SECRET` and a scoped `FLY_API_TOKEN`. These deployment-runner
-  credentials are not Fly app secrets.
+  environment needs `MIGRATION_DATABASE_URL`, `MAINTENANCE_SECRET` and a scoped
+  `FLY_API_TOKEN`. These deployment-runner credentials are not Fly app secrets.
 - `PUBLIC_URL` currently uses the Fly-provided HTTPS hostname. A later
   custom IONOS domain changes DNS and `PUBLIC_URL`, not the application flow.
 - Hosted credentials (Stripe, Printful and the HMAC/maintenance secrets) belong in Fly
@@ -574,6 +571,12 @@ fly:secrets` command deliberately cannot overwrite it from the local `.env`.
 The hosted app selects it because `fly.toml` explicitly declares
 `APP_ENVIRONMENT=hosted-test` and `STRIPE_PAYMENT_MODE=test`. The deploy
 activates it.
+
+The signing secret remains inspectable in Stripe Sandbox → Workbench →
+Webhooks: select the `https://wolkenworte.fly.dev/webhook/stripe` destination
+and choose **Click to reveal**. It is an endpoint-specific hosted runtime
+secret and must not be added to local `.env`; local webhook forwarding uses the
+separate `STRIPE_TEST_LOCAL_WEBHOOK_SECRET` printed by `stripe listen`.
 
 Complete one real hosted Checkout with Stripe test card data. Copy the
 `cs_test_...` value from the resulting confirmation-page URL and run:

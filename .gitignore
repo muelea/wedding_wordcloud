@@ -4,7 +4,6 @@ data/*.sqlite-journal
 data/*.sqlite-wal
 data/*.sqlite-shm
 .env
-.local/
 *.log
 supabase/.branches/
 supabase/.temp/
