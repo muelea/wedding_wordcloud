@@ -98,9 +98,10 @@ async function assertDatabaseReady() {
       current_user AS current_user,
       has_schema_privilege(current_user, current_schema(), 'CREATE') AS can_create_schema_objects
   `);
-  if (result.rows[0]?.version !== REQUIRED_SCHEMA_VERSION) {
+  const currentVersion = Number(result.rows[0]?.version);
+  if (!Number.isSafeInteger(currentVersion) || currentVersion < Number(REQUIRED_SCHEMA_VERSION)) {
     throw new Error(
-      `Postgres-Schema ist nicht aktuell (erwartet: ${REQUIRED_SCHEMA_VERSION}). ` +
+      `Postgres-Schema ist nicht aktuell (mindestens erwartet: ${REQUIRED_SCHEMA_VERSION}). ` +
       'Bitte zuerst die Supabase-Migrationen anwenden.'
     );
   }

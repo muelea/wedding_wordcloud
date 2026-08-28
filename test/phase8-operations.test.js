@@ -154,6 +154,15 @@ test('Phase 8 built-in observability, recovery and pre-live cleanup', async (t) 
     assert.equal(Object.hasOwn(status.fulfillment, 'orders'), false);
   });
 
+  await t.test('an additive future migration does not stop the currently compatible release', async () => {
+    await hosted.query('INSERT INTO app_schema_versions (version) VALUES (7)');
+    try {
+      await assert.doesNotReject(db.assertDatabaseReady());
+    } finally {
+      await hosted.query('DELETE FROM app_schema_versions WHERE version = 7');
+    }
+  });
+
   await t.test('manual recovery claims exactly one blocked order and records the outcome', async () => {
     const command = require('../scripts/retry-blocked-fulfillment');
     assert.throws(
