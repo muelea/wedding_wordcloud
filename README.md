@@ -137,7 +137,7 @@ dotted and dotless I.
   confirmations, leased Resend jobs, shipment/refund/cancellation notices and
   signed replay-safe Resend delivery webhooks are also implemented. Customer
   VAT/Stripe Tax treatment, legal review of the versioned contractual copy,
-  Resend domain/webhook activation and the first explicitly approved controlled
+  enabling Resend live delivery and the first explicitly approved controlled
   Printful draft remain pending before live sales.
 
 ## Guest ownership and personal photo designs
@@ -283,9 +283,11 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 observability, and `DATABASE_SCHEMA` is generated only by isolated tests.
 Developers normally should not add either one to `.env`.
 
-Postgres, Supabase Storage and durable email jobs are active now. Resend remains
-in `mock` mode until its sending domain and signed webhook are deliberately
-activated; hosted Stripe test payments cannot contact the live Resend API.
+Postgres, Supabase Storage and durable email jobs are active now. The Resend
+sending domain, restricted runtime key and signed webhook are configured and
+their delivered, bounced, complained and suppressed outcomes have been verified.
+The hosted environment remains in `mock` mode, so ordinary jobs and hosted
+Stripe test payments cannot contact the live Resend API.
 
 **Never commit `.env`** — it is gitignored and may contain both local runtime
 credentials and privileged operator credentials. Hosted runtime secrets must
@@ -617,7 +619,9 @@ sent as a tag. An ambiguous provider response can reuse only that exact key for
 blocked for manual review instead of risking a duplicate send. Signed Resend
 events are deduplicated by `svix-id` and terminal
 bounce/failure/complaint/suppression states cannot be moved backward by a late
-delivery event. Each increase in Stripe's cumulative refunded amount creates
+delivery event. Routine workers cannot claim provider-smoke jobs; only the
+explicit local operator command can claim an exact allowlisted smoke job. Each
+increase in Stripe's cumulative refunded amount creates
 one notice for exactly the newly refunded amount; duplicate or stale events do
 not create mail. Every provider request sets Reply-To to the canonical seller
 contact `kontakt@jusa.io`. Email failure never rolls back payment or blocks
@@ -702,9 +706,10 @@ keys in Fly for the next deploy.
   `STRIPE_LIVE_PAYMENTS_ENABLED=false`.
 - **Live transactional delivery** — email snapshots and mock outcomes are
   durable, but `EMAIL_DELIVERY_MODE=mock` prevents ordinary jobs from contacting
-  Resend. Stripe test payments remain mocked in every mode. The verified sending
-  domain, signed webhook activation and controlled delivered/bounced smoke are
-  still launch gates.
+  Resend. Stripe test payments remain mocked in every mode. The sending domain,
+  signed webhook and controlled real-inbox/delivered/bounced/complained/
+  suppressed outcomes are verified; only the deliberate live-delivery cutover
+  remains gated.
 - **Real Printful fulfillment after test payments** — live countries and
   estimates are connected for the curated mug variants 1320, 4830 and 16586,
   coaster variant 15662, unframed poster variants 8948 and 8952, framed

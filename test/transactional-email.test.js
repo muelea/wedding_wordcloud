@@ -239,11 +239,21 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     const smoke = await db.createEmailSmokeJob({
       recipientEmail: 'maintainer@example.test', locale: 'it',
     });
-    const first = await db.claimEmailJob({ jobId: smoke.emailJob.id, lockedBy: 'email-worker-a', leaseMs: 15_000 });
+    const routineClaim = await db.claimEmailJob({
+      jobId: smoke.emailJob.id, lockedBy: 'routine-email-worker', leaseMs: 15_000,
+    });
+    assert.equal(routineClaim, null, 'routine workers must never claim provider-smoke jobs');
+    const first = await db.claimEmailJob({
+      jobId: smoke.emailJob.id, lockedBy: 'email-worker-a', leaseMs: 15_000,
+      providerSmoke: true,
+    });
     await hosted.query(`
       UPDATE email_jobs SET locked_until = transaction_timestamp() - interval '1 second' WHERE id = $1
     `, [smoke.emailJob.id]);
-    const second = await db.claimEmailJob({ jobId: smoke.emailJob.id, lockedBy: 'email-worker-b', leaseMs: 15_000 });
+    const second = await db.claimEmailJob({
+      jobId: smoke.emailJob.id, lockedBy: 'email-worker-b', leaseMs: 15_000,
+      providerSmoke: true,
+    });
     assert.equal(Number(second.lease_version), Number(first.lease_version) + 1);
     const stale = await db.completeMockEmail(smoke.emailJob.id, {
       lockedBy: first.locked_by, leaseVersion: Number(first.lease_version),

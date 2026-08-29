@@ -55,19 +55,20 @@ implementation history is intentionally not maintained as a step-by-step diary.
 
 ### Resend activation
 
-- [ ] Register `mail.wolkenworte.io` in Resend with region `eu-west-1`, publish
+- [x] Register `mail.wolkenworte.io` in Resend with region `eu-west-1`, publish
   its exact SPF, DKIM and Return-Path/MX records in Porkbun, verify the domain,
   and leave transactional open/click tracking disabled.
-- [ ] Create one long-lived Sending-access key restricted to that domain plus a
+- [x] Create one long-lived Sending-access key restricted to that domain plus a
   separate temporary Full-access setup key. Never deploy the management key.
-- [ ] Run `npm run resend:configure-webhook -- --confirm-replace-webhook`, revoke
+- [x] Run `npm run resend:configure-webhook -- --confirm-replace-webhook`, revoke
   and locally clear the temporary management key, deploy the staged runtime
   key/From identity/signing secret, and verify signed delivery callbacks.
-- [ ] Configure local-only `RESEND_SMOKE_RECIPIENTS` and run the guarded real
+- [x] Configure local-only `RESEND_SMOKE_RECIPIENTS` and run the guarded real
   inbox, delivered, bounced, complained and suppressed provider smokes from
   `README.md`. Confirm Reply-To is `kontakt@jusa.io`.
-- [ ] Return `EMAIL_DELIVERY_MODE` to `mock` after testing. Enable live delivery
-  only as part of the approved production cutover.
+- [x] Keep the hosted test environment at `EMAIL_DELIVERY_MODE=mock` after the
+  provider smokes.
+- [ ] Enable live delivery only as part of the approved production cutover.
 
 ### Printful verification
 

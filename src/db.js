@@ -1203,8 +1203,14 @@ async function getEmailJobsForOrder(orderId) {
   return rowsToBoundary(result.rows);
 }
 
-async function claimEmailJob({ jobId = null, lockedBy, leaseMs = 60_000 } = {}) {
+async function claimEmailJob({
+  jobId = null,
+  lockedBy,
+  leaseMs = 60_000,
+  providerSmoke = false,
+} = {}) {
   if (!lockedBy || String(lockedBy).length > 120) throw new Error('invalid email lease owner');
+  if (providerSmoke && jobId == null) throw new Error('provider smoke claims require an exact job id');
   const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
     ? leaseMs
     : 60_000;
@@ -1214,9 +1220,10 @@ async function claimEmailJob({ jobId = null, lockedBy, leaseMs = 60_000 } = {}) 
       FROM email_jobs
       WHERE ($1::bigint IS NULL OR id = $1)
         AND status IN ('pending', 'failed', 'processing')
+        AND provider_smoke = $4
         AND provider_terminal = false
         AND attempt_count < 4
-        AND next_attempt_at <= transaction_timestamp()
+        AND ($4::boolean OR next_attempt_at <= transaction_timestamp())
         AND (locked_until IS NULL OR locked_until <= transaction_timestamp())
       ORDER BY next_attempt_at ASC, id ASC
       FOR UPDATE SKIP LOCKED
@@ -1232,7 +1239,7 @@ async function claimEmailJob({ jobId = null, lockedBy, leaseMs = 60_000 } = {}) 
     FROM candidate
     WHERE target.id = candidate.id
     RETURNING target.*
-  `, [jobId, String(lockedBy), safeLeaseMs]);
+  `, [jobId, String(lockedBy), safeLeaseMs, Boolean(providerSmoke)]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -2800,6 +2807,15 @@ async function createEmailSmokeJob({ recipientEmail, locale = 'de' }) {
       dedupeKey: `email_smoke:order_confirmation:${order.id}`,
       providerSmoke: true,
     });
+    // Compatibility fence: an older deployed routine worker does not know the
+    // provider_smoke claim filter yet. Only an exact, explicitly provider-smoke
+    // claim may bypass this schedule.
+    const fencedEmailResult = await client.query(`
+      UPDATE email_jobs
+      SET next_attempt_at = transaction_timestamp() + interval '100 years'
+      WHERE id = $1 AND provider_smoke = true
+      RETURNING *
+    `, [email.job.id]);
     const smokeResult = await client.query(`
       INSERT INTO email_smoke_runs (order_id, email_job_id, status)
       VALUES ($1, $2, 'running') RETURNING *
@@ -2807,7 +2823,7 @@ async function createEmailSmokeJob({ recipientEmail, locale = 'de' }) {
     return {
       order: rowToBoundary(order),
       shipment: rowToBoundary(shipmentResult.rows[0]),
-      emailJob: email.job,
+      emailJob: rowToBoundary(fencedEmailResult.rows[0]),
       smokeRun: rowToBoundary(smokeResult.rows[0]),
     };
   });

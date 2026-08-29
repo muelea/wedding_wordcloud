@@ -156,7 +156,12 @@ async function processJob(jobId, options = {}) {
   if (stopping || workerBusy) return db.getEmailJobById(jobId);
   workerBusy = true;
   try {
-    const job = await db.claimEmailJob({ jobId, lockedBy: WORKER_ID, leaseMs: LEASE_MS });
+    const job = await db.claimEmailJob({
+      jobId,
+      lockedBy: WORKER_ID,
+      leaseMs: LEASE_MS,
+      providerSmoke: Boolean(options.providerSmoke),
+    });
     if (!job) return db.getEmailJobById(jobId);
     return executeClaimedJob(job, options);
   } finally {

@@ -100,6 +100,8 @@ it — this file is about how to work in it safely.
   confirmation job in the same transaction. Never call Resend inside the
   Stripe webhook, copy email into shipment recipients, or let email failure
   roll back payment/block fulfillment. Test payments always use email `mock`.
+  Routine workers never claim `provider_smoke` jobs; only the explicit,
+  allowlisted operator smoke may claim an exact smoke job id.
   Live retries reuse the permanent job dedupe key only inside the 23-hour
   safety window; signed raw-body Resend callbacks dedupe by `svix-id`, and
   stale lease owners cannot commit. Bounce, failure, complaint and suppression
