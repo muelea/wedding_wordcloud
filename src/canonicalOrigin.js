@@ -1,5 +1,7 @@
 'use strict';
 
+const INFRASTRUCTURE_HOST = 'wolkenworte.fly.dev';
+
 function configuredOrigin() {
   try {
     const url = new URL(process.env.PUBLIC_URL || '');
@@ -22,4 +24,17 @@ function redirectWwwAlias(req, res, next) {
   return res.redirect(308, `${canonical.origin}${safeTarget}`);
 }
 
-module.exports = { configuredOrigin, redirectWwwAlias };
+function markInfrastructureHostNoIndex(req, res, next) {
+  const requestedHost = String(req.hostname || '').toLowerCase().replace(/\.$/, '');
+  if (requestedHost === INFRASTRUCTURE_HOST) {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+  next();
+}
+
+module.exports = {
+  INFRASTRUCTURE_HOST,
+  configuredOrigin,
+  markInfrastructureHostNoIndex,
+  redirectWwwAlias,
+};

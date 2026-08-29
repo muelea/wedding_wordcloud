@@ -68,8 +68,13 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
     assert.equal(www.statusCode, 308);
     assert.equal(www.headers.location, 'https://wolkenworte.io/start?locale=de');
 
+    const canonicalHost = await requestWithHost(baseUrl, '/', 'wolkenworte.io');
+    assert.equal(canonicalHost.statusCode, 200);
+    assert.equal(canonicalHost.headers['x-robots-tag'], undefined);
+
     const infrastructureHost = await requestWithHost(baseUrl, '/', 'wolkenworte.fly.dev');
     assert.equal(infrastructureHost.statusCode, 200);
+    assert.equal(infrastructureHost.headers['x-robots-tag'], 'noindex, nofollow');
   } finally {
     if (previousPublicUrl == null) delete process.env.PUBLIC_URL;
     else process.env.PUBLIC_URL = previousPublicUrl;

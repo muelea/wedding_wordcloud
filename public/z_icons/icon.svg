@@ -17,12 +17,13 @@
       <stop offset=".62" stop-color="#61001f"/>
       <stop offset="1" stop-color="#4b0018"/>
     </radialGradient>
-    <mask id="heart-cutout" x="0" y="0" width="726" height="672" maskUnits="userSpaceOnUse">
-      <rect width="726" height="672" fill="#fff"/>
-      <path fill="#000" d="M364 488c-14-13-49-38-73-61-21-20-32-42-31-65 1-26 18-46 42-49 28-4 49 10 62 31 14-21 35-35 62-31 24 3 41 23 42 49 1 27-13 52-35 74-20 20-44 39-69 52Z"/>
-    </mask>
+    <clipPath id="heart-cutout" clipPathUnits="userSpaceOnUse">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0H726V672H0ZM364 488c-14-13-49-38-73-61-21-20-32-42-31-65 1-26 18-46 42-49 28-4 49 10 62 31 14-21 35-35 62-31 24 3 41 23 42 49 1 27-13 52-35 74-20 20-44 39-69 52Z"/>
+    </clipPath>
   </defs>
-  <g mask="url(#heart-cutout)">
+  <!-- A binary clip preserves the transparent heart without the intermittent
+       luminance-mask compositing artifact seen at the 32×30 header size. -->
+  <g clip-path="url(#heart-cutout)">
     <ellipse cx="369" cy="244" rx="184.5" ry="186" fill="url(#rose-back)"/>
     <path fill="url(#burgundy-right)" d="m364 344c33-66 94-110 163-110 101 0 179 76 179 173 0 76-50 136-129 150l30 54c3 6-1 9-8 6-45-16-83-36-120-54l-286 9c51-16 133-52 171-84 34-28 74-63 91-92 22-38 6-76-27-83-28-6-50 10-64 31Z"/>
     <path fill="url(#rose-left)" d="M364 344c-29-62-90-100-160-100-100 0-178 74-178 166 0 93 72 162 167 162 60 0 110-31 171-84-33-25-71-55-88-80-27-39-18-77 25-94 27-6 49 9 63 30Z"/>

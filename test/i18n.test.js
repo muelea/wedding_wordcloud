@@ -72,10 +72,10 @@ test('locale catalogs cover the complete user journey and preserve interpolation
 test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', filename), 'utf8');
-    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260826-5" \/>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260829-1" \/>/, filename);
     assert.match(html, /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/, filename);
-    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260826-9"><\/script>/, filename);
-    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260826-3" \/>/, filename);
+    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-1"><\/script>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-1" \/>/, filename);
     assert.match(html, /<header\b[^>]*\bww-site-header\b/, `${filename} needs the shared site header`);
     assert.match(html, /class="[^"]*\bww-nav\b/, `${filename} needs a language-switcher host in its header`);
   }
@@ -160,11 +160,31 @@ test('shared header pins the brand left and language switcher right at every vie
 
   assert.match(styles, /\.ww-nav\s*\{[^}]*width:\s*100%\s*!important[^}]*padding:\s*0 40px\s*!important/s);
   assert.match(styles, /\.ww-brand\s*\{[^}]*margin-right:\s*auto/s);
+  assert.match(styles, /\.ww-brand\s*\{[^}]*-webkit-font-smoothing:\s*auto/s);
+  assert.match(styles, /\.ww-nav::after\s*\{[^}]*width:\s*126px[^}]*flex:\s*0 0 126px/s);
+  assert.match(styles, /\.ww-nav\.ww-language-mounted::after\s*\{[^}]*display:\s*none/s);
   assert.match(styles, /\.ww-site-header \.ww-language-inline\s*\{[^}]*margin-left:\s*auto/s);
   assert.match(styles, /@media \(max-width:\s*620px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
   assert.match(runtime, /container\.appendChild\(wrapper\)/);
+  assert.match(runtime, /container\.classList\.add\('ww-language-mounted'\)/);
   assert.doesNotMatch(runtime, /container\.insertBefore\(wrapper/,
     'the language switcher must remain the final, right-aligned header item');
+
+  const domReadyHandler = runtime.slice(runtime.indexOf("root.document.addEventListener('DOMContentLoaded'"));
+  assert.ok(
+    domReadyHandler.indexOf('mountLanguageSelector();') < domReadyHandler.indexOf('await readyPromise;'),
+    'the language control must mount before locale network loading can yield a partial header'
+  );
+});
+
+test('shared wordmark uses stable text and mask-free vector rendering', () => {
+  const publicRoot = path.join(__dirname, '..', 'public');
+  const styles = fs.readFileSync(path.join(publicRoot, 'site-header.css'), 'utf8');
+  const icon = fs.readFileSync(path.join(publicRoot, 'z_icons', 'icon.svg'), 'utf8');
+
+  assert.match(styles, /\.ww-brand\s*\{[^}]*font-weight:\s*600[^}]*-webkit-font-smoothing:\s*auto/s);
+  assert.doesNotMatch(icon, /<mask\b|\bmask=/i);
+  assert.match(icon, /fill-rule="evenodd"/);
 });
 
 test('language switcher uses the branded accessible menu and Unicode flags', () => {
@@ -237,7 +257,7 @@ test('guest live preview hides the language switcher until the preview closes', 
 
   assert.match(guestPage, /document\.body\.classList\.add\('preview-open'\)/);
   assert.match(guestPage, /document\.body\.classList\.remove\('preview-open'\)/);
-  assert.match(styles, /body\.preview-open\s+\.ww-language-picker\s*\{[^}]*display:\s*none/s);
+  assert.match(styles, /body\.preview-open\s+\.ww-language-picker\s*\{[^}]*visibility:\s*hidden/s);
 });
 
 test('event locale is validated, persisted and returned by public APIs', async (t) => {

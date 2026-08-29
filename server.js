@@ -26,7 +26,7 @@ const performanceProbe = require('./src/performanceProbe');
 const { createWordUpdateBroadcaster } = require('./src/wordBroadcasts');
 const log = require('./src/structuredLog');
 const maintenanceMode = require('./src/maintenanceMode');
-const { redirectWwwAlias } = require('./src/canonicalOrigin');
+const { markInfrastructureHostNoIndex, redirectWwwAlias } = require('./src/canonicalOrigin');
 
 const PORT = process.env.PORT || 3000;
 
@@ -45,6 +45,9 @@ app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
 app.use(compression());
 app.use(log.requestContext);
+// Keep the permanent Fly hostname usable for provider callbacks and guarded
+// operations without letting it compete with wolkenworte.io in search results.
+app.use(markInfrastructureHostNoIndex);
 
 let initialized = false;
 let acceptingTraffic = false;

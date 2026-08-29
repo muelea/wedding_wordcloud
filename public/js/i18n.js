@@ -358,6 +358,7 @@
 
     wrapper.append(trigger, menu);
     wrapper.classList.add('ww-language-inline');
+    container.classList.add('ww-language-mounted');
     container.appendChild(wrapper);
     stackingHost = wrapper.closest('header');
     updateLanguageSelector();
@@ -388,10 +389,13 @@
     root.document.documentElement.lang = locale;
     readyPromise = setLocale(locale, { source: localeSource });
     root.document.addEventListener('DOMContentLoaded', async () => {
-      await readyPromise;
-      translateTree(root.document);
+      // The selected locale is already known synchronously. Mount the fixed-
+      // width control before waiting for its catalog so the first painted
+      // header has its final geometry during a language-change navigation.
       mountLanguageSelector();
       startObserver();
+      await readyPromise;
+      translateTree(root.document);
     });
   }
 

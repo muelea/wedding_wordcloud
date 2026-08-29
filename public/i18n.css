@@ -27,7 +27,8 @@
 }
 
 body.preview-open .ww-language-picker {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .ww-language-trigger,

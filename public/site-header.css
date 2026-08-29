@@ -45,6 +45,23 @@
   background: transparent !important;
 }
 
+/* Reserve the language control's final flex item before i18n.js mounts it.
+   This keeps the middle landing-page navigation in exactly the same place
+   while a locale catalog is loading during a language-change navigation. */
+.ww-nav::after {
+  content: '';
+  display: block;
+  width: 126px;
+  height: 38px;
+  flex: 0 0 126px;
+  margin-left: auto;
+  pointer-events: none;
+}
+
+.ww-nav.ww-language-mounted::after {
+  display: none;
+}
+
 .ww-brand {
   display: inline-flex;
   align-items: center;
@@ -58,6 +75,9 @@
   text-decoration: none;
   flex: 0 0 auto;
   margin-right: auto;
+  /* landing.html smooths its whole body; the remaining pages do not. Use
+     the browser default explicitly for one identical wordmark everywhere. */
+  -webkit-font-smoothing: auto;
 }
 
 .ww-site-header .ww-language-inline {
@@ -107,6 +127,7 @@
   .ww-brand { font-size: 1.18rem; }
   .ww-brand-icon { width: 28px; height: 26px; }
   .ww-back-link { font-size: .8rem; }
+  .ww-nav::after { width: 112px; height: 36px; flex-basis: 112px; }
 }
 
 @media (max-width: 460px) {
