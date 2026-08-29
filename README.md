@@ -117,7 +117,7 @@ dotted and dotless I.
   single-concurrency, Postgres-leased worker that reconciles the same
   deterministic external ID before any provider retry write.
 - The production container, readiness/liveness checks, cache rules, graceful
-  shutdown, Fly configuration and manual deployment workflow are in the repository.
+  shutdown, Fly configuration and guarded local deployment command are in the repository.
 - Socket.io room updates are transaction-after-commit and coalesced per event
   into complete snapshots at most once per 100 milliseconds. Initial room and
   private receipt hydration deduplicate connection storms without caching
@@ -249,8 +249,8 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `PORT` | local + hosted setting | TCP port for Express and Socket.io; 3000 locally and 8080 on Fly. |
 | `PUBLIC_URL` | local + hosted setting | Canonical origin for QR codes, links, redirects and immutable print capability URLs; empty locally allows LAN detection. |
 | `DATABASE_URL` | local/Fly runtime secret | Least-privileged Postgres connection used by the running process. The `.env` and Fly values are independently managed. |
-| `DATABASE_CA_CERT_PATH` | shared setting | Path to the committed public Supabase CA used by local processes, CI and the Fly container for verified hosted Postgres TLS. |
-| `MIGRATION_DATABASE_URL` | operator/CI only | Privileged connection for migrations and role provisioning; forbidden in the Fly web process. |
+| `DATABASE_CA_CERT_PATH` | shared setting | Path to the committed public Supabase CA used by local processes and the Fly container for verified hosted Postgres TLS. |
+| `MIGRATION_DATABASE_URL` | local operator only | Privileged connection for migrations and role provisioning; forbidden in the Fly web process. |
 | `TEST_DATABASE_URL` | optional test operator | Overrides the admin connection used to create isolated test schemas; otherwise tests fall back to migration/runtime URLs. |
 | `SUPABASE_URL` | local/operator/Fly runtime | Supabase API origin used by the backend for private Storage; browsers never call it directly. |
 | `SUPABASE_SECRET_KEY` | local/operator/Fly secret | Backend-only `sb_secret_...` key for private Storage operations; never exposed to clients. |
@@ -357,7 +357,7 @@ still need professional review before live payments are enabled.
 server.js                  Express + Socket.io bootstrap, route mounting
 Dockerfile                 Non-root Debian/Node 22 production image
 fly.toml                   Frankfurt hosted-test lifecycle and health config
-.github/workflows/         Manual test → migrate → deploy → smoke workflow
+scripts/deploy-hosted.js   Guarded local test → build → migrate → deploy → smoke command
 scripts/hosted-smoke.js    Sanitized HTTPS/Postgres/Socket.io hosted smoke
 scripts/socket-capacity.js Guarded 100-room/2,000-socket staging qualification
 reports/                   Sanitized retained capacity evidence
@@ -444,9 +444,28 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 
 ## Deployment notes
 
-- Repository: GitHub `muelea/wedding_wordcloud`, `main`. Deployments remain
-  explicit; pushing `main` does not deploy automatically. The committed GitHub
-  workflow is manual-only (`workflow_dispatch`).
+- Repository: GitHub `muelea/wedding_wordcloud`, `main`. GitHub is the source
+  control remote, not a deployment runner. Pushing `main` does not deploy, no
+  repository deployment workflow exists, and no deployment credentials belong
+  in GitHub.
+- The only supported hosted-test release path is this command from an explicitly
+  approved maintainer workstation:
+
+  ```bash
+  npm run deploy:hosted
+  ```
+
+  It requires Node 22+, a running Docker daemon, an authenticated local Fly CLI,
+  and the ignored local `.env` values `MIGRATION_DATABASE_URL` and
+  `MAINTENANCE_SECRET`. It refuses CI, arguments, a dirty worktree, any branch
+  other than `main`, a commit that does not exactly match `origin/main`, a
+  different Fly app, or unsafe hosted-test settings in `fly.toml`. It never
+  prints or uploads the migration credential. Before release it also reads only
+  Fly Secret names—not values—and rejects missing runtime secrets, any migration
+  credential, or any secret that could override the committed safety modes.
+  This command is intentionally restricted to the current hosted-test
+  environment; a future live release path must be reviewed separately before
+  any safety mode changes.
 - The hosted test app is `wolkenworte` in Fly's `fra` region with one
   `shared-cpu-2x`/512 MiB stateless web Machine, no volume, automatic stop/start
   and the public origin `https://wolkenworte.io`. Durable business data is in
@@ -454,7 +473,7 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   stable infrastructure endpoint for the existing Stripe sandbox webhook,
   Supabase maintenance Cron and explicitly guarded hosted-test tools.
 - Fly receives only the least-privileged `DATABASE_URL`. Migrations run first
-  from local/CI tooling with `MIGRATION_DATABASE_URL`, which must never be
+  from local operator tooling with `MIGRATION_DATABASE_URL`, which must never be
   available to an ordinary web Machine.
 - `npm run fly:secrets` validates and stages the runtime-secret allowlist from
   the ignored `.env` and deliberately excludes `MIGRATION_DATABASE_URL`. The
@@ -470,14 +489,12 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   exact Vault-backed pg_net request and succeeds only after a new Fly-completed
   maintenance heartbeat appears. The explicit flag is required because this
   invokes real retention work.
-- The release order is `npm test`, production image build, strict Fly config
-  validation, `npm run db:migrate`, `flyctl deploy --remote-only --ha=false`,
-  `npm run maintenance:configure-cron`, and
-  `npm run smoke:hosted -- https://wolkenworte.io`. The manual GitHub
-  workflow encodes this same fail-fast order.
-- Before that GitHub workflow is first used, its protected `hosted-test`
-  environment needs `MIGRATION_DATABASE_URL`, `MAINTENANCE_SECRET` and a scoped
-  `FLY_API_TOKEN`. These deployment-runner credentials are not Fly app secrets.
+- The release order is a clean `npm ci`, `npm test`, an AMD64 production image
+  build, strict Fly config validation, `npm run db:migrate`, the fixed Fly
+  deployment, `npm run maintenance:configure-cron`, and
+  `npm run smoke:hosted -- https://wolkenworte.io`, followed by a final Fly
+  status check. `npm run deploy:hosted` owns and tests this fail-fast order; do
+  not reproduce it as an ad-hoc command list or remote workflow.
 - `PUBLIC_URL` is `https://wolkenworte.io`. Porkbun hosts the authoritative DNS;
   Fly terminates HTTPS for the apex and `www`, and the application redirects
   only the `www` alias to the apex. Existing infrastructure callbacks keep
@@ -576,7 +593,7 @@ run (the hosted-only command safely defaults to the fixed Fly test origin):
 
 ```bash
 npm run stripe:configure-webhook -- --confirm-replace-webhook
-flyctl deploy --app wolkenworte
+npm run deploy:hosted
 ```
 
 The guarded command creates exactly one sandbox destination for
@@ -650,7 +667,8 @@ activation can therefore wait until the sending domain is available:
    sent/delivered/bounced/failed/complained/suppressed events and stages only the
    runtime sending key, From identity and returned signing secret in Fly. Revoke
    the temporary Full-access key and clear `RESEND_MANAGEMENT_API_KEY` immediately.
-4. Deploy the staged secrets while Fly remains in email `mock` mode. Put only a
+4. Run `npm run deploy:hosted` to activate the staged secrets while Fly remains
+   in email `mock` mode. Put only a
    maintainer inbox or Resend's `delivered@resend.dev`, `bounced@resend.dev`,
    `complained@resend.dev` and `suppressed@resend.dev` addresses in the local
    `RESEND_SMOKE_RECIPIENTS`. For each controlled smoke, override only the local
@@ -704,7 +722,7 @@ Stripe mode, requires draft-only writes, creates marked synthetic data, never
 confirms the draft and verifies Printful processed the frozen capability URL.
 `npm run printful:configure-webhook -- --confirm-replace-webhook` deliberately
 replaces the store's signed v2 webhook configuration and stages its returned
-keys in Fly for the next deploy.
+keys in Fly for activation by `npm run deploy:hosted`.
 
 ## What's intentionally disabled
 

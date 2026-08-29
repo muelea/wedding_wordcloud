@@ -26,7 +26,7 @@ async function main() {
   if (fly.status !== 0) {
     throw new Error('Webhook wurde bei Printful ersetzt, aber die Fly-Secrets konnten nicht vorgemerkt werden.');
   }
-  console.log('[printful-webhook] Signierte v2-Events konfiguriert; Fly-Secrets sind für den nächsten Deploy vorgemerkt.');
+  console.log('[printful-webhook] Signierte v2-Events konfiguriert; Fly-Secrets sind für npm run deploy:hosted vorgemerkt.');
 }
 
 if (require.main === module) {

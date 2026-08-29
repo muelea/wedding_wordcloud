@@ -66,8 +66,9 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] Create one long-lived Sending-access key restricted to that domain plus a
   separate temporary Full-access setup key. Never deploy the management key.
 - [x] Run `npm run resend:configure-webhook -- --confirm-replace-webhook`, revoke
-  and locally clear the temporary management key, deploy the staged runtime
-  key/From identity/signing secret, and verify signed delivery callbacks.
+  and locally clear the temporary management key, activate the staged runtime
+  key/From identity/signing secret with `npm run deploy:hosted`, and verify
+  signed delivery callbacks.
 - [x] Configure local-only `RESEND_SMOKE_RECIPIENTS` and run the guarded real
   inbox, delivered, bounced, complained and suppressed provider smokes from
   `README.md`. Confirm Reply-To is `kontakt@jusa.io`.
@@ -85,7 +86,8 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [ ] Inspect the resulting mockups and cancel or remove synthetic drafts in
   Printful after verification.
 - [ ] Run `npm run printful:configure-webhook -- --confirm-replace-webhook`,
-  deploy the returned signing values and verify replay-safe status callbacks.
+  activate the returned signing values with `npm run deploy:hosted` and verify
+  replay-safe status callbacks.
 - [ ] Keep `PRINTFUL_FULFILLMENT_MODE=mock`,
   `PRINTFUL_ALLOW_ORDER_WRITES=false` and
   `PRINTFUL_CONFIRM_LIVE_ORDERS=false` until the cutover is explicitly
@@ -111,8 +113,8 @@ Execute this only after every item above has an owner and all launch blockers
 are signed off. Deployment, destructive cleanup, credential rotation and live
 provider activation each require explicit maintainer approval at action time.
 
-1. Deploy the tested candidate while Stripe remains in test mode, email remains
-   in mock mode and Printful writes remain disabled.
+1. Run `npm run deploy:hosted` for the tested candidate while Stripe remains in
+   test mode, email remains in mock mode and Printful writes remain disabled.
 2. Set `MAINTENANCE_MODE=true` on Fly and verify public traffic receives the
    maintenance response while health endpoints remain available.
 3. Set `ALLOW_TEST_DATA_RESET=true` only in the local operator environment and

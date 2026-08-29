@@ -149,8 +149,12 @@ it — this file is about how to work in it safely.
 ## Where things deploy
 
 The repository is GitHub `muelea/wedding_wordcloud`, `main` branch. Pushing
-`main` is not a deployment action; the repository deployment workflow is
-manual-only.
+`main` is not a deployment action. GitHub is source control only: there is no
+repository deployment workflow and no deployment credentials belong there.
+The only supported hosted-test release path is the guarded local
+`npm run deploy:hosted` command from an explicitly approved maintainer
+workstation. Do not reproduce its release sequence in ad-hoc commands or a
+remote workflow.
 
 The Supabase/Postgres foundation and least-privileged runtime role are active.
 The hosted test app is active at the canonical public origin
@@ -159,6 +163,6 @@ automatic stop/start; `www` redirects to the apex. The stable
 `https://wolkenworte.fly.dev` hostname remains in use for existing Stripe
 sandbox and maintenance callbacks. This is not the live-sales launch. Local
 secrets stay in `.env`; hosted runtime secrets belong in Fly Secrets, while the
-privileged `MIGRATION_DATABASE_URL` stays only in local/CI migration tooling,
-never Fly. Do not deploy again or push branches without explicit maintainer
-approval.
+privileged `MIGRATION_DATABASE_URL` stays only in local operator migration
+tooling, never Fly. Do not deploy again or push branches without explicit
+maintainer approval.

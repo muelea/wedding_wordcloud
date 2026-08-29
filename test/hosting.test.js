@@ -7,6 +7,13 @@ const http = require('node:http');
 const path = require('node:path');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
+const {
+  assertGitReleaseCandidate,
+  releaseSteps,
+  validateFlySecretBoundary,
+  validateHostedConfig,
+  validateOperatorEnvironment,
+} = require('../scripts/deploy-hosted');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -87,12 +94,12 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   }
 });
 
-test('container, Fly config and deployment workflow enforce the hosting boundary', () => {
+test('container, Fly config and local deployment command enforce the hosting boundary', () => {
   const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8');
   const dockerignore = fs.readFileSync(path.join(ROOT, '.dockerignore'), 'utf8');
   const fly = fs.readFileSync(path.join(ROOT, 'fly.toml'), 'utf8');
   const envExample = fs.readFileSync(path.join(ROOT, '.env.example'), 'utf8');
-  const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'deploy-hosted.yml'), 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const secretScript = fs.readFileSync(path.join(ROOT, 'scripts', 'configure-fly-secrets.js'), 'utf8');
   const dbConfig = fs.readFileSync(path.join(ROOT, 'src', 'dbConfig.js'), 'utf8');
   const databaseCa = path.join(ROOT, 'certs', 'supabase-prod-ca-2021.crt');
@@ -136,21 +143,123 @@ test('container, Fly config and deployment workflow enforce the hosting boundary
   assert.doesNotMatch(secretScript, /DATABASE_CA_CERT/);
   assert.doesNotMatch(envExample, /^STRIPE_(?:SECRET_KEY|WEBHOOK_SECRET|ALLOW_LIVE_PAYMENTS)=/m);
 
-  const testIndex = workflow.indexOf('npm test');
-  const buildIndex = workflow.indexOf('docker build');
-  const migrationIndex = workflow.indexOf('npm run db:migrate');
-  const deployIndex = workflow.indexOf('flyctl deploy');
-  const cronIndex = workflow.indexOf('npm run maintenance:configure-cron');
-  const smokeIndex = workflow.indexOf('npm run smoke:hosted');
-  assert.ok(testIndex > -1 && testIndex < buildIndex);
-  assert.ok(buildIndex < migrationIndex && migrationIndex < deployIndex &&
-    deployIndex < cronIndex && cronIndex < smokeIndex);
-  assert.match(workflow, /flyctl deploy --remote-only --ha=false/);
+  const workflow = path.join(ROOT, '.github', 'workflows', 'deploy-hosted.yml');
+  assert.equal(fs.existsSync(workflow), false);
+  assert.equal(packageJson.scripts['deploy:hosted'], 'node scripts/deploy-hosted.js');
+
+  validateHostedConfig(fly);
+  const steps = releaseSteps('0123456789ab');
+  assert.deepEqual(steps.map(({ label }) => label), [
+    'Abhängigkeiten reproduzierbar installieren',
+    'Vollständige Tests',
+    'Produktionsimage lokal bauen',
+    'Fly-Konfiguration streng validieren',
+    'Datenbankmigrationen anwenden',
+    'Freigegebenes Image zu Fly deployen',
+    'Wartungs-Cron aktualisieren',
+    'Hosted-Smoke-Test ausführen',
+    'Finalen Fly-Status prüfen',
+  ]);
+  const commands = steps.map(({ command, args }) => [command, ...args].join(' '));
+  assert.equal(commands[0], 'npm ci');
+  assert.equal(commands[1], 'npm test');
+  assert.equal(commands[2],
+    'docker build --platform linux/amd64 --tag wolkenworte:0123456789ab .');
+  assert.equal(commands[3], 'flyctl config validate --strict --config fly.toml --app wolkenworte');
+  assert.equal(commands[4], 'npm run db:migrate');
+  assert.equal(commands[5], 'flyctl deploy --remote-only --ha=false --config fly.toml --app wolkenworte --yes');
+  assert.equal(commands[6],
+    'npm run maintenance:configure-cron -- --url https://wolkenworte.fly.dev');
+  assert.equal(commands[7], 'npm run smoke:hosted -- https://wolkenworte.io');
+  assert.equal(commands[8], 'flyctl status --app wolkenworte');
+  assert.equal(steps[4].releaseBoundary, true);
+
   assert.match(secretScript, /MIGRATION_DATABASE_URL darf niemals an Fly übertragen/);
   assert.doesNotMatch(secretScript.match(/const REQUIRED = \[[\s\S]*?\];/)?.[0] || '', /MIGRATION_DATABASE_URL/);
   assert.doesNotMatch(
     secretScript.match(/const OPTIONAL = \[[\s\S]*?\];/)?.[0] || '',
     /STRIPE_TEST_HOSTED_WEBHOOK_SECRET|STRIPE_LIVE_WEBHOOK_SECRET/
+  );
+});
+
+test('local deployment guard rejects unsafe config, credentials and Git state', () => {
+  const fly = fs.readFileSync(path.join(ROOT, 'fly.toml'), 'utf8');
+  assert.throws(
+    () => validateHostedConfig(fly.replace('EMAIL_DELIVERY_MODE = "mock"', 'EMAIL_DELIVERY_MODE = "live"')),
+    /EMAIL_DELIVERY_MODE="mock"/
+  );
+  assert.throws(
+    () => validateHostedConfig(`${fly}\nMIGRATION_DATABASE_URL = "forbidden"\n`),
+    /Operator-Secrets/
+  );
+
+  const validEnvironment = {
+    FLY_APP_NAME: 'wolkenworte',
+    MIGRATION_DATABASE_URL: 'postgresql://migration.example.invalid/database',
+    MAINTENANCE_SECRET: 'm'.repeat(32),
+  };
+  validateOperatorEnvironment(validEnvironment, '22.0.0');
+  assert.throws(
+    () => validateOperatorEnvironment({ ...validEnvironment, CI: 'true' }, '22.0.0'),
+    /lokale Operator-Workstation/
+  );
+  assert.throws(
+    () => validateOperatorEnvironment({ ...validEnvironment, FLY_APP_NAME: 'other-app' }, '22.0.0'),
+    /nur wolkenworte/
+  );
+  assert.throws(
+    () => validateOperatorEnvironment({ ...validEnvironment, MAINTENANCE_SECRET: 'short' }, '22.0.0'),
+    /kürzer als 32 Zeichen/
+  );
+
+  const requiredFlySecrets = [
+    'DATABASE_URL',
+    'SUPABASE_URL',
+    'SUPABASE_SECRET_KEY',
+    'RATE_LIMIT_HMAC_SECRET',
+    'MAINTENANCE_SECRET',
+  ].map((Name) => ({ Name, Digest: 'not-a-secret-value' }));
+  validateFlySecretBoundary(JSON.stringify(requiredFlySecrets));
+  assert.throws(
+    () => validateFlySecretBoundary(JSON.stringify(requiredFlySecrets.slice(1))),
+    /DATABASE_URL/
+  );
+  assert.throws(
+    () => validateFlySecretBoundary(JSON.stringify([
+      ...requiredFlySecrets,
+      { Name: 'STRIPE_PAYMENT_MODE', Digest: 'not-a-secret-value' },
+    ])),
+    /Sicherheitskonfiguration/
+  );
+  assert.throws(
+    () => validateFlySecretBoundary(JSON.stringify([
+      ...requiredFlySecrets,
+      { Name: 'MIGRATION_DATABASE_URL', Digest: 'not-a-secret-value' },
+    ])),
+    /Operator-Zugänge/
+  );
+
+  const cleanGit = new Map([
+    ['git branch --show-current', 'main'],
+    ['git status --porcelain --untracked-files=all', ''],
+    ['git rev-parse HEAD', 'a'.repeat(40)],
+    ['git ls-remote --exit-code origin refs/heads/main', `${'a'.repeat(40)}\trefs/heads/main`],
+  ]);
+  const run = (command, args) => cleanGit.get([command, ...args].join(' '));
+  assert.equal(assertGitReleaseCandidate(run), 'a'.repeat(40));
+
+  const dirtyGit = new Map(cleanGit);
+  dirtyGit.set('git status --porcelain --untracked-files=all', ' M README.md');
+  assert.throws(
+    () => assertGitReleaseCandidate((command, args) => dirtyGit.get([command, ...args].join(' '))),
+    /nicht sauber/
+  );
+
+  const staleGit = new Map(cleanGit);
+  staleGit.set('git ls-remote --exit-code origin refs/heads/main', `${'b'.repeat(40)}\trefs/heads/main`);
+  assert.throws(
+    () => assertGitReleaseCandidate((command, args) => staleGit.get([command, ...args].join(' '))),
+    /origin\/main/
   );
 });
 

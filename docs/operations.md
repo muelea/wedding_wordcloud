@@ -41,11 +41,13 @@ separate mutation command and deploy the staged Fly secret:
 
 ```bash
 npm run stripe:configure-webhook -- --confirm-replace-webhook
-flyctl deploy --app wolkenworte
+npm run deploy:hosted
 ```
 
 This replaces only the destination for Wolkenworte's hosted-test callback. It
 does not modify unrelated Stripe endpoints and never prints the signing secret.
+The deployment is the repository's guarded local hosted-test release command;
+there is no remote deployment workflow.
 
 ## Retry one blocked fulfillment
 
@@ -74,7 +76,7 @@ least-privileged runtime role remain intact.
 
 Do not run it during ordinary development. At the approved pre-live cutover:
 
-1. Deploy the tested application code and migrations.
+1. Run `npm run deploy:hosted` for the tested application code and migrations.
 2. Keep payments, email and fulfillment in their safe modes: live Stripe off,
    email mock, Printful mock, order writes off and confirmations off.
 3. Temporarily set `MAINTENANCE_MODE=true` on Fly. Verify `/` returns `503` and
