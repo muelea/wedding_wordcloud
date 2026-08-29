@@ -27,7 +27,6 @@
   });
   const LEGACY_STORAGE_KEY = 'wolkenworte-language';
   const COOKIE_KEY = 'wolkenworte-language';
-  const CATALOG_VERSION = '20260829-2';
   const ATTRIBUTE_NAMES = Object.freeze(['aria-label', 'placeholder', 'title', 'alt', 'content']);
   const textSources = new WeakMap();
   const attributeSources = new WeakMap();
@@ -92,6 +91,58 @@
     return interpolate(messages[source] || messages[normalizedSource] || source, params);
   }
 
+  function parseParams(element, attributeName) {
+    const raw = element?.getAttribute(attributeName);
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function storeParams(element, attributeName, params) {
+    if (!element) return;
+    if (params && Object.keys(params).length) {
+      element.setAttribute(attributeName, JSON.stringify(params));
+    } else {
+      element.removeAttribute(attributeName);
+    }
+  }
+
+  function setText(element, source, params = {}) {
+    if (!element) return;
+    const normalizedSource = String(source);
+    element.setAttribute('data-i18n-source', normalizedSource);
+    storeParams(element, 'data-i18n-params', params);
+    element.textContent = t(normalizedSource, params);
+    if (element.firstChild?.nodeType === 3) {
+      textSources.set(element.firstChild, { source: normalizedSource, params: { ...params } });
+    }
+  }
+
+  function clearText(element) {
+    if (!element) return;
+    element.removeAttribute('data-i18n-source');
+    element.removeAttribute('data-i18n-params');
+    element.replaceChildren();
+  }
+
+  function setAttribute(element, name, source, params = {}) {
+    if (!element || !ATTRIBUTE_NAMES.includes(name)) return;
+    const normalizedSource = String(source);
+    element.setAttribute(`data-i18n-${name}-source`, normalizedSource);
+    storeParams(element, `data-i18n-${name}-params`, params);
+    element.setAttribute(name, t(normalizedSource, params));
+    let sources = attributeSources.get(element);
+    if (!sources) {
+      sources = {};
+      attributeSources.set(element, sources);
+    }
+    sources[name] = { source: normalizedSource, params: { ...params } };
+  }
+
   function translateTextNode(node, preserveSource = false) {
     if (!node || node.nodeType !== 3 || !node.parentElement) return;
     if (node.parentElement.closest('script, style, [data-i18n-ignore]')) return;
@@ -99,14 +150,18 @@
     const trimmed = current.trim();
     if (!trimmed) return;
     const declaredSource = node.parentElement.getAttribute('data-i18n-source');
-    let source = declaredSource || textSources.get(node);
+    let binding = textSources.get(node);
     if (declaredSource) {
-      textSources.set(node, declaredSource);
-    } else if (!source || (!preserveSource && current !== replaceTrimmed(current, t(source)))) {
-      source = trimmed;
-      textSources.set(node, source);
+      binding = {
+        source: declaredSource,
+        params: parseParams(node.parentElement, 'data-i18n-params'),
+      };
+      textSources.set(node, binding);
+    } else if (!binding || (!preserveSource && current !== replaceTrimmed(current, t(binding.source, binding.params)))) {
+      binding = { source: trimmed, params: {} };
+      textSources.set(node, binding);
     }
-    const translated = replaceTrimmed(current, t(source));
+    const translated = replaceTrimmed(current, t(binding.source, binding.params));
     if (translated !== current) node.nodeValue = translated;
   }
 
@@ -128,9 +183,16 @@
       const current = element.getAttribute(name);
       if (!current) continue;
       const declaredSource = element.getAttribute(`data-i18n-${name}-source`);
-      if (declaredSource) sources[name] = declaredSource;
-      else if (!sources[name] || (!preserveSource && current !== t(sources[name]))) sources[name] = current;
-      const translated = t(sources[name]);
+      if (declaredSource) {
+        sources[name] = {
+          source: declaredSource,
+          params: parseParams(element, `data-i18n-${name}-params`),
+        };
+      } else if (!sources[name] ||
+          (!preserveSource && current !== t(sources[name].source, sources[name].params))) {
+        sources[name] = { source: current, params: {} };
+      }
+      const translated = t(sources[name].source, sources[name].params);
       if (translated !== current) element.setAttribute(name, translated);
     }
   }
@@ -160,8 +222,8 @@
       const locales = nextLocale === 'en' ? ['en'] : ['en', nextLocale];
       const loaded = await Promise.all(locales.map(async (code) => {
         const response = await root.fetch(
-          `/locales/${encodeURIComponent(code)}.json?v=${CATALOG_VERSION}`,
-          { cache: 'force-cache' }
+          `/locales/${encodeURIComponent(code)}.json`,
+          { cache: 'no-cache' }
         );
         if (!response.ok) throw new Error(`Could not load locale ${code}`);
         return response.json();
@@ -345,6 +407,9 @@
     setLocale,
     useEventLocale,
     t,
+    setText,
+    clearText,
+    setAttribute,
     translateTree,
     formatCurrency,
     formatNumber,

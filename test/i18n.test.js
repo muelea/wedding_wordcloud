@@ -98,7 +98,7 @@ test('every public page loads the shared language layer', () => {
     const html = viewSource(filename);
     assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260829-2" \/>/, filename);
     assert.match(html, /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/, filename);
-    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-2"><\/script>/, filename);
+    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-3"><\/script>/, filename);
     assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-2" \/>/, filename);
     assert.match(html, /include\('partials\/site-header'\)/,
       `${filename} needs the shared server-rendered site header`);
@@ -273,6 +273,33 @@ test('language switcher is server-rendered, progressively enhanced and uses Unic
     'the client and server must not compete over duplicate language preferences');
   assert.doesNotMatch(runtime, /location\.assign/,
     'language changes must not destroy and rebuild the document');
+  assert.match(runtime, /`\/locales\/\$\{encodeURIComponent\(code\)\}\.json`/);
+  assert.match(runtime, /cache:\s*'no-cache'/,
+    'translation catalogs must revalidate so deployments cannot leave mixed-language copy behind');
+  assert.match(runtime, /function setText\(element, source, params = \{\}\)/,
+    'dynamic UI must retain an explicit translation source');
+});
+
+test('shipping rerenders derived UI from stable sources whenever the locale changes', () => {
+  const shipping = viewSource('shipping.ejs');
+  assert.match(shipping, /WolkenworteI18n\.setText\(element, source, params\)/);
+  assert.match(shipping, /window\.addEventListener\('wolkenworte:localechange', refreshLocalizedShipping\)/);
+  assert.match(shipping, /showQuote\(currentQuote, \{ scroll: false, resetAction: false \}\)/);
+  assert.match(shipping, /locale:\s*WolkenworteI18n\.getLocale\(\)/);
+  assert.doesNotMatch(shipping, /customerErrorMessage/,
+    'errors must keep their source key instead of freezing an already translated string');
+
+  for (const locale of CATALOG_LOCALES) {
+    const catalog = require(`../public/locales/${locale}.json`);
+    for (const source of [
+      'Preis aktualisieren',
+      'Weiter zur Zahlung',
+      'Mehr zur Verarbeitung eurer Lieferdaten im',
+      'Zahlung abgebrochen. Eure Angaben sind weiterhin gespeichert.',
+    ]) {
+      assert.ok(catalog[source], `${locale} is missing shipping copy: ${source}`);
+    }
+  }
 });
 
 test('language URLs preserve page state and server locale resolution honors explicit preference', () => {

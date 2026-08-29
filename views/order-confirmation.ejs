@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
   <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/i18n.js?v=20260829-3"></script>
   <title data-i18n-source="Bestellung bestätigt – Wolkenworte"><%= t('Bestellung bestätigt – Wolkenworte') %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -66,8 +66,8 @@
       <h1 id="title">Zahlung wird bestätigt</h1>
       <p class="copy" id="copy">Einen Moment bitte. Wir bestätigen eure Zahlung.</p>
       <div class="summary" id="summary" hidden>
-        <div class="summary-row"><span>Bestellung</span><strong id="quantity"></strong></div>
-        <div class="summary-row"><span>Gesamtbetrag</span><strong id="total"></strong></div>
+        <div class="summary-row"><span>Bestellung</span><strong id="quantity" data-i18n-ignore></strong></div>
+        <div class="summary-row"><span>Gesamtbetrag</span><strong id="total" data-i18n-ignore></strong></div>
       </div>
       <a class="home-link" id="home-link" href="/">Zurück zur Wortwolke</a>
     </section>
@@ -77,12 +77,14 @@
     const parts = location.pathname.split('/').filter(Boolean);
     const slug = parts[1];
     const t = (source, params) => WolkenworteI18n.t(source, params);
+    const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
     const sessionId = new URLSearchParams(location.search).get('session_id') || '';
     const icon = document.getElementById('status-icon');
     const title = document.getElementById('title');
     const copy = document.getElementById('copy');
     const summary = document.getElementById('summary');
     const homeLink = document.getElementById('home-link');
+    let confirmedOrder = null;
     homeLink.href = `/e/${encodeURIComponent(slug)}/display`;
 
     function money(cents, currency) {
@@ -93,9 +95,28 @@
       icon.textContent = '!';
       icon.classList.remove('pending');
       icon.classList.add('error');
-      title.textContent = t('Bestätigung nicht gefunden');
-      copy.textContent = t(message);
+      setText(title, 'Bestätigung nicht gefunden');
+      setText(copy, message);
     }
+
+    function renderConfirmedSummary(order) {
+      const unit = order.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
+      const productLabel = `${WolkenworteI18n.formatNumber(order.quantity)} ${t(
+        order.quantity === 1 ? unit.singular : unit.plural
+      )}`;
+      const shipmentCount = Number(order.shipmentCount || 1);
+      document.getElementById('quantity').textContent = shipmentCount > 1
+        ? t('{{quantity}} an {{count}} Lieferadressen', {
+          quantity: productLabel,
+          count: WolkenworteI18n.formatNumber(shipmentCount),
+        })
+        : productLabel;
+      document.getElementById('total').textContent = money(order.totalCents, order.currency);
+    }
+
+    window.addEventListener('wolkenworte:localechange', () => {
+      if (confirmedOrder) renderConfirmedSummary(confirmedOrder);
+    });
 
     async function checkStatus(attempt = 0) {
       if (!/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
@@ -111,25 +132,15 @@
         if (!response.ok) throw new Error('Die Bestellung konnte nicht geladen werden.');
         if (order.configurationType === 'personal_memory') {
           homeLink.href = `/e/${encodeURIComponent(slug)}`;
-          homeLink.textContent = t('Zurück zur Gäste-Seite');
+          setText(homeLink, 'Zurück zur Gäste-Seite');
         }
         if (order.paymentConfirmed) {
           icon.textContent = '✓';
           icon.classList.remove('pending');
-          title.textContent = t('Vielen Dank für eure Bestellung.');
-          copy.textContent = t('Eure Zahlung wurde bestätigt und eure Bestellung ist bei uns eingegangen.');
-          const unit = order.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
-          const productLabel = `${WolkenworteI18n.formatNumber(order.quantity)} ${t(
-            order.quantity === 1 ? unit.singular : unit.plural
-          )}`;
-          const shipmentCount = Number(order.shipmentCount || 1);
-          document.getElementById('quantity').textContent = shipmentCount > 1
-            ? t('{{quantity}} an {{count}} Lieferadressen', {
-              quantity: productLabel,
-              count: WolkenworteI18n.formatNumber(shipmentCount),
-            })
-            : productLabel;
-          document.getElementById('total').textContent = money(order.totalCents, order.currency);
+          setText(title, 'Vielen Dank für eure Bestellung.');
+          setText(copy, 'Eure Zahlung wurde bestätigt und eure Bestellung ist bei uns eingegangen.');
+          confirmedOrder = order;
+          renderConfirmedSummary(order);
           summary.hidden = false;
           return;
         }
@@ -137,8 +148,8 @@
           setTimeout(() => checkStatus(attempt + 1), 1000);
           return;
         }
-        title.textContent = t('Zahlung wird noch verarbeitet');
-        copy.textContent = t('Die Bestätigung dauert länger als erwartet. Bitte ladet diese Seite in einem Moment erneut.');
+        setText(title, 'Zahlung wird noch verarbeitet');
+        setText(copy, 'Die Bestätigung dauert länger als erwartet. Bitte ladet diese Seite in einem Moment erneut.');
       } catch (error) {
         if (attempt < 4) {
           setTimeout(() => checkStatus(attempt + 1), 1000);

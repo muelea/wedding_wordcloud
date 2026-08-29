@@ -14,7 +14,10 @@ function cacheControlForStaticRequest(req) {
     return 'no-cache';
   }
   const version = typeof req.query?.v === 'string' ? req.query.v : '';
-  if (isLocaleManifest(pathname) && !VERSION_RE.test(version)) return 'no-cache';
+  // Locale catalogs are tiny and correctness matters more than a long-lived
+  // immutable response. Revalidation still allows an ETag/304 while ensuring
+  // a deployment can never strand a browser on an older set of translations.
+  if (isLocaleManifest(pathname)) return 'no-cache';
   if (VERSION_RE.test(version)) return 'public, max-age=31536000, immutable';
   return 'public, max-age=0, must-revalidate';
 }

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
   <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/i18n.js?v=20260829-3"></script>
   <script src="/js/action-state.js?v=20260829-1"></script>
   <script src="/js/site-header.js" defer></script>
   <title data-i18n-source="Wortwolke – Anzeige"><%= t('Wortwolke – Anzeige') %></title>
@@ -425,6 +425,8 @@
   const resetCancel     = document.getElementById('reset-cancel');
   const resetSubmit     = document.getElementById('reset-submit');
   const t = (source, params) => WolkenworteI18n.t(source, params);
+  const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
+  const clearText = (element) => WolkenworteI18n.clearText(element);
 
   let currentWords = [];
   let renderTimer  = null;
@@ -488,7 +490,7 @@
   fetch(`/api/events/${encodeURIComponent(slug)}`).then(r => r.json()).then(async ({ coupleName, theme, locale }) => {
     await WolkenworteI18n.useEventLocale(locale);
     document.getElementById('couple-name').textContent = coupleName;
-    document.title = WolkenworteI18n.t('{{name}} – Wortwolke', { name: coupleName });
+    setText(document.querySelector('title'), '{{name}} – Wortwolke', { name: coupleName });
     if (!urlTheme && (theme === 'neon' || theme === 'pastel')) applyTheme(theme);
   }).catch(() => {});
 
@@ -546,7 +548,7 @@
   socket.on('fatal-error', () => {
     const errorState = document.createElement('p');
     errorState.style.cssText = 'padding:60px;font-family:Georgia,serif;';
-    errorState.textContent = t('Diese Wortwolke wurde nicht gefunden.');
+    setText(errorState, 'Diese Wortwolke wurde nicht gefunden.');
     document.body.replaceChildren(errorState);
   });
 
@@ -583,7 +585,7 @@
   // ── New session (archive current words on the server, then clear) ───────
   function startNewSession() {
     if (!currentWords.length) return;
-    resetError.textContent = '';
+    clearText(resetError);
     resetDialog.showModal();
     resetPin.focus();
   }
@@ -591,13 +593,13 @@
   resetCancel.addEventListener('click', () => resetDialog.close());
   resetDialog.addEventListener('close', () => {
     resetForm.reset();
-    resetError.textContent = '';
+    clearText(resetError);
   });
 
   resetForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!resetForm.reportValidity()) return;
-    resetError.textContent = '';
+    clearText(resetError);
     WolkenworteActions.setBusy(resetSubmit, true);
     resetCancel.disabled = true;
     const pin = resetPin.value.trim();
@@ -609,12 +611,12 @@
     if (res?.ok) {
       resetDialog.close();
     } else if (res?.status === 401) {
-      resetError.textContent = t('Falscher PIN.');
+      setText(resetError, 'Falscher PIN.');
       resetPin.select();
     } else if (res?.status === 429) {
-      resetError.textContent = t('Zu viele Versuche. Bitte wartet 15 Minuten.');
+      setText(resetError, 'Zu viele Versuche. Bitte wartet 15 Minuten.');
     } else {
-      resetError.textContent = t('Verbindung fehlgeschlagen. Bitte versucht es erneut.');
+      setText(resetError, 'Verbindung fehlgeschlagen. Bitte versucht es erneut.');
     }
     WolkenworteActions.setBusy(resetSubmit, false);
     resetCancel.disabled = false;

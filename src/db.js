@@ -5,6 +5,7 @@ const { Pool } = require('pg');
 const { connectionOptions } = require('./dbConfig');
 const { getProduct, resolveProductOrientation } = require('./products');
 const { buildEmailSnapshot } = require('./emailTemplates');
+const I18n = require('./i18n');
 const log = require('./structuredLog');
 
 const REQUIRED_SCHEMA_VERSION = '6';
@@ -712,6 +713,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     );
     const event = eventResult.rows[0];
     if (!event) throw new Error('event not found');
+    const checkoutLocale = I18n.normalizeLocale(checkoutRequest?.locale || event.locale);
 
     const configurationIds = getCheckoutQuoteConfigurationIds(lockedQuote);
     const configurationResult = await client.query(`
@@ -757,7 +759,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
       jsonValue(checkoutRequest || {}),
       idempotencyKey,
       sessionExpiresAt,
-      event.locale,
+      checkoutLocale,
     ]);
     const order = rowToBoundary(inserted.rows[0]);
     await insertOrderShipmentsAndItems(client, order.id, lockedQuote, configurations);
@@ -818,6 +820,51 @@ async function markCheckoutCreationFailed(orderId, error = null) {
 
 async function retryCheckoutOrder(orderId) {
   return getOrderById(orderId);
+}
+
+async function replaceExpiredCheckoutSession(orderId, {
+  expectedSessionId,
+  checkoutRequest,
+  locale,
+}) {
+  const normalizedLocale = I18n.normalizeLocale(locale);
+  const request = { ...(checkoutRequest || {}), locale: normalizedLocale };
+  const replacementKey = [
+    'wolkenworte',
+    'checkout',
+    String(orderId),
+    normalizedLocale,
+    crypto.randomBytes(18).toString('base64url'),
+  ].join('-');
+  const sessionExpiresAt = new Date(Date.now() + 31 * 60 * 1000);
+  const result = await getPool().query(`
+    UPDATE orders
+    SET stripe_session_id = NULL,
+        stripe_checkout_url = NULL,
+        status = 'creating_checkout',
+        checkout_request_json = $1::jsonb,
+        stripe_idempotency_key = $2,
+        checkout_session_expires_at = $3,
+        checkout_first_attempt_at = NULL,
+        checkout_last_attempt_at = NULL,
+        checkout_attempts = 0,
+        checkout_ambiguous = false,
+        checkout_error = NULL,
+        locale_snapshot = $4,
+        updated_at = transaction_timestamp()
+    WHERE id = $5
+      AND status = 'checkout_pending'
+      AND stripe_session_id = $6
+    RETURNING *
+  `, [
+    jsonValue(request),
+    replacementKey,
+    sessionExpiresAt,
+    normalizedLocale,
+    orderId,
+    expectedSessionId,
+  ]);
+  return rowToBoundary(result.rows[0]);
 }
 
 function normalizeBuyerEmail(value) {
@@ -2880,6 +2927,7 @@ module.exports = {
   attachStripeSession,
   markCheckoutCreationFailed,
   retryCheckoutOrder,
+  replaceExpiredCheckoutSession,
   recordSuccessfulPayment,
   recordTestPayment,
   claimFulfillmentOrder,

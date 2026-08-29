@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
   <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/i18n.js?v=20260829-3"></script>
   <script src="/js/action-state.js?v=20260829-1"></script>
   <title data-i18n-source="Wortwolke erstellen – Wolkenworte"><%= t('Wortwolke erstellen – Wolkenworte') %></title>
   <style>
@@ -287,7 +287,7 @@
 </main>
 
 <script>
-  const t = (source, params) => WolkenworteI18n.t(source, params);
+  const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
   const coupleNameInput = document.getElementById('couple-name');
   const slugInput        = document.getElementById('slug');
   const slugStatus       = document.getElementById('slug-status');
@@ -346,10 +346,16 @@
         const res = await fetch(`/api/slug-availability?slug=${encodeURIComponent(slug)}`);
         const data = await res.json();
         if (data.valid) {
-          slugStatus.textContent = `…/e/${data.slug}-••••• (${t('der Code wird beim Erstellen ergänzt')})`;
+          const explanation = document.createElement('span');
+          setText(explanation, 'der Code wird beim Erstellen ergänzt');
+          slugStatus.replaceChildren(
+            document.createTextNode(`…/e/${data.slug}-••••• (`),
+            explanation,
+            document.createTextNode(')')
+          );
           slugStatus.className = 'slug-status ok';
         } else {
-          slugStatus.textContent = t('Bitte andere Zeichen für die Adresse verwenden.');
+          setText(slugStatus, 'Bitte andere Zeichen für die Adresse verwenden.');
           slugStatus.className = 'slug-status err';
         }
       } catch {
@@ -359,12 +365,12 @@
   }
 
   function showError(msg) {
-    errorBanner.textContent = t(msg);
+    setText(errorBanner, msg);
     errorBanner.classList.add('show');
   }
   function clearError() {
     errorBanner.classList.remove('show');
-    errorBanner.textContent = '';
+    WolkenworteI18n.clearText(errorBanner);
   }
 
   form.addEventListener('submit', async (e) => {

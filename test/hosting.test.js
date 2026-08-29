@@ -57,7 +57,7 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
 
   const locale = await fetch(`${baseUrl}/locales/en.json?v=20260829-2`);
   assert.equal(locale.status, 200);
-  assert.equal(locale.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.equal(locale.headers.get('cache-control'), 'no-cache');
 
   const unversionedLocale = await fetch(`${baseUrl}/locales/en.json`);
   assert.equal(unversionedLocale.status, 200);

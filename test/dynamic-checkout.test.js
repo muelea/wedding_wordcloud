@@ -290,6 +290,187 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   ]);
 });
 
+test('cart checkout follows the latest selected locale across repeated Stripe round trips', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { coupleName: 'Lingua Lea & Locale Luca', locale: 'de' });
+  const configuration = await saveConfiguration(baseUrl, event.slug, 1);
+
+  const printful = require('../src/printful');
+  const stripe = require('../src/stripe');
+  const originalCountries = printful.getShippingCountries;
+  const originalEstimate = printful.estimateOrderCosts;
+  const originalCheckout = stripe.createCheckoutSession;
+  const originalExpire = stripe.expireCheckoutSession;
+  const createdLocales = [];
+  const expiredSessions = [];
+  let estimateCalls = 0;
+  printful.getShippingCountries = async () => [
+    { code: 'DE', name: 'Germany', region: 'europe', states: [] },
+  ];
+  printful.estimateOrderCosts = async () => {
+    estimateCalls += 1;
+    return { currency: 'EUR', subtotal: 5.49, shipping: 4.49, tax: 0, vat: 1.9, total: 11.88 };
+  };
+  stripe.createCheckoutSession = async (options) => {
+    createdLocales.push(options.locale);
+    const id = `cs_test_locale_${options.locale}_${createdLocales.length}`;
+    return { id, url: `https://checkout.stripe.test/${id}` };
+  };
+  stripe.expireCheckoutSession = async (sessionId) => {
+    expiredSessions.push(sessionId);
+    return { id: sessionId, status: 'expired', paymentStatus: 'unpaid' };
+  };
+  t.after(() => {
+    printful.getShippingCountries = originalCountries;
+    printful.estimateOrderCosts = originalEstimate;
+    stripe.createCheckoutSession = originalCheckout;
+    stripe.expireCheckoutSession = originalExpire;
+  });
+
+  const shipment = {
+    items: [{ configurationId: configuration.id, quantity: 1 }],
+    recipient: {
+      name: 'Locale Luca',
+      address1: 'Blumenstraße 12',
+      city: 'Berlin',
+      zip: '10115',
+      country_code: 'DE',
+    },
+  };
+  const estimate = await fetch(`${baseUrl}/api/events/${event.slug}/cart/estimate-costs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configurationIds: [configuration.id], shipments: [shipment] }),
+  });
+  assert.equal(estimate.status, 200);
+  const quote = (await estimate.json()).quote;
+  const checkoutUrl = `${baseUrl}/api/events/${event.slug}/cart/checkout`;
+  const checkout = async (locale) => {
+    const response = await fetch(checkoutUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configurationIds: [configuration.id], quoteId: quote.id, locale }),
+    });
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+
+  assert.deepEqual(await checkout('en'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_en_1',
+  });
+  const db = require('../src/db');
+  const englishOrder = await db.getOrderByQuoteId(quote.id);
+  const englishKey = englishOrder.stripe_idempotency_key;
+  assert.equal(englishOrder.locale_snapshot, 'en');
+
+  assert.deepEqual(await checkout('en'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_en_1',
+    reused: true,
+  });
+  assert.deepEqual(await checkout('it'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_it_2',
+    replaced: true,
+  });
+  assert.deepEqual(await checkout('it'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_it_2',
+    reused: true,
+  });
+  assert.deepEqual(await checkout('fr'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_fr_3',
+    replaced: true,
+  });
+  assert.deepEqual(await checkout('es'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_es_4',
+    replaced: true,
+  });
+  assert.deepEqual(await checkout('tr'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_tr_5',
+    replaced: true,
+  });
+  assert.deepEqual(await checkout('de'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_de_6',
+    replaced: true,
+  });
+  assert.deepEqual(await checkout('it'), {
+    url: 'https://checkout.stripe.test/cs_test_locale_it_7',
+    replaced: true,
+  });
+
+  assert.deepEqual(createdLocales, ['en', 'it', 'fr', 'es', 'tr', 'de', 'it']);
+  assert.deepEqual(expiredSessions, [
+    'cs_test_locale_en_1',
+    'cs_test_locale_it_2',
+    'cs_test_locale_fr_3',
+    'cs_test_locale_es_4',
+    'cs_test_locale_tr_5',
+    'cs_test_locale_de_6',
+  ]);
+  assert.equal(estimateCalls, 2,
+    'locale-only replacements keep the already revalidated quote and do not repeat pricing');
+  const finalOrder = await db.getOrderByQuoteId(quote.id);
+  assert.equal(finalOrder.stripe_session_id, 'cs_test_locale_it_7');
+  assert.equal(finalOrder.locale_snapshot, 'it');
+  assert.equal(JSON.parse(finalOrder.checkout_request_json).locale, 'it');
+  assert.notEqual(finalOrder.stripe_idempotency_key, englishKey);
+});
+
+test('a concurrently completed Stripe payment wins over a locale replacement', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { coupleName: 'Race Ria & Payment Paul', locale: 'de' });
+  const configuration = await saveConfiguration(baseUrl, event.slug, 1);
+
+  const printful = require('../src/printful');
+  const stripe = require('../src/stripe');
+  const originalCountries = printful.getShippingCountries;
+  const originalEstimate = printful.estimateOrderCosts;
+  const originalCheckout = stripe.createCheckoutSession;
+  const originalExpire = stripe.expireCheckoutSession;
+  let checkoutCalls = 0;
+  printful.getShippingCountries = async () => [
+    { code: 'DE', name: 'Germany', region: 'europe', states: [] },
+  ];
+  printful.estimateOrderCosts = async () => ({
+    currency: 'EUR', subtotal: 5.49, shipping: 4.49, tax: 0, vat: 1.9, total: 11.88,
+  });
+  stripe.createCheckoutSession = async () => {
+    checkoutCalls += 1;
+    return { id: 'cs_test_locale_paid_race', url: 'https://checkout.stripe.test/paid-race' };
+  };
+  stripe.expireCheckoutSession = async (sessionId) => ({
+    id: sessionId,
+    status: 'complete',
+    paymentStatus: 'paid',
+  });
+  t.after(() => {
+    printful.getShippingCountries = originalCountries;
+    printful.estimateOrderCosts = originalEstimate;
+    stripe.createCheckoutSession = originalCheckout;
+    stripe.expireCheckoutSession = originalExpire;
+  });
+
+  const quote = await calculateQuote(baseUrl, event.slug, configuration.id);
+  const checkoutUrl = `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/checkout`;
+  const first = await fetch(checkoutUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quoteId: quote.id, locale: 'en' }),
+  });
+  assert.equal(first.status, 200);
+  const switched = await fetch(checkoutUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quoteId: quote.id, locale: 'it' }),
+  });
+  assert.equal(switched.status, 200);
+  assert.deepEqual(await switched.json(), {
+    confirmationUrl: `/e/${event.slug}/order-confirmation?session_id=cs_test_locale_paid_race&lang=it`,
+    paymentProcessing: true,
+  });
+  assert.equal(checkoutCalls, 1, 'a completed payment must never be replaced by another payable Session');
+});
+
 test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);

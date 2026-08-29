@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
   <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/i18n.js?v=20260829-3"></script>
   <script src="/js/action-state.js?v=20260829-1"></script>
   <title data-i18n-source="Erinnerung gestalten – Wolkenworte"><%= t('Erinnerung gestalten – Wolkenworte') %></title>
   <style>
@@ -1833,6 +1833,10 @@
     const isPersonalMode = new URLSearchParams(location.search).get('mode') === 'personal';
     const guestId = getOrCreateGuestId();
     const t = (source, params) => WolkenworteI18n.t(source, params);
+    const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
+    const clearText = (element) => WolkenworteI18n.clearText(element);
+    const setTranslatedAttribute = (element, name, source, params) =>
+      WolkenworteI18n.setAttribute(element, name, source, params);
     let configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
 
     function getOrCreateGuestId() {
@@ -2058,7 +2062,7 @@
       }
       orderActionPending = true;
       setOrderActionsBusy(true);
-      errorText.textContent = '';
+      clearText(errorText);
       try {
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/edit`,
@@ -2098,7 +2102,7 @@
       const hasItems = items.length > 0;
       orderBox.hidden = !hasItems;
       orderList.replaceChildren();
-      orderCount.textContent = t(items.length === 1 ? '{{count}} Design' : '{{count}} Designs', {
+      setText(orderCount, items.length === 1 ? '{{count}} Design' : '{{count}} Designs', {
         count: items.length,
       });
       items.forEach((item) => {
@@ -2127,11 +2131,11 @@
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.className = 'order-edit';
-        edit.textContent = t(isEditing ? 'Geöffnet' : 'Öffnen');
+        setText(edit, isEditing ? 'Geöffnet' : 'Öffnen');
         edit.disabled = isEditing;
-        edit.setAttribute('aria-label', t(isEditing
+        setTranslatedAttribute(edit, 'aria-label', isEditing
           ? '{{item}} ist zur Bearbeitung geöffnet'
-          : '{{item}} öffnen und bearbeiten', { item: productName }));
+          : '{{item}} öffnen und bearbeiten', { item: productName });
         if (isEditing) {
           edit.setAttribute('aria-current', 'true');
         } else {
@@ -2140,7 +2144,7 @@
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'order-remove';
-        remove.setAttribute('aria-label', t('{{item}} aus der Bestellung entfernen', { item: productName }));
+        setTranslatedAttribute(remove, 'aria-label', '{{item}} aus der Bestellung entfernen', { item: productName });
         remove.textContent = '×';
         remove.addEventListener('click', () => {
           if (editingOrderItemId === item.id) {
@@ -2235,7 +2239,7 @@
         return;
       }
       photoButton.disabled = true;
-      errorText.textContent = '';
+      clearText(errorText);
       try {
         for (const file of files.slice(0, available)) {
           mugEditor.setFeedback('Foto wird vorbereitet…');
@@ -2276,16 +2280,16 @@
     function updateToolbarSummaries() {
       const orientation = selectedOrientationOption();
       if (orientation) {
-        selectedOrientationName.textContent = t(orientation.label);
-        selectedOrientationDetail.textContent = t(orientation.description);
+        setText(selectedOrientationName, orientation.label);
+        setText(selectedOrientationDetail, orientation.description);
       }
       const palette = selectedThemeOption();
       if (palette) {
-        selectedThemeName.textContent = t(palette.label);
+        setText(selectedThemeName, palette.label);
         renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
       }
-      placementSummaryName.textContent = t('Design anordnen');
-      placementSummaryDetail.textContent = t('Wählt eine Anordnung für euer aktuelles Design.');
+      setText(placementSummaryName, 'Design anordnen');
+      setText(placementSummaryDetail, 'Wählt eine Anordnung für euer aktuelles Design.');
     }
 
     function closeToolbarMenus(except = null) {
@@ -2350,7 +2354,7 @@
         input.type = 'color';
         input.className = 'custom-color-input';
         input.value = color;
-        input.setAttribute('aria-label', t('Farbe {{count}} wählen', { count: index + 1 }));
+        setTranslatedAttribute(input, 'aria-label', 'Farbe {{count}} wählen', { count: index + 1 });
 
         const value = document.createElement('span');
         value.className = 'custom-color-value';
@@ -2361,7 +2365,7 @@
         remove.className = 'custom-color-remove';
         remove.textContent = '×';
         remove.disabled = customColors.length === 1;
-        remove.setAttribute('aria-label', t('Farbe {{count}} entfernen', { count: index + 1 }));
+        setTranslatedAttribute(remove, 'aria-label', 'Farbe {{count}} entfernen', { count: index + 1 });
 
         input.addEventListener('input', () => {
           customColors[index] = input.value.toLowerCase();
@@ -2627,7 +2631,7 @@
         tab.className = 'surface-tab';
         tab.dataset.surfaceKey = surface.key;
         tab.setAttribute('role', 'tab');
-        tab.textContent = t(surface.label);
+        setText(tab, surface.label);
         tab.addEventListener('click', () => selectSurface(surface.key));
         tab.addEventListener('keydown', (event) => {
           if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -2839,7 +2843,7 @@
 
     function markDirty() {
       if (suppressDirty) return;
-      errorText.textContent = '';
+      clearText(errorText);
       currentDesignNeedsSave = true;
     }
 
@@ -2982,7 +2986,7 @@
       if (!product) return;
       selectedProductThumb.src = product.thumbnail;
       selectedProductThumb.alt = '';
-      selectedProductName.textContent = t(product.displayName);
+      setText(selectedProductName, product.displayName);
       selectedProductDetail.textContent = selectedProductSummary(product);
       updateToolbarSummaries();
     }
@@ -3098,7 +3102,7 @@
       variantPanel.hidden = candidates.length < 2;
       variantOptions.replaceChildren();
       if (candidates.length < 2) return;
-      document.getElementById('variant-title').textContent = t('{{item}} wählen', {
+      setText(document.getElementById('variant-title'), '{{item}} wählen', {
         item: t(family?.label || 'Ausführung'),
       });
       candidates.forEach((candidate, candidateIndex) => {
@@ -3141,7 +3145,7 @@
         option.className = 'product-option';
         option.dataset.familyKey = family.key;
         option.setAttribute('role', 'radio');
-        option.setAttribute('aria-label', t(family.label));
+        setTranslatedAttribute(option, 'aria-label', family.label);
         option.addEventListener('click', () => selectDialogFamily(family));
         option.addEventListener('keydown', (event) => {
           if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -3163,9 +3167,9 @@
         const copy = document.createElement('span');
         copy.className = 'product-copy';
         const name = document.createElement('strong');
-        name.textContent = t(family.label);
+        setText(name, family.label);
         const description = document.createElement('span');
-        description.textContent = t(family.description);
+        setText(description, family.description);
         const checkmark = document.createElement('span');
         checkmark.className = 'checkmark';
         checkmark.setAttribute('aria-hidden', 'true');
@@ -3254,7 +3258,7 @@
         const card = document.createElement('span');
         card.className = 'option-card';
         const name = document.createElement('strong');
-        name.textContent = t(orientation.label);
+        setText(name, orientation.label);
         const description = document.createElement('small');
         description.textContent = `${t(orientation.size.label)} · ${t(orientation.description)}`;
         card.append(name, description);
@@ -3282,9 +3286,9 @@
         const card = document.createElement('span');
         card.className = 'option-card';
         const name = document.createElement('strong');
-        name.textContent = t(layout.label);
+        setText(name, layout.label);
         const description = document.createElement('small');
-        description.textContent = t(layout.description);
+        setText(description, layout.description);
         card.append(name, description);
         button.append(card);
         placementOptions.appendChild(button);
@@ -3324,9 +3328,9 @@
         swatches.className = 'swatches';
         renderPaletteStrip(swatches, paletteColors);
         const name = document.createElement('strong');
-        name.textContent = t(palette.label);
+        setText(name, palette.label);
         const description = document.createElement('small');
-        description.textContent = t(palette.description);
+        setText(description, palette.description);
         card.append(swatches, name, description);
         label.append(input, card);
         themeOptions.appendChild(label);
@@ -3414,7 +3418,7 @@
       }
       orderActionPending = true;
       setOrderActionsBusy(true, activeButton);
-      errorText.textContent = '';
+      clearText(errorText);
       try {
         const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
           method: 'POST',
@@ -3439,7 +3443,7 @@
         renderOrderBox();
         return true;
       } catch {
-        errorText.textContent = t('Der Entwurf konnte nicht gespeichert werden. Bitte versucht es noch einmal.');
+        setText(errorText, 'Der Entwurf konnte nicht gespeichert werden. Bitte versucht es noch einmal.');
         return false;
       } finally {
         orderActionPending = false;
@@ -3463,7 +3467,7 @@
     designAnotherButton.addEventListener('click', async () => {
       if (!await saveCurrentDesign(designAnotherButton)) return;
       editingOrderItemId = null;
-      errorText.textContent = '';
+      clearText(errorText);
       document.getElementById('controls-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
       mugEditor?.setFeedback('Wählt ein Produkt oder passt das Design weiter an.');
       renderOrderBox();
@@ -3472,6 +3476,19 @@
     continueOrderButton.addEventListener('click', async () => {
       if (await saveCurrentDesign(continueOrderButton)) navigateToShipping();
     });
+
+    function refreshLocalizedConfigurator() {
+      if (!product || !products.length) return;
+      buildProductOptions();
+      buildOrientationOptions();
+      buildPlacementOptions();
+      buildThemeOptions();
+      renderCustomColorControls();
+      renderOrderBox();
+      updateProductPresentation();
+    }
+
+    window.addEventListener('wolkenworte:localechange', refreshLocalizedConfigurator);
 
     fetch(`/api/events/${encodeURIComponent(slug)}/configurator${isPersonalMode ? '?mode=personal' : ''}`)
       .then(async (response) => {
@@ -3509,7 +3526,7 @@
         buildThemeOptions();
         renderCustomColorControls();
 
-        document.title = WolkenworteI18n.t('Erinnerung für {{name}} gestalten – Wolkenworte', {
+        setText(document.querySelector('title'), 'Erinnerung für {{name}} gestalten – Wolkenworte', {
           name: data.event.coupleName,
         });
         updateProductPresentation();
@@ -3522,7 +3539,7 @@
         initMug3D();
       })
       .catch((error) => {
-        loading.textContent = t(error.message === 'no_words'
+        setText(loading, error.message === 'no_words'
           ? 'Für diese Wortwolke wurden noch keine Wörter gesammelt.'
           : 'Der Konfigurator konnte nicht geladen werden.');
       });

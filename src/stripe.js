@@ -173,9 +173,9 @@ async function createCheckoutSession({
       });
   const cancelUrl = cartConfigurationIds.length > 1
     ? `${baseUrl}/e/${encodedSlug}/shipping?configurations=${encodeURIComponent(cartConfigurationIds.join(','))}` +
-      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`
+      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled&lang=${encodeURIComponent(checkoutLocale)}`
     : `${baseUrl}/e/${encodedSlug}/shipping?configuration=${encodedConfiguration}` +
-      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled`;
+      `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled&lang=${encodeURIComponent(checkoutLocale)}`;
 
   const expiresAt = Math.floor(Date.parse(order?.checkout_session_expires_at || '') / 1000);
   if (!Number.isSafeInteger(expiresAt)) {
@@ -216,7 +216,8 @@ async function createCheckoutSession({
       }],
       metadata,
       payment_intent_data: { metadata },
-      success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}` +
+        `&lang=${encodeURIComponent(checkoutLocale)}`,
       cancel_url: cancelUrl,
       expires_at: expiresAt,
     }, {
@@ -233,6 +234,48 @@ async function createCheckoutSession({
   });
 
   return { url: session.url, id: session.id };
+}
+
+/**
+ * Expire an unpaid Checkout Session before replacing an immutable parameter
+ * such as its locale. A failed expire call is reconciled with Stripe so a
+ * concurrently completed payment always wins over a replacement attempt.
+ */
+async function expireCheckoutSession(sessionId) {
+  const client = getClient();
+  if (!client) throw notConfiguredError();
+  const id = String(sessionId || '');
+  if (!/^cs_[A-Za-z0-9_]+$/.test(id)) {
+    const error = new Error('Die gespeicherte Stripe-Session ist ungültig.');
+    error.code = 'STRIPE_INVALID_CHECKOUT_SESSION';
+    throw error;
+  }
+
+  const startedAt = Date.now();
+  try {
+    const session = await client.checkout.sessions.expire(id);
+    performanceProbe.recordExternalCall('stripe', {
+      durationMs: Date.now() - startedAt, succeeded: true,
+    });
+    return { id: session.id, status: session.status, paymentStatus: session.payment_status };
+  } catch (expireError) {
+    try {
+      const session = await client.checkout.sessions.retrieve(id);
+      if (session.status === 'complete' || session.status === 'expired') {
+        performanceProbe.recordExternalCall('stripe', {
+          durationMs: Date.now() - startedAt, succeeded: true,
+        });
+        return { id: session.id, status: session.status, paymentStatus: session.payment_status };
+      }
+    } catch {
+      // Preserve the original expiry failure; it is the operation the caller
+      // can safely retry without changing local checkout state.
+    }
+    performanceProbe.recordExternalCall('stripe', {
+      durationMs: Date.now() - startedAt, succeeded: false,
+    });
+    throw expireError;
+  }
 }
 
 /** Verify and parse the exact raw Stripe webhook bytes. */
@@ -254,5 +297,6 @@ module.exports = {
   getCheckoutMode,
   freezeCheckoutRequest,
   createCheckoutSession,
+  expireCheckoutSession,
   constructWebhookEvent,
 };

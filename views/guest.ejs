@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/i18n.js?v=20260829-3"></script>
   <script src="/js/site-header.js" defer></script>
   <title data-i18n-source="Wortwolke"><%= t('Wortwolke') %></title>
   <style>
@@ -931,6 +931,7 @@
   const previewContext = previewCanvas.getContext('2d');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const t = (source, params) => WolkenworteI18n.t(source, params);
+  const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
 
   let currentWords = [];
   let previewOpen = false;
@@ -1076,7 +1077,7 @@
   function showShareConfirmation(message) {
     clearTimeout(shareResetTimer);
     shareLabel.textContent = message;
-    shareResetTimer = setTimeout(() => { shareLabel.textContent = t('Link teilen'); }, 1800);
+    shareResetTimer = setTimeout(() => { setText(shareLabel, 'Link teilen'); }, 1800);
   }
 
   function updatePreview(words) {
@@ -1193,13 +1194,14 @@
   });
 
   window.addEventListener('resize', schedulePreviewRender);
+  window.addEventListener('wolkenworte:localechange', () => updatePreview(currentWords));
 
   fetch(`/api/events/${encodeURIComponent(slug)}`)
     .then(r => r.json())
     .then(async ({ coupleName, theme, locale }) => {
       await WolkenworteI18n.useEventLocale(locale);
       document.getElementById('couple-name').textContent = coupleName;
-      document.title = WolkenworteI18n.t('{{name}} – Wortwolke', { name: coupleName });
+      setText(document.querySelector('title'), '{{name}} – Wortwolke', { name: coupleName });
       if (!urlTheme && (theme === 'neon' || theme === 'pastel')) {
         applyTheme(theme);
       }
@@ -1340,14 +1342,14 @@
   socket.on('fatal-error', (msg) => {
     const errorState = document.createElement('p');
     errorState.className = 'error-state';
-    errorState.textContent = t('Diese Wortwolke wurde nicht gefunden.');
+    setText(errorState, 'Diese Wortwolke wurde nicht gefunden.');
     document.querySelector('main').replaceChildren(errorState);
   });
 
   socket.on('disconnect', () => {
     btn.disabled = true;
     setRemoveControlsDisabled(true);
-    if (previewOpen) previewLiveCopy.textContent = t('Verbindung wird wiederhergestellt…');
+    if (previewOpen) setText(previewLiveCopy, 'Verbindung wird wiederhergestellt…');
   });
   socket.on('connect', () => {
     btn.disabled = false;

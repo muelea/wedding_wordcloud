@@ -288,6 +288,22 @@ function parseStoredCheckoutRequest(order) {
   }
 }
 
+function checkoutLocaleForOrder(order) {
+  const request = parseStoredCheckoutRequest(order);
+  return I18n.normalizeLocale(request.locale || order?.locale_snapshot);
+}
+
+function requestedCheckoutLocale(value, eventLocale) {
+  return I18n.isSupportedLocale(value)
+    ? I18n.normalizeLocale(value)
+    : I18n.normalizeLocale(eventLocale);
+}
+
+function checkoutConfirmationUrl(eventSlug, sessionId, locale = null) {
+  const path = `/e/${encodeURIComponent(eventSlug)}/order-confirmation?session_id=${encodeURIComponent(sessionId)}`;
+  return locale ? `${path}&lang=${encodeURIComponent(I18n.normalizeLocale(locale))}` : path;
+}
+
 async function attemptPersistedCheckout(order) {
   const claimed = await db.claimCheckoutAttempt(order.id);
   if (!claimed) return null;
@@ -303,6 +319,114 @@ async function attemptPersistedCheckout(order) {
     await db.markCheckoutCreationFailed(claimed.id, error);
     throw error;
   }
+}
+
+async function replacePendingCheckoutLocale(order, requestedLocale, eventSlug) {
+  if (order?.status !== 'checkout_pending' || !order.stripe_checkout_url || !order.stripe_session_id) {
+    return null;
+  }
+  if (checkoutLocaleForOrder(order) === requestedLocale) {
+    return { url: order.stripe_checkout_url, reused: true };
+  }
+
+  const providerSession = await stripe.expireCheckoutSession(order.stripe_session_id);
+  if (providerSession.status === 'complete' || providerSession.paymentStatus === 'paid') {
+    return {
+      confirmationUrl: checkoutConfirmationUrl(eventSlug, order.stripe_session_id, requestedLocale),
+      paymentProcessing: true,
+    };
+  }
+  if (providerSession.status !== 'expired') {
+    const error = new Error('Stripe Checkout Session could not be safely replaced');
+    error.code = 'STRIPE_CHECKOUT_REPLACEMENT_UNSAFE';
+    throw error;
+  }
+
+  const checkoutRequest = {
+    ...parseStoredCheckoutRequest(order),
+    locale: requestedLocale,
+  };
+  const replacement = await db.replaceExpiredCheckoutSession(order.id, {
+    expectedSessionId: order.stripe_session_id,
+    checkoutRequest,
+    locale: requestedLocale,
+  });
+  if (replacement) {
+    const session = await attemptPersistedCheckout(replacement);
+    return session ? { url: session.url, replaced: true } : null;
+  }
+
+  const latest = await db.getOrderById(order.id);
+  if (latest && ['paid_test', 'paid'].includes(latest.status)) {
+    return {
+      confirmationUrl: checkoutConfirmationUrl(eventSlug, latest.stripe_session_id, requestedLocale),
+      alreadyPaid: true,
+    };
+  }
+  if (latest?.status === 'checkout_pending' && latest.stripe_checkout_url &&
+      checkoutLocaleForOrder(latest) === requestedLocale) {
+    return { url: latest.stripe_checkout_url, reused: true };
+  }
+  return null;
+}
+
+async function recoverCreatingCheckoutLocale(order, requestedLocale, eventSlug) {
+  if (order?.status !== 'creating_checkout') return null;
+  const recoveredSession = await attemptPersistedCheckout(order);
+  if (!recoveredSession) return null;
+  if (checkoutLocaleForOrder(order) === requestedLocale) {
+    return { url: recoveredSession.url, recovered: true };
+  }
+  const attachedOrder = await db.getOrderById(order.id);
+  return replacePendingCheckoutLocale(attachedOrder, requestedLocale, eventSlug);
+}
+
+async function resolveExistingCheckoutOrder(order, requestedLocale, eventSlug) {
+  if (!order) return null;
+  if (order.status === 'checkout_pending') {
+    return replacePendingCheckoutLocale(order, requestedLocale, eventSlug);
+  }
+  if (['paid_test', 'paid'].includes(order.status)) {
+    return {
+      confirmationUrl: checkoutConfirmationUrl(eventSlug, order.stripe_session_id, requestedLocale),
+      alreadyPaid: true,
+    };
+  }
+  if (order.status === 'creating_checkout') {
+    return recoverCreatingCheckoutLocale(order, requestedLocale, eventSlug);
+  }
+  return null;
+}
+
+function sendCheckoutInProgress(res) {
+  return res.status(409).json({
+    error: 'checkout_in_progress',
+    message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
+  });
+}
+
+function sendCheckoutReplacementError(res, error, order) {
+  if (error?.code === 'STRIPE_NOT_CONFIGURED') {
+    return res.status(501).json({
+      error: 'checkout_not_configured',
+      message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+    });
+  }
+  if (error?.code === 'STRIPE_LIVE_MODE_BLOCKED') {
+    return res.status(503).json({
+      error: 'stripe_live_mode_blocked',
+      message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+    });
+  }
+  performanceProbe.recordOperation('checkoutFailed');
+  log.error('stripe_checkout_locale_replacement_failed', {
+    orderId: order?.id,
+    errorCode: log.errorCode(error, 'checkout_locale_replacement_failed'),
+  });
+  return res.status(500).json({
+    error: 'checkout_failed',
+    message: 'Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.',
+  });
 }
 
 function quoteAmountsDiffer(stored, fresh) {
@@ -1151,34 +1275,17 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         message: 'Die Preisberechnung wurde nicht gefunden. Bitte berechnet den Preis erneut.',
       });
     }
+    const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
 
     let order = await db.getOrderByQuoteId(storedQuote.id);
-    if (order?.status === 'checkout_pending' && order.stripe_checkout_url) {
-      return res.json({ url: order.stripe_checkout_url, reused: true });
-    }
-    if (order && ['paid_test', 'paid'].includes(order.status)) {
-      return res.json({
-        confirmationUrl: `/e/${encodeURIComponent(event.slug)}/order-confirmation?session_id=${encodeURIComponent(order.stripe_session_id)}`,
-        alreadyPaid: true,
-      });
-    }
-    if (order?.status === 'creating_checkout') {
+    if (order) {
       try {
-        const recoveredSession = await attemptPersistedCheckout(order);
-        if (recoveredSession) return res.json({ url: recoveredSession.url, recovered: true });
+        const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
+        if (resolved) return res.json(resolved);
       } catch (error) {
-        if (error?.code === 'STRIPE_NOT_CONFIGURED') {
-          return res.status(501).json({ error: 'checkout_not_configured' });
-        }
-        performanceProbe.recordOperation('checkoutFailed');
-        log.error('stripe_checkout_recovery_failed', {
-          orderId: order.id, errorCode: log.errorCode(error, 'checkout_recovery_failed'),
-        });
+        return sendCheckoutReplacementError(res, error, order);
       }
-      return res.status(409).json({
-        error: 'checkout_in_progress',
-        message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
-      });
+      return sendCheckoutInProgress(res);
     }
     if (db.isCheckoutQuoteExpired(storedQuote)) {
       return res.status(409).json({
@@ -1238,7 +1345,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         quantity: freshQuote.quantity,
         shipmentCount: pricedShipments.length,
         baseUrl: getBaseUrl(req, port),
-        locale: I18n.normalizeLocale(req.body?.locale || event.locale),
+        locale: requestedLocale,
       });
       const orderResult = await db.createCheckoutOrder({
         eventId: event.id,
@@ -1248,14 +1355,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         checkoutRequest,
       });
       order = orderResult.order;
-      if (!orderResult.created && order.status !== 'creating_checkout') {
-        if (order.status === 'checkout_pending' && order.stripe_checkout_url) {
-          return res.json({ url: order.stripe_checkout_url, reused: true });
-        }
-        return res.status(409).json({
-          error: 'checkout_in_progress',
-          message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
-        });
+      if (!orderResult.created) {
+        const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
+        if (resolved) return res.json(resolved);
+        return sendCheckoutInProgress(res);
       }
 
       const session = await attemptPersistedCheckout(order);
@@ -1319,37 +1422,20 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           message: 'Die Preisberechnung wurde nicht gefunden. Bitte berechnet den Preis erneut.',
         });
       }
+      const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
 
       // A repeated click returns the same Stripe Session. No re-estimate is
       // necessary because this exact quote was already revalidated before
       // that Session was created.
       let order = await db.getOrderByQuoteId(storedQuote.id);
-      if (order?.status === 'checkout_pending' && order.stripe_checkout_url) {
-        return res.json({ url: order.stripe_checkout_url, reused: true });
-      }
-      if (order && ['paid_test', 'paid'].includes(order.status)) {
-        return res.json({
-          confirmationUrl: `/e/${encodeURIComponent(event.slug)}/order-confirmation?session_id=${encodeURIComponent(order.stripe_session_id)}`,
-          alreadyPaid: true,
-        });
-      }
-      if (order?.status === 'creating_checkout') {
+      if (order) {
         try {
-          const recoveredSession = await attemptPersistedCheckout(order);
-          if (recoveredSession) return res.json({ url: recoveredSession.url, recovered: true });
+          const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
+          if (resolved) return res.json(resolved);
         } catch (error) {
-          if (error?.code === 'STRIPE_NOT_CONFIGURED') {
-            return res.status(501).json({ error: 'checkout_not_configured' });
-          }
-          performanceProbe.recordOperation('checkoutFailed');
-          log.error('stripe_checkout_recovery_failed', {
-            orderId: order.id, errorCode: log.errorCode(error, 'checkout_recovery_failed'),
-          });
+          return sendCheckoutReplacementError(res, error, order);
         }
-        return res.status(409).json({
-          error: 'checkout_in_progress',
-          message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
-        });
+        return sendCheckoutInProgress(res);
       }
       if (db.isCheckoutQuoteExpired(storedQuote)) {
         return res.status(409).json({
@@ -1411,7 +1497,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           quantity: freshQuote.quantity,
           shipmentCount: refreshedShipments.length,
           baseUrl: getBaseUrl(req, port),
-          locale: I18n.normalizeLocale(req.body?.locale || event.locale),
+          locale: requestedLocale,
         });
         const orderResult = await db.createCheckoutOrder({
           eventId: event.id,
@@ -1421,14 +1507,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           checkoutRequest,
         });
         order = orderResult.order;
-        if (!orderResult.created && order.status !== 'creating_checkout') {
-          if (order.status === 'checkout_pending' && order.stripe_checkout_url) {
-            return res.json({ url: order.stripe_checkout_url, reused: true });
-          }
-          return res.status(409).json({
-            error: 'checkout_in_progress',
-            message: 'Die Zahlungsseite wird bereits vorbereitet. Bitte versucht es gleich noch einmal.',
-          });
+        if (!orderResult.created) {
+          const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
+          if (resolved) return res.json(resolved);
+          return sendCheckoutInProgress(res);
         }
 
         const session = await attemptPersistedCheckout(order);
