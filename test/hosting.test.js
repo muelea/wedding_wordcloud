@@ -14,6 +14,12 @@ const {
   validateHostedConfig,
   validateOperatorEnvironment,
 } = require('../scripts/deploy-hosted');
+const {
+  BROWSER_DEPENDENCY_FILES,
+  inspectDependencies,
+  integrationStatus,
+  validateRepositoryAssets,
+} = require('../scripts/prepare-local');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -179,6 +185,45 @@ test('container, Fly config and local deployment command enforce the hosting bou
   assert.doesNotMatch(
     secretScript.match(/const OPTIONAL = \[[\s\S]*?\];/)?.[0] || '',
     /STRIPE_TEST_HOSTED_WEBHOOK_SECRET|STRIPE_LIVE_WEBHOOK_SECRET/
+  );
+});
+
+test('a fresh collaborator checkout has one deterministic local startup path', () => {
+  const runLocal = fs.readFileSync(path.join(ROOT, 'run_local.sh'), 'utf8');
+  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+  const agents = fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+
+  assert.equal(fs.readFileSync(path.join(ROOT, '.nvmrc'), 'utf8').trim(), '22');
+  assert.equal(packageJson.engines.node, '>=22');
+  assert.equal(packageJson.scripts['local:prepare'], 'node scripts/prepare-local.js');
+  assert.match(runLocal, /node scripts\/prepare-local\.js/);
+  assert.doesNotMatch(runLocal, /\[\[ ! -d node_modules \]\]/);
+  assert.doesNotMatch(runLocal, /npm install/);
+  assert.match(readme, /fresh clone plus a securely supplied|Clone the repository[\s\S]*\.\/run_local\.sh/i);
+  assert.match(readme, /there is no untracked 3D\s+model/i);
+  assert.match(agents, /Collaborator startup is one guarded path/);
+
+  const dependencyState = inspectDependencies(ROOT, { requireStamp: false });
+  assert.deepEqual(dependencyState.problems, []);
+  for (const filename of BROWSER_DEPENDENCY_FILES) {
+    assert.equal(fs.existsSync(path.join(ROOT, filename)), true, `${filename} must be installed`);
+  }
+  const repositoryAssets = validateRepositoryAssets(ROOT);
+  assert.ok(repositoryAssets.includes(path.join('public', 'js', 'mug-3d-viewer.js')));
+  assert.ok(repositoryAssets.some((filename) => filename.endsWith('mug.svg')));
+  assert.ok(repositoryAssets.some((filename) => filename.endsWith('coaster-flat.png')));
+  assert.ok(repositoryAssets.some((filename) => filename.endsWith('jost-latin.woff2')));
+
+  assert.deepEqual(
+    integrationStatus({
+      STRIPE_PAYMENT_MODE: 'test',
+      STRIPE_TEST_SECRET_KEY: 'configured',
+      PRINTFUL_API_KEY: 'configured',
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SECRET_KEY: 'configured',
+    }).map(({ ready }) => ready),
+    [true, true, true]
   );
 });
 

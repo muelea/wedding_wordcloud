@@ -115,6 +115,14 @@ it — this file is about how to work in it safely.
   `.env.example` with an empty/placeholder value and document it in
   `README.md`'s env var table — never put a real secret in a file that gets
   committed.
+- **Collaborator startup is one guarded path.** A fresh clone plus a securely
+  supplied, runtime-scoped `.env` must start through `./run_local.sh`. That
+  command owns deterministic dependency synchronization and the local
+  environment/asset preflight in `scripts/prepare-local.js`. Three.js, Fabric.js
+  and Gelasio are served from their pinned npm packages; the procedural mug
+  renderer and product assets are tracked in `public/`. Do not restore a mere
+  `node_modules`-directory check, add a CDN/manual asset-copy requirement or
+  assume an untracked 3D model exists.
 - **Stripe/Printful must degrade gracefully when unconfigured**, not throw.
   Missing `STRIPE_TEST_SECRET_KEY`/`STRIPE_LIVE_SECRET_KEY` for the selected
   `STRIPE_PAYMENT_MODE` → checkout route returns a clear 501, not a

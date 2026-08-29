@@ -4,9 +4,14 @@
   "description": "Multi-tenant wedding word cloud with personal photo designs and safe print-on-demand checkout",
   "main": "server.js",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "local:prepare": "node scripts/prepare-local.js",
     "deploy:hosted": "node scripts/deploy-hosted.js",
     "db:migrate": "node scripts/db-migrate.js",
     "db:provision-runtime": "node scripts/provision-runtime-role.js",
