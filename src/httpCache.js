@@ -10,10 +10,11 @@ function isLocaleManifest(pathname) {
 function cacheControlForStaticRequest(req) {
   const pathname = String(req.path || '');
   if (!STATIC_EXTENSION_RE.test(pathname)) return null;
-  if (/\.html?$/i.test(pathname) || isLocaleManifest(pathname)) {
+  if (/\.html?$/i.test(pathname)) {
     return 'no-cache';
   }
   const version = typeof req.query?.v === 'string' ? req.query.v : '';
+  if (isLocaleManifest(pathname) && !VERSION_RE.test(version)) return 'no-cache';
   if (VERSION_RE.test(version)) return 'public, max-age=31536000, immutable';
   return 'public, max-age=0, must-revalidate';
 }
@@ -24,10 +25,4 @@ function staticCacheMiddleware(req, res, next) {
   next();
 }
 
-function sendHtml(res, filePath, status = 200) {
-  res.status(status);
-  res.set('Cache-Control', 'no-cache');
-  return res.sendFile(filePath);
-}
-
-module.exports = { cacheControlForStaticRequest, sendHtml, staticCacheMiddleware };
+module.exports = { cacheControlForStaticRequest, staticCacheMiddleware };

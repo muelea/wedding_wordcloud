@@ -2,7 +2,7 @@
  * Shared spiral + collision-detection word-cloud layout engine.
  *
  * Ported unchanged (algorithmically) from the original prototype's
- * display.html. This is the one piece of the prototype explicitly called
+ * display.ejs. This is the one piece of the prototype explicitly called
  * out as a real strength: the same layoutWords()/buildSVG() functions
  * drive both the live on-screen canvas render and the print-ready SVG
  * export, so the two are always visually identical by construction.
@@ -13,7 +13,7 @@
  *   - In Node (tests, and potentially a future server-side export) via
  *     require('./wordcloud-core.js').
  *
- * Pure/stateless: unlike the prototype's display.html (which kept a
+ * Pure/stateless: unlike the prototype's display page (which kept a
  * module-level `wordColors` Map), color assignment is passed in as a
  * `colorFn(word)` callback so this module has no hidden state and is
  * safe to reuse across concurrent events on the server.

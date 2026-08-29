@@ -31,6 +31,7 @@ COPY --chown=node:node package.json package-lock.json server.js ./
 COPY --chown=node:node certs ./certs
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
+COPY --chown=node:node views ./views
 
 USER node
 EXPOSE 8080

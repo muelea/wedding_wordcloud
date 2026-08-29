@@ -14,7 +14,7 @@
   display: inline-flex;
   align-items: center;
   color: #400f26;
-  font-family: 'Jost', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .ww-language-inline {
@@ -37,10 +37,11 @@ body.preview-open .ww-language-picker {
   -webkit-appearance: none;
   font: inherit;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .ww-language-trigger {
-  min-width: 126px;
+  width: 126px;
   height: 38px;
   display: inline-flex;
   align-items: center;
@@ -57,10 +58,13 @@ body.preview-open .ww-language-picker {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  list-style: none;
 }
 
+.ww-language-trigger::-webkit-details-marker { display: none; }
+
 .ww-language-trigger:hover,
-.ww-language-picker.is-open .ww-language-trigger {
+.ww-language-picker[open] .ww-language-trigger {
   border-color: rgba(156, 28, 76, .3);
   background: #fffdfa;
   box-shadow: 0 7px 22px rgba(64, 15, 38, .12);
@@ -84,6 +88,7 @@ body.preview-open .ww-language-picker {
 .ww-language-current-name {
   flex: 1 1 auto;
   text-align: left;
+  white-space: nowrap;
 }
 
 .ww-language-chevron {
@@ -98,7 +103,7 @@ body.preview-open .ww-language-picker {
   transition: transform .18s ease, margin .18s ease;
 }
 
-.ww-language-picker.is-open .ww-language-chevron {
+.ww-language-picker[open] .ww-language-chevron {
   margin-top: 3px;
   transform: rotate(225deg);
 }
@@ -115,10 +120,6 @@ body.preview-open .ww-language-picker {
   box-shadow: 0 18px 48px rgba(64, 15, 38, .16);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-}
-
-.ww-language-menu[hidden] {
-  display: none;
 }
 
 .ww-language-option {
@@ -169,7 +170,7 @@ body.preview-open .ww-language-picker {
     position: relative;
     inset: auto;
   }
-  .ww-language-trigger { min-width: 112px; height: 36px; font-size: 11px; }
+  .ww-language-trigger { width: 112px; height: 36px; font-size: 11px; }
   .ww-language-menu { width: 158px; }
 }
 

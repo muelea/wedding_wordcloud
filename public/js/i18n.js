@@ -25,7 +25,9 @@
     es: '🇪🇸',
     tr: '🇹🇷',
   });
-  const STORAGE_KEY = 'wolkenworte-language';
+  const LEGACY_STORAGE_KEY = 'wolkenworte-language';
+  const COOKIE_KEY = 'wolkenworte-language';
+  const CATALOG_VERSION = '20260829-2';
   const ATTRIBUTE_NAMES = Object.freeze(['aria-label', 'placeholder', 'title', 'alt', 'content']);
   const textSources = new WeakMap();
   const attributeSources = new WeakMap();
@@ -34,18 +36,35 @@
   let messages = {};
   let observer = null;
   let readyPromise = Promise.resolve();
+  let localeRequestId = 0;
+  const catalogPromises = new Map([[DEFAULT_LOCALE, Promise.resolve({})]]);
 
   function normalizeLocale(value, fallback = DEFAULT_LOCALE) {
     const candidate = String(value || '').trim().toLowerCase().split(/[-_]/)[0];
     return SUPPORTED_LOCALES.includes(candidate) ? candidate : fallback;
   }
 
-  function readStoredLocale() {
+  function readCookieLocale() {
     try {
-      return root.localStorage?.getItem(STORAGE_KEY) || '';
+      const prefix = `${COOKIE_KEY}=`;
+      const pair = String(root.document?.cookie || '')
+        .split(';')
+        .map((value) => value.trim())
+        .find((value) => value.startsWith(prefix));
+      return pair ? decodeURIComponent(pair.slice(prefix.length)) : '';
     } catch {
       return '';
     }
+  }
+
+  function persistLocale(value) {
+    try {
+      const secure = root.location?.protocol === 'https:' ? '; Secure' : '';
+      root.document.cookie = `${COOKIE_KEY}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+    } catch {}
+    // The cookie is the single source of truth because the server can read it
+    // before rendering. Remove the pre-SSR implementation's duplicate value.
+    try { root.localStorage?.removeItem(LEGACY_STORAGE_KEY); } catch {}
   }
 
   function initialLocale() {
@@ -54,8 +73,10 @@
     if (SUPPORTED_LOCALES.includes(normalizeLocale(queryLocale, ''))) {
       return { locale: normalizeLocale(queryLocale), source: 'query' };
     }
-    const storedLocale = normalizeLocale(readStoredLocale(), '');
-    if (SUPPORTED_LOCALES.includes(storedLocale)) return { locale: storedLocale, source: 'stored' };
+    const cookieLocale = normalizeLocale(readCookieLocale(), '');
+    if (SUPPORTED_LOCALES.includes(cookieLocale)) return { locale: cookieLocale, source: 'stored' };
+    const renderedLocale = normalizeLocale(root.document?.documentElement?.lang, '');
+    if (SUPPORTED_LOCALES.includes(renderedLocale)) return { locale: renderedLocale, source: 'server' };
     const browserLocale = normalizeLocale(root.navigator?.languages?.[0] || root.navigator?.language);
     return { locale: browserLocale, source: 'browser' };
   }
@@ -77,8 +98,11 @@
     const current = node.nodeValue || '';
     const trimmed = current.trim();
     if (!trimmed) return;
-    let source = textSources.get(node);
-    if (!source || (!preserveSource && current !== replaceTrimmed(current, t(source)))) {
+    const declaredSource = node.parentElement.getAttribute('data-i18n-source');
+    let source = declaredSource || textSources.get(node);
+    if (declaredSource) {
+      textSources.set(node, declaredSource);
+    } else if (!source || (!preserveSource && current !== replaceTrimmed(current, t(source)))) {
       source = trimmed;
       textSources.set(node, source);
     }
@@ -103,7 +127,9 @@
       if (!element.hasAttribute(name)) continue;
       const current = element.getAttribute(name);
       if (!current) continue;
-      if (!sources[name] || (!preserveSource && current !== t(sources[name]))) sources[name] = current;
+      const declaredSource = element.getAttribute(`data-i18n-${name}-source`);
+      if (declaredSource) sources[name] = declaredSource;
+      else if (!sources[name] || (!preserveSource && current !== t(sources[name]))) sources[name] = current;
       const translated = t(sources[name]);
       if (translated !== current) element.setAttribute(name, translated);
     }
@@ -128,28 +154,58 @@
   }
 
   async function loadMessages(nextLocale) {
-    if (nextLocale === DEFAULT_LOCALE || !root.fetch) return {};
-    const locales = nextLocale === 'en' ? ['en'] : ['en', nextLocale];
-    const loaded = await Promise.all(locales.map(async (code) => {
-      const response = await root.fetch(`/locales/${encodeURIComponent(code)}.json`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Could not load locale ${code}`);
-      return response.json();
-    }));
-    return Object.assign({}, ...loaded);
+    if (catalogPromises.has(nextLocale)) return catalogPromises.get(nextLocale);
+    if (!root.fetch) return {};
+    const request = (async () => {
+      const locales = nextLocale === 'en' ? ['en'] : ['en', nextLocale];
+      const loaded = await Promise.all(locales.map(async (code) => {
+        const response = await root.fetch(
+          `/locales/${encodeURIComponent(code)}.json?v=${CATALOG_VERSION}`,
+          { cache: 'force-cache' }
+        );
+        if (!response.ok) throw new Error(`Could not load locale ${code}`);
+        return response.json();
+      }));
+      return Object.assign({}, ...loaded);
+    })();
+    catalogPromises.set(nextLocale, request);
+    try {
+      return await request;
+    } catch (error) {
+      catalogPromises.delete(nextLocale);
+      throw error;
+    }
   }
 
   async function setLocale(value, options = {}) {
     const nextLocale = normalizeLocale(value);
-    const loaded = await loadMessages(nextLocale).catch(() => ({}));
+    const requestId = ++localeRequestId;
+    let loaded;
+    try {
+      loaded = await loadMessages(nextLocale);
+    } catch (error) {
+      if (requestId === localeRequestId && root.dispatchEvent && typeof root.CustomEvent === 'function') {
+        root.dispatchEvent(new root.CustomEvent('wolkenworte:localeerror', {
+          detail: { locale: nextLocale },
+        }));
+      }
+      return locale;
+    }
+    if (requestId !== localeRequestId) return locale;
     locale = nextLocale;
     messages = loaded;
     if (options.source) localeSource = options.source;
     if (options.persist) {
       localeSource = 'stored';
-      try { root.localStorage?.setItem(STORAGE_KEY, locale); } catch {}
+      persistLocale(locale);
     }
     if (root.document) translateTree(root.document, true);
     updateLanguageSelector();
+    if (root.dispatchEvent && typeof root.CustomEvent === 'function') {
+      root.dispatchEvent(new root.CustomEvent('wolkenworte:localechange', {
+        detail: { locale, source: localeSource },
+      }));
+    }
     return locale;
   }
 
@@ -178,79 +234,20 @@
     const picker = root.document?.querySelector('.ww-language-picker');
     if (!picker) return;
     const trigger = picker.querySelector('#ww-language-select');
+    const menu = picker.querySelector('#ww-language-menu');
     const currentFlag = picker.querySelector('.ww-language-current-flag');
     const currentName = picker.querySelector('.ww-language-current-name');
     if (currentFlag) currentFlag.textContent = LANGUAGE_FLAGS[locale];
     if (currentName) currentName.textContent = LANGUAGE_NAMES[locale];
     if (trigger) trigger.setAttribute('aria-label', `${t('Sprache')}: ${LANGUAGE_NAMES[locale]}`);
+    if (menu) menu.setAttribute('aria-label', t('Sprache'));
     picker.querySelectorAll('[data-language-code]').forEach((option) => {
       const isSelected = option.dataset.languageCode === locale;
-      option.setAttribute('aria-selected', String(isSelected));
+      if (isSelected) option.setAttribute('aria-current', 'true');
+      else option.removeAttribute('aria-current');
       option.classList.toggle('is-selected', isSelected);
+      option.href = languageUrl(root.location.href, option.dataset.languageCode);
     });
-  }
-
-  function createLanguageMenuController({
-    optionCodes,
-    getSelectedCode,
-    getOpen,
-    setOpen,
-    getFocusedIndex,
-    focusOption,
-    focusTrigger,
-    onChoose,
-  }) {
-    const codes = [...optionCodes];
-
-    function close({ restoreFocus = false } = {}) {
-      if (!getOpen()) return;
-      setOpen(false);
-      if (restoreFocus) focusTrigger();
-    }
-
-    function open(direction = 0) {
-      setOpen(true);
-      const selectedIndex = Math.max(0, codes.indexOf(getSelectedCode()));
-      const focusIndex = (selectedIndex + direction + codes.length) % codes.length;
-      focusOption(focusIndex);
-    }
-
-    function toggle() {
-      if (getOpen()) close({ restoreFocus: true });
-      else open();
-    }
-
-    function choose(code) {
-      if (!codes.includes(code)) return false;
-      close();
-      onChoose(code);
-      return true;
-    }
-
-    function handleTriggerKey(key) {
-      if (key !== 'ArrowDown' && key !== 'ArrowUp') return false;
-      open(key === 'ArrowDown' ? 1 : -1);
-      return true;
-    }
-
-    function handleMenuKey(key) {
-      const currentIndex = getFocusedIndex();
-      let nextIndex = currentIndex;
-      if (key === 'ArrowDown') nextIndex = (currentIndex + 1) % codes.length;
-      else if (key === 'ArrowUp') nextIndex = (currentIndex - 1 + codes.length) % codes.length;
-      else if (key === 'Home') nextIndex = 0;
-      else if (key === 'End') nextIndex = codes.length - 1;
-      else if (key === 'Escape') {
-        close({ restoreFocus: true });
-        return true;
-      } else {
-        return false;
-      }
-      focusOption(nextIndex);
-      return true;
-    }
-
-    return Object.freeze({ close, open, toggle, choose, handleTriggerKey, handleMenuKey });
   }
 
   function languageUrl(href, code) {
@@ -259,108 +256,47 @@
     return url.toString();
   }
 
-  function mountLanguageSelector() {
-    if (!root.document?.body || root.document.getElementById('ww-language-select')) return;
-    const container = root.document.querySelector('.ww-nav');
-    if (!container) return;
-    const wrapper = root.document.createElement('div');
-    wrapper.className = 'ww-language-picker';
-    wrapper.setAttribute('data-i18n-ignore', '');
+  function enhanceLanguageSelector() {
+    const picker = root.document?.querySelector('.ww-language-picker');
+    if (!picker || picker.dataset.enhanced === 'true') return;
+    picker.dataset.enhanced = 'true';
+    const trigger = picker.querySelector('#ww-language-select');
+    const options = Array.from(picker.querySelectorAll('[data-language-code]'));
+    const stackingHost = picker.closest('header');
+    let selectionId = 0;
 
-    const trigger = root.document.createElement('button');
-    trigger.id = 'ww-language-select';
-    trigger.className = 'ww-language-trigger';
-    trigger.type = 'button';
-    trigger.setAttribute('aria-haspopup', 'listbox');
-    trigger.setAttribute('aria-expanded', 'false');
-    trigger.setAttribute('aria-controls', 'ww-language-menu');
-
-    const currentFlag = root.document.createElement('span');
-    currentFlag.className = 'ww-language-flag ww-language-current-flag';
-    currentFlag.setAttribute('aria-hidden', 'true');
-    const currentName = root.document.createElement('span');
-    currentName.className = 'ww-language-current-name';
-    const chevron = root.document.createElement('span');
-    chevron.className = 'ww-language-chevron';
-    chevron.setAttribute('aria-hidden', 'true');
-    trigger.append(currentFlag, currentName, chevron);
-
-    const menu = root.document.createElement('div');
-    menu.id = 'ww-language-menu';
-    menu.className = 'ww-language-menu';
-    menu.setAttribute('role', 'listbox');
-    menu.setAttribute('aria-label', t('Sprache'));
-    menu.hidden = true;
-
-    for (const code of SUPPORTED_LOCALES) {
-      const option = root.document.createElement('button');
-      option.id = `ww-language-option-${code}`;
-      option.className = 'ww-language-option';
-      option.type = 'button';
-      option.dataset.languageCode = code;
-      option.setAttribute('role', 'option');
-
-      const flag = root.document.createElement('span');
-      flag.className = 'ww-language-flag';
-      flag.setAttribute('aria-hidden', 'true');
-      flag.textContent = LANGUAGE_FLAGS[code];
-      const name = root.document.createElement('span');
-      name.className = 'ww-language-option-name';
-      name.textContent = LANGUAGE_NAMES[code];
-      const check = root.document.createElement('span');
-      check.className = 'ww-language-check';
-      check.setAttribute('aria-hidden', 'true');
-      check.textContent = '✓';
-      option.append(flag, name, check);
-      menu.appendChild(option);
-    }
-
-    const options = Array.from(menu.querySelectorAll('[data-language-code]'));
-    let stackingHost = null;
-
-    function chooseLanguage(code) {
-      try { root.localStorage?.setItem(STORAGE_KEY, code); } catch {}
-      root.location.assign(languageUrl(root.location.href, code));
-    }
-
-    const controller = createLanguageMenuController({
-      optionCodes: SUPPORTED_LOCALES,
-      getSelectedCode: () => locale,
-      getOpen: () => !menu.hidden,
-      setOpen: (isOpen) => {
-        menu.hidden = !isOpen;
-        wrapper.classList.toggle('is-open', isOpen);
-        stackingHost?.classList.toggle('ww-language-host-open', isOpen);
-        trigger.setAttribute('aria-expanded', String(isOpen));
-      },
-      getFocusedIndex: () => options.indexOf(root.document.activeElement),
-      focusOption: (index) => options[index]?.focus(),
-      focusTrigger: () => trigger.focus(),
-      onChoose: chooseLanguage,
-    });
-
-    trigger.addEventListener('click', controller.toggle);
-    trigger.addEventListener('keydown', (event) => {
-      if (controller.handleTriggerKey(event.key)) event.preventDefault();
-    });
-    menu.addEventListener('keydown', (event) => {
-      if (controller.handleMenuKey(event.key)) event.preventDefault();
+    picker.addEventListener('toggle', () => {
+      stackingHost?.classList.toggle('ww-language-host-open', picker.open);
     });
     options.forEach((option) => {
-      option.addEventListener('click', () => controller.choose(option.dataset.languageCode));
+      option.addEventListener('click', async (event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        const nextLocale = normalizeLocale(option.dataset.languageCode);
+        const currentSelectionId = ++selectionId;
+        picker.open = false;
+        trigger?.setAttribute('aria-busy', 'true');
+        const appliedLocale = await setLocale(nextLocale, { persist: true, source: 'stored' });
+        if (appliedLocale === nextLocale) {
+          const nextUrl = languageUrl(root.location.href, nextLocale);
+          root.history?.replaceState(root.history.state, '', nextUrl);
+          updateLanguageSelector();
+        }
+        if (currentSelectionId === selectionId) {
+          trigger?.removeAttribute('aria-busy');
+          trigger?.focus();
+        }
+      });
     });
     root.document.addEventListener('pointerdown', (event) => {
-      if (!wrapper.contains(event.target)) controller.close();
+      if (!picker.contains(event.target)) picker.open = false;
     });
-    root.document.addEventListener('focusin', (event) => {
-      if (!wrapper.contains(event.target)) controller.close();
+    root.document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && picker.open) {
+        picker.open = false;
+        trigger?.focus();
+      }
     });
-
-    wrapper.append(trigger, menu);
-    wrapper.classList.add('ww-language-inline');
-    container.classList.add('ww-language-mounted');
-    container.appendChild(wrapper);
-    stackingHost = wrapper.closest('header');
     updateLanguageSelector();
   }
 
@@ -389,10 +325,7 @@
     root.document.documentElement.lang = locale;
     readyPromise = setLocale(locale, { source: localeSource });
     root.document.addEventListener('DOMContentLoaded', async () => {
-      // The selected locale is already known synchronously. Mount the fixed-
-      // width control before waiting for its catalog so the first painted
-      // header has its final geometry during a language-change navigation.
-      mountLanguageSelector();
+      enhanceLanguageSelector();
       startObserver();
       await readyPromise;
       translateTree(root.document);
@@ -404,7 +337,6 @@
     SUPPORTED_LOCALES,
     LANGUAGE_NAMES,
     LANGUAGE_FLAGS,
-    createLanguageMenuController,
     languageUrl,
     normalizeLocale,
     getLocale: () => locale,

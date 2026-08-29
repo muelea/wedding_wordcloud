@@ -1,25 +1,20 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="<%= locale %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Datenschutzerklärung für Wolkenworte." />
+  <meta name="description" content="<%= t('Datenschutzerklärung für Wolkenworte.') %>" data-i18n-content-source="Datenschutzerklärung für Wolkenworte." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
-  <link rel="stylesheet" href="/i18n.css?v=20260829-1" />
+  <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-1"></script>
-  <title>Datenschutz – Wolkenworte</title>
+  <script src="/js/i18n.js?v=20260829-2"></script>
+  <title data-i18n-source="Datenschutz – Wolkenworte"><%= t('Datenschutz – Wolkenworte') %></title>
   <link rel="stylesheet" href="/legal.css" />
-  <link rel="stylesheet" href="/site-header.css?v=20260829-1" />
+  <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
   <script src="/js/site-header.js" defer></script>
 </head>
 <body>
-  <header class="site-header ww-site-header">
-    <div class="header-inner ww-nav">
-      <a class="brand ww-brand" href="/"><img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg?v=20260829-1" alt="" aria-hidden="true" />Wolkenworte</a>
-      <a class="back-link ww-back-link" href="/"><span aria-hidden="true">←</span><span>Zurück zur Startseite</span></a>
-    </div>
-  </header>
+  <%- include('partials/site-header') %>
 
   <main class="legal-main">
     <p class="eyebrow">Rechtliches</p>
@@ -90,9 +85,9 @@
 
     <section class="legal-section">
       <h2>8. Speicherung im Browser</h2>
-      <p>Wolkenworte setzt derzeit keine eigenen Cookies ein und verwendet keine Analyse- oder Werbetracker.</p>
+      <p>Wolkenworte verwendet ausschließlich ein technisch erforderliches Sprachpräferenz-Cookie. Analyse- oder Werbetracker werden nicht eingesetzt.</p>
       <p>Für Gäste wird im Session Storage eine zufällige, veranstaltungsbezogene Sitzungskennung gespeichert. Sie dient ausschließlich dazu, dem Browser die eigenen Wortbeiträge anzuzeigen und nur deren Entfernung zu erlauben.</p>
-      <p>Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.</p>
+      <p>Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.</p>
       <p>Diese Speicherung ist für die ausdrücklich gewünschten Funktionen erforderlich. Rechtsgrundlage ist § 25 Abs. 2 Nr. 2 TDDDG sowie Art. 6 Abs. 1 lit. f DSGVO.</p>
     </section>
 

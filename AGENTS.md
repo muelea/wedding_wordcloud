@@ -21,7 +21,7 @@ it — this file is about how to work in it safely.
   `src/db.js`, both `test/isolation.test.js` and `test/words.test.js` must
   pass; they cover cross-event isolation and receipt-bound removal.
 - If you touched personal photos/configuration types in `src/routes/events.js`,
-  `src/mugPrint.js`, `public/configure.html` or `public/js/mug-editor.js`,
+  `src/mugPrint.js`, `views/configure.ejs` or `public/js/mug-editor.js`,
   both `test/configurator.test.js` and `test/storage-assets.test.js` must pass;
   they cover empty personal starts, decoded-image validation, private Storage,
   configuration isolation and immutable print output.
@@ -65,7 +65,7 @@ it — this file is about how to work in it safely.
   6 unique assets and at most 6 MiB stored bytes per complete design. Asset
   joins are transactional; non-active/foreign assets cannot be attached, and
   failed Storage deletion must retain its retryable object key.
-- **The admin PIN fields in `public/create.html` (`#pin`, `#pin-confirm`)
+- **The admin PIN fields in `views/create.ejs` (`#pin`, `#pin-confirm`)
   must stay `type="tel"`, not `type="password"`.** Two adjacent
   `type="password"` fields make Safari/Chrome treat the form as an account
   signup and offer to autofill/generate a strong (alphanumeric) password.
@@ -125,8 +125,9 @@ it — this file is about how to work in it safely.
 
 ## Conventions
 
-- Backend logic lives in `src/`, routes in `src/routes/`, static frontend in
-  `public/`, tests in `test/` (one `*.test.js` per concern, using
+- Backend logic lives in `src/`, routes in `src/routes/`, server-rendered page
+  templates in `views/`, static frontend assets in `public/`, and tests in
+  `test/` (one `*.test.js` per concern, using
   `node:test` — no external test framework).
 - No build step. Plain CommonJS (`require`/`module.exports`), no bundler,
   no TypeScript. Keep it that way unless explicitly asked to change it —
@@ -135,7 +136,7 @@ it — this file is about how to work in it safely.
   Keep SQL behind `src/db.js`, keep callers async/await, and evolve schema only
   through ordered files in `supabase/migrations/`; do not add an ORM or a
   SQLite test substitute.
-- German is the user-facing language throughout (`public/*.html` copy, form
+- German is the source language throughout (`views/*.ejs` copy, form
   labels, error messages). Keep new user-facing strings in German unless
   told otherwise.
 - No accounts/login system for guests or couples. The admin PIN authorizes only

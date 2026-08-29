@@ -45,10 +45,16 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   assert.equal(html.headers.get('cache-control'), 'no-cache');
 
   const directHtml = await fetch(`${baseUrl}/landing.html?v=stale-release`);
+  assert.equal(directHtml.status, 404);
   assert.equal(directHtml.headers.get('cache-control'), 'no-cache');
 
-  const locale = await fetch(`${baseUrl}/locales/de.json?v=stale-release`);
-  assert.equal(locale.headers.get('cache-control'), 'no-cache');
+  const locale = await fetch(`${baseUrl}/locales/en.json?v=20260829-2`);
+  assert.equal(locale.status, 200);
+  assert.equal(locale.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+
+  const unversionedLocale = await fetch(`${baseUrl}/locales/en.json`);
+  assert.equal(unversionedLocale.status, 200);
+  assert.equal(unversionedLocale.headers.get('cache-control'), 'no-cache');
 
   const unversionedJs = await fetch(`${baseUrl}/js/site-header.js`);
   assert.equal(unversionedJs.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
@@ -94,6 +100,7 @@ test('container, Fly config and deployment workflow enforce the hosting boundary
   assert.match(dockerfile, /FROM node:22-bookworm-slim AS runtime/);
   assert.match(dockerfile, /USER node/);
   assert.match(dockerfile, /COPY --chown=node:node certs \.\/certs/);
+  assert.match(dockerfile, /COPY --chown=node:node views \.\/views/);
   assert.match(dockerfile, /ENTRYPOINT \["\/usr\/bin\/tini", "-s", "--"\]/);
   assert.doesNotMatch(dockerfile, /COPY\s+\.\s+\./);
   assert.match(dockerignore, /^\.env$/m);

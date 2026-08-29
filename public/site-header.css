@@ -45,43 +45,30 @@
   background: transparent !important;
 }
 
-/* Reserve the language control's final flex item before i18n.js mounts it.
-   This keeps the middle landing-page navigation in exactly the same place
-   while a locale catalog is loading during a language-change navigation. */
-.ww-nav::after {
-  content: '';
-  display: block;
-  width: 126px;
-  height: 38px;
-  flex: 0 0 126px;
-  margin-left: auto;
-  pointer-events: none;
-}
-
-.ww-nav.ww-language-mounted::after {
-  display: none;
-}
-
 .ww-brand {
   display: inline-flex;
   align-items: center;
   gap: 9px;
   color: var(--ink, var(--text, #400f26));
-  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
   font-size: 1.4rem;
-  font-weight: 600;
-  letter-spacing: .01em;
   line-height: 1;
   text-decoration: none;
   flex: 0 0 auto;
   margin-right: auto;
-  /* landing.html smooths its whole body; the remaining pages do not. Use
-     the browser default explicitly for one identical wordmark everywhere. */
-  -webkit-font-smoothing: auto;
+  view-transition-name: ww-brand;
+}
+
+.ww-brand-wordmark {
+  display: block;
+  width: auto;
+  height: .81em;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .ww-site-header .ww-language-inline {
   margin-left: auto;
+  view-transition-name: ww-language-picker;
 }
 
 .ww-brand-icon {
@@ -115,6 +102,10 @@
   .ww-site-header.scrolled { background: var(--bg, var(--paper, #fffdfa)) !important; }
 }
 
+@media (max-width: 960px) {
+  .ww-site-header .nav-links { display: none !important; }
+}
+
 @media (max-width: 620px) {
   .ww-nav {
     width: 100% !important;
@@ -127,7 +118,12 @@
   .ww-brand { font-size: 1.18rem; }
   .ww-brand-icon { width: 28px; height: 26px; }
   .ww-back-link { font-size: .8rem; }
-  .ww-nav::after { width: 112px; height: 36px; flex-basis: 112px; }
+}
+
+@media (max-width: 360px) {
+  .ww-nav { gap: 8px !important; }
+  .ww-brand { font-size: 1.06rem; }
+  .ww-language-trigger { width: 108px; padding-inline: 8px; }
 }
 
 @media (max-width: 460px) {
@@ -150,4 +146,21 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ww-site-header { transition: none; }
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-group(ww-brand),
+::view-transition-group(ww-language-picker) {
+  animation-duration: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }

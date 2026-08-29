@@ -45,6 +45,7 @@ function clearApplicationModules() {
     '../src/lifecycle',
     '../src/maintenance',
     '../src/printArtifacts',
+    '../src/pageRenderer',
     '../src/routes/maintenance',
     '../src/routes/performance',
     '../scripts/operations-status',

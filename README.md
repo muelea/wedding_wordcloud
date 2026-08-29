@@ -396,20 +396,22 @@ src/
     performance.js         secret-authenticated aggregate capacity snapshot
     webhook.js             raw-body Stripe, signed Printful and signed Resend callbacks
 public/
-  landing.html             Marketing landing page, served at '/'
-  create.html              Event creation form, served at '/start'
-  guest.html               Guest word-submission + personal-memory entry page
-  display.html             Live display + SVG export + mug CTA, served at '/e/:slug/display'
-  configure.html           Shared/personal product configurator with photo editor + 3D/flat previews
-  shipping.html            Mobile-first address + live Printful price estimate
-  order-confirmation.html  Polling confirmation page for signed test payments
-  impressum.html           Current legal notice
-  datenschutz.html         Current local-development privacy disclosure
   js/mug-3d-viewer.js      Shared rotatable Three.js mug preview
   js/mug-editor.js         Bounded, dynamically scaled text/motif/photo print-area editor
   js/mug-icons.js          Curated editorial fine-line wedding motif library
-  404.html                 Unknown-event page
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
+views/
+  landing.ejs              Marketing landing page, served at '/'
+  create.ejs               Event creation form, served at '/start'
+  guest.ejs                Guest word-submission + personal-memory entry page
+  display.ejs              Live display + SVG export + mug CTA, served at '/e/:slug/display'
+  configure.ejs            Shared/personal product configurator with photo editor + 3D/flat previews
+  shipping.ejs             Mobile-first address + live Printful price estimate
+  order-confirmation.ejs   Polling confirmation page for signed test payments
+  impressum.ejs            Current legal notice
+  datenschutz.ejs          Current privacy disclosure
+  404.ejs                  Unknown-event page
+  partials/site-header.ejs Shared server-rendered header and language navigation
 test/                      node:test suite — see "Testing" below
 ```
 
@@ -733,7 +735,7 @@ keys in Fly for the next deploy.
 ## Known gotchas
 
 - **Don't make the admin PIN fields `type="password"`.** Two adjacent
-  password-type fields (`#pin`, `#pin-confirm` in `create.html`) make
+  password-type fields (`#pin`, `#pin-confirm` in `views/create.ejs`) make
   Safari/Chrome treat the form as an account signup and offer to
   autofill/generate a strong password — which then fails the PIN's
   `pattern="[0-9]*"` validation and silently refocuses the field, looking

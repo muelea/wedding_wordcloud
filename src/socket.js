@@ -11,8 +11,8 @@
  * room via io.to(slug).emit(...) — never io.emit(...) globally.
  *
  * A client picks its event by connecting with `?slug=<event-slug>` in the
- * Socket.io connection query string (see public/guest.html and
- * public/e-display.html). The slug is validated against the DB before the
+ * Socket.io connection query string (see views/guest.ejs and
+ * views/display.ejs). The slug is validated against the DB before the
  * socket is allowed to join the room; an unknown slug gets an error event
  * and is disconnected.
  */

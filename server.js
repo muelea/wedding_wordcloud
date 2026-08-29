@@ -21,7 +21,8 @@ const emailDelivery = require('./src/emailDelivery');
 const printArtifacts = require('./src/printArtifacts');
 const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
-const { sendHtml, staticCacheMiddleware } = require('./src/httpCache');
+const { staticCacheMiddleware } = require('./src/httpCache');
+const { renderPage } = require('./src/pageRenderer');
 const performanceProbe = require('./src/performanceProbe');
 const { createWordUpdateBroadcaster } = require('./src/wordBroadcasts');
 const log = require('./src/structuredLog');
@@ -135,51 +136,74 @@ app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
 // landing page's CTAs have a real, working flow to link into rather than
 // being a dead-end mockup. See README "Public landing page" for the full
 // routing rationale.
-app.get('/', (req, res) => {
-  sendHtml(res, path.join(__dirname, 'public', 'landing.html'));
-});
+app.get('/', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'landing', {
+    header: { variant: 'landing', headerClass: 'site-header', navClass: 'shell nav', id: 'site-header' },
+  });
+}));
 
-app.get('/start', (req, res) => {
-  sendHtml(res, path.join(__dirname, 'public', 'create.html'));
-});
+app.get('/start', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'create', {
+    header: { variant: 'back', headerClass: 'topbar', navClass: 'topbar-inner' },
+  });
+}));
 
-app.get('/impressum', (req, res) => {
-  sendHtml(res, path.join(__dirname, 'public', 'impressum.html'));
-});
+app.get('/impressum', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'impressum', {
+    header: { variant: 'back', headerClass: 'site-header', navClass: 'header-inner' },
+  });
+}));
 
-app.get('/datenschutz', (req, res) => {
-  sendHtml(res, path.join(__dirname, 'public', 'datenschutz.html'));
-});
+app.get('/datenschutz', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'datenschutz', {
+    header: { variant: 'back', headerClass: 'site-header', navClass: 'header-inner' },
+  });
+}));
 
 app.get('/e/:slug', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
-  sendHtml(res, path.join(__dirname, 'public', 'guest.html'));
+  if (!event) return renderPage(req, res, '404', { status: 404 });
+  return renderPage(req, res, 'guest', { eventLocale: event.locale });
 }));
 
 app.get('/e/:slug/display', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
-  sendHtml(res, path.join(__dirname, 'public', 'display.html'));
+  if (!event) return renderPage(req, res, '404', { status: 404 });
+  return renderPage(req, res, 'display', { eventLocale: event.locale });
 }));
 
 app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
-  sendHtml(res, path.join(__dirname, 'public', 'configure.html'));
+  if (!event) return renderPage(req, res, '404', { status: 404 });
+  return renderPage(req, res, 'configure', {
+    eventLocale: event.locale,
+    header: {
+      variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
+      backHref: '#', backLabel: 'Zurück zur Wortwolke', backAria: 'Zurück zur Wortwolke',
+    },
+  });
 }));
 
 app.get('/e/:slug/shipping', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
-  sendHtml(res, path.join(__dirname, 'public', 'shipping.html'));
+  if (!event) return renderPage(req, res, '404', { status: 404 });
+  return renderPage(req, res, 'shipping', {
+    eventLocale: event.locale,
+    header: {
+      variant: 'back', headerClass: 'topbar', backId: 'back-link', backHref: '#',
+      backLabel: 'Zurück zum Design', backAria: 'Zurück zum Design',
+    },
+  });
 }));
 
 app.get('/e/:slug/order-confirmation', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return sendHtml(res, path.join(__dirname, 'public', '404.html'), 404);
-  res.set('Cache-Control', 'no-store');
-  res.sendFile(path.join(__dirname, 'public', 'order-confirmation.html'));
+  if (!event) return renderPage(req, res, '404', { status: 404 });
+  return renderPage(req, res, 'order-confirmation', {
+    eventLocale: event.locale,
+    cacheControl: 'no-store',
+    header: { headerClass: 'topbar' },
+  });
 }));
 
 // Legacy live-event SVG export used by the display/download flow. Paid mug

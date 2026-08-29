@@ -4,24 +4,48 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const ejs = require('ejs');
 const { startTestServer, createEvent } = require('./helpers');
 const I18n = require('../src/i18n');
+const PageRenderer = require('../src/pageRenderer');
 const { normalizeWord } = require('../src/words');
 
 const LOCALES = ['de', 'en', 'fr', 'it', 'es', 'tr'];
 const CATALOG_LOCALES = LOCALES.filter((locale) => locale !== 'de');
 const PUBLIC_PAGES = [
-  'landing.html',
-  'create.html',
-  'guest.html',
-  'display.html',
-  'configure.html',
-  'shipping.html',
-  'order-confirmation.html',
-  '404.html',
-  'impressum.html',
-  'datenschutz.html',
+  'landing.ejs',
+  'create.ejs',
+  'guest.ejs',
+  'display.ejs',
+  'configure.ejs',
+  'shipping.ejs',
+  'order-confirmation.ejs',
+  '404.ejs',
+  'impressum.ejs',
+  'datenschutz.ejs',
 ];
+const VIEW_ROOT = path.join(__dirname, '..', 'views');
+const TEST_LANGUAGES = I18n.SUPPORTED_LOCALES.map((code) => ({
+  code,
+  name: PageRenderer.LANGUAGE_NAMES[code],
+  flag: PageRenderer.LANGUAGE_FLAGS[code],
+  href: `/?lang=${code}`,
+}));
+
+function viewSource(filename) {
+  return fs.readFileSync(path.join(VIEW_ROOT, filename), 'utf8');
+}
+
+function renderView(filename, header = {}) {
+  const fullPath = path.join(VIEW_ROOT, filename);
+  return ejs.render(fs.readFileSync(fullPath, 'utf8'), {
+    locale: 'de',
+    localeSource: 'default',
+    header,
+    languages: TEST_LANGUAGES,
+    t: (source) => source,
+  }, { filename: fullPath });
+}
 const REQUIRED_MESSAGES = [
   'Wortwolke starten',
   'Teilt ein Wort für das Brautpaar.',
@@ -34,7 +58,7 @@ const REQUIRED_MESSAGES = [
   'Stripe hat die Zahlung bestätigt und wir haben die Bestellung sicher gespeichert.',
   'Diese Wortwolke gibt es nicht.',
   'und',
-  'Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.',
+  'Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.',
 ];
 
 function placeholders(value) {
@@ -71,17 +95,20 @@ test('locale catalogs cover the complete user journey and preserve interpolation
 
 test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
-    const html = fs.readFileSync(path.join(__dirname, '..', 'public', filename), 'utf8');
-    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260829-1" \/>/, filename);
+    const html = viewSource(filename);
+    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260829-2" \/>/, filename);
     assert.match(html, /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/, filename);
-    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-1"><\/script>/, filename);
-    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-1" \/>/, filename);
-    assert.match(html, /<header\b[^>]*\bww-site-header\b/, `${filename} needs the shared site header`);
-    assert.match(html, /class="[^"]*\bww-nav\b/, `${filename} needs a language-switcher host in its header`);
+    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-2"><\/script>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-2" \/>/, filename);
+    assert.match(html, /include\('partials\/site-header'\)/,
+      `${filename} needs the shared server-rendered site header`);
+    const rendered = renderView(filename);
+    assert.match(rendered, /<header\b[^>]*\bww-site-header\b/, filename);
+    assert.match(rendered, /<details class="ww-language-picker ww-language-inline"/, filename);
   }
 
-  const guestPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'guest.html'), 'utf8');
-  const displayPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'display.html'), 'utf8');
+  const guestPage = viewSource('guest.ejs');
+  const displayPage = viewSource('display.ejs');
   assert.match(guestPage, /id="couple-name" data-i18n-ignore/);
   assert.match(displayPage, /id="couple-name" data-i18n-ignore/);
   assert.match(guestPage, /label\.setAttribute\('data-i18n-ignore', ''\)/);
@@ -94,10 +121,11 @@ test('interface fonts are locally served, pinned and licensed', () => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(absolute);
-      else if (/\.(?:css|html|js)$/.test(entry.name)) textFiles.push(absolute);
+      else if (/\.(?:css|ejs|html|js)$/.test(entry.name)) textFiles.push(absolute);
     }
   };
   visit(publicRoot);
+  visit(VIEW_ROOT);
 
   for (const filename of textFiles) {
     const content = fs.readFileSync(filename, 'utf8');
@@ -114,8 +142,8 @@ test('interface fonts are locally served, pinned and licensed', () => {
 });
 
 test('legal pages describe the hosted product and enforced retention', () => {
-  const privacy = fs.readFileSync(path.join(__dirname, '..', 'public', 'datenschutz.html'), 'utf8');
-  const legalNotice = fs.readFileSync(path.join(__dirname, '..', 'public', 'impressum.html'), 'utf8');
+  const privacy = viewSource('datenschutz.ejs');
+  const legalNotice = viewSource('impressum.ejs');
 
   assert.match(privacy, /Fly\.io, Inc\.[\s\S]*Frankfurt am Main/);
   assert.match(privacy, /Supabase, Inc\.[\s\S]*privaten Objektspeicher/);
@@ -127,11 +155,11 @@ test('legal pages describe the hosted product and enforced retention', () => {
 });
 
 test('guest and display pages keep event content below a dedicated branded header', () => {
-  const guestPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'guest.html'), 'utf8');
-  const displayPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'display.html'), 'utf8');
+  const guestPage = renderView('guest.ejs');
+  const displayPage = renderView('display.ejs');
 
-  for (const [filename, html] of [['guest.html', guestPage], ['display.html', displayPage]]) {
-    assert.match(html, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav">[\s\S]*?Wolkenworte[\s\S]*?<\/header>/, filename);
+  for (const [filename, html] of [['guest.ejs', guestPage], ['display.ejs', displayPage]]) {
+    assert.match(html, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/, filename);
   }
 
   assert.match(guestPage, /<section class="event-intro"/);
@@ -157,40 +185,40 @@ test('shared site header is transparent at rest and becomes glassy only after sc
 test('shared header pins the brand left and language switcher right at every viewport size', () => {
   const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
   const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
+  const partial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
 
   assert.match(styles, /\.ww-nav\s*\{[^}]*width:\s*100%\s*!important[^}]*padding:\s*0 40px\s*!important/s);
   assert.match(styles, /\.ww-brand\s*\{[^}]*margin-right:\s*auto/s);
-  assert.match(styles, /\.ww-brand\s*\{[^}]*-webkit-font-smoothing:\s*auto/s);
-  assert.match(styles, /\.ww-nav::after\s*\{[^}]*width:\s*126px[^}]*flex:\s*0 0 126px/s);
-  assert.match(styles, /\.ww-nav\.ww-language-mounted::after\s*\{[^}]*display:\s*none/s);
+  assert.doesNotMatch(styles, /\.ww-nav::after/,
+    'the final language control is server-rendered, so an empty placeholder must not return');
   assert.match(styles, /\.ww-site-header \.ww-language-inline\s*\{[^}]*margin-left:\s*auto/s);
   assert.match(styles, /@media \(max-width:\s*620px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
-  assert.match(runtime, /container\.appendChild\(wrapper\)/);
-  assert.match(runtime, /container\.classList\.add\('ww-language-mounted'\)/);
-  assert.doesNotMatch(runtime, /container\.insertBefore\(wrapper/,
-    'the language switcher must remain the final, right-aligned header item');
-
-  const domReadyHandler = runtime.slice(runtime.indexOf("root.document.addEventListener('DOMContentLoaded'"));
-  assert.ok(
-    domReadyHandler.indexOf('mountLanguageSelector();') < domReadyHandler.indexOf('await readyPromise;'),
-    'the language control must mount before locale network loading can yield a partial header'
-  );
+  assert.match(partial, /<details class="ww-language-picker ww-language-inline"/);
+  assert.match(partial, /<summary[\s\S]*?id="ww-language-select"/);
+  assert.doesNotMatch(runtime, /createElement\(/,
+    'the header and language control must exist in the server response');
 });
 
-test('shared wordmark uses stable text and mask-free vector rendering', () => {
+test('shared wordmark uses font-independent, mask-free vector rendering', () => {
   const publicRoot = path.join(__dirname, '..', 'public');
   const styles = fs.readFileSync(path.join(publicRoot, 'site-header.css'), 'utf8');
   const icon = fs.readFileSync(path.join(publicRoot, 'z_icons', 'icon.svg'), 'utf8');
+  const wordmark = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'brand-wordmark.ejs'), 'utf8');
 
-  assert.match(styles, /\.ww-brand\s*\{[^}]*font-weight:\s*600[^}]*-webkit-font-smoothing:\s*auto/s);
+  assert.match(styles, /\.ww-brand-wordmark\s*\{[^}]*height:\s*\.81em/s);
+  assert.doesNotMatch(styles, /\.ww-brand\s*\{[^}]*font-family/s);
   assert.doesNotMatch(icon, /<mask\b|\bmask=/i);
   assert.match(icon, /fill-rule="evenodd"/);
+  assert.match(wordmark, /<svg[\s\S]*?<path\b/);
+  assert.match(wordmark, /fill="currentColor"/);
+  assert.doesNotMatch(wordmark, /<text\b|font-family/i);
 });
 
-test('language switcher uses the branded accessible menu and Unicode flags', () => {
+test('language switcher is server-rendered, progressively enhanced and uses Unicode flags', () => {
   const browserI18n = require('../public/js/i18n.js');
   const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
   const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
+  const partial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
 
   assert.deepEqual(browserI18n.LANGUAGE_FLAGS, {
     de: '🇩🇪',
@@ -200,59 +228,44 @@ test('language switcher uses the branded accessible menu and Unicode flags', () 
     es: '🇪🇸',
     tr: '🇹🇷',
   });
-  assert.match(runtime, /setAttribute\('aria-haspopup', 'listbox'\)/);
-  assert.match(runtime, /setAttribute\('role', 'listbox'\)/);
-  assert.doesNotMatch(runtime, /createElement\('select'\)/);
-  assert.doesNotMatch(runtime, /addEventListener\('focusout'/,
-    'focusout must not race pointer clicks inside the language menu');
+  assert.match(partial, /<details class="ww-language-picker ww-language-inline"/);
+  assert.match(partial, /<nav id="ww-language-menu"/);
+  assert.match(partial, /<a[\s\S]*?data-language-code=/);
+  assert.match(partial, /hreflang="<%= language\.code %>"/);
   assert.match(styles, /\.ww-language-menu\s*\{/);
+  assert.match(styles, /\.ww-language-trigger\s*\{[^}]*width:\s*126px/s,
+    'translated language names must not resize the header control');
   assert.match(styles, /\.ww-language-option\.is-selected/);
-  assert.match(runtime, /stackingHost\?\.classList\.toggle\('ww-language-host-open', isOpen\)/);
+  assert.match(styles, /\.ww-language-picker\[open\] \.ww-language-trigger/);
+  assert.match(runtime, /stackingHost\?\.classList\.toggle\('ww-language-host-open', picker\.open\)/);
   assert.match(styles, /\.ww-language-host-open\s*\{[^}]*z-index:\s*10001\s*!important/s);
-  assert.match(runtime, /querySelector\('\.ww-nav'\)/);
-  assert.doesNotMatch(runtime, /querySelector\('body > \.header'\)/,
-    'the language switcher must never fall back to page content');
-  assert.doesNotMatch(runtime, /body\.appendChild\(wrapper\)/,
-    'the language switcher must never be mounted outside a site header');
+  assert.match(runtime, /await setLocale\(nextLocale, \{ persist: true, source: 'stored' \}\)/);
+  assert.match(runtime, /history\?\.replaceState/);
+  assert.doesNotMatch(runtime, /localStorage\?\.(?:getItem|setItem)/,
+    'the client and server must not compete over duplicate language preferences');
+  assert.doesNotMatch(runtime, /location\.assign/,
+    'language changes must not destroy and rebuild the document');
 });
 
-test('language switcher closes on a second trigger click and navigates on selection', () => {
+test('language URLs preserve page state and server locale resolution honors explicit preference', () => {
   const browserI18n = require('../public/js/i18n.js');
-  let open = false;
-  let focusedOption = -1;
-  let triggerFocusCount = 0;
-  let chosenLocale = '';
-  const controller = browserI18n.createLanguageMenuController({
-    optionCodes: browserI18n.SUPPORTED_LOCALES,
-    getSelectedCode: () => 'en',
-    getOpen: () => open,
-    setOpen: (value) => { open = value; },
-    getFocusedIndex: () => focusedOption,
-    focusOption: (index) => { focusedOption = index; },
-    focusTrigger: () => { triggerFocusCount += 1; },
-    onChoose: (code) => { chosenLocale = code; },
-  });
-
-  controller.toggle();
-  assert.equal(open, true);
-  assert.equal(focusedOption, browserI18n.SUPPORTED_LOCALES.indexOf('en'));
-
-  controller.toggle();
-  assert.equal(open, false, 'a second trigger click must close the menu');
-  assert.equal(triggerFocusCount, 1);
-
-  controller.open();
-  assert.equal(controller.choose('fr'), true);
-  assert.equal(open, false);
-  assert.equal(chosenLocale, 'fr', 'choosing an option must request that locale');
   assert.equal(
-    browserI18n.languageUrl('https://example.test/start?source=qr#form', chosenLocale),
+    browserI18n.languageUrl('https://example.test/start?source=qr#form', 'fr'),
     'https://example.test/start?source=qr&lang=fr#form'
   );
+  assert.deepEqual(PageRenderer.resolvePageLocale({
+    query: { lang: 'tr-TR' },
+    headers: { cookie: 'wolkenworte-language=fr', 'accept-language': 'en-US,en;q=0.8' },
+  }, 'de'), { locale: 'tr', source: 'query' });
+  assert.deepEqual(PageRenderer.resolvePageLocale({
+    query: {},
+    headers: { cookie: 'wolkenworte-language=fr', 'accept-language': 'en-US,en;q=0.8' },
+  }, 'de'), { locale: 'fr', source: 'cookie' });
+  assert.equal(PageRenderer.preferredRequestLocale('fr;q=0, en-US;q=0.8, de;q=0.5'), 'en');
 });
 
 test('guest live preview hides the language switcher until the preview closes', () => {
-  const guestPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'guest.html'), 'utf8');
+  const guestPage = viewSource('guest.ejs');
   const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
 
   assert.match(guestPage, /document\.body\.classList\.add\('preview-open'\)/);
@@ -264,12 +277,37 @@ test('event locale is validated, persisted and returned by public APIs', async (
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
+  const frenchLanding = await fetch(`${baseUrl}/?lang=fr`);
+  assert.equal(frenchLanding.status, 200);
+  assert.match(frenchLanding.headers.get('set-cookie') || '', /wolkenworte-language=fr/);
+  const frenchLandingHtml = await frenchLanding.text();
+  assert.match(frenchLandingHtml, /<html lang="fr">/);
+  assert.match(frenchLandingHtml, /Wolkenworte – Votre mariage en un mot/);
+  assert.match(frenchLandingHtml, /Comment ça marche/);
+  assert.match(frenchLandingHtml, /Commencer gratuitement/);
+  assert.match(frenchLandingHtml, /ww-language-current-name">Français/);
+
+  const rememberedStart = await fetch(`${baseUrl}/start`, {
+    headers: { Cookie: 'wolkenworte-language=fr' },
+  });
+  assert.equal(rememberedStart.status, 200);
+  const rememberedStartHtml = await rememberedStart.text();
+  assert.match(rememberedStartHtml, /<html lang="fr"/);
+  assert.match(rememberedStartHtml, /Retour à l’accueil/);
+  assert.match(rememberedStartHtml, /ww-language-current-name">Français/);
+
   const event = await createEvent(baseUrl, {
     coupleName: 'İpek & Işık',
     slug: 'ipek-isik',
     locale: 'tr-TR',
   });
   assert.equal(event.locale, 'tr');
+
+  const turkishGuest = await fetch(`${baseUrl}/e/${event.slug}`);
+  assert.equal(turkishGuest.status, 200);
+  const turkishGuestHtml = await turkishGuest.text();
+  assert.match(turkishGuestHtml, /<html lang="tr"/);
+  assert.match(turkishGuestHtml, /ww-language-current-name">Türkçe/);
 
   const info = await fetch(`${baseUrl}/api/events/${event.slug}`).then((response) => response.json());
   assert.equal(info.locale, 'tr');

@@ -126,8 +126,8 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
     assert.throws(() => validateOptions({
       ...parseArgs(['--confirm-capacity-test']), estimates: 11,
     }, env), /cannot exceed/);
-    for (const page of ['guest.html', 'display.html']) {
-      const source = fs.readFileSync(path.join(__dirname, '..', 'public', page), 'utf8');
+    for (const page of ['guest.ejs', 'display.ejs']) {
+      const source = fs.readFileSync(path.join(__dirname, '..', 'views', page), 'utf8');
       assert.match(source, /transports:\s*\['websocket', 'polling'\]/);
       assert.match(source, /tryAllTransports:\s*true/);
       assert.match(source, /timeout:\s*7000/);
