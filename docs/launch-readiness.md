@@ -32,6 +32,9 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] Event expiration, bounded authenticated maintenance, one-use reset PINs,
   abuse controls, operational status and guarded recovery/cleanup commands are
   implemented.
+- [x] The legal notice and privacy page describe the current hosted test stack,
+  provider data flows, browser storage and enforced deletion periods. Interface
+  fonts are served locally rather than fetched from Google Fonts.
 - [x] The retained 100-room/2,000-socket capacity qualification passed on one
   Fly Machine. A second Machine is neither required nor supported with the
   current in-memory Socket.io adapter.
@@ -47,6 +50,8 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [ ] Review product margins and the provisional markup/payment-reserve values.
 - [ ] Approve the versioned order-confirmation, contract-formation,
   personalization/withdrawal, refund and cancellation wording.
+- [ ] Have qualified German counsel review the legal notice and privacy policy
+  together with the final live provider contracts and tax setup.
 - [ ] Define exact retention periods for paid orders, addresses, buyer email,
   sent message bodies and provider metadata. Encode approved deletion periods
   in bounded tests and cleanup queries; do not leave them as an operator habit.

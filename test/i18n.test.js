@@ -33,6 +33,8 @@ const REQUIRED_MESSAGES = [
   '{{count}} Lieferadressen',
   'Stripe hat die Zahlung bestätigt und wir haben die Bestellung sicher gespeichert.',
   'Diese Wortwolke gibt es nicht.',
+  'und',
+  'Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.',
 ];
 
 function placeholders(value) {
@@ -71,6 +73,7 @@ test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', filename), 'utf8');
     assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260826-5" \/>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/, filename);
     assert.match(html, /<script src="\/js\/i18n\.js\?v=20260826-9"><\/script>/, filename);
     assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260826-3" \/>/, filename);
     assert.match(html, /<header\b[^>]*\bww-site-header\b/, `${filename} needs the shared site header`);
@@ -82,6 +85,45 @@ test('every public page loads the shared language layer', () => {
   assert.match(guestPage, /id="couple-name" data-i18n-ignore/);
   assert.match(displayPage, /id="couple-name" data-i18n-ignore/);
   assert.match(guestPage, /label\.setAttribute\('data-i18n-ignore', ''\)/);
+});
+
+test('interface fonts are locally served, pinned and licensed', () => {
+  const publicRoot = path.join(__dirname, '..', 'public');
+  const textFiles = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      else if (/\.(?:css|html|js)$/.test(entry.name)) textFiles.push(absolute);
+    }
+  };
+  visit(publicRoot);
+
+  for (const filename of textFiles) {
+    const content = fs.readFileSync(filename, 'utf8');
+    assert.doesNotMatch(content, /fonts\.(?:googleapis|gstatic)\.com/i,
+      `${path.relative(publicRoot, filename)} must not load fonts from a third party`);
+  }
+
+  const styles = fs.readFileSync(path.join(publicRoot, 'site-fonts.css'), 'utf8');
+  for (const family of ['jost', 'playfair-display', 'cormorant-garamond']) {
+    assert.match(styles, new RegExp(`/assets/site-fonts/${family}/`));
+    assert.ok(fs.statSync(path.join(publicRoot, 'assets', 'site-fonts', family, 'OFL.txt')).size > 0,
+      `${family} must retain its OFL license`);
+  }
+});
+
+test('legal pages describe the hosted product and enforced retention', () => {
+  const privacy = fs.readFileSync(path.join(__dirname, '..', 'public', 'datenschutz.html'), 'utf8');
+  const legalNotice = fs.readFileSync(path.join(__dirname, '..', 'public', 'impressum.html'), 'utf8');
+
+  assert.match(privacy, /Fly\.io, Inc\.[\s\S]*Frankfurt am Main/);
+  assert.match(privacy, /Supabase, Inc\.[\s\S]*privaten Objektspeicher/);
+  assert.match(privacy, /Plus Five Five, Inc\.[\s\S]*Öffnungs- und Klicktracking ist deaktiviert/);
+  assert.match(privacy, /automatisch 365 Tage nach Erstellung/);
+  assert.match(privacy, /Nicht bezahlte persönliche Erinnerungskonfigurationen[\s\S]*30 Tagen/);
+  assert.doesNotMatch(privacy, /ausschließlich lokal entwickelt|Google Fonts|künftige Hosting-Anbieter|künftigen Hosting-Anbieter/);
+  assert.match(legalNotice, /interaktive Wortwolken[\s\S]*personalisierte Druckprodukte/);
 });
 
 test('guest and display pages keep event content below a dedicated branded header', () => {

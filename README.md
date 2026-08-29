@@ -183,6 +183,11 @@ does not depend on Georgia or another host font being installed. The existing
 design-font `OFL.txt` files live next to their binaries; Gelasio's license ships
 with its pinned `@fontsource/gelasio` package.
 
+The website interface also serves its pinned Jost, Playfair Display and
+Cormorant Garamond WOFF2 files locally from `public/assets/site-fonts/`.
+Browsers therefore do not contact Google Fonts or another font CDN during page
+loads. Each interface-font family keeps its OFL license beside the binaries.
+
 ## Quick start
 
 ```bash
