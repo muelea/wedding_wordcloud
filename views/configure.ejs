@@ -7,7 +7,9 @@
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
+  <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
   <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/action-state.js?v=20260829-1"></script>
   <title data-i18n-source="Erinnerung gestalten – Wolkenworte"><%= t('Erinnerung gestalten – Wolkenworte') %></title>
   <style>
 
@@ -1603,7 +1605,6 @@
         <section class="design-toolbar" aria-labelledby="controls-title">
           <div class="design-toolbar-copy">
             <h2 id="controls-title">Euer Design</h2>
-            <p class="controls-sub" id="controls-subtitle">Drei kurze Schritte – mehr braucht es nicht.</p>
           </div>
 
           <div class="design-toolbar-controls">
@@ -1867,7 +1868,6 @@
     const selectedProductThumb = document.getElementById('selected-product-thumb');
     const selectedProductName = document.getElementById('selected-product-name');
     const selectedProductDetail = document.getElementById('selected-product-detail');
-    const controlsSubtitle = document.getElementById('controls-subtitle');
     const designToolbarControls = document.querySelector('.design-toolbar-controls');
     const selectedOrientationName = document.getElementById('selected-orientation-name');
     const selectedOrientationDetail = document.getElementById('selected-orientation-detail');
@@ -2040,21 +2040,12 @@
       return items;
     }
 
-    function setOrderActionsBusy(isBusy, activeButton = null, busyLabel = 'Design wird gespeichert…') {
-      designAnotherButton.disabled = isBusy;
-      continueOrderButton.disabled = isBusy;
-      checkoutPanel.setAttribute('aria-busy', String(isBusy));
-      designAnotherButton.textContent = isBusy && activeButton === designAnotherButton
-        ? t(busyLabel)
-        : t('Weiteres Produkt gestalten');
-      if (isBusy && activeButton === continueOrderButton) {
-        continueOrderButton.textContent = t(busyLabel);
-      } else {
-        const arrow = document.createElement('span');
-        arrow.setAttribute('aria-hidden', 'true');
-        arrow.textContent = '→';
-        continueOrderButton.replaceChildren(document.createTextNode(`${t('Zur Lieferadresse')} `), arrow);
+    function setOrderActionsBusy(isBusy, activeButton = null) {
+      for (const button of [designAnotherButton, continueOrderButton]) {
+        WolkenworteActions.setBusy(button, isBusy && button === activeButton);
+        button.disabled = isBusy;
       }
+      checkoutPanel.setAttribute('aria-busy', String(isBusy));
     }
 
     async function loadOrderItem(configurationId) {
@@ -3243,9 +3234,6 @@
       const hasOrientationChoice = options.length > 1;
       orientationStep.hidden = !hasOrientationChoice;
       designToolbarControls.classList.toggle('has-orientation', hasOrientationChoice);
-      controlsSubtitle.textContent = hasOrientationChoice
-        ? 'Produkt, Ausrichtung, Farbwelt und Platzierung.'
-        : 'Drei kurze Schritte – mehr braucht es nicht.';
       if (!hasOrientationChoice) {
         selectedOrientation = 'default';
         updateToolbarSummaries();

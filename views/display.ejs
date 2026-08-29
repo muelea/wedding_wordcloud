@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
+  <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
   <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/action-state.js?v=20260829-1"></script>
   <script src="/js/site-header.js" defer></script>
   <title data-i18n-source="Wortwolke – Anzeige"><%= t('Wortwolke – Anzeige') %></title>
   <style>
@@ -219,7 +221,11 @@
       align-items: center;
       gap: 22px;
     }
-    .footer-actions span {
+    .footer-actions button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      font-family: inherit;
       font-size: 11px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
@@ -229,7 +235,8 @@
       cursor: pointer;
       user-select: none;
     }
-    .footer-actions span:hover { opacity: 1; }
+    .footer-actions button:hover,
+    .footer-actions button:focus-visible { opacity: 1; }
 
     /* ── Memory configurator CTA ── */
     #memory-cta {
@@ -283,6 +290,48 @@
       to { opacity: 0; transform: translateY(-8px) scale(0.92); }
     }
 
+    .reset-dialog {
+      width: min(440px, calc(100% - 32px));
+      margin: auto;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: 0 24px 70px rgba(64, 15, 38, .22);
+    }
+    .reset-dialog::backdrop { background: rgba(30, 7, 18, .42); backdrop-filter: blur(4px); }
+    .reset-dialog-card { padding: 30px; }
+    .reset-dialog h2 { margin: 0; font: 600 27px/1.15 'Playfair Display', Georgia, serif; }
+    .reset-dialog-copy { margin: 10px 0 22px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .reset-dialog label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
+    .reset-dialog input {
+      width: 100%;
+      height: 50px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+      background: color-mix(in srgb, var(--bg) 92%, var(--primary));
+      color: var(--text);
+      font: 18px/1 'Jost', system-ui, sans-serif;
+    }
+    .reset-dialog input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 13%, transparent); }
+    .reset-dialog-error { min-height: 20px; margin: 9px 0 0; color: #b33a4d; font-size: 13px; }
+    .reset-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 17px; }
+    .reset-dialog-button {
+      min-height: 44px;
+      padding: 11px 17px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font: 600 13px/1 'Jost', system-ui, sans-serif;
+    }
+    .reset-dialog-button.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .reset-dialog-button:disabled { cursor: wait; opacity: .58; }
+
     @media (max-width: 620px) {
       :root {
         --site-header-height: 73px;
@@ -326,9 +375,9 @@
 <footer class="footer">
   <span class="footer-event-name" id="couple-name" data-i18n-ignore>♡</span>
   <div class="footer-actions">
-    <span id="theme-hint" title="Theme wechseln">Theme</span>
-    <span id="export-hint" title="Als SVG exportieren">SVG</span>
-    <span id="clear-hint" title="Wörter archivieren &amp; neue Runde starten">Neue Runde</span>
+    <button id="theme-hint" type="button" title="Farbwelt wechseln">Farbwelt</button>
+    <button id="export-hint" type="button" title="Wortwolke herunterladen">Download</button>
+    <button id="clear-hint" type="button" title="Wörter archivieren &amp; neue Runde starten">Neue Runde</button>
   </div>
   <div class="qr-wrap">
     <div class="qr-label">
@@ -340,6 +389,21 @@
 </footer>
 
 <div class="toast-container" id="toast-container"></div>
+
+<dialog class="reset-dialog" id="reset-dialog" aria-labelledby="reset-dialog-title">
+  <form class="reset-dialog-card" id="reset-form">
+    <h2 id="reset-dialog-title">Neue Runde starten?</h2>
+    <p class="reset-dialog-copy">Die aktuellen Wörter werden archiviert. Anschließend beginnt eure Wortwolke wieder leer.</p>
+    <label for="reset-pin">Admin-PIN
+      <input id="reset-pin" type="tel" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off" required />
+    </label>
+    <p class="reset-dialog-error" id="reset-error" role="alert" aria-live="polite"></p>
+    <div class="reset-dialog-actions">
+      <button class="reset-dialog-button" id="reset-cancel" type="button">Abbrechen</button>
+      <button class="reset-dialog-button primary" id="reset-submit" type="submit">Neue Runde starten</button>
+    </div>
+  </form>
+</dialog>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/wordcloud-core.js?v=20260819-2"></script>
@@ -354,6 +418,12 @@
   const wordTotalEl     = document.getElementById('word-total');
   const toastContainer  = document.getElementById('toast-container');
   const memoryCta       = document.getElementById('memory-cta');
+  const resetDialog     = document.getElementById('reset-dialog');
+  const resetForm       = document.getElementById('reset-form');
+  const resetPin        = document.getElementById('reset-pin');
+  const resetError      = document.getElementById('reset-error');
+  const resetCancel     = document.getElementById('reset-cancel');
+  const resetSubmit     = document.getElementById('reset-submit');
   const t = (source, params) => WolkenworteI18n.t(source, params);
 
   let currentWords = [];
@@ -511,21 +581,44 @@
   document.getElementById('export-hint').addEventListener('click', exportSVG);
 
   // ── New session (archive current words on the server, then clear) ───────
-  async function startNewSession() {
+  function startNewSession() {
     if (!currentWords.length) return;
-    if (!confirm(t('Aktuelle Wörter archivieren und eine neue Runde starten?'))) return;
-    const pin = prompt(t('Admin-PIN eingeben, um die Wortwolke zurückzusetzen:'));
-    if (!pin) return;
+    resetError.textContent = '';
+    resetDialog.showModal();
+    resetPin.focus();
+  }
+
+  resetCancel.addEventListener('click', () => resetDialog.close());
+  resetDialog.addEventListener('close', () => {
+    resetForm.reset();
+    resetError.textContent = '';
+  });
+
+  resetForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!resetForm.reportValidity()) return;
+    resetError.textContent = '';
+    WolkenworteActions.setBusy(resetSubmit, true);
+    resetCancel.disabled = true;
+    const pin = resetPin.value.trim();
     const res = await fetch(`/api/events/${encodeURIComponent(slug)}/reset`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin }),
     }).catch(() => null);
-    if (!res) return alert(t('Verbindung fehlgeschlagen.'));
-    if (res.status === 401) return alert(t('Falscher PIN.'));
-    if (res.status === 429) return alert(t('Zu viele Versuche. Bitte wartet 15 Minuten.'));
-    if (!res.ok) alert(t('Verbindung fehlgeschlagen.'));
-  }
+    if (res?.ok) {
+      resetDialog.close();
+    } else if (res?.status === 401) {
+      resetError.textContent = t('Falscher PIN.');
+      resetPin.select();
+    } else if (res?.status === 429) {
+      resetError.textContent = t('Zu viele Versuche. Bitte wartet 15 Minuten.');
+    } else {
+      resetError.textContent = t('Verbindung fehlgeschlagen. Bitte versucht es erneut.');
+    }
+    WolkenworteActions.setBusy(resetSubmit, false);
+    resetCancel.disabled = false;
+  });
 
   document.getElementById('clear-hint').addEventListener('click', startNewSession);
 

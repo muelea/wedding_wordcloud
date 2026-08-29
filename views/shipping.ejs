@@ -6,7 +6,9 @@
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
+  <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
   <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/action-state.js?v=20260829-1"></script>
   <title data-i18n-source="Lieferadresse – Wolkenworte"><%= t('Lieferadresse – Wolkenworte') %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -296,7 +298,6 @@
     .quote-total span { font-size: 14px; font-weight: 500; }
     .quote-total strong { font-family: 'Playfair Display', Georgia, serif; font-size: 29px; font-weight: 600; white-space: nowrap; }
     .quote-placeholder { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
-    .quote-ready { margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: rgba(40, 122, 100, .09); color: var(--success); font-size: 13px; line-height: 1.45; }
     .checkout-error { min-height: 18px; margin: 10px 2px 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .fatal { margin-top: 20px; padding: 18px; border: 1px solid rgba(179, 58, 77, .24); border-radius: 16px; background: rgba(179, 58, 77, .07); color: var(--danger); line-height: 1.55; }
     .loading { padding: 80px 16px; text-align: center; color: var(--muted); }
@@ -353,7 +354,7 @@
             <div class="shipment-list" id="shipment-list"></div>
             <button class="add-shipment-button" id="add-shipment" type="button">Weitere Lieferadresse hinzufügen</button>
             <button class="submit-button" id="submit-button" type="submit" disabled>Gesamtpreis berechnen <span aria-hidden="true">→</span></button>
-            <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten durch Wolkenworte und Printful im <a href="/datenschutz">Datenschutz</a>.</p>
+            <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten im <a href="/datenschutz">Datenschutz</a>.</p>
             <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
           </form>
         </section>
@@ -368,8 +369,7 @@
             <div class="quote-row"><span>Versand</span><strong id="shipping-price"></strong></div>
             <div class="quote-row"><span>Steuern und MwSt.</span><strong id="tax-price"></strong></div>
             <div class="quote-total"><span>Gesamtpreis</span><strong id="total-price"></strong></div>
-            <p class="quote-ready">Der Preis ist kurzzeitig reserviert und wird direkt vor der Zahlung noch einmal geprüft.</p>
-            <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Testzahlung <span aria-hidden="true">→</span></button>
+            <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Zahlung <span aria-hidden="true">→</span></button>
             <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
           </div>
         </section>
@@ -410,6 +410,31 @@
     let configuration = null;
     let currentQuote = null;
     let countryDisplayNames = null;
+    const customerErrorMessages = Object.freeze({
+      invalid_address: 'Bitte füllt alle benötigten Adressfelder vollständig aus.',
+      pricing_not_configured: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
+      address_not_accepted: 'Für diese Lieferadresse konnten keine Versandkosten berechnet werden. Bitte prüft eure Angaben.',
+      pricing_unavailable: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
+      pricing_currency_mismatch: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
+      quote_not_found: 'Der Gesamtpreis muss neu berechnet werden.',
+      quote_expired: 'Der Gesamtpreis muss neu berechnet werden.',
+      quote_changed: 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.',
+      checkout_in_progress: 'Die Zahlungsseite wird bereits geöffnet. Bitte wartet einen Moment.',
+      checkout_not_configured: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+      stripe_live_mode_blocked: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+      checkout_failed: 'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.',
+    });
+
+    function customerErrorMessage(result, fallback) {
+      return t(customerErrorMessages[result?.error] || fallback);
+    }
+
+    function setButtonLabel(button, source) {
+      const arrow = document.createElement('span');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      button.replaceChildren(document.createTextNode(`${t(source)} `), arrow);
+    }
 
     function getOrCreateGuestId() {
       const storageKey = `guest-session:${slug}`;
@@ -1153,8 +1178,8 @@
       quoteResult.hidden = true;
       quotePlaceholder.hidden = false;
       checkoutError.textContent = '';
-      checkoutButton.disabled = false;
-      checkoutButton.textContent = t('Weiter zur Testzahlung →');
+      if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = false;
+      setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
       if (configurations.length) {
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
       }
@@ -1226,8 +1251,8 @@
       quotePlaceholder.hidden = true;
       quoteResult.hidden = false;
       checkoutError.textContent = '';
-      checkoutButton.disabled = false;
-      checkoutButton.textContent = t('Weiter zur Testzahlung →');
+      if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = false;
+      setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
       document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -1273,9 +1298,9 @@
         ? saved.shipments
         : [defaultShipment()]);
       showQuote(saved.quote);
-      submitButton.textContent = t('Preis aktualisieren');
+      setButtonLabel(submitButton, 'Preis aktualisieren');
       if (checkoutWasCancelled) {
-        checkoutError.textContent = t('Die Testzahlung wurde abgebrochen. Ihr könnt sie hier erneut öffnen.');
+        checkoutError.textContent = t('Zahlung abgebrochen. Eure Angaben sind weiterhin gespeichert.');
       }
     }
 
@@ -1350,8 +1375,7 @@
       if (!form.reportValidity()) return;
       const { shipments, totalQuantity, quantityError } = collectShipments();
       if (quantityError || totalQuantity < 1 || totalQuantity > 99) return;
-      submitButton.disabled = true;
-      submitButton.textContent = t('Preis wird berechnet…');
+      WolkenworteActions.setBusy(submitButton, true);
       try {
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/cart/estimate-costs`,
@@ -1367,24 +1391,23 @@
         const result = await response.json();
         if (!response.ok) {
           if (Array.isArray(result.fields)) markInvalidFields(result.fields);
-          throw new Error(result.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.');
+          throw new Error(customerErrorMessage(result, 'Bitte füllt alle benötigten Adressfelder vollständig aus.'));
         }
         showQuote(result.quote);
-        submitButton.textContent = t('Preis aktualisieren');
+        setButtonLabel(submitButton, 'Preis aktualisieren');
       } catch (error) {
-        formError.textContent = t(error.message || 'Bitte fülle alle benötigten Adressfelder vollständig aus.');
-        submitButton.textContent = t('Erneut versuchen');
+        formError.textContent = error.message || t('Bitte füllt alle benötigten Adressfelder vollständig aus.');
+        setButtonLabel(submitButton, 'Erneut versuchen');
       } finally {
-        submitButton.disabled = false;
+        WolkenworteActions.setBusy(submitButton, false);
       }
     });
 
     checkoutButton.addEventListener('click', async () => {
       if (!currentQuote?.id) return;
-      checkoutButton.disabled = true;
-      checkoutButton.textContent = t('Preis wird noch einmal geprüft…');
+      WolkenworteActions.setBusy(checkoutButton, true);
       checkoutError.textContent = '';
-      let checkoutAction = 'recheck';
+      let navigating = false;
       try {
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/cart/checkout`,
@@ -1406,26 +1429,26 @@
         if (!response.ok) {
           if (result.error === 'quote_expired') {
             clearQuote();
-            submitButton.textContent = t('Gesamtpreis neu berechnen →');
-            formError.textContent = t(result.message || 'Der Preis ist abgelaufen. Bitte berechnet ihn erneut.');
+            setButtonLabel(submitButton, 'Gesamtpreis neu berechnen');
+            formError.textContent = customerErrorMessage(result, 'Der Gesamtpreis muss neu berechnet werden.');
             return;
           }
           if (result.error === 'quote_changed') {
-            checkoutAction = 'confirm';
-            checkoutButton.textContent = t('Aktualisierten Preis bestätigen →');
+            setButtonLabel(checkoutButton, 'Neuen Gesamtpreis bestätigen');
+            checkoutError.textContent = customerErrorMessage(result, 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.');
+            return;
           }
-          throw new Error(result.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.');
+          throw new Error(customerErrorMessage(result, 'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.'));
         }
-        if (result.confirmationUrl) {
-          location.assign(result.confirmationUrl);
-          return;
-        }
-        if (!result.url) throw new Error('Stripe hat keine gültige Zahlungsseite geliefert.');
-        location.assign(result.url);
+        const destination = result.confirmationUrl || result.url;
+        if (!destination) throw new Error(t('Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.'));
+        navigating = true;
+        location.assign(destination);
       } catch (error) {
-        checkoutError.textContent = t(error.message || 'Die Zahlungsseite konnte nicht vorbereitet werden.');
-        checkoutButton.disabled = false;
-        if (checkoutAction === 'recheck') checkoutButton.textContent = t('Erneut zur Testzahlung →');
+        checkoutError.textContent = error.message || t('Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.');
+        setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
+      } finally {
+        if (!navigating) WolkenworteActions.setBusy(checkoutButton, false);
       }
     });
 

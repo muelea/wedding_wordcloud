@@ -238,13 +238,13 @@ function sendPrintfulError(res, error) {
   if (error?.code === 'PRINTFUL_NOT_CONFIGURED') {
     return res.status(501).json({
       error: 'pricing_not_configured',
-      message: 'Die Preisberechnung ist noch nicht eingerichtet.',
+      message: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
     });
   }
   if (error?.code === 'PRINTFUL_ADDRESS_REJECTED') {
     return res.status(422).json({
       error: 'address_not_accepted',
-      message: 'Printful konnte für diese Adresse keinen Preis berechnen. Bitte prüft eure Angaben.',
+      message: 'Für diese Lieferadresse konnten keine Versandkosten berechnet werden. Bitte prüft eure Angaben.',
     });
   }
   if (error?.code === 'PRINTFUL_AUTH_FAILED') {
@@ -954,7 +954,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           log.error('printful_quote_currency_mismatch', { errorCode: 'pricing_currency_mismatch' });
           return res.status(502).json({
             error: 'pricing_currency_mismatch',
-            message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
+            message: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es später erneut.',
           });
         }
         const savedQuote = await db.createCheckoutQuote({
@@ -971,7 +971,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           log.error('printful_quote_invalid', { errorCode: 'invalid_pricing_response' });
           return res.status(502).json({
             error: 'pricing_unavailable',
-            message: 'Printful hat gerade keinen gültigen Preis geliefert. Bitte versucht es erneut.',
+            message: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
           });
         }
         return sendPrintfulError(res, error);
@@ -1011,7 +1011,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         log.error('printful_quote_currency_mismatch', { errorCode: 'pricing_currency_mismatch' });
         return res.status(502).json({
           error: 'pricing_currency_mismatch',
-          message: 'Der Shoppreis konnte nicht in Euro berechnet werden. Bitte versucht es später erneut.',
+          message: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es später erneut.',
         });
       }
       const savedQuote = await db.createCheckoutQuote({
@@ -1029,7 +1029,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         log.error('printful_quote_invalid', { errorCode: 'invalid_pricing_response' });
         return res.status(502).json({
           error: 'pricing_unavailable',
-          message: 'Printful hat gerade keinen gültigen Preis geliefert. Bitte versucht es erneut.',
+          message: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
         });
       }
       return sendPrintfulError(res, error);
@@ -1209,7 +1209,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       if (freshQuote.currency !== 'EUR') {
         return res.status(502).json({
           error: 'pricing_currency_mismatch',
-          message: 'Der Shoppreis konnte nicht in Euro berechnet werden.',
+          message: 'Der Gesamtpreis konnte gerade nicht berechnet werden.',
         });
       }
 
@@ -1221,7 +1221,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       if (changed) {
         return res.status(409).json({
           error: 'quote_changed',
-          message: 'Printful hat den Preis aktualisiert. Bitte bestätigt den neuen Gesamtpreis.',
+          message: 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.',
           quote: { ...checkoutQuoteResponse(refreshedQuote), ...cartSummary(configurations) },
         });
       }
@@ -1271,11 +1271,14 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       if (error?.code === 'STRIPE_NOT_CONFIGURED') {
         return res.status(501).json({
           error: 'checkout_not_configured',
-          message: 'Stripe ist noch nicht eingerichtet. Bitte ergänzt den Test-Key in der .env-Datei.',
+          message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
         });
       }
       if (error?.code === 'STRIPE_LIVE_MODE_BLOCKED') {
-        return res.status(503).json({ error: 'stripe_live_mode_blocked', message: error.message });
+        return res.status(503).json({
+          error: 'stripe_live_mode_blocked',
+          message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+        });
       }
       if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
       performanceProbe.recordOperation('checkoutFailed');
@@ -1383,7 +1386,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         if (freshQuote.currency !== 'EUR') {
           return res.status(502).json({
             error: 'pricing_currency_mismatch',
-            message: 'Der Shoppreis konnte nicht in Euro berechnet werden.',
+            message: 'Der Gesamtpreis konnte gerade nicht berechnet werden.',
           });
         }
 
@@ -1395,7 +1398,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         if (changed) {
           return res.status(409).json({
             error: 'quote_changed',
-            message: 'Printful hat den Preis aktualisiert. Bitte bestätigt den neuen Gesamtpreis.',
+            message: 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.',
             quote: checkoutQuoteResponse(refreshedQuote),
           });
         }
@@ -1441,11 +1444,14 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         if (error?.code === 'STRIPE_NOT_CONFIGURED') {
           return res.status(501).json({
             error: 'checkout_not_configured',
-            message: 'Stripe ist noch nicht eingerichtet. Bitte ergänzt den Test-Key in der .env-Datei.',
+            message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
           });
         }
         if (error?.code === 'STRIPE_LIVE_MODE_BLOCKED') {
-          return res.status(503).json({ error: 'stripe_live_mode_blocked', message: error.message });
+          return res.status(503).json({
+            error: 'stripe_live_mode_blocked',
+            message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+          });
         }
         if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
         performanceProbe.recordOperation('checkoutFailed');

@@ -70,7 +70,7 @@ add their own photos, words and motifs, and purchase it independently.
    implied by Printful's estimate. The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
-8. "Weiter zur Testzahlung" re-estimates the same trusted design basket and
+8. "Weiter zur Zahlung" re-estimates the same trusted design basket and
    address split immediately before creating a dynamic Stripe-hosted Checkout
    Session. A changed price must be confirmed again. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted

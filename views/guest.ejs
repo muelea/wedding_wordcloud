@@ -104,6 +104,7 @@
       width: 100%;
       padding: 23px 0;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 18px;
@@ -137,6 +138,27 @@
       color: var(--primary2);
     }
     .creator-action.primary:hover { color: var(--primary2); }
+    .share-fallback {
+      width: 100%;
+      flex: 1 0 100%;
+      padding-top: 14px;
+      border-top: 1px solid var(--header-bd);
+    }
+    .share-fallback label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .share-fallback-row { display: flex; gap: 8px; }
+    .share-fallback input {
+      min-width: 0;
+      height: 42px;
+      padding: 0 12px;
+      flex: 1;
+      border: 1px solid var(--header-bd);
+      border-radius: 11px;
+      background: var(--input-bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+    }
+    .share-fallback-status { min-height: 16px; margin: 6px 0 0; color: var(--muted); font-size: 11px; }
 
     .card {
       width: min(620px, calc(100% - 40px));
@@ -379,15 +401,6 @@
       transition: transform .18s, box-shadow .18s, background .5s;
     }
     .memory-cta-link:hover { transform: translateY(-1px); box-shadow: 0 10px 24px var(--shadow); }
-    .memory-cta-note {
-      display: block;
-      margin-top: 11px;
-      color: var(--muted);
-      font-size: 9.5px;
-      line-height: 1.45;
-      text-align: center;
-    }
-
     .tags {
       display: flex;
       flex-wrap: wrap;
@@ -784,6 +797,14 @@
       <button class="creator-action" id="share-link" type="button"><span id="share-label">Link teilen</span></button>
       <a class="creator-action primary" id="display-link" href="#" target="_blank" rel="noopener">Anzeige öffnen&nbsp;↗</a>
     </div>
+    <div class="share-fallback" id="share-fallback" hidden>
+      <label for="share-fallback-url">Link zur Wortwolke</label>
+      <div class="share-fallback-row">
+        <input id="share-fallback-url" type="text" readonly />
+        <button class="creator-action" id="share-fallback-copy" type="button">Link kopieren</button>
+      </div>
+      <p class="share-fallback-status" id="share-fallback-status" role="status" aria-live="polite"></p>
+    </div>
   </section>
 
   <section class="memory-cta" aria-labelledby="memory-cta-title">
@@ -796,7 +817,6 @@
     </div>
     <p class="memory-cta-copy">Gestaltet euer persönliches Erinnerungsstück – mit eigenen Fotos, Namen und Worten. Ganz unabhängig von der Hochzeits-Wortwolke.</p>
     <a class="memory-cta-link" id="memory-cta-link" href="#"><span>Persönliche Erinnerung gestalten</span><span aria-hidden="true">→</span></a>
-    <small class="memory-cta-note">Euer Entwurf bleibt getrennt von den Beiträgen des Brautpaars.</small>
   </section>
 
 </main>
@@ -885,6 +905,10 @@
   const charCount = document.getElementById('char-count');
   const shareButton = document.getElementById('share-link');
   const shareLabel = document.getElementById('share-label');
+  const shareFallback = document.getElementById('share-fallback');
+  const shareFallbackUrl = document.getElementById('share-fallback-url');
+  const shareFallbackCopy = document.getElementById('share-fallback-copy');
+  const shareFallbackStatus = document.getElementById('share-fallback-status');
   const displayLink = document.getElementById('display-link');
   const previewTrigger = document.getElementById('preview-trigger');
   const previewCount = document.getElementById('preview-count');
@@ -998,13 +1022,40 @@
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(guestUrl);
       } else if (!copyWithTemporaryInput(guestUrl)) {
-        window.prompt(t('Kopiert diesen Link:'), guestUrl);
+        showShareFallback();
         return;
       }
       showShareConfirmation(t('Link kopiert ✓'));
     } catch (error) {
       if (error && error.name === 'AbortError') return;
-      window.prompt(t('Kopiert diesen Link:'), guestUrl);
+      showShareFallback();
+    }
+  });
+
+  function showShareFallback() {
+    shareFallbackUrl.value = guestUrl;
+    shareFallback.hidden = false;
+    shareFallbackStatus.textContent = '';
+    shareFallbackUrl.focus();
+    shareFallbackUrl.select();
+  }
+
+  shareFallbackCopy.addEventListener('click', async () => {
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(guestUrl);
+        copied = true;
+      } else {
+        copied = copyWithTemporaryInput(guestUrl);
+      }
+    } catch {}
+    shareFallbackStatus.textContent = copied
+      ? t('Link kopiert ✓')
+      : t('Der Link ist bereit zum Kopieren.');
+    if (!copied) {
+      shareFallbackUrl.focus();
+      shareFallbackUrl.select();
     }
   });
 

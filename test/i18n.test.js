@@ -50,15 +50,15 @@ const REQUIRED_MESSAGES = [
   'Wortwolke starten',
   'Teilt ein Wort für das Brautpaar.',
   '{{count}} Wörter live geteilt',
-  'Admin-PIN eingeben, um die Wortwolke zurückzusetzen:',
+  'Neue Runde starten?',
   'Eure Worte. Eure Erinnerung.',
   '{{count}} Elemente ausgewählt',
   'Wählt, wie viele Produkte an welche Adresse gehen sollen. Für eine einzelne Lieferung bleibt einfach diese eine Adresse stehen.',
   '{{count}} Lieferadressen',
-  'Stripe hat die Zahlung bestätigt und wir haben die Bestellung sicher gespeichert.',
+  'Eure Zahlung wurde bestätigt und eure Bestellung ist bei uns eingegangen.',
   'Diese Wortwolke gibt es nicht.',
   'und',
-  'Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN und ein Admin-Token werden nicht im Browser gespeichert.',
+  'Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN wird nicht im Browser gespeichert.',
 ];
 
 function placeholders(value) {
@@ -112,6 +112,34 @@ test('every public page loads the shared language layer', () => {
   assert.match(guestPage, /id="couple-name" data-i18n-ignore/);
   assert.match(displayPage, /id="couple-name" data-i18n-ignore/);
   assert.match(guestPage, /label\.setAttribute\('data-i18n-ignore', ''\)/);
+});
+
+test('customer-facing actions stay calm and do not expose staging or provider narration', () => {
+  const shipping = viewSource('shipping.ejs');
+  const confirmation = viewSource('order-confirmation.ejs');
+  const create = viewSource('create.ejs');
+  const guest = viewSource('guest.ejs');
+  const display = viewSource('display.ejs');
+
+  assert.match(shipping, />Weiter zur Zahlung <span/);
+  assert.doesNotMatch(shipping, /Weiter zur Testzahlung|Preis wird noch einmal geprüft|Der Preis ist kurzzeitig reserviert/);
+  assert.doesNotMatch(confirmation, /Stripe-Testmodus|Testzahlung erfolgreich|Dies war eine Testzahlung/);
+  assert.doesNotMatch(create, /Wird geprüft…|Wird gestartet…/);
+  assert.doesNotMatch(guest, /window\.prompt/);
+  assert.doesNotMatch(display, /\b(?:confirm|prompt|alert)\s*\(/);
+  assert.match(display, /<button id="clear-hint" type="button"/);
+
+  for (const filename of ['create.ejs', 'configure.ejs', 'shipping.ejs', 'display.ejs']) {
+    const page = viewSource(filename);
+    assert.match(page, /\/action-state\.css\?v=20260829-1/, filename);
+    assert.match(page, /\/js\/action-state\.js\?v=20260829-1/, filename);
+  }
+
+  const actionStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'action-state.css'), 'utf8');
+  const actionRuntime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'action-state.js'), 'utf8');
+  assert.match(actionStyles, /prefers-reduced-motion/);
+  assert.match(actionStyles, /prefers-reduced-motion[\s\S]*animation:\s*none/);
+  assert.match(actionRuntime, /aria-busy/);
 });
 
 test('interface fonts are locally served, pinned and licensed', () => {

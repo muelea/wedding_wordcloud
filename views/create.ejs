@@ -6,7 +6,9 @@
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
+  <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
   <script src="/js/i18n.js?v=20260829-2"></script>
+  <script src="/js/action-state.js?v=20260829-1"></script>
   <title data-i18n-source="Wortwolke erstellen – Wolkenworte"><%= t('Wortwolke erstellen – Wolkenworte') %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -262,7 +264,7 @@
         <input id="slug" type="text" placeholder="lea-und-julian" maxlength="80" required />
       </div>
       <div class="slug-status" id="slug-status"></div>
-      <p class="field-hint">Beim Erstellen hängen wir automatisch einen kurzen eindeutigen Code an (z. B. „lea-und-julian-x7k2q") — so bekommt jedes Paar eine eigene Adresse, und Fremde können eure Wortwolke nicht einfach erraten und mitlesen.</p>
+      <p class="field-hint">Wir ergänzen automatisch einen kurzen Code, damit eure Wortwolke eine eindeutige, schwer erratbare Adresse erhält.</p>
     </div>
 
     <div class="pin-row">
@@ -337,7 +339,7 @@
     clearTimeout(slugCheckTimer);
     const slug = slugInput.value.trim();
     if (!slug) { slugStatus.textContent = ''; return; }
-    slugStatus.textContent = t('Wird geprüft…');
+    slugStatus.textContent = '';
     slugStatus.className = 'slug-status';
     slugCheckTimer = setTimeout(async () => {
       try {
@@ -379,8 +381,7 @@
     if (!/^\d{4,6}$/.test(pin)) return showError('Der PIN muss aus 4-6 Ziffern bestehen.');
     if (pin !== pinConfirm) return showError('Die beiden PINs stimmen nicht überein.');
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = t('Wird gestartet…');
+    WolkenworteActions.setBusy(submitBtn, true);
 
     try {
       const res = await fetch('/api/events', {
@@ -395,8 +396,7 @@
         // remaining failure modes are validation errors or (extremely
         // rare) a server-side generation failure, both surfaced as-is.
         showError(creationErrorMessages[data.error] || 'Etwas ist schiefgelaufen.');
-        submitBtn.disabled = false;
-        submitBtn.textContent = t('Wortwolke starten');
+        WolkenworteActions.setBusy(submitBtn, false);
         return;
       }
       try {
@@ -408,8 +408,7 @@
       location.assign(data.guestUrl);
     } catch {
       showError('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
-      submitBtn.disabled = false;
-      submitBtn.textContent = t('Wortwolke starten');
+      WolkenworteActions.setBusy(submitBtn, false);
     }
   });
 </script>

@@ -1,0 +1,42 @@
+.ww-busy-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ww-busy-button.ww-is-busy {
+  cursor: wait;
+}
+
+.ww-busy-button.ww-is-busy::before {
+  width: 1em;
+  height: 1em;
+  margin-right: .65em;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  content: "";
+  animation: ww-action-spin .7s linear infinite;
+}
+
+.ww-loading-spinner {
+  width: .78em;
+  height: .78em;
+  border: .1em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ww-action-spin .7s linear infinite;
+}
+
+@keyframes ww-action-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ww-busy-button.ww-is-busy::before,
+  .ww-loading-spinner {
+    animation: none;
+  }
+}
