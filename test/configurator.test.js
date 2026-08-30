@@ -526,6 +526,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /DesignLayout\.applyLayoutAction\(currentDesign, slots/);
   assert.match(configurePage, /button\.className = 'option placement-action'/);
   assert.match(configurePage, /button\.addEventListener\('click', \(\) => activatePlacement\(layout\)\)/);
+  assert.match(
+    configurePage,
+    /const initialLayoutKey = view\.layouts\.find\(\(layout\) => layout\.key === 'fit-area'\)\?\.key \|\|/,
+    'a new shared cloud must initially fill the printable product area'
+  );
   assert.doesNotMatch(configurePage, /selectedPlacement/);
   assert.doesNotMatch(configurePage, /name = 'placement'/);
   assert.doesNotMatch(configurePage, /Fläche füllen/);

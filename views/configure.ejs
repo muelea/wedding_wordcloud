@@ -2448,7 +2448,8 @@
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
-      const initialLayoutKey = view.layouts[0].key;
+      const initialLayoutKey = view.layouts.find((layout) => layout.key === 'fit-area')?.key ||
+        view.layouts[0].key;
       const slots = view.layoutGeometry[initialLayoutKey];
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
