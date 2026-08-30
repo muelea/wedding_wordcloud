@@ -138,6 +138,25 @@ app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
 // routing rationale.
 app.get('/', asyncRoute(async (req, res) => {
   return renderPage(req, res, 'landing', {
+    header: {
+      variant: 'landing',
+      headerClass: 'site-header',
+      navClass: 'shell nav',
+      id: 'site-header',
+      navLinks: [
+        { href: '#so-gehts', label: "So geht's" },
+        { href: '#erinnerungsstuecke', label: 'Erinnerungsstücke' },
+        { href: '#erinnerung', label: 'Eure Erinnerung' },
+      ],
+    },
+  });
+}));
+
+// '/wedding' is the original wedding-framed marketing page, kept as its own
+// route (not folded into the generic '/' landing page) so existing links,
+// QR codes and bookmarks pointing at the wedding pitch keep working.
+app.get('/wedding', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'wedding', {
     header: { variant: 'landing', headerClass: 'site-header', navClass: 'shell nav', id: 'site-header' },
   });
 }));

@@ -9,6 +9,12 @@
   const backLabel = config.backLabel || 'Zurück zur Startseite';
   const backAria = config.backAria || backLabel;
   const currentLanguage = languages.find((language) => language.code === locale) || languages[0];
+  const navLinks = config.navLinks || [
+    { href: '#so-gehts', label: "So geht's" },
+    { href: '#erleben', label: 'Erleben' },
+    { href: '#erinnerungsstuecke', label: 'Erinnerungsstücke' },
+    { href: '#erinnerung', label: 'Eure Erinnerung' },
+  ];
 %>
 <header class="<%= headerClass %> ww-site-header"<% if (config.id) { %> id="<%= config.id %>"<% } %>>
   <div class="<%= navClass ? `${navClass} ` : '' %>ww-nav ww-language-mounted">
@@ -19,12 +25,11 @@
 
     <% if (variant === 'landing') { %>
       <nav class="nav-links" aria-label="<%= t('Seitennavigation') %>" data-i18n-aria-label-source="Seitennavigation">
-        <a href="#so-gehts" data-i18n-source="So geht's"><%= t("So geht's") %></a>
-        <a href="#erleben" data-i18n-source="Erleben"><%= t('Erleben') %></a>
-        <a href="#erinnerungsstuecke" data-i18n-source="Erinnerungsstücke"><%= t('Erinnerungsstücke') %></a>
-        <a href="#erinnerung" data-i18n-source="Eure Erinnerung"><%= t('Eure Erinnerung') %></a>
+        <% for (const link of navLinks) { %>
+          <a href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
+        <% } %>
       </nav>
-      <a class="button outline" href="/start" data-i18n-source="Kostenlos starten"><%= t('Kostenlos starten') %></a>
+      <a class="button outline" href="/start" data-i18n-source="Hier starten"><%= t('Hier starten') %></a>
     <% } else if (variant === 'back') { %>
       <a class="back-link ww-back-link"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
     <% } %>
