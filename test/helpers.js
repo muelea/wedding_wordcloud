@@ -15,6 +15,9 @@ const APPLICATION_MIGRATIONS = [
   '20260827000004_application_design_assets.sql',
   '20260827000007_application_lifecycle_abuse.sql',
   '20260827000009_application_fulfillment_jobs.sql',
+  '20260830000010_event_drafts.sql',
+  '20260830000011_event_label.sql',
+  '20260830000012_optional_event_admin_pin.sql',
   '20260827000012_application_email_jobs.sql',
   '20260827000014_application_operations.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));

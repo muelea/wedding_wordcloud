@@ -9,6 +9,12 @@
   const backLabel = config.backLabel || 'Zurück zur Startseite';
   const backAria = config.backAria || backLabel;
   const currentLanguage = languages.find((language) => language.code === locale) || languages[0];
+  const navLinks = config.navLinks || [
+    { href: '#so-gehts', label: "So geht's" },
+    { href: '#erleben', label: 'Erleben' },
+    { href: '#erinnerungsstuecke', label: 'Erinnerungsstücke' },
+    { href: '#erinnerung', label: 'Eure Erinnerung' },
+  ];
 %>
 <header class="<%= headerClass %> ww-site-header"<% if (config.id) { %> id="<%= config.id %>"<% } %>>
   <div class="<%= navClass ? `${navClass} ` : '' %>ww-nav ww-language-mounted">
@@ -18,17 +24,51 @@
     </a>
 
     <% if (variant === 'landing') { %>
-      <nav class="nav-links" aria-label="<%= t('Seitennavigation') %>" data-i18n-aria-label-source="Seitennavigation">
-        <a href="#so-gehts" data-i18n-source="So geht's"><%= t("So geht's") %></a>
-        <a href="#erleben" data-i18n-source="Erleben"><%= t('Erleben') %></a>
-        <a href="#erinnerungsstuecke" data-i18n-source="Erinnerungsstücke"><%= t('Erinnerungsstücke') %></a>
-        <a href="#erinnerung" data-i18n-source="Eure Erinnerung"><%= t('Eure Erinnerung') %></a>
+      <nav id="landing-section-links" class="landing-section-links" aria-label="Seitennavigation">
+        <a href="#erinnerungsstuecke">Erinnerungsstücke</a>
+        <a href="#so-gehts">So geht's</a>
+        <a href="#inspiration">Inspiration</a>
+        <a href="#testimonials">Stimmen</a>
+        <details class="ww-language-picker landing-menu-language" data-i18n-ignore>
+          <summary
+            id="ww-language-select"
+            class="ww-language-trigger"
+            aria-label="<%= t('Sprache') %>: <%= currentLanguage.name %>"
+          >
+            <span class="ww-language-flag ww-language-current-flag" aria-hidden="true"><%= currentLanguage.flag %></span>
+            <span class="ww-language-current-name"><%= currentLanguage.name %></span>
+            <span class="ww-language-chevron" aria-hidden="true"></span>
+          </summary>
+          <nav id="ww-language-menu" class="ww-language-menu" aria-label="<%= t('Sprache') %>">
+            <% for (const language of languages) { %>
+              <a
+                id="ww-language-option-<%= language.code %>"
+                class="ww-language-option<%= language.code === locale ? ' is-selected' : '' %>"
+                data-language-code="<%= language.code %>"
+                href="<%= language.href %>"
+                lang="<%= language.code %>"
+                hreflang="<%= language.code %>"
+                <% if (language.code === locale) { %>aria-current="true"<% } %>
+              >
+                <span class="ww-language-flag" aria-hidden="true"><%= language.flag %></span>
+                <span class="ww-language-option-name"><%= language.name %></span>
+                <span class="ww-language-check" aria-hidden="true">✓</span>
+              </a>
+            <% } %>
+          </nav>
+        </details>
       </nav>
-      <a class="button outline" href="/start" data-i18n-source="Kostenlos starten"><%= t('Kostenlos starten') %></a>
+      <div class="landing-header-actions">
+        <a class="button primary landing-start-button" href="/start" data-i18n-source="Hier starten"><%= t('Hier starten') %></a>
+        <button class="landing-menu-toggle" type="button" aria-label="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
+          <span class="landing-menu-toggle-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+      </div>
     <% } else if (variant === 'back') { %>
       <a class="back-link ww-back-link"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
     <% } %>
 
+    <% if (variant !== 'landing') { %>
     <details class="ww-language-picker ww-language-inline" data-i18n-ignore>
       <summary
         id="ww-language-select"
@@ -57,5 +97,6 @@
         <% } %>
       </nav>
     </details>
+    <% } %>
   </div>
 </header>

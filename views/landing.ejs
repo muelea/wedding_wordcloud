@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="<%= t('Wolkenworte macht aus den Wünschen eurer Gäste eine lebendige Wortwolke – in Echtzeit.') %>" data-i18n-content-source="Wolkenworte macht aus den Wünschen eurer Gäste eine lebendige Wortwolke – in Echtzeit." />
+  <meta name="description" content="<%= t('Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass.') %>" data-i18n-content-source="Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
-  <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
+  <link rel="stylesheet" href="/site-fonts.css?v=20260829-3" />
   <script src="/js/i18n.js?v=20260829-3"></script>
-  <title data-i18n-source="Wolkenworte – Eure Hochzeit in einem Wort"><%= t('Wolkenworte – Eure Hochzeit in einem Wort') %></title>
+  <title data-i18n-source="Wolkenworte – Eure Erinnerungen in einem Wort"><%= t('Wolkenworte – Eure Erinnerungen in einem Wort') %></title>
   <style>
 
     :root {
@@ -52,22 +52,59 @@
     .flourish i { width: 7px; height: 7px; border: 1px solid var(--gold-line); transform: rotate(45deg); display: block; }
 
     /* ── Nav ── */
-    .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,253,250,.82); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid transparent; box-shadow: 0 0 0 rgba(64,15,38,0); transition: border-color .35s ease, box-shadow .35s ease; }
+    .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,253,250,.82); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid transparent; box-shadow: 0 0 0 rgba(64,15,38,0); transition: background .35s ease, border-color .35s ease, box-shadow .35s ease; }
+    /* Header stays fully transparent over the intro video; legibility comes
+       from lightening the logo/text themselves instead of a backing wash. */
+    html.intro-fade .brand,
+    html.intro-fade .nav-links a,
+    html.intro-fade .button.outline {
+      color: #fff;
+    }
+    html.intro-fade .brand-icon { filter: brightness(0) invert(1); }
+    html.intro-fade .nav-links a::after { background: #fff; }
+    html.intro-fade .button.outline { border-color: rgba(255,255,255,.7); }
+    html.intro-fade .button.outline:hover { border-color: #fff; }
+    /* Keep the complete header present over the teaser, but remove only the
+       section-link words until the video is dismissed. */
+    /* These are deliberately literal landing-page links: they must stay
+       inspectable and visible once the teaser has finished, even at narrow
+       viewport widths. */
+    #site-header .ww-nav { flex-wrap: nowrap; }
+    #site-header .landing-section-links { display: flex; align-items: center; gap: 30px; opacity: 1; visibility: visible; pointer-events: auto; color: var(--muted); font-size: .85rem; letter-spacing: .01em; white-space: nowrap; transition: opacity .25s ease, visibility .25s ease; }
+    #site-header .landing-section-links a { position: relative; padding-bottom: 3px; color: var(--muted); white-space: nowrap; transition: color .2s ease; }
+    #site-header .landing-section-links a::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--sage-deep); transform: scaleX(0); transform-origin: center; transition: transform .25s ease; }
+    #site-header .landing-section-links a:hover { color: var(--ink); }
+    #site-header .landing-section-links a:hover::after { transform: scaleX(1); }
+    #site-header .landing-section-links .landing-menu-language { position: relative; display: inline-flex; }
+    #site-header .landing-header-actions .landing-menu-toggle { display: none; align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; border: 1px solid rgba(64,15,38,.13); border-radius: 999px; color: var(--ink); background: rgba(255,253,250,.94); box-shadow: 0 5px 18px rgba(64,15,38,.08); cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+    #site-header .landing-menu-toggle:hover, #site-header.landing-menu-open .landing-menu-toggle { border-color: rgba(156,28,76,.3); background: #fffdfa; box-shadow: 0 7px 22px rgba(64,15,38,.12); }
+    #site-header .landing-menu-toggle-icon { display: grid; gap: 4px; width: 18px; }
+    #site-header .landing-menu-toggle-icon i { display: block; width: 18px; height: 1px; background: currentColor; transition: transform .2s ease, opacity .2s ease; }
+    #site-header.landing-menu-open .landing-menu-toggle-icon i:first-child { transform: translateY(5px) rotate(45deg); }
+    #site-header.landing-menu-open .landing-menu-toggle-icon i:nth-child(2) { opacity: 0; }
+    #site-header.landing-menu-open .landing-menu-toggle-icon i:last-child { transform: translateY(-5px) rotate(-45deg); }
+    #site-header .landing-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; margin-left: auto; white-space: nowrap; }
+    #site-header .landing-header-actions .button { white-space: nowrap; }
+    #site-header .landing-header-actions .landing-start-button { height: 38px; padding: 0 17px; }
+    /* The overlay is the source of truth. A stale document class can never
+       keep the links hidden after the teaser has been dismissed. */
+    #intro-overlay:not(.fade-out) ~ #site-header .landing-section-links { opacity: 0; visibility: hidden; pointer-events: none; }
+    #intro-overlay:not(.fade-out) ~ #site-header .landing-menu-toggle { opacity: 0; visibility: hidden; pointer-events: none; }
     .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(64,15,38,.06); }
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
-    #so-gehts, #erleben, #erinnerungsstuecke, #erinnerung { scroll-margin-top: 84px; }
-    .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; }
-    .brand-icon { width: 32px; height: 30px; flex: 0 0 auto; object-fit: contain; }
+    #so-gehts, #erinnerungsstuecke, #inspiration, #testimonials { scroll-margin-top: 84px; }
+    .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; transition: color .6s ease; }
+    .brand-icon { width: 32px; height: 30px; flex: 0 0 auto; object-fit: contain; transition: filter .6s ease; }
     .nav-links { display: flex; gap: 30px; align-items: center; color: var(--muted); font-size: .85rem; letter-spacing: .01em; }
-    .nav-links a { position: relative; padding-bottom: 3px; }
+    .nav-links a { position: relative; padding-bottom: 3px; transition: color .6s ease; }
     .nav-links a::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--sage-deep); transform: scaleX(0); transition: transform .25s ease; }
-    .nav-links a:hover { color: var(--ink); }
+    .nav-links a:hover { color: var(--ink); transition: color .2s ease; }
     .nav-links a:hover::after { transform: scaleX(1); }
 
     .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; padding: 13px 22px; font-size: .84rem; font-weight: 500; letter-spacing: .015em; border: 1px solid transparent; transition: transform .25s ease, box-shadow .25s ease; }
     .button:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(61,15,34,.14); }
     .button.primary { background: var(--ink); color: #fff; }
-    .button.outline { border-color: var(--line); color: var(--ink); background: transparent; }
+    .button.outline { border-color: var(--line); color: var(--ink); background: transparent; transition: transform .25s ease, box-shadow .25s ease, color .6s ease, border-color .6s ease; }
     .button.outline:hover { border-color: var(--gold-line); }
 
     /* ── Hero ── */
@@ -79,6 +116,7 @@
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
     .trust { margin-top: 26px; display: flex; align-items: center; gap: 9px; }
+    .trust + .trust { margin-top: 10px; }
     .trust-heart { width: 18px; height: auto; color: var(--coral); transform: rotate(-6deg); }
     .trust span.copy { color: var(--muted); font-size: .8rem; }
 
@@ -135,6 +173,36 @@
     .cloud span:nth-child(7n)   { animation-delay: -5.7s; }
     @media (prefers-reduced-motion: reduce) { .cloud span { animation: none; } }
 
+    /* ── Full-screen intro ── */
+    /* intro-lock blocks scrolling for the intro's *entire* life, including
+       the fade-out: it's only lifted once the crossfade fully finishes, not
+       the instant it starts. Otherwise leftover wheel/touch momentum from
+       the gesture that triggered dismissal keeps scrolling the page while
+       the fade is still playing, and visitors land past the hero instead of
+       on it. intro-fade is the separate, shorter-lived class that drives the
+       visuals (header colors, main opacity) and is removed immediately on
+       dismissal, in parallel with the video's own opacity fade. */
+    html.intro-lock { overflow: hidden; }
+    main { transition: opacity 1.2s ease; }
+    html.intro-fade main { opacity: 0; }
+    /* Sits below the sticky header's z-index (50) on purpose, so the nav
+       (and its language switcher / CTA) stay usable while the intro plays.
+       The overlay's own background is already the page's paper color, so
+       dismissal is a direct video opacity fade: the last frame (the
+       "Wolkenworte – for the people you love" title card) simply grows
+       more and more transparent, dissolving straight into the site's real
+       background instead of onto an intermediate color that itself shifts. */
+    #intro-overlay { position: fixed; inset: 0; z-index: 40; background: var(--paper); display: flex; align-items: center; justify-content: center; }
+    #intro-overlay.fade-out { pointer-events: none; }
+    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 1.2s ease; }
+    #intro-overlay.fade-out #intro-video { opacity: 0; }
+    #intro-scroll-cue { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #fff; cursor: pointer; transition: opacity .3s ease; }
+    #intro-overlay.fade-out #intro-scroll-cue { opacity: 0; }
+    #intro-scroll-cue svg { width: 22px; height: 22px; animation: scroll-cue-bounce 1.8s ease-in-out infinite; }
+    #intro-scroll-cue span { font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
+    @keyframes scroll-cue-bounce { 0%,100% { transform: translateY(0); opacity: .7; } 50% { transform: translateY(8px); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { #intro-overlay { display: none; } #intro-scroll-cue svg { animation: none; } }
+
     /* ── Sections shared ── */
     section { padding: 100px 0; }
     .section-top { max-width: 580px; margin: 0 auto 44px; text-align: center; }
@@ -143,8 +211,14 @@
     .section-top h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); letter-spacing: -.025em; line-height: 1.15; margin: 14px 0; font-weight: 500; }
     .section-top p { color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
 
+    /* ── Inspiration ── */
+    .inspiration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+    .inspiration-card { text-align: center; padding: 36px 26px; border-radius: 18px; background: #fffefc; border: 1px solid var(--line); }
+    .inspiration-card h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; font-weight: 500; margin: 0 0 9px; }
+    .inspiration-card p { color: var(--muted); font-size: .9rem; line-height: 1.68; font-weight: 300; }
+
     /* ── Steps ── */
-    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 34px; }
+    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; }
     .step { text-align: center; }
     .step-badge { width: 58px; height: 58px; margin: 0 auto 22px; border-radius: 50%; border: 1px solid var(--gold-line); display: grid; place-items: center; color: var(--sage-deep); background: var(--paper); }
     .step-badge svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -152,31 +226,53 @@
     .step h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.26rem; font-weight: 500; margin: 0 0 9px; }
     .step p { color: var(--muted); font-size: .87rem; line-height: 1.68; font-weight: 300; }
 
-    /* ── Feature (phone) ── */
-    .feature-grid { display: grid; grid-template-columns: .82fr 1.18fr; align-items: center; gap: 84px; }
-    .phone { width: 270px; margin: auto; background: #fffefc; padding: 38px 26px 30px; position: relative; border-radius: 2px; border: 1px solid var(--gold-line); box-shadow: var(--shadow); }
-    .phone::before { content: ''; position: absolute; top: 16px; left: 0; right: 0; margin: auto; width: 15px; height: 15px; background-color: var(--champagne); }
-    .phone::before { -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 29'%3E%3Cpath d='M16 27.5C7 21 1.5 14.5 1.5 9 1.5 4.3 5.3 1 9.6 1c3.3 0 5.7 1.9 6.4 4.4C16.7 2.9 19.1 1 22.4 1c4.3 0 8.1 3.3 8.1 8 0 5.5-5.5 12-14.5 18.5Z'/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 29'%3E%3Cpath d='M16 27.5C7 21 1.5 14.5 1.5 9 1.5 4.3 5.3 1 9.6 1c3.3 0 5.7 1.9 6.4 4.4C16.7 2.9 19.1 1 22.4 1c4.3 0 8.1 3.3 8.1 8 0 5.5-5.5 12-14.5 18.5Z'/%3E%3C/svg%3E") center/contain no-repeat; }
-    .phone .mini-brand { font-family: 'Playfair Display', Georgia, serif; text-align: center; color: var(--sage-deep); font-size: 1.1rem; margin-top: 14px; font-style: italic; }
-    .phone .question { font-family: 'Playfair Display', Georgia, serif; font-size: 1.24rem; text-align: center; line-height: 1.4; margin: 30px 0 22px; font-weight: 500; }
-    .phone .entry { display: flex; align-items: center; gap: 8px; padding: 13px 2px; border-bottom: 1px solid var(--gold-line); color: #a98b93; font-size: .74rem; font-weight: 300; }
-    .phone .entry .heart-icon { margin-left: auto; width: 15px; height: auto; color: var(--sage-deep); }
-    .phone .sent { margin-top: 22px; text-align: center; color: var(--sage-deep); font-size: .72rem; letter-spacing: .02em; }
-    .feature-copy h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
-    .feature-copy p { color: var(--muted); font-size: .98rem; line-height: 1.75; max-width: 480px; font-weight: 300; }
-    .checks { padding: 0; list-style: none; margin: 24px 0 0; display: grid; gap: 13px; font-size: .92rem; font-weight: 300; }
-    .checks li { display: flex; align-items: flex-start; gap: 11px; }
-    .checks .heart-icon { width: 15px; height: auto; color: var(--sage-deep); margin-top: 4px; }
+    /* Each step shows a small mockup of what that moment actually looks
+       like in the product, instead of an abstract icon — a mini browser for
+       creating the event, the QR/direct-entry choice, the growing display,
+       and the finished keepsake formats. */
+    .step-visual { height: 168px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
+    .mock-browser { width: 100%; max-width: 220px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #fffefc; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
+    .mock-browser-bar { height: 22px; background: var(--cream); display: flex; align-items: center; gap: 5px; padding: 0 9px; }
+    .mock-browser-bar i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-line); display: block; }
+    .mock-browser-body { padding: 18px 16px; }
+    .mock-field { height: 9px; border-radius: 4px; background: var(--line); margin-bottom: 9px; }
+    .mock-field.short { width: 58%; }
+    .mock-button { margin-top: 14px; background: var(--ink); color: #fff; font-size: .66rem; letter-spacing: .02em; text-align: center; padding: 8px; border-radius: 999px; }
+    .mock-collect { display: flex; align-items: center; justify-content: center; gap: 14px; }
+    .mock-qr { width: 62px; height: 62px; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: #fffefc; color: var(--ink); box-shadow: 0 10px 24px rgba(64,15,38,.08); }
+    .mock-or { color: var(--muted); font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; }
+    .mock-phone-mini { width: 62px; height: 86px; border-radius: 12px; border: 2px solid var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #fffefc; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
+    .mock-phone-mini-line { width: 34px; height: 6px; border-radius: 3px; background: var(--line); }
+    .mock-phone-mini-heart { width: 16px; height: auto; color: var(--sage-deep); }
+    .mock-phone { width: 100%; max-width: 128px; background: #fffefc; padding: 16px 12px 12px; position: relative; border-radius: 2px; border: 1px solid var(--gold-line); box-shadow: 0 10px 24px rgba(64,15,38,.08); }
+    .mock-phone-notch { width: 9px; height: 9px; margin: 0 auto 8px; border-radius: 50%; background: var(--champagne); }
+    .mock-phone-question { font-family: 'Playfair Display', Georgia, serif; font-size: .66rem; text-align: center; line-height: 1.35; margin: 0 0 10px; font-weight: 500; }
+    .mock-phone-entry { display: flex; align-items: center; gap: 5px; padding: 6px 2px; border-bottom: 1px solid var(--gold-line); color: #a98b93; font-size: .58rem; font-weight: 300; }
+    .mock-phone-entry-heart { margin-left: auto; width: 11px; height: auto; color: var(--sage-deep); }
+    .mock-screen { width: 100%; max-width: 220px; aspect-ratio: 4 / 3; border-radius: 8px; border: 3px solid var(--ink); background: #fffefc; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
+    .mock-screen::after { content: ''; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); width: 34%; height: 10px; background: var(--ink); border-radius: 0 0 4px 4px; }
+    .mock-cloud-mini { display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 5px 8px; padding: 10px; }
+    .mock-cloud-mini span { font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; line-height: 1; white-space: nowrap; }
+    .mock-cloud-mini span:nth-child(1) { font-size: 1.1rem; color: var(--sage-deep); font-weight: 600; }
+    .mock-cloud-mini span:nth-child(2) { font-size: .85rem; color: var(--coral); }
+    .mock-cloud-mini span:nth-child(3) { font-size: .7rem; color: var(--ink); }
+    .mock-cloud-mini span:nth-child(4) { font-size: .95rem; color: var(--champagne); }
+    .mock-cloud-mini span:nth-child(5) { font-size: .75rem; color: var(--coral); }
+    .mock-cloud-mini span:nth-child(6) { font-size: .68rem; color: var(--ink); }
+    .mock-keep { display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .mock-keep img { width: 62px; height: auto; }
+    .steps-cta { margin-top: 56px; text-align: center; }
+
 
     /* ── Print / mug-duo ── */
-    .print-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 84px; }
+    .print-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 84px; position: relative; }
     .print-copy h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
     .print-copy p { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
     .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; letter-spacing: .03em; font-style: italic; font-family: 'Playfair Display', Georgia, serif; }
 
-    .quote { text-align: center; }
-    .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-style: italic; font-weight: 500; letter-spacing: -.02em; line-height: 1.35; }
-    .quote cite { color: var(--muted); font-size: .82rem; font-style: normal; letter-spacing: .01em; }
+    .quote { text-align: center; position: relative; }
+    .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Shadows Into Light', 'Playfair Display', cursive; font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-style: normal; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
+    .quote cite { color: var(--sage-deep); font-family: 'Shadows Into Light', cursive; font-size: 1.25rem; font-style: normal; letter-spacing: .01em; }
     /* The shared procedural mug renderer uses the locally served Three.js
        browser build; the homepage and configurator render the same geometry. */
     .cup-stage { min-height: 400px; display: grid; place-items: center; position: relative; gap: 4px; }
@@ -185,6 +281,19 @@
     #mug-canvas:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 8px; }
     .cup-caption { color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
     .cup-caption .icon-rotate { width: 13px; height: 13px; opacity: .7; }
+
+    /* ── Playful accents: floating hearts. Kept decorative-only
+       (aria-hidden, pointer-events:none). ── */
+    @keyframes floatHeart { 0%, 100% { transform: translateY(0) rotate(var(--heart-tilt, -6deg)); } 50% { transform: translateY(-7px) rotate(var(--heart-tilt, -6deg)); } }
+    .heart-accent { position: absolute; color: var(--gold-line); opacity: .6; pointer-events: none; animation: floatHeart 5.5s ease-in-out infinite; }
+    .heart-accent.tl { left: 4%; top: 10%; --heart-tilt: -10deg; width: 30px; }
+    .heart-accent.br { right: 4%; bottom: 10%; --heart-tilt: 8deg; width: 26px; animation-delay: -2.4s; }
+    .hero-inline-heart { display: inline-block; width: 22px; height: auto; margin-left: 6px; color: var(--coral); vertical-align: -2px; animation: floatHeart 4.2s ease-in-out infinite; --heart-tilt: -8deg; }
+    .trust-heart { animation: floatHeart 4.8s ease-in-out infinite; }
+    .trust:nth-of-type(2) .trust-heart { animation-delay: -1.6s; }
+    .trust:nth-of-type(3) .trust-heart { animation-delay: -3.2s; }
+    .trust-heart, .hero-inline-heart { transition: transform .35s ease; }
+    .trust:hover .trust-heart, .hero-inline-heart:hover { transform: scale(1.2) rotate(4deg); animation-play-state: paused; }
 
     /* ── Quote ── */
 
@@ -208,26 +317,53 @@
        IntersectionObserver support and the visitor hasn't asked for
        reduced motion (see the script at the end of the page). */
     html.js-reveal-ready .section-top, html.js-reveal-ready .step,
-    html.js-reveal-ready .phone, html.js-reveal-ready .feature-copy,
-    html.js-reveal-ready .print-copy, html.js-reveal-ready .cup-stage,
-    html.js-reveal-ready .cta-box {
+    html.js-reveal-ready .inspiration-card, html.js-reveal-ready .print-copy,
+    html.js-reveal-ready .cup-stage, html.js-reveal-ready .cta-box {
       opacity: 0; transform: translateY(18px);
       transition: opacity .7s ease, transform .7s ease;
     }
     html.js-reveal-ready .is-visible { opacity: 1; transform: translateY(0); }
+    /* Quotes get their own richer reveal — the text rises and sharpens into
+       focus rather than just fading, with the citation trailing slightly
+       behind the blockquote, since a testimonial is meant to land as its
+       own moment rather than blend into the generic section reveal. */
+    html.js-reveal-ready .quote blockquote, html.js-reveal-ready .quote cite {
+      opacity: 0; transform: translateY(22px); filter: blur(6px);
+      transition: opacity .9s ease, transform .9s ease, filter .9s ease;
+    }
+    html.js-reveal-ready .quote cite { transition-delay: .22s; }
+    html.js-reveal-ready .quote blockquote.is-visible, html.js-reveal-ready .quote cite.is-visible {
+      opacity: 1; transform: translateY(0); filter: blur(0);
+    }
     html.js-reveal-ready .step:nth-child(2) { transition-delay: .08s; }
     html.js-reveal-ready .step:nth-child(3) { transition-delay: .16s; }
     html.js-reveal-ready .step:nth-child(4) { transition-delay: .24s; }
+    html.js-reveal-ready .step:nth-child(5) { transition-delay: .32s; }
+    html.js-reveal-ready .inspiration-card:nth-child(2) { transition-delay: .08s; }
+    html.js-reveal-ready .inspiration-card:nth-child(3) { transition-delay: .16s; }
+    html.js-reveal-ready .inspiration-card:nth-child(4) { transition-delay: .08s; }
+    html.js-reveal-ready .inspiration-card:nth-child(5) { transition-delay: .16s; }
+    html.js-reveal-ready .inspiration-card:nth-child(6) { transition-delay: .24s; }
 
-    @media (max-width: 760px) { .cta-box .deco { display: none; } }
+    @media (max-width: 1050px) {
+      #site-header .landing-header-actions .landing-menu-toggle { display: inline-flex; margin-left: 0; }
+      #site-header .landing-section-links { display: none; }
+      #site-header.landing-menu-open .landing-section-links { position: absolute; top: calc(100% + 8px); right: 20px; display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,250,.98); box-shadow: 0 14px 32px rgba(64,15,38,.13); }
+      #site-header.landing-menu-open .landing-section-links a { padding: 11px 13px; color: var(--ink); }
+      #site-header.landing-menu-open .landing-section-links a::after { display: none; }
+      #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }
+      #site-header.landing-menu-open .landing-section-links .landing-menu-language .ww-language-trigger { width: 100%; }
+      #site-header .landing-header-actions { margin-left: 12px; }
+    }
+    @media (max-width: 760px) { .cta-box .deco, .heart-accent { display: none; } }
     @media (max-width: 760px) {
       .shell { width: min(100% - 32px, 560px); }
       .nav { height: 76px; }
-      #so-gehts, #erleben, #erinnerungsstuecke, #erinnerung { scroll-margin-top: 76px; }
+      #so-gehts, #erinnerungsstuecke, #inspiration, #testimonials { scroll-margin-top: 76px; }
       .nav-links { display: none; }
       .nav .button { padding: 11px 17px; font-size: .8rem; }
       .hero { padding: 30px 0 72px; }
-      .hero-grid, .feature-grid, .print-grid { grid-template-columns: 1fr; gap: 46px; }
+      .hero-grid, .print-grid { grid-template-columns: 1fr; gap: 46px; }
       .hero-copy { text-align: center; }
       .hero-copy .eyebrow { justify-content: center; }
       .lead { margin-inline: auto; }
@@ -236,9 +372,14 @@
       .cloud { margin-bottom: 6px; }
       section { padding: 72px 0; }
       .steps { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
-      .feature-grid, .print-grid { text-align: center; }
-      .checks { text-align: left; max-width: 330px; margin-inline: auto; }
-      .cup-stage { order: -1; min-height: 340px; }
+      .step-visual { height: 140px; margin-bottom: 16px; }
+      .mock-browser, .mock-screen { max-width: 180px; }
+      .mock-phone { max-width: 150px; }
+      .mock-qr, .mock-phone-mini, .mock-keep img { transform: scale(.88); }
+      .inspiration-grid { grid-template-columns: 1fr; gap: 18px; }
+      .print-grid { text-align: center; }
+      .print-copy p { margin-left: auto; margin-right: auto; }
+      .cup-stage { min-height: 340px; order: -1; }
       #mug-canvas { width: 360px; height: 320px; }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
@@ -248,6 +389,27 @@
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
 </head>
 <body>
+  <div id="intro-overlay">
+    <video id="intro-video" autoplay muted playsinline preload="auto" poster="/assets/video/teaser-poster.jpg" aria-label="Wolkenworte Teaser-Video">
+      <source src="/assets/video/teaser.mp4" type="video/mp4" />
+    </video>
+    <div id="intro-scroll-cue" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      <span>Scrollen zum Fortfahren</span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduceMotion) {
+        var overlay = document.getElementById('intro-overlay');
+        if (overlay) overlay.remove();
+      } else {
+        document.documentElement.classList.add('intro-lock', 'intro-fade');
+      }
+    })();
+  </script>
+
   <%- include('partials/site-header') %>
 
   <main>
@@ -255,25 +417,53 @@
       <div class="shell hero-grid">
         <div class="hero-copy">
           <p class="eyebrow">Wünsche &amp; Erinnerungen sammeln</p>
-          <h1>Eine Wolke<br><em>voller Glück.</em></h1>
-          <p class="lead">Eure Gäste teilen Wünsche und Erinnerungen – Wolkenworte macht daraus eine lebendige Wortwolke, live auf eurer Feier und als Druck. Eine Erinnerung, die für immer bleibt.</p>
+          <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
+          <p class="lead">Ihr sammelt Wünsche und Erinnerungen für Menschen die euch wichtig sind. Wolkenworte macht daraus eine lebendige Wortwolke. Ob auf großen Feiern oder in kleiner Runde – mit Wolkenworte entsteht eine Erinnerung, die für immer bleibt.</p>
           <div class="hero-actions">
-            <a class="button primary" href="/start">Kostenlos starten <span>→</span></a>
+            <a class="button primary" href="/start">Hier starten <span>→</span></a>
           </div>
           <div class="trust">
             <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
             <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
           </div>
+          <div class="trust">
+            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+            <span class="copy">Jeder kann mitmachen – ganz einfach per Smartphone.</span>
+          </div>
+          <div class="trust">
+            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+            <span class="copy">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</span>
+          </div>
         </div>
 
-        <div class="reel" aria-label="Animierte Vorschau einer Hochzeits-Wortwolke">
+        <div class="reel" aria-label="Animierte Vorschau einer Wortwolke">
           <span class="reel-label"><span class="live-dot" aria-hidden="true"></span>Live-Vorschau</span>
           <div class="demo-title">Lea &amp; Julian</div>
-          <div class="demo-subtitle">Unsere Hochzeit · 2026</div>
+          <div class="demo-subtitle">Unsere Geschichte · 2026</div>
           <div class="cloud">
             <span>Liebe</span><span>für immer</span><span>Freude</span><span>unvergesslich</span><span>Zusammen</span><span>Herzklopfen</span><span>Sommerabend</span><span>Gänsehaut</span><span>Vertrauen</span><span>goldenes Licht</span><span>Lachen</span><span>Geborgenheit</span><span>Hand in Hand</span>
           </div>
-          <p class="reel-caption">So wächst eure Wortwolke live auf dem großen Bildschirm – Wort für Wort, während eure Gäste feiern.</p>
+          <p class="reel-caption">Beispiel Hochzeit – eure Wortwolke wächst live auf dem großen Bildschirm – Wort für Wort, während eure Gäste feiern.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="print" id="erinnerungsstuecke">
+      <div class="shell">
+        <div class="section-top">
+          <div class="flourish"><i></i></div>
+          <p class="eyebrow center">Eine Erinnerung zum Anfassen</p>
+          <h2>Aus eurer Wolke wird ein Lieblingsstück.</h2>
+        </div>
+        <div class="print-grid">
+          <div class="print-copy">
+            <p>Nach dem großen Moment kann eure ganz persönliche Wortwolke auf einem Erinnerungsstück weiterleben – als Tasse für den nächsten gemeinsamen Kaffee, als Poster oder als Geschenk für eure Liebsten.</p>
+            <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
+          </div>
+          <div class="cup-stage">
+            <canvas id="mug-canvas" tabindex="0" role="img" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse. Zum Drehen ziehen oder Pfeiltasten verwenden."></canvas>
+            <span class="cup-caption"><svg class="icon-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20"/><path d="M20 5v6h-6"/></svg>Zum Drehen ziehen</span>
+          </div>
         </div>
       </div>
     </section>
@@ -284,80 +474,155 @@
           <div class="flourish"><i></i></div>
           <p class="eyebrow center">Ganz unkompliziert</p>
           <h2>Ein Moment, den alle mitgestalten.</h2>
-          <p>Kein Download, keine Accounts und keine komplizierte Technik. Nur ein QR-Code, eure Gäste und ganz viel Liebe.</p>
+          <p>Kein Download, keine Accounts und keine komplizierte Technik. Nur ein QR-Code – und am Ende wird daraus mehr, als ihr euch vorstellen könnt.</p>
         </div>
         <div class="steps">
           <article class="step">
             <span class="step-n">Schritt 01</span>
-            <div class="step-badge"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M17 20h3"/></svg></div>
-            <h3>QR-Code zeigen</h3>
-            <p>Platziert den Code auf eurer Leinwand, auf den Tischen oder in eurer Papeterie.</p>
+            <div class="step-visual">
+              <div class="mock-browser">
+                <div class="mock-browser-bar"><i></i><i></i><i></i></div>
+                <div class="mock-browser-body">
+                  <div class="mock-field"></div>
+                  <div class="mock-field short"></div>
+                  <div class="mock-button">Wolke erstellen</div>
+                </div>
+              </div>
+            </div>
+            <h3>Wolke anlegen</h3>
+            <p>Erstellt in wenigen Sekunden eure eigene Wortwolke – ganz ohne Anmeldung.</p>
           </article>
           <article class="step">
             <span class="step-n">Schritt 02</span>
-            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg></div>
-            <h3>Wünsche sammeln</h3>
-            <p>Alle geben auf dem eigenen Handy ihr persönliches Wort für euch ein.</p>
+            <div class="step-visual">
+              <div class="mock-collect">
+                <div class="mock-qr" aria-hidden="true">
+                  <svg viewBox="0 0 40 40" fill="currentColor">
+                    <rect x="2" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                    <rect x="5.5" y="5.5" width="3" height="3"/>
+                    <rect x="28" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                    <rect x="31.5" y="5.5" width="3" height="3"/>
+                    <rect x="2" y="28" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                    <rect x="5.5" y="31.5" width="3" height="3"/>
+                    <rect x="17" y="4" width="3" height="3"/>
+                    <rect x="23" y="9" width="3" height="3"/>
+                    <rect x="17" y="14" width="3" height="3"/>
+                    <rect x="4" y="17" width="3" height="3"/>
+                    <rect x="11" y="17" width="3" height="3"/>
+                    <rect x="23" y="17" width="3" height="3"/>
+                    <rect x="29" y="17" width="3" height="3"/>
+                    <rect x="35" y="17" width="3" height="3"/>
+                    <rect x="17" y="23" width="3" height="3"/>
+                    <rect x="29" y="23" width="3" height="3"/>
+                    <rect x="23" y="29" width="3" height="3"/>
+                    <rect x="35" y="29" width="3" height="3"/>
+                    <rect x="17" y="35" width="3" height="3"/>
+                  </svg>
+                </div>
+                <span class="mock-or">oder</span>
+                <div class="mock-phone-mini">
+                  <div class="mock-phone-mini-line"></div>
+                  <svg class="mock-phone-mini-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+            <h3>Wolke teilen</h3>
+            <p>Teilt den QR-Code oder Link mit euren Liebsten – ganz gleich, wo sie sind.</p>
           </article>
           <article class="step">
             <span class="step-n">Schritt 03</span>
-            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></div>
+            <div class="step-visual">
+              <div class="mock-phone">
+                <div class="mock-phone-notch"></div>
+                <p class="mock-phone-question">Dein Wort für<br>diesen Moment</p>
+                <div class="mock-phone-entry">Liebe, Glück, Freude <svg class="mock-phone-entry-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+            </div>
+            <h3>Wünsche sammeln</h3>
+            <p>Jede und jeder gibt ihr persönliches Wort direkt auf dem eigenen Handy ein. Ganz einfach, jeder kann mitmachen.</p>
+          </article>
+          <article class="step">
+            <span class="step-n">Schritt 04</span>
+            <div class="step-visual">
+              <div class="mock-screen">
+                <div class="mock-cloud-mini">
+                  <span>Liebe</span><span>Glück</span><span>Wir</span><span>Zusammen</span><span>Freude</span><span>für immer</span>
+                </div>
+              </div>
+            </div>
             <h3>Staunen</h3>
             <p>Auf dem großen Screen wächst eure Wortwolke in Echtzeit – Wort für Wort.</p>
           </article>
           <article class="step">
-            <span class="step-n">Schritt 04</span>
-            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M4 8l8-5 8 5-8 5-8-5Z"/><path d="M4 8v8l8 5 8-5V8"/><path d="M12 13v8"/></svg></div>
+            <span class="step-n">Schritt 05</span>
+            <div class="step-visual">
+              <div class="mock-keep">
+                <img src="/assets/product-thumbnails/mug.svg" alt="" />
+                <img src="/assets/product-thumbnails/poster.svg" alt="" />
+                <img src="/assets/product-thumbnails/tote.svg" alt="" />
+              </div>
+            </div>
             <h3>Bewahren</h3>
             <p>Lasst eure Wortwolke als Tasse, Poster oder anderes Erinnerungsstück weiterleben.</p>
+          </article>
+        </div>
+        <div class="steps-cta">
+          <a class="button primary" href="/start">Hier starten <span>→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section id="inspiration">
+      <div class="shell">
+        <div class="section-top">
+          <div class="flourish"><i></i></div>
+          <p class="eyebrow center">Für jeden besonderen Anlass</p>
+          <h2>Wolkenworte passt sich eurem Moment an.</h2>
+          <p>Ob große Feier oder kleine Runde – überall dort, wo Menschen euch etwas mitgeben möchten.</p>
+        </div>
+        <div class="inspiration-grid">
+          <article class="inspiration-card">
+            <div class="step-badge"><svg viewBox="0 0 24 24"><circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/></svg></div>
+            <h3>Hochzeit</h3>
+            <p>Wünsche und Erinnerungen von all euren Gästen – für den schönsten Tag.</p>
+          </article>
+          <article class="inspiration-card">
+            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+            <h3>Mit deinen Besties</h3>
+            <p>Sammelt eure schönsten Erinnerungen vom Roadtrip und druckt sie auf eine Tasse – für dich und deine Besties.</p>
+          </article>
+          <article class="inspiration-card">
+            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 17l5-5-5-5M21 12H9"/></svg></div>
+            <h3>Abschiedsfeier</h3>
+            <p>Sammelt Abschiedsworte von Kolleg:innen oder Freund:innen – ein Geschenk zum Neuanfang.</p>
+          </article>
+          <article class="inspiration-card">
+            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1 2.5 3 6 3s6-2 6-3v-5.5"/><path d="M22 8v5"/></svg></div>
+            <h3>Zum Abschluss</h3>
+            <p>Feiert den Abschluss mit Wünschen von allen, die den Weg mit euch gegangen sind.</p>
+          </article>
+          <article class="inspiration-card">
+            <div class="step-badge"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-9.5-9C1 8 2 4 6 4c2 0 3.5 1 4.5 2.5C11.5 5 13 4 15 4c4 0 5 4 3.5 7C16 15.5 12 20 12 20Z"/></svg></div>
+            <h3>Gute Besserung</h3>
+            <p>Schickt aufmunternde Worte und Genesungswünsche von allen, die an dich denken.</p>
+          </article>
+          <article class="inspiration-card">
+            <div class="step-badge"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M4 10h16M12 10v10M8 10c-1.5 0-2.5-1-2.5-2.2C5.5 6.5 7 5.5 8 6.5c1 1 1 2 1 3.5M16 10c1.5 0 2.5-1 2.5-2.2 0-1.3-1.5-2.3-2.5-1.3-1 1-1 2-1 3.5"/></svg></div>
+            <h3>Einfach als Geschenk</h3>
+            <p>Ihr braucht keinen Anlass – sammelt Worte für jemanden, der euch wichtig ist.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="feature" id="erleben">
-      <div class="shell feature-grid">
-        <div class="phone" aria-label="Vorschau der mobilen Eingabe">
-          <div class="mini-brand">Wolkenworte</div>
-          <p class="question">Dein Wort für<br>das Brautpaar</p>
-          <div class="entry">Liebe, Glück, Freude <svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>
-          <p class="sent">„Glück" wurde hinzugefügt!</p>
-        </div>
-        <div class="feature-copy">
-          <p class="eyebrow">Eure Gäste im Mittelpunkt</p>
-          <h2>So einfach, dass jeder mitmacht.</h2>
-          <p>Vom ersten Scan bis zum großen Wow-Moment ist alles bewusst leicht gehalten. Die Wortwolke aktualisiert sich sofort auf eurem Display – ganz ohne App.</p>
-          <ul class="checks">
-            <li><svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>Funktioniert auf jedem Smartphone</li>
-            <li><svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>Live-Ansicht für Beamer oder Fernseher</li>
-            <li><svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>Auch Menschen, die nicht dabei sein können, schenken euch ein Wort – von überall auf der Welt.</li>
-            <li><svg class="heart-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>Sanftes Pastell- oder leuchtendes Neon-Design</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="print" id="erinnerungsstuecke">
-      <div class="shell print-grid">
-        <div class="print-copy">
-          <p class="eyebrow">Eine Erinnerung zum Anfassen</p>
-          <h2>Aus eurer Wolke wird ein Lieblingsstück.</h2>
-          <p>Nach der Feier kann eure ganz persönliche Wortwolke auf einem Erinnerungsstück weiterleben – als Tasse für den ersten Kaffee als Ehepaar, als Poster oder als Geschenk für eure Liebsten.</p>
-          <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
-        </div>
-        <div class="cup-stage">
-          <canvas id="mug-canvas" tabindex="0" role="img" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse. Zum Drehen ziehen oder Pfeiltasten verwenden."></canvas>
-          <span class="cup-caption"><svg class="icon-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20"/><path d="M20 5v6h-6"/></svg>Zum Drehen ziehen</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="quote" id="erinnerung">
+    <section class="quote" id="testimonials">
+      <svg class="heart-icon heart-accent tl" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+      <svg class="heart-icon heart-accent br" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
       <div class="shell">
         <div class="flourish"><i></i></div>
-        <p class="eyebrow center">Was am Ende bleibt</p>
-        <blockquote>Aus vielen kleinen Worten wird eine Erinnerung, die euch noch lange begleitet.</blockquote>
-        <cite>Gemeinsam von euren Gästen gestaltet</cite>
+        <p class="eyebrow center">So fühlt es sich an</p>
+        <blockquote>Jeden Morgen, wenn ich aus meiner Wolkenworte-Tasse trinke, spüre ich für einen Moment die Wärme all der Menschen die ich liebe.</blockquote>
+        <cite>– Lea</cite>
       </div>
     </section>
 
@@ -367,9 +632,9 @@
           <svg class="heart-icon deco tl" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
           <svg class="heart-icon deco br" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
           <p class="eyebrow">Bereit für euren Moment?</p>
-          <h2>Lasst eure Liebe<br>Wellen schlagen.</h2>
+          <h2>Lasst eure Worte<br>Wellen schlagen.</h2>
           <p>Probiert die Live-Wortwolke jetzt aus – kostenlos und ohne Anmeldung.</p>
-          <a class="button primary" href="/start">Kostenlos starten <span>→</span></a>
+          <a class="button primary" href="/start">Hier starten <span>→</span></a>
         </div>
       </div>
     </section>
@@ -385,11 +650,51 @@
   <script src="/js/site-header.js"></script>
   <script>
     (function () {
+      var overlay = document.getElementById('intro-overlay');
+      if (!overlay) return;
+
+      var introVideo = document.getElementById('intro-video');
+      var scrollCue = document.getElementById('intro-scroll-cue');
+
+      function finishIntro() {
+        if (overlay.classList.contains('fade-out')) return;
+        overlay.classList.add('fade-out');
+        document.documentElement.classList.remove('intro-fade');
+        var header = document.getElementById('site-header');
+        if (header) header.classList.add('intro-finished');
+        window.removeEventListener('wheel', finishIntro);
+        window.removeEventListener('touchmove', finishIntro);
+        window.removeEventListener('keydown', onIntroKeydown);
+        window.setTimeout(function () {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          document.documentElement.classList.remove('intro-lock');
+        }, 1250);
+      }
+
+      function onIntroKeydown(event) {
+        if (['ArrowDown', 'PageDown', ' ', 'End'].indexOf(event.key) !== -1) {
+          event.preventDefault();
+          finishIntro();
+        }
+      }
+
+      if (introVideo) {
+        introVideo.addEventListener('ended', finishIntro);
+        introVideo.addEventListener('error', finishIntro);
+      }
+      if (scrollCue) scrollCue.addEventListener('click', finishIntro);
+      window.addEventListener('wheel', finishIntro, { passive: true });
+      window.addEventListener('touchmove', finishIntro, { passive: true });
+      window.addEventListener('keydown', onIntroKeydown);
+    })();
+  </script>
+  <script>
+    (function () {
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if ('IntersectionObserver' in window && !reduceMotion) {
         document.documentElement.classList.add('js-reveal-ready');
         var targets = document.querySelectorAll(
-          '.section-top, .step, .phone, .feature-copy, .print-copy, .cup-stage, .cta-box'
+          '.section-top, .step, .inspiration-card, .print-copy, .cup-stage, .quote blockquote, .quote cite, .cta-box'
         );
         var io = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {
@@ -416,73 +721,71 @@
 
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // The hero words plus complementary wedding terms, laid out through
-      // the configurator's real print engine with the same color hierarchy.
+      // Landing-cup art direction. x/y are centres in the 2700 × 1050 print
+      // file; angle is 0 (horizontal) or -90 (vertical). Edit these values to
+      // refine an individual word without giving up the automatic layout as a
+      // safe starting point.
       var WORDS = [
-        { text: 'Liebe', count: 47, color: '#9c1c4c' },
-        { text: 'unvergesslich', count: 41, color: '#d1607e' },
-        { text: 'Freude', count: 29, color: '#c1922f' },
-        { text: 'für immer', count: 32, color: '#d1607e' },
-        { text: 'Zusammen', count: 41, color: '#c1922f' },
-        { text: 'Herzklopfen', count: 32, color: '#d1607e' },
-        { text: 'Sommerabend', count: 41, color: '#9c1c4c' },
-        { text: 'Gänsehaut', count: 30, color: '#400f26' },
-        { text: 'Vertrauen', count: 27, color: '#400f26' },
-        { text: 'goldenes Licht', count: 41, color: '#d1607e' },
-        { text: 'Lachen', count: 29, color: '#c1922f' },
-        { text: 'Geborgenheit', count: 30, color: '#400f26' },
-        { text: 'Hand in Hand', count: 41, color: '#c1922f' },
-        { text: 'Lieblingsmensch', count: 38, color: '#9c1c4c' },
-        { text: 'Verbundenheit', count: 35, color: '#400f26' },
-        { text: 'Leichtigkeit', count: 34, color: '#d1607e' },
-        { text: 'Herzenswärme', count: 37, color: '#c1922f' },
-        { text: 'Lieblingsmoment', count: 32, color: '#d1607e' },
-        { text: 'Seelenverwandt', count: 31, color: '#9c1c4c' },
-        { text: 'Abenteuer', count: 30, color: '#c1922f' },
-        { text: 'Dankbarkeit', count: 29, color: '#400f26' },
-        { text: 'Ewigkeit', count: 36, color: '#d1607e' },
-        { text: 'Zuhause', count: 39, color: '#9c1c4c' },
-        { text: 'Zukunft', count: 33, color: '#c1922f' },
-        { text: 'Gemeinsam', count: 40, color: '#400f26' },
-        { text: 'Tanzen', count: 28, color: '#d1607e' },
-        { text: 'Glück', count: 42, color: '#9c1c4c' },
-        { text: 'Nähe', count: 30, color: '#400f26' },
-        { text: 'Küsse', count: 29, color: '#d1607e' },
-        { text: 'Wir', count: 44, color: '#9c1c4c' },
-        { text: 'Ja-Wort', count: 34, color: '#c1922f' }
+        { text: 'Liebe', count: 45, displayScale: 2.15, x: 200, y: 450, angle: -90, color: '#a40e4c' },
+        { text: 'unvergesslich', count: 14, displayScale: 2.08, x: 655, y: 835, angle: 0, color: '#168f83' },
+        { text: 'Freude', count: 22, displayScale: 2.2, x: 780, y: 435, angle: 0, color: '#d90368' },
+        { text: 'für immer', count: 9, displayScale: 1.5, x: 2550, y: 530, angle: -90, color: '#6a4c93' },
+        { text: 'Zusammen', count: 17, displayScale: 1.02, x: 800, y: 195, angle: 0, color: '#ff7f3f' },
+        { text: 'Herzklopfen', count: 6, displayScale: 1.02, x: 1990, y: 570, angle: 0, color: '#d90368' },
+        { text: 'Sommerabend', count: 38, displayScale: .78, x: 1995, y: 915, angle: 0, color: '#f45b69' },
+        { text: 'Gänsehaut', count: 11, displayScale: 1.02, x: 2000, y: 750, angle: 0, color: '#168f83' },
+        { text: 'Vertrauen', count: 27, displayScale: 1.5, x: 1295, y: 505, angle: -90, color: '#6a4c93' },
+        { text: 'goldenes Licht', count: 20, displayScale: .72, x: 2000, y: 420, angle: 0, color: '#a40e4c' },
+        { text: 'Lachen', count: 32, displayScale: 1.48, x: 1950, y: 220, angle: 0, color: '#f45b69' },
+        { text: 'Geborgenheit', count: 4, displayScale: 1.5, x: 1475, y: 505, angle: -90, color: '#ff7f3f' },
+        { text: 'Hand in Hand', count: 24, displayScale: .86, x: 780, y: 665, angle: 0, color: '#6a4c93' }
       ];
 
       // This is the configurator's "Fläche optimal nutzen" print geometry.
-      var printArea = { x: 36, y: 36, width: 2628, height: 978 };
-      var measurementCanvas = document.createElement('canvas');
-      var measurementContext = measurementCanvas.getContext('2d');
-      var colors = new Map(WORDS.map(function (item) { return [item.text, item.color]; }));
-      var placed = WordCloudCore.layoutWordsInArea(
-        WORDS.map(function (item) { return [item.text, item.count]; }),
-        printArea.width,
-        printArea.height,
-        measurementContext,
-        function (word) { return colors.get(word); }
-      );
+      // Keep the landing-page product preview on the exact same optimization
+      // path, rather than merely using its rectangular bounds.
+      var optimalLayout = [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }];
 
-      function drawHomepageWords(ctx, metrics) {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'alphabetic';
-        placed.forEach(function (item) {
-          var x = metrics.offsetX + printArea.x + item.x;
-          var y = metrics.offsetY + printArea.y + item.y;
-          ctx.font = item.fontPx + 'px ' + WordCloudCore.FONT_FAMILY;
-          ctx.fillStyle = item.color;
-          if (item.rotated) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText(item.word, 0, item.fontPx * .34);
-            ctx.restore();
-          } else {
-            ctx.fillText(item.word, x, y + item.fontPx * .34);
-          }
+      // The mug's word cloud is baked onto a canvas texture, so it's invisible
+      // to i18n.js's DOM-text scan (unlike the hero's <span> cloud) — the
+      // words must be re-translated and the texture redrawn by hand whenever
+      // the locale changes.
+      function buildDrawTexture() {
+        var i18n = window.WolkenworteI18n;
+        var translate = i18n && i18n.t ? i18n.t : function (source) { return source; };
+        var placed = WORDS.map(function (configuration, index) {
+          return {
+            id: 'homepage-word-' + index,
+            text: translate(configuration.text),
+            x: configuration.x,
+            y: configuration.y,
+            // This is intentionally independent per word: changing one
+            // displayScale cannot cause the other manual words to repack.
+            fontSize: configuration.fontSize || Math.round(configuration.displayScale * 100),
+            angle: configuration.angle,
+            color: configuration.color
+          };
         });
+
+        return function drawHomepageWords(ctx, metrics) {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'alphabetic';
+          placed.forEach(function (item) {
+            var x = metrics.offsetX + item.x;
+            var y = metrics.offsetY + item.y;
+            ctx.font = item.fontSize + 'px ' + WordCloudCore.FONT_FAMILY;
+            ctx.fillStyle = item.color;
+            if (item.angle === -90) {
+              ctx.save();
+              ctx.translate(x, y);
+              ctx.rotate(-Math.PI / 2);
+              ctx.fillText(item.text, 0, item.fontSize * .34);
+              ctx.restore();
+            } else {
+              ctx.fillText(item.text, x, y + item.fontSize * .34);
+            }
+          });
+        };
       }
 
       var mug = Mug3DViewer.create({
@@ -491,11 +794,21 @@
         canvas: canvas,
         interactionElement: canvas,
         product: Mug3DViewer.DEFAULT_PRODUCT,
-        drawTexture: drawHomepageWords,
+        drawTexture: buildDrawTexture(),
         autoRotate: !reduceMotion,
         autoRotateDurationMs: 9000
       });
       window.addEventListener('resize', mug.resize);
+
+      // Redraw once more after the initial locale's message catalog finishes
+      // loading (the first draw above may have run before it arrived), and
+      // again on every subsequent language switch.
+      if (window.WolkenworteI18n && window.WolkenworteI18n.ready) {
+        window.WolkenworteI18n.ready().then(function () { mug.updateTexture(buildDrawTexture()); });
+      }
+      window.addEventListener('wolkenworte:localechange', function () {
+        mug.updateTexture(buildDrawTexture());
+      });
     })();
   </script>
 </body>

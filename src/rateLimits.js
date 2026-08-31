@@ -8,6 +8,7 @@ const LIMITS = Object.freeze({
   wordGuest: Object.freeze({ max: 30, windowMs: 60 * 1000 }),
   wordSource: Object.freeze({ max: 300, windowMs: 60 * 1000 }),
   wordRemoveGuest: Object.freeze({ max: 60, windowMs: 60 * 1000 }),
+  wordRemoveAdmin: Object.freeze({ max: 60, windowMs: 60 * 1000 }),
   themeGuest: Object.freeze({ max: 10, windowMs: 60 * 1000 }),
   themeEvent: Object.freeze({ max: 60, windowMs: 60 * 1000 }),
   socketEvent: Object.freeze({ max: 500 }),
