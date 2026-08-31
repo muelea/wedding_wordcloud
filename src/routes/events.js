@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const crypto = require('crypto');
 const QRCode = require('qrcode');
 const db = require('../db');
 const { slugify, makeUniqueSlug } = require('../slug');
@@ -700,6 +701,15 @@ async function estimateCartShipments({ body, countries, configurations }) {
 function makeRouter({ io, port, wordBroadcasts = null }) {
   const router = express.Router();
 
+  function draftOwnerHash(req, slug) {
+    const name = `ww-draft-${slug}=`;
+    const value = String(req.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(name));
+    if (!value) return '';
+    try {
+      return crypto.createHash('sha256').update(decodeURIComponent(value.slice(name.length))).digest('hex');
+    } catch { return ''; }
+  }
+
   function requestIdentities(req) {
     const sourceHash = sourceHashForRequest(req);
     const guestId = rateLimits.guestIdentity(req.get('X-Wolkenworte-Guest-Id'), sourceHash);
@@ -744,6 +754,22 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   });
 
   // ── Create event ──────────────────────────────────────────────────────
+  router.post('/events/draft', express.json(), asyncRoute(async (req, res) => {
+    const sourceHash = sourceHashForRequest(req);
+    if (!rateLimits.consume([{ name: 'event:create', key: sourceHash, ...rateLimits.LIMITS.eventCreate }])) return rateLimited(res);
+    const locale = I18n.normalizeLocale(req.body?.locale);
+    const ownerToken = crypto.randomBytes(32).toString('base64url');
+    const ownerHash = crypto.createHash('sha256').update(ownerToken).digest('hex');
+    let event = null;
+    for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
+      try {
+        event = await db.createDraftEvent({ slug: makeUniqueSlug('wortwolke', () => false), locale, ownerHash });
+      } catch (error) { if (error?.code !== '23505') throw error; }
+    }
+    if (!event) return res.status(500).json({ error: 'slug_generation_failed' });
+    res.cookie(`ww-draft-${event.slug}`, ownerToken, { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: 365 * 24 * 60 * 60 * 1000, path: '/' });
+    res.status(201).json({ slug: event.slug, guestUrl: `/e/${event.slug}` });
+  }));
   router.post('/events', express.json(), asyncRoute(async (req, res) => {
     const sourceHash = sourceHashForRequest(req);
     if (!rateLimits.consume([{
@@ -811,15 +837,93 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.json({
       slug: event.slug,
       coupleName: event.couple_name,
+      eventLabel: event.event_label || '',
       theme: event.theme,
       locale: event.locale,
+      hasAdminPin: Boolean(event.admin_pin_hash && event.admin_pin_salt),
+      isDraft: event.is_draft === true,
+      isDraftOwner: event.is_draft === true && Boolean(draftOwnerHash(req, event.slug)) && draftOwnerHash(req, event.slug) === event.draft_owner_hash,
     });
+  }));
+
+  router.post('/events/:slug/claim-draft', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
+    const coupleName = String(req.body?.coupleName || '').trim();
+    const pin = String(req.body?.pin || '');
+    if (!event || !event.is_draft) return res.status(404).json({ error: 'draft_not_found' });
+    if (!coupleName || coupleName.length > MAX_NAME_LENGTH) return res.status(400).json({ error: 'invalid_couple_name' });
+    if (!PIN_RE.test(pin)) return res.status(400).json({ error: 'invalid_pin' });
+    const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), coupleName, pin });
+    if (!claimed) return res.status(403).json({ error: 'not_draft_owner' });
+    res.clearCookie(`ww-draft-${event.slug}`, { path: '/' });
+    res.json({ slug: claimed.slug, coupleName: claimed.couple_name });
+  }));
+
+  // This verifies one settings interaction only; it deliberately issues no
+  // reusable credential, cookie or browser-side authorization token.
+  router.post('/events/:slug/verify-settings-pin', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
+    if (!event || event.is_draft || !event.admin_pin_hash || !event.admin_pin_salt) {
+      return res.status(400).json({ error: 'pin_not_configured' });
+    }
+    const authorization = await db.authorizeResetPin(event, req.body?.pin, sourceHashForRequest(req));
+    if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
+    return res.status(204).end();
+  }));
+
+  router.post('/events/:slug/settings', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
+    const coupleName = String(req.body?.coupleName || '').trim();
+    const eventLabel = String(req.body?.eventLabel || '').trim().slice(0, MAX_NAME_LENGTH);
+    const pin = String(req.body?.pin || '');
+    const newPin = String(req.body?.newPin || '');
+    if (!event || !coupleName || coupleName.length > MAX_NAME_LENGTH) return res.status(400).json({ error: 'invalid_couple_name' });
+    if (event.is_draft) {
+      if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
+      const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), coupleName, pin: newPin || null });
+      if (!claimed) return res.status(403).json({ error: 'not_draft_owner' });
+      const updated = await db.updateEventDetails({ eventId: event.id, coupleName, eventLabel });
+      res.clearCookie(`ww-draft-${event.slug}`, { path: '/' });
+      return res.json({ coupleName: updated.couple_name, eventLabel: updated.event_label || '' });
+    }
+    const hasAdminPin = Boolean(event.admin_pin_hash && event.admin_pin_salt);
+    if (hasAdminPin) {
+      const authorization = await db.authorizeResetPin(event, pin, sourceHashForRequest(req));
+      if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
+    }
+    if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
+    const updated = await db.updateEventDetails({ eventId: event.id, coupleName, eventLabel, newPin: newPin || null });
+    res.json({ coupleName: updated.couple_name, eventLabel: updated.event_label || '' });
+  }));
+
+  router.post('/events/:slug/remove-word', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'event_not_found' });
+    const word = normalizeWord(req.body?.word, event.locale);
+    if (!word) return res.status(400).json({ error: 'invalid_word' });
+    if (!rateLimits.consume([{
+      name: 'word:remove:admin', key: `${event.id}:${sourceHashForRequest(req)}`,
+      ...rateLimits.LIMITS.wordRemoveAdmin,
+    }])) return rateLimited(res);
+
+    if (event.is_draft) {
+      if (draftOwnerHash(req, event.slug) !== event.draft_owner_hash) return res.status(403).json({ error: 'not_draft_owner' });
+    } else if (event.admin_pin_hash && event.admin_pin_salt) {
+      const authorization = await db.authorizeResetPin(event, req.body?.pin, sourceHashForRequest(req));
+      if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
+    }
+
+    const removed = await db.removeWordForAdmin(event.id, word);
+    if (!removed) return res.status(404).json({ error: 'word_not_found' });
+    if (wordBroadcasts) wordBroadcasts.schedule(event);
+    else io.to(event.slug).emit('word-update', await db.getWords(event.id));
+    return res.json({ ok: true, word });
   }));
 
   router.get('/events/:slug/qr', asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const url = `${getBaseUrl(req, port)}/e/${event.slug}`;
+    const url = `${getBaseUrl(req, port)}/e/${event.slug}/display`;
     try {
       const dataUrl = await QRCode.toDataURL(url, {
         width: 220,

@@ -482,6 +482,9 @@ test('configurator exposes every curated product with verified Printful geometry
     fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
   ]);
   assert.match(landingPage, /mug-3d-viewer\.js\?v=20260821-1/);
+  assert.match(landingPage, /x: 170, y: 450, angle: -90/);
+  assert.match(landingPage, /fontSize: configuration\.fontSize \|\| Math\.round\(configuration\.displayScale \* 100\)/);
+  assert.match(landingPage, /x: configuration\.x,[\s\S]*?y: configuration\.y,[\s\S]*?angle: configuration\.angle/);
   assert.match(configurePage, /mug-3d-viewer\.js\?v=20260821-1/);
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="variant-options"/);
@@ -504,7 +507,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
-  assert.match(configurePage, /design-layout\.js\?v=20260826-4/);
+  assert.match(configurePage, /design-layout\.js\?v=20260830-1/);
   assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
   assert.match(configurePage, /mug-editor\.js\?v=20260827-10/);
   assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"[^>]*hidden/);

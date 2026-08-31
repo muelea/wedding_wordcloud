@@ -744,6 +744,15 @@
   <h1 id="couple-name" data-i18n-ignore>♡</h1>
 </section>
 
+<section class="creator-tools" id="draft-details" hidden>
+  <div class="creator-status"><div class="creator-copy"><strong>Diese Wortwolke gehört euch.</strong><span>Ihr könnt Namen und Admin-PIN auch später festlegen.</span></div></div>
+  <form id="draft-details-form" class="creator-actions">
+    <input id="draft-couple-name" type="text" maxlength="80" placeholder="Namen hinzufügen" aria-label="Namen" />
+    <input id="draft-pin" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN" aria-label="Admin-PIN" />
+    <button class="creator-action primary" type="submit">Speichern</button>
+  </form>
+</section>
+
 <main class="card">
   <section class="contribution" aria-labelledby="contribution-title">
     <h2 class="prompt" id="contribution-title">Teilt ein Wort für das Brautpaar.</h2>
@@ -1198,17 +1207,32 @@
 
   fetch(`/api/events/${encodeURIComponent(slug)}`)
     .then(r => r.json())
-    .then(async ({ coupleName, theme, locale }) => {
+    .then(async ({ coupleName, theme, locale, isDraft, isDraftOwner }) => {
       await WolkenworteI18n.useEventLocale(locale);
       document.getElementById('couple-name').textContent = coupleName;
       setText(document.querySelector('title'), '{{name}} – Wortwolke', { name: coupleName });
       if (!urlTheme && (theme === 'neon' || theme === 'pastel')) {
         applyTheme(theme);
       }
+      if (isDraft && isDraftOwner) {
+        document.getElementById('draft-details').hidden = false;
+        document.getElementById('contribution-title').textContent = 'Startet mit eurem ersten Wort.';
+        input.focus();
+      }
     })
     .catch(() => {});
 
   input.addEventListener('input', () => { charCount.textContent = input.value.length; });
+  document.getElementById('draft-details-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const coupleName = document.getElementById('draft-couple-name').value.trim();
+    const pin = document.getElementById('draft-pin').value.trim();
+    if (!coupleName || !/^\d{4,6}$/.test(pin)) return showFlash('Bitte Namen und einen PIN mit 4–6 Ziffern eingeben.');
+    const response = await fetch(`/api/events/${encodeURIComponent(slug)}/claim-draft`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coupleName, pin }) });
+    if (!response.ok) return showFlash('Die Angaben konnten nicht gespeichert werden.');
+    document.getElementById('couple-name').textContent = coupleName;
+    document.getElementById('draft-details').hidden = true;
+  });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) submitWord(); });
   btn.addEventListener('click', submitWord);
 

@@ -193,6 +193,46 @@ async function createEvent({ slug, coupleName, pin, locale = 'de' }) {
   });
 }
 
+async function createDraftEvent({ slug, locale = 'de', ownerHash, pin = null }) {
+  const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
+  return withTransaction(async (client) => {
+    await client.query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, transaction_timestamp())', [slug]);
+    const result = await client.query(`
+      INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt, locale, is_draft, draft_owner_hash, created_at, expires_at)
+      VALUES ($1, 'Eure Wortwolke', $2, $3, $4, true, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
+      RETURNING *
+    `, [slug, credentials.hash, credentials.salt, locale, ownerHash]);
+    return rowToBoundary(result.rows[0]);
+  });
+}
+
+async function claimDraftEvent({ eventId, ownerHash, coupleName, pin = null }) {
+  const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
+  const result = await getPool().query(`
+    UPDATE events SET couple_name = $1, admin_pin_hash = $2, admin_pin_salt = $3,
+      is_draft = false, draft_owner_hash = null
+    WHERE id = $4 AND is_draft = true AND draft_owner_hash = $5 AND expires_at > transaction_timestamp()
+    RETURNING *
+  `, [coupleName, credentials.hash, credentials.salt, eventId, ownerHash]);
+  return rowToBoundary(result.rows[0]);
+}
+
+async function updateEventDetails({ eventId, coupleName, eventLabel, newPin = null }) {
+  const params = [coupleName, eventLabel || null, eventId];
+  let pinSql = '';
+  if (newPin) {
+    const { hash, salt } = await hashPin(newPin);
+    params.splice(2, 0, hash, salt);
+    pinSql = ', admin_pin_hash = $3, admin_pin_salt = $4';
+    params[4] = eventId;
+  }
+  const result = await getPool().query(`
+    UPDATE events SET couple_name = $1, event_label = $2${pinSql}
+    WHERE id = $${params.length} AND expires_at > transaction_timestamp() RETURNING *
+  `, params);
+  return rowToBoundary(result.rows[0]);
+}
+
 async function getEventBySlug(slug) {
   const result = await getPool().query(`
     SELECT * FROM events
@@ -437,6 +477,27 @@ async function removeWordContribution(eventId, receiptId, ownerId) {
       `, [eventId, contribution.word]);
     }
     return contribution.word;
+  });
+}
+
+// An event administrator removes the complete aggregate, not just one
+// anonymous contribution. The contribution receipts are removed in the same
+// transaction so a later guest-side removal cannot alter a deleted word.
+async function removeWordForAdmin(eventId, word) {
+  return withTransaction(async (client) => {
+    const event = await client.query(`
+      SELECT id FROM events
+      WHERE id = $1 AND expires_at > transaction_timestamp()
+      FOR KEY SHARE
+    `, [eventId]);
+    if (!event.rowCount) return false;
+    const deleted = await client.query(
+      'DELETE FROM words WHERE event_id = $1 AND word = $2 RETURNING word',
+      [eventId, word]
+    );
+    if (!deleted.rowCount) return false;
+    await client.query('DELETE FROM word_contributions WHERE event_id = $1 AND word = $2', [eventId, word]);
+    return true;
   });
 }
 
@@ -2895,6 +2956,9 @@ module.exports = {
   hashPin,
   verifyPin,
   createEvent,
+  createDraftEvent,
+  claimDraftEvent,
+  updateEventDetails,
   getEventBySlug,
   getEventById,
   slugExists,
@@ -2908,6 +2972,7 @@ module.exports = {
   getWordContributions,
   getWordContributionsForOwners,
   removeWordContribution,
+  removeWordForAdmin,
   getWords,
   clearWords,
   archiveWords,

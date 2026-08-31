@@ -165,6 +165,40 @@
     return optimized;
   }
 
+  // Once an optimized group is safely packed, stretch only the distances
+  // between its centres towards the left and right print edges. The item
+  // dimensions do not change, and horizontal distances only increase, so this
+  // cannot create a new overlap. It prevents a sparse, short-word design from
+  // looking like a compact square in a wide print area such as a mug wrap.
+  function spreadItemsHorizontally(items, slot, measureContext, fontFamily, inset) {
+    if (items.length < 2) return items;
+    const dimensionsByItem = new Map(items.map((item) => [
+      item,
+      itemDimensions(item, 1, measureContext, fontFamily),
+    ]));
+    const leftItem = items.reduce((left, item) => (
+      item.x - dimensionsByItem.get(item).width / 2 < left.x - dimensionsByItem.get(left).width / 2
+        ? item
+        : left
+    ));
+    const rightItem = items.reduce((right, item) => (
+      item.x + dimensionsByItem.get(item).width / 2 > right.x + dimensionsByItem.get(right).width / 2
+        ? item
+        : right
+    ));
+    const sourceSpan = rightItem.x - leftItem.x;
+    if (leftItem === rightItem || sourceSpan <= 0) return items;
+
+    const leftHalfWidth = dimensionsByItem.get(leftItem).width / 2;
+    const rightHalfWidth = dimensionsByItem.get(rightItem).width / 2;
+    const targetLeftX = slot.x + inset + leftHalfWidth;
+    const targetRightX = slot.x + slot.width - inset - rightHalfWidth;
+    const scale = (targetRightX - targetLeftX) / sourceSpan;
+    if (scale <= 1) return items;
+    const offset = targetLeftX - leftItem.x * scale;
+    return items.map((item) => ({ ...item, x: round(item.x * scale + offset) }));
+  }
+
   function fitItemsInSlot(items, slot, measureContext, fontFamily) {
     if (!items.length) return [];
     const bounds = items.reduce((result, item) => {
@@ -280,7 +314,7 @@
     const targetCenterY = slot.y + slot.height / 2;
     const packedByIndex = new Map(best.map((item) => [item.index, item]));
 
-    return items.map((item, index) => {
+    const optimized = items.map((item, index) => {
       const packed = packedByIndex.get(index);
       return scaleItem(
         item,
@@ -289,6 +323,7 @@
         targetCenterY + (packed.y - sourceCenterY) * fitScale
       );
     });
+    return spreadItemsHorizontally(optimized, slot, measureContext, fontFamily, inset);
   }
 
   function optimizeDesign(design, slots, measureContext, options = {}) {

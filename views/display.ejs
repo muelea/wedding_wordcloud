@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" id="event-manifest" />
+  <meta name="theme-color" content="#9c1c4c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
@@ -90,33 +93,52 @@
       pointer-events: none;
     }
 
-    .word-counter { text-align: right; }
-
-    .word-counter .count {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: clamp(28px, 3.5vw, 48px);
-      color: var(--primary);
-      line-height: 1;
-      transition: color 0.6s;
-    }
-
-    .word-counter .label {
-      font-size: 10px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-top: 2px;
-      transition: color 0.6s;
-    }
 
     #cloud-container {
       position: fixed;
       top: var(--site-header-height);
-      left: 0; right: 0; bottom: 100px;
+      left: 0; right: 0; bottom: 180px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+
+    .display-word-entry {
+      position: fixed;
+      z-index: 12;
+      bottom: 116px;
+      left: 50%;
+      display: flex;
+      width: min(560px, calc(100% - 32px));
+      min-height: 52px;
+      padding: 5px;
+      transform: translateX(-50%);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bg) 94%, transparent);
+      box-shadow: 0 10px 28px rgba(64,15,38,.1);
+    }
+    .display-word-entry[hidden] { display: none !important; }
+    #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', system-ui, sans-serif; }
+    #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', system-ui, sans-serif; cursor: pointer; }
+    #display-word-close { width: 34px; border: 0; background: transparent; color: var(--muted); font: 300 25px/1 system-ui, sans-serif; cursor: pointer; }
+    .display-own-words { position: fixed; z-index: 11; bottom: 176px; left: 50%; display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; width: min(560px, calc(100% - 32px)); transform: translateX(-50%); }
+    .display-own-words[hidden] { display: none !important; }
+    .display-own-word { display: inline-flex; align-items: center; gap: 5px; min-height: 29px; padding: 3px 5px 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--bg) 94%, transparent); color: var(--text); font-size: 13px; box-shadow: 0 4px 14px rgba(64,15,38,.06); }
+    .display-own-remove { width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 19px/1 system-ui, sans-serif; cursor: pointer; }
+    .display-own-remove:hover { color: var(--primary); background: rgba(164,14,76,.1); }
+    .palette-options { display: grid; gap: 9px; }
+    .palette-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+    .palette-swatches { display: flex; overflow: hidden; border-radius: 999px; }
+    .palette-swatches i { width: 16px; height: 16px; }
+    .word-manager { border-top: 1px solid var(--border); padding-top: 14px; }
+    .word-manager summary { cursor: pointer; font: 600 15px 'Jost', sans-serif; color: var(--text); }
+    .word-manager-list { display: grid; gap: 7px; max-height: 210px; margin: 11px 0 0; overflow: auto; }
+    .word-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; padding: 4px 4px 4px 11px; border: 1px solid var(--border); border-radius: 10px; }
+    .word-manager-count { color: var(--muted); font-size: 12px; }
+    .word-manager-remove { width: 29px; height: 29px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
+    .word-manager-remove:hover { background: rgba(164,14,76,.1); color: var(--primary); }
+    .word-manager-empty { margin: 11px 0 0; color: var(--muted); font-size: 13px; }
 
     #cloud-canvas {
       display: block;
@@ -190,6 +212,9 @@
     }
 
     .qr-wrap { display: flex; align-items: center; gap: 14px; }
+    .share-save-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+    .share-save-actions button { padding: 0; border: 0; background: transparent; color: var(--muted); font: 600 11px/1 'Jost', system-ui, sans-serif; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+    .share-save-actions button:hover, .share-save-actions button:focus-visible { color: var(--primary); }
 
     .qr-label { text-align: right; }
     .qr-label .line1 {
@@ -331,6 +356,17 @@
     }
     .reset-dialog-button.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
     .reset-dialog-button:disabled { cursor: wait; opacity: .58; }
+    .draft-settings { width: min(420px, calc(100% - 32px)); border: 0; border-radius: 20px; padding: 0; color: var(--text); background: var(--bg); box-shadow: 0 24px 70px rgba(64,15,38,.22); }
+    .draft-settings::backdrop { background: rgba(64,15,38,.3); }
+    .draft-settings form { padding: 25px; display: grid; gap: 12px; }
+    .draft-settings h2 { font: 500 25px 'Playfair Display', Georgia, serif; color: var(--primary); }
+    .draft-settings p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .draft-settings label { display: grid; gap: 6px; color: var(--text); font-size: 14px; font-weight: 600; }
+    .draft-settings input { height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 15px 'Jost', sans-serif; }
+    .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .dialog-heading h2 { margin: 0; }
+    .dialog-close { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 26px/1 system-ui, sans-serif; cursor: pointer; }
+    .dialog-close:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
 
     @media (max-width: 620px) {
       :root {
@@ -346,6 +382,7 @@
       .footer-actions { display: none; }
       .qr-label .line2 { display: none; }
       .qr-code { width: 72px; height: 72px; }
+      .share-save-actions { gap: 8px; }
     }
   </style>
 </head>
@@ -354,10 +391,6 @@
 <%- include('partials/site-header') %>
 
 <aside class="cloud-status" aria-label="Live-Wortwolke">
-  <div class="word-counter">
-    <div class="count" id="word-total">0</div>
-    <div class="label">Wörter geteilt</div>
-  </div>
   <button id="memory-cta" title="Wortwolke verewigen">
     Wortwolke verewigen
   </button>
@@ -372,14 +405,23 @@
   </div>
 </div>
 
+<form class="display-word-entry" id="display-word-entry">
+  <input id="display-word-input" maxlength="30" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
+  <button id="display-word-submit" type="submit">Hinzufügen</button>
+  <button id="display-word-close" type="button" aria-label="Eingabe schließen" onclick="this.closest('form').hidden = true">×</button>
+</form>
+<section class="display-own-words" id="display-own-words" aria-label="Deine eingegebenen Wörter" hidden></section>
+
 <footer class="footer">
   <span class="footer-event-name" id="couple-name" data-i18n-ignore>♡</span>
   <div class="footer-actions">
-    <button id="theme-hint" type="button" title="Farbwelt wechseln">Farbwelt</button>
-    <button id="export-hint" type="button" title="Wortwolke herunterladen">Download</button>
-    <button id="clear-hint" type="button" title="Wörter archivieren &amp; neue Runde starten">Neue Runde</button>
+    <button id="draft-settings-button" type="button" hidden>Einstellungen</button>
   </div>
   <div class="qr-wrap">
+    <div class="share-save-actions">
+      <button id="share-cloud" type="button">Teilen</button>
+      <button id="save-cloud" type="button">Speichern</button>
+    </div>
     <div class="qr-label">
       <div class="line1">Scannen &amp; mitmachen</div>
       <div class="line2" id="qr-url"></div>
@@ -405,17 +447,75 @@
   </form>
 </dialog>
 
+<dialog class="draft-settings" id="save-cloud-dialog" aria-labelledby="save-cloud-title">
+  <form method="dialog">
+    <div class="dialog-heading"><h2 id="save-cloud-title">Wortwolke speichern</h2><button class="dialog-close" type="submit" aria-label="Hinweis schließen">×</button></div>
+    <p>Ihr könnt diese Wortwolke als App auf eurem Gerät ablegen und später direkt wieder öffnen.</p>
+    <p><strong>iPhone / iPad:</strong> Im Teilen-Menü auf „Zum Home-Bildschirm“ tippen.</p>
+    <p><strong>Computer oder Android:</strong> Im Browser-Menü „Installieren“ oder „App installieren“ wählen.</p>
+  </form>
+</dialog>
+
+<dialog class="draft-settings" id="draft-settings" aria-labelledby="draft-settings-title">
+  <form id="draft-settings-form">
+    <div class="dialog-heading"><h2 id="draft-settings-title">Einstellungen</h2><button class="dialog-close" type="button" aria-label="Einstellungen schließen" onclick="this.closest('dialog').close()">×</button></div>
+    <p>Gebt eurer Wortwolke einen Namen, ergänzt euren Anlass und wählt eine Farbwelt.</p>
+    <label for="draft-name">Für wen ist diese Wortwolke?
+      <input id="draft-name" maxlength="80" placeholder="z. B. Lea &amp; Max" required />
+    </label>
+    <label for="draft-event-label">Für welches Event? <span style="font-weight:400">(optional)</span>
+      <input id="draft-event-label" maxlength="80" placeholder="z. B. unsere Hochzeit" />
+    </label>
+    <div><h2 style="font-size:20px">Farbwelt</h2><div class="palette-options" id="palette-options"></div></div>
+    <details class="word-manager" id="word-manager"><summary>Wörter verwalten</summary><div class="word-manager-list" id="word-manager-list"></div><p class="word-manager-empty" id="word-manager-empty" hidden>Noch keine Wörter vorhanden.</p></details>
+    <button class="reset-dialog-button" id="show-word-entry" type="button">Eingabefeld anzeigen</button>
+    <p class="reset-dialog-error" id="draft-settings-error" role="alert" aria-live="polite"></p>
+    <button class="reset-dialog-button primary" type="submit">Speichern</button>
+  </form>
+</dialog>
+
+<dialog class="draft-settings" id="pin-choice-dialog" aria-labelledby="pin-choice-title">
+  <form method="dialog">
+    <h2 id="pin-choice-title">Einstellungen schützen?</h2>
+    <p>Möchtet ihr einen Admin-PIN festlegen? Damit können nur Personen mit dem PIN die Einstellungen ändern.</p>
+    <div class="reset-dialog-actions">
+      <button class="reset-dialog-button" id="pin-choice-no" value="cancel" type="button">Ohne PIN fortfahren</button>
+      <button class="reset-dialog-button primary" id="pin-choice-yes" value="default" type="button">PIN festlegen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="draft-settings" id="pin-setup-dialog" aria-labelledby="pin-setup-title">
+  <form id="pin-setup-form">
+    <h2 id="pin-setup-title">Admin-PIN festlegen</h2>
+    <p>Dieser PIN schützt spätere Änderungen an eurer Wortwolke.</p>
+    <input id="pin-setup-input" type="tel" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off" placeholder="PIN mit 4–6 Ziffern" required />
+    <p class="reset-dialog-error" id="pin-setup-error" role="alert" aria-live="polite"></p>
+    <button class="reset-dialog-button primary" type="submit">Weiter zu Einstellungen</button>
+  </form>
+</dialog>
+
+<dialog class="draft-settings" id="pin-unlock-dialog" aria-labelledby="pin-unlock-title">
+  <form id="pin-unlock-form">
+    <h2 id="pin-unlock-title">Admin-PIN eingeben</h2>
+    <p>Gebt den Admin-PIN ein, um die Einstellungen zu ändern.</p>
+    <input id="pin-unlock-input" type="tel" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off" placeholder="Admin-PIN" required />
+    <p class="reset-dialog-error" id="pin-unlock-error" role="alert" aria-live="polite"></p>
+    <button class="reset-dialog-button primary" type="submit">Weiter</button>
+  </form>
+</dialog>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/wordcloud-core.js?v=20260819-2"></script>
 <script>
   // Slug comes from the URL: /e/<slug>/display
   const slug = location.pathname.split('/').filter(Boolean)[1];
+  document.getElementById('event-manifest').href = `/e/${encodeURIComponent(slug)}/manifest.webmanifest`;
 
   const canvas         = document.getElementById('cloud-canvas');
   const ctx             = canvas.getContext('2d');
   const container       = document.getElementById('cloud-container');
   const emptyState      = document.getElementById('empty-state');
-  const wordTotalEl     = document.getElementById('word-total');
   const toastContainer  = document.getElementById('toast-container');
   const memoryCta       = document.getElementById('memory-cta');
   const resetDialog     = document.getElementById('reset-dialog');
@@ -424,6 +524,20 @@
   const resetError      = document.getElementById('reset-error');
   const resetCancel     = document.getElementById('reset-cancel');
   const resetSubmit     = document.getElementById('reset-submit');
+  const displayWordEntry = document.getElementById('display-word-entry');
+  const displayWordInput = document.getElementById('display-word-input');
+  const displayOwnWords = document.getElementById('display-own-words');
+  const draftSettings = document.getElementById('draft-settings');
+  const draftSettingsButton = document.getElementById('draft-settings-button');
+  let eventHasAdminPin = false;
+  let eventIsDraft = false;
+  let unlockedAdminPin = '';
+  let pendingAdminPin = '';
+  let guestUrl = '';
+  let cloudName = '';
+  let cloudEventLabel = '';
+  let deferredInstallPrompt = null;
+  const ownDisplayWords = new Map();
   const t = (source, params) => WolkenworteI18n.t(source, params);
   const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
   const clearText = (element) => WolkenworteI18n.clearText(element);
@@ -431,7 +545,12 @@
   let currentWords = [];
   let renderTimer  = null;
   let lastWords    = null;
-  let getWordColor = WordCloudCore.makeColorAssigner('pastel');
+  const PALETTES = {
+    pastel: { label: 'Sorbet Pop', colors: ['#a40e4c', '#d90368', '#f45b69', '#ff7f3f', '#6a4c93', '#168f83'], background: ['#fffdfa', '#fff3f5', 'rgba(247,238,223,.7)', 'rgba(209,96,126,.08)'] },
+    'sage-gold': { label: 'Smaragd & Gold', colors: ['#063e36', '#006d5b', '#14967f', '#8f6100', '#d0920f', '#654100'], background: ['#f7fbf5', '#edf6ef', 'rgba(20,150,127,.13)', 'rgba(208,146,15,.10)'] },
+    ocean: { label: 'Ocean Electric', colors: ['#003049', '#00509d', '#0077b6', '#0096c7', '#00a6a6', '#136f63'], background: ['#f4f9fc', '#eaf4fa', 'rgba(0,119,182,.13)', 'rgba(0,166,166,.10)'] },
+  };
+  let getWordColor = WordCloudCore.makePaletteAssigner(PALETTES.pastel.colors);
 
   // ── Theme ─────────────────────────────────────────────────────────────────
   const urlTheme = new URLSearchParams(location.search).get('theme');
@@ -439,9 +558,18 @@
 
   function applyTheme(t) {
     currentTheme = t;
-    getWordColor = WordCloudCore.makeColorAssigner(t); // re-assign colors from new palette
     document.documentElement.dataset.theme = t;
     if (currentWords.length > 0) scheduleRender(currentWords);
+  }
+  function applyPalette(key) {
+    const palette = PALETTES[key] || PALETTES.pastel;
+    const root = document.documentElement.style;
+    getWordColor = WordCloudCore.makePaletteAssigner(palette.colors);
+    root.setProperty('--primary', palette.colors[0]);
+    root.setProperty('--accent', palette.colors[4]);
+    root.setProperty('--bg', palette.background[0]); root.setProperty('--bg2', palette.background[1]);
+    root.setProperty('--rad1', palette.background[2]); root.setProperty('--rad2', palette.background[3]);
+    if (currentWords.length) scheduleRender(currentWords);
   }
 
   function renderCloud(words) {
@@ -487,26 +615,218 @@
   }
 
   // ── Config & QR ──────────────────────────────────────────────────────────
-  fetch(`/api/events/${encodeURIComponent(slug)}`).then(r => r.json()).then(async ({ coupleName, theme, locale }) => {
+  fetch(`/api/events/${encodeURIComponent(slug)}`).then(r => r.json()).then(async ({ coupleName, eventLabel, theme, locale, isDraft, isDraftOwner, hasAdminPin }) => {
     await WolkenworteI18n.useEventLocale(locale);
     document.getElementById('couple-name').textContent = coupleName;
+    cloudName = coupleName || '';
+    cloudEventLabel = eventLabel || '';
     setText(document.querySelector('title'), '{{name}} – Wortwolke', { name: coupleName });
     if (!urlTheme && (theme === 'neon' || theme === 'pastel')) applyTheme(theme);
+    draftSettingsButton.hidden = false;
+    eventHasAdminPin = hasAdminPin === true;
+    eventIsDraft = isDraft === true;
+    document.getElementById('draft-name').value = coupleName || '';
+    document.getElementById('draft-event-label').value = eventLabel || '';
+    if (isDraftOwner) displayWordInput.focus();
   }).catch(() => {});
 
   fetch(`/api/events/${encodeURIComponent(slug)}/qr`).then(r => r.json()).then(({ dataUrl, url }) => {
     document.getElementById('qr-img').src = dataUrl;
     document.getElementById('qr-url').textContent = url.replace('http://', '').replace('https://', '');
+    guestUrl = url;
   }).catch(() => {});
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    document.getElementById('save-cloud').textContent = 'Gespeichert ✓';
+  });
+  document.getElementById('share-cloud').addEventListener('click', async () => {
+    const url = guestUrl || `${location.origin}/e/${encodeURIComponent(slug)}`;
+    const eventSuffix = cloudEventLabel ? ` zum ${cloudEventLabel}` : '';
+    const message = `Hallo,\n\ndu bist herzlich eingeladen, dich an der Wortwolke für ${cloudName || 'uns'}${eventSuffix} zu beteiligen.\n\nWort eingeben & Wortwolke ansehen: ${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `Wortwolke für ${cloudName || 'uns'}`, text: message });
+        return;
+      }
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(message);
+      else {
+        const temporaryInput = document.createElement('textarea');
+        temporaryInput.value = message; temporaryInput.setAttribute('readonly', '');
+        temporaryInput.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.appendChild(temporaryInput); temporaryInput.select();
+        const copied = document.execCommand('copy'); temporaryInput.remove();
+        if (!copied) throw new Error('copy_failed');
+      }
+      document.getElementById('share-cloud').textContent = 'Link kopiert ✓';
+      setTimeout(() => { document.getElementById('share-cloud').textContent = 'Teilen'; }, 1800);
+    } catch (error) {
+      if (error?.name !== 'AbortError') document.getElementById('share-cloud').textContent = 'Link kopieren';
+    }
+  });
+  document.getElementById('save-cloud').addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      return;
+    }
+    document.getElementById('save-cloud-dialog').showModal();
+  });
 
   applyTheme(currentTheme);
 
   // ── Socket (room-scoped to this event via ?slug=) ───────────────────────
+  function getOrCreateGuestId() {
+    const storageKey = `guest-session:${slug}`;
+    try {
+      const existing = sessionStorage.getItem(storageKey);
+      if (/^[a-f0-9]{32}$/.test(existing || '')) return existing;
+    } catch {}
+    const bytes = new Uint8Array(16);
+    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+    else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+    const guestId = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    try { sessionStorage.setItem(storageKey, guestId); } catch {}
+    return guestId;
+  }
+  const guestId = getOrCreateGuestId();
   const socket = io({
-    query: { slug },
+    query: { slug, guestId },
     transports: ['websocket', 'polling'],
     tryAllTransports: true,
     timeout: 7000,
+  });
+  displayWordEntry.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const word = displayWordInput.value.trim();
+    if (!word) return;
+    socket.emit('submit-word', word);
+    displayWordInput.value = '';
+  });
+  document.getElementById('display-word-close').addEventListener('click', () => { displayWordEntry.hidden = true; });
+  function addOwnDisplayWord(word, receipt) {
+    if (!word || !receipt || ownDisplayWords.has(receipt)) return;
+    const tag = document.createElement('span'); tag.className = 'display-own-word';
+    const label = document.createElement('span'); label.textContent = word;
+    const remove = document.createElement('button'); remove.className = 'display-own-remove'; remove.type = 'button'; remove.textContent = '×';
+    remove.setAttribute('aria-label', `„${word}“ entfernen`);
+    remove.addEventListener('click', () => {
+      remove.disabled = true;
+      socket.emit('remove-word', { receipt }, (result) => {
+        if (result?.ok || result?.error === 'not_found') {
+          ownDisplayWords.delete(receipt); tag.remove();
+          displayOwnWords.hidden = ownDisplayWords.size === 0;
+        } else remove.disabled = false;
+      });
+    });
+    tag.append(label, remove); displayOwnWords.appendChild(tag);
+    ownDisplayWords.set(receipt, tag); displayOwnWords.hidden = false;
+  }
+  function renderOwnDisplayWords(contributions) {
+    ownDisplayWords.clear(); displayOwnWords.replaceChildren();
+    for (const contribution of Array.isArray(contributions) ? contributions : []) addOwnDisplayWord(contribution?.word, contribution?.receipt);
+    displayOwnWords.hidden = ownDisplayWords.size === 0;
+  }
+  socket.on('own-word-update', renderOwnDisplayWords);
+  socket.on('word-accepted', (word, receipt) => addOwnDisplayWord(word, receipt));
+  for (const [key, palette] of Object.entries(PALETTES)) {
+    const button = document.createElement('button'); button.className = 'palette-option'; button.type = 'button';
+    button.innerHTML = `<strong>${palette.label}</strong><span class="palette-swatches">${palette.colors.map((color) => `<i style="background:${color}"></i>`).join('')}</span>`;
+    button.addEventListener('click', () => applyPalette(key));
+    document.getElementById('palette-options').appendChild(button);
+  }
+  applyPalette('pastel');
+  function openSettings() {
+    document.getElementById('draft-settings-error').textContent = '';
+    renderWordManager();
+    draftSettings.showModal();
+    document.getElementById('draft-name').focus();
+  }
+  draftSettingsButton.addEventListener('click', () => {
+    unlockedAdminPin = ''; pendingAdminPin = '';
+    if (eventHasAdminPin) {
+      document.getElementById('pin-unlock-input').value = '';
+      document.getElementById('pin-unlock-error').textContent = '';
+      document.getElementById('pin-unlock-dialog').showModal();
+      document.getElementById('pin-unlock-input').focus();
+    } else if (eventIsDraft) {
+      document.getElementById('pin-choice-dialog').showModal();
+    } else openSettings();
+  });
+  document.getElementById('pin-choice-no').addEventListener('click', () => {
+    document.getElementById('pin-choice-dialog').close(); openSettings();
+  });
+  document.getElementById('pin-choice-yes').addEventListener('click', () => {
+    document.getElementById('pin-choice-dialog').close();
+    document.getElementById('pin-setup-input').value = '';
+    document.getElementById('pin-setup-error').textContent = '';
+    document.getElementById('pin-setup-dialog').showModal();
+    document.getElementById('pin-setup-input').focus();
+  });
+  document.getElementById('pin-setup-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const pin = document.getElementById('pin-setup-input').value.trim();
+    if (!/^\d{4,6}$/.test(pin)) { document.getElementById('pin-setup-error').textContent = 'Bitte 4–6 Ziffern eingeben.'; return; }
+    pendingAdminPin = pin;
+    document.getElementById('pin-setup-dialog').close(); openSettings();
+  });
+  document.getElementById('pin-unlock-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const pin = document.getElementById('pin-unlock-input').value.trim();
+    const response = await fetch(`/api/events/${encodeURIComponent(slug)}/verify-settings-pin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+    if (!response.ok) { document.getElementById('pin-unlock-error').textContent = 'Der Admin-PIN ist nicht korrekt.'; return; }
+    unlockedAdminPin = pin;
+    document.getElementById('pin-unlock-dialog').close(); openSettings();
+  });
+  document.getElementById('show-word-entry').addEventListener('click', () => {
+    displayWordEntry.hidden = false;
+    draftSettings.close();
+    displayWordInput.focus();
+  });
+  function renderWordManager() {
+    const list = document.getElementById('word-manager-list');
+    const empty = document.getElementById('word-manager-empty');
+    list.replaceChildren();
+    const words = [...currentWords].sort(([a], [b]) => a.localeCompare(b, 'de'));
+    empty.hidden = words.length > 0;
+    for (const [word, count] of words) {
+      const item = document.createElement('div'); item.className = 'word-manager-item';
+      const label = document.createElement('span'); label.textContent = word;
+      const countLabel = document.createElement('span'); countLabel.className = 'word-manager-count'; countLabel.textContent = count > 1 ? `× ${count}` : '';
+      const remove = document.createElement('button'); remove.className = 'word-manager-remove'; remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', `„${word}“ entfernen`);
+      remove.addEventListener('click', async () => {
+        remove.disabled = true;
+        const response = await fetch(`/api/events/${encodeURIComponent(slug)}/remove-word`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word, pin: unlockedAdminPin }) });
+        if (!response.ok) { document.getElementById('draft-settings-error').textContent = 'Das Wort konnte nicht entfernt werden.'; remove.disabled = false; }
+      });
+      const left = document.createElement('span'); left.append(label, countLabel);
+      item.append(left, remove); list.appendChild(item);
+    }
+  }
+  document.getElementById('draft-settings-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const coupleName = document.getElementById('draft-name').value.trim();
+    const eventLabel = document.getElementById('draft-event-label').value.trim();
+    if (!coupleName) return;
+    const response = await fetch(`/api/events/${encodeURIComponent(slug)}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coupleName, eventLabel, pin: unlockedAdminPin, newPin: pendingAdminPin }) });
+    if (!response.ok) {
+      document.getElementById('draft-settings-error').textContent = response.status === 401
+        ? 'Der Admin-PIN ist nicht korrekt.'
+        : 'Die Einstellungen konnten nicht gespeichert werden.';
+      return;
+    }
+    document.getElementById('couple-name').textContent = coupleName;
+    cloudName = coupleName;
+    cloudEventLabel = eventLabel;
+    eventHasAdminPin = eventHasAdminPin || Boolean(pendingAdminPin);
+    eventIsDraft = false;
+    draftSettings.close();
   });
   let socketHasConnected = false;
   socket.on('connect_error', () => {
@@ -519,9 +839,7 @@
 
   socket.on('word-update', (words) => {
     currentWords = words;
-    const total = words.reduce((s, [, c]) => s + c, 0);
-    wordTotalEl.textContent = total;
-
+    if (draftSettings.open) renderWordManager();
     memoryCta.classList.toggle('visible', words.length > 0);
 
     if (words.length === 0) {
@@ -551,36 +869,6 @@
     setText(errorState, 'Diese Wortwolke wurde nicht gefunden.');
     document.body.replaceChildren(errorState);
   });
-
-  // ── Theme toggle ──────────────────────────────────────────────────────────
-  function toggleTheme() {
-    const next = currentTheme === 'neon' ? 'pastel' : 'neon';
-    applyTheme(next);
-    socket.emit('theme-change', next);
-  }
-
-  document.getElementById('theme-hint').addEventListener('click', toggleTheme);
-
-  // ── SVG export (for print) ───────────────────────────────────────────────
-  function exportSVG() {
-    if (!currentWords.length) return;
-    const side = 2000; // fixed high-resolution square so print output stays crisp
-    const measureCtx = document.createElement('canvas').getContext('2d');
-    const exportColorFn = WordCloudCore.makeColorAssigner(currentTheme);
-    const placed = WordCloudCore.layoutWords(currentWords, side, measureCtx, exportColorFn);
-    const svg = WordCloudCore.buildSVG(placed, side, currentTheme);
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `wortwolke-${currentTheme}-${new Date().toISOString().slice(0, 10)}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  document.getElementById('export-hint').addEventListener('click', exportSVG);
 
   // ── New session (archive current words on the server, then clear) ───────
   function startNewSession() {
@@ -621,8 +909,6 @@
     WolkenworteActions.setBusy(resetSubmit, false);
     resetCancel.disabled = false;
   });
-
-  document.getElementById('clear-hint').addEventListener('click', startNewSession);
 
   // ── Product configurator ──────────────────────────────────────────────────
   memoryCta.addEventListener('click', () => {

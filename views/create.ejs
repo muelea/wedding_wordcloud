@@ -287,6 +287,18 @@
 </main>
 
 <script>
+  // Starting is intentionally frictionless: create an owner-bound draft, then
+  // let the couple add its first word before deciding on names and a PIN.
+  (async () => {
+    try {
+      const response = await fetch('/api/events/draft', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: WolkenworteI18n.getLocale() }),
+      });
+      const draft = await response.json();
+      if (response.ok) location.replace(`${draft.guestUrl}/display`);
+    } catch {}
+  })();
   const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
   const coupleNameInput = document.getElementById('couple-name');
   const slugInput        = document.getElementById('slug');
