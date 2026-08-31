@@ -2,9 +2,11 @@
 
 const crypto = require('node:crypto');
 const path = require('node:path');
+const { Pool } = require('pg');
 const { io: ioClient } = require('socket.io-client');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { connectionOptions } = require('../src/dbConfig');
 
 const requestedBaseUrl = process.argv.slice(2).find((argument) => !argument.startsWith('--'));
 const baseUrl = String(requestedBaseUrl || process.env.PUBLIC_URL || 'https://wolkenworte.fly.dev')
@@ -76,7 +78,40 @@ function once(socket, event, timeoutMs = 20_000) {
   });
 }
 
-async function main() {
+async function cleanupFixture(fixture, dependencies = {}) {
+  if (!fixture?.slug) return;
+  const connectionString = dependencies.connectionString || process.env.MIGRATION_DATABASE_URL;
+  if (!connectionString) throw new Error('MIGRATION_DATABASE_URL fehlt für die Hosted-Smoke-Bereinigung.');
+  const pool = dependencies.pool || new Pool(connectionOptions(connectionString, {
+    schema: 'public',
+    applicationName: 'wolkenworte-hosted-smoke-cleanup',
+    requireDirect: false,
+  }));
+  const ownsPool = !dependencies.pool;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const event = await client.query(`
+      SELECT id FROM public.events
+      WHERE slug = $1 AND couple_name = $2
+      FOR UPDATE
+    `, [fixture.slug, fixture.coupleName]);
+    if (event.rowCount === 1) {
+      await client.query('DELETE FROM public.configurations WHERE event_id = $1', [event.rows[0].id]);
+      await client.query('DELETE FROM public.events WHERE id = $1', [event.rows[0].id]);
+      await client.query('DELETE FROM public.reserved_event_slugs WHERE slug = $1', [fixture.slug]);
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch { /* preserve error */ }
+    throw error;
+  } finally {
+    client.release();
+    if (ownsPool) await pool.end();
+  }
+}
+
+async function runSmoke(fixture) {
   const parsed = new URL(baseUrl);
   if (parsed.protocol !== 'https:') throw new Error('Hosted smoke requires an HTTPS base URL.');
   const startedAt = Date.now();
@@ -98,11 +133,12 @@ async function main() {
   }
 
   const adminPin = String(crypto.randomInt(1000, 10_000));
+  fixture.coupleName = `Hosted Smoke ${new Date().toISOString()}`;
   const eventResponse = await fetchWithTimeout('/api/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      coupleName: `Hosted Smoke ${new Date().toISOString()}`,
+      coupleName: fixture.coupleName,
       slug: 'hosted-smoke',
       pin: adminPin,
       locale: 'de',
@@ -112,6 +148,7 @@ async function main() {
   if (eventResponse.status !== 201 || typeof event.slug !== 'string' || 'adminToken' in event) {
     throw new Error(`event creation smoke failed (${eventResponse.status})`);
   }
+  fixture.slug = event.slug;
 
   const { socket } = await connectSocket(event.slug);
   try {
@@ -177,7 +214,6 @@ async function main() {
   if (configurationResponse.status !== 201 || !configuration.id || !configuration.printFileUrl) {
     throw new Error(`configuration smoke failed (${configurationResponse.status})`);
   }
-
   const editableResponse = await fetchWithTimeout(
     `/api/events/${encodeURIComponent(event.slug)}/configurations/${encodeURIComponent(configuration.id)}/edit`
   );
@@ -227,6 +263,15 @@ async function main() {
   );
 }
 
+async function main() {
+  const fixture = {};
+  try {
+    return await runSmoke(fixture);
+  } finally {
+    await cleanupFixture(fixture);
+  }
+}
+
 if (require.main === module) {
   main().catch((error) => {
     console.error('[smoke] hosted verification failed:', error.message);
@@ -234,4 +279,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { fetchWithTimeout, main, waitUntilReady };
+module.exports = { cleanupFixture, fetchWithTimeout, main, runSmoke, waitUntilReady };

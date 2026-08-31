@@ -180,6 +180,11 @@ test('container, Fly config and local deployment command enforce the hosting bou
   assert.equal(commands[8], 'flyctl status --app wolkenworte');
   assert.equal(steps[4].releaseBoundary, true);
 
+  const hostedSmoke = fs.readFileSync(path.join(ROOT, 'scripts', 'hosted-smoke.js'), 'utf8');
+  assert.match(hostedSmoke, /finally\s*\{\s*await cleanupFixture\(fixture\)/);
+  assert.match(hostedSmoke, /DELETE FROM public\.configurations WHERE event_id = \$1/);
+  assert.match(hostedSmoke, /DELETE FROM public\.reserved_event_slugs WHERE slug = \$1/);
+
   assert.match(secretScript, /MIGRATION_DATABASE_URL darf niemals an Fly übertragen/);
   assert.doesNotMatch(secretScript.match(/const REQUIRED = \[[\s\S]*?\];/)?.[0] || '', /MIGRATION_DATABASE_URL/);
   assert.doesNotMatch(
