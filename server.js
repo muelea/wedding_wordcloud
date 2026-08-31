@@ -11,7 +11,6 @@ const crypto = require('crypto');
 
 const db = require('./src/db');
 const { makeUniqueSlug } = require('./src/slug');
-const I18n = require('./src/i18n');
 const { sourceHashForRequest } = require('./src/clientIdentity');
 const rateLimits = require('./src/rateLimits');
 const { attachSocketHandlers } = require('./src/socket');
@@ -27,7 +26,7 @@ const printArtifacts = require('./src/printArtifacts');
 const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
 const { staticCacheMiddleware } = require('./src/httpCache');
-const { renderPage } = require('./src/pageRenderer');
+const { renderPage, resolvePageLocale } = require('./src/pageRenderer');
 const performanceProbe = require('./src/performanceProbe');
 const { createWordUpdateBroadcaster } = require('./src/wordBroadcasts');
 const log = require('./src/structuredLog');
@@ -192,7 +191,7 @@ app.get('/start', asyncRoute(async (req, res) => {
 
   const ownerToken = crypto.randomBytes(32).toString('base64url');
   const ownerHash = crypto.createHash('sha256').update(ownerToken).digest('hex');
-  const locale = I18n.normalizeLocale(req.query.lang);
+  const locale = resolvePageLocale(req).locale;
   let event = null;
   for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
     try {

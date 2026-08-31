@@ -29,36 +29,40 @@ test('event creation & slug-preview flow', async (t) => {
   assert.equal(event.displayUrl, `/e/${event.slug}/display`);
   assert.equal('adminToken' in event, false);
 
-  // Creating a cloud now hands the couple straight to the guest experience;
-  // the old intermediate success screen no longer adds an extra decision.
-  const startHtml = await fetch(`${baseUrl}/start`).then((r) => r.text());
-  assert.match(startHtml, /location\.assign\(data\.guestUrl\)/);
-  assert.doesNotMatch(startHtml, /id="success"/);
+  // Starting now creates an owner-bound draft immediately and sends the
+  // browser straight to its unified live display.
+  const startResponse = await fetch(`${baseUrl}/start`, { redirect: 'manual' });
+  assert.equal(startResponse.status, 303);
+  const startLocation = startResponse.headers.get('location') || '';
+  const draftLocationMatch = /^\/e\/(wortwolke-[23456789abcdefghjkmnpqrstuvwxyz]{5})\/display$/.exec(startLocation);
+  assert.ok(draftLocationMatch, `unexpected draft display location: ${startLocation}`);
+  const draftSlug = draftLocationMatch[1];
+  const draftCookie = (startResponse.headers.get('set-cookie') || '').split(';')[0];
+  assert.match(draftCookie, new RegExp(`^ww-draft-${draftSlug}=`));
+  const draftInfo = await fetch(`${baseUrl}/api/events/${draftSlug}`, {
+    headers: { Cookie: draftCookie },
+  }).then((response) => response.json());
+  assert.equal(draftInfo.isDraft, true);
+  assert.equal(draftInfo.isDraftOwner, true);
+  assert.equal(draftInfo.hasAdminPin, false);
 
-  // The guest page doubles as the lightweight control point: everybody can
-  // preview the live cloud, share the guest link and open the dedicated
-  // display from the same page.
-  const guestHtml = await fetch(`${baseUrl}${event.guestUrl}`).then((r) => r.text());
-  assert.match(guestHtml, /id="preview-trigger"/);
-  assert.match(guestHtml, /id="cloud-preview"/);
-  assert.match(guestHtml, /id="preview-memory-cta"[^>]*hidden>Wortwolke verewigen<\/a>/);
-  assert.match(guestHtml, /previewMemoryCta\.href = `\/e\/\$\{encodeURIComponent\(slug\)\}\/configure`/);
-  assert.match(guestHtml, /previewMemoryCta\.hidden = currentWords\.length === 0/);
-  assert.match(guestHtml, /id="creator-tools" aria-label="Wortwolke teilen und Anzeige öffnen">/);
-  assert.match(guestHtml, /id="contribution-title">Teilt ein Wort für das Brautpaar\.<\/h2>/);
-  assert.match(guestHtml, /id="submit-btn" type="button" aria-label="Wort teilen"/);
-  assert.match(guestHtml, /id="flash" role="status" aria-live="polite"/);
-  assert.match(guestHtml, /Persönliche Erinnerung gestalten/);
-  assert.doesNotMatch(guestHtml, /Persönliche Tasse gestalten/);
-  assert.doesNotMatch(guestHtml, /class="ornament"/);
-  assert.match(guestHtml, /id="preview-qr"/);
-  assert.match(guestHtml, /id="preview-qr-img"/);
-  assert.match(guestHtml, /Scannen &amp; mitmachen/);
-  assert.match(guestHtml, /\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
-  assert.doesNotMatch(guestHtml, /Creator-Modus/);
-  assert.doesNotMatch(guestHtml, /creatorTools\.hidden = !isCreator/);
-  assert.doesNotMatch(guestHtml, /previewDisplayLink\.hidden = !isCreator/);
-  assert.match(guestHtml, /socket\.on\('word-update', updatePreview\)/);
+  // Old guest links remain valid, but both creators and contributors now use
+  // the same display, which contains contribution, sharing and save controls.
+  const guestResponse = await fetch(`${baseUrl}${event.guestUrl}`, { redirect: 'manual' });
+  assert.equal(guestResponse.status, 302);
+  assert.equal(guestResponse.headers.get('location'), event.displayUrl);
+  const displayHtml = await fetch(`${baseUrl}${event.displayUrl}`).then((response) => response.text());
+  assert.match(displayHtml, /id="cloud-container"/);
+  assert.match(displayHtml, /id="display-word-entry"/);
+  assert.match(displayHtml, /id="display-word-input"/);
+  assert.match(displayHtml, /id="display-word-submit"/);
+  assert.match(displayHtml, /id="display-own-words"/);
+  assert.match(displayHtml, /id="memory-cta" title="Wortwolke verewigen"/);
+  assert.match(displayHtml, /id="share-cloud"/);
+  assert.match(displayHtml, /id="save-cloud"/);
+  assert.match(displayHtml, /id="draft-settings-button"/);
+  assert.match(displayHtml, /\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
+  assert.match(displayHtml, /socket\.on\('word-update', \(words\) =>/);
 
   // The prefix alone stays a valid preview after creation too -- previewing
   // it is not a "taken" check anymore, so it doesn't flip to invalid.

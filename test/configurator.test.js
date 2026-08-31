@@ -482,7 +482,7 @@ test('configurator exposes every curated product with verified Printful geometry
     fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
   ]);
   assert.match(landingPage, /mug-3d-viewer\.js\?v=20260821-1/);
-  assert.match(landingPage, /x: 170, y: 450, angle: -90/);
+  assert.match(landingPage, /x: 200, y: 450, angle: -90/);
   assert.match(landingPage, /fontSize: configuration\.fontSize \|\| Math\.round\(configuration\.displayScale \* 100\)/);
   assert.match(landingPage, /x: configuration\.x,[\s\S]*?y: configuration\.y,[\s\S]*?angle: configuration\.angle/);
   assert.match(configurePage, /mug-3d-viewer\.js\?v=20260821-1/);

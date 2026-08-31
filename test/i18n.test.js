@@ -97,7 +97,13 @@ test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
     const html = viewSource(filename);
     assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260829-2" \/>/, filename);
-    assert.match(html, /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/, filename);
+    assert.match(
+      html,
+      filename === 'landing.ejs'
+        ? /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-3" \/>/
+        : /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/,
+      filename
+    );
     assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-3"><\/script>/, filename);
     assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-2" \/>/, filename);
     assert.match(html, /include\('partials\/site-header'\)/,
@@ -126,8 +132,9 @@ test('customer-facing actions stay calm and do not expose staging or provider na
   assert.doesNotMatch(confirmation, /Stripe-Testmodus|Testzahlung erfolgreich|Dies war eine Testzahlung/);
   assert.doesNotMatch(create, /Wird geprüft…|Wird gestartet…/);
   assert.doesNotMatch(guest, /window\.prompt/);
-  assert.doesNotMatch(display, /\b(?:confirm|prompt|alert)\s*\(/);
-  assert.match(display, /<button id="clear-hint" type="button"/);
+  assert.doesNotMatch(display, /(?:^|[^\w$.])(?:window\.)?(?:confirm|prompt|alert)\s*\(/m);
+  assert.match(display, /<dialog class="reset-dialog" id="reset-dialog"/);
+  assert.match(display, /<button class="reset-dialog-button" id="reset-cancel" type="button">Abbrechen<\/button>/);
 
   for (const filename of ['create.ejs', 'configure.ejs', 'shipping.ejs', 'display.ejs']) {
     const page = viewSource(filename);
@@ -191,7 +198,7 @@ test('guest and display pages keep event content below a dedicated branded heade
   }
 
   assert.match(guestPage, /<section class="event-intro"/);
-  assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="word-total"/);
+  assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="memory-cta"/);
   assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="couple-name" data-i18n-ignore/);
   assert.doesNotMatch(displayPage, /display-meta/,
     'the display must not add a second header-like metadata bar');
@@ -337,19 +344,30 @@ test('event locale is validated, persisted and returned by public APIs', async (
   assert.match(frenchLanding.headers.get('set-cookie') || '', /wolkenworte-language=fr/);
   const frenchLandingHtml = await frenchLanding.text();
   assert.match(frenchLandingHtml, /<html lang="fr">/);
-  assert.match(frenchLandingHtml, /Wolkenworte – Votre mariage en un mot/);
-  assert.match(frenchLandingHtml, /Comment ça marche/);
-  assert.match(frenchLandingHtml, /Commencer gratuitement/);
+  assert.match(frenchLandingHtml, /Wolkenworte – Vos souvenirs en un mot/);
+  assert.match(frenchLandingHtml, /Commencer ici/);
   assert.match(frenchLandingHtml, /ww-language-current-name">Français/);
 
   const rememberedStart = await fetch(`${baseUrl}/start`, {
     headers: { Cookie: 'wolkenworte-language=fr' },
+    redirect: 'manual',
   });
-  assert.equal(rememberedStart.status, 200);
-  const rememberedStartHtml = await rememberedStart.text();
-  assert.match(rememberedStartHtml, /<html lang="fr"/);
-  assert.match(rememberedStartHtml, /Retour à l’accueil/);
-  assert.match(rememberedStartHtml, /ww-language-current-name">Français/);
+  assert.equal(rememberedStart.status, 303);
+  const rememberedStartLocation = rememberedStart.headers.get('location') || '';
+  const rememberedDraftMatch = /^\/e\/([^/]+)\/display$/.exec(rememberedStartLocation);
+  assert.ok(rememberedDraftMatch, `unexpected draft display location: ${rememberedStartLocation}`);
+  const rememberedDraftInfo = await fetch(
+    `${baseUrl}/api/events/${rememberedDraftMatch[1]}`
+  ).then((response) => response.json());
+  assert.equal(rememberedDraftInfo.locale, 'fr');
+  const draftCookie = (rememberedStart.headers.get('set-cookie') || '').split(';')[0];
+  const rememberedDisplay = await fetch(`${baseUrl}${rememberedStartLocation}`, {
+    headers: { Cookie: `wolkenworte-language=fr; ${draftCookie}` },
+  });
+  assert.equal(rememberedDisplay.status, 200);
+  const rememberedDisplayHtml = await rememberedDisplay.text();
+  assert.match(rememberedDisplayHtml, /<html lang="fr"/);
+  assert.match(rememberedDisplayHtml, /ww-language-current-name">Français/);
 
   const event = await createEvent(baseUrl, {
     coupleName: 'İpek & Işık',
