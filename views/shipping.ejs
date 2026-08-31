@@ -1382,14 +1382,6 @@
         countries = countriesData.countries || [];
         if (!countries.length) throw new Error('countries');
 
-        if (configuration.configurationType === 'personal_memory') {
-          backLink.href = `/e/${encodeURIComponent(slug)}/configure?mode=personal`;
-          setText(document.querySelector('title'), 'Persönliche Erinnerung bestellen – Wolkenworte');
-          setText(document.getElementById('shipping-title'), 'Wohin darf eure Erinnerung reisen?');
-          setText(document.getElementById('shipping-intro'),
-            'Mit eurer Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.');
-        }
-
         renderShipments([defaultShipment()]);
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
         await restoreSavedQuote();

@@ -53,7 +53,6 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
       return storedObjects.get(key);
     },
     async remove(key) { storedObjects.delete(key); },
-    async createSignedUrl() { throw new Error('not used'); },
   });
   t.after(() => storage.resetAdapterForTests());
   const createdEvent = await createEvent(baseUrl, { coupleName: 'Draft Dora & Sicher Sven' });

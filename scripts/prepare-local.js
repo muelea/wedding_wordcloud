@@ -102,7 +102,7 @@ function inspectDependencies(root = ROOT, { requireStamp = true } = {}) {
 }
 
 function validateNativeDependencies(root = ROOT) {
-  for (const name of ['canvas', 'sharp']) {
+  for (const name of ['canvas']) {
     const result = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(name)})`], {
       cwd: root,
       encoding: 'utf8',
@@ -192,7 +192,7 @@ function integrationStatus(env = process.env) {
   const stripeMode = String(env.STRIPE_PAYMENT_MODE || 'test').trim().toLowerCase();
   return [
     {
-      label: 'Private Foto-Uploads',
+      label: 'Private Druckdateien',
       ready: Boolean(String(env.SUPABASE_URL || '').trim() && String(env.SUPABASE_SECRET_KEY || '').trim()),
     },
     {
@@ -230,7 +230,7 @@ function validateLocalEnvironment(root = ROOT) {
   if (unavailable.length) {
     console.warn(`[local] Hinweis: Diese optionalen Integrationen sind in .env nicht vollständig konfiguriert: ${unavailable.join(', ')}.`);
   } else {
-    console.log('[local] Foto-Uploads, Stripe-Testcheckout und Printful-Preise sind konfiguriert.');
+    console.log('[local] Private Druckdateien, Stripe-Testcheckout und Printful-Preise sind konfiguriert.');
   }
   console.log('[local] 3D-Tasse, Produktbilder und Schriften sind lokal verfügbar.');
 }

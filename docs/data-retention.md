@@ -1,6 +1,6 @@
 # Wolkenworte data-retention record
 
-Last reviewed: 2026-08-28
+Last reviewed: 2026-08-31
 
 This document records what the application enforces today and which commerce
 retention periods still require a German/EU legal and tax decision before live
@@ -12,7 +12,7 @@ customer support, bookkeeping or statutory evidence.
 | Data | Current lifetime | Enforcement |
 |---|---:|---|
 | Wedding event, shared words, contribution receipts and event archives | 365 days from event creation | Postgres expiry plus the bounded maintenance cleanup |
-| Unpaid personal-memory configurations and their private photos | 30 days | Postgres expiry; Storage object is deleted before its final metadata row |
+| Unpaid product configurations | 365 days from event creation | Removed with their expired event unless retained by a paid order |
 | Checkout quote containing address and current provider price | 5–120 minutes, 30 minutes by default | It cannot start Checkout after expiry; abandoned expired quotes are removed after a one-day cleanup grace period |
 | Frozen paid print artifact | at least 90 days from submission, or 60 days after delivery | Expiry is extended by fulfillment/webhook state; Storage object is deleted before metadata |
 | Reserved event slug | Indefinite | Deliberately retained so an expired wedding URL is never assigned to another couple |

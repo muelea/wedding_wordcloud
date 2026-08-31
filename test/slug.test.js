@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { slugify, suggestSlug, randomSuffix, makeUniqueSlug, SUFFIX_ALPHABET, SUFFIX_LENGTH } = require('../src/slug');
+const { slugify, randomSuffix, makeUniqueSlug, SUFFIX_ALPHABET, SUFFIX_LENGTH } = require('../src/slug');
 
 test('randomSuffix produces fixed-length strings from the unambiguous alphabet only', () => {
   const alphabetSet = new Set(SUFFIX_ALPHABET.split(''));
@@ -80,10 +80,6 @@ test('makeUniqueSlug falls back to a default prefix for an empty base', () => {
   assert.ok(slug.startsWith('unser-brautpaar-'));
 });
 
-// Existing behavior, unchanged by this feature -- pinned down here so a
-// future refactor of slug.js can't silently break the name-derivation part.
-test('slugify/suggestSlug still transliterate umlauts as before', () => {
+test('slugify transliterates umlauts', () => {
   assert.equal(slugify('Jö & Björn Müller'), 'joe-und-bjoern-mueller');
-  assert.equal(suggestSlug('Johanna & Peter'), 'johanna-und-peter');
-  assert.equal(suggestSlug(''), 'unser-brautpaar');
 });

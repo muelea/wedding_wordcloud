@@ -13,8 +13,6 @@ const LIMITS = Object.freeze({
   themeEvent: Object.freeze({ max: 60, windowMs: 60 * 1000 }),
   socketEvent: Object.freeze({ max: 500 }),
   socketSource: Object.freeze({ max: 300 }),
-  assetGuest: Object.freeze({ max: 12, windowMs: 60 * 60 * 1000 }),
-  assetSource: Object.freeze({ max: 300, windowMs: 60 * 60 * 1000 }),
   configurationGuest: Object.freeze({ max: 30, windowMs: 60 * 60 * 1000 }),
   configurationSource: Object.freeze({ max: 300, windowMs: 60 * 60 * 1000 }),
   estimateGuest: Object.freeze({ max: 20, windowMs: 10 * 60 * 1000 }),

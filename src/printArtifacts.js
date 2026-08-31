@@ -3,7 +3,6 @@
 const crypto = require('crypto');
 const db = require('./db');
 const storage = require('./privateStorage');
-const designAssets = require('./designAssets');
 const { buildProductPrintSvg } = require('./mugPrint');
 const { getProduct, resolveProductOrientation } = require('./products');
 
@@ -50,13 +49,7 @@ async function renderItemSurfaces(orderItem) {
     throw new Error('Die gespeicherte Druckkonfiguration passt nicht zum Produkt.');
   }
 
-  let design = snapshot.design;
-  const hasPhotos = Object.values(design.surfaces)
-    .some((surface) => Array.isArray(surface) && surface.some((item) => item.type === 'image'));
-  if (hasPhotos) {
-    if (!orderItem.configuration_id) throw new Error('Die private Fotokonfiguration fehlt.');
-    design = await designAssets.materializeDesignForPrint(orderItem.configuration_id, design);
-  }
+  const design = snapshot.design;
 
   return product.printSurfaces.map((surface) => {
     const surfaceDesign = design.surfaces[surface.key];

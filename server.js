@@ -121,15 +121,15 @@ app.use('/api', makeEventsRouter({ io, port: PORT, wordBroadcasts }));
 app.get('/e/:slug/manifest.webmanifest', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).end();
-  const displayPath = `/e/${encodeURIComponent(event.slug)}/display`;
+  const eventPath = `/e/${encodeURIComponent(event.slug)}`;
   res.type('application/manifest+json');
   res.set('Cache-Control', 'private, no-store');
   return res.json({
-    id: displayPath,
+    id: eventPath,
     name: `${event.couple_name} – Wortwolke`,
     short_name: 'Wortwolke',
-    start_url: displayPath,
-    scope: `/e/${encodeURIComponent(event.slug)}/`,
+    start_url: eventPath,
+    scope: eventPath,
     display: 'standalone',
     background_color: '#fffdfa',
     theme_color: '#9c1c4c',
@@ -178,12 +178,7 @@ app.get('/', asyncRoute(async (req, res) => {
   });
 }));
 
-// The wedding-framed marketing page was folded into the generic '/' landing
-// page (which already covers weddings as one of its use cases); old links,
-// QR codes and bookmarks pointing at '/wedding' are redirected there.
-app.get('/wedding', (req, res) => res.redirect(301, '/'));
-
-app.get('/start', asyncRoute(async (req, res) => {
+app.post('/start', asyncRoute(async (req, res) => {
   const sourceHash = sourceHashForRequest(req);
   if (!rateLimits.consume([{
     name: 'event:create', key: sourceHash, ...rateLimits.LIMITS.eventCreate,
@@ -207,7 +202,7 @@ app.get('/start', asyncRoute(async (req, res) => {
     httpOnly: true, sameSite: 'lax', secure: req.secure,
     maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
   });
-  return res.redirect(303, `/e/${encodeURIComponent(event.slug)}/display`);
+  return res.redirect(303, `/e/${encodeURIComponent(event.slug)}`);
 }));
 
 app.get('/impressum', asyncRoute(async (req, res) => {
@@ -223,14 +218,6 @@ app.get('/datenschutz', asyncRoute(async (req, res) => {
 }));
 
 app.get('/e/:slug', asyncRoute(async (req, res) => {
-  const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return renderPage(req, res, '404', { status: 404 });
-  // One shared experience: the live display includes the word field, so a
-  // QR scan and older guest links both go straight there.
-  return res.redirect(302, `/e/${encodeURIComponent(event.slug)}/display`);
-}));
-
-app.get('/e/:slug/display', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });
   return renderPage(req, res, 'display', { eventLocale: event.locale });
@@ -334,7 +321,7 @@ async function start() {
     } else {
       console.log('\n  ♡  Wolkenworte is running!\n');
       console.log(`  Create an event →  ${base}/`);
-      console.log(`  (each event then gets its own /e/<slug> and /e/<slug>/display URLs)\n`);
+      console.log(`  (each event then gets its own /e/<slug> URL)\n`);
     }
   });
 }

@@ -14,8 +14,6 @@ const LOCALES = ['de', 'en', 'fr', 'it', 'es', 'tr'];
 const CATALOG_LOCALES = LOCALES.filter((locale) => locale !== 'de');
 const PUBLIC_PAGES = [
   'landing.ejs',
-  'create.ejs',
-  'guest.ejs',
   'display.ejs',
   'configure.ejs',
   'shipping.ejs',
@@ -48,8 +46,8 @@ function renderView(filename, header = {}) {
 }
 const REQUIRED_MESSAGES = [
   'Wortwolke starten',
-  'Teilt ein Wort für das Brautpaar.',
-  '{{count}} Wörter live geteilt',
+  'Ein Wort eingeben',
+  'Live-Wortwolke',
   'Neue Runde starten?',
   'Eure Worte. Eure Erinnerung.',
   '{{count}} Elemente ausgewählt',
@@ -90,7 +88,7 @@ test('locale catalogs cover the complete user journey and preserve interpolation
   }
 
   assert.equal(I18n.translate('Wolkenworte', 'tr'), 'Wolkenworte');
-  assert.equal(I18n.translate('{{count}} Wörter live', 'fr', { count: 3 }), '3 mots en direct');
+  assert.equal(I18n.translate('{{count}} Elemente ausgewählt', 'fr', { count: 3 }), '3 éléments sélectionnés');
 });
 
 test('every public page loads the shared language layer', () => {
@@ -113,30 +111,23 @@ test('every public page loads the shared language layer', () => {
     assert.match(rendered, /<details class="ww-language-picker ww-language-inline"/, filename);
   }
 
-  const guestPage = viewSource('guest.ejs');
   const displayPage = viewSource('display.ejs');
-  assert.match(guestPage, /id="couple-name" data-i18n-ignore/);
   assert.match(displayPage, /id="couple-name" data-i18n-ignore/);
-  assert.match(guestPage, /label\.setAttribute\('data-i18n-ignore', ''\)/);
 });
 
 test('customer-facing actions stay calm and do not expose staging or provider narration', () => {
   const shipping = viewSource('shipping.ejs');
   const confirmation = viewSource('order-confirmation.ejs');
-  const create = viewSource('create.ejs');
-  const guest = viewSource('guest.ejs');
   const display = viewSource('display.ejs');
 
   assert.match(shipping, />Weiter zur Zahlung <span/);
   assert.doesNotMatch(shipping, /Weiter zur Testzahlung|Preis wird noch einmal geprüft|Der Preis ist kurzzeitig reserviert/);
   assert.doesNotMatch(confirmation, /Stripe-Testmodus|Testzahlung erfolgreich|Dies war eine Testzahlung/);
-  assert.doesNotMatch(create, /Wird geprüft…|Wird gestartet…/);
-  assert.doesNotMatch(guest, /window\.prompt/);
   assert.doesNotMatch(display, /(?:^|[^\w$.])(?:window\.)?(?:confirm|prompt|alert)\s*\(/m);
   assert.match(display, /<dialog class="reset-dialog" id="reset-dialog"/);
   assert.match(display, /<button class="reset-dialog-button" id="reset-cancel" type="button">Abbrechen<\/button>/);
 
-  for (const filename of ['create.ejs', 'configure.ejs', 'shipping.ejs', 'display.ejs']) {
+  for (const filename of ['configure.ejs', 'shipping.ejs', 'display.ejs']) {
     const page = viewSource(filename);
     assert.match(page, /\/action-state\.css\?v=20260829-1/, filename);
     assert.match(page, /\/js\/action-state\.js\?v=20260829-1/, filename);
@@ -184,25 +175,19 @@ test('legal pages describe the hosted product and enforced retention', () => {
   assert.match(privacy, /Supabase, Inc\.[\s\S]*privaten Objektspeicher/);
   assert.match(privacy, /Plus Five Five, Inc\.[\s\S]*Öffnungs- und Klicktracking ist deaktiviert/);
   assert.match(privacy, /automatisch 365 Tage nach Erstellung/);
-  assert.match(privacy, /Nicht bezahlte persönliche Erinnerungskonfigurationen[\s\S]*30 Tagen/);
   assert.doesNotMatch(privacy, /ausschließlich lokal entwickelt|Google Fonts|künftige Hosting-Anbieter|künftigen Hosting-Anbieter/);
   assert.match(legalNotice, /interaktive Wortwolken[\s\S]*personalisierte Druckprodukte/);
 });
 
-test('guest and display pages keep event content below a dedicated branded header', () => {
-  const guestPage = renderView('guest.ejs');
+test('the event page keeps its content below a dedicated branded header', () => {
   const displayPage = renderView('display.ejs');
 
-  for (const [filename, html] of [['guest.ejs', guestPage], ['display.ejs', displayPage]]) {
-    assert.match(html, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/, filename);
-  }
+  assert.match(displayPage, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/);
 
-  assert.match(guestPage, /<section class="event-intro"/);
   assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="memory-cta"/);
   assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="couple-name" data-i18n-ignore/);
   assert.doesNotMatch(displayPage, /display-meta/,
     'the display must not add a second header-like metadata bar');
-  assert.doesNotMatch(guestPage, /<header class="header">/);
   assert.doesNotMatch(displayPage, /<header class="header">/);
 });
 
@@ -312,8 +297,8 @@ test('shipping rerenders derived UI from stable sources whenever the locale chan
 test('language URLs preserve page state and server locale resolution honors explicit preference', () => {
   const browserI18n = require('../public/js/i18n.js');
   assert.equal(
-    browserI18n.languageUrl('https://example.test/start?source=qr#form', 'fr'),
-    'https://example.test/start?source=qr&lang=fr#form'
+    browserI18n.languageUrl('https://example.test/e/wortwolke-x7k2q?source=qr#cloud', 'fr'),
+    'https://example.test/e/wortwolke-x7k2q?source=qr&lang=fr#cloud'
   );
   assert.deepEqual(PageRenderer.resolvePageLocale({
     query: { lang: 'tr-TR' },
@@ -324,15 +309,6 @@ test('language URLs preserve page state and server locale resolution honors expl
     headers: { cookie: 'wolkenworte-language=fr', 'accept-language': 'en-US,en;q=0.8' },
   }, 'de'), { locale: 'fr', source: 'cookie' });
   assert.equal(PageRenderer.preferredRequestLocale('fr;q=0, en-US;q=0.8, de;q=0.5'), 'en');
-});
-
-test('guest live preview hides the language switcher until the preview closes', () => {
-  const guestPage = viewSource('guest.ejs');
-  const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
-
-  assert.match(guestPage, /document\.body\.classList\.add\('preview-open'\)/);
-  assert.match(guestPage, /document\.body\.classList\.remove\('preview-open'\)/);
-  assert.match(styles, /body\.preview-open\s+\.ww-language-picker\s*\{[^}]*visibility:\s*hidden/s);
 });
 
 test('event locale is validated, persisted and returned by public APIs', async (t) => {
@@ -349,12 +325,13 @@ test('event locale is validated, persisted and returned by public APIs', async (
   assert.match(frenchLandingHtml, /ww-language-current-name">Français/);
 
   const rememberedStart = await fetch(`${baseUrl}/start`, {
+    method: 'POST',
     headers: { Cookie: 'wolkenworte-language=fr' },
     redirect: 'manual',
   });
   assert.equal(rememberedStart.status, 303);
   const rememberedStartLocation = rememberedStart.headers.get('location') || '';
-  const rememberedDraftMatch = /^\/e\/([^/]+)\/display$/.exec(rememberedStartLocation);
+  const rememberedDraftMatch = /^\/e\/([^/]+)$/.exec(rememberedStartLocation);
   assert.ok(rememberedDraftMatch, `unexpected draft display location: ${rememberedStartLocation}`);
   const rememberedDraftInfo = await fetch(
     `${baseUrl}/api/events/${rememberedDraftMatch[1]}`
@@ -384,11 +361,6 @@ test('event locale is validated, persisted and returned by public APIs', async (
 
   const info = await fetch(`${baseUrl}/api/events/${event.slug}`).then((response) => response.json());
   assert.equal(info.locale, 'tr');
-
-  const personalConfigurator = await fetch(
-    `${baseUrl}/api/events/${event.slug}/configurator?mode=personal`
-  ).then((response) => response.json());
-  assert.equal(personalConfigurator.event.locale, 'tr');
 
   const invalid = await fetch(`${baseUrl}/api/events`, {
     method: 'POST',

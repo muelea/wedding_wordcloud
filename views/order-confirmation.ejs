@@ -85,7 +85,7 @@
     const summary = document.getElementById('summary');
     const homeLink = document.getElementById('home-link');
     let confirmedOrder = null;
-    homeLink.href = `/e/${encodeURIComponent(slug)}/display`;
+    homeLink.href = `/e/${encodeURIComponent(slug)}`;
 
     function money(cents, currency) {
       return WolkenworteI18n.formatCurrency(cents, currency);
@@ -130,10 +130,6 @@
         );
         const order = await response.json();
         if (!response.ok) throw new Error('Die Bestellung konnte nicht geladen werden.');
-        if (order.configurationType === 'personal_memory') {
-          homeLink.href = `/e/${encodeURIComponent(slug)}`;
-          setText(homeLink, 'Zurück zur Gäste-Seite');
-        }
         if (order.paymentConfirmed) {
           icon.textContent = '✓';
           icon.classList.remove('pending');

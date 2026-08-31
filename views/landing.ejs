@@ -101,7 +101,7 @@
     .nav-links a:hover { color: var(--ink); transition: color .2s ease; }
     .nav-links a:hover::after { transform: scaleX(1); }
 
-    .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; padding: 13px 22px; font-size: .84rem; font-weight: 500; letter-spacing: .015em; border: 1px solid transparent; transition: transform .25s ease, box-shadow .25s ease; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; padding: 13px 22px; font: inherit; font-size: .84rem; font-weight: 500; letter-spacing: .015em; border: 1px solid transparent; cursor: pointer; transition: transform .25s ease, box-shadow .25s ease; }
     .button:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(61,15,34,.14); }
     .button.primary { background: var(--ink); color: #fff; }
     .button.outline { border-color: var(--line); color: var(--ink); background: transparent; transition: transform .25s ease, box-shadow .25s ease, color .6s ease, border-color .6s ease; }
@@ -420,7 +420,7 @@
           <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
           <p class="lead">Ihr sammelt Wünsche und Erinnerungen für Menschen die euch wichtig sind. Wolkenworte macht daraus eine lebendige Wortwolke. Ob auf großen Feiern oder in kleiner Runde – mit Wolkenworte entsteht eine Erinnerung, die für immer bleibt.</p>
           <div class="hero-actions">
-            <a class="button primary" href="/start">Hier starten <span>→</span></a>
+            <form action="/start" method="post"><button class="button primary" type="submit">Hier starten <span>→</span></button></form>
           </div>
           <div class="trust">
             <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
@@ -567,7 +567,7 @@
           </article>
         </div>
         <div class="steps-cta">
-          <a class="button primary" href="/start">Hier starten <span>→</span></a>
+          <form action="/start" method="post"><button class="button primary" type="submit">Hier starten <span>→</span></button></form>
         </div>
       </div>
     </section>
@@ -634,7 +634,7 @@
           <p class="eyebrow">Bereit für euren Moment?</p>
           <h2>Lasst eure Worte<br>Wellen schlagen.</h2>
           <p>Probiert die Live-Wortwolke jetzt aus – kostenlos und ohne Anmeldung.</p>
-          <a class="button primary" href="/start">Hier starten <span>→</span></a>
+          <form action="/start" method="post"><button class="button primary" type="submit">Hier starten <span>→</span></button></form>
         </div>
       </div>
     </section>

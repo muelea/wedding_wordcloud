@@ -967,11 +967,7 @@ function getPublicProductFamilies() {
   return PRODUCT_FAMILIES.map((family) => ({ ...family }));
 }
 
-// Backwards-compatible name used by older tests and modules.
-const MUG_DUO = MUG_11;
-
 module.exports = {
-  MUG_DUO,
   MUG_11,
   MUG_15,
   MUG_20,

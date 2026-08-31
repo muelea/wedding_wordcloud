@@ -18,18 +18,16 @@ function waitFor(socket, eventName, timeoutMs = 4000) {
   });
 }
 
-function simpleDesign(assetId = null) {
+function simpleDesign() {
   return {
     version: 2,
     surfaces: {
-      default: assetId
-        ? [{ id: 'photo', type: 'image', assetId }]
-        : [{ id: 'word', text: 'liebe', x: 100, y: 100, fontSize: 40, angle: 0, color: '#000000' }],
+      default: [{ id: 'word', text: 'liebe', x: 100, y: 100, fontSize: 40, angle: 0, color: '#000000' }],
     },
   };
 }
 
-async function createPersonalConfiguration(db, eventId, assetId = null) {
+async function createEventConfiguration(db, eventId) {
   return db.createConfiguration({
     eventId,
     productKey: 'white-glossy-mug-duo-11oz',
@@ -37,22 +35,12 @@ async function createPersonalConfiguration(db, eventId, assetId = null) {
     quantity: 2,
     unitPriceCents: 0,
     theme: 'blush',
-    words: [],
-    design: simpleDesign(assetId),
-    configurationType: 'personal_memory',
+    words: [['liebe', 1]],
+    design: simpleDesign(),
     orientation: 'default',
     printWidth: 2700,
     printHeight: 1120,
   });
-}
-
-async function insertAsset(query, eventId, id, ownerId = OWNER_A) {
-  await query(`
-    INSERT INTO design_assets (
-      id, event_id, uploader_owner_id, object_key, mime_type, byte_size,
-      sha256, storage_status, expires_at
-    ) VALUES ($1, $2, $3, $4, 'image/png', 4, $5, 'active', transaction_timestamp() + interval '30 days')
-  `, [id, eventId, ownerId, `photos/${eventId}/${id}.png`, 'a'.repeat(64)]);
 }
 
 async function expireEvent(query, eventId) {
@@ -67,7 +55,6 @@ test('lifecycle and abuse boundaries', async (t) => {
   t.after(app.close);
   const db = require('../src/db');
   const lifecycle = require('../src/lifecycle');
-  const storage = require('../src/privateStorage');
   const rateLimits = require('../src/rateLimits');
   const clientIdentity = require('../src/clientIdentity');
 
@@ -228,12 +215,12 @@ test('lifecycle and abuse boundaries', async (t) => {
     assert.equal(rows.rows[0].count, 0);
   });
 
-  await t.test('personal revisions expire after 30 days but a paid reference remains retained', async () => {
+  await t.test('configurations follow the event lifetime and paid references remain retained', async () => {
     const created = await createEvent(app.baseUrl, { coupleName: 'Entwurf Ablauf', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
-    const configuration = await createPersonalConfiguration(db, event.id);
+    const configuration = await createEventConfiguration(db, event.id);
     const lifetime = Date.parse(configuration.expires_at) - Date.parse(configuration.created_at);
-    assert.equal(lifetime, 30 * 24 * 60 * 60 * 1000);
+    assert.ok(Math.abs(lifetime - 365 * 24 * 60 * 60 * 1000) < 2_000);
 
     await app.query(`UPDATE configurations SET expires_at = transaction_timestamp() - interval '1 minute' WHERE id = $1`, [configuration.id]);
     assert.equal(
@@ -258,15 +245,11 @@ test('lifecycle and abuse boundaries', async (t) => {
     );
   });
 
-  await t.test('event cleanup deletes unpaid objects first and detaches paid configuration data', async () => {
+  await t.test('event cleanup deletes unpaid configurations and detaches paid configuration data', async () => {
     const created = await createEvent(app.baseUrl, { coupleName: 'Retention Paar', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
-    const paidAssetId = `p${'1'.repeat(23)}`;
-    const unpaidAssetId = `u${'2'.repeat(23)}`;
-    await insertAsset(app.query, event.id, paidAssetId);
-    await insertAsset(app.query, event.id, unpaidAssetId, OWNER_B);
-    const paidConfiguration = await createPersonalConfiguration(db, event.id, paidAssetId);
-    const unpaidConfiguration = await createPersonalConfiguration(db, event.id, unpaidAssetId);
+    const paidConfiguration = await createEventConfiguration(db, event.id);
+    const unpaidConfiguration = await createEventConfiguration(db, event.id);
 
     const order = await app.query(`
       INSERT INTO orders (
@@ -281,55 +264,23 @@ test('lifecycle and abuse boundaries', async (t) => {
     `, [order.rows[0].id, paidConfiguration.id]);
     await expireEvent(app.query, event.id);
 
-    const removedKeys = [];
-    storage.setAdapterForTests({
-      async remove(key) { removedKeys.push(key); },
-    });
     const result = await lifecycle.cleanupExpiredEvent(event.id);
-    storage.resetAdapterForTests();
     assert.deepEqual(result, {
       eligible: true,
       deleted: true,
       retainedConfigurations: 1,
-      failedAssets: 0,
     });
-    assert.deepEqual(removedKeys, [`photos/${event.id}/${unpaidAssetId}.png`]);
 
     const retained = await app.query(`
       SELECT
         (SELECT event_id FROM orders WHERE id = $1) AS order_event_id,
         (SELECT event_id FROM configurations WHERE id = $2) AS configuration_event_id,
-        (SELECT event_id FROM design_assets WHERE id = $3) AS asset_event_id,
-        EXISTS (SELECT 1 FROM configurations WHERE id = $4) AS unpaid_configuration_exists,
-        EXISTS (SELECT 1 FROM design_assets WHERE id = $5) AS unpaid_asset_exists
-    `, [order.rows[0].id, paidConfiguration.id, paidAssetId, unpaidConfiguration.id, unpaidAssetId]);
+        EXISTS (SELECT 1 FROM configurations WHERE id = $3) AS unpaid_configuration_exists
+    `, [order.rows[0].id, paidConfiguration.id, unpaidConfiguration.id]);
     assert.equal(retained.rows[0].order_event_id, null);
     assert.equal(retained.rows[0].configuration_event_id, null);
-    assert.equal(retained.rows[0].asset_event_id, null);
     assert.equal(retained.rows[0].unpaid_configuration_exists, false);
-    assert.equal(retained.rows[0].unpaid_asset_exists, false);
     assert.equal(await db.slugExists(created.slug), true);
-  });
-
-  await t.test('failed Storage deletion keeps the expired event retryable', async () => {
-    const created = await createEvent(app.baseUrl, { coupleName: 'Retry Ablauf', pin: '1234' });
-    const event = await db.getEventBySlug(created.slug);
-    const assetId = `r${'3'.repeat(23)}`;
-    await insertAsset(app.query, event.id, assetId);
-    await expireEvent(app.query, event.id);
-    storage.setAdapterForTests({ async remove() { throw new Error('offline'); } });
-    const failed = await lifecycle.cleanupExpiredEvent(event.id);
-    assert.equal(failed.deleted, false);
-    assert.equal(failed.failedAssets, 1);
-    const failedRow = await app.query('SELECT storage_status, object_key FROM design_assets WHERE id = $1', [assetId]);
-    assert.equal(failedRow.rows[0].storage_status, 'delete_failed');
-    assert.ok(failedRow.rows[0].object_key);
-
-    storage.setAdapterForTests({ async remove() {} });
-    const retried = await lifecycle.cleanupExpiredEvent(event.id);
-    storage.resetAdapterForTests();
-    assert.equal(retried.deleted, true);
-    assert.equal(retried.failedAssets, 0);
   });
 
   await t.test('database ceilings are atomic and increments at the unique-word ceiling still work', async () => {
@@ -384,41 +335,17 @@ test('lifecycle and abuse boundaries', async (t) => {
     await app.query(`
       INSERT INTO configurations (
         id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
-        theme, words_json, design_json, configuration_type, orientation,
+        theme, words_json, design_json, orientation,
         print_width, print_height, expires_at
       )
       SELECT lpad(value::text, 16, 'c'), $1, 'white-glossy-mug-duo-11oz', 1320,
-             2, 0, 'blush', '[]'::jsonb, '{}'::jsonb, 'personal_memory',
+             2, 0, 'blush', '[["liebe", 1]]'::jsonb, '{}'::jsonb,
              'default', 2700, 1120, transaction_timestamp() + interval '30 days'
       FROM generate_series(1, 2000) value
     `, [configEvent.id]);
     await assert.rejects(
-      createPersonalConfiguration(db, configEvent.id),
+      createEventConfiguration(db, configEvent.id),
       (error) => error.code === 'configuration_limit'
-    );
-
-    const assetEventCreated = await createEvent(app.baseUrl, { coupleName: 'Asset Grenzen', pin: '1234' });
-    const assetEvent = await db.getEventBySlug(assetEventCreated.slug);
-    await app.query(`
-      INSERT INTO design_assets (
-        id, event_id, uploader_owner_id, object_key, mime_type, byte_size,
-        sha256, storage_status, expires_at
-      )
-      SELECT 'asset' || lpad(value::text, 19, '0'), $1, md5(value::text),
-             'photos/limit/' || value || '.png', 'image/png', 1,
-             repeat('a', 64), 'active', transaction_timestamp() + interval '30 days'
-      FROM generate_series(1, 2000) value
-    `, [assetEvent.id]);
-    await assert.rejects(
-      db.beginDesignAssetUpload({
-        eventId: assetEvent.id,
-        ownerId: 'e'.repeat(32),
-        mimeType: 'image/png',
-        byteSize: 1,
-        sha256: 'f'.repeat(64),
-        extension: 'png',
-      }),
-      (error) => error.code === 'asset_limit'
     );
   });
 

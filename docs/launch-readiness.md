@@ -1,6 +1,6 @@
 # Wolkenworte launch-readiness checklist
 
-Last reviewed: 2026-08-28
+Last reviewed: 2026-08-31
 
 The hosted-architecture refactor is complete. Wolkenworte now runs locally and
 on the Fly hosted test environment from the same application code, ordered
@@ -21,9 +21,8 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] The Porkbun-managed `wolkenworte.io` domain is attached to Fly with the
   apex as the canonical public origin and `www` redirecting to it. The stable
   Fly hostname remains available for infrastructure callbacks.
-- [x] Private Storage holds normalized personal photos and frozen paid print
-  artifacts; application records contain opaque identifiers rather than public
-  object URLs.
+- [x] Private Storage holds frozen paid print artifacts; application records
+  contain opaque identifiers rather than public object URLs.
 - [x] Stripe sandbox Checkout has been verified end to end through the public
   Fly webhook, durable `paid_test` state, mock email, mock fulfillment and the
   public confirmation page.
@@ -103,7 +102,7 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [ ] Confirm and configure the Supabase database backup policy appropriate for
   live commerce data.
 - [ ] Configure a separate encrypted export of the private Storage objects.
-  Database backups contain Storage metadata, not the photo/print object bytes.
+  Database backups contain Storage metadata, not the print object bytes.
 - [ ] Perform and document one restoration exercise that restores both the
   database and matching Storage objects before live payments are enabled.
 
@@ -119,7 +118,8 @@ provider activation each require explicit maintainer approval at action time.
    maintenance response while health endpoints remain available.
 3. Set `ALLOW_TEST_DATA_RESET=true` only in the local operator environment and
    run the guarded cleanup from `docs/operations.md`. Verify that application
-   tables and the configured private bucket are empty while migrations remain.
+   tables and the configured private bucket are empty while the clean baseline
+   schema remains.
 4. Restore `ALLOW_TEST_DATA_RESET=false` immediately.
 5. Rotate the database runtime credential, Supabase backend key, rate-limit
    HMAC secret and maintenance secret. Update only the stores that consume each

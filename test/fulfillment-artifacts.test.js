@@ -106,7 +106,6 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
       }
       objects.delete(key);
     },
-    async createSignedUrl() { throw new Error('not used'); },
   });
   t.after(() => storage.resetAdapterForTests());
 
@@ -336,7 +335,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
 
   await t.test('the committed Cron definition reads Vault secrets and uses the explicit 30-second timeout', () => {
     const migration = fs.readFileSync(path.join(
-      __dirname, '..', 'supabase', 'migrations', '20260827000011_global_maintenance_cron.sql'
+      __dirname, '..', 'supabase', 'migrations', '20260831000000_wolkenworte_baseline.sql'
     ), 'utf8');
     assert.match(migration, /vault\.decrypted_secrets/);
     assert.match(migration, /timeout_milliseconds := 30000/);

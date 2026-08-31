@@ -46,7 +46,7 @@
   }
 
   function copyId(item, usedIds) {
-    const type = item.type === 'image' ? 'foto' : item.type === 'icon' ? 'motiv' : 'wort';
+    const type = item.type === 'icon' ? 'motiv' : 'wort';
     const base = String(item.id || type).slice(0, 48);
     let index = 2;
     let candidate = `${base}-seite-${index}`;
@@ -61,10 +61,7 @@
   function itemDimensions(item, scale, measureContext, fontFamily) {
     let width;
     let height;
-    if (item.type === 'image') {
-      width = Math.max(1, Number(item.width) || 48);
-      height = Math.max(1, Number(item.height) || 48);
-    } else if (item.type === 'icon') {
+    if (item.type === 'icon') {
       width = height = Math.max(1, Number(item.size) || 48);
     } else {
       const fontSize = Math.max(1, Number(item.fontSize) || 12);
@@ -93,10 +90,6 @@
   }
 
   function minimumScale(item) {
-    if (item.type === 'image') {
-      return Math.max(48 / Math.max(1, Number(item.width) || 48),
-        48 / Math.max(1, Number(item.height) || 48));
-    }
     if (item.type === 'icon') return 48 / Math.max(1, Number(item.size) || 48);
     return 12 / Math.max(1, Number(item.fontSize) || 12);
   }
@@ -154,10 +147,7 @@
 
   function scaleItem(item, scale, x, y) {
     const optimized = { ...item, x: round(x), y: round(y) };
-    if (item.type === 'image') {
-      optimized.width = round(Math.max(48, (Number(item.width) || 48) * scale));
-      optimized.height = round(Math.max(48, (Number(item.height) || 48) * scale));
-    } else if (item.type === 'icon') {
+    if (item.type === 'icon') {
       optimized.size = round(Math.max(48, (Number(item.size) || 48) * scale));
     } else {
       optimized.fontSize = round(Math.max(12, (Number(item.fontSize) || 12) * scale));

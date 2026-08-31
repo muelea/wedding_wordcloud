@@ -13,10 +13,7 @@ const DESIGN_SAFE_MARGIN = 24;
 function getDesignBounds(item) {
   let itemWidth;
   let itemHeight;
-  if (item.type === 'image') {
-    itemWidth = item.width;
-    itemHeight = item.height;
-  } else if (item.type === 'icon') {
+  if (item.type === 'icon') {
     itemWidth = item.size;
     itemHeight = item.size;
   } else {
@@ -44,11 +41,6 @@ function isPrintDesignWithinBounds(
       !Number.isFinite(width) || !Number.isFinite(height)) return false;
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
-    if (item.type === 'image' &&
-        (!Number.isFinite(item.width) || !Number.isFinite(item.height) ||
-         (typeof item.src !== 'string' && typeof item.assetId !== 'string'))) {
-      return false;
-    }
     const bounds = getDesignBounds(item);
     const halfWidth = bounds.width / 2;
     const halfHeight = bounds.height / 2;
@@ -61,19 +53,6 @@ function isPrintDesignWithinBounds(
 
 function designElements(design) {
   return design.map((item) => {
-    if (item.type === 'image') {
-      if (typeof item.src !== 'string' || !item.src.startsWith('data:image/')) {
-        throw new Error('Cannot build a print with an unresolved private image');
-      }
-      const x = item.x - item.width / 2;
-      const y = item.y - item.height / 2;
-      const rotate = item.angle
-        ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
-        : '';
-      return `<image data-photo="true" x="${x.toFixed(1)}" y="${y.toFixed(1)}" ` +
-        `width="${item.width.toFixed(1)}" height="${item.height.toFixed(1)}" ` +
-        `href="${item.src}" preserveAspectRatio="none"${rotate}/>`;
-    }
     if (item.type === 'icon') {
       const icon = MugIcons.get(item.icon);
       const scale = item.size / MugIcons.VIEWBOX_SIZE;

@@ -508,7 +508,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/wordcloud-core.js?v=20260819-2"></script>
 <script>
-  // Slug comes from the URL: /e/<slug>/display
+  // Slug comes from the canonical event URL: /e/<slug>
   const slug = location.pathname.split('/').filter(Boolean)[1];
   document.getElementById('event-manifest').href = `/e/${encodeURIComponent(slug)}/manifest.webmanifest`;
 
@@ -533,7 +533,7 @@
   let eventIsDraft = false;
   let unlockedAdminPin = '';
   let pendingAdminPin = '';
-  let guestUrl = '';
+  let eventUrl = '';
   let cloudName = '';
   let cloudEventLabel = '';
   let deferredInstallPrompt = null;
@@ -633,7 +633,7 @@
   fetch(`/api/events/${encodeURIComponent(slug)}/qr`).then(r => r.json()).then(({ dataUrl, url }) => {
     document.getElementById('qr-img').src = dataUrl;
     document.getElementById('qr-url').textContent = url.replace('http://', '').replace('https://', '');
-    guestUrl = url;
+    eventUrl = url;
   }).catch(() => {});
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -646,7 +646,7 @@
     document.getElementById('save-cloud').textContent = 'Gespeichert ✓';
   });
   document.getElementById('share-cloud').addEventListener('click', async () => {
-    const url = guestUrl || `${location.origin}/e/${encodeURIComponent(slug)}`;
+    const url = eventUrl || `${location.origin}/e/${encodeURIComponent(slug)}`;
     const eventSuffix = cloudEventLabel ? ` zum ${cloudEventLabel}` : '';
     const message = `Hallo,\n\ndu bist herzlich eingeladen, dich an der Wortwolke für ${cloudName || 'uns'}${eventSuffix} zu beteiligen.\n\nWort eingeben & Wortwolke ansehen: ${url}`;
     try {

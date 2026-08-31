@@ -95,7 +95,6 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
       keys.forEach((key) => objects.delete(key));
     },
     async listAllObjectKeys() { return [...objects.keys()]; },
-    async createSignedUrl() { throw new Error('not used'); },
   });
   t.after(() => storage.resetAdapterForTests());
 
@@ -155,11 +154,11 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
   });
 
   await t.test('an additive future migration does not stop the currently compatible release', async () => {
-    await hosted.query('INSERT INTO app_schema_versions (version) VALUES (7)');
+    await hosted.query('INSERT INTO app_schema_versions (version) VALUES (2)');
     try {
       await assert.doesNotReject(db.assertDatabaseReady());
     } finally {
-      await hosted.query('DELETE FROM app_schema_versions WHERE version = 7');
+      await hosted.query('DELETE FROM app_schema_versions WHERE version = 2');
     }
   });
 
@@ -267,14 +266,11 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     assert.equal(Object.hasOwn(packageJson.dependencies, '@sentry/node'), false);
     assert.equal(Object.hasOwn(packageJson.dependencies, 'prom-client'), false);
-    const application = fs.readFileSync(path.join(
-      __dirname, '..', 'supabase', 'migrations', '20260827000014_application_operations.sql'
+    const baseline = fs.readFileSync(path.join(
+      __dirname, '..', 'supabase', 'migrations', '20260831000000_wolkenworte_baseline.sql'
     ), 'utf8');
-    const global = fs.readFileSync(path.join(
-      __dirname, '..', 'supabase', 'migrations', '20260827000015_global_operations_access.sql'
-    ), 'utf8');
-    assert.match(application, /operator_actions/);
-    assert.match(global, /wolkenworte_runtime/);
-    assert.doesNotMatch(application, /wolkenworte_runtime/);
+    assert.match(baseline, /operator_actions/);
+    assert.match(baseline, /wolkenworte_runtime/);
+    assert.match(baseline, /enable row level security/);
   });
 });

@@ -40,8 +40,6 @@ async function execute(triggerKind) {
       emailsClaimed: emailSummary.claimed,
       emailsCompleted: emailSummary.completed,
       emailsBlocked: emailSummary.blocked,
-      configurationsCleaned: retentionSummary.configurations,
-      assetsCleaned: retentionSummary.assets,
       eventsCleaned: retentionSummary.events,
       artifactsCleaned: retentionSummary.artifacts,
     };

@@ -59,7 +59,7 @@
         </details>
       </nav>
       <div class="landing-header-actions">
-        <a class="button primary landing-start-button" href="/start" data-i18n-source="Hier starten"><%= t('Hier starten') %></a>
+        <form action="/start" method="post"><button class="button primary landing-start-button" type="submit" data-i18n-source="Hier starten"><%= t('Hier starten') %></button></form>
         <button class="landing-menu-toggle" type="button" aria-label="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
           <span class="landing-menu-toggle-icon" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>

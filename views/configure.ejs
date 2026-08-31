@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="<%= t('Gestaltet eure persönlichen Wolkenworte-Erinnerungen.') %>" data-i18n-content-source="Gestaltet eure persönlichen Wolkenworte-Erinnerungen." />
+  <meta name="description" content="<%= t('Eure Worte. Eure Erinnerung.') %>" data-i18n-content-source="Eure Worte. Eure Erinnerung." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
@@ -622,7 +622,6 @@
       text-align: center;
       transform: translateY(-1px);
     }
-    .editor-photo-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .editor-icon-button { width: 36px; padding: 7px; font-size: 15px; }
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
     .editor-scroll {
@@ -702,7 +701,6 @@
       background: transparent;
       box-shadow: none;
     }
-    .editor-selection.is-photo .editor-field-label-color { opacity: .42; }
     .editor-selection-head { display: none; }
     .editor-selection-row {
       display: grid;
@@ -1677,8 +1675,6 @@
                     <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
                   </div>
                   <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
-                  <button class="editor-button editor-button-primary" id="editor-photo" type="button"><span aria-hidden="true">＋</span> Foto</button>
-                  <input class="editor-photo-input" id="editor-photo-input" type="file" accept="image/*" multiple />
                   <div class="editor-motif-picker">
                     <button class="editor-button editor-button-primary" id="editor-icon-toggle" type="button" aria-expanded="false" aria-controls="editor-icon-menu" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Motiv</button>
                     <div class="editor-motif-menu" id="editor-icon-menu" role="dialog" aria-label="Motiv auswählen" hidden>
@@ -1700,7 +1696,7 @@
               <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
                 <div class="editor-selection-head">
                   <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
-                  <span class="editor-selection-hint" id="editor-selection-hint">Wort, Foto oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
+                  <span class="editor-selection-hint" id="editor-selection-hint">Wort oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
                 </div>
                 <div class="editor-selection-row">
                   <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
@@ -1742,7 +1738,7 @@
             <div class="wrap-preview">
               <div class="editor-scroll is-fit" id="editor-scroll">
                 <div class="editor-canvas-shell" id="editor-canvas-shell">
-                  <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter, Fotos und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
+                  <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
                   <span class="print-safe-guide" aria-hidden="true"></span>
                 </div>
               </div>
@@ -1830,14 +1826,12 @@
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
-    const isPersonalMode = new URLSearchParams(location.search).get('mode') === 'personal';
     const guestId = getOrCreateGuestId();
     const t = (source, params) => WolkenworteI18n.t(source, params);
     const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
     const clearText = (element) => WolkenworteI18n.clearText(element);
     const setTranslatedAttribute = (element, name, source, params) =>
       WolkenworteI18n.setAttribute(element, name, source, params);
-    let configurationType = isPersonalMode ? 'personal_memory' : 'event_wordcloud';
 
     function getOrCreateGuestId() {
       const storageKey = `guest-session:${slug}`;
@@ -1898,9 +1892,6 @@
     const customPalettePanel = document.getElementById('custom-palette-panel');
     const customColorList = document.getElementById('custom-color-list');
     const customColorAdd = document.getElementById('custom-color-add');
-    const photoButton = document.getElementById('editor-photo');
-    const photoInput = document.getElementById('editor-photo-input');
-    photoButton.hidden = configurationType !== 'personal_memory';
     const orderBox = document.getElementById('order-box');
     const orderList = document.getElementById('order-list');
     const orderCount = document.getElementById('order-count');
@@ -1933,14 +1924,7 @@
 
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
-    backLink.href = isPersonalMode
-      ? `/e/${encodeURIComponent(slug)}`
-      : `/e/${encodeURIComponent(slug)}/display`;
-    if (isPersonalMode) {
-      backLink.setAttribute('aria-label', 'Zurück zur Gäste-Seite');
-      backLink.querySelector('span:last-child').textContent = 'Zurück zur Gäste-Seite';
-      loading.textContent = 'Euer Design wird vorbereitet…';
-    }
+    backLink.href = `/e/${encodeURIComponent(slug)}`;
 
     function orderStorageKey() {
       return `wolkenworte-order:${slug}`;
@@ -1961,7 +1945,6 @@
           productKey: String(item.productKey || ''),
           orientation: String(item.orientation || 'default'),
           printFileUrl: String(item.printFileUrl || ''),
-          configurationType: String(item.configurationType || ''),
           createdAt: String(item.createdAt || ''),
         }))
         .slice(-20);
@@ -2023,7 +2006,6 @@
         productKey: configuration.productKey,
         orientation: configuration.orientation || 'default',
         printFileUrl: configuration.printFileUrl,
-        configurationType: configuration.configurationType,
         createdAt: configuration.createdAt || new Date().toISOString(),
       };
     }
@@ -2111,7 +2093,7 @@
         const productName = t(itemProduct?.displayName || 'Wolkenworte Design');
         const itemSize = itemProduct
           ? `${productSizeText(itemProduct, item.orientation)}${orientation ? ` · ${t(orientation.label)}` : ''}`
-          : t('Persönliches Design');
+          : t('Wolkenworte Design');
         const isEditing = item.id === editingOrderItemId;
         const row = document.createElement('div');
         row.className = 'order-item';
@@ -2183,88 +2165,6 @@
       }
       return canvas.getContext('2d');
     }
-
-    async function decodePhoto(file) {
-      if (typeof createImageBitmap === 'function') {
-        try {
-          return await createImageBitmap(file, { imageOrientation: 'from-image' });
-        } catch {}
-      }
-      const objectUrl = URL.createObjectURL(file);
-      try {
-        return await new Promise((resolve, reject) => {
-          const image = new Image();
-          image.onload = () => resolve(image);
-          image.onerror = () => reject(new Error('photo_decode_failed'));
-          image.src = objectUrl;
-        });
-      } finally {
-        URL.revokeObjectURL(objectUrl);
-      }
-    }
-
-    async function preparePhoto(file) {
-      if (!file || !String(file.type || '').startsWith('image/') || file.size > 20 * 1024 * 1024) {
-        throw new Error('photo_invalid');
-      }
-      const source = await decodePhoto(file);
-      const sourceWidth = source.naturalWidth || source.width;
-      const sourceHeight = source.naturalHeight || source.height;
-      if (!sourceWidth || !sourceHeight) throw new Error('photo_invalid');
-      const scale = Math.min(1, 1600 / Math.max(sourceWidth, sourceHeight));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
-      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
-      const context = canvas.getContext('2d', { alpha: false });
-      context.fillStyle = '#ffffff';
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(source, 0, 0, canvas.width, canvas.height);
-      if (typeof source.close === 'function') source.close();
-      return canvas.toDataURL('image/jpeg', .84);
-    }
-
-    photoButton.addEventListener('click', () => photoInput.click());
-    photoInput.addEventListener('change', async () => {
-      const files = [...photoInput.files];
-      photoInput.value = '';
-      if (!files.length || !mugEditor) return;
-      const existingPhotos = new Set(Object.values(getAllSurfaceDesigns())
-        .flat()
-        .filter((item) => item.type === 'image')
-        .map((item) => item.assetId)
-        .filter(Boolean)).size;
-      const available = Math.max(0, 6 - existingPhotos);
-      if (!available) {
-        mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
-        return;
-      }
-      photoButton.disabled = true;
-      clearText(errorText);
-      try {
-        for (const file of files.slice(0, available)) {
-          mugEditor.setFeedback('Foto wird vorbereitet…');
-          const prepared = await preparePhoto(file);
-          const response = await fetch(`/api/events/${encodeURIComponent(slug)}/assets`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Wolkenworte-Guest-Id': guestId,
-            },
-            body: JSON.stringify({ dataUrl: prepared }),
-          });
-          const uploaded = await response.json();
-          if (!response.ok || !uploaded.assetId || !uploaded.previewUrl) {
-            throw new Error(uploaded.error || 'photo_upload_failed');
-          }
-          await mugEditor.addImage(uploaded.previewUrl, uploaded.assetId);
-        }
-        if (files.length > available) mugEditor.setFeedback('Maximal sechs Fotos pro Design.');
-      } catch {
-        errorText.textContent = 'Das Foto konnte nicht verarbeitet werden. Bitte verwendet ein anderes Bild.';
-      } finally {
-        photoButton.disabled = false;
-      }
-    });
 
     function getPalette(themeKey) {
       const palette = product.themes.find((option) => option.key === themeKey) || product.themes[0];
@@ -2443,7 +2343,6 @@
     }
 
     function buildAutomaticDesign() {
-      if (configurationType === 'personal_memory') return [];
       const view = productView();
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
@@ -2489,18 +2388,6 @@
       };
     }
 
-    function allDesignItems(designs) {
-      return Object.values(designs || {}).flat().filter(Boolean);
-    }
-
-    async function preloadDesignImages(designs) {
-      if (!mugEditor) return;
-      const sources = [...new Set(allDesignItems(designs)
-        .filter((item) => item.type === 'image' && typeof item.src === 'string')
-        .map((item) => item.src))];
-      await Promise.all(sources.map((source) => mugEditor.preloadImage(source)));
-    }
-
     function productSurfaces() {
       return Array.isArray(product?.printSurfaces) && product.printSurfaces.length
         ? product.printSurfaces
@@ -2544,14 +2431,9 @@
     async function applySavedConfiguration(configurationData) {
       const nextProduct = products.find((candidate) => candidate.key === configurationData.productKey);
       if (!nextProduct) throw new Error('invalid_product');
-      if (!['event_wordcloud', 'personal_memory'].includes(configurationData.configurationType)) {
-        throw new Error('invalid_configuration_type');
-      }
 
       suppressDirty = true;
       try {
-        configurationType = configurationData.configurationType;
-        photoButton.hidden = configurationType !== 'personal_memory';
         product = nextProduct;
         selectedFamilyKey = product.familyKey;
         const savedOrientation = selectedOrientationOption(product, configurationData.orientation);
@@ -2578,7 +2460,6 @@
         });
 
         const loadedDesigns = designsForProductSurfaces(configurationData.designs);
-        await preloadDesignImages(loadedDesigns);
         const surfaces = productSurfaces();
         activeSurface = surfaces[0].key;
         surfaceStates = new Map(surfaces.map((surface, index) => [
@@ -2654,9 +2535,10 @@
       for (const surface of productSurfaces()) {
         if (surface.key === activeSurface) continue;
         const state = surfaceStates.get(surface.key);
-        const design = (state?.design || []).map((item, index) => item.type === 'image'
-          ? { ...item }
-          : { ...item, color: colors[index % colors.length] });
+        const design = (state?.design || []).map((item, index) => ({
+          ...item,
+          color: colors[index % colors.length],
+        }));
         surfaceStates.set(surface.key, cloneEditorState({ design }, false));
       }
     }
@@ -2665,15 +2547,6 @@
       storeActiveSurfaceState();
       const front = surfaceStates.get('front');
       if (!front) return;
-      const otherPhotoCount = productSurfaces()
-        .filter((surface) => surface.key !== 'back')
-        .flatMap((surface) => surfaceStates.get(surface.key)?.design || [])
-        .filter((item) => item.type === 'image').length;
-      const copiedPhotoCount = front.design.filter((item) => item.type === 'image').length;
-      if (otherPhotoCount + copiedPhotoCount > 6) {
-        mugEditor.setFeedback('Für beide Seiten sind zusammen maximal sechs Fotos möglich.');
-        return;
-      }
       const copied = cloneEditorState(front, false);
       surfaceStates.set('back', copied);
       if (activeSurface === 'back') mugEditor.setState(copied);
@@ -2693,18 +2566,7 @@
         ctx.save();
         ctx.translate(offsetX + item.x * scale, offsetY + item.y * scale);
         ctx.rotate((item.angle || 0) * Math.PI / 180);
-        if (item.type === 'image') {
-          const image = mugEditor?.getImageElement(item.src);
-          if (image) {
-            ctx.drawImage(
-              image,
-              -item.width * scale / 2,
-              -item.height * scale / 2,
-              item.width * scale,
-              item.height * scale
-            );
-          }
-        } else if (item.type === 'icon') {
+        if (item.type === 'icon') {
           const icon = MugIcons.get(item.icon);
           if (icon) {
             const iconScale = item.size * scale / MugIcons.VIEWBOX_SIZE;
@@ -3388,9 +3250,7 @@
         },
         onReset: () => {
           mugEditor.setDesign(buildAutomaticDesign(), { record: true });
-          mugEditor.setFeedback(configurationType === 'personal_memory'
-            ? 'Druckseite geleert'
-            : 'Automatische Wortwolke wiederhergestellt');
+          mugEditor.setFeedback('Automatische Wortwolke wiederhergestellt');
           markDirty();
         },
       });
@@ -3413,7 +3273,7 @@
         if (allowEmptyDraft && !editingOrderItemId && isCompletelyEmpty) return true;
         errorText.textContent = productSurfaces().length > 1
           ? t('Gestaltet bitte auch die {{item}}.', { item: t(missingSurface.label) })
-          : t('Fügt mindestens ein Foto, Wort oder Motiv zu eurem Design hinzu.');
+          : t('Fügt mindestens ein Wort oder Motiv zu eurem Design hinzu.');
         mugEditor.setFeedback('{{item}} ist noch leer.', { item: t(missingSurface.label) });
         return false;
       }
@@ -3433,7 +3293,6 @@
             theme: selectedTheme,
             words,
             designs,
-            configurationType,
           }),
         });
         const data = await response.json();
@@ -3491,7 +3350,7 @@
 
     window.addEventListener('wolkenworte:localechange', refreshLocalizedConfigurator);
 
-    fetch(`/api/events/${encodeURIComponent(slug)}/configurator${isPersonalMode ? '?mode=personal' : ''}`)
+    fetch(`/api/events/${encodeURIComponent(slug)}/configurator`)
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'load_failed');
@@ -3499,7 +3358,6 @@
       })
       .then(async (data) => {
         await WolkenworteI18n.useEventLocale(data.event.locale);
-        configurationType = data.configurationType;
         words = data.words;
         products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
         product = products.find((candidate) => candidate.key === data.product?.key) || products[0];

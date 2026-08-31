@@ -20,10 +20,9 @@ it — this file is about how to work in it safely.
 - If you touched guest contribution ownership in `src/socket.js` or
   `src/db.js`, both `test/isolation.test.js` and `test/words.test.js` must
   pass; they cover cross-event isolation and receipt-bound removal.
-- If you touched personal photos/configuration types in `src/routes/events.js`,
-  `src/mugPrint.js`, `views/configure.ejs` or `public/js/mug-editor.js`,
-  both `test/configurator.test.js` and `test/storage-assets.test.js` must pass;
-  they cover empty personal starts, decoded-image validation, private Storage,
+- If you touched product designs in `src/routes/events.js`, `src/mugPrint.js`,
+  `views/configure.ejs` or `public/js/mug-editor.js`,
+  `test/configurator.test.js` must pass; it covers trusted canvas validation,
   configuration isolation and immutable print output.
 - If you touched `public/js/wordcloud-core.js` (the layout/export engine),
   `test/svg-export.test.js` and `test/export-font-metrics.test.js` must
@@ -55,24 +54,10 @@ it — this file is about how to work in it safely.
   and somebody else's receipt must remain indistinguishable to callers. Never
   replace this with a decrement-by-word endpoint, which would let one guest
   remove another guest's vote.
-- **Personal-memory configurations stay isolated from the event word cloud.**
-  `configuration_type=personal_memory` starts with no event words and requires
-  its own non-empty design. It must never silently fall back to `words` from
-  the shared event. Photos live only in the private Supabase Storage bucket;
-  immutable `design_json` contains opaque asset ids and never bytes, signed
-  URLs or permanent public URLs. Keep the server checks: decoded JPEG/PNG/WebP
-  with valid magic bytes, at most 1,600 px/2,560,000 pixels per upload, at most
-  6 unique assets and at most 6 MiB stored bytes per complete design. Asset
-  joins are transactional; non-active/foreign assets cannot be attached, and
-  failed Storage deletion must retain its retryable object key.
-- **The admin PIN fields in `views/create.ejs` (`#pin`, `#pin-confirm`)
-  must stay `type="tel"`, not `type="password"`.** Two adjacent
-  `type="password"` fields make Safari/Chrome treat the form as an account
-  signup and offer to autofill/generate a strong (alphanumeric) password.
-  That password then fails the PIN's `pattern="[0-9]*"` validation and the
-  browser silently refocuses the field — looks exactly like a broken submit
-  button, and cost real debugging time to track down. The dot-masking is
-  done with CSS (`-webkit-text-security: disc`) instead, purely visual.
+- **Admin PIN controls stay numeric telephone fields.** The inputs in
+  `views/display.ejs` must remain `type="tel"`, `inputmode="numeric"` and
+  `autocomplete="off"`, not password fields. Password-manager autofill can
+  insert alphanumeric account passwords that fail the 4–6 digit PIN check.
 - **Reset has no reusable admin credential.** The PIN is submitted only in the
   JSON body of one reset request, verified asynchronously, and discarded. Do
   not restore an admin-token endpoint, browser token storage, accounts or a
@@ -80,9 +65,7 @@ it — this file is about how to work in it safely.
   source address, never the raw IPv4/IPv6 address.
 - **Expired events look unknown and their slugs are never reused.** Public
   lookups filter `expires_at`; `reserved_event_slugs` survives event cleanup.
-  Paid configurations and assets must detach before an event is deleted, and
-  Storage objects must be removed before their last metadata row. A failed
-  object deletion retains a retryable key.
+  Paid configurations must detach before an event is deleted.
 - **Paid Printful files are frozen private artifacts.** Draft/live work uses
   only the opaque artifact-id/nonce application URL, never the editable
   configuration route or a Supabase object URL. Failed object operations keep
@@ -141,9 +124,11 @@ it — this file is about how to work in it safely.
   no TypeScript. Keep it that way unless explicitly asked to change it —
   the project is intentionally low-dependency/low-ops.
 - Postgres through one bounded `pg.Pool` is the production and test data layer.
-  Keep SQL behind `src/db.js`, keep callers async/await, and evolve schema only
-  through ordered files in `supabase/migrations/`; do not add an ORM or a
-  SQLite test substitute.
+  Keep SQL behind `src/db.js` and keep callers async/await. While the app has no
+  customers, `supabase/migrations/20260831000000_wolkenworte_baseline.sql` is
+  the one clean schema baseline. Once customer data exists, never rewrite that
+  baseline: evolve it only through new ordered migration files. Do not add an
+  ORM or a SQLite test substitute.
 - German is the source language throughout (`views/*.ejs` copy, form
   labels, error messages). Keep new user-facing strings in German unless
   told otherwise.

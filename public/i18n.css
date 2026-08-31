@@ -26,11 +26,6 @@
   z-index: 10001 !important;
 }
 
-body.preview-open .ww-language-picker {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .ww-language-trigger,
 .ww-language-option {
   appearance: none;

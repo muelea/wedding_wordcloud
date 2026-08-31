@@ -1,34 +1,27 @@
 # Wolkenworte
 
-A live word cloud for weddings. Any couple creates their own event, guests
-scan a QR code and submit a word from their phone (no account, no app), and
-the word cloud grows in real time on a shared display. Free to use — the
-commercial product being prepared is an optional order of 1–99 personalized
-white mugs, cork-backed coasters, matte or framed posters, tote bags, throw
-blankets, spiral notebooks and decorative pillows, printed from the finished
-word cloud after the event. Guests can also
-start a completely separate personal-memory design during the celebration,
-add their own photos, words and motifs, and purchase it independently.
+A live word cloud for weddings and other special occasions. One click creates
+an event, participants submit words from their phones without an account or
+app, and the cloud grows in real time on the same shared event page. The
+commercial product being prepared is an optional order of personalized mugs,
+coasters, posters, tote bags, blankets, notebooks and pillows printed from a
+frozen snapshot of the word cloud.
 
 ## How it works
 
-1. Couple visits `/start`, enters their names, gets a unique event at
-   `/e/<slug>` plus a 4-6 digit admin PIN.
-2. `/e/<slug>/display` goes on the big screen / projector.
-3. Guests open `/e/<slug>` on their phone (usually via QR code) and submit
+1. A visitor selects “Hier starten”. The landing page posts to `/start`, which
+   creates an owner-bound setup event and redirects to its sole public URL,
+   `/e/<slug>`.
+2. The event page works on phones and on a big screen. Its creator can add the
+   name and optionally a 4–6 digit admin PIN there; there is no separate setup,
+   guest or display route.
+3. Participants open `/e/<slug>` (usually via QR code) and submit
    one word at a time. Their anonymous browser session can remove its own
    contributions again; matching words are decremented rather than deleting
    another guest's vote.
-4. Words appear live on the display via Socket.io — font size scales with
+4. Words appear live on the event page via Socket.io — font size scales with
    how many guests submitted the same word.
-5. From the guest page, any attendee can open the personal-memory flow. It
-   starts with an empty product design, locally reduces selected photos before upload,
-   and keeps that opaque design separate from the shared wedding word cloud. It uses
-   the same products, arrangement actions and editing tools as the shared-cloud configurator;
-   only the initial canvas content differs.
-   A guest can add up to six photos plus personal words and motifs, then use
-   the normal address, quote and checkout flow for their own order.
-6. After the event, the couple opens a product configurator, chooses a white
+5. After the event, the couple opens a product configurator, chooses a white
    mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
    spiral notebook or decorative pillow from grouped product families, any
    color palette and product-specific arrangement actions, and approves an
@@ -60,7 +53,7 @@ add their own photos, words and motifs, and purchase it independently.
    selection. The immutable canvas design is the only source for preview and Printful output. Words
    can also be edited directly. Hard bounds keep
    the entire design printable.
-7. The saved designs continue to a dedicated, mobile-first shipping-address
+6. The saved designs continue to a dedicated, mobile-first shipping-address
    page. There the customer chooses the quantity of each design per delivery
    address. Countries and state/province choices come directly from Printful;
    the server sends one Printful estimate per recipient address containing all
@@ -70,7 +63,7 @@ add their own photos, words and motifs, and purchase it independently.
    implied by Printful's estimate. The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
-8. "Weiter zur Zahlung" re-estimates the same trusted design basket and
+7. "Weiter zur Zahlung" re-estimates the same trusted design basket and
    address split immediately before creating a dynamic Stripe-hosted Checkout
    Session. A changed price must be confirmed again. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted
@@ -83,7 +76,7 @@ add their own photos, words and motifs, and purchase it independently.
 
 Wolkenworte supports German, English, French, Italian, Spanish and Turkish.
 The language chosen when an event is created is stored on the event and is
-used by default on its guest, display, configurator, shipping and confirmation
+used by default on its event, configurator, shipping and confirmation
 pages. Every page also exposes a language selector; a visitor's explicit
 choice is stored locally in that browser and takes precedence over the event
 default. A `?lang=de|en|fr|it|es|tr` query parameter provides the same explicit
@@ -93,15 +86,15 @@ German source copy is the canonical message id, the English catalog is the
 runtime fallback, and each additional locale lives in `public/locales/`.
 Fixed interface copy, metadata, accessibility labels, browser dialogs,
 product descriptions, editor feedback, quantities, money, country names and
-Stripe Checkout all use the active locale. `Wolkenworte`, couple names, guest
-word submissions and text or photos deliberately added to a personal design
-are never translated. Word normalization is locale-aware, including Turkish
+Stripe Checkout all use the active locale. `Wolkenworte`, event names and word
+submissions are never translated. Word normalization is locale-aware, including Turkish
 dotted and dotless I.
 
 ## Current development status
 
-- The full product now runs on Postgres. Versioned migrations and a dedicated
-  least-privileged runtime role are configured in the Supabase project.
+- The full product now runs on Postgres. During this customer-free build phase,
+  one clean baseline migration and a dedicated least-privileged runtime role
+  define the Supabase project.
 - The hosted test environment is active at `https://wolkenworte.io` on one
   stateless Fly Machine in Frankfurt. `https://www.wolkenworte.io` redirects to
   that canonical apex origin. The Machine scales to zero while idle and
@@ -123,10 +116,6 @@ dotted and dotless I.
   private receipt hydration deduplicate connection storms without caching
   stale or cross-owner state. A guarded hosted capacity runner records
   application, transport, Postgres and Fly metrics against explicit gates.
-- Personal photos are normalized by the server and stored once in a private
-  Supabase Storage bucket. Immutable configurations contain only opaque asset
-  IDs; editable responses use short-lived signed previews and print SVGs
-  materialize verified private bytes on demand.
 - The application data layer is fully asynchronous through one bounded `pg`
   pool. Application startup checks the required migration version and never
   creates or alters schema objects.
@@ -140,7 +129,7 @@ dotted and dotless I.
   enabling Resend live delivery and the first explicitly approved controlled
   Printful draft remain pending before live sales.
 
-## Guest ownership and personal photo designs
+## Guest ownership and lifecycle
 
 Every guest contribution gets an unguessable receipt tied to the event and an
 anonymous browser-session id. Removing a contribution requires all three, so a
@@ -148,28 +137,8 @@ guest can decrement only a word that this same browser session submitted. The
 API deliberately gives the same `not_found` response for an unknown receipt
 and another guest's receipt.
 
-The personal-memory configurator is a separate configuration type. It always
-starts empty, never imports words from the shared wedding cloud and requires
-its own non-empty design. Before transmission, the browser accepts source
-files up to 20 MiB, applies image orientation, scales the longest side to at
-most 1600 px and encodes the result as JPEG at quality `0.84`. The server then
-validates actual JPEG/PNG/WebP signatures and enforces at most six photos and
-at most 6 MiB decoded image data across the complete design.
-
-The reduced browser image is uploaded once to the backend. The server verifies
-its real JPEG/PNG/WebP signature, fully decodes it with bounded dimensions and
-pixels, strips metadata, normalizes it, and writes it to the private
-`wolkenworte-private` Supabase Storage bucket. Postgres stores only the opaque
-asset id, checksum, byte size, state and configuration references—never the
-image bytes or a permanent object URL. Revisions reuse the same object.
-
-Editable configurations receive a fresh 15-minute signed preview URL. The
-configuration-specific print route verifies and embeds the private bytes on
-demand and uses `private, no-store`; its opaque random configuration id remains
-the public handle. Failed upload/deletion transitions retain a retryable object
-key instead of silently orphaning Storage bytes. The authenticated 15-second
-maintenance runner invokes the race-safe, object-first cleanup primitives in
-bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
+The authenticated 15-second maintenance runner invokes race-safe cleanup
+primitives in bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
 so due work wakes a stopped Machine; completion is recorded separately from
 pg_net merely queueing a request.
 
@@ -213,8 +182,8 @@ model, CDN download or manual asset-copy step. A stale `node_modules` directory
 therefore cannot silently disable the 3D preview.
 
 The server prints a URL on startup (including the machine's LAN address, so
-phones on the same Wi-Fi can reach it). `/` is the landing page and `/start` is
-event creation. A complete collaborator `.env` enables private photo uploads,
+phones on the same Wi-Fi can reach it). `/` is the landing page and `POST /start`
+creates an event. A complete collaborator `.env` enables private print artifacts,
 Stripe sandbox Checkout and Printful price estimates; the startup check names
 any integration that was deliberately left unconfigured without printing a
 credential.
@@ -234,10 +203,14 @@ run `supabase start` and `supabase db reset`, put that local admin connection in
 infrastructure setup, not part of normal collaborator onboarding.
 
 For a clean hosted project, run `npm run db:migrate` with only the privileged
-`MIGRATION_DATABASE_URL`, then `npm run db:provision-runtime` once. The second
-command generates the `wolkenworte_app` password, proves the role cannot create
-tables, verifies schema access and writes its `DATABASE_URL` to the ignored
-local `.env`. Never put `MIGRATION_DATABASE_URL` in Fly Secrets.
+`MIGRATION_DATABASE_URL`. The single committed baseline creates the complete
+application schema, runtime grants, private print-artifact bucket and Cron
+function. Then run `npm run db:provision-runtime` once. That command generates
+the `wolkenworte_app` password, proves the role cannot create tables, verifies
+schema access and writes its `DATABASE_URL` to the ignored local `.env`. Never
+put `MIGRATION_DATABASE_URL` in Fly Secrets. Once real customer data exists,
+the baseline is immutable and every schema change must be an additive ordered
+migration.
 
 ## Environment variables
 
@@ -279,7 +252,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `TEST_DATABASE_URL` | optional test operator | Overrides the admin connection used to create isolated test schemas; otherwise tests fall back to migration/runtime URLs. |
 | `SUPABASE_URL` | local/operator/Fly runtime | Supabase API origin used by the backend for private Storage; browsers never call it directly. |
 | `SUPABASE_SECRET_KEY` | local/operator/Fly secret | Backend-only `sb_secret_...` key for private Storage operations; never exposed to clients. |
-| `SUPABASE_STORAGE_BUCKET` | shared setting | Private bucket containing normalized personal photos and frozen paid print artifacts. |
+| `SUPABASE_STORAGE_BUCKET` | shared setting | Private bucket containing frozen paid print artifacts. |
 | `RATE_LIMIT_HMAC_SECRET` | local/Fly secret | HMACs normalized source addresses so durable abuse data never stores raw IP addresses. |
 | `MAINTENANCE_SECRET` | local/Fly secret | Independent bearer secret for bounded Supabase Cron maintenance wake-ups. |
 | `MAINTENANCE_MODE` | shared setting | Temporarily blocks public HTTP/socket traffic during the guarded pre-live cleanup while health/operator checks remain available. |
@@ -390,7 +363,6 @@ reports/                   Sanitized retained capacity evidence
 src/
   db.js                    async Postgres data boundary and transaction logic
   dbConfig.js              verified-TLS and bounded pg pool configuration
-  designAssets.js          bounded image normalization + private asset lifecycle
   privateStorage.js        backend-only Supabase Storage boundary
   lifecycle.js             expired-event cleanup + paid-data detachment
   maintenance.js           bounded fulfillment/retention orchestration + heartbeat
@@ -417,21 +389,19 @@ src/
   mugPrint.js              Product-sized SVG print-file renderer
   products.js              Curated, API-verified Printful variants and geometry
   routes/
-    events.js              Event/configuration CRUD, personal photos, pricing and checkout
+    events.js              Event/configuration CRUD, pricing and checkout
     maintenance.js         secret-authenticated synchronous Cron wake-up
     performance.js         secret-authenticated aggregate capacity snapshot
     webhook.js             raw-body Stripe, signed Printful and signed Resend callbacks
 public/
   js/mug-3d-viewer.js      Shared rotatable Three.js mug preview
-  js/mug-editor.js         Bounded, dynamically scaled text/motif/photo print-area editor
+  js/mug-editor.js         Bounded, dynamically scaled text/motif print-area editor
   js/mug-icons.js          Curated editorial fine-line wedding motif library
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
 views/
   landing.ejs              Marketing landing page, served at '/'
-  create.ejs               Event creation form, served at '/start'
-  guest.ejs                Guest word-submission + personal-memory entry page
-  display.ejs              Live display + SVG export + mug CTA, served at '/e/:slug/display'
-  configure.ejs            Shared/personal product configurator with photo editor + 3D/flat previews
+  display.ejs              Unified word entry/live display + SVG export + product CTA at '/e/:slug'
+  configure.ejs            Word-cloud product configurator with text/motif editor + 3D/flat previews
   shipping.ejs             Mobile-first address + live Printful price estimate
   order-confirmation.ejs   Polling confirmation page for signed test payments
   impressum.ejs            Current legal notice
@@ -448,14 +418,14 @@ npm test
 ```
 
 Runs `node --test test/*.test.js`. The suite covers multi-tenant
-isolation, personal photo-design separation, word submission/live-update, SVG layout/export correctness, the
+isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
 dynamic Stripe Checkout, price-change confirmation, webhook idempotency,
 immutable artifacts, lease recovery/stale-owner rejection, provider ambiguity
 reconciliation, signed callbacks, atomic buyer-email jobs, Resend idempotency,
 lost-response recovery, lease fencing, shipment/refund/cancellation notices,
-authenticated maintenance, private Storage normalization/deduplication/deletion recovery,
+authenticated maintenance, private print-artifact deletion recovery,
 expiration privacy, safe paid-data retention, one-use async PIN reset and
 database/process abuse ceilings,
 hosting health/cache/shutdown behavior, live safety gates and
@@ -539,10 +509,9 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - Keep one web Machine until both an official Socket.io cross-Machine adapter
   and tested Fly affinity/replay for long-polling exist. Increasing the Machine
   count with the current in-memory adapter would split rooms and is unsupported.
-- The Supabase bucket is private. Personal-photo validation remains limited to
-  JPEG/PNG/WebP and 6 MiB per complete design; the bucket also accepts frozen
-  SVG print artifacts up to 24 MiB. Fly holds the backend-only Storage key; browser
-  previews are signed for 15 minutes and immutable designs store no signed URL.
+- The Supabase bucket is private and accepts frozen SVG print artifacts up to
+  24 MiB. Fly holds the backend-only Storage key; Printful receives only an
+  opaque application capability URL, never a Storage URL.
 
 ## Socket capacity qualification
 
@@ -561,7 +530,7 @@ Stripe payments, Resend delivery or Printful order writes.
 A qualifying run uses 100 rooms and 2,000 Socket.io clients, including 300 in
 one near-maximum hot room and 20 permanently polling-only clients. The other
 clients use the same WebSocket-first connection with real polling fallback and
-randomized reconnect backoff as the shipped guest/display pages. During 30 seconds it offers and
+randomized reconnect backoff as the shipped event page. During 30 seconds it offers and
 requires 1,500 accepted submissions at 50 per second alongside configuration
 saves and Printful estimates, then verifies word/theme/reset/receipt isolation,
 production abuse ceilings, recovery after a real Machine restart and takeover
@@ -778,14 +747,10 @@ keys in Fly for activation by `npm run deploy:hosted`.
 
 ## Known gotchas
 
-- **Don't make the admin PIN fields `type="password"`.** Two adjacent
-  password-type fields (`#pin`, `#pin-confirm` in `views/create.ejs`) make
-  Safari/Chrome treat the form as an account signup and offer to
-  autofill/generate a strong password — which then fails the PIN's
-  `pattern="[0-9]*"` validation and silently refocuses the field, looking
-  like the button is broken. They're deliberately `type="tel"` with
-  `autocomplete="off"` and CSS-only dot-masking (`-webkit-text-security`)
-  instead. Don't "fix" this back to `type="password"`.
+- **Keep admin PIN inputs numeric telephone fields.** The PIN controls in
+  `views/display.ejs` deliberately use `type="tel"`, `inputmode="numeric"`
+  and `autocomplete="off"`. A password input invites browser account-password
+  autofill and can insert values that fail the 4–6 digit PIN validation.
 - **Never use `io.emit(...)` or a bare `socket.emit(...)` broadcast in
   `src/socket.js`.** Every event must join a room keyed by its slug first;
   every emit must be `io.to(slug).emit(...)` / `socket.to(slug).emit(...)`.

@@ -161,7 +161,6 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
       name: 'Wortwolken-Tasse',
       unit: { singular: 'Tasse', plural: 'Tassen' },
     },
-    configurationType: 'event_wordcloud',
     paidAt: paidOrder.paid_at,
   });
 });

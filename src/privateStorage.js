@@ -3,7 +3,6 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const DEFAULT_BUCKET = 'wolkenworte-private';
-const SIGNED_PREVIEW_TTL_SECONDS = 15 * 60;
 const STORAGE_TIMEOUT_MS = 3_500;
 const STORAGE_LIST_PAGE_SIZE = 100;
 const STORAGE_DELETE_BATCH_SIZE = 100;
@@ -56,11 +55,6 @@ function activeAdapter() {
       });
       if (error) throw error;
     },
-    async createSignedUrl(objectKey, expiresIn = SIGNED_PREVIEW_TTL_SECONDS) {
-      const { data, error } = await storageClient().createSignedUrl(objectKey, expiresIn);
-      if (error || !data?.signedUrl) throw error || new Error('Signed URL fehlt.');
-      return data.signedUrl;
-    },
     async download(objectKey) {
       const { data, error } = await storageClient().download(objectKey);
       if (error || !data) throw error || new Error('Storage-Objekt fehlt.');
@@ -88,10 +82,6 @@ function activeAdapter() {
 
 function upload(...args) {
   return activeAdapter().upload(...args);
-}
-
-function createSignedUrl(...args) {
-  return activeAdapter().createSignedUrl(...args);
 }
 
 function download(...args) {
@@ -158,13 +148,11 @@ function resetAdapterForTests() {
 
 module.exports = {
   DEFAULT_BUCKET,
-  SIGNED_PREVIEW_TTL_SECONDS,
   STORAGE_TIMEOUT_MS,
   STORAGE_LIST_PAGE_SIZE,
   STORAGE_DELETE_BATCH_SIZE,
   bucketName,
   upload,
-  createSignedUrl,
   download,
   remove,
   listAllObjectKeys,

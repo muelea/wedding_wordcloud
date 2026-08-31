@@ -383,7 +383,6 @@ async function connectAll(baseUrl, rooms, options, state) {
 function configurationPayload(index) {
   const product = resolveProductOrientation(getProduct('white-glossy-mug-duo-11oz'), 'default');
   return {
-    configurationType: 'personal_memory',
     productKey: product.key,
     quantity: 1,
     theme: 'pastel',
@@ -467,7 +466,6 @@ function interruptedFulfillmentSnapshot(configuration) {
     printfulPlacements: product.printful.placements,
     printfulOptions: product.printful.options,
     orientation: configuration.orientation,
-    configurationType: configuration.configuration_type,
     theme: configuration.theme,
     printWidth: Number(configuration.print_width),
     printHeight: Number(configuration.print_height),

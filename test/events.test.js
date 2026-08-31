@@ -7,16 +7,9 @@ const { startTestServer, createEvent } = require('./helpers');
 // Matches "<prefix>-<5-char suffix from the unambiguous alphabet>".
 const SUFFIX_RE = /^(.+)-([23456789abcdefghjkmnpqrstuvwxyz]{5})$/;
 
-test('event creation & slug-preview flow', async (t) => {
+test('event creation uses one canonical event URL', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-
-  // /api/slug-availability now only previews/validates the name-derived
-  // prefix -- the final slug always gets a random unique code appended at
-  // creation time, so there is no "taken" concept to check here anymore.
-  let preview = await fetch(`${baseUrl}/api/slug-availability?slug=anna-und-ben`).then((r) => r.json());
-  assert.equal(preview.valid, true);
-  assert.equal(preview.slug, 'anna-und-ben');
 
   const event = await createEvent(baseUrl, { coupleName: 'Anna & Ben', slug: 'anna-und-ben', pin: '4242' });
   // The final slug is the requested prefix PLUS a random suffix, not the
@@ -25,16 +18,15 @@ test('event creation & slug-preview flow', async (t) => {
   const match = SUFFIX_RE.exec(event.slug);
   assert.ok(match, `expected "${event.slug}" to match "<prefix>-<suffix>"`);
   assert.equal(match[1], 'anna-und-ben');
-  assert.equal(event.guestUrl, `/e/${event.slug}`);
-  assert.equal(event.displayUrl, `/e/${event.slug}/display`);
+  assert.equal(event.eventUrl, `/e/${event.slug}`);
   assert.equal('adminToken' in event, false);
 
   // Starting now creates an owner-bound draft immediately and sends the
   // browser straight to its unified live display.
-  const startResponse = await fetch(`${baseUrl}/start`, { redirect: 'manual' });
+  const startResponse = await fetch(`${baseUrl}/start`, { method: 'POST', redirect: 'manual' });
   assert.equal(startResponse.status, 303);
   const startLocation = startResponse.headers.get('location') || '';
-  const draftLocationMatch = /^\/e\/(wortwolke-[23456789abcdefghjkmnpqrstuvwxyz]{5})\/display$/.exec(startLocation);
+  const draftLocationMatch = /^\/e\/(wortwolke-[23456789abcdefghjkmnpqrstuvwxyz]{5})$/.exec(startLocation);
   assert.ok(draftLocationMatch, `unexpected draft display location: ${startLocation}`);
   const draftSlug = draftLocationMatch[1];
   const draftCookie = (startResponse.headers.get('set-cookie') || '').split(';')[0];
@@ -46,12 +38,11 @@ test('event creation & slug-preview flow', async (t) => {
   assert.equal(draftInfo.isDraftOwner, true);
   assert.equal(draftInfo.hasAdminPin, false);
 
-  // Old guest links remain valid, but both creators and contributors now use
-  // the same display, which contains contribution, sharing and save controls.
-  const guestResponse = await fetch(`${baseUrl}${event.guestUrl}`, { redirect: 'manual' });
-  assert.equal(guestResponse.status, 302);
-  assert.equal(guestResponse.headers.get('location'), event.displayUrl);
-  const displayHtml = await fetch(`${baseUrl}${event.displayUrl}`).then((response) => response.text());
+  // Creators and contributors use one canonical event page, which contains
+  // contribution, sharing and save controls.
+  const eventPageResponse = await fetch(`${baseUrl}${event.eventUrl}`);
+  assert.equal(eventPageResponse.status, 200);
+  const displayHtml = await eventPageResponse.text();
   assert.match(displayHtml, /id="cloud-container"/);
   assert.match(displayHtml, /id="display-word-entry"/);
   assert.match(displayHtml, /id="display-word-input"/);
@@ -63,11 +54,15 @@ test('event creation & slug-preview flow', async (t) => {
   assert.match(displayHtml, /id="draft-settings-button"/);
   assert.match(displayHtml, /\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
   assert.match(displayHtml, /socket\.on\('word-update', \(words\) =>/);
-
-  // The prefix alone stays a valid preview after creation too -- previewing
-  // it is not a "taken" check anymore, so it doesn't flip to invalid.
-  preview = await fetch(`${baseUrl}/api/slug-availability?slug=anna-und-ben`).then((r) => r.json());
-  assert.equal(preview.valid, true);
+  const manifest = await fetch(`${baseUrl}${event.eventUrl}/manifest.webmanifest`).then((response) => response.json());
+  assert.equal(manifest.id, event.eventUrl);
+  assert.equal(manifest.start_url, event.eventUrl);
+  assert.equal(manifest.scope, event.eventUrl);
+  const removedDisplayRoute = await fetch(`${baseUrl}${event.eventUrl}/display`);
+  assert.equal(removedDisplayRoute.status, 404);
+  assert.equal((await fetch(`${baseUrl}/start`)).status, 404);
+  assert.equal((await fetch(`${baseUrl}/wedding`)).status, 404);
+  assert.equal((await fetch(`${baseUrl}/api/slug-availability?slug=anna-und-ben`)).status, 404);
 
   // Public event info is fetchable by the real (suffixed) slug.
   const info = await fetch(`${baseUrl}/api/events/${event.slug}`).then((r) => r.json());
@@ -107,7 +102,7 @@ test('identical couple names produce distinct, independently working slugs (priv
   assert.notEqual(firstMatch[2], secondMatch[2]);
 
   // Both slugs are independently real, working events -- not just distinct
-  // strings, but two separate rows a guest/display page can actually load.
+  // strings, but two separate rows an event page can actually load.
   const firstInfo = await fetch(`${baseUrl}/api/events/${first.slug}`).then((r) => r.json());
   const secondInfo = await fetch(`${baseUrl}/api/events/${second.slug}`).then((r) => r.json());
   assert.equal(firstInfo.coupleName, 'Johanna & Peter');
@@ -186,7 +181,7 @@ test('admin PIN authorizes one reset request without issuing or storing a reusab
   });
   assert.equal(resetRes.status, 200);
 
-  const displayHtml = await fetch(`${baseUrl}/e/${event.slug}/display`).then((response) => response.text());
+  const displayHtml = await fetch(`${baseUrl}/e/${event.slug}`).then((response) => response.text());
   assert.doesNotMatch(displayHtml, /admin-token:|sessionStorage\.setItem\([^)]*admin/i);
   assert.match(displayHtml, /JSON\.stringify\(\{ pin \}\)/);
 });

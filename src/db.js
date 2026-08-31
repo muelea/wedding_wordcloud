@@ -8,13 +8,7 @@ const { buildEmailSnapshot } = require('./emailTemplates');
 const I18n = require('./i18n');
 const log = require('./structuredLog');
 
-const REQUIRED_SCHEMA_VERSION = '6';
-const MAX_CONFIGURATION_ASSETS = 6;
-const MAX_CONFIGURATION_ASSET_BYTES = 6 * 1024 * 1024;
-const MAX_UNATTACHED_OWNER_ASSETS = 12;
-const MAX_UNATTACHED_OWNER_BYTES = 12 * 1024 * 1024;
-const MAX_UNATTACHED_EVENT_ASSETS = 2000;
-const MAX_UNATTACHED_EVENT_BYTES = 1024 * 1024 * 1024;
+const REQUIRED_SCHEMA_VERSION = '1';
 const MAX_EVENT_CONTRIBUTIONS = 5000;
 const MAX_EVENT_UNIQUE_WORDS = 500;
 const MAX_OWNER_CONTRIBUTIONS = 100;
@@ -684,7 +678,6 @@ function configurationSnapshot(configuration) {
     printfulPlacements: product.printful.placements,
     printfulOptions: product.printful.options,
     orientation: configuration.orientation,
-    configurationType: configuration.configuration_type,
     theme: configuration.theme,
     printWidth: configuration.print_width,
     printHeight: configuration.print_height,
@@ -1610,219 +1603,6 @@ function isCheckoutQuoteExpired(quote) {
 }
 
 // ── Configurations ──────────────────────────────────────────────────────
-function designAssetIds(design) {
-  if (!design?.surfaces || typeof design.surfaces !== 'object' || Array.isArray(design.surfaces)) return [];
-  return [...new Set(Object.values(design.surfaces)
-    .flatMap((surface) => Array.isArray(surface) ? surface : [])
-    .filter((item) => item?.type === 'image')
-    .map((item) => String(item.assetId || ''))
-    .filter(Boolean))];
-}
-
-function assetValidationError() {
-  const error = new Error('Configuration contains unavailable design assets.');
-  error.code = 'invalid_design_assets';
-  return error;
-}
-
-async function beginDesignAssetUpload({
-  eventId,
-  ownerId,
-  mimeType,
-  byteSize,
-  sha256,
-  extension,
-}) {
-  return withTransaction(async (client) => {
-    const lockedEvent = await client.query(`
-      SELECT id FROM events
-      WHERE id = $1 AND expires_at > transaction_timestamp()
-      FOR UPDATE
-    `, [eventId]);
-    if (!lockedEvent.rowCount) {
-      const error = new Error('event not found');
-      error.code = 'event_not_found';
-      throw error;
-    }
-
-    const existing = await client.query(`
-      SELECT *
-      FROM design_assets
-      WHERE event_id = $1 AND uploader_owner_id = $2 AND sha256 = $3
-        AND storage_status = 'active' AND deleted_at IS NULL
-      ORDER BY created_at ASC, id ASC
-      LIMIT 1
-      FOR UPDATE
-    `, [eventId, ownerId, sha256]);
-    if (existing.rows[0]) {
-      const refreshed = await client.query(`
-        UPDATE design_assets
-        SET expires_at = greatest(expires_at, transaction_timestamp() + interval '30 days')
-        WHERE id = $1
-        RETURNING *
-      `, [existing.rows[0].id]);
-      return { reused: true, asset: rowToBoundary(refreshed.rows[0]) };
-    }
-
-    const usage = await client.query(`
-      SELECT
-        count(*) filter (
-          where uploader_owner_id = $2 and not exists (
-            select 1 from configuration_assets reference where reference.asset_id = asset.id
-          )
-        )::integer AS owner_count,
-        coalesce(sum(byte_size) filter (
-          where uploader_owner_id = $2 and not exists (
-            select 1 from configuration_assets reference where reference.asset_id = asset.id
-          )
-        ), 0)::bigint AS owner_bytes,
-        count(*) filter (where not (
-          exists (
-            select 1 from configuration_assets reference where reference.asset_id = asset.id
-          ) and not exists (
-            select 1
-            from configuration_assets reference
-            where reference.asset_id = asset.id
-              and not exists (
-                select 1
-                from order_items item
-                join orders paid_order on paid_order.id = item.order_id
-                where item.configuration_id = reference.configuration_id
-                  and paid_order.status in ('paid_test', 'paid', 'fulfilled')
-              )
-          )
-        ))::integer AS event_count,
-        coalesce(sum(byte_size) filter (where not (
-          exists (
-            select 1 from configuration_assets reference where reference.asset_id = asset.id
-          ) and not exists (
-            select 1
-            from configuration_assets reference
-            where reference.asset_id = asset.id
-              and not exists (
-                select 1
-                from order_items item
-                join orders paid_order on paid_order.id = item.order_id
-                where item.configuration_id = reference.configuration_id
-                  and paid_order.status in ('paid_test', 'paid', 'fulfilled')
-              )
-          )
-        )), 0)::bigint AS event_bytes
-      FROM design_assets asset
-      WHERE event_id = $1
-        AND storage_status in ('uploading', 'active')
-        AND deleted_at IS NULL
-    `, [eventId, ownerId]);
-    const totals = usage.rows[0];
-    const exceedsOwner = Number(totals.owner_count) + 1 > MAX_UNATTACHED_OWNER_ASSETS ||
-      Number(totals.owner_bytes) + byteSize > MAX_UNATTACHED_OWNER_BYTES;
-    const exceedsEvent = Number(totals.event_count) + 1 > MAX_UNATTACHED_EVENT_ASSETS ||
-      Number(totals.event_bytes) + byteSize > MAX_UNATTACHED_EVENT_BYTES;
-    if (exceedsOwner || exceedsEvent) {
-      const error = new Error('Asset upload ceiling reached.');
-      error.code = 'asset_limit';
-      throw error;
-    }
-
-    const id = crypto.randomBytes(18).toString('base64url');
-    const objectKey = `photos/${eventId}/${crypto.randomBytes(24).toString('hex')}.${extension}`;
-    const inserted = await client.query(`
-      INSERT INTO design_assets (
-        id, event_id, uploader_owner_id, object_key, mime_type, byte_size,
-        sha256, storage_status, expires_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'uploading', transaction_timestamp() + interval '30 days')
-      RETURNING *
-    `, [id, eventId, ownerId, objectKey, mimeType, byteSize, sha256]);
-    return { reused: false, asset: rowToBoundary(inserted.rows[0]) };
-  });
-}
-
-async function activateDesignAsset(assetId) {
-  const result = await getPool().query(`
-    UPDATE design_assets
-    SET storage_status = 'active', last_delete_error = NULL,
-        expires_at = greatest(expires_at, transaction_timestamp() + interval '30 days')
-    WHERE id = $1 AND storage_status = 'uploading' AND deleted_at IS NULL
-    RETURNING *
-  `, [assetId]);
-  if (!result.rows[0]) throw new Error('Design asset could not be activated.');
-  return rowToBoundary(result.rows[0]);
-}
-
-async function markDesignAssetUploadFailed(assetId, reason) {
-  const sanitized = String(reason || 'storage_upload_failed').replace(/[^a-z0-9_:-]/gi, '').slice(0, 240);
-  const result = await getPool().query(`
-    UPDATE design_assets
-    SET storage_status = 'delete_failed', last_delete_error = $2
-    WHERE id = $1 AND storage_status = 'uploading' AND deleted_at IS NULL
-    RETURNING *
-  `, [assetId, sanitized]);
-  return rowToBoundary(result.rows[0]);
-}
-
-async function getConfigurationAssets(configurationId) {
-  const result = await getPool().query(`
-    SELECT asset.*
-    FROM configuration_assets reference
-    JOIN design_assets asset ON asset.id = reference.asset_id
-    WHERE reference.configuration_id = $1
-    ORDER BY asset.id
-  `, [configurationId]);
-  return rowsToBoundary(result.rows);
-}
-
-async function claimDesignAssetForDeletion(assetId) {
-  return withTransaction(async (client) => {
-    const locked = await client.query(`
-      SELECT * FROM design_assets WHERE id = $1 FOR UPDATE
-    `, [assetId]);
-    const asset = locked.rows[0];
-    if (!asset || asset.deleted_at || asset.storage_status === 'deleting') return null;
-    const references = await client.query(
-      'SELECT 1 FROM configuration_assets WHERE asset_id = $1 LIMIT 1',
-      [assetId]
-    );
-    const staleUpload = asset.storage_status === 'uploading' &&
-      Date.parse(asset.created_at) <= Date.now() - 15 * 60 * 1000;
-    const eligible = asset.storage_status === 'delete_failed' || staleUpload ||
-      (asset.storage_status === 'active' && Date.parse(asset.expires_at) <= Date.now());
-    if (references.rowCount || !eligible) return null;
-    const claimed = await client.query(`
-      UPDATE design_assets
-      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
-          last_delete_error = NULL
-      WHERE id = $1
-      RETURNING *
-    `, [assetId]);
-    return rowToBoundary(claimed.rows[0]);
-  });
-}
-
-async function finishDesignAssetDeletion(assetId) {
-  const result = await getPool().query(`
-    DELETE FROM design_assets asset
-    WHERE asset.id = $1 AND asset.storage_status = 'deleting'
-      AND NOT EXISTS (
-        SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
-      )
-    RETURNING id
-  `, [assetId]);
-  if (!result.rowCount) throw new Error('Design asset deletion lost its claim.');
-  return true;
-}
-
-async function failDesignAssetDeletion(assetId, reason) {
-  const sanitized = String(reason || 'storage_delete_failed').replace(/[^a-z0-9_:-]/gi, '').slice(0, 240);
-  const result = await getPool().query(`
-    UPDATE design_assets
-    SET storage_status = 'delete_failed', last_delete_error = $2
-    WHERE id = $1 AND storage_status = 'deleting'
-    RETURNING *
-  `, [assetId, sanitized]);
-  if (!result.rows[0]) throw new Error('Design asset deletion failure could not be recorded.');
-  return rowToBoundary(result.rows[0]);
-}
-
 async function createConfiguration({
   eventId,
   productKey,
@@ -1832,17 +1612,11 @@ async function createConfiguration({
   theme,
   words,
   design,
-  configurationType = 'event_wordcloud',
   orientation = 'default',
   printWidth,
   printHeight,
 }) {
   if (!design) throw new TypeError('A configuration requires an immutable canvas design.');
-  const assetIds = designAssetIds(design);
-  if (assetIds.length > MAX_CONFIGURATION_ASSETS ||
-      (configurationType === 'event_wordcloud' && assetIds.length)) {
-    throw assetValidationError();
-  }
   return withTransaction(async (client) => {
     const eventResult = await client.query(`
       SELECT id, expires_at FROM events
@@ -1869,51 +1643,20 @@ async function createConfiguration({
       throw limitError('configuration_limit');
     }
 
-    if (assetIds.length) {
-      const assets = await client.query(`
-        SELECT id, byte_size
-        FROM design_assets
-        WHERE id = ANY($1::text[]) AND event_id = $2
-          AND storage_status = 'active' AND deleted_at IS NULL
-        ORDER BY id
-        FOR KEY SHARE
-      `, [assetIds, eventId]);
-      const totalBytes = assets.rows.reduce((sum, asset) => sum + Number(asset.byte_size), 0);
-      if (assets.rowCount !== assetIds.length || totalBytes > MAX_CONFIGURATION_ASSET_BYTES) {
-        throw assetValidationError();
-      }
-      await client.query(`
-        UPDATE design_assets
-        SET expires_at = greatest(expires_at, transaction_timestamp() + interval '30 days')
-        WHERE id = ANY($1::text[])
-      `, [assetIds]);
-    }
-
     const id = crypto.randomBytes(12).toString('base64url');
     const result = await client.query(`
       INSERT INTO configurations (
         id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
-        theme, words_json, design_json, configuration_type, orientation,
+        theme, words_json, design_json, orientation,
         print_width, print_height, expires_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13,
-        case when $10 = 'personal_memory'
-          then transaction_timestamp() + interval '30 days'
-          else $14::timestamptz
-        end
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, $11, $12, $13
       )
       RETURNING *
     `, [
       id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
-      jsonValue(words), jsonValue(design), configurationType, orientation, printWidth, printHeight,
-      event.expires_at,
+      jsonValue(words), jsonValue(design), orientation, printWidth, printHeight, event.expires_at,
     ]);
-    if (assetIds.length) {
-      await client.query(`
-        INSERT INTO configuration_assets (configuration_id, asset_id)
-        SELECT $1, unnest($2::text[])
-      `, [id, assetIds]);
-    }
     return rowToBoundary(result.rows[0]);
   });
 }
@@ -2017,15 +1760,6 @@ async function prepareExpiredEventCleanup(eventId) {
 
     if (retainedConfigurationIds.length) {
       await client.query(`
-        UPDATE design_assets asset
-        SET event_id = null
-        WHERE asset.event_id = $1 AND EXISTS (
-          SELECT 1 FROM configuration_assets reference
-          WHERE reference.asset_id = asset.id
-            AND reference.configuration_id = ANY($2::text[])
-        )
-      `, [eventId, retainedConfigurationIds]);
-      await client.query(`
         UPDATE configurations
         SET event_id = null
         WHERE event_id = $1 AND id = ANY($2::text[])
@@ -2033,20 +1767,9 @@ async function prepareExpiredEventCleanup(eventId) {
     }
 
     await client.query('DELETE FROM configurations WHERE event_id = $1', [eventId]);
-    const assets = await client.query(`
-      UPDATE design_assets asset
-      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
-          last_delete_error = null
-      WHERE asset.event_id = $1
-        AND NOT EXISTS (
-          SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
-        )
-      RETURNING *
-    `, [eventId]);
     return {
       eventId: String(eventId),
       retainedConfigurationIds,
-      assets: rowsToBoundary(assets.rows),
     };
   });
 }
@@ -2059,12 +1782,11 @@ async function finishExpiredEventDeletion(eventId) {
       FOR UPDATE
     `, [eventId]);
     if (!event.rowCount) return false;
-    const remaining = await client.query(`
-      SELECT
-        EXISTS (SELECT 1 FROM configurations WHERE event_id = $1) AS configurations,
-        EXISTS (SELECT 1 FROM design_assets WHERE event_id = $1) AS assets
-    `, [eventId]);
-    if (remaining.rows[0].configurations || remaining.rows[0].assets) return false;
+    const remaining = await client.query(
+      'SELECT 1 FROM configurations WHERE event_id = $1 LIMIT 1',
+      [eventId]
+    );
+    if (remaining.rowCount) return false;
     await client.query('DELETE FROM events WHERE id = $1', [eventId]);
     return true;
   });
@@ -2204,77 +1926,6 @@ async function getExpiredEventIds(limit = 5) {
   return result.rows.map((row) => String(row.id));
 }
 
-async function prepareExpiredPersonalConfigurationCleanup() {
-  return withTransaction(async (client) => {
-    const selected = await client.query(`
-      SELECT configuration.id
-      FROM configurations configuration
-      WHERE configuration.configuration_type = 'personal_memory'
-        AND configuration.expires_at <= transaction_timestamp()
-        AND NOT EXISTS (
-          SELECT 1 FROM order_items item
-          JOIN orders retained_order ON retained_order.id = item.order_id
-          WHERE item.configuration_id = configuration.id
-            AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
-        )
-      ORDER BY configuration.expires_at, configuration.id
-      FOR UPDATE SKIP LOCKED
-      LIMIT 1
-    `);
-    if (!selected.rowCount) return null;
-    const configurationId = selected.rows[0].id;
-    const assetResult = await client.query(`
-      SELECT asset.id
-      FROM design_assets asset
-      JOIN configuration_assets reference ON reference.asset_id = asset.id
-      WHERE reference.configuration_id = $1
-      FOR UPDATE OF asset
-    `, [configurationId]);
-    await client.query('DELETE FROM configurations WHERE id = $1', [configurationId]);
-    const assetIds = assetResult.rows.map((row) => row.id);
-    if (!assetIds.length) return { configurationId, assets: [] };
-    const unreferenced = await client.query(`
-      SELECT asset.* FROM design_assets asset
-      WHERE asset.id = ANY($1::text[])
-        AND NOT EXISTS (
-          SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
-        )
-    `, [assetIds]);
-    return { configurationId, assets: rowsToBoundary(unreferenced.rows) };
-  });
-}
-
-async function claimExpiredDesignAsset(excludeIds = []) {
-  return withTransaction(async (client) => {
-    const selected = await client.query(`
-      SELECT asset.id
-      FROM design_assets asset
-      WHERE asset.expires_at <= transaction_timestamp()
-        AND NOT (asset.id = ANY($1::text[]))
-        AND (
-          asset.storage_status IN ('active', 'delete_failed') OR
-          (asset.storage_status = 'uploading'
-            AND asset.created_at < transaction_timestamp() - interval '10 minutes')
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM configuration_assets reference WHERE reference.asset_id = asset.id
-        )
-      ORDER BY asset.expires_at, asset.id
-      FOR UPDATE SKIP LOCKED
-      LIMIT 1
-    `, [excludeIds]);
-    if (!selected.rowCount) return null;
-    const claimed = await client.query(`
-      UPDATE design_assets
-      SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
-          last_delete_error = null
-      WHERE id = $1
-      RETURNING *
-    `, [selected.rows[0].id]);
-    return rowToBoundary(claimed.rows[0]);
-  });
-}
-
 async function startMaintenanceRun(triggerKind = 'http') {
   const result = await getPool().query(`
     INSERT INTO maintenance_runs (trigger_kind) VALUES ($1) RETURNING *
@@ -2341,10 +1992,6 @@ async function getOperationalStatus() {
       (SELECT count(*)::integer FROM email_jobs WHERE status = 'complained') AS email_complained,
       (SELECT coalesce(extract(epoch from transaction_timestamp() - min(created_at))::bigint, 0)
        FROM email_jobs WHERE status IN ('pending', 'failed', 'processing')) AS oldest_email_age_seconds,
-      (SELECT count(*)::integer FROM design_assets
-       WHERE storage_status = 'delete_failed'
-          OR (storage_status = 'uploading'
-              AND created_at < transaction_timestamp() - interval '10 minutes')) AS design_asset_failures,
       (SELECT count(*)::integer FROM print_artifacts
        WHERE storage_status IN ('uploading', 'delete_failed')
          AND created_at < transaction_timestamp() - interval '10 minutes') AS print_artifact_failures,
@@ -2377,7 +2024,6 @@ async function getOperationalStatus() {
       oldestAgeSeconds: Number(row.oldest_email_age_seconds || 0),
     },
     storage: {
-      designAssetFailures: Number(row.design_asset_failures || 0),
       printArtifactFailures: Number(row.print_artifact_failures || 0),
     },
     retention: {
@@ -2446,7 +2092,7 @@ const PRELIVE_BUSINESS_TABLES = Object.freeze([
   'email_smoke_runs', 'provider_smoke_runs', 'resend_webhook_events',
   'printful_webhook_events', 'stripe_webhook_events', 'email_jobs',
   'print_artifacts', 'order_items', 'checkout_order_shipments', 'orders',
-  'checkout_quotes', 'configuration_assets', 'design_assets', 'configurations',
+  'checkout_quotes', 'configurations',
   'admin_pin_failures', 'archives', 'word_contributions', 'words', 'events',
   'reserved_event_slugs', 'maintenance_runs',
 ]);
@@ -2789,11 +2435,11 @@ async function createProviderSmokeOrder({ productKey, recipient }) {
     const configurationResult = await client.query(`
       INSERT INTO configurations (
         id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
-        theme, words_json, design_json, configuration_type, orientation,
+        theme, words_json, design_json, orientation,
         print_width, print_height, expires_at
       ) VALUES (
         $1, null, $2, $3, 1, 0, 'pastel', '[]'::jsonb, $4::jsonb,
-        'personal_memory', 'default', $5, $6,
+        'default', $5, $6,
         transaction_timestamp() + interval '30 days'
       ) RETURNING *
     `, [
@@ -2906,7 +2552,6 @@ async function createEmailSmokeJob({ recipientEmail, locale = 'de' }) {
         productKey: product.key,
         printfulVariantId: product.printful.variantId,
         orientation: 'default',
-        configurationType: 'personal_memory',
       }),
     ]);
     const email = await insertEmailJobForOrder(client, {
@@ -3023,13 +2668,6 @@ module.exports = {
   getEventCartCheckoutQuote,
   updateCheckoutQuote,
   isCheckoutQuoteExpired,
-  beginDesignAssetUpload,
-  activateDesignAsset,
-  markDesignAssetUploadFailed,
-  getConfigurationAssets,
-  claimDesignAssetForDeletion,
-  finishDesignAssetDeletion,
-  failDesignAssetDeletion,
   createConfiguration,
   getConfiguration,
   getEventConfiguration,
@@ -3047,8 +2685,6 @@ module.exports = {
   finishPrintArtifactDeletion,
   failPrintArtifactDeletion,
   getExpiredEventIds,
-  prepareExpiredPersonalConfigurationCleanup,
-  claimExpiredDesignAsset,
   startMaintenanceRun,
   finishMaintenanceRun,
   failMaintenanceRun,

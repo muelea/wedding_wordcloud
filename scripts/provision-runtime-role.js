@@ -51,7 +51,7 @@ async function main() {
       `);
       const schemaVersion = Number(identity.rows[0]?.schema_version);
       if (identity.rows[0]?.current_user !== 'wolkenworte_app' ||
-          !Number.isSafeInteger(schemaVersion) || schemaVersion < 6) {
+          !Number.isSafeInteger(schemaVersion) || schemaVersion < 1) {
         throw new Error(
           'Runtime-Rolle kann das Wolkenworte-Schema nicht korrekt lesen ' +
           `(user=${identity.rows[0]?.current_user || 'unknown'}, ` +

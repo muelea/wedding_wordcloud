@@ -22,7 +22,6 @@ const {
 } = require('../products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
 const DesignFonts = require('../designFonts');
-const designAssets = require('../designAssets');
 const MugIcons = require('../../public/js/mug-icons.js');
 const I18n = require('../i18n');
 const { asyncRoute } = require('../asyncRoute');
@@ -35,9 +34,6 @@ const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
 // left for words the couple adds manually in the editor.
 const MAX_DESIGN_ELEMENTS = 500;
-const MAX_DESIGN_IMAGES = 6;
-const DESIGN_ASSET_ID_RE = /^[A-Za-z0-9_-]{24}$/;
-const CONFIGURATION_TYPES = new Set(['event_wordcloud', 'personal_memory']);
 const ADDRESS_LIMITS = Object.freeze({
   name: 100,
   address1: 120,
@@ -472,9 +468,7 @@ function normalizeDesign(
   width,
   height,
   safeMargin,
-  imageBudget = { assetIds: new Set() },
-  locale = I18n.DEFAULT_LOCALE,
-  allowImages = false
+  locale = I18n.DEFAULT_LOCALE
 ) {
   if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
@@ -484,11 +478,11 @@ function normalizeDesign(
   for (const [index, rawItem] of rawDesign.entries()) {
     if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
     const type = rawItem.type == null || rawItem.type === 'text' ? 'text' : rawItem.type;
-    if (type !== 'text' && type !== 'icon' && type !== 'image') return null;
+    if (type !== 'text' && type !== 'icon') return null;
     const x = Number(rawItem.x);
     const y = Number(rawItem.y);
     const rawAngle = Number(rawItem.angle ?? 0);
-    const idPrefix = type === 'image' ? 'foto' : type === 'icon' ? 'motiv' : 'wort';
+    const idPrefix = type === 'icon' ? 'motiv' : 'wort';
     const id = String(rawItem.id || `${idPrefix}-${index + 1}`).slice(0, 64);
     if (!id || ids.has(id) || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(rawAngle)) {
       return null;
@@ -502,25 +496,6 @@ function normalizeDesign(
       y: Math.round(y * 10) / 10,
       angle: Math.round(angle * 10) / 10,
     };
-    if (type === 'image') {
-      const assetId = String(rawItem.assetId || '');
-      const imageWidth = Number(rawItem.width);
-      const imageHeight = Number(rawItem.height);
-      if (!allowImages || !DESIGN_ASSET_ID_RE.test(assetId) ||
-          !Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) ||
-          imageWidth < 48 || imageHeight < 48 || imageWidth > width || imageHeight > height) {
-        return null;
-      }
-      imageBudget.assetIds.add(assetId);
-      if (imageBudget.assetIds.size > MAX_DESIGN_IMAGES) return null;
-      normalized.push({
-        ...common,
-        assetId,
-        width: Math.round(imageWidth * 10) / 10,
-        height: Math.round(imageHeight * 10) / 10,
-      });
-      continue;
-    }
     const color = String(rawItem.color || '').toLowerCase();
     if (!/^#[0-9a-f]{6}$/.test(color)) return null;
     if (type === 'icon') {
@@ -550,21 +525,17 @@ function normalizeDesign(
 function normalizeProductDesigns(
   rawBody,
   product,
-  configurationType,
   locale = I18n.DEFAULT_LOCALE
 ) {
   if (!rawBody || typeof rawBody !== 'object') return null;
   const rawDesigns = rawBody.designs;
   if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
-  const imageBudget = { assetIds: new Set() };
   const normalizeOne = (rawDesign) => normalizeDesign(
     rawDesign,
     product.printFile.width,
     product.printFile.height,
     product.designSafeMargin,
-    imageBudget,
-    locale,
-    configurationType === 'personal_memory'
+    locale
   );
 
   const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
@@ -602,7 +573,6 @@ function configurationResponse(slug, configuration) {
     quantity: Number(configuration.quantity),
     product: getPublicProduct(baseProduct, product.orientation),
     orientation: product.orientation,
-    configurationType: configuration.configuration_type,
     ...printFiles,
     createdAt: configuration.created_at,
   };
@@ -621,7 +591,7 @@ function configurationDesignSurfaces(product, design) {
   return null;
 }
 
-async function editableConfigurationResponse(slug, configuration) {
+function editableConfigurationResponse(slug, configuration) {
   const summary = configurationResponse(slug, configuration);
   if (!summary) return null;
   const product = resolveProductOrientation(
@@ -638,9 +608,6 @@ async function editableConfigurationResponse(slug, configuration) {
     return null;
   }
   if (!Array.isArray(words)) return null;
-  if (designAssets.collectAssetIds(design).length) {
-    design = await designAssets.materializeDesignForEditing(configuration.id, design);
-  }
   return {
     ...summary,
     productKey: configuration.product_key,
@@ -737,39 +704,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     return res.status(429).json({ error: 'rate_limited' });
   }
 
-  // ── Slug preview (live-checked while typing in the create form) ─────────
-  // NOTE: this only validates/previews the name-derived *prefix*. The final
-  // slug always gets a random suffix appended at creation time (see
-  // makeUniqueSlug in ../slug.js), so there is no meaningful "is this exact
-  // text taken" question to answer here anymore — the suffix is what
-  // guarantees uniqueness, not this prefix. That's also why the response
-  // shape is `{ slug, valid }`, not `{ slug, available }`: "available"
-  // implied the typed text could itself be taken, which is no longer true
-  // and would mislead the couple about what the final URL looks like.
-  router.get('/slug-availability', (req, res) => {
-    const raw = String(req.query.slug || '');
-    const slug = slugify(raw);
-    if (!slug) return res.json({ slug, valid: false, reason: 'empty' });
-    res.json({ slug, valid: true });
-  });
-
   // ── Create event ──────────────────────────────────────────────────────
-  router.post('/events/draft', express.json(), asyncRoute(async (req, res) => {
-    const sourceHash = sourceHashForRequest(req);
-    if (!rateLimits.consume([{ name: 'event:create', key: sourceHash, ...rateLimits.LIMITS.eventCreate }])) return rateLimited(res);
-    const locale = I18n.normalizeLocale(req.body?.locale);
-    const ownerToken = crypto.randomBytes(32).toString('base64url');
-    const ownerHash = crypto.createHash('sha256').update(ownerToken).digest('hex');
-    let event = null;
-    for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
-      try {
-        event = await db.createDraftEvent({ slug: makeUniqueSlug('wortwolke', () => false), locale, ownerHash });
-      } catch (error) { if (error?.code !== '23505') throw error; }
-    }
-    if (!event) return res.status(500).json({ error: 'slug_generation_failed' });
-    res.cookie(`ww-draft-${event.slug}`, ownerToken, { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: 365 * 24 * 60 * 60 * 1000, path: '/' });
-    res.status(201).json({ slug: event.slug, guestUrl: `/e/${event.slug}` });
-  }));
   router.post('/events', express.json(), asyncRoute(async (req, res) => {
     const sourceHash = sourceHashForRequest(req);
     if (!rateLimits.consume([{
@@ -825,12 +760,11 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.status(201).json({
       slug: event.slug,
       locale: event.locale,
-      guestUrl: `/e/${event.slug}`,
-      displayUrl: `/e/${event.slug}/display`,
+      eventUrl: `/e/${event.slug}`,
     });
   }));
 
-  // ── Public event info (guest + display pages fetch this) ────────────────
+  // ── Public event info (the event page fetches this) ────────────────────
   router.get('/events/:slug', asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
@@ -844,19 +778,6 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       isDraft: event.is_draft === true,
       isDraftOwner: event.is_draft === true && Boolean(draftOwnerHash(req, event.slug)) && draftOwnerHash(req, event.slug) === event.draft_owner_hash,
     });
-  }));
-
-  router.post('/events/:slug/claim-draft', express.json(), asyncRoute(async (req, res) => {
-    const event = await db.getEventBySlug(req.params.slug);
-    const coupleName = String(req.body?.coupleName || '').trim();
-    const pin = String(req.body?.pin || '');
-    if (!event || !event.is_draft) return res.status(404).json({ error: 'draft_not_found' });
-    if (!coupleName || coupleName.length > MAX_NAME_LENGTH) return res.status(400).json({ error: 'invalid_couple_name' });
-    if (!PIN_RE.test(pin)) return res.status(400).json({ error: 'invalid_pin' });
-    const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), coupleName, pin });
-    if (!claimed) return res.status(403).json({ error: 'not_draft_owner' });
-    res.clearCookie(`ww-draft-${event.slug}`, { path: '/' });
-    res.json({ slug: claimed.slug, coupleName: claimed.couple_name });
   }));
 
   // This verifies one settings interaction only; it deliberately issues no
@@ -923,7 +844,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   router.get('/events/:slug/qr', asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const url = `${getBaseUrl(req, port)}/e/${event.slug}/display`;
+    const url = `${getBaseUrl(req, port)}/e/${event.slug}`;
     try {
       const dataUrl = await QRCode.toDataURL(url, {
         width: 220,
@@ -961,9 +882,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   router.get('/events/:slug/configurator', asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const personalMemory = req.query.mode === 'personal';
-    const words = personalMemory ? [] : await db.getWords(event.id);
-    if (!personalMemory && !words.length) return res.status(409).json({ error: 'no_words' });
+    const words = await db.getWords(event.id);
+    if (!words.length) return res.status(409).json({ error: 'no_words' });
     res.json({
       event: {
         slug: event.slug,
@@ -972,9 +892,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         locale: event.locale,
       },
       words,
-      configurationType: personalMemory ? 'personal_memory' : 'event_wordcloud',
-      // Keep `product` for older/open browser tabs while the current UI uses
-      // the complete curated list to render the size selector.
+      // The default product initializes the editor; the full curated list
+      // renders the product selector.
       product: getPublicProduct(DEFAULT_PRODUCT),
       products: getPublicProducts(),
       productFamilies: getPublicProductFamilies(),
@@ -990,28 +909,6 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       res.json({ countries });
     } catch (error) {
       sendPrintfulError(res, error);
-    }
-  }));
-
-  router.post('/events/:slug/assets', express.json({ limit: '27mb' }), asyncRoute(async (req, res) => {
-    res.set('Cache-Control', 'no-store');
-    const event = await db.getEventBySlug(req.params.slug);
-    if (!event) return res.status(404).json({ error: 'event_not_found' });
-    if (!consumeEventRequest(
-      req, event, 'asset', rateLimits.LIMITS.assetGuest, rateLimits.LIMITS.assetSource
-    )) return rateLimited(res);
-    try {
-      const result = await designAssets.uploadEventAsset({
-        event,
-        ownerId: req.get('X-Wolkenworte-Guest-Id'),
-        dataUrl: req.body?.dataUrl,
-      });
-      return res.status(201).json(result);
-    } catch (error) {
-      if (error instanceof designAssets.DesignAssetError) {
-        return res.status(error.status).json({ error: error.code });
-      }
-      throw error;
     }
   }));
 
@@ -1032,10 +929,6 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     if (!product) return res.status(400).json({ error: 'invalid_orientation' });
 
     const theme = req.body?.theme;
-    const configurationType = String(req.body?.configurationType || 'event_wordcloud');
-    if (!CONFIGURATION_TYPES.has(configurationType)) {
-      return res.status(400).json({ error: 'invalid_configuration_type' });
-    }
     const defaultQuantity = product.minQuantity;
     const quantity = Number(req.body?.quantity ?? defaultQuantity);
     if (!Number.isSafeInteger(quantity) || quantity < product.minQuantity || quantity > product.maxQuantity) {
@@ -1046,16 +939,14 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
     // The browser sends the exact snapshot it previewed. Re-normalize it at
     // this trust boundary, then store it independently from the live event.
-    const words = configurationType === 'personal_memory'
-      ? []
-      : req.body && Object.hasOwn(req.body, 'words')
-        ? normalizeSnapshotWords(req.body.words, event.locale)
-        : await db.getWords(event.id);
-    if (configurationType === 'event_wordcloud' && (!words || !words.length)) {
+    const words = req.body && Object.hasOwn(req.body, 'words')
+      ? normalizeSnapshotWords(req.body.words, event.locale)
+      : await db.getWords(event.id);
+    if (!words || !words.length) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 
-    const design = normalizeProductDesigns(req.body, product, configurationType, event.locale);
+    const design = normalizeProductDesigns(req.body, product, event.locale);
     if (!design) {
       return res.status(400).json({ error: 'invalid_design' });
     }
@@ -1073,15 +964,11 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         theme,
         words,
         design,
-        configurationType,
         orientation: product.orientation,
         printWidth: product.printFile.width,
         printHeight: product.printFile.height,
       });
     } catch (error) {
-      if (error.code === 'invalid_design_assets') {
-        return res.status(400).json({ error: 'invalid_design' });
-      }
       if (error.code === 'configuration_limit') return rateLimited(res);
       throw error;
     }
@@ -1095,7 +982,6 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       orientation: configuration.orientation === 'default'
         ? product.orientation
         : configuration.orientation,
-      configurationType: configuration.configuration_type,
       ...printFiles,
       createdAt: configuration.created_at,
     });
@@ -1127,7 +1013,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.set('Cache-Control', 'no-store');
     const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
-    const response = await editableConfigurationResponse(req.params.slug, configuration);
+    const response = editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
   }));
@@ -1343,20 +1229,9 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       return res.status(500).send('configuration is invalid');
     }
     if (!design) return res.status(500).send('configuration is invalid');
-    if (configuration.configuration_type === 'personal_memory' && design.some((item) => item.type === 'image')) {
-      try {
-        const storedDesign = JSON.parse(configuration.design_json);
-        const materialized = await designAssets.materializeDesignForPrint(configuration.id, storedDesign);
-        design = materialized.surfaces[surfaceKey];
-      } catch {
-        return res.status(503).send('configuration asset is unavailable');
-      }
-    }
     const svg = buildProductPrintSvg(product, design);
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
-    res.set('Cache-Control', configuration.configuration_type === 'personal_memory'
-      ? 'private, no-store'
-      : 'public, max-age=31536000, immutable');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(svg);
   }));
 
@@ -1685,18 +1560,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         name: product.name,
         unit: product.unit,
       } : { name: 'Wolkenworte Bestellung', unit: { singular: 'Produkt', plural: 'Produkte' } },
-      configurationType: configuration?.configuration_type || 'event_wordcloud',
       paidAt: order.paid_at,
-    });
-  }));
-
-  // Retain a clear response for clients of the former fixed-Price endpoint.
-  router.post('/events/:slug/checkout', express.json(), asyncRoute(async (req, res) => {
-    const event = await db.getEventBySlug(req.params.slug);
-    if (!event) return res.status(404).json({ error: 'event_not_found' });
-    return res.status(410).json({
-      error: 'quote_required',
-      message: 'Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.',
     });
   }));
 

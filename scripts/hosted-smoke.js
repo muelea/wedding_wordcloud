@@ -3,7 +3,6 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const { io: ioClient } = require('socket.io-client');
-const sharp = require('sharp');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
@@ -146,23 +145,6 @@ async function main() {
   }
 
   const ownerId = crypto.randomBytes(16).toString('hex');
-  const photoBytes = await sharp({
-    create: { width: 96, height: 72, channels: 4, background: '#b83f6d' },
-  }).jpeg({ quality: 90 }).toBuffer();
-  const assetResponse = await fetchWithTimeout(`/api/events/${encodeURIComponent(event.slug)}/assets`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Wolkenworte-Guest-Id': ownerId,
-    },
-    body: JSON.stringify({ dataUrl: `data:image/jpeg;base64,${photoBytes.toString('base64')}` }),
-  });
-  const asset = await assetResponse.json();
-  if (assetResponse.status !== 201 || !/^[A-Za-z0-9_-]{24}$/.test(asset.assetId || '') ||
-      !String(asset.previewUrl || '').startsWith('https://') || asset.expiresInSeconds !== 900) {
-    throw new Error(`private photo upload smoke failed (${assetResponse.status})`);
-  }
-
   const configurationResponse = await fetchWithTimeout(
     `/api/events/${encodeURIComponent(event.slug)}/configurations`,
     {
@@ -172,21 +154,20 @@ async function main() {
         'X-Wolkenworte-Guest-Id': ownerId,
       },
       body: JSON.stringify({
-        configurationType: 'personal_memory',
         productKey: 'white-glossy-mug-duo-11oz',
         quantity: 1,
         theme: 'pastel',
+        words: [['bereit', 1]],
         designs: {
           default: [{
-            id: 'hosted-private-photo',
-            type: 'image',
-            assetId: asset.assetId,
-            src: asset.previewUrl,
+            id: 'hosted-word',
+            text: 'bereit',
             x: 1350,
             y: 525,
-            width: 640,
-            height: 480,
+            fontSize: 96,
             angle: 0,
+            color: '#a40e4c',
+            fontFamily: 'classic',
           }],
         },
       }),
@@ -194,26 +175,23 @@ async function main() {
   );
   const configuration = await configurationResponse.json();
   if (configurationResponse.status !== 201 || !configuration.id || !configuration.printFileUrl) {
-    throw new Error(`private configuration smoke failed (${configurationResponse.status})`);
+    throw new Error(`configuration smoke failed (${configurationResponse.status})`);
   }
 
   const editableResponse = await fetchWithTimeout(
     `/api/events/${encodeURIComponent(event.slug)}/configurations/${encodeURIComponent(configuration.id)}/edit`
   );
   const editable = await editableResponse.json();
-  const editablePhoto = editable?.designs?.default?.[0];
-  if (editableResponse.status !== 200 || editablePhoto?.assetId !== asset.assetId ||
-      !String(editablePhoto?.src || '').startsWith('https://') ||
-      String(editablePhoto?.src || '').startsWith('data:image/')) {
-    throw new Error(`signed private preview smoke failed (${editableResponse.status})`);
+  if (editableResponse.status !== 200 || editable?.designs?.default?.[0]?.text !== 'bereit') {
+    throw new Error(`editable configuration smoke failed (${editableResponse.status})`);
   }
 
   const printResponse = await fetchWithTimeout(configuration.printFileUrl);
   const printSvg = await printResponse.text();
-  if (printResponse.status !== 200 || printResponse.headers.get('cache-control') !== 'private, no-store' ||
-      !printSvg.includes('data-photo="true"') || !printSvg.includes('href="data:image/jpeg;base64,') ||
-      printSvg.includes('.supabase.co/storage/')) {
-    throw new Error(`private print materialization smoke failed (${printResponse.status})`);
+  if (printResponse.status !== 200 ||
+      printResponse.headers.get('cache-control') !== 'public, max-age=31536000, immutable' ||
+      !printSvg.includes('>bereit</text>')) {
+    throw new Error(`print rendering smoke failed (${printResponse.status})`);
   }
 
   const hiddenMaintenance = await fetchWithTimeout('/internal/maintenance/run', { method: 'POST' });
@@ -242,9 +220,9 @@ async function main() {
   }
 
   console.log(
-    `[smoke] hosted HTTP, Postgres, one-use PIN reset, private Storage, ` +
+    `[smoke] hosted HTTP, Postgres, one-use PIN reset, ` +
     `${skipMaintenance ? 'maintenance auth boundary' : 'maintenance'}, artifact capability, ` +
-    `immutable photo print, cache and Socket.io checks passed ` +
+    `configuration print, cache and Socket.io checks passed ` +
     `in ${Date.now() - startedAt}ms.`
   );
 }

@@ -3,10 +3,8 @@
 // Unit-level checks for the Stripe/Printful integration shape: both must be
 // no-op-safe (never throw uncaught, never silently "succeed") when their
 // real credentials aren't configured — which is the expected state for
-// this build pass. The HTTP-level behavior (POST /api/events/:slug/checkout
-// returning 501 with a clear German message when Stripe isn't configured)
-// is exercised manually in README "Try it" steps and was verified during
-// development; these tests pin down the underlying module contracts.
+// this build pass. These tests pin down the underlying module contracts used
+// by the current quote-backed cart checkout routes.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');

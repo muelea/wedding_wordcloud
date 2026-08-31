@@ -11,8 +11,8 @@
  * room via io.to(slug).emit(...) — never io.emit(...) globally.
  *
  * A client picks its event by connecting with `?slug=<event-slug>` in the
- * Socket.io connection query string (see views/guest.ejs and
- * views/display.ejs). The slug is validated against the DB before the
+ * Socket.io connection query string (see views/display.ejs). The slug is
+ * validated against the DB before the
  * socket is allowed to join the room; an unknown slug gets an error event
  * and is disconnected.
  */
@@ -146,8 +146,7 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       // per accepted contribution.
       broadcasts.schedule(event);
       performanceProbe.recordOperation('wordAccepted');
-      // Keep the normalized word as the first argument for backwards
-      // compatibility; the private receipt is only sent to its submitter.
+      // Only the submitter receives the normalized word and its private receipt.
       socket.emit('word-accepted', word, receipt);
     });
 

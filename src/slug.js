@@ -22,12 +22,6 @@ function slugify(input) {
   return s;
 }
 
-// Suggests a slug from couple names, e.g. "Johanna" + "Peter" -> "johanna-und-peter".
-function suggestSlug(coupleName) {
-  const base = slugify(coupleName);
-  return base || 'unser-brautpaar';
-}
-
 // ── Random suffix ────────────────────────────────────────────────────────
 // Every event's *final* slug (see makeUniqueSlug below) always gets a short
 // random suffix appended to the name-derived prefix, e.g.
@@ -73,4 +67,4 @@ function makeUniqueSlug(base, exists, { maxAttempts = 10 } = {}) {
   throw new Error(`could not generate a unique slug for "${prefix}" after ${maxAttempts} attempts`);
 }
 
-module.exports = { slugify, suggestSlug, randomSuffix, makeUniqueSlug, SUFFIX_ALPHABET, SUFFIX_LENGTH };
+module.exports = { slugify, randomSuffix, makeUniqueSlug, SUFFIX_ALPHABET, SUFFIX_LENGTH };
