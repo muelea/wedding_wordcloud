@@ -21,7 +21,7 @@ test('randomSuffix produces fixed-length strings from the unambiguous alphabet o
 
 // Proves the suffix is genuinely random-ish, not a sequential counter (e.g.
 // "aaaaa", "aaaab", "aaaac", ...) that a stranger could enumerate to
-// rediscover other couples' events -- the exact privacy property this
+// rediscover other organizers' events -- the exact privacy property this
 // feature exists to guarantee. Not a real entropy analysis, just a smoke
 // check that would fail hard against a naive counter-based implementation.
 test('randomSuffix is not a sequential/enumerable counter', () => {
@@ -77,7 +77,7 @@ test('makeUniqueSlug throws rather than looping forever if every candidate is so
 
 test('makeUniqueSlug falls back to a default prefix for an empty base', () => {
   const slug = makeUniqueSlug('', () => false);
-  assert.ok(slug.startsWith('unser-brautpaar-'));
+  assert.ok(slug.startsWith('wortwolke-'));
 });
 
 test('slugify transliterates umlauts', () => {

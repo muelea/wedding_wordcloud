@@ -3,7 +3,7 @@
 /**
  * Server-side SVG export, using the exact same layoutWords()/buildSVG()
  * engine as the browser (public/js/wordcloud-core.js) — so the mug print
- * file matches what the couple saw and downloaded from the display page.
+ * file matches what the organizer saw and downloaded from the display page.
  *
  * Text measurement uses `node-canvas`'s real CanvasRenderingContext2D
  * (same Canvas 2D spec the browser implements), not an approximation.

@@ -8,7 +8,7 @@ const { buildEmailSnapshot } = require('./emailTemplates');
 const I18n = require('./i18n');
 const log = require('./structuredLog');
 
-const REQUIRED_SCHEMA_VERSION = '1';
+const REQUIRED_SCHEMA_VERSION = '2';
 const MAX_EVENT_CONTRIBUTIONS = 5000;
 const MAX_EVENT_UNIQUE_WORDS = 500;
 const MAX_OWNER_CONTRIBUTIONS = 100;
@@ -170,7 +170,7 @@ async function verifyPin(pin, hash, salt) {
 }
 
 // ── Events ──────────────────────────────────────────────────────────────
-async function createEvent({ slug, coupleName, pin, locale = 'de' }) {
+async function createEvent({ slug, title, pin, locale = 'de' }) {
   const { hash, salt } = await hashPin(pin);
   return withTransaction(async (client) => {
     await client.query(`
@@ -179,40 +179,40 @@ async function createEvent({ slug, coupleName, pin, locale = 'de' }) {
     `, [slug]);
     const result = await client.query(`
       INSERT INTO events (
-        slug, couple_name, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
+        slug, title, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
       ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
       RETURNING *
-    `, [slug, coupleName, hash, salt, locale]);
+    `, [slug, title, hash, salt, locale]);
     return rowToBoundary(result.rows[0]);
   });
 }
 
-async function createDraftEvent({ slug, coupleName, locale = 'de', ownerHash, pin = null }) {
+async function createDraftEvent({ slug, title, locale = 'de', ownerHash, pin = null }) {
   const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
   return withTransaction(async (client) => {
     await client.query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, transaction_timestamp())', [slug]);
     const result = await client.query(`
-      INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt, locale, is_draft, draft_owner_hash, created_at, expires_at)
+      INSERT INTO events (slug, title, admin_pin_hash, admin_pin_salt, locale, is_draft, draft_owner_hash, created_at, expires_at)
       VALUES ($1, $2, $3, $4, $5, true, $6, transaction_timestamp(), transaction_timestamp() + interval '365 days')
       RETURNING *
-    `, [slug, coupleName, credentials.hash, credentials.salt, locale, ownerHash]);
+    `, [slug, title, credentials.hash, credentials.salt, locale, ownerHash]);
     return rowToBoundary(result.rows[0]);
   });
 }
 
-async function claimDraftEvent({ eventId, ownerHash, coupleName, pin = null }) {
+async function claimDraftEvent({ eventId, ownerHash, title, pin = null }) {
   const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
   const result = await getPool().query(`
-    UPDATE events SET couple_name = $1, admin_pin_hash = $2, admin_pin_salt = $3,
+    UPDATE events SET title = $1, admin_pin_hash = $2, admin_pin_salt = $3,
       is_draft = false, draft_owner_hash = null
     WHERE id = $4 AND is_draft = true AND draft_owner_hash = $5 AND expires_at > transaction_timestamp()
     RETURNING *
-  `, [coupleName, credentials.hash, credentials.salt, eventId, ownerHash]);
+  `, [title, credentials.hash, credentials.salt, eventId, ownerHash]);
   return rowToBoundary(result.rows[0]);
 }
 
-async function updateEventDetails({ eventId, coupleName, eventLabel, newPin = null }) {
-  const params = [coupleName, eventLabel || null, eventId];
+async function updateEventDetails({ eventId, title, subtitle, newPin = null }) {
+  const params = [title, subtitle || null, eventId];
   let pinSql = '';
   if (newPin) {
     const { hash, salt } = await hashPin(newPin);
@@ -221,7 +221,7 @@ async function updateEventDetails({ eventId, coupleName, eventLabel, newPin = nu
     params[4] = eventId;
   }
   const result = await getPool().query(`
-    UPDATE events SET couple_name = $1, event_label = $2${pinSql}
+    UPDATE events SET title = $1, subtitle = $2${pinSql}
     WHERE id = $${params.length} AND expires_at > transaction_timestamp() RETURNING *
   `, params);
   return rowToBoundary(result.rows[0]);
@@ -597,17 +597,17 @@ function getCheckoutQuoteShipments(quote) {
 async function createOrder({ eventId, stripeSessionId }) {
   return withTransaction(async (client) => {
     const eventResult = await client.query(`
-      SELECT slug, couple_name FROM events
+      SELECT slug, title FROM events
       WHERE id = $1 AND expires_at > transaction_timestamp()
     `, [eventId]);
     const event = eventResult.rows[0];
     if (!event) throw new Error('event not found');
     const result = await client.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot, stripe_session_id, status
+        event_id, event_slug_snapshot, event_title_snapshot, stripe_session_id, status
       ) VALUES ($1, $2, $3, $4, 'pending')
       RETURNING id
-    `, [eventId, event.slug, event.couple_name, stripeSessionId]);
+    `, [eventId, event.slug, event.title, stripeSessionId]);
     return result.rows[0].id;
   });
 }
@@ -760,7 +760,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     }
 
     const eventResult = await client.query(
-      `SELECT slug, couple_name, locale FROM events
+      `SELECT slug, title, locale FROM events
        WHERE id = $1 AND expires_at > transaction_timestamp()
        FOR KEY SHARE`,
       [eventId]
@@ -785,7 +785,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     const sessionExpiresAt = new Date(Date.now() + 31 * 60 * 1000);
     const inserted = await client.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot,
+        event_id, event_slug_snapshot, event_title_snapshot,
         configuration_id, configuration_ids_json, quote_id, status, shipping_json,
         currency, items_cents, payment_reserve_cents, shipping_cents, tax_cents,
         total_cents, mode, checkout_request_json, stripe_idempotency_key,
@@ -798,7 +798,7 @@ async function createCheckoutOrder({ eventId, configurationId, quote, mode = 'te
     `, [
       eventId,
       event.slug,
-      event.couple_name,
+      event.title,
       configurationId || configurationIds[0],
       jsonValue(configurationIds),
       lockedQuote.id,
@@ -2449,7 +2449,7 @@ async function createProviderSmokeOrder({ productKey, recipient }) {
     const configuration = rowToBoundary(configurationResult.rows[0]);
     const orderResult = await client.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot, configuration_id,
+        event_id, event_slug_snapshot, event_title_snapshot, configuration_id,
         configuration_ids_json, quote_id, status, shipping_json, currency,
         items_cents, shipping_cents, tax_cents, total_cents, mode, paid_at,
         fulfillment_status, fulfillment_next_attempt_at, provider_smoke
@@ -2501,7 +2501,7 @@ async function createEmailSmokeJob({ recipientEmail, locale = 'de' }) {
   return withTransaction(async (client) => {
     const orderResult = await client.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot, configuration_ids_json,
+        event_id, event_slug_snapshot, event_title_snapshot, configuration_ids_json,
         quote_id, status, shipping_json, buyer_email, currency, items_cents,
         shipping_cents, tax_cents, total_cents, mode, paid_at,
         fulfillment_status, fulfillment_mode, provider_smoke, locale_snapshot

@@ -93,9 +93,9 @@ async function cleanupFixture(fixture, dependencies = {}) {
     await client.query('BEGIN');
     const event = await client.query(`
       SELECT id FROM public.events
-      WHERE slug = $1 AND couple_name = $2
+      WHERE slug = $1 AND title = $2
       FOR UPDATE
-    `, [fixture.slug, fixture.coupleName]);
+    `, [fixture.slug, fixture.title]);
     if (event.rowCount === 1) {
       await client.query('DELETE FROM public.configurations WHERE event_id = $1', [event.rows[0].id]);
       await client.query('DELETE FROM public.events WHERE id = $1', [event.rows[0].id]);
@@ -133,12 +133,12 @@ async function runSmoke(fixture) {
   }
 
   const adminPin = String(crypto.randomInt(1000, 10_000));
-  fixture.coupleName = `Hosted Smoke ${new Date().toISOString()}`;
+  fixture.title = `Hosted Smoke ${new Date().toISOString()}`;
   const eventResponse = await fetchWithTimeout('/api/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      coupleName: fixture.coupleName,
+      title: fixture.title,
       slug: 'hosted-smoke',
       pin: adminPin,
       locale: 'de',

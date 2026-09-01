@@ -167,7 +167,7 @@ test('area optimization measures every text with its selected design font', () =
 test('configurator exposes every curated product with verified Printful geometry', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Mara & Theo' });
+  const event = await createEvent(baseUrl, { title: 'Mara & Theo' });
 
   const empty = await fetch(`${baseUrl}/api/events/${event.slug}/configurator`);
   assert.equal(empty.status, 409, 'an empty cloud cannot be configured');
@@ -624,7 +624,7 @@ test('configurator exposes every curated product with verified Printful geometry
 test('confirmed configuration freezes the approved words in a permanent Printful-sized SVG', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Freeze Frieda & Emil' });
+  const event = await createEvent(baseUrl, { title: 'Freeze Frieda & Emil' });
   const socket = await connectSocket(baseUrl, event.slug);
   t.after(() => socket.close());
 
@@ -675,7 +675,7 @@ test('confirmed configuration freezes the approved words in a permanent Printful
 test('configurations require the exact canvas and store no placement state', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Canvas Carla' });
+  const event = await createEvent(baseUrl, { title: 'Canvas Carla' });
 
   const missingDesign = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
@@ -726,7 +726,7 @@ test('configurations require the exact canvas and store no placement state', asy
 test('custom editor design is frozen exactly and cannot leave the printable area', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Editor Ella & Finn' });
+  const event = await createEvent(baseUrl, { title: 'Editor Ella & Finn' });
   const words = [['ursprünglich', 2], ['liebe', 1]];
   const design = [
     { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456', fontFamily: 'lora' },

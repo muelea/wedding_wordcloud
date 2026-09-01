@@ -79,7 +79,7 @@ test('word submission -> live update flow: broadcast, atomic increment, normaliz
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { coupleName: 'Liebe Lea' });
+  const event = await createEvent(baseUrl, { title: 'Liebe Lea' });
   const guest1Id = '1'.repeat(32);
   const guest2Id = '2'.repeat(32);
 
@@ -176,7 +176,7 @@ test('a newly connecting socket receives current state, not an empty board', asy
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { coupleName: 'Nachzügler Nadine' });
+  const event = await createEvent(baseUrl, { title: 'Nachzügler Nadine' });
 
   const { socket: first } = await connectSocket(baseUrl, event.slug);
   t.after(() => first.close());

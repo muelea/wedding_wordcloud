@@ -95,7 +95,7 @@ test('layoutWords handles a dense word list without dropping words or creating o
   // At high density the algorithm's own documented fallback (8 shrink
   // attempts per word, spiral placement — see wordcloud-core.js) can, in
   // principle, leave a handful of words unplaced rather than ever
-  // overlapping two words. In practice, for a realistically dense wedding
+  // overlapping two words. In practice, for a realistically dense event
   // word cloud (45 unique words — most real events land well under that)
   // it places everything; this asserts that plus the two guarantees that
   // must never be violated regardless of density: no duplicates, no

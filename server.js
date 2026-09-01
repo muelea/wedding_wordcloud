@@ -99,7 +99,7 @@ app.use('/webhook', makeWebhookRouter({ port: PORT }));
 app.use('/internal/maintenance', makeMaintenanceRouter());
 
 // Serve the pinned Three.js module locally so the configurator's 3D preview
-// never depends on a third-party CDN being reachable from a wedding venue.
+// never depends on a third-party CDN being reachable from an event venue.
 app.get('/vendor/three.min.js', staticCacheMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'three', 'build', 'three.min.js'));
 });
@@ -166,9 +166,9 @@ app.get('/', asyncRoute(async (req, res) => {
 
 app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncRoute(async (req, res) => {
   const submittedName = typeof req.body?.cloudName === 'string' ? req.body.cloudName : '';
-  const coupleName = normalizeEventName(submittedName);
-  if (!coupleName || coupleName.length > MAX_EVENT_NAME_LENGTH) {
-    const error = !coupleName
+  const title = normalizeEventName(submittedName);
+  if (!title || title.length > MAX_EVENT_NAME_LENGTH) {
+    const error = !title
       ? 'Bitte gebt eurer Wortwolke einen Namen.'
       : 'Der Name darf höchstens 80 Zeichen lang sein.';
     return renderPage(req, res, 'landing', {
@@ -190,7 +190,7 @@ app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncR
   for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
     try {
       event = await db.createDraftEvent({
-        slug: makeUniqueSlug('wortwolke', () => false), coupleName, locale, ownerHash,
+        slug: makeUniqueSlug('wortwolke', () => false), title, locale, ownerHash,
       });
     } catch (error) {
       if (error?.code !== '23505') throw error;
@@ -227,8 +227,7 @@ app.get('/e/:slug', asyncRoute(async (req, res) => {
     pageData: {
       eventUrl,
       qrSvg,
-      cloudName: event.couple_name,
-      eventLabel: event.event_label || '',
+      cloudTitle: event.title,
     },
   });
 }));

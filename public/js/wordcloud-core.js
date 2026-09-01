@@ -88,7 +88,7 @@
   // jumps straight to the maximum merely because it is the current leader,
   // and removing one contribution always makes that word measurably smaller
   // without causing unrelated words to resize. The curve rises quickly at
-  // wedding-sized counts and then eases towards the maximum.
+  // event-sized counts and then eases towards the maximum.
   function sizeForCount(word, count, minCount, maxCount, minPx, maxPx) {
     const safeCount = Math.max(1, Number(count) || 1);
     const frequencyRatio = 0.32 + 0.68 * (1 - Math.exp(-(safeCount - 1) / 8));

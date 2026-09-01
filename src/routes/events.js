@@ -32,7 +32,7 @@ const performanceProbe = require('../performanceProbe');
 const PIN_RE = /^\d{4,6}$/;
 const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
-// left for words the couple adds manually in the editor.
+// left for words the organizer adds manually in the editor.
 const MAX_DESIGN_ELEMENTS = 500;
 const ADDRESS_LIMITS = Object.freeze({
   name: 100,
@@ -712,30 +712,30 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       key: sourceHash,
       ...rateLimits.LIMITS.eventCreate,
     }])) return rateLimited(res);
-    const { coupleName: submittedCoupleName, pin } = req.body || {};
-    const coupleName = normalizeEventName(submittedCoupleName);
+    const { title: submittedTitle, pin } = req.body || {};
+    const title = normalizeEventName(submittedTitle);
     if (req.body?.locale != null && !I18n.isSupportedLocale(req.body.locale)) {
       return res.status(400).json({ error: 'invalid_locale' });
     }
     const locale = I18n.normalizeLocale(req.body?.locale);
     let { slug } = req.body || {};
 
-    if (!coupleName) {
-      return res.status(400).json({ error: 'invalid_couple_name' });
+    if (!title) {
+      return res.status(400).json({ error: 'invalid_title' });
     }
-    if (coupleName.length > MAX_EVENT_NAME_LENGTH) {
-      return res.status(400).json({ error: 'couple_name_too_long' });
+    if (title.length > MAX_EVENT_NAME_LENGTH) {
+      return res.status(400).json({ error: 'title_too_long' });
     }
     if (!pin || !PIN_RE.test(String(pin))) {
       return res.status(400).json({ error: 'invalid_pin' });
     }
 
-    slug = slugify(slug || coupleName);
+    slug = slugify(slug || title);
     if (!slug) return res.status(400).json({ error: 'invalid_slug' });
 
     // Always append a random suffix -- no more 409/manual-retry dance for
-    // the common "same names as an earlier couple" case, and it closes the
-    // privacy gap where a guessable slug lets a stranger view a couple's
+    // the common "same title as an earlier event" case, and it closes the
+    // privacy gap where a guessable slug lets a stranger view an event's
     // (unauthenticated-read) live guest submissions. See src/slug.js for
     // the full reasoning. Retries with a fresh suffix on the astronomically
     // unlikely case of a real collision rather than assuming one can't
@@ -748,7 +748,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         // suffix instead of relying on a stale availability pre-check.
         event = await db.createEvent({
           slug: finalSlug,
-          coupleName,
+          title,
           pin,
           locale,
         });
@@ -771,8 +771,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     if (!event) return res.status(404).json({ error: 'event not found' });
     res.json({
       slug: event.slug,
-      coupleName: event.couple_name,
-      eventLabel: event.event_label || '',
+      title: event.title,
+      subtitle: event.subtitle || '',
       theme: event.theme,
       locale: event.locale,
       hasAdminPin: Boolean(event.admin_pin_hash && event.admin_pin_salt),
@@ -795,18 +795,18 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
   router.post('/events/:slug/settings', express.json(), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
-    const coupleName = normalizeEventName(req.body?.coupleName);
-    const eventLabel = String(req.body?.eventLabel || '').trim().slice(0, MAX_EVENT_NAME_LENGTH);
+    const title = normalizeEventName(req.body?.title);
+    const subtitle = String(req.body?.subtitle || '').trim().slice(0, MAX_EVENT_NAME_LENGTH);
     const pin = String(req.body?.pin || '');
     const newPin = String(req.body?.newPin || '');
-    if (!event || !coupleName || coupleName.length > MAX_EVENT_NAME_LENGTH) return res.status(400).json({ error: 'invalid_couple_name' });
+    if (!event || !title || title.length > MAX_EVENT_NAME_LENGTH) return res.status(400).json({ error: 'invalid_title' });
     if (event.is_draft) {
       if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
-      const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), coupleName, pin: newPin || null });
+      const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), title, pin: newPin || null });
       if (!claimed) return res.status(403).json({ error: 'not_draft_owner' });
-      const updated = await db.updateEventDetails({ eventId: event.id, coupleName, eventLabel });
+      const updated = await db.updateEventDetails({ eventId: event.id, title, subtitle });
       res.clearCookie(`ww-draft-${event.slug}`, { path: '/' });
-      return res.json({ coupleName: updated.couple_name, eventLabel: updated.event_label || '' });
+      return res.json({ title: updated.title, subtitle: updated.subtitle || '' });
     }
     const hasAdminPin = Boolean(event.admin_pin_hash && event.admin_pin_salt);
     if (hasAdminPin) {
@@ -814,8 +814,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
     }
     if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
-    const updated = await db.updateEventDetails({ eventId: event.id, coupleName, eventLabel, newPin: newPin || null });
-    res.json({ coupleName: updated.couple_name, eventLabel: updated.event_label || '' });
+    const updated = await db.updateEventDetails({ eventId: event.id, title, subtitle, newPin: newPin || null });
+    res.json({ title: updated.title, subtitle: updated.subtitle || '' });
   }));
 
   router.post('/events/:slug/remove-word', express.json(), asyncRoute(async (req, res) => {
@@ -884,7 +884,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.json({
       event: {
         slug: event.slug,
-        coupleName: event.couple_name,
+        title: event.title,
         theme: event.theme,
         locale: event.locale,
       },

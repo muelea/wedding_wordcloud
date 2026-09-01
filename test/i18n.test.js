@@ -43,8 +43,8 @@ function renderView(filename, header = {}) {
     pageData: {
       eventUrl: 'https://example.test/e/wortwolke-test',
       qrSvg: '<svg viewBox="0 0 1 1"><path d="M0 0h1v1H0z" /></svg>',
-      cloudName: 'Lea & Max',
-      eventLabel: '',
+      cloudTitle: 'Lea & Max',
+      subtitle: '',
     },
     languages: TEST_LANGUAGES,
     t: (source) => source,
@@ -137,7 +137,7 @@ test('every public page loads the shared language layer', () => {
   }
 
   const displayPage = viewSource('display.ejs');
-  assert.match(displayPage, /id="couple-name" data-i18n-ignore/);
+  assert.match(displayPage, /id="cloud-title" data-i18n-ignore/);
 });
 
 test('customer-facing actions stay calm and do not expose staging or provider narration', () => {
@@ -210,7 +210,7 @@ test('the event page keeps its content below a dedicated branded header', () => 
   assert.match(displayPage, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/);
 
   assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="memory-cta"/);
-  assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="couple-name" data-i18n-ignore/);
+  assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="cloud-title" data-i18n-ignore/);
   assert.doesNotMatch(displayPage, /id="qr-url"/,
     'the footer must not expose the raw event URL as visible copy');
   assert.match(displayPage, /class="line2">QR-Code scannen</);
@@ -367,7 +367,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
     `${baseUrl}/api/events/${rememberedDraftMatch[1]}`
   ).then((response) => response.json());
   assert.equal(rememberedDraftInfo.locale, 'fr');
-  assert.equal(rememberedDraftInfo.coupleName, 'Nuage des amis');
+  assert.equal(rememberedDraftInfo.title, 'Nuage des amis');
   const draftCookie = (rememberedStart.headers.get('set-cookie') || '').split(';')[0];
   const rememberedDisplay = await fetch(`${baseUrl}${rememberedStartLocation}`, {
     headers: { Cookie: `wolkenworte-language=fr; ${draftCookie}` },
@@ -378,7 +378,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
   assert.match(rememberedDisplayHtml, /ww-language-current-name">Français/);
 
   const event = await createEvent(baseUrl, {
-    coupleName: 'İpek & Işık',
+    title: 'İpek & Işık',
     slug: 'ipek-isik',
     locale: 'tr-TR',
   });
@@ -396,12 +396,12 @@ test('event locale is validated, persisted and returned by public APIs', async (
   const invalid = await fetch(`${baseUrl}/api/events`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coupleName: 'Invalid Locale', pin: '1234', locale: 'xx' }),
+    body: JSON.stringify({ title: 'Invalid Locale', pin: '1234', locale: 'xx' }),
   });
   assert.equal(invalid.status, 400);
   assert.deepEqual(await invalid.json(), { error: 'invalid_locale' });
 
-  const germanDefault = await createEvent(baseUrl, { coupleName: 'Deutsch bleibt Standard' });
+  const germanDefault = await createEvent(baseUrl, { title: 'Deutsch bleibt Standard' });
   assert.equal(germanDefault.locale, 'de');
 });
 

@@ -35,7 +35,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
 
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Preis Paula & Porto Paul' });
+  const event = await createEvent(baseUrl, { title: 'Preis Paula & Porto Paul' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 3);
 
   const shippingPage = await fetch(`${baseUrl}/e/${event.slug}/shipping?configuration=${configuration.id}`);
@@ -200,7 +200,7 @@ test('cart quote estimates mixed products for one address as one Printful shipme
 
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Cart Carla & Mix Max' });
+  const event = await createEvent(baseUrl, { title: 'Cart Carla & Mix Max' });
   const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
   const coaster = await saveConfiguration(baseUrl, event.slug, {
     productKey: 'cork-back-coaster',
@@ -273,8 +273,8 @@ test('cart quote estimates mixed products for one address as one Printful shipme
 test('a configuration can never be quoted through another event slug', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const first = await createEvent(baseUrl, { coupleName: 'Erstes Paar' });
-  const second = await createEvent(baseUrl, { coupleName: 'Zweites Paar' });
+  const first = await createEvent(baseUrl, { title: 'Erste Cloud' });
+  const second = await createEvent(baseUrl, { title: 'Zweite Cloud' });
   const configuration = await saveConfiguration(baseUrl, first.slug, 1);
 
   const response = await fetch(

@@ -12,6 +12,7 @@ const INITIAL_DATABASE_URL = process.env.TEST_DATABASE_URL ||
   process.env.DATABASE_URL;
 const APPLICATION_MIGRATIONS = [
   '20260831000000_wolkenworte_baseline.sql',
+  '20260901000000_generalize_event_naming.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -135,14 +136,14 @@ async function startTestServer() {
 
 let counter = 0;
 let clientCounter = 0;
-function uniqueCoupleName() {
+function uniqueTitle() {
   counter += 1;
-  return `Test Couple ${Date.now()}-${counter}`;
+  return `Test Cloud ${Date.now()}-${counter}`;
 }
 
 async function createEvent(baseUrl, overrides = {}) {
   clientCounter += 1;
-  const coupleName = overrides.coupleName || uniqueCoupleName();
+  const title = overrides.title || uniqueTitle();
   const res = await fetch(`${baseUrl}/api/events`, {
     method: 'POST',
     headers: {
@@ -150,7 +151,7 @@ async function createEvent(baseUrl, overrides = {}) {
       'X-Wolkenworte-Test-Client-IP': overrides.clientIp || `192.0.2.${(clientCounter % 250) + 1}`,
     },
     body: JSON.stringify({
-      coupleName,
+      title,
       slug: overrides.slug,
       pin: overrides.pin || '1234',
       locale: overrides.locale,
@@ -158,7 +159,7 @@ async function createEvent(baseUrl, overrides = {}) {
   });
   const body = await res.json();
   if (!res.ok) throw new Error(`createEvent failed: ${res.status} ${JSON.stringify(body)}`);
-  return { ...body, coupleName, pin: overrides.pin || '1234' };
+  return { ...body, title, pin: overrides.pin || '1234' };
 }
 
 function productDesignPayload(productKey = 'white-glossy-mug-duo-11oz', orientation = 'default') {
@@ -183,4 +184,4 @@ function productDesignPayload(productKey = 'white-glossy-mug-duo-11oz', orientat
   };
 }
 
-module.exports = { startTestServer, createEvent, uniqueCoupleName, productDesignPayload };
+module.exports = { startTestServer, createEvent, uniqueTitle, productDesignPayload };

@@ -132,7 +132,7 @@ test('lifecycle and abuse boundaries', async (t) => {
           'Content-Type': 'application/json',
           'X-Wolkenworte-Test-Client-IP': '198.51.100.20',
         },
-        body: JSON.stringify({ coupleName: `Limit Paar ${index}`, pin: '1234' }),
+        body: JSON.stringify({ title: `Limit Cloud ${index}`, pin: '1234' }),
       });
       statuses.push(response.status);
     }
@@ -141,7 +141,7 @@ test('lifecycle and abuse boundaries', async (t) => {
   });
 
   await t.test('reset failures are durable, generic and store no raw address', async () => {
-    const created = await createEvent(app.baseUrl, { coupleName: 'Reset Schutz', pin: '7788' });
+    const created = await createEvent(app.baseUrl, { title: 'Reset Schutz', pin: '7788' });
     const event = await db.getEventBySlug(created.slug);
     const headers = {
       'Content-Type': 'application/json',
@@ -194,7 +194,7 @@ test('lifecycle and abuse boundaries', async (t) => {
   });
 
   await t.test('expired events are indistinguishable from unknown events and slugs remain reserved', async () => {
-    const created = await createEvent(app.baseUrl, { coupleName: 'Ablauf Privat', pin: '1234' });
+    const created = await createEvent(app.baseUrl, { title: 'Ablauf Privat', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
     await expireEvent(app.query, event.id);
 
@@ -216,7 +216,7 @@ test('lifecycle and abuse boundaries', async (t) => {
   });
 
   await t.test('configurations follow the event lifetime and paid references remain retained', async () => {
-    const created = await createEvent(app.baseUrl, { coupleName: 'Entwurf Ablauf', pin: '1234' });
+    const created = await createEvent(app.baseUrl, { title: 'Entwurf Ablauf', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
     const configuration = await createEventConfiguration(db, event.id);
     const lifetime = Date.parse(configuration.expires_at) - Date.parse(configuration.created_at);
@@ -230,9 +230,9 @@ test('lifecycle and abuse boundaries', async (t) => {
 
     const order = await app.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot, status, mode
+        event_id, event_slug_snapshot, event_title_snapshot, status, mode
       ) VALUES ($1, $2, $3, 'paid_test', 'test') RETURNING id
-    `, [event.id, created.slug, created.coupleName]);
+    `, [event.id, created.slug, created.title]);
     await app.query(`
       INSERT INTO order_items (
         order_id, configuration_id, shipment_index, item_index, product_key,
@@ -246,16 +246,16 @@ test('lifecycle and abuse boundaries', async (t) => {
   });
 
   await t.test('event cleanup deletes unpaid configurations and detaches paid configuration data', async () => {
-    const created = await createEvent(app.baseUrl, { coupleName: 'Retention Paar', pin: '1234' });
+    const created = await createEvent(app.baseUrl, { title: 'Retention Cloud', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
     const paidConfiguration = await createEventConfiguration(db, event.id);
     const unpaidConfiguration = await createEventConfiguration(db, event.id);
 
     const order = await app.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot, status, mode
+        event_id, event_slug_snapshot, event_title_snapshot, status, mode
       ) VALUES ($1, $2, $3, 'paid_test', 'test') RETURNING id
-    `, [event.id, created.slug, created.coupleName]);
+    `, [event.id, created.slug, created.title]);
     await app.query(`
       INSERT INTO order_items (
         order_id, configuration_id, shipment_index, item_index, product_key,
@@ -284,7 +284,7 @@ test('lifecycle and abuse boundaries', async (t) => {
   });
 
   await t.test('database ceilings are atomic and increments at the unique-word ceiling still work', async () => {
-    const created = await createEvent(app.baseUrl, { coupleName: 'Wort Grenzen', pin: '1234' });
+    const created = await createEvent(app.baseUrl, { title: 'Wort Grenzen', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
     await app.query(`
       INSERT INTO words (event_id, word, count)
@@ -304,7 +304,7 @@ test('lifecycle and abuse boundaries', async (t) => {
     assert.equal(counts.rows[0].words, 500);
     assert.equal(counts.rows[0].contributions, 1);
 
-    const ownerCreated = await createEvent(app.baseUrl, { coupleName: 'Gast Grenze', pin: '1234' });
+    const ownerCreated = await createEvent(app.baseUrl, { title: 'Gast Grenze', pin: '1234' });
     const ownerEvent = await db.getEventBySlug(ownerCreated.slug);
     await app.query(`INSERT INTO words (event_id, word, count) VALUES ($1, 'liebe', 100)`, [ownerEvent.id]);
     await app.query(`
@@ -317,7 +317,7 @@ test('lifecycle and abuse boundaries', async (t) => {
       (error) => error.code === 'guest_contribution_limit'
     );
 
-    const totalCreated = await createEvent(app.baseUrl, { coupleName: 'Event Grenze', pin: '1234' });
+    const totalCreated = await createEvent(app.baseUrl, { title: 'Event Grenze', pin: '1234' });
     const totalEvent = await db.getEventBySlug(totalCreated.slug);
     await app.query(`INSERT INTO words (event_id, word, count) VALUES ($1, 'freude', 5000)`, [totalEvent.id]);
     await app.query(`
@@ -330,7 +330,7 @@ test('lifecycle and abuse boundaries', async (t) => {
       (error) => error.code === 'event_contribution_limit'
     );
 
-    const configEventCreated = await createEvent(app.baseUrl, { coupleName: 'Konfig Grenzen', pin: '1234' });
+    const configEventCreated = await createEvent(app.baseUrl, { title: 'Konfig Grenzen', pin: '1234' });
     const configEvent = await db.getEventBySlug(configEventCreated.slug);
     await app.query(`
       INSERT INTO configurations (
@@ -351,7 +351,7 @@ test('lifecycle and abuse boundaries', async (t) => {
 
   await t.test('socket word burst limit rejects the fourth immediate submission without a write', async () => {
     rateLimits.resetForTests();
-    const created = await createEvent(app.baseUrl, { coupleName: 'Socket Grenze', pin: '1234' });
+    const created = await createEvent(app.baseUrl, { title: 'Socket Grenze', pin: '1234' });
     const event = await db.getEventBySlug(created.slug);
     const socket = connectSocket(app.baseUrl, {
       transports: ['websocket'], forceNew: true,

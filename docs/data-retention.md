@@ -11,11 +11,11 @@ customer support, bookkeeping or statutory evidence.
 
 | Data | Current lifetime | Enforcement |
 |---|---:|---|
-| Wedding event, shared words, contribution receipts and event archives | 365 days from event creation | Postgres expiry plus the bounded maintenance cleanup |
+| Word-cloud event, shared words, contribution receipts and event archives | 365 days from event creation | Postgres expiry plus the bounded maintenance cleanup |
 | Unpaid product configurations | 365 days from event creation | Removed with their expired event unless retained by a paid order |
 | Checkout quote containing address and current provider price | 5–120 minutes, 30 minutes by default | It cannot start Checkout after expiry; abandoned expired quotes are removed after a one-day cleanup grace period |
 | Frozen paid print artifact | at least 90 days from submission, or 60 days after delivery | Expiry is extended by fulfillment/webhook state; Storage object is deleted before metadata |
-| Reserved event slug | Indefinite | Deliberately retained so an expired wedding URL is never assigned to another couple |
+| Reserved event slug | Indefinite | Deliberately retained so an expired word-cloud URL is never assigned to another organizer |
 | Hashed reset-attempt source identity | No independent customer profile | Contains only an HMAC, never a raw IP; its event relationship is removed with the expired event |
 
 Support holds override print-artifact deletion. Failed Storage deletion remains

@@ -1,7 +1,7 @@
 {
   "name": "wolkenworte",
   "version": "0.1.0",
-  "description": "Multi-tenant wedding word cloud with safe print-on-demand checkout",
+  "description": "Multi-tenant collaborative word cloud with safe print-on-demand checkout",
   "main": "server.js",
   "type": "commonjs",
   "engines": {

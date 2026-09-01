@@ -60,7 +60,7 @@ test('GET /e/:slug/export.svg serves a well-formed SVG containing every submitte
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { coupleName: 'Export Erika & Long Word Lars' });
+  const event = await createEvent(baseUrl, { title: 'Export Erika & Long Word Lars' });
 
   const socket = await connectSocket(baseUrl, event.slug);
   t.after(() => socket.close());
@@ -73,7 +73,7 @@ test('GET /e/:slug/export.svg serves a well-formed SVG containing every submitte
     'liebe',
     'vertrauen',
     'zärtlichkeit',            // umlaut
-    'hochzeitsvorbereitungsstress', // long (29 chars)
+    'veranstaltungsvorbereitung', // deliberately long
   ];
   for (const word of submitted) {
     const accepted = await submitWord(socket, word);
@@ -99,7 +99,7 @@ test('GET /e/:slug/export.svg 404s for an event with no words submitted yet', as
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { coupleName: 'Wortlose Wendy' });
+  const event = await createEvent(baseUrl, { title: 'Wortlose Wendy' });
   const res = await fetch(`${baseUrl}/e/${event.slug}/export.svg`);
   assert.equal(res.status, 404);
 });

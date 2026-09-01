@@ -5,7 +5,7 @@
  *
  * This is the critical correctness fix over the prototype: the prototype
  * used io.emit()/socket.broadcast.emit() with no rooms at all, so every
- * connected client (across every wedding, if you ran it multi-tenant) saw
+ * connected client (across every event, if you ran it multi-tenant) saw
  * every event's data. Here, every socket must join a room keyed by the
  * event's slug before it can do anything, and every emit is scoped to that
  * room via io.to(slug).emit(...) — never io.emit(...) globally.

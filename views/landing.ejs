@@ -28,8 +28,8 @@
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Jost', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
+    html { max-width: 100%; scroll-behavior: smooth; overflow-x: clip; }
+    body { max-width: 100%; margin: 0; overflow-x: clip; background: var(--paper); color: var(--ink); font-family: 'Jost', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
     h1, h2, h3, p { margin-top: 0; }
     .shell { width: min(1120px, calc(100% - 48px)); margin: auto; }
@@ -90,8 +90,7 @@
     #site-header .landing-header-actions .landing-start-button { height: 38px; padding: 0 17px; }
     /* The overlay is the source of truth. A stale document class can never
        keep the links hidden after the teaser has been dismissed. */
-    #intro-overlay:not(.fade-out) ~ #site-header .landing-section-links { opacity: 0; visibility: hidden; pointer-events: none; }
-    #intro-overlay:not(.fade-out) ~ #site-header .landing-menu-toggle { opacity: 0; visibility: hidden; pointer-events: none; }
+    #intro-overlay:not(.fade-out) ~ #site-header:not(.landing-menu-open) .landing-section-links { opacity: 0; visibility: hidden; pointer-events: none; }
     .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(64,15,38,.06); }
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
     #so-gehts, #erinnerungsstuecke, #inspiration, #testimonials { scroll-margin-top: 84px; }
@@ -111,8 +110,10 @@
 
     .start-dialog {
       width: min(500px, calc(100% - 32px));
+      max-height: calc(100dvh - 32px);
       margin: auto;
       padding: 0;
+      overflow: hidden;
       border: 1px solid var(--gold-line);
       border-radius: 24px;
       background: var(--paper);
@@ -120,7 +121,7 @@
       box-shadow: 0 28px 80px rgba(64,15,38,.22);
     }
     .start-dialog::backdrop { background: rgba(38,9,23,.44); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
-    .start-dialog-form { display: grid; gap: 20px; padding: 30px; }
+    .start-dialog-form { display: grid; gap: 20px; max-height: inherit; padding: 30px; overflow-y: auto; overscroll-behavior: contain; }
     .start-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
     .start-dialog h2 { margin: 0; font: 500 clamp(1.65rem, 4vw, 2rem)/1.15 'Playfair Display', Georgia, serif; letter-spacing: -.02em; }
     .start-dialog-close { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 28px/1 system-ui, sans-serif; cursor: pointer; }
@@ -176,7 +177,7 @@
     .cloud span:nth-child(7)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--sage-deep); font-weight: 600; }
     .cloud span:nth-child(10) { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--coral); font-weight: 600; }
     .cloud span:nth-child(13) { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--champagne); font-weight: 600; }
-    /* A couple more standout words besides the hero one, so the cloud reads
+    /* A few more standout words besides the hero one, so the cloud reads
        as varied rather than one big word plus a flat field of small ones. */
 
     /* Three drift paths (different offsets/rotation), cycled across words
@@ -244,19 +245,19 @@
     .inspiration-card p { color: var(--muted); font-size: .9rem; line-height: 1.68; font-weight: 300; }
 
     /* ── Steps ── */
-    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; }
-    .step { text-align: center; }
+    .steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
+    .step { min-width: 0; padding: 26px 18px 28px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #fffefc; text-align: center; box-shadow: 0 14px 34px rgba(64,15,38,.05); }
     .step-badge { width: 58px; height: 58px; margin: 0 auto 22px; border-radius: 50%; border: 1px solid var(--gold-line); display: grid; place-items: center; color: var(--sage-deep); background: var(--paper); }
     .step-badge svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
     .step-n { display: block; color: var(--champagne); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 8px; }
     .step h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.26rem; font-weight: 500; margin: 0 0 9px; }
-    .step p { color: var(--muted); font-size: .87rem; line-height: 1.68; font-weight: 300; }
+    .step p { color: var(--muted); font-size: .87rem; line-height: 1.68; font-weight: 300; overflow-wrap: anywhere; }
 
     /* Each step shows a small mockup of what that moment actually looks
        like in the product, instead of an abstract icon — a mini browser for
        creating the event, the QR/direct-entry choice, the growing display,
        and the finished keepsake formats. */
-    .step-visual { height: 168px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
+    .step-visual { width: 100%; height: 168px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
     .mock-browser { width: 100%; max-width: 220px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #fffefc; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
     .mock-browser-bar { height: 22px; background: var(--cream); display: flex; align-items: center; gap: 5px; padding: 0 9px; }
     .mock-browser-bar i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-line); display: block; }
@@ -302,7 +303,7 @@
     /* The shared procedural mug renderer uses the locally served Three.js
        browser build; the homepage and configurator render the same geometry. */
     .cup-stage { min-height: 400px; display: grid; place-items: center; position: relative; gap: 4px; }
-    #mug-canvas { width: 480px; height: 430px; touch-action: none; cursor: grab; }
+    #mug-canvas { width: min(480px, 100%); height: auto; aspect-ratio: 48 / 43; touch-action: none; cursor: grab; }
     #mug-canvas.dragging { cursor: grabbing; }
     #mug-canvas:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 8px; }
     .cup-caption { color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
@@ -380,6 +381,8 @@
       #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language .ww-language-trigger { width: 100%; }
       #site-header .landing-header-actions { margin-left: 12px; }
+      .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .step:last-child:nth-child(odd) { grid-column: 1 / -1; width: calc((100% - 20px) / 2); justify-self: center; }
     }
     @media (max-width: 760px) { .cta-box .deco, .heart-accent { display: none; } }
     @media (max-width: 760px) {
@@ -397,8 +400,10 @@
       .reel { padding: 34px 22px 30px; }
       .cloud { margin-bottom: 6px; }
       section { padding: 72px 0; }
-      .steps { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
-      .step-visual { height: 140px; margin-bottom: 16px; }
+      .steps { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      .step { padding: 24px 20px 26px; }
+      .step:last-child:nth-child(odd) { grid-column: auto; width: 100%; }
+      .step-visual { height: 150px; margin-bottom: 16px; }
       .mock-browser, .mock-screen { max-width: 180px; }
       .mock-phone { max-width: 150px; }
       .mock-qr, .mock-phone-mini, .mock-keep img { transform: scale(.88); }
@@ -406,11 +411,22 @@
       .print-grid { text-align: center; }
       .print-copy p { margin-left: auto; margin-right: auto; }
       .cup-stage { min-height: 340px; order: -1; }
-      #mug-canvas { width: 360px; height: 320px; }
+      #mug-canvas { width: min(360px, 100%); height: auto; aspect-ratio: 9 / 8; }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
-      .start-dialog-form { padding: 24px 20px 22px; }
+      .start-dialog {
+        inset: auto 0 var(--start-dialog-keyboard-inset, 0px);
+        width: 100%;
+        max-width: none;
+        max-height: calc(var(--start-dialog-visual-height, 100dvh) - 12px);
+        margin: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        border-radius: 24px 24px 0 0;
+      }
+      .start-dialog-form { padding: 24px 20px calc(22px + env(safe-area-inset-bottom, 0px)); }
       .start-dialog-actions .button { width: 100%; }
     }
   </style>
@@ -689,10 +705,9 @@
           value="<%= startDialog.name || '' %>"
           maxlength="80"
           autocomplete="off"
-          placeholder="z. B. Lea &amp; Julian"
-          data-i18n-placeholder-source="z. B. Lea & Julian"
+          placeholder="z. B. Sommerfest 2026"
+          data-i18n-placeholder-source="z. B. Sommerfest 2026"
           required
-          autofocus
         />
       </label>
       <p class="start-dialog-error" id="start-dialog-error" role="alert" aria-live="polite"><%= startDialog.error ? t(startDialog.error) : '' %></p>
@@ -716,13 +731,24 @@
       var form = document.getElementById('start-dialog-form');
       var input = document.getElementById('start-cloud-name');
       var closeButton = document.getElementById('start-dialog-close');
+      var visualViewport = window.visualViewport;
       if (!dialog || !form || !input || !closeButton) return;
+
+      function syncDialogViewport() {
+        if (!visualViewport || !dialog.open) return;
+        var visualBottom = Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop);
+        dialog.style.setProperty('--start-dialog-visual-height', visualViewport.height + 'px');
+        dialog.style.setProperty('--start-dialog-keyboard-inset', visualBottom + 'px');
+      }
 
       function openDialog() {
         var header = document.getElementById('site-header');
         if (header) header.classList.remove('landing-menu-open');
         if (!dialog.open) dialog.showModal();
-        window.requestAnimationFrame(function () { input.focus(); });
+        syncDialogViewport();
+        if (window.matchMedia('(pointer: fine)').matches) {
+          window.requestAnimationFrame(function () { input.focus(); });
+        }
       }
 
       document.querySelectorAll('[data-open-start-dialog]').forEach(function (button) {
@@ -736,6 +762,14 @@
         if (event.target === dialog) dialog.close();
       });
       input.addEventListener('input', function () { input.setCustomValidity(''); });
+      if (visualViewport) {
+        visualViewport.addEventListener('resize', syncDialogViewport);
+        visualViewport.addEventListener('scroll', syncDialogViewport);
+      }
+      dialog.addEventListener('close', function () {
+        dialog.style.removeProperty('--start-dialog-visual-height');
+        dialog.style.removeProperty('--start-dialog-keyboard-inset');
+      });
       form.addEventListener('submit', function (event) {
         if (input.value.trim()) return;
         event.preventDefault();

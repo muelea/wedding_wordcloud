@@ -21,7 +21,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   ]) {
     previous[name] = process.env[name];
   }
-  process.env.PUBLIC_URL = 'https://shop.weddingcloud.example';
+  process.env.PUBLIC_URL = 'https://shop.wolkenworte.example';
   process.env.STRIPE_PAYMENT_MODE = 'live';
   process.env.STRIPE_LIVE_SECRET_KEY = 'sk_live_fulfillment_fixture';
   process.env.STRIPE_LIVE_PAYMENTS_ENABLED = 'true';
@@ -55,7 +55,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     async remove(key) { storedObjects.delete(key); },
   });
   t.after(() => storage.resetAdapterForTests());
-  const createdEvent = await createEvent(baseUrl, { coupleName: 'Draft Dora & Sicher Sven' });
+  const createdEvent = await createEvent(baseUrl, { title: 'Draft Dora & Sicher Sven' });
 
   const db = require('../src/db');
   const event = await db.getEventBySlug(createdEvent.slug);
@@ -146,7 +146,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     }],
   }]);
   assert.match(captured.payload.items[0].files[0].url,
-    /^https:\/\/shop\.weddingcloud\.example\/api\/print-files\/[A-Za-z0-9_-]{24}\/[A-Za-z0-9_-]{32}$/);
+    /^https:\/\/shop\.wolkenworte\.example\/api\/print-files\/[A-Za-z0-9_-]{24}\/[A-Za-z0-9_-]{32}$/);
   assert.equal((await db.getOrderPrintArtifacts(order.id)).length, 1);
 
   const splitQuote = await db.createCheckoutQuote({
@@ -317,7 +317,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
       quantity: 2,
     },
   });
-  const notebookPrintUrl = `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
+  const notebookPrintUrl = `https://shop.wolkenworte.example/api/events/${createdEvent.slug}` +
     '/configurations/notebook-configuration/print.svg';
   assert.deepEqual(notebookPayload.items[0].files, [
     { type: 'front', url: `${notebookPrintUrl}?surface=front` },
@@ -345,7 +345,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
       quantity: 1,
     },
   });
-  const pillowPrintUrl = `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
+  const pillowPrintUrl = `https://shop.wolkenworte.example/api/events/${createdEvent.slug}` +
     '/configurations/pillow-configuration/print.svg';
   assert.deepEqual(pillowPayload.items[0].files, [
     { type: 'front', url: `${pillowPrintUrl}?surface=front` },
@@ -381,7 +381,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     'landscape keeps the verified poster variant and therefore the same price basis');
   assert.deepEqual(landscapePosterPayload.items[0].files, [{
     type: 'default',
-    url: `https://shop.weddingcloud.example/api/events/${createdEvent.slug}` +
+    url: `https://shop.wolkenworte.example/api/events/${createdEvent.slug}` +
       '/configurations/landscape-poster-configuration/print.svg',
   }], 'Printful receives the orientation-specific immutable SVG from the normal file route');
 });

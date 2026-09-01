@@ -86,7 +86,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
   const storage = require('../src/privateStorage');
   const printful = require('../src/printful');
   const fulfillment = require('../src/fulfillment');
-  const eventPublic = await createEvent(hosted.baseUrl, { coupleName: 'Lease Lara & Artefakt Anton' });
+  const eventPublic = await createEvent(hosted.baseUrl, { title: 'Lease Lara & Artefakt Anton' });
   const event = await db.getEventBySlug(eventPublic.slug);
   const objects = new Map();
   let failNextRemoval = false;

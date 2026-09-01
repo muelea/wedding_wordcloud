@@ -154,7 +154,7 @@ async function seedFixtures(pool, options, runId) {
         RETURNING slug
       )
       INSERT INTO events (
-        slug, couple_name, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
+        slug, title, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
       )
       SELECT fixture.slug, 'Socket Capacity ' || fixture.room_index,
              $2, $3, 'de', transaction_timestamp(), transaction_timestamp() + interval '365 days'
@@ -493,7 +493,7 @@ async function seedInterruptedFulfillment(pool, room, configurationId, runId) {
     const quoteId = `socket_capacity_${runId}`;
     const orderResult = await client.query(`
       INSERT INTO orders (
-        event_id, event_slug_snapshot, event_label_snapshot, configuration_id,
+        event_id, event_slug_snapshot, event_title_snapshot, configuration_id,
         configuration_ids_json, quote_id, status, shipping_json, currency,
         items_cents, shipping_cents, tax_cents, total_cents, mode, paid_at,
         fulfillment_status, fulfillment_mode, fulfillment_attempts,

@@ -41,7 +41,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
 
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Webhook Wanda & Signed Sven' });
+  const event = await createEvent(baseUrl, { title: 'Webhook Wanda & Signed Sven' });
   const configuration = await saveConfiguration(baseUrl, event.slug);
 
   const printful = require('../src/printful');

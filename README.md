@@ -1,6 +1,6 @@
 # Wolkenworte
 
-A live word cloud for weddings and other special occasions. One click creates
+A live collaborative word cloud for celebrations, teams, gifts and other shared moments. One click creates
 an event, participants submit words from their phones without an account or
 app, and the cloud grows in real time on the same shared event page. The
 commercial product being prepared is an optional order of personalized mugs,
@@ -21,7 +21,7 @@ frozen snapshot of the word cloud.
    another guest's vote.
 4. Words appear live on the event page via Socket.io — font size scales with
    how many guests submitted the same word.
-5. After the event, the couple opens a product configurator, chooses a white
+5. After the event, the organizer opens a product configurator, chooses a white
    mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
    spiral notebook or decorative pillow from grouped product families, any
    color palette and product-specific arrangement actions, and approves an
@@ -42,7 +42,7 @@ frozen snapshot of the word cloud.
    faces expose separate front/back editors plus a copy-to-back shortcut and
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
-   and every curated wedding motif can be moved, resized, rotated, recolored,
+   and every curated editorial motif can be moved, resized, rotated, recolored,
    duplicated or removed. A selection rectangle, Shift/Command/Control-click and
    “Select all” support the familiar temporary multi-selection workflow; desktop
    users can also copy and paste selected elements with the standard keyboard
@@ -396,7 +396,7 @@ src/
 public/
   js/mug-3d-viewer.js      Shared rotatable Three.js mug preview
   js/mug-editor.js         Bounded, dynamically scaled text/motif print-area editor
-  js/mug-icons.js          Curated editorial fine-line wedding motif library
+  js/mug-icons.js          Curated editorial fine-line motif library
   js/wordcloud-core.js     Shared layout/export engine (used by both the browser and Node tests)
 views/
   landing.ejs              Marketing landing page, served at '/'
@@ -754,7 +754,7 @@ keys in Fly for activation by `npm run deploy:hosted`.
 - **Never use `io.emit(...)` or a bare `socket.emit(...)` broadcast in
   `src/socket.js`.** Every event must join a room keyed by its slug first;
   every emit must be `io.to(slug).emit(...)` / `socket.to(slug).emit(...)`.
-  A bare global emit leaks one couple's words into every other couple's
+  A bare global emit leaks one event's words into every other event's
   display. `test/isolation.test.js` catches this — don't disable it to make
   a change pass.
 

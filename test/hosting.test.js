@@ -316,7 +316,7 @@ test('local deployment guard rejects unsafe config, credentials and Git state', 
 test('graceful shutdown disconnects Socket.io and closes the listener within its bound', async (t) => {
   const hosted = await startTestServer();
   t.after(hosted.close);
-  const event = await createEvent(hosted.baseUrl, { coupleName: 'Shutdown Schorsch' });
+  const event = await createEvent(hosted.baseUrl, { title: 'Shutdown Schorsch' });
 
   const socket = ioClient(hosted.baseUrl, {
     query: { slug: event.slug },

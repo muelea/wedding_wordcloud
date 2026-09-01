@@ -44,7 +44,7 @@ async function calculateQuote(baseUrl, slug, configurationId) {
 test('checkout revalidates Printful, creates one dynamic Stripe Session and reuses it on double click', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Checkout Clara & Cent Carl', locale: 'tr' });
+  const event = await createEvent(baseUrl, { title: 'Checkout Clara & Cent Carl', locale: 'tr' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
 
   const printful = require('../src/printful');
@@ -147,7 +147,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
 test('a changed Printful price must be shown and confirmed before Stripe is created', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Preis Pia & Update Uwe' });
+  const event = await createEvent(baseUrl, { title: 'Preis Pia & Update Uwe' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
 
   const printful = require('../src/printful');
@@ -202,7 +202,7 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
 test('cart checkout revalidates mixed products and creates one Stripe Session', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Warenkorb Wanda & Stripe Sven' });
+  const event = await createEvent(baseUrl, { title: 'Warenkorb Wanda & Stripe Sven' });
   const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
   const coaster = await saveConfiguration(baseUrl, event.slug, {
     productKey: 'cork-back-coaster',
@@ -293,7 +293,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
 test('cart checkout follows the latest selected locale across repeated Stripe round trips', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Lingua Lea & Locale Luca', locale: 'de' });
+  const event = await createEvent(baseUrl, { title: 'Lingua Lea & Locale Luca', locale: 'de' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
 
   const printful = require('../src/printful');
@@ -418,7 +418,7 @@ test('cart checkout follows the latest selected locale across repeated Stripe ro
 test('a concurrently completed Stripe payment wins over a locale replacement', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Race Ria & Payment Paul', locale: 'de' });
+  const event = await createEvent(baseUrl, { title: 'Race Ria & Payment Paul', locale: 'de' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
 
   const printful = require('../src/printful');
@@ -474,7 +474,7 @@ test('a concurrently completed Stripe payment wins over a locale replacement', a
 test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
-  const event = await createEvent(baseUrl, { coupleName: 'Ablauf Anna & Sicher Sven' });
+  const event = await createEvent(baseUrl, { title: 'Ablauf Anna & Sicher Sven' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
 
   const printful = require('../src/printful');

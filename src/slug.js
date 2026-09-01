@@ -25,16 +25,16 @@ function slugify(input) {
 // ── Random suffix ────────────────────────────────────────────────────────
 // Every event's *final* slug (see makeUniqueSlug below) always gets a short
 // random suffix appended to the name-derived prefix, e.g.
-// "johanna-und-peter-x7k2q". Two problems, one fix:
-//   1. Collisions: common name combos ("anna-und-max") used to 409 on the
-//      second couple with the same names, forcing a manual retry.
-//   2. Privacy: a guessable slug lets a stranger who guesses a common name
-//      combo view that couple's (unauthenticated-read) live word cloud.
+// "sommerfest-2026-x7k2q". Two problems, one fix:
+//   1. Collisions: common titles ("sommerfest") used to 409 on the
+//      second event with the same title, forcing a manual retry.
+//   2. Privacy: a guessable slug lets a stranger who guesses a common title
+//      view that event's (unauthenticated-read) live word cloud.
 //      Admin actions are PIN-gated, but *viewing* submitted guest words is
 //      not, so an unguessable slug is the actual privacy boundary here.
 // The prefix is kept (not replaced by a fully opaque id) because it's
 // genuinely useful as a spoken/typed fallback if a QR code fails to scan —
-// "unsere Wortwolke ist unter johanna-und-peter-irgendwas" is still
+// "unsere Wortwolke ist unter sommerfest-irgendwas" is still
 // findable/memorable in a way a random ID alone would not be.
 //
 // Alphabet excludes visually-confusable characters (0/O, 1/l/I) so the
@@ -59,7 +59,7 @@ function randomSuffix(length = SUFFIX_LENGTH) {
 // reports a collision, rather than assuming one can never happen.
 // `exists` is a `(candidateSlug) => boolean` predicate (e.g. db.slugExists).
 function makeUniqueSlug(base, exists, { maxAttempts = 10 } = {}) {
-  const prefix = base || 'unser-brautpaar';
+  const prefix = base || 'wortwolke';
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const candidate = `${prefix}-${randomSuffix()}`;
     if (!exists(candidate)) return candidate;

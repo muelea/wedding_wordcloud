@@ -11,7 +11,7 @@ test('event creation uses one canonical event URL', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { coupleName: 'Anna & Ben', slug: 'anna-und-ben', pin: '4242' });
+  const event = await createEvent(baseUrl, { title: 'Anna & Ben', slug: 'anna-und-ben', pin: '4242' });
   // The final slug is the requested prefix PLUS a random suffix, not the
   // literal typed text -- this is the core of the privacy/collision fix.
   assert.notEqual(event.slug, 'anna-und-ben');
@@ -45,7 +45,7 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.equal(draftInfo.isDraft, true);
   assert.equal(draftInfo.isDraftOwner, true);
   assert.equal(draftInfo.hasAdminPin, false);
-  assert.equal(draftInfo.coupleName, 'Sommerfest 2026');
+  assert.equal(draftInfo.title, 'Sommerfest 2026');
 
   // Creators and contributors use one canonical event page, which contains
   // contribution and distinct sharing/copy-link controls.
@@ -91,9 +91,24 @@ test('event creation uses one canonical event URL', async (t) => {
 
   // Public event info is fetchable by the real (suffixed) slug.
   const info = await fetch(`${baseUrl}/api/events/${event.slug}`).then((r) => r.json());
-  assert.equal(info.coupleName, 'Anna & Ben');
+  assert.equal(info.title, 'Anna & Ben');
+  assert.equal(info.subtitle, '');
   assert.equal('eventTitle' in info, false);
+  assert.equal('eventLabel' in info, false);
   assert.equal('weddingDate' in info, false);
+
+  const settingsResponse = await fetch(`${baseUrl}/api/events/${event.slug}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Anna & Ben', subtitle: 'Sommerfest · Berlin', pin: '4242' }),
+  });
+  assert.equal(settingsResponse.status, 200);
+  assert.deepEqual(await settingsResponse.json(), {
+    title: 'Anna & Ben',
+    subtitle: 'Sommerfest · Berlin',
+  });
+  const updatedInfo = await fetch(`${baseUrl}/api/events/${event.slug}`).then((r) => r.json());
+  assert.equal(updatedInfo.subtitle, 'Sommerfest · Berlin');
 
   // The bare prefix (without suffix) was never actually created, so it
   // 404s just like any other unknown slug.
@@ -105,17 +120,17 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.equal(missing.status, 404);
 });
 
-test('identical couple names produce distinct, independently working slugs (privacy/collision fix)', async (t) => {
+test('identical titles produce distinct, independently working slugs (privacy/collision fix)', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  // Two unrelated couples who happen to share a name combo -- previously
+  // Two unrelated events that happen to share a title -- previously
   // the second creation would 409 and force a manual retry; now each just
   // gets its own random suffix automatically.
-  const first = await createEvent(baseUrl, { coupleName: 'Johanna & Peter', pin: '1111' });
-  const second = await createEvent(baseUrl, { coupleName: 'Johanna & Peter', pin: '2222' });
+  const first = await createEvent(baseUrl, { title: 'Johanna & Peter', pin: '1111' });
+  const second = await createEvent(baseUrl, { title: 'Johanna & Peter', pin: '2222' });
 
-  assert.notEqual(first.slug, second.slug, 'two events with identical couple names must get different slugs');
+  assert.notEqual(first.slug, second.slug, 'two events with identical titles must get different slugs');
 
   const firstMatch = SUFFIX_RE.exec(first.slug);
   const secondMatch = SUFFIX_RE.exec(second.slug);
@@ -130,8 +145,8 @@ test('identical couple names produce distinct, independently working slugs (priv
   // strings, but two separate rows an event page can actually load.
   const firstInfo = await fetch(`${baseUrl}/api/events/${first.slug}`).then((r) => r.json());
   const secondInfo = await fetch(`${baseUrl}/api/events/${second.slug}`).then((r) => r.json());
-  assert.equal(firstInfo.coupleName, 'Johanna & Peter');
-  assert.equal(secondInfo.coupleName, 'Johanna & Peter');
+  assert.equal(firstInfo.title, 'Johanna & Peter');
+  assert.equal(secondInfo.title, 'Johanna & Peter');
 
   // The bare shared prefix without any suffix was never created as its own
   // event -- confirms neither creation silently collapsed onto a
@@ -152,18 +167,18 @@ test('event creation validates required fields', async (t) => {
 
   const badPin = await fetch(`${baseUrl}/api/events`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coupleName: 'Klara & Jonas', pin: '12' }),
+    body: JSON.stringify({ title: 'Klara & Jonas', pin: '12' }),
   });
   assert.equal(badPin.status, 400);
 });
 
-test('slug is auto-derived from couple names when not supplied, umlauts transliterated', async (t) => {
+test('slug is auto-derived from the title when not supplied, umlauts transliterated', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
   const res = await fetch(`${baseUrl}/api/events`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coupleName: 'Jö & Björn Müller', pin: '9999' }),
+    body: JSON.stringify({ title: 'Jö & Björn Müller', pin: '9999' }),
   });
   const body = await res.json();
   assert.equal(res.status, 201);
@@ -176,7 +191,7 @@ test('admin PIN authorizes one reset request without issuing or storing a reusab
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { coupleName: 'Pinnwand Petra', pin: '7777' });
+  const event = await createEvent(baseUrl, { title: 'Pinnwand Petra', pin: '7777' });
 
   // A missing PIN and a wrong PIN use the same generic authentication error.
   const noAuth = await fetch(`${baseUrl}/api/events/${event.slug}/reset`, {

@@ -67,8 +67,8 @@ test('multi-tenant isolation: a word submitted to event A never reaches event B'
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const eventA = await createEvent(baseUrl, { coupleName: 'Alpha Aachen' });
-  const eventB = await createEvent(baseUrl, { coupleName: 'Beta Berlin' });
+  const eventA = await createEvent(baseUrl, { title: 'Alpha Aachen' });
+  const eventB = await createEvent(baseUrl, { title: 'Beta Berlin' });
 
   const { socket: socketA, initialWords: initialA } = await connectSocket(baseUrl, eventA.slug);
   const { socket: socketB } = await connectSocket(baseUrl, eventB.slug);
@@ -105,8 +105,8 @@ test('multi-tenant isolation: theme-change on event A does not affect event B', 
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const eventA = await createEvent(baseUrl, { coupleName: 'Gamma Gera' });
-  const eventB = await createEvent(baseUrl, { coupleName: 'Delta Dresden' });
+  const eventA = await createEvent(baseUrl, { title: 'Gamma Gera' });
+  const eventB = await createEvent(baseUrl, { title: 'Delta Dresden' });
 
   const { socket: socketA } = await connectSocket(baseUrl, eventA.slug);
   const { socket: socketB } = await connectSocket(baseUrl, eventB.slug);

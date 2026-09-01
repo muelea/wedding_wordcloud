@@ -91,7 +91,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
   const fulfillment = require('../src/fulfillment');
   t.after(() => resend.resetAdapterForTests());
   const eventPublic = await createEvent(hosted.baseUrl, {
-    coupleName: 'E-Mail Emma & Nachricht Noah', locale: 'de',
+    title: 'E-Mail Emma & Nachricht Noah', locale: 'de',
   });
   const event = await db.getEventBySlug(eventPublic.slug);
 

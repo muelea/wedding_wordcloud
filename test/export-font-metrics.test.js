@@ -98,7 +98,7 @@ test('layoutForExport (real font metrics) still guarantees zero overlaps and eve
   const words = [
     ['liebe', 12], ['glück', 9], ['zärtlichkeit', 7], ['humor', 15],
     ['vertrauen', 5], ['abenteuer', 3], ['freundschaft', 8],
-    ['hochzeitsvorbereitungsstress', 1], ['tanzen', 6], ['musik', 4],
+    ['veranstaltungsvorbereitung', 1], ['tanzen', 6], ['musik', 4],
     ['gemeinsam', 2], ['füreinander', 10], ['unterstützung', 1],
     ['geduld', 11], ['spaß', 13], ['romantik', 6], ['traum', 5],
     ['zukunft', 3], ['familie', 14], ['genuss', 2],

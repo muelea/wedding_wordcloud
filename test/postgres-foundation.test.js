@@ -7,7 +7,7 @@ const path = require('path');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
 async function storedEvent(db, baseUrl, name) {
-  const created = await createEvent(baseUrl, { coupleName: name });
+  const created = await createEvent(baseUrl, { title: name });
   return { created, row: await db.getEventBySlug(created.slug) };
 }
 
@@ -77,6 +77,12 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
     `);
     const byColumn = new Map(schema.rows.map((column) => [column.column_name, column]));
     assert.equal(byColumn.get('expires_at').data_type, 'timestamp with time zone');
+    assert.equal(byColumn.get('title').is_nullable, 'NO');
+    assert.equal(byColumn.has('couple_name'), false);
+    assert.equal(byColumn.get('subtitle').is_nullable, 'YES');
+    assert.equal(byColumn.has('event_label'), false);
+    assert.equal(byColumn.get('event_title_snapshot').is_nullable, 'NO');
+    assert.equal(byColumn.has('event_label_snapshot'), false);
     assert.equal(byColumn.get('design_json').data_type, 'jsonb');
     assert.equal(byColumn.get('configuration_snapshot_json').data_type, 'jsonb');
     assert.equal(byColumn.get('buyer_email').is_nullable, 'YES');

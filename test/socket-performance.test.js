@@ -314,8 +314,8 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
   await t.test('three committed submissions coalesce into one isolated complete room update', async () => {
     const app = await startTestServer();
     t.after(app.close);
-    const eventA = await createEvent(app.baseUrl, { coupleName: 'Coalesce Alpha' });
-    const eventB = await createEvent(app.baseUrl, { coupleName: 'Coalesce Beta' });
+    const eventA = await createEvent(app.baseUrl, { title: 'Coalesce Alpha' });
+    const eventB = await createEvent(app.baseUrl, { title: 'Coalesce Beta' });
     const sender = await connectSocket(app.baseUrl, eventA.slug, 'a'.repeat(32));
     const display = await connectSocket(app.baseUrl, eventA.slug, 'b'.repeat(32));
     const foreign = await connectSocket(app.baseUrl, eventB.slug, 'c'.repeat(32));
@@ -355,7 +355,7 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
   await t.test('shutdown-style transport closure preserves automatic reconnection', async () => {
     const app = await startTestServer();
     t.after(app.close);
-    const event = await createEvent(app.baseUrl, { coupleName: 'Reconnect Transport' });
+    const event = await createEvent(app.baseUrl, { title: 'Reconnect Transport' });
     const socket = ioClient(app.baseUrl, {
       query: { slug: event.slug, guestId: 'e'.repeat(32) },
       transports: ['websocket'],
@@ -386,7 +386,7 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
   await t.test('polling fallback receives a complete maximum-size initial snapshot', async () => {
     const app = await startTestServer();
     t.after(app.close);
-    const event = await createEvent(app.baseUrl, { coupleName: 'Polling Grenze' });
+    const event = await createEvent(app.baseUrl, { title: 'Polling Grenze' });
     const db = require('../src/db');
     const stored = await db.getEventBySlug(event.slug);
     await app.query(`

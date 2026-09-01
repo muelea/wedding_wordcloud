@@ -99,7 +99,7 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
   t.after(() => storage.resetAdapterForTests());
 
   const eventPublic = await createEvent(hosted.baseUrl, {
-    coupleName: 'Privatname Betrieb Test', clientIp: '192.0.2.88',
+    title: 'Privatname Betrieb Test', clientIp: '192.0.2.88',
   });
   const event = await db.getEventBySlug(eventPublic.slug);
 
@@ -154,11 +154,11 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
   });
 
   await t.test('an additive future migration does not stop the currently compatible release', async () => {
-    await hosted.query('INSERT INTO app_schema_versions (version) VALUES (2)');
+    await hosted.query('INSERT INTO app_schema_versions (version) VALUES (3)');
     try {
       await assert.doesNotReject(db.assertDatabaseReady());
     } finally {
-      await hosted.query('DELETE FROM app_schema_versions WHERE version = 2');
+      await hosted.query('DELETE FROM app_schema_versions WHERE version = 3');
     }
   });
 
