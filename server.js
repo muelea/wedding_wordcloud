@@ -7,7 +7,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const compression = require('compression');
-const crypto = require('crypto');
 
 const db = require('./src/db');
 const { makeUniqueSlug } = require('./src/slug');
@@ -21,6 +20,7 @@ const { makePerformanceRouter } = require('./src/routes/performance');
 const { getBaseUrl } = require('./src/baseUrl');
 const { buildEventUrl, renderEventQrSvg } = require('./src/eventQr');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('./src/eventNames');
+const { DEFAULT_PRODUCT, getPublicProduct } = require('./src/products');
 const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
 const emailDelivery = require('./src/emailDelivery');
@@ -166,11 +166,22 @@ app.get('/', asyncRoute(async (req, res) => {
 
 app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncRoute(async (req, res) => {
   const submittedName = typeof req.body?.cloudName === 'string' ? req.body.cloudName : '';
+  const pin = typeof req.body?.organizerPin === 'string' ? req.body.organizerPin.trim() : '';
+  const pinConfirmation = typeof req.body?.organizerPinConfirmation === 'string'
+    ? req.body.organizerPinConfirmation.trim()
+    : '';
   const title = normalizeEventName(submittedName);
+  let error = '';
   if (!title || title.length > MAX_EVENT_NAME_LENGTH) {
-    const error = !title
+    error = !title
       ? 'Bitte gebt eurer Wortwolke einen Namen.'
       : 'Der Name darf höchstens 80 Zeichen lang sein.';
+  } else if (!/^\d{4,6}$/.test(pin)) {
+    error = 'Bitte wählt eine Organisator-PIN mit 4–6 Ziffern.';
+  } else if (pin !== pinConfirmation) {
+    error = 'Die beiden PINs stimmen nicht überein.';
+  }
+  if (error) {
     return renderPage(req, res, 'landing', {
       ...landingPageOptions({
         startDialog: { open: true, name: submittedName.slice(0, MAX_EVENT_NAME_LENGTH), error },
@@ -183,24 +194,18 @@ app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncR
     name: 'event:create', key: sourceHash, ...rateLimits.LIMITS.eventCreate,
   }])) return res.status(429).send('Bitte versucht es in einem Moment erneut.');
 
-  const ownerToken = crypto.randomBytes(32).toString('base64url');
-  const ownerHash = crypto.createHash('sha256').update(ownerToken).digest('hex');
   const locale = resolvePageLocale(req).locale;
   let event = null;
   for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
     try {
-      event = await db.createDraftEvent({
-        slug: makeUniqueSlug('wortwolke', () => false), title, locale, ownerHash,
+      event = await db.createEvent({
+        slug: makeUniqueSlug('wortwolke', () => false), title, pin, locale,
       });
     } catch (error) {
       if (error?.code !== '23505') throw error;
     }
   }
   if (!event) return res.status(500).send('Die Wortwolke konnte nicht erstellt werden.');
-  res.cookie(`ww-draft-${event.slug}`, ownerToken, {
-    httpOnly: true, sameSite: 'lax', secure: req.secure,
-    maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
-  });
   return res.redirect(303, `/e/${encodeURIComponent(event.slug)}`);
 }));
 
@@ -221,13 +226,16 @@ app.get('/e/:slug', asyncRoute(async (req, res) => {
   if (!event) return renderPage(req, res, '404', { status: 404 });
   const eventUrl = buildEventUrl(getBaseUrl(req, PORT), event.slug);
   const qrSvg = await renderEventQrSvg(eventUrl);
+  const paletteOptions = getPublicProduct(DEFAULT_PRODUCT).themes
+    .filter((palette) => palette.key !== 'custom');
   return renderPage(req, res, 'display', {
     eventLocale: event.locale,
-    header: { variant: 'display' },
+    header: { variant: 'display', paletteOptions },
     pageData: {
       eventUrl,
       qrSvg,
       cloudTitle: event.title,
+      paletteOptions,
     },
   });
 }));
@@ -279,7 +287,7 @@ app.get('/e/:slug/export.svg', asyncRoute(async (req, res) => {
   if (!event) return res.status(404).send('event not found');
   const words = await db.getWords(event.id);
   if (!words.length) return res.status(404).send('no words submitted yet');
-  const svg = layoutForExport(words, event.theme);
+  const svg = layoutForExport(words, 'pastel');
   res.set('Content-Type', 'image/svg+xml; charset=utf-8');
   res.set('Cache-Control', 'no-store');
   res.send(svg);

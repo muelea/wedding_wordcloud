@@ -163,7 +163,7 @@ test('lifecycle and abuse boundaries', async (t) => {
 
     const bucket = await app.query(`
       SELECT source_ip_hash, failed_attempts, blocked_until
-      FROM admin_pin_failures WHERE event_id = $1
+      FROM organizer_pin_failures WHERE event_id = $1
     `, [event.id]);
     assert.equal(bucket.rowCount, 1);
     assert.match(bucket.rows[0].source_ip_hash, /^[a-f0-9]{64}$/);

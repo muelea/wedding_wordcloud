@@ -9,12 +9,15 @@ frozen snapshot of the word cloud.
 
 ## How it works
 
-1. A visitor selects “Hier starten”, gives the word cloud a recognizable name,
-   and submits the naming dialog to `/start`. This creates an owner-bound setup
-   event and redirects to its sole public URL, `/e/<slug>`.
-2. The event page works on phones and on a big screen. Its creator can add the
-   name and optionally a 4–6 digit admin PIN there; there is no separate setup,
-   guest or display route.
+1. A visitor selects “Hier starten”, gives the word cloud a recognizable name
+   and chooses a mandatory 4–6 digit organizer PIN. Submitting the dialog to
+   `/start` creates the event atomically and redirects to its sole public URL,
+   `/e/<slug>`.
+2. The event page works on phones and on a big screen; there is no separate
+   setup, guest or display route. The organizer PIN authorizes renaming the
+   cloud, removing any submitted word, resetting the cloud and replacing the
+   PIN. It is checked per action, never stored in the browser, and cannot be
+   recovered if forgotten.
 3. Participants open `/e/<slug>` (usually via QR code) and submit
    one word at a time. Their anonymous browser session can remove its own
    contributions again; matching words are decremented rather than deleting
@@ -43,7 +46,9 @@ frozen snapshot of the word cloud.
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
    and every curated editorial motif can be moved, resized, rotated, recolored,
-   duplicated or removed. A selection rectangle, Shift/Command/Control-click and
+   duplicated or removed. Customers can also upload PNG or JPEG images; uploads
+   are safely resized, embedded in the immutable design and can be moved, resized,
+   rotated, duplicated or removed like other elements. A selection rectangle, Shift/Command/Control-click and
    “Select all” support the familiar temporary multi-selection workflow; desktop
    users can also copy and paste selected elements with the standard keyboard
    shortcuts. Text elements can use the classic default or one of four curated,
@@ -119,7 +124,7 @@ dotted and dotless I.
 - The application data layer is fully asynchronous through one bounded `pg`
   pool. Application startup checks the required migration version and never
   creates or alters schema objects.
-- Event/configuration expiration, safe paid-data retention, one-use reset PINs,
+- Event/configuration expiration, safe paid-data retention, per-action organizer PIN checks,
   abuse controls, bounded authenticated maintenance, Supabase Cron wake-ups,
   leased fulfillment and signed replay-safe Printful status webhooks are
   implemented. Verified Stripe buyer contact, immutable multilingual order

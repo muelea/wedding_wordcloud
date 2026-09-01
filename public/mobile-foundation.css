@@ -80,12 +80,3 @@ video { max-inline-size: 100%; }
     padding-bottom: max(22px, calc(14px + var(--ww-safe-bottom)));
   }
 }
-
-@media (max-width: 360px) {
-  .ww-language-inline .ww-language-trigger {
-    width: 64px;
-    padding-inline: 10px;
-  }
-
-  .ww-language-inline .ww-language-current-name { display: none; }
-}

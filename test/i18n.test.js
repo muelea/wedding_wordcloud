@@ -44,7 +44,7 @@ function renderView(filename, header = {}, locale = 'de') {
       eventUrl: 'https://example.test/e/wortwolke-test',
       qrSvg: '<svg viewBox="0 0 1 1"><path d="M0 0h1v1H0z" /></svg>',
       cloudTitle: 'Lea & Max',
-      subtitle: '',
+      paletteOptions: [],
     },
     languages: TEST_LANGUAGES,
     t: (source) => source,
@@ -67,7 +67,7 @@ const REQUIRED_MESSAGES = [
   '{{name}} – Wolkenworte',
   'Ihr seid eingeladen, die Wortwolke „{{name}}“ mitzugestalten. Fügt ein Wort hinzu und erlebt live, wie sie gemeinsam wächst.',
   'Live-Wortwolke',
-  'Neue Runde starten?',
+  'Wortwolke zurücksetzen?',
   'Eure Worte. Eure Erinnerung.',
   '{{count}} Elemente ausgewählt',
   'Wählt, wie viele Produkte an welche Adresse gehen sollen. Für eine einzelne Lieferung bleibt einfach diese eine Adresse stehen.',
@@ -75,7 +75,7 @@ const REQUIRED_MESSAGES = [
   'Eure Zahlung wurde bestätigt und eure Bestellung ist bei uns eingegangen.',
   'Diese Wortwolke gibt es nicht.',
   'und',
-  'Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN wird nicht im Browser gespeichert.',
+  'Die gewählte Sprache wird in einem funktionalen Cookie gespeichert. Die persönliche Farbpalette der Wortwolke und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Wortwolke, Konfiguration und Lieferadresse erhalten bleiben. Die Organisator-PIN wird nicht im Browser gespeichert.',
 ];
 
 function placeholders(value) {
@@ -113,7 +113,7 @@ test('locale catalogs cover the complete user journey and preserve interpolation
 test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
     const html = viewSource(filename);
-    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260829-2" \/>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260901-1" \/>/, filename);
     assert.match(
       html,
       filename === 'landing.ejs'
@@ -121,18 +121,25 @@ test('every public page loads the shared language layer', () => {
         : /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/,
       filename
     );
-    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260829-3"><\/script>/, filename);
-    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-2" \/>/, filename);
+    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260901-1"><\/script>/, filename);
+    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260901-1" \/>/, filename);
     assert.match(html, /include\('partials\/site-header'\)/,
       `${filename} needs the shared server-rendered site header`);
-    const rendered = renderView(filename, filename === 'display.ejs' ? { variant: 'display' } : {});
+    const header = filename === 'landing.ejs'
+      ? { variant: 'landing' }
+      : filename === 'display.ejs' ? { variant: 'display' } : {};
+    const rendered = renderView(filename, header);
     assert.match(rendered, /<header\b[^>]*\bww-site-header\b/, filename);
+    assert.equal((rendered.match(/data-language-picker/g) || []).length, 1, filename);
+    assert.match(rendered, /<summary\s+class="ww-language-trigger"\s+data-language-trigger/, filename);
+    assert.match(rendered, /<nav class="ww-language-menu" data-language-menu/, filename);
     if (filename === 'display.ejs') {
       assert.match(rendered, /<details class="ww-display-menu" id="display-page-menu">/, filename);
-      assert.match(rendered, /<details class="ww-language-picker ww-display-menu-language"/, filename);
-      assert.match(rendered, /id="ww-language-select"[\s\S]*?class="ww-language-trigger"/, filename);
+      assert.match(rendered, /<details class="ww-language-picker ww-display-menu-language" data-language-picker/, filename);
+    } else if (filename === 'landing.ejs') {
+      assert.match(rendered, /<details class="ww-language-picker landing-menu-language" data-language-picker/, filename);
     } else {
-      assert.match(rendered, /<details class="ww-language-picker ww-language-inline"/, filename);
+      assert.match(rendered, /<details class="ww-language-picker ww-language-inline" data-language-picker/, filename);
     }
   }
 
@@ -244,7 +251,8 @@ test('shared site header is transparent at rest and becomes glassy only after sc
 test('shared header pins the brand left and language switcher right at every viewport size', () => {
   const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
   const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
-  const partial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
+  const headerPartial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
+  const pickerPartial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'language-picker.ejs'), 'utf8');
 
   assert.match(styles, /\.ww-nav\s*\{[^}]*width:\s*100%\s*!important[^}]*padding:\s*0 40px\s*!important/s);
   assert.match(styles, /\.ww-brand\s*\{[^}]*margin-right:\s*auto/s);
@@ -252,8 +260,10 @@ test('shared header pins the brand left and language switcher right at every vie
     'the final language control is server-rendered, so an empty placeholder must not return');
   assert.match(styles, /\.ww-site-header \.ww-language-inline\s*\{[^}]*margin-left:\s*auto/s);
   assert.match(styles, /@media \(max-width:\s*620px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
-  assert.match(partial, /<details class="ww-language-picker ww-language-inline"/);
-  assert.match(partial, /<summary[\s\S]*?id="ww-language-select"/);
+  assert.equal((headerPartial.match(/include\('language-picker'/g) || []).length, 3);
+  assert.doesNotMatch(headerPartial, /<details class="ww-language-picker/);
+  assert.match(pickerPartial, /<details class="ww-language-picker/);
+  assert.match(pickerPartial, /<summary[\s\S]*?data-language-trigger/);
   assert.doesNotMatch(runtime, /createElement\(/,
     'the header and language control must exist in the server response');
 });
@@ -277,7 +287,7 @@ test('language switcher is server-rendered, progressively enhanced and uses Unic
   const browserI18n = require('../public/js/i18n.js');
   const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
   const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
-  const partial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
+  const partial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'language-picker.ejs'), 'utf8');
 
   assert.deepEqual(browserI18n.LANGUAGE_FLAGS, {
     de: '🇩🇪',
@@ -287,8 +297,9 @@ test('language switcher is server-rendered, progressively enhanced and uses Unic
     es: '🇪🇸',
     tr: '🇹🇷',
   });
-  assert.match(partial, /<details class="ww-language-picker ww-language-inline"/);
-  assert.match(partial, /<nav id="ww-language-menu"/);
+  assert.match(partial, /<details class="ww-language-picker/);
+  assert.match(partial, /data-language-picker/);
+  assert.match(partial, /<nav class="ww-language-menu" data-language-menu/);
   assert.match(partial, /<a[\s\S]*?data-language-code=/);
   assert.match(partial, /hreflang="<%= language\.code %>"/);
   assert.match(styles, /\.ww-language-menu\s*\{/);
@@ -296,7 +307,8 @@ test('language switcher is server-rendered, progressively enhanced and uses Unic
     'translated language names must not resize the header control');
   assert.match(styles, /\.ww-language-option\.is-selected/);
   assert.match(styles, /\.ww-language-picker\[open\] \.ww-language-trigger/);
-  assert.match(runtime, /stackingHost\?\.classList\.toggle\('ww-language-host-open', picker\.open\)/);
+  assert.match(runtime, /querySelectorAll\('\[data-language-picker\]'\)/);
+  assert.match(runtime, /stackingHost\?\.classList\.toggle\('ww-language-host-open', hasOpenPicker\)/);
   assert.match(styles, /\.ww-language-host-open\s*\{[^}]*z-index:\s*10001\s*!important/s);
   assert.match(runtime, /await setLocale\(nextLocale, \{ persist: true, source: 'stored' \}\)/);
   assert.match(runtime, /history\?\.replaceState/);
@@ -309,6 +321,24 @@ test('language switcher is server-rendered, progressively enhanced and uses Unic
     'translation catalogs must revalidate so deployments cannot leave mixed-language copy behind');
   assert.match(runtime, /function setText\(element, source, params = \{\}\)/,
     'dynamic UI must retain an explicit translation source');
+});
+
+test('language switcher visuals have one owner and cannot inherit page-specific link skins', () => {
+  const header = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
+  const picker = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'language-picker.ejs'), 'utf8');
+  const landing = viewSource('landing.ejs');
+  const display = viewSource('display.ejs');
+  const languageStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
+  const headerStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
+
+  assert.equal((header.match(/include\('language-picker'/g) || []).length, 3);
+  assert.equal((picker.match(/<details class="ww-language-picker/g) || []).length, 1);
+  assert.match(landing, /\.landing-section-link::after/);
+  assert.doesNotMatch(landing, /\.landing-section-links a(?::|\s|\{)/);
+  assert.doesNotMatch(display, /\.ww-display-menu\s+\.ww-language-option/);
+  assert.match(headerStyles, /\.ww-site-header a:not\(\.ww-language-option\):focus-visible/);
+  assert.match(languageStyles, /\.ww-language-option:hover,[\s\S]*?background:\s*#fbf2e7/);
+  assert.match(languageStyles, /\.ww-language-option\.is-selected\s*\{[\s\S]*?color:\s*#8c1945/);
 });
 
 test('shipping rerenders derived UI from stable sources whenever the locale changes', () => {
@@ -366,21 +396,22 @@ test('event locale is validated, persisted and returned by public APIs', async (
   const rememberedStart = await fetch(`${baseUrl}/start`, {
     method: 'POST',
     headers: { Cookie: 'wolkenworte-language=fr' },
-    body: new URLSearchParams({ cloudName: 'Nuage des amis' }),
+    body: new URLSearchParams({
+      cloudName: 'Nuage des amis', organizerPin: '4567', organizerPinConfirmation: '4567',
+    }),
     redirect: 'manual',
   });
   assert.equal(rememberedStart.status, 303);
   const rememberedStartLocation = rememberedStart.headers.get('location') || '';
-  const rememberedDraftMatch = /^\/e\/([^/]+)$/.exec(rememberedStartLocation);
-  assert.ok(rememberedDraftMatch, `unexpected draft display location: ${rememberedStartLocation}`);
-  const rememberedDraftInfo = await fetch(
-    `${baseUrl}/api/events/${rememberedDraftMatch[1]}`
+  const rememberedEventMatch = /^\/e\/([^/]+)$/.exec(rememberedStartLocation);
+  assert.ok(rememberedEventMatch, `unexpected display location: ${rememberedStartLocation}`);
+  const rememberedEventInfo = await fetch(
+    `${baseUrl}/api/events/${rememberedEventMatch[1]}`
   ).then((response) => response.json());
-  assert.equal(rememberedDraftInfo.locale, 'fr');
-  assert.equal(rememberedDraftInfo.title, 'Nuage des amis');
-  const draftCookie = (rememberedStart.headers.get('set-cookie') || '').split(';')[0];
+  assert.equal(rememberedEventInfo.locale, 'fr');
+  assert.equal(rememberedEventInfo.title, 'Nuage des amis');
   const rememberedDisplay = await fetch(`${baseUrl}${rememberedStartLocation}`, {
-    headers: { Cookie: `wolkenworte-language=fr; ${draftCookie}` },
+    headers: { Cookie: 'wolkenworte-language=fr' },
   });
   assert.equal(rememberedDisplay.status, 200);
   const rememberedDisplayHtml = await rememberedDisplay.text();

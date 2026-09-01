@@ -8,7 +8,7 @@
   const backHref = config.backHref || '/';
   const backLabel = config.backLabel || 'Zurück zur Startseite';
   const backAria = config.backAria || backLabel;
-  const currentLanguage = languages.find((language) => language.code === locale) || languages[0];
+  const paletteOptions = Array.isArray(config.paletteOptions) ? config.paletteOptions : [];
   const navLinks = config.navLinks || [
     { href: '#so-gehts', label: "So geht's" },
     { href: '#erleben', label: 'Erleben' },
@@ -27,36 +27,9 @@
       <nav id="landing-section-links" class="landing-section-links" aria-label="Seitennavigation">
         <button class="landing-menu-start" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
         <% for (const link of navLinks) { %>
-          <a href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
+          <a class="landing-section-link" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
         <% } %>
-        <details class="ww-language-picker landing-menu-language" data-i18n-ignore>
-          <summary
-            id="ww-language-select"
-            class="ww-language-trigger"
-            aria-label="<%= t('Sprache') %>: <%= currentLanguage.name %>"
-          >
-            <span class="ww-language-flag ww-language-current-flag" aria-hidden="true"><%= currentLanguage.flag %></span>
-            <span class="ww-language-current-name"><%= currentLanguage.name %></span>
-            <span class="ww-language-chevron" aria-hidden="true"></span>
-          </summary>
-          <nav id="ww-language-menu" class="ww-language-menu" aria-label="<%= t('Sprache') %>">
-            <% for (const language of languages) { %>
-              <a
-                id="ww-language-option-<%= language.code %>"
-                class="ww-language-option<%= language.code === locale ? ' is-selected' : '' %>"
-                data-language-code="<%= language.code %>"
-                href="<%= language.href %>"
-                lang="<%= language.code %>"
-                hreflang="<%= language.code %>"
-                <% if (language.code === locale) { %>aria-current="true"<% } %>
-              >
-                <span class="ww-language-flag" aria-hidden="true"><%= language.flag %></span>
-                <span class="ww-language-option-name"><%= language.name %></span>
-                <span class="ww-language-check" aria-hidden="true">✓</span>
-              </a>
-            <% } %>
-          </nav>
-        </details>
+        <%- include('language-picker', { languagePickerClass: 'landing-menu-language' }) %>
       </nav>
       <div class="landing-header-actions">
         <button class="button primary landing-start-button" type="submit" form="start-dialog-form" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
@@ -76,35 +49,23 @@
       <div class="ww-display-menu-panel">
         <section class="ww-display-menu-language-row" aria-labelledby="display-menu-language-label">
           <span class="ww-display-menu-label" id="display-menu-language-label">Sprache</span>
-          <details class="ww-language-picker ww-display-menu-language" data-i18n-ignore>
-            <summary
-              id="ww-language-select"
-              class="ww-language-trigger"
-              aria-label="<%= t('Sprache') %>: <%= currentLanguage.name %>"
-            >
-              <span class="ww-language-flag ww-language-current-flag" aria-hidden="true"><%= currentLanguage.flag %></span>
-              <span class="ww-language-current-name"><%= currentLanguage.name %></span>
-              <span class="ww-language-chevron" aria-hidden="true"></span>
-            </summary>
-            <nav id="ww-language-menu" class="ww-language-menu" aria-label="<%= t('Sprache') %>">
-              <% for (const language of languages) { %>
-                <a
-                  id="ww-language-option-<%= language.code %>"
-                  class="ww-language-option<%= language.code === locale ? ' is-selected' : '' %>"
-                  data-language-code="<%= language.code %>"
-                  href="<%= language.href %>"
-                  lang="<%= language.code %>"
-                  hreflang="<%= language.code %>"
-                  <% if (language.code === locale) { %>aria-current="true"<% } %>
-                >
-                  <span class="ww-language-flag" aria-hidden="true"><%= language.flag %></span>
-                  <span class="ww-language-option-name"><%= language.name %></span>
-                  <span class="ww-language-check" aria-hidden="true">✓</span>
-                </a>
-              <% } %>
-            </nav>
-          </details>
+          <%- include('language-picker', { languagePickerClass: 'ww-display-menu-language' }) %>
         </section>
+        <% if (paletteOptions.length) { %>
+        <section class="ww-display-menu-palette-row" aria-labelledby="display-menu-palette-label">
+          <label class="ww-display-menu-label" id="display-menu-palette-label" for="display-palette-select">Farbwelt</label>
+          <div class="ww-display-menu-palette-control">
+            <span class="ww-display-menu-palette-swatches" id="display-palette-swatches" aria-hidden="true">
+              <% for (const color of paletteOptions[0].colors) { %><i style="background:<%= color %>"></i><% } %>
+            </span>
+            <select id="display-palette-select" aria-label="Farbwelt">
+              <% for (const palette of paletteOptions) { %>
+                <option value="<%= palette.key %>" data-i18n-source="<%= palette.label %>"><%= t(palette.label) %></option>
+              <% } %>
+            </select>
+          </div>
+        </section>
+        <% } %>
         <div class="ww-display-menu-actions">
           <button class="ww-display-menu-action" id="display-own-words-button" type="button" aria-haspopup="dialog" aria-controls="display-own-words-dialog" hidden>
             <span>Deine Wörter</span>
@@ -119,34 +80,7 @@
       </div>
     </details>
     <% } else if (variant !== 'landing') { %>
-    <details class="ww-language-picker ww-language-inline" data-i18n-ignore>
-      <summary
-        id="ww-language-select"
-        class="ww-language-trigger"
-        aria-label="<%= t('Sprache') %>: <%= currentLanguage.name %>"
-      >
-        <span class="ww-language-flag ww-language-current-flag" aria-hidden="true"><%= currentLanguage.flag %></span>
-        <span class="ww-language-current-name"><%= currentLanguage.name %></span>
-        <span class="ww-language-chevron" aria-hidden="true"></span>
-      </summary>
-      <nav id="ww-language-menu" class="ww-language-menu" aria-label="<%= t('Sprache') %>">
-        <% for (const language of languages) { %>
-          <a
-            id="ww-language-option-<%= language.code %>"
-            class="ww-language-option<%= language.code === locale ? ' is-selected' : '' %>"
-            data-language-code="<%= language.code %>"
-            href="<%= language.href %>"
-            lang="<%= language.code %>"
-            hreflang="<%= language.code %>"
-            <% if (language.code === locale) { %>aria-current="true"<% } %>
-          >
-            <span class="ww-language-flag" aria-hidden="true"><%= language.flag %></span>
-            <span class="ww-language-option-name"><%= language.name %></span>
-            <span class="ww-language-check" aria-hidden="true">✓</span>
-          </a>
-        <% } %>
-      </nav>
-    </details>
+    <%- include('language-picker', { languagePickerClass: 'ww-language-inline' }) %>
     <% } %>
   </div>
 </header>

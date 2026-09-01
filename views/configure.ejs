@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Eure Worte. Eure Erinnerung.') %>" data-i18n-content-source="Eure Worte. Eure Erinnerung." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
-  <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
+  <link rel="stylesheet" href="/i18n.css?v=20260901-1" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
   <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260829-3"></script>
+  <script src="/js/i18n.js?v=20260901-1"></script>
   <script src="/js/action-state.js?v=20260829-1"></script>
   <title data-i18n-source="Erinnerung gestalten – Wolkenworte"><%= t('Erinnerung gestalten – Wolkenworte') %></title>
   <style>
@@ -683,6 +683,39 @@
       border-color: rgba(156, 28, 76, .74);
       box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
     }
+    .editor-image-quality {
+      position: absolute;
+      z-index: 6;
+      max-width: calc(100% - 16px);
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      border-radius: 5px;
+      box-shadow: 0 4px 14px rgba(25, 20, 22, .2);
+      color: #fff;
+      font-family: 'Jost', system-ui, sans-serif;
+      font-size: 10px;
+      line-height: 1;
+      pointer-events: none;
+      transform: translate(-100%, 5px);
+      white-space: nowrap;
+    }
+    .editor-image-quality[hidden] { display: none; }
+    .editor-image-quality.is-above { transform: translate(-100%, calc(-100% - 5px)); }
+    .editor-image-quality-detail {
+      min-width: 0;
+      padding: 6px 7px;
+      overflow: hidden;
+      background: rgba(24, 23, 24, .94);
+      text-overflow: ellipsis;
+    }
+    .editor-image-quality-label {
+      padding: 6px 7px;
+      background: #23864a;
+      font-weight: 700;
+    }
+    .editor-image-quality[data-quality="good"] .editor-image-quality-label { background: #3a8d54; }
+    .editor-image-quality[data-quality="low"] .editor-image-quality-label { background: #b23a3a; }
     .editor-selection {
       min-height: 0;
       margin: 10px 0 0;
@@ -1616,8 +1649,8 @@
       .option-card { min-height: 76px; }
     }
   </style>
-  <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
-  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
+  <link rel="stylesheet" href="/site-header.css?v=20260901-1" />
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-2" />
   <script src="/js/site-header.js" defer></script>
   <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
@@ -1717,6 +1750,8 @@
                       <div class="editor-motif-grid" id="editor-icon-grid"></div>
                     </div>
                   </div>
+                  <button class="editor-button editor-button-primary" id="editor-image" type="button"><span aria-hidden="true">＋</span> Bild</button>
+                  <input id="editor-image-input" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" aria-label="Bild auswählen" hidden />
                   <button class="editor-button" id="editor-reset" type="button" title="Automatische Wortwolke wiederherstellen">Zurücksetzen</button>
                   <button class="editor-button" id="editor-select-all" type="button" title="Alles auswählen (⌘/Strg + A)">Alles auswählen</button>
                 </div>
@@ -1731,7 +1766,7 @@
               <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
                 <div class="editor-selection-head">
                   <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
-                  <span class="editor-selection-hint" id="editor-selection-hint">Wort oder Motiv anklicken, um die Werkzeuge zu aktivieren</span>
+                  <span class="editor-selection-hint" id="editor-selection-hint">Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere</span>
                 </div>
                 <div class="editor-selection-row">
                   <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
@@ -1775,6 +1810,10 @@
                 <div class="editor-canvas-shell" id="editor-canvas-shell">
                   <canvas id="wrap-canvas" width="1350" height="525" aria-label="Interaktive Druckfläche. Wörter und Motive können ausgewählt, verschoben, gedreht und vergrößert werden."></canvas>
                   <span class="print-safe-guide" aria-hidden="true"></span>
+                  <div class="editor-image-quality" id="editor-image-quality" role="status" aria-live="polite" hidden>
+                    <span class="editor-image-quality-detail" id="editor-image-quality-detail"></span>
+                    <strong class="editor-image-quality-label" id="editor-image-quality-label"></strong>
+                  </div>
                 </div>
               </div>
               <p class="editor-status" id="editor-feedback" aria-live="polite"></p>
@@ -1851,16 +1890,18 @@
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
-  <script src="/js/wordcloud-core.js?v=20260819-2"></script>
+  <script src="/js/wordcloud-core.js?v=20260901-1"></script>
   <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
   <script src="/js/mug-icons.js?v=20260826-1"></script>
   <script src="/js/design-fonts.js?v=20260826-1"></script>
-  <script src="/js/design-layout.js?v=20260830-1"></script>
-  <script src="/js/mug-editor.js?v=20260827-10"></script>
+  <script src="/js/design-layout.js?v=20260901-2"></script>
+  <script src="/js/image-quality.js?v=20260901-1"></script>
+  <script src="/js/mug-editor.js?v=20260901-4"></script>
   <script>
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
+    const paletteStorageKey = `wordcloud-palette:${slug}`;
     const guestId = getOrCreateGuestId();
     const t = (source, params) => WolkenworteI18n.t(source, params);
     const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
@@ -2347,6 +2388,17 @@
       };
     }
 
+    async function ensureDesignFonts(fontKeys) {
+      if (!document.fonts || typeof document.fonts.load !== 'function') {
+        throw new Error('design_font_unavailable');
+      }
+      const keys = [...new Set(fontKeys.map((key) => DesignFonts.normalizeKey(key)))];
+      await Promise.all(keys.map((key) => {
+        const font = DesignFonts.get(key);
+        return document.fonts.load(`16px "${font.family}"`, 'Wolkenworte');
+      }));
+    }
+
     function drawCloud(ctx, x, y, width, height = width, showOnlyFullyVisible = false) {
       const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
       const placed = WordCloudCore.layoutWords(words, height, ctx, colors);
@@ -2369,10 +2421,14 @@
           ctx.save();
           ctx.translate(itemX, itemY);
           ctx.rotate(-Math.PI / 2);
-          ctx.fillText(item.word, 0, item.fontPx * .34);
+          ctx.fillText(item.word, 0, item.fontPx * WordCloudCore.TEXT_BASELINE_OFFSET);
           ctx.restore();
         } else {
-          ctx.fillText(item.word, itemX, itemY + item.fontPx * .34);
+          ctx.fillText(
+            item.word,
+            itemX,
+            itemY + item.fontPx * WordCloudCore.TEXT_BASELINE_OFFSET
+          );
         }
       }
     }
@@ -2489,12 +2545,17 @@
         mugEditor.resizePrintArea({
           printWidth: view.printFile.width,
           printHeight: view.printFile.height,
+          printFileDpi: view.printFile.dpi,
           safeMargin: product.designSafeMargin,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
 
         const loadedDesigns = designsForProductSurfaces(configurationData.designs);
+        await ensureDesignFonts(Object.values(loadedDesigns).flat()
+          .filter((item) => item.type !== 'icon' && item.type !== 'image')
+          .map((item) => item.fontFamily));
+        await mugEditor.preloadImages(Object.values(loadedDesigns).flat());
         const surfaces = productSurfaces();
         activeSurface = surfaces[0].key;
         surfaceStates = new Map(surfaces.map((surface, index) => [
@@ -2570,10 +2631,13 @@
       for (const surface of productSurfaces()) {
         if (surface.key === activeSurface) continue;
         const state = surfaceStates.get(surface.key);
-        const design = (state?.design || []).map((item, index) => ({
-          ...item,
-          color: colors[index % colors.length],
-        }));
+        let colorIndex = 0;
+        const design = (state?.design || []).map((item) => {
+          if (item.type === 'image') return { ...item };
+          const colored = { ...item, color: colors[colorIndex % colors.length] };
+          colorIndex += 1;
+          return colored;
+        });
         surfaceStates.set(surface.key, cloneEditorState({ design }, false));
       }
     }
@@ -2601,7 +2665,18 @@
         ctx.save();
         ctx.translate(offsetX + item.x * scale, offsetY + item.y * scale);
         ctx.rotate((item.angle || 0) * Math.PI / 180);
-        if (item.type === 'icon') {
+        if (item.type === 'image') {
+          const image = mugEditor?.getImageElement(item.src);
+          if (image) {
+            ctx.drawImage(
+              image,
+              -item.width * scale / 2,
+              -item.height * scale / 2,
+              item.width * scale,
+              item.height * scale
+            );
+          }
+        } else if (item.type === 'icon') {
           const icon = MugIcons.get(item.icon);
           if (icon) {
             const iconScale = item.size * scale / MugIcons.VIEWBOX_SIZE;
@@ -2616,7 +2691,11 @@
         } else {
           ctx.font = `${item.fontSize * scale}px ${DesignFonts.cssFamily(item.fontFamily)}`;
           ctx.fillStyle = item.color;
-          ctx.fillText(item.text, 0, item.fontSize * scale * .34);
+          ctx.fillText(
+            item.text,
+            0,
+            item.fontSize * scale * WordCloudCore.TEXT_BASELINE_OFFSET
+          );
         }
         ctx.restore();
       }
@@ -2956,6 +3035,7 @@
         mugEditor.resizePrintArea({
           printWidth: view.printFile.width,
           printHeight: view.printFile.height,
+          printFileDpi: view.printFile.dpi,
           safeMargin: product.designSafeMargin,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
@@ -3113,6 +3193,7 @@
         mugEditor.resizePrintArea({
           printWidth: view.printFile.width,
           printHeight: view.printFile.height,
+          printFileDpi: view.printFile.dpi,
           safeMargin: product.designSafeMargin,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
@@ -3246,6 +3327,9 @@
         selectionPanel: document.getElementById('editor-selection'),
         selectionStatus: document.getElementById('editor-selection-status'),
         selectionHint: document.getElementById('editor-selection-hint'),
+        imageQualityBadge: document.getElementById('editor-image-quality'),
+        imageQualityDetail: document.getElementById('editor-image-quality-detail'),
+        imageQualityLabel: document.getElementById('editor-image-quality-label'),
         textInput: document.getElementById('editor-text'),
         textLabel: document.getElementById('editor-text-label'),
         fontSelect: document.getElementById('editor-font'),
@@ -3257,6 +3341,8 @@
         feedback: document.getElementById('editor-feedback'),
         zoomLabel: document.getElementById('editor-zoom-label'),
         addButton: document.getElementById('editor-add'),
+        imageButton: document.getElementById('editor-image'),
+        imageInput: document.getElementById('editor-image-input'),
         iconButton: document.getElementById('editor-icon-toggle'),
         iconMenu: document.getElementById('editor-icon-menu'),
         iconGrid: document.getElementById('editor-icon-grid'),
@@ -3275,6 +3361,7 @@
         deleteButton: document.getElementById('editor-delete'),
         printWidth: view.printFile.width,
         printHeight: view.printFile.height,
+        printFileDpi: view.printFile.dpi,
         safeMargin: product.designSafeMargin,
         defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
@@ -3308,8 +3395,16 @@
         if (allowEmptyDraft && !editingOrderItemId && isCompletelyEmpty) return true;
         errorText.textContent = productSurfaces().length > 1
           ? t('Gestaltet bitte auch die {{item}}.', { item: t(missingSurface.label) })
-          : t('Fügt mindestens ein Wort oder Motiv zu eurem Design hinzu.');
+          : t('Fügt mindestens ein Wort, Motiv oder Bild zu eurem Design hinzu.');
         mugEditor.setFeedback('{{item}} ist noch leer.', { item: t(missingSurface.label) });
+        return false;
+      }
+      const uploadedImages = new Set(Object.values(designs).flat()
+        .filter((item) => item.type === 'image')
+        .map((item) => item.src));
+      if (uploadedImages.size > 4) {
+        setText(errorText, 'Verwendet bitte höchstens vier verschiedene Bilder pro Design.');
+        mugEditor.setFeedback('Zu viele verschiedene Bilder');
         return false;
       }
       orderActionPending = true;
@@ -3411,8 +3506,10 @@
         selectedFamilyKey = product.familyKey;
         const customPalette = product.themes.find((option) => option.key === 'custom');
         customColors = customPalette ? [...customPalette.colors] : ['#c2185b'];
-        selectedTheme = product.themes.some((option) => option.key === data.event.theme)
-          ? data.event.theme
+        let preferredPalette = '';
+        try { preferredPalette = localStorage.getItem(paletteStorageKey) || ''; } catch {}
+        selectedTheme = product.themes.some((option) => option.key === preferredPalette && option.key !== 'custom')
+          ? preferredPalette
           : product.themes[0].key;
         buildProductOptions();
         buildOrientationOptions();
@@ -3425,6 +3522,7 @@
         });
         updateProductPresentation();
 
+        await ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]);
         loading.hidden = true;
         content.hidden = false;
         initEditor();

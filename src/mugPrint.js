@@ -4,6 +4,7 @@ const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignFonts = require('./designFonts');
+const { inspectRasterDataUrl } = require('./designImages');
 
 const measureCanvas = createCanvas(10, 10);
 const measureCtx = measureCanvas.getContext('2d');
@@ -13,14 +14,21 @@ const DESIGN_SAFE_MARGIN = 24;
 function getDesignBounds(item) {
   let itemWidth;
   let itemHeight;
-  if (item.type === 'icon') {
+  if (item.type === 'image') {
+    itemWidth = item.width;
+    itemHeight = item.height;
+  } else if (item.type === 'icon') {
     itemWidth = item.size;
     itemHeight = item.size;
   } else {
-    measureCtx.font = `${item.fontSize}px ${DesignFonts.cssFamily(item.fontFamily)}`;
-    const metrics = measureCtx.measureText(item.text);
-    itemWidth = Math.max(1, metrics.width);
-    itemHeight = Math.max(1, item.fontSize * 1.18);
+    const textBox = WordCloudCore.measureTextBox(
+      item.text,
+      item.fontSize,
+      measureCtx,
+      DesignFonts.cssFamily(item.fontFamily)
+    );
+    itemWidth = textBox.width;
+    itemHeight = textBox.height;
   }
   const radians = item.angle * Math.PI / 180;
   const cos = Math.abs(Math.cos(radians));
@@ -41,6 +49,9 @@ function isPrintDesignWithinBounds(
       !Number.isFinite(width) || !Number.isFinite(height)) return false;
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
+    if (item.type === 'image' && (!inspectRasterDataUrl(item.src) ||
+        !Number.isFinite(item.width) || !Number.isFinite(item.height) ||
+        item.width <= 0 || item.height <= 0)) return false;
     const bounds = getDesignBounds(item);
     const halfWidth = bounds.width / 2;
     const halfHeight = bounds.height / 2;
@@ -53,6 +64,16 @@ function isPrintDesignWithinBounds(
 
 function designElements(design) {
   return design.map((item) => {
+    if (item.type === 'image') {
+      const x = item.x - item.width / 2;
+      const y = item.y - item.height / 2;
+      const rotate = item.angle
+        ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
+        : '';
+      return `<image data-uploaded-image="true" x="${x.toFixed(1)}" y="${y.toFixed(1)}" ` +
+        `width="${item.width.toFixed(1)}" height="${item.height.toFixed(1)}" ` +
+        `preserveAspectRatio="none" href="${item.src}"${rotate}/>`;
+    }
     if (item.type === 'icon') {
       const icon = MugIcons.get(item.icon);
       const scale = item.size / MugIcons.VIEWBOX_SIZE;
@@ -67,7 +88,8 @@ function designElements(design) {
       ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
       : '';
     const fontKey = DesignFonts.normalizeKey(item.fontFamily);
-    return `<text x="${item.x.toFixed(1)}" y="${(item.y + item.fontSize * 0.34).toFixed(1)}" ` +
+    return `<text x="${item.x.toFixed(1)}" ` +
+      `y="${(item.y + item.fontSize * WordCloudCore.TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
       `font-size="${item.fontSize.toFixed(1)}" font-family="${DesignFonts.svgFamily(fontKey)}" ` +
       `data-font="${fontKey}" ` +
       `fill="${item.color}" text-anchor="middle"${rotate}>${WordCloudCore.escapeXML(item.text)}</text>`;

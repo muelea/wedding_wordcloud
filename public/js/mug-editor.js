@@ -6,6 +6,11 @@
   const DEFAULT_PRINT_MARGIN = 24;
   const MIN_PRINT_FONT_SIZE = 12;
   const MIN_PRINT_ICON_SIZE = 48;
+  const MIN_PRINT_IMAGE_SIZE = 24;
+  const MAX_UPLOAD_FILE_BYTES = 15 * 1024 * 1024;
+  const MAX_EMBEDDED_IMAGE_BYTES = 1_000_000;
+  const MAX_UPLOAD_PIXELS = 40_000_000;
+  const MAX_UPLOAD_DIMENSION = 2700;
   const MAX_HISTORY = 60;
 
   function translate(source, params = {}) {
@@ -32,8 +37,10 @@
       if (!root.fabric) throw new Error('Fabric.js is required for the mug editor');
       if (!root.MugIcons) throw new Error('MugIcons is required for the mug editor');
       if (!root.DesignFonts) throw new Error('DesignFonts is required for the mug editor');
+      if (!root.ImagePrintQuality) throw new Error('ImagePrintQuality is required for the mug editor');
       this.width = options.printWidth;
       this.height = options.printHeight;
+      this.printFileDpi = Number(options.printFileDpi) || 300;
       this.printMargin = Number.isFinite(options.safeMargin) ? options.safeMargin : DEFAULT_PRINT_MARGIN;
       this.editorScale = editorScaleFor(this.width, this.height);
       this.canvasWidth = this.width * this.editorScale;
@@ -59,6 +66,9 @@
       this.feedback = options.feedback;
       this.selectionStatus = options.selectionStatus;
       this.selectionHint = options.selectionHint;
+      this.imageQualityBadge = options.imageQualityBadge;
+      this.imageQualityDetail = options.imageQualityDetail;
+      this.imageQualityLabel = options.imageQualityLabel;
       this.iconButton = options.iconButton;
       this.iconMenu = options.iconMenu;
       this.iconGrid = options.iconGrid;
@@ -78,6 +88,11 @@
       this.zoom = 1;
       this.idCounter = 0;
       this.clipboard = null;
+      this.imageElements = new Map();
+      this.imageLoadPromises = new Map();
+      this.imageRefsBySource = new Map();
+      this.imageSourcesByRef = new Map();
+      this.imageRefCounter = 0;
 
       this.canvas = new root.fabric.Canvas(options.canvas, {
         width: this.canvasWidth,
@@ -100,10 +115,17 @@
       this.renderSwatches();
       this.renderIconPicker();
       this.setZoom(1);
+      if (root.ResizeObserver && this.shell) {
+        this.shellResizeObserver = new root.ResizeObserver(() => {
+          this.updateImageQualityBadge(this.canvas.getActiveObject());
+        });
+        this.shellResizeObserver.observe(this.shell);
+      }
     }
 
     makeObject(item) {
       if (item.type === 'icon') return this.makeIconObject(item);
+      if (item.type === 'image') return this.makeImageObject(item);
       const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
       const text = new root.fabric.IText(item.text, {
         left: item.x * this.editorScale,
@@ -137,6 +159,41 @@
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
+    }
+
+    makeImageObject(item) {
+      const element = this.imageElements.get(item.src);
+      if (!element) throw new Error('Uploaded image must be loaded before restoring the design');
+      const image = new root.fabric.FabricImage(element, {
+        left: item.x * this.editorScale,
+        top: item.y * this.editorScale,
+        originX: 'center',
+        originY: 'center',
+        angle: item.angle || 0,
+        lockScalingFlip: true,
+        centeredScaling: true,
+        centeredRotation: true,
+        transparentCorners: false,
+        cornerColor: '#ffffff',
+        cornerStrokeColor: '#9c1c4c',
+        borderColor: '#9c1c4c',
+        cornerStyle: 'circle',
+        cornerSize: 14,
+        touchCornerSize: 28,
+        padding: 3,
+        hoverCursor: 'move',
+        moveCursor: 'grabbing',
+      });
+      image.editorKind = 'image';
+      image.editorSrc = item.src;
+      image.editorId = item.id || this.nextId('bild');
+      image.set({
+        scaleX: item.width * this.editorScale / Math.max(1, image.width),
+        scaleY: item.height * this.editorScale / Math.max(1, image.height),
+      });
+      image.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+      image.setCoords();
+      return image;
     }
 
     makeIconObject(item) {
@@ -204,11 +261,33 @@
     }
 
     historySnapshot() {
-      return JSON.stringify(this.getDesign());
+      return JSON.stringify(this.getDesign().map((item) => {
+        if (item.type !== 'image') return item;
+        const imageRef = this.imageReference(item.src);
+        const compact = { ...item, imageRef };
+        delete compact.src;
+        return compact;
+      }));
     }
 
     designFromHistory(snapshot) {
-      return JSON.parse(snapshot);
+      return JSON.parse(snapshot).map((item) => {
+        if (item.type !== 'image') return item;
+        const src = this.imageSourcesByRef.get(item.imageRef);
+        if (!src) throw new Error('Uploaded image history is unavailable');
+        const restored = { ...item, src };
+        delete restored.imageRef;
+        return restored;
+      });
+    }
+
+    imageReference(src) {
+      if (this.imageRefsBySource.has(src)) return this.imageRefsBySource.get(src);
+      this.imageRefCounter += 1;
+      const reference = `bildquelle-${this.imageRefCounter}`;
+      this.imageRefsBySource.set(src, reference);
+      this.imageSourcesByRef.set(reference, src);
+      return reference;
     }
 
     bindCanvasEvents() {
@@ -282,8 +361,104 @@
       return text;
     }
 
+    loadImageElement(src) {
+      return new Promise((resolve, reject) => {
+        const image = new root.Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('image_decode_failed'));
+        image.src = src;
+      });
+    }
+
+    loadImageSource(src) {
+      if (this.imageElements.has(src)) return Promise.resolve(this.imageElements.get(src));
+      if (this.imageLoadPromises.has(src)) return this.imageLoadPromises.get(src);
+      const promise = this.loadImageElement(src).then((image) => {
+        this.imageElements.set(src, image);
+        this.imageLoadPromises.delete(src);
+        return image;
+      }).catch((error) => {
+        this.imageLoadPromises.delete(src);
+        throw error;
+      });
+      this.imageLoadPromises.set(src, promise);
+      return promise;
+    }
+
+    preloadImages(design) {
+      const sources = [...new Set((Array.isArray(design) ? design : [])
+        .filter((item) => item?.type === 'image' && typeof item.src === 'string')
+        .map((item) => item.src))];
+      return Promise.all(sources.map((src) => this.loadImageSource(src)));
+    }
+
+    getImageElement(src) {
+      return this.imageElements.get(src) || null;
+    }
+
+    dataUrlByteSize(dataUrl) {
+      const encoded = String(dataUrl).slice(String(dataUrl).indexOf(',') + 1);
+      const padding = encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0;
+      return Math.floor(encoded.length * 3 / 4) - padding;
+    }
+
+    async normalizedImageUpload(file) {
+      if (!file || !['image/png', 'image/jpeg'].includes(file.type) ||
+          file.size < 1 || file.size > MAX_UPLOAD_FILE_BYTES) {
+        throw new Error('invalid_image_file');
+      }
+      const objectUrl = root.URL.createObjectURL(file);
+      let source;
+      try {
+        source = await this.loadImageElement(objectUrl);
+      } finally {
+        root.URL.revokeObjectURL(objectUrl);
+      }
+      const sourceWidth = source.naturalWidth || source.width;
+      const sourceHeight = source.naturalHeight || source.height;
+      if (!sourceWidth || !sourceHeight || sourceWidth * sourceHeight > MAX_UPLOAD_PIXELS) {
+        throw new Error('invalid_image_dimensions');
+      }
+
+      const outputType = file.type;
+      let scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(sourceWidth, sourceHeight));
+      for (let attempt = 0; attempt < 9; attempt += 1) {
+        const outputWidth = Math.max(1, Math.round(sourceWidth * scale));
+        const outputHeight = Math.max(1, Math.round(sourceHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = outputWidth;
+        canvas.height = outputHeight;
+        const context = canvas.getContext('2d');
+        if (outputType === 'image/jpeg') {
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, outputWidth, outputHeight);
+        }
+        context.drawImage(source, 0, 0, outputWidth, outputHeight);
+        const dataUrl = canvas.toDataURL(outputType, .9);
+        if (this.dataUrlByteSize(dataUrl) <= MAX_EMBEDDED_IMAGE_BYTES) {
+          return { dataUrl, width: outputWidth, height: outputHeight };
+        }
+        scale *= .78;
+      }
+      throw new Error('image_too_complex');
+    }
+
     bindControls(options) {
       options.addButton.addEventListener('click', () => this.addWord());
+      options.imageButton.addEventListener('click', () => options.imageInput.click());
+      options.imageInput.addEventListener('change', async () => {
+        const [file] = options.imageInput.files || [];
+        options.imageInput.value = '';
+        if (!file) return;
+        options.imageButton.disabled = true;
+        try {
+          await this.addImageFile(file);
+        } catch {
+          this.setFeedback('Das Bild konnte nicht verarbeitet werden. Bitte wählt eine PNG- oder JPG-Datei bis 15 MB.');
+        } finally {
+          options.imageButton.disabled = false;
+        }
+      });
       options.iconButton.addEventListener('click', (event) => {
         event.stopPropagation();
         this.toggleIconPicker();
@@ -687,7 +862,7 @@
       this.canvas?.calcOffset();
     }
 
-    resizePrintArea({ printWidth, printHeight, defaultX, defaultY, safeMargin }) {
+    resizePrintArea({ printWidth, printHeight, printFileDpi, defaultX, defaultY, safeMargin }) {
       const nextWidth = Number(printWidth);
       const nextHeight = Number(printHeight);
       if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight) || nextWidth < 1 || nextHeight < 1) {
@@ -707,13 +882,16 @@
         ...item,
         x: nextPrintMargin + (item.x - this.printMargin) * xScale,
         y: nextPrintMargin + (item.y - this.printMargin) * yScale,
-        ...(item.type === 'icon'
+        ...(item.type === 'image'
+          ? { width: item.width * sizeScale, height: item.height * sizeScale }
+          : item.type === 'icon'
           ? { size: Math.max(MIN_PRINT_ICON_SIZE, item.size * sizeScale) }
           : { fontSize: Math.max(MIN_PRINT_FONT_SIZE, item.fontSize * sizeScale) }),
       }));
 
       this.width = nextWidth;
       this.height = nextHeight;
+      this.printFileDpi = Number(printFileDpi) || this.printFileDpi;
       this.printMargin = nextPrintMargin;
       this.editorScale = editorScaleFor(nextWidth, nextHeight);
       this.canvasWidth = nextWidth * this.editorScale;
@@ -735,7 +913,9 @@
           ...item,
           x: round(item.x),
           y: round(item.y),
-          ...(item.type === 'icon'
+          ...(item.type === 'image'
+            ? { width: round(item.width), height: round(item.height) }
+            : item.type === 'icon'
             ? { size: round(item.size) }
             : { fontSize: round(item.fontSize) }),
           angle: round(item.angle),
@@ -747,12 +927,14 @@
     handleTransform(object) {
       if (!object) return;
       this.keepInside(object);
+      this.updateImageQualityBadge(object);
       this.emitChange();
     }
 
     absorbScale(object) {
       if (!object) return;
       if (this.isActiveSelection(object)) return;
+      if (object.editorKind === 'image') return;
       if (object.editorKind === 'icon') {
         const size = Math.max(object.width * object.scaleX, object.height * object.scaleY) / this.editorScale;
         this.setIconSize(object, Math.max(MIN_PRINT_ICON_SIZE, size));
@@ -771,6 +953,7 @@
     }
 
     getObjectColor(object) {
+      if (object.editorKind === 'image') return null;
       return String(object.editorKind === 'icon' ? object.editorDrawing.stroke : object.fill);
     }
 
@@ -783,6 +966,7 @@
     }
 
     applyObjectColor(object, color) {
+      if (object.editorKind === 'image') return;
       if (object.editorKind === 'icon') {
         object.editorDrawing.set({ stroke: color });
         object.dirty = true;
@@ -925,13 +1109,57 @@
       this.setFeedback('{{item}} hinzugefügt', { item: translate(definition.label) });
     }
 
+    async addImageFile(file) {
+      this.closeIconPicker();
+      const upload = await this.normalizedImageUpload(file);
+      await this.loadImageSource(upload.dataUrl);
+      const availableWidth = this.width - this.printMargin * 2;
+      const availableHeight = this.height - this.printMargin * 2;
+      const maximumScale = Math.min(
+        availableWidth / upload.width,
+        availableHeight / upload.height
+      );
+      const minimumScale = MIN_PRINT_IMAGE_SIZE / Math.min(upload.width, upload.height);
+      if (minimumScale > maximumScale) throw new Error('unsupported_image_aspect');
+      const displayScale = Math.max(minimumScale, Math.min(
+        availableWidth * .48 / upload.width,
+        availableHeight * .55 / upload.height
+      ));
+      const object = this.makeObject({
+        id: this.nextId('bild'),
+        type: 'image',
+        src: upload.dataUrl,
+        x: this.defaultX,
+        y: this.defaultY,
+        width: upload.width * displayScale,
+        height: upload.height * displayScale,
+        angle: 0,
+      });
+      const offset = (this.canvas.getObjects().length % 5) * 18;
+      object.set({ left: object.left + offset, top: object.top + offset });
+      this.keepInside(object);
+      this.canvas.add(object);
+      this.canvas.setActiveObject(object);
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.setFeedback('Bild hinzugefügt');
+    }
+
+    objectKindLabel(object) {
+      if (object?.editorKind === 'icon') return 'Motiv';
+      if (object?.editorKind === 'image') return 'Bild';
+      return 'Wort';
+    }
+
     deleteActive() {
       const active = this.canvas.getActiveObject();
       if (!active) return;
       const selected = this.selectedObjects(active);
       const deletedLabel = selected.length > 1
         ? translate('{{count}} Elemente', { count: selected.length })
-        : translate(active.editorKind === 'icon' ? 'Motiv' : 'Wort');
+        : translate(this.objectKindLabel(active));
       this.canvas.discardActiveObject();
       this.canvas.remove(...selected);
       this.canvas.requestRenderAll();
@@ -944,7 +1172,9 @@
     duplicateDesignItems(designs) {
       const copies = designs.map((design) => {
         const nextDesign = { ...design };
-        nextDesign.id = this.nextId(nextDesign.type === 'icon' ? 'motiv' : 'wort');
+        nextDesign.id = this.nextId(
+          nextDesign.type === 'icon' ? 'motiv' : nextDesign.type === 'image' ? 'bild' : 'wort'
+        );
         nextDesign.x += 48;
         nextDesign.y += 48;
         return this.makeObject(nextDesign);
@@ -968,7 +1198,7 @@
       this.duplicateDesignItems(designs);
       this.setFeedback(selected.length > 1
         ? '{{count}} Elemente dupliziert'
-        : active.editorKind === 'icon' ? 'Motiv dupliziert' : 'Wort dupliziert', { count: selected.length });
+        : '{{item}} dupliziert', { count: selected.length, item: translate(this.objectKindLabel(active)) });
     }
 
     copyActive() {
@@ -978,7 +1208,7 @@
       this.clipboard = selected.map((object) => ({ ...this.serializeObject(object) }));
       this.setFeedback(selected.length > 1
         ? '{{count}} Elemente kopiert'
-        : active.editorKind === 'icon' ? 'Motiv kopiert' : 'Wort kopiert', { count: selected.length });
+        : '{{item}} kopiert', { count: selected.length, item: translate(this.objectKindLabel(active)) });
       return true;
     }
 
@@ -988,7 +1218,7 @@
       this.clipboard = copies.map((copy) => ({ ...this.serializeObject(copy) }));
       this.setFeedback(copies.length > 1
         ? '{{count}} Elemente eingefügt'
-        : copies[0].editorKind === 'icon' ? 'Motiv eingefügt' : 'Wort eingefügt', { count: copies.length });
+        : '{{item}} eingefügt', { count: copies.length, item: translate(this.objectKindLabel(copies[0])) });
       return true;
     }
 
@@ -1021,6 +1251,15 @@
         y: transform.translateY / this.editorScale,
         angle: transform.angle || 0,
       };
+      if (object.editorKind === 'image') {
+        return {
+          ...common,
+          type: 'image',
+          src: object.editorSrc,
+          width: object.width * Math.abs(transform.scaleX) / this.editorScale,
+          height: object.height * Math.abs(transform.scaleY) / this.editorScale,
+        };
+      }
       common.color = this.getObjectColor(object);
       if (object.editorKind === 'icon') {
         return {
@@ -1051,6 +1290,7 @@
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
+      this.updateSelectionPanel();
     }
 
     rotateActive(delta) {
@@ -1109,7 +1349,12 @@
 
     applyPalette(colors) {
       this.palette = colors;
-      this.canvas.getObjects().forEach((object, index) => this.applyObjectColor(object, colors[index % colors.length]));
+      let colorIndex = 0;
+      this.canvas.getObjects().forEach((object) => {
+        if (object.editorKind === 'image') return;
+        this.applyObjectColor(object, colors[colorIndex % colors.length]);
+        colorIndex += 1;
+      });
       this.canvas.requestRenderAll();
       this.renderSwatches();
       this.recordHistory();
@@ -1141,14 +1386,16 @@
       const selected = this.selectedObjects(active);
       const isMultiple = selected.length > 1;
       const isIcon = !isMultiple && active?.editorKind === 'icon';
-      const canColor = selected.length > 0;
+      const isImage = !isMultiple && active?.editorKind === 'image';
+      const canColor = selected.some((object) => object.editorKind !== 'image');
       const selectedTexts = selected.filter((object) => object.editorKind === 'text');
       const canChangeFont = selectedTexts.length > 0;
       this.selectionPanel.classList.toggle('is-active', hasSelection);
       this.selectionPanel.classList.toggle('is-multiple', isMultiple);
       this.selectionPanel.setAttribute('aria-disabled', String(!hasSelection));
       this.shell.classList.toggle('has-selection', hasSelection);
-      this.textInput.disabled = !hasSelection || isMultiple || isIcon;
+      this.updateImageQualityBadge(isImage ? active : null);
+      this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
       this.colorInput.disabled = !hasSelection || !canColor;
       this.fontSelect.disabled = !hasSelection || !canChangeFont;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
@@ -1193,6 +1440,11 @@
         this.selectionHint.textContent = translate('Motiv ziehen, drehen, färben oder skalieren');
         this.textLabel.textContent = translate('Ausgewähltes Motiv');
         this.textInput.value = iconLabel;
+      } else if (isImage) {
+        this.selectionStatus.textContent = translate('Bild bearbeiten');
+        this.selectionHint.textContent = translate('Bild ziehen, drehen oder skalieren');
+        this.textLabel.textContent = translate('Ausgewähltes Bild');
+        this.textInput.value = translate('Bild');
       } else {
         this.selectionStatus.textContent = translate('„{{text}}“ bearbeiten', { text: active.text });
         this.selectionHint.textContent = translate('Doppelklick: Wort direkt bearbeiten');
@@ -1204,6 +1456,78 @@
       this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
         button.classList.toggle('is-selected', Boolean(activeColor) && button.dataset.color === activeColor.toLowerCase());
       });
+    }
+
+    updateImageQualityBadge(object) {
+      if (!this.imageQualityBadge) return;
+      if (!object || object.editorKind !== 'image' || this.isActiveSelection(object)) {
+        this.imageQualityBadge.hidden = true;
+        return;
+      }
+
+      const design = this.serializeObject(object);
+      const element = object.getElement?.() || this.getImageElement(object.editorSrc);
+      const quality = root.ImagePrintQuality.evaluate({
+        sourceWidth: element?.naturalWidth || element?.width || object.width,
+        sourceHeight: element?.naturalHeight || element?.height || object.height,
+        printWidth: design.width,
+        printHeight: design.height,
+        printFileDpi: this.printFileDpi,
+      });
+      if (!quality) {
+        this.imageQualityBadge.hidden = true;
+        return;
+      }
+
+      const number = (value, digits = 0) => root.WolkenworteI18n?.formatNumber
+        ? root.WolkenworteI18n.formatNumber(value, {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits,
+          })
+        : Number(value).toFixed(digits).replace('.', ',');
+      const labelSources = {
+        optimal: 'Optimale Qualität',
+        good: 'Gute Qualität',
+        low: 'Zu niedrige Qualität',
+      };
+      const descriptionSources = {
+        optimal: 'Erreicht das empfohlene Produktziel von {{target}} DPI.',
+        good: 'Druckfähig; für maximale Schärfe das Bild auf {{target}} DPI verkleinern.',
+        low: 'Für einen scharfen Druck das Bild kleiner skalieren oder höher aufgelöst hochladen (mindestens {{minimum}} DPI).',
+      };
+      const detail = translate('ca. {{width}} × {{height}} cm · {{dpi}} DPI', {
+        width: number(quality.widthCm, 1),
+        height: number(quality.heightCm, 1),
+        dpi: number(quality.effectiveDpi),
+      });
+      const label = translate(labelSources[quality.level]);
+      const description = translate(descriptionSources[quality.level], {
+        target: number(quality.targetDpi),
+        minimum: number(quality.minimumDpi),
+      });
+      this.imageQualityDetail.textContent = detail;
+      this.imageQualityLabel.textContent = label;
+      this.imageQualityBadge.dataset.quality = quality.level;
+      this.imageQualityBadge.title = description;
+      this.imageQualityBadge.setAttribute('aria-label', `${detail}. ${label}. ${description}`);
+
+      object.setCoords();
+      const bounds = object.getBoundingRect();
+      this.imageQualityBadge.hidden = false;
+      const shellWidth = this.shell.clientWidth;
+      const shellHeight = this.shell.clientHeight;
+      const badgeWidth = this.imageQualityBadge.offsetWidth;
+      const badgeHeight = this.imageQualityBadge.offsetHeight;
+      const anchorX = (bounds.left + bounds.width) / this.canvasWidth * shellWidth;
+      const anchorY = (bounds.top + bounds.height) / this.canvasHeight * shellHeight;
+      const left = Math.min(shellWidth - 6, Math.max(badgeWidth + 6, anchorX));
+      const showAbove = anchorY + badgeHeight + 7 > shellHeight;
+      const top = showAbove
+        ? Math.min(shellHeight - 2, Math.max(badgeHeight + 7, anchorY))
+        : Math.min(shellHeight - badgeHeight - 7, Math.max(2, anchorY));
+      this.imageQualityBadge.style.left = `${left}px`;
+      this.imageQualityBadge.style.top = `${top}px`;
+      this.imageQualityBadge.classList.toggle('is-above', showAbove);
     }
 
     setZoom(nextZoom) {

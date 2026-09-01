@@ -197,34 +197,6 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       respond({ ok: true, word: removedWord });
     });
 
-    // Relay theme changes to all connected clients FOR THIS EVENT ONLY.
-    socket.on('theme-change', async (theme) => {
-      if (theme !== 'neon' && theme !== 'pastel') return;
-      if (!rateLimits.consume([
-        {
-          name: 'theme:guest',
-          key: `${event.id}:${socket.data.guestId}`,
-          ...rateLimits.LIMITS.themeGuest,
-        },
-        { name: 'theme:event', key: event.id, ...rateLimits.LIMITS.themeEvent },
-      ])) {
-        performanceProbe.recordOperation('themeRateLimited');
-        socket.emit('theme-error', { error: 'rate_limited' });
-        return;
-      }
-      try {
-        await db.setEventTheme(event.id, theme);
-        performanceProbe.recordOperation('themeChanged');
-        socket.to(event.slug).emit('theme-change', theme);
-      } catch (error) {
-        performanceProbe.recordOperation('themeFailed');
-        log.error('socket_theme_change_failed', {
-          eventId: event.id,
-          errorCode: log.errorCode(error, 'theme_change_failed'),
-        });
-        socket.emit('theme-error');
-      }
-    });
   });
   return {
     stop() {

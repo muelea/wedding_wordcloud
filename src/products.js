@@ -15,18 +15,21 @@ const THEMES = Object.freeze([
     label: 'Sorbet Pop',
     description: 'Leuchtende Beeren- und Aprikosentöne',
     colors: Object.freeze(['#a40e4c', '#d90368', '#f45b69', '#ff7f3f', '#6a4c93', '#168f83']),
+    background: Object.freeze(['#fffdfa', '#fff3f5', 'rgba(247,238,223,.7)', 'rgba(209,96,126,.08)']),
   }),
   Object.freeze({
     key: 'sage-gold',
     label: 'Smaragd & Gold',
     description: 'Edle Juwelen- und Goldtöne',
     colors: Object.freeze(['#063e36', '#006d5b', '#14967f', '#8f6100', '#d0920f', '#654100']),
+    background: Object.freeze(['#f7fbf5', '#edf6ef', 'rgba(20,150,127,.13)', 'rgba(208,146,15,.10)']),
   }),
   Object.freeze({
     key: 'ocean',
     label: 'Ocean Electric',
     description: 'Tiefes Blau mit leuchtendem Türkis',
     colors: Object.freeze(['#003049', '#00509d', '#0077b6', '#0096c7', '#00a6a6', '#136f63']),
+    background: Object.freeze(['#f4f9fc', '#eaf4fa', 'rgba(0,119,182,.13)', 'rgba(0,166,166,.10)']),
   }),
   Object.freeze({
     key: 'custom',

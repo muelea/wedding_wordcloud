@@ -2,11 +2,16 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { createCanvas } = require('canvas');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignLayout = require('../public/js/design-layout.js');
 const DesignFonts = require('../public/js/design-fonts.js');
+const ImagePrintQuality = require('../public/js/image-quality.js');
+const WordCloudCore = require('../public/js/wordcloud-core.js');
+const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
+const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../src/mugPrint');
 
 function connectSocket(baseUrl, slug) {
   return new Promise((resolve, reject) => {
@@ -35,6 +40,133 @@ function oneSurfaceDesign(design) {
   return { designs: { default: design } };
 }
 
+test('uploaded-image quality follows effective print DPI and product targets', () => {
+  const optimal = ImagePrintQuality.evaluate({
+    sourceWidth: 1200,
+    sourceHeight: 600,
+    printWidth: 1200,
+    printHeight: 600,
+    printFileDpi: 300,
+  });
+  assert.deepEqual(optimal, {
+    effectiveDpi: 300,
+    targetDpi: 300,
+    minimumDpi: 150,
+    widthCm: 10.16,
+    heightCm: 5.08,
+    level: 'optimal',
+  });
+
+  const goodForFineDetail = ImagePrintQuality.evaluate({
+    sourceWidth: 1200,
+    sourceHeight: 600,
+    printWidth: 2400,
+    printHeight: 1200,
+    printFileDpi: 300,
+  });
+  assert.equal(goodForFineDetail.effectiveDpi, 150);
+  assert.equal(goodForFineDetail.level, 'good');
+
+  const goodForLargeFormat = ImagePrintQuality.evaluate({
+    sourceWidth: 960,
+    sourceHeight: 480,
+    printWidth: 1200,
+    printHeight: 600,
+    printFileDpi: 150,
+  });
+  assert.equal(goodForLargeFormat.effectiveDpi, 120);
+  assert.equal(goodForLargeFormat.minimumDpi, 120);
+  assert.equal(goodForLargeFormat.level, 'good');
+
+  const low = ImagePrintQuality.evaluate({
+    sourceWidth: 600,
+    sourceHeight: 300,
+    printWidth: 1800,
+    printHeight: 900,
+    printFileDpi: 300,
+  });
+  assert.equal(low.effectiveDpi, 100);
+  assert.equal(low.level, 'low');
+  assert.equal(ImagePrintQuality.evaluate({ sourceWidth: 0 }), null);
+});
+
+function automaticFitAreaDesign(product, words) {
+  const context = createCanvas(10, 10).getContext('2d');
+  const slots = product.layoutGeometry['fit-area'];
+  assert.ok(Array.isArray(slots) && slots.length, `${product.key} must expose its initial fit-area`);
+  const design = [];
+  slots.forEach((slot, slotIndex) => {
+    const width = slot.width || slot.side;
+    const height = slot.height || slot.side;
+    const placed = WordCloudCore.layoutWordsInArea(
+      words,
+      width,
+      height,
+      context,
+      WordCloudCore.makeColorAssigner('pastel')
+    );
+    placed.forEach((item, itemIndex) => design.push({
+      id: `fit-area-${slotIndex + 1}-${itemIndex + 1}`,
+      text: item.word,
+      x: Math.round((slot.x + item.x) * 10) / 10,
+      y: Math.round((slot.y + item.y) * 10) / 10,
+      fontSize: Math.round(item.fontPx * 10) / 10,
+      angle: item.rotated ? -90 : 0,
+      color: item.color,
+      fontFamily: DesignFonts.DEFAULT_FONT_KEY,
+    }));
+  });
+  return design;
+}
+
+test('automatic fit-area geometry is accepted by every product and orientation', () => {
+  const sparse = [['liebe', 1]];
+  for (const baseProduct of PRODUCTS) {
+    for (const orientation of baseProduct.orientationOptions) {
+      const product = resolveProductOrientation(baseProduct, orientation.key);
+      const design = automaticFitAreaDesign(product, sparse);
+      assert.equal(design.length, sparse.length, `${product.key}/${orientation.key} keeps the sparse cloud`);
+      assert.equal(
+        isPrintDesignWithinBounds(
+          design,
+          product.printFile.width,
+          product.printFile.height,
+          product.designSafeMargin
+        ),
+        true,
+        `${product.key}/${orientation.key} browser layout must satisfy server print bounds`
+      );
+      assert.doesNotThrow(() => buildProductPrintSvg(product, design));
+    }
+  }
+
+  const dense = [
+    ['liebe', 15], ['glück', 12], ['humor', 11], ['vertrauen', 10],
+    ['abenteuer', 9], ['freundschaft', 8], ['zusammenhalt', 7], ['familie', 6],
+    ['reisen', 5], ['musik', 4], ['tanzen', 4], ['respekt', 3],
+    ['wärme', 3], ['zukunft', 2], ['romantik', 2], ['gemeinsam', 1],
+  ];
+  for (const [productKey, orientation] of [
+    ['white-glossy-mug-duo-11oz', 'default'],
+    ['matte-poster-30x40cm', 'portrait'],
+    ['matte-poster-30x40cm', 'landscape'],
+  ]) {
+    const product = resolveProductOrientation(getProduct(productKey), orientation);
+    const design = automaticFitAreaDesign(product, dense);
+    assert.equal(design.length, dense.length, `${productKey}/${orientation} keeps the dense cloud`);
+    assert.equal(
+      isPrintDesignWithinBounds(
+        design,
+        product.printFile.width,
+        product.printFile.height,
+        product.designSafeMargin
+      ),
+      true,
+      `${productKey}/${orientation} dense browser layout must satisfy server print bounds`
+    );
+  }
+});
+
 test('every placement action can be applied repeatedly to the complete current design', () => {
   const measurementContext = {
     font: '',
@@ -47,6 +179,7 @@ test('every placement action can be applied repeatedly to the complete current d
     { id: 'wort-ausgang', text: 'Liebe', x: 25, y: 40, fontSize: 18, angle: 0, color: '#a40e4c' },
     { id: 'wort-ergaenzt', text: 'Zusammenhalt', x: 75, y: 60, fontSize: 14, angle: -8, color: '#168f83' },
     { id: 'motiv-ergaenzt', type: 'icon', icon: 'heart', x: 50, y: 75, size: 20, angle: 5, color: '#d90368' },
+    { id: 'bild-ergaenzt', type: 'image', src: 'data:image/png;base64,upload', x: 60, y: 45, width: 40, height: 30, angle: -4 },
   ];
   const actions = {
     single: [{ x: 10, y: 20, width: 200, height: 120 }],
@@ -66,7 +199,7 @@ test('every placement action can be applied repeatedly to the complete current d
     assert.equal(new Set(applied.map((item) => item.id)).size, applied.length);
 
     const edited = applied.map((item, index) => index === 0
-      ? { ...item, x: item.x + 19, y: item.y + 11, fontSize: 12 }
+      ? { ...item, x: item.x + 19, y: item.y + 11, fontSize: item.fontSize + 7 }
       : { ...item });
     const appliedAgain = DesignLayout.applyLayoutAction(edited, slots, measurementContext);
     assert.equal(appliedAgain.length, expectedLength, `${key} must be safe to execute again`);
@@ -76,6 +209,9 @@ test('every placement action can be applied repeatedly to the complete current d
       `${key} must not add or remove elements when repeated`
     );
     assert.notDeepEqual(appliedAgain, edited, `${key} must process the edited canvas again`);
+    const image = appliedAgain.find((item) => item.id.startsWith('bild-ergaenzt'));
+    assert.equal(image.type, 'image');
+    assert.ok(image.width > 0 && image.height > 0, `${key} must preserve uploaded-image geometry`);
   }
 });
 
@@ -505,10 +641,16 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /\.workspace-tools \{[\s\S]*?position: relative;[\s\S]*?z-index: 20;/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(configurePage, /wordcloud-core\.js\?v=20260901-1/);
   assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
-  assert.match(configurePage, /design-layout\.js\?v=20260830-1/);
+  assert.match(configurePage, /design-layout\.js\?v=20260901-2/);
   assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260827-10/);
+  assert.match(configurePage, /image-quality\.js\?v=20260901-1/);
+  assert.match(configurePage, /mug-editor\.js\?v=20260901-4/);
+  assert.match(configurePage, /id="editor-image"[^>]*type="button"/);
+  assert.match(configurePage, /id="editor-image-input"[^>]*type="file"[^>]*accept="image\/png,image\/jpeg/);
+  assert.match(configurePage, /id="editor-image-quality"[^>]*role="status"[^>]*aria-live="polite"[^>]*hidden/);
+  assert.match(configurePage, /printFileDpi: view\.printFile\.dpi/);
   assert.match(configurePage, /id="editor-font"[^>]*aria-label="Schriftart"[^>]*hidden/);
   assert.match(configurePage, /id="editor-font-toggle"[^>]*aria-haspopup="listbox"/);
   assert.match(configurePage, /id="editor-font-menu"[^>]*role="listbox"/);
@@ -516,6 +658,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /fontSelect: document\.getElementById\('editor-font'\)/);
   assert.match(configurePage, /fontButton: document\.getElementById\('editor-font-toggle'\)/);
   assert.match(configurePage, /DesignFonts\.cssFamily\(item\.fontFamily\)/);
+  assert.match(configurePage, /async function ensureDesignFonts\(fontKeys\)/);
+  assert.match(configurePage, /await ensureDesignFonts\(\[DesignFonts\.DEFAULT_FONT_KEY\]\)/);
+  assert.match(configurePage, /WordCloudCore\.TEXT_BASELINE_OFFSET/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /id="editor-duplicate"[^>]*title="Duplizieren \(⌘\/Strg \+ C und V\)"/);
   assert.match(configurePage, /id="editor-select-all"[^>]*title="Alles auswählen \(⌘\/Strg \+ A\)"/);
@@ -573,7 +718,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260826-9`);
+  const qualityRuntime = await fetch(`${baseUrl}/js/image-quality.js?v=20260901-1`);
+  assert.equal(qualityRuntime.status, 200);
+  assert.match(await qualityRuntime.text(), /effectiveDpi/);
+
+  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260901-4`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
@@ -588,6 +737,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /selectionKey: \['shiftKey', 'ctrlKey', 'metaKey'\]/);
   assert.match(mugEditorSource, /new root\.fabric\.ActiveSelection\(selectable/);
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'a'/);
+  assert.match(mugEditorSource, /async addImageFile\(file\)/);
+  assert.match(mugEditorSource, /new root\.fabric\.FabricImage\(element/);
+  assert.match(mugEditorSource, /MAX_EMBEDDED_IMAGE_BYTES/);
+  assert.match(mugEditorSource, /ImagePrintQuality\.evaluate/);
+  assert.match(mugEditorSource, /updateImageQualityBadge\(object\)/);
   assert.match(mugEditorSource, /root\.fabric\.util\.qrDecompose\(object\.calcTransformMatrix\(\)\)/);
   assert.match(mugEditorSource, /setActiveFont\(fontKey\)/);
   assert.match(mugEditorSource, /name\.style\.fontFamily = font\.cssFamily/);
@@ -672,6 +826,35 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   assert.equal((svg.match(/<text /g) || []).length, snapshot.length);
 });
 
+test('a sparse automatic design saves and freezes the exact preview geometry', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { title: 'Geometrie Greta & Linus' });
+  const product = resolveProductOrientation(getProduct('white-glossy-mug-duo-11oz'), 'default');
+  const words = [['liebe', 1]];
+  const design = automaticFitAreaDesign(product, words);
+
+  const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      productKey: product.key,
+      orientation: 'default',
+      quantity: 1,
+      theme: 'pastel',
+      words,
+      ...oneSurfaceDesign(design),
+    }),
+  });
+  const saveBody = await save.text();
+  assert.equal(save.status, 201, saveBody);
+  const configuration = JSON.parse(saveBody);
+  const print = await fetch(baseUrl + configuration.printFileUrl);
+  assert.equal(print.status, 200);
+  assert.equal(await print.text(), buildProductPrintSvg(product, design),
+    'the immutable print must preserve the exact saved coordinates, size, rotation, color and font');
+});
+
 test('configurations require the exact canvas and store no placement state', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
@@ -728,10 +911,18 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Editor Ella & Finn' });
   const words = [['ursprünglich', 2], ['liebe', 1]];
+  const uploadCanvas = createCanvas(120, 80);
+  const uploadContext = uploadCanvas.getContext('2d');
+  uploadContext.fillStyle = '#168f83';
+  uploadContext.fillRect(0, 0, 120, 80);
+  uploadContext.fillStyle = '#ffffff';
+  uploadContext.fillRect(30, 20, 60, 40);
+  const imageSrc = uploadCanvas.toDataURL('image/png');
   const design = [
     { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456', fontFamily: 'lora' },
     { id: 'wort-2', text: 'für immer', x: 1550, y: 655, fontSize: 82, angle: -30, color: '#abcdef', fontFamily: 'caveat' },
     { id: 'motiv-1', type: 'icon', icon: 'heart', x: 1880, y: 390, size: 170, angle: -12, color: '#d90368' },
+    { id: 'bild-1', type: 'image', src: imageSrc, x: 2200, y: 700, width: 240, height: 160, angle: 10 },
   ];
 
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
@@ -765,9 +956,14 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.match(svg, /stroke="#d90368"/);
   assert.match(svg, /stroke-width="1\.5"/);
   assert.match(svg, /translate\(1880\.0 390\.0\) rotate\(-12\.0\)/);
+  assert.match(svg, /<image data-uploaded-image="true"/);
+  assert.match(svg, /x="2080\.0" y="620\.0" width="240\.0" height="160\.0"/);
+  assert.match(svg, /transform="rotate\(10\.0 2200\.0 700\.0\)"/);
+  assert.ok(svg.includes(`href="${imageSrc}"`), 'the trusted raster must be embedded in the immutable print');
   assert.doesNotMatch(svg, />ursprünglich<\/text>/, 'the edited design, not the original cloud, is printed');
   assert.equal((svg.match(/<text /g) || []).length, 2);
   assert.equal((svg.match(/<path data-motif=/g) || []).length, 1);
+  assert.equal((svg.match(/<image data-uploaded-image=/g) || []).length, 1);
   assert.doesNotMatch(svg, /<rect\b/);
 
   const editable = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`);
@@ -789,7 +985,18 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     { id: 'wort-1', type: 'text', text: 'Unser Wort', icon: undefined, color: '#123456', fontFamily: 'lora' },
     { id: 'wort-2', type: 'text', text: 'für immer', icon: undefined, color: '#abcdef', fontFamily: 'caveat' },
     { id: 'motiv-1', type: 'icon', text: undefined, icon: 'heart', color: '#d90368', fontFamily: undefined },
+    { id: 'bild-1', type: 'image', text: undefined, icon: undefined, color: undefined, fontFamily: undefined },
   ]);
+  assert.deepEqual(editableBody.designs.default.find((item) => item.id === 'bild-1'), {
+    id: 'bild-1',
+    type: 'image',
+    src: imageSrc,
+    x: 2200,
+    y: 700,
+    width: 240,
+    height: 160,
+    angle: 10,
+  });
 
   const unknownFont = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
@@ -854,4 +1061,39 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   });
   assert.equal(unknownMotif.status, 400);
   assert.equal((await unknownMotif.json()).error, 'invalid_design');
+
+  const forgedImage = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      words,
+      ...oneSurfaceDesign([
+        { id: 'wort-1', text: 'bleibt', x: 1200, y: 500, fontSize: 100, angle: 0, color: '#123456' },
+        {
+          id: 'bild-fremd', type: 'image', src: 'data:image/png;base64,PHN2Zz48c2NyaXB0Lz48L3N2Zz4=',
+          x: 1600, y: 500, width: 240, height: 160, angle: 0,
+        },
+      ]),
+    }),
+  });
+  assert.equal(forgedImage.status, 400);
+  assert.equal((await forgedImage.json()).error, 'invalid_design');
+
+  const distortedImage = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 2,
+      theme: 'pastel',
+      words,
+      ...oneSurfaceDesign([
+        { id: 'wort-1', text: 'bleibt', x: 1200, y: 500, fontSize: 100, angle: 0, color: '#123456' },
+        { id: 'bild-verzerrt', type: 'image', src: imageSrc, x: 1600, y: 500, width: 240, height: 240, angle: 0 },
+      ]),
+    }),
+  });
+  assert.equal(distortedImage.status, 400);
+  assert.equal((await distortedImage.json()).error, 'invalid_design');
 });

@@ -1,7 +1,6 @@
 'use strict';
 
 const express = require('express');
-const crypto = require('crypto');
 const db = require('../db');
 const { slugify, makeUniqueSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
@@ -23,6 +22,7 @@ const {
 } = require('../products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
 const DesignFonts = require('../designFonts');
+const { inspectRasterDataUrl } = require('../designImages');
 const MugIcons = require('../../public/js/mug-icons.js');
 const I18n = require('../i18n');
 const { asyncRoute } = require('../asyncRoute');
@@ -34,6 +34,8 @@ const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
 // left for words the organizer adds manually in the editor.
 const MAX_DESIGN_ELEMENTS = 500;
+const MAX_DESIGN_IMAGES = 4;
+const MAX_DESIGN_IMAGE_BYTES = 5_000_000;
 const ADDRESS_LIMITS = Object.freeze({
   name: 100,
   address1: 120,
@@ -468,7 +470,8 @@ function normalizeDesign(
   width,
   height,
   safeMargin,
-  locale = I18n.DEFAULT_LOCALE
+  locale = I18n.DEFAULT_LOCALE,
+  imageState = { sources: new Set(), totalBytes: 0 }
 ) {
   if (!Array.isArray(rawDesign) || rawDesign.length === 0 || rawDesign.length > MAX_DESIGN_ELEMENTS) {
     return null;
@@ -478,11 +481,11 @@ function normalizeDesign(
   for (const [index, rawItem] of rawDesign.entries()) {
     if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
     const type = rawItem.type == null || rawItem.type === 'text' ? 'text' : rawItem.type;
-    if (type !== 'text' && type !== 'icon') return null;
+    if (type !== 'text' && type !== 'icon' && type !== 'image') return null;
     const x = Number(rawItem.x);
     const y = Number(rawItem.y);
     const rawAngle = Number(rawItem.angle ?? 0);
-    const idPrefix = type === 'icon' ? 'motiv' : 'wort';
+    const idPrefix = type === 'icon' ? 'motiv' : type === 'image' ? 'bild' : 'wort';
     const id = String(rawItem.id || `${idPrefix}-${index + 1}`).slice(0, 64);
     if (!id || ids.has(id) || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(rawAngle)) {
       return null;
@@ -496,6 +499,29 @@ function normalizeDesign(
       y: Math.round(y * 10) / 10,
       angle: Math.round(angle * 10) / 10,
     };
+    if (type === 'image') {
+      const src = rawItem.src;
+      const image = inspectRasterDataUrl(src);
+      const imageWidth = Number(rawItem.width);
+      const imageHeight = Number(rawItem.height);
+      if (!image || !Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) ||
+          imageWidth < 24 || imageHeight < 24 || imageWidth > width || imageHeight > height ||
+          Math.abs((imageWidth / imageHeight) / (image.width / image.height) - 1) > 0.01) return null;
+      if (!imageState.sources.has(src)) {
+        imageState.sources.add(src);
+        imageState.totalBytes += image.byteSize;
+        if (imageState.sources.size > MAX_DESIGN_IMAGES ||
+            imageState.totalBytes > MAX_DESIGN_IMAGE_BYTES) return null;
+      }
+      normalized.push({
+        ...common,
+        src,
+        width: Math.round(imageWidth * 10) / 10,
+        height: Math.round(imageHeight * 10) / 10,
+      });
+      continue;
+    }
+
     const color = String(rawItem.color || '').toLowerCase();
     if (!/^#[0-9a-f]{6}$/.test(color)) return null;
     if (type === 'icon') {
@@ -530,12 +556,14 @@ function normalizeProductDesigns(
   if (!rawBody || typeof rawBody !== 'object') return null;
   const rawDesigns = rawBody.designs;
   if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
+  const imageState = { sources: new Set(), totalBytes: 0 };
   const normalizeOne = (rawDesign) => normalizeDesign(
     rawDesign,
     product.printFile.width,
     product.printFile.height,
     product.designSafeMargin,
-    locale
+    locale,
+    imageState
   );
 
   const allowedSurfaces = new Set(product.printSurfaces.map((surface) => surface.key));
@@ -668,15 +696,6 @@ async function estimateCartShipments({ body, countries, configurations }) {
 function makeRouter({ io, port, wordBroadcasts = null }) {
   const router = express.Router();
 
-  function draftOwnerHash(req, slug) {
-    const name = `ww-draft-${slug}=`;
-    const value = String(req.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(name));
-    if (!value) return '';
-    try {
-      return crypto.createHash('sha256').update(decodeURIComponent(value.slice(name.length))).digest('hex');
-    } catch { return ''; }
-  }
-
   function requestIdentities(req) {
     const sourceHash = sourceHashForRequest(req);
     const guestId = rateLimits.guestIdentity(req.get('X-Wolkenworte-Guest-Id'), sourceHash);
@@ -702,6 +721,32 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   function rateLimited(res) {
     performanceProbe.recordOperation('httpRateLimited');
     return res.status(429).json({ error: 'rate_limited' });
+  }
+
+  async function authorizeOrganizerAction(req, res, event) {
+    let authorization;
+    try {
+      authorization = await db.authorizeOrganizerPin(event, req.body?.pin, sourceHashForRequest(req));
+    } catch (error) {
+      if (error?.code === 'pin_busy') {
+        res.status(503).json({ error: 'temporarily_unavailable' });
+        return false;
+      }
+      throw error;
+    }
+    if (authorization.configured === false) {
+      res.status(409).json({ error: 'pin_not_configured' });
+      return false;
+    }
+    if (authorization.blocked) {
+      rateLimited(res);
+      return false;
+    }
+    if (!authorization.ok) {
+      res.status(401).json({ error: 'invalid_pin' });
+      return false;
+    }
+    return true;
   }
 
   // ── Create event ──────────────────────────────────────────────────────
@@ -772,50 +817,40 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.json({
       slug: event.slug,
       title: event.title,
-      subtitle: event.subtitle || '',
-      theme: event.theme,
       locale: event.locale,
-      hasAdminPin: Boolean(event.admin_pin_hash && event.admin_pin_salt),
-      isDraft: event.is_draft === true,
-      isDraftOwner: event.is_draft === true && Boolean(draftOwnerHash(req, event.slug)) && draftOwnerHash(req, event.slug) === event.draft_owner_hash,
+      hasOrganizerPin: Boolean(event.organizer_pin_hash && event.organizer_pin_salt),
     });
   }));
 
-  // This verifies one settings interaction only; it deliberately issues no
+  // This verifies one organizer interaction only; it deliberately issues no
   // reusable credential, cookie or browser-side authorization token.
-  router.post('/events/:slug/verify-settings-pin', express.json(), asyncRoute(async (req, res) => {
+  router.post('/events/:slug/organizer/verify', express.json(), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
-    if (!event || event.is_draft || !event.admin_pin_hash || !event.admin_pin_salt) {
-      return res.status(400).json({ error: 'pin_not_configured' });
-    }
-    const authorization = await db.authorizeResetPin(event, req.body?.pin, sourceHashForRequest(req));
-    if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
+    if (!event) return res.status(404).json({ error: 'event_not_found' });
+    if (!await authorizeOrganizerAction(req, res, event)) return;
     return res.status(204).end();
   }));
 
   router.post('/events/:slug/settings', express.json(), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     const title = normalizeEventName(req.body?.title);
-    const subtitle = String(req.body?.subtitle || '').trim().slice(0, MAX_EVENT_NAME_LENGTH);
-    const pin = String(req.body?.pin || '');
-    const newPin = String(req.body?.newPin || '');
     if (!event || !title || title.length > MAX_EVENT_NAME_LENGTH) return res.status(400).json({ error: 'invalid_title' });
-    if (event.is_draft) {
-      if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
-      const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), title, pin: newPin || null });
-      if (!claimed) return res.status(403).json({ error: 'not_draft_owner' });
-      const updated = await db.updateEventDetails({ eventId: event.id, title, subtitle });
-      res.clearCookie(`ww-draft-${event.slug}`, { path: '/' });
-      return res.json({ title: updated.title, subtitle: updated.subtitle || '' });
-    }
-    const hasAdminPin = Boolean(event.admin_pin_hash && event.admin_pin_salt);
-    if (hasAdminPin) {
-      const authorization = await db.authorizeResetPin(event, pin, sourceHashForRequest(req));
-      if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
-    }
-    if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
-    const updated = await db.updateEventDetails({ eventId: event.id, title, subtitle, newPin: newPin || null });
-    res.json({ title: updated.title, subtitle: updated.subtitle || '' });
+    if (!await authorizeOrganizerAction(req, res, event)) return;
+    const updated = await db.updateEventTitle({ eventId: event.id, title });
+    if (!updated) return res.status(404).json({ error: 'event_not_found' });
+    io.to(event.slug).emit('event-settings-updated', { title: updated.title });
+    res.json({ title: updated.title });
+  }));
+
+  router.post('/events/:slug/organizer-pin', express.json(), asyncRoute(async (req, res) => {
+    const event = await db.getEventBySlug(req.params.slug);
+    const newPin = String(req.body?.newPin || '');
+    if (!event) return res.status(404).json({ error: 'event_not_found' });
+    if (!PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
+    if (!await authorizeOrganizerAction(req, res, event)) return;
+    const updated = await db.replaceOrganizerPin({ eventId: event.id, newPin });
+    if (!updated) return res.status(404).json({ error: 'event_not_found' });
+    res.status(204).end();
   }));
 
   router.post('/events/:slug/remove-word', express.json(), asyncRoute(async (req, res) => {
@@ -828,12 +863,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       ...rateLimits.LIMITS.wordRemoveAdmin,
     }])) return rateLimited(res);
 
-    if (event.is_draft) {
-      if (draftOwnerHash(req, event.slug) !== event.draft_owner_hash) return res.status(403).json({ error: 'not_draft_owner' });
-    } else if (event.admin_pin_hash && event.admin_pin_salt) {
-      const authorization = await db.authorizeResetPin(event, req.body?.pin, sourceHashForRequest(req));
-      if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
-    }
+    if (!await authorizeOrganizerAction(req, res, event)) return;
 
     const removed = await db.removeWordForAdmin(event.id, word);
     if (!removed) return res.status(404).json({ error: 'word_not_found' });
@@ -854,20 +884,11 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
   }));
 
-  // ── Reset ("Neue Runde") — one request, one PIN verification ───────────
+  // ── Reset word cloud — one request, one PIN verification ────────────────
   router.post('/events/:slug/reset', express.json({ limit: '1kb' }), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const sourceHash = sourceHashForRequest(req);
-    let authorization;
-    try {
-      authorization = await db.authorizeResetPin(event, req.body?.pin, sourceHash);
-    } catch (error) {
-      if (error?.code === 'pin_busy') return res.status(503).json({ error: 'temporarily_unavailable' });
-      throw error;
-    }
-    if (authorization.blocked) return rateLimited(res);
-    if (!authorization.ok) return res.status(401).json({ error: 'invalid_pin' });
+    if (!await authorizeOrganizerAction(req, res, event)) return;
     await db.archiveAndClearWords(event.id);
     if (wordBroadcasts) wordBroadcasts.resetRoom(event, []);
     else io.to(event.slug).emit('word-update', []);
@@ -885,7 +906,6 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       event: {
         slug: event.slug,
         title: event.title,
-        theme: event.theme,
         locale: event.locale,
       },
       words,
@@ -909,7 +929,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
   }));
 
-  router.post('/events/:slug/configurations', express.json({ limit: '256kb' }), asyncRoute(async (req, res) => {
+  router.post('/events/:slug/configurations', express.json({ limit: '16mb' }), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     if (!consumeEventRequest(

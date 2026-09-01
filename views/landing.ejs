@@ -11,9 +11,9 @@
   <% if (locale === 'tr') { %>
     <link rel="preload" href="/assets/site-fonts/jost/jost-latin-ext.woff2" as="font" type="font/woff2" crossorigin />
   <% } %>
-  <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
+  <link rel="stylesheet" href="/i18n.css?v=20260901-1" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-3" />
-  <script src="/js/i18n.js?v=20260829-3"></script>
+  <script src="/js/i18n.js?v=20260901-1"></script>
   <title data-i18n-source="Wolkenworte – Eure Erinnerungen in einem Wort"><%= t('Wolkenworte – Eure Erinnerungen in einem Wort') %></title>
   <style>
 
@@ -77,10 +77,10 @@
        viewport widths. */
     #site-header .ww-nav { flex-wrap: nowrap; }
     #site-header .landing-section-links { display: flex; align-items: center; gap: 30px; opacity: 1; visibility: visible; pointer-events: auto; color: var(--muted); font-size: .85rem; letter-spacing: .01em; white-space: nowrap; transition: opacity .25s ease, visibility .25s ease; }
-    #site-header .landing-section-links a { position: relative; padding-bottom: 3px; color: var(--muted); white-space: nowrap; transition: color .2s ease; }
-    #site-header .landing-section-links a::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--sage-deep); transform: scaleX(0); transform-origin: center; transition: transform .25s ease; }
-    #site-header .landing-section-links a:hover { color: var(--ink); }
-    #site-header .landing-section-links a:hover::after { transform: scaleX(1); }
+    #site-header .landing-section-link { position: relative; padding-bottom: 3px; color: var(--muted); white-space: nowrap; transition: color .2s ease; }
+    #site-header .landing-section-link::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--sage-deep); transform: scaleX(0); transform-origin: center; transition: transform .25s ease; }
+    #site-header .landing-section-link:hover { color: var(--ink); }
+    #site-header .landing-section-link:hover::after { transform: scaleX(1); }
     #site-header .landing-section-links .landing-menu-language { position: relative; display: inline-flex; }
     #site-header .landing-header-actions .landing-menu-toggle { display: none; align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; border: 1px solid rgba(64,15,38,.13); border-radius: 999px; color: var(--ink); background: rgba(255,253,250,.94); box-shadow: 0 5px 18px rgba(64,15,38,.08); cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
     #site-header .landing-menu-toggle:hover, #site-header.landing-menu-open .landing-menu-toggle { border-color: rgba(156,28,76,.3); background: #fffdfa; box-shadow: 0 7px 22px rgba(64,15,38,.12); }
@@ -135,6 +135,10 @@
     .start-dialog-label { display: grid; gap: 8px; color: var(--ink); font-size: .84rem; font-weight: 600; }
     .start-dialog-input { width: 100%; height: 54px; padding: 0 16px; border: 1px solid var(--gold-line); border-radius: 14px; outline: none; background: #fff; color: var(--ink); font: 1rem 'Jost', system-ui, sans-serif; }
     .start-dialog-input:focus { border-color: var(--sage-deep); box-shadow: 0 0 0 4px rgba(156,28,76,.1); }
+    .start-dialog-field-hint { color: var(--muted); font-size: .76rem; font-weight: 400; line-height: 1.45; }
+    .start-dialog-pin-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .start-dialog-pin-help { margin: -5px 0 0; padding: 13px 15px; border-radius: 14px; background: rgba(156,28,76,.055); color: var(--muted); font-size: .8rem; line-height: 1.5; }
+    .start-dialog-pin-help strong { color: var(--ink); }
     .start-dialog-error { min-height: 20px; margin: -9px 0 0; color: #a40e4c; font-size: .82rem; }
     .start-dialog-actions { display: flex; justify-content: flex-end; }
     .start-dialog-actions .button { min-height: 48px; }
@@ -384,8 +388,8 @@
       #site-header .landing-section-links { display: none; }
       #site-header.landing-menu-open .landing-section-links { position: absolute; top: calc(100% + 8px); right: max(20px, var(--ww-safe-right)); display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,250,.98); box-shadow: 0 14px 32px rgba(64,15,38,.13); }
       #site-header.landing-menu-open .landing-section-links .landing-menu-start { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 5px; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; font: 600 .82rem 'Jost', system-ui, sans-serif; cursor: pointer; }
-      #site-header.landing-menu-open .landing-section-links a { padding: 11px 13px; color: var(--ink); }
-      #site-header.landing-menu-open .landing-section-links a::after { display: none; }
+      #site-header.landing-menu-open .landing-section-link { padding: 11px 13px; color: var(--ink); }
+      #site-header.landing-menu-open .landing-section-link::after { display: none; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language .ww-language-trigger { width: 100%; }
       #site-header .landing-header-actions { margin-left: 12px; }
@@ -436,6 +440,7 @@
       }
       .start-dialog-form { padding: 24px 20px calc(22px + env(safe-area-inset-bottom, 0px)); }
       .start-dialog-actions .button { width: 100%; }
+      .start-dialog-pin-fields { grid-template-columns: 1fr; }
     }
     @media (max-width: 360px) {
       #site-header .landing-header-actions .landing-start-button { display: none; }
@@ -444,8 +449,8 @@
       #site-header.landing-menu-open .landing-section-links { right: max(16px, var(--ww-safe-right)); }
     }
   </style>
-  <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
-  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
+  <link rel="stylesheet" href="/site-header.css?v=20260901-1" />
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-2" />
   <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
 <body>
@@ -725,7 +730,43 @@
           data-i18n-placeholder-source="z. B. Sommerfest 2026"
           required
         />
+        <span class="start-dialog-field-hint">Höchstens 80 Zeichen.</span>
       </label>
+      <div class="start-dialog-pin-fields">
+        <label class="start-dialog-label" for="start-organizer-pin">Organisator-PIN
+          <input
+            class="start-dialog-input"
+            id="start-organizer-pin"
+            name="organizerPin"
+            type="tel"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            minlength="4"
+            maxlength="6"
+            autocomplete="off"
+            aria-describedby="start-organizer-pin-help"
+            placeholder="4–6 Ziffern"
+            required
+          />
+        </label>
+        <label class="start-dialog-label" for="start-organizer-pin-confirmation">PIN wiederholen
+          <input
+            class="start-dialog-input"
+            id="start-organizer-pin-confirmation"
+            name="organizerPinConfirmation"
+            type="tel"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            minlength="4"
+            maxlength="6"
+            autocomplete="off"
+            aria-describedby="start-organizer-pin-help"
+            placeholder="PIN erneut eingeben"
+            required
+          />
+        </label>
+      </div>
+      <p class="start-dialog-pin-help" id="start-organizer-pin-help"><strong>Wichtig:</strong> Wer diese PIN kennt, kann die Wortwolke umbenennen, beliebige Wörter entfernen, sie zurücksetzen und die PIN ändern. Es gibt keine „PIN vergessen“-Funktion – bewahrt sie daher sicher auf und teilt sie nicht mit euren Gästen.</p>
       <p class="start-dialog-error" id="start-dialog-error" role="alert" aria-live="polite"><%= startDialog.error ? t(startDialog.error) : '' %></p>
       <div class="start-dialog-actions">
         <button class="button primary" type="submit">Wortwolke erstellen <span aria-hidden="true">→</span></button>
@@ -746,8 +787,10 @@
       var dialog = document.getElementById('start-dialog');
       var form = document.getElementById('start-dialog-form');
       var input = document.getElementById('start-cloud-name');
+      var pinInput = document.getElementById('start-organizer-pin');
+      var pinConfirmation = document.getElementById('start-organizer-pin-confirmation');
       var closeButton = document.getElementById('start-dialog-close');
-      if (!dialog || !form || !input || !closeButton) return;
+      if (!dialog || !form || !input || !pinInput || !pinConfirmation || !closeButton) return;
 
       function openDialog() {
         var header = document.getElementById('site-header');
@@ -769,11 +812,29 @@
         if (event.target === dialog) dialog.close();
       });
       input.addEventListener('input', function () { input.setCustomValidity(''); });
+      pinInput.addEventListener('input', function () {
+        pinInput.setCustomValidity('');
+        pinConfirmation.setCustomValidity('');
+      });
+      pinConfirmation.addEventListener('input', function () { pinConfirmation.setCustomValidity(''); });
       form.addEventListener('submit', function (event) {
-        if (input.value.trim()) return;
-        event.preventDefault();
-        input.setCustomValidity(WolkenworteI18n.t('Bitte gebt eurer Wortwolke einen Namen.'));
-        input.reportValidity();
+        if (!input.value.trim()) {
+          event.preventDefault();
+          input.setCustomValidity(WolkenworteI18n.t('Bitte gebt eurer Wortwolke einen Namen.'));
+          input.reportValidity();
+          return;
+        }
+        if (!/^\d{4,6}$/.test(pinInput.value.trim())) {
+          event.preventDefault();
+          pinInput.setCustomValidity(WolkenworteI18n.t('Bitte wählt eine Organisator-PIN mit 4–6 Ziffern.'));
+          pinInput.reportValidity();
+          return;
+        }
+        if (pinInput.value.trim() !== pinConfirmation.value.trim()) {
+          event.preventDefault();
+          pinConfirmation.setCustomValidity(WolkenworteI18n.t('Die beiden PINs stimmen nicht überein.'));
+          pinConfirmation.reportValidity();
+        }
       });
       if (dialog.dataset.openOnLoad === 'true') {
         if (dialog.open) dialog.close();

@@ -54,6 +54,15 @@ function wordList(n) {
   return words;
 }
 
+test('all renderers share one centred text line box and baseline', () => {
+  const context = makeFakeMeasureCtx();
+  const box = WordCloudCore.measureTextBox('liebe', 100, context);
+  assert.equal(box.width, 210);
+  assert.equal(box.height, 100 * WordCloudCore.TEXT_LINE_HEIGHT);
+  assert.equal(WordCloudCore.TEXT_LINE_HEIGHT, 1.18);
+  assert.equal(WordCloudCore.TEXT_BASELINE_OFFSET, 0.34);
+});
+
 test('layoutWords places every word exactly once, with no overlapping boxes', () => {
   const words = wordList(24);
   const side = 900;

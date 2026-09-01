@@ -8,7 +8,7 @@ const { buildEmailSnapshot } = require('./emailTemplates');
 const I18n = require('./i18n');
 const log = require('./structuredLog');
 
-const REQUIRED_SCHEMA_VERSION = '2';
+const REQUIRED_SCHEMA_VERSION = '3';
 const MAX_EVENT_CONTRIBUTIONS = 5000;
 const MAX_EVENT_UNIQUE_WORDS = 500;
 const MAX_OWNER_CONTRIBUTIONS = 100;
@@ -179,7 +179,7 @@ async function createEvent({ slug, title, pin, locale = 'de' }) {
     `, [slug]);
     const result = await client.query(`
       INSERT INTO events (
-        slug, title, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
+        slug, title, organizer_pin_hash, organizer_pin_salt, locale, created_at, expires_at
       ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
       RETURNING *
     `, [slug, title, hash, salt, locale]);
@@ -187,43 +187,22 @@ async function createEvent({ slug, title, pin, locale = 'de' }) {
   });
 }
 
-async function createDraftEvent({ slug, title, locale = 'de', ownerHash, pin = null }) {
-  const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
-  return withTransaction(async (client) => {
-    await client.query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, transaction_timestamp())', [slug]);
-    const result = await client.query(`
-      INSERT INTO events (slug, title, admin_pin_hash, admin_pin_salt, locale, is_draft, draft_owner_hash, created_at, expires_at)
-      VALUES ($1, $2, $3, $4, $5, true, $6, transaction_timestamp(), transaction_timestamp() + interval '365 days')
-      RETURNING *
-    `, [slug, title, credentials.hash, credentials.salt, locale, ownerHash]);
-    return rowToBoundary(result.rows[0]);
-  });
-}
-
-async function claimDraftEvent({ eventId, ownerHash, title, pin = null }) {
-  const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
+async function updateEventTitle({ eventId, title }) {
   const result = await getPool().query(`
-    UPDATE events SET title = $1, admin_pin_hash = $2, admin_pin_salt = $3,
-      is_draft = false, draft_owner_hash = null
-    WHERE id = $4 AND is_draft = true AND draft_owner_hash = $5 AND expires_at > transaction_timestamp()
+    UPDATE events SET title = $1
+    WHERE id = $2 AND expires_at > transaction_timestamp()
     RETURNING *
-  `, [title, credentials.hash, credentials.salt, eventId, ownerHash]);
+  `, [title, eventId]);
   return rowToBoundary(result.rows[0]);
 }
 
-async function updateEventDetails({ eventId, title, subtitle, newPin = null }) {
-  const params = [title, subtitle || null, eventId];
-  let pinSql = '';
-  if (newPin) {
-    const { hash, salt } = await hashPin(newPin);
-    params.splice(2, 0, hash, salt);
-    pinSql = ', admin_pin_hash = $3, admin_pin_salt = $4';
-    params[4] = eventId;
-  }
+async function replaceOrganizerPin({ eventId, newPin }) {
+  const { hash, salt } = await hashPin(newPin);
   const result = await getPool().query(`
-    UPDATE events SET title = $1, subtitle = $2${pinSql}
-    WHERE id = $${params.length} AND expires_at > transaction_timestamp() RETURNING *
-  `, params);
+    UPDATE events SET organizer_pin_hash = $1, organizer_pin_salt = $2
+    WHERE id = $3 AND expires_at > transaction_timestamp()
+    RETURNING *
+  `, [hash, salt, eventId]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -250,49 +229,41 @@ async function slugExists(slug) {
   return result.rows[0].exists;
 }
 
-async function setEventTheme(eventId, theme) {
-  const result = await getPool().query(`
-    UPDATE events SET theme = $1
-    WHERE id = $2 AND expires_at > transaction_timestamp()
-  `, [theme, eventId]);
-  if (!result.rowCount) throw new Error('event not found');
-}
-
-async function getResetPinStatus(eventId, sourceIpHash) {
+async function getOrganizerPinStatus(eventId, sourceIpHash) {
   await getPool().query(`
-    DELETE FROM admin_pin_failures
+    DELETE FROM organizer_pin_failures
     WHERE updated_at < transaction_timestamp() - interval '1 day'
   `);
   const result = await getPool().query(`
     SELECT blocked_until > transaction_timestamp() AS blocked
-    FROM admin_pin_failures
+    FROM organizer_pin_failures
     WHERE event_id = $1 AND source_ip_hash = $2
   `, [eventId, sourceIpHash]);
   return { blocked: result.rows[0]?.blocked === true };
 }
 
-async function recordResetPinFailure(eventId, sourceIpHash) {
+async function recordOrganizerPinFailure(eventId, sourceIpHash) {
   const result = await getPool().query(`
-    INSERT INTO admin_pin_failures (
+    INSERT INTO organizer_pin_failures (
       event_id, source_ip_hash, window_started_at, failed_attempts, blocked_until, updated_at
     ) VALUES ($1, $2, transaction_timestamp(), 1, null, transaction_timestamp())
     ON CONFLICT (event_id, source_ip_hash) DO UPDATE SET
       window_started_at = case
-        when admin_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
+        when organizer_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
           then transaction_timestamp()
-        else admin_pin_failures.window_started_at
+        else organizer_pin_failures.window_started_at
       end,
       failed_attempts = case
-        when admin_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
+        when organizer_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
           then 1
-        else least(5, admin_pin_failures.failed_attempts + 1)
+        else least(5, organizer_pin_failures.failed_attempts + 1)
       end,
       blocked_until = case
-        when admin_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
+        when organizer_pin_failures.window_started_at <= transaction_timestamp() - interval '15 minutes'
           then null
-        when admin_pin_failures.failed_attempts + 1 >= 5
+        when organizer_pin_failures.failed_attempts + 1 >= 5
           then transaction_timestamp() + interval '15 minutes'
-        else admin_pin_failures.blocked_until
+        else organizer_pin_failures.blocked_until
       end,
       updated_at = transaction_timestamp()
     RETURNING failed_attempts, blocked_until
@@ -303,25 +274,28 @@ async function recordResetPinFailure(eventId, sourceIpHash) {
   };
 }
 
-async function clearResetPinFailures(eventId, sourceIpHash) {
+async function clearOrganizerPinFailures(eventId, sourceIpHash) {
   await getPool().query(`
-    DELETE FROM admin_pin_failures WHERE event_id = $1 AND source_ip_hash = $2
+    DELETE FROM organizer_pin_failures WHERE event_id = $1 AND source_ip_hash = $2
   `, [eventId, sourceIpHash]);
 }
 
-async function authorizeResetPin(event, pin, sourceIpHash) {
-  const status = await getResetPinStatus(event.id, sourceIpHash);
+async function authorizeOrganizerPin(event, pin, sourceIpHash) {
+  if (!event?.organizer_pin_hash || !event?.organizer_pin_salt) {
+    return { ok: false, blocked: false, configured: false };
+  }
+  const status = await getOrganizerPinStatus(event.id, sourceIpHash);
   if (status.blocked) return { ok: false, blocked: true };
   const validShape = /^\d{4,6}$/.test(String(pin || ''));
   let valid = false;
   if (validShape) {
-    valid = await verifyPin(pin, event.admin_pin_hash, event.admin_pin_salt);
+    valid = await verifyPin(pin, event.organizer_pin_hash, event.organizer_pin_salt);
   }
   if (!valid) {
-    await recordResetPinFailure(event.id, sourceIpHash);
+    await recordOrganizerPinFailure(event.id, sourceIpHash);
     return { ok: false, blocked: false };
   }
-  await clearResetPinFailures(event.id, sourceIpHash);
+  await clearOrganizerPinFailures(event.id, sourceIpHash);
   return { ok: true, blocked: false };
 }
 
@@ -2093,7 +2067,7 @@ const PRELIVE_BUSINESS_TABLES = Object.freeze([
   'printful_webhook_events', 'stripe_webhook_events', 'email_jobs',
   'print_artifacts', 'order_items', 'checkout_order_shipments', 'orders',
   'checkout_quotes', 'configurations',
-  'admin_pin_failures', 'archives', 'word_contributions', 'words', 'events',
+  'organizer_pin_failures', 'archives', 'word_contributions', 'words', 'events',
   'reserved_event_slugs', 'maintenance_runs',
 ]);
 
@@ -2601,17 +2575,15 @@ module.exports = {
   hashPin,
   verifyPin,
   createEvent,
-  createDraftEvent,
-  claimDraftEvent,
-  updateEventDetails,
+  updateEventTitle,
+  replaceOrganizerPin,
   getEventBySlug,
   getEventById,
   slugExists,
-  setEventTheme,
-  getResetPinStatus,
-  recordResetPinFailure,
-  clearResetPinFailures,
-  authorizeResetPin,
+  getOrganizerPinStatus,
+  recordOrganizerPinFailure,
+  clearOrganizerPinFailures,
+  authorizeOrganizerPin,
   upsertWord,
   addWordContribution,
   getWordContributions,

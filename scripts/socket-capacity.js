@@ -154,7 +154,7 @@ async function seedFixtures(pool, options, runId) {
         RETURNING slug
       )
       INSERT INTO events (
-        slug, title, admin_pin_hash, admin_pin_salt, locale, created_at, expires_at
+        slug, title, organizer_pin_hash, organizer_pin_salt, locale, created_at, expires_at
       )
       SELECT fixture.slug, 'Socket Capacity ' || fixture.room_index,
              $2, $3, 'de', transaction_timestamp(), transaction_timestamp() + interval '365 days'
@@ -257,7 +257,7 @@ function connectClient(baseUrl, room, index, state, transport) {
       connectedOnce: false, restartDisconnected: false, reconnectSnapshotAt: null,
       reconnectConnectedAt: null,
       restartDisconnectedAt: null,
-      reconnectSnapshotCorrect: false, themeEvents: 0, resetEvents: 0,
+      reconnectSnapshotCorrect: false, settingsEvents: 0, resetEvents: 0,
     };
     const transportOptions = transport === 'polling'
       ? { transports: ['polling'], upgrade: false }
@@ -357,7 +357,7 @@ function connectClient(baseUrl, room, index, state, transport) {
         ready();
       }
     });
-    socket.on('theme-change', () => { client.themeEvents += 1; });
+    socket.on('event-settings-updated', () => { client.settingsEvents += 1; });
     socket.on('round-reset', () => { client.resetEvents += 1; });
   });
 }
@@ -615,16 +615,22 @@ function emitWithAck(socket, event, payload, timeoutMs = 5_000) {
 }
 
 async function verifyIsolation(baseUrl, clients, rooms, state) {
-  const themeRoom = rooms[1];
-  const themeBaseline = clients.map((client) => client.themeEvents);
-  clients.find((client) => client.room.index === themeRoom.index).socket.emit('theme-change', 'neon');
+  const settingsRoom = rooms[1];
+  const settingsBaseline = clients.map((client) => client.settingsEvents);
+  const settingsResponse = await fetch(`${baseUrl}/api/events/${settingsRoom.slug}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: `Capacity room ${settingsRoom.index}`, pin: PIN }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (settingsResponse.status !== 200) state.unexpectedErrors.push(`settings:${settingsResponse.status}`);
   await delay(500);
-  const sameRoomTheme = clients.filter((client) => client.room.index === themeRoom.index)
-    .some((client, index) => client.themeEvents > themeBaseline[clients.indexOf(client)]);
-  const foreignTheme = clients.some((client, index) =>
-    client.room.index !== themeRoom.index && client.themeEvents !== themeBaseline[index]
+  const sameRoomSettings = clients.filter((client) => client.room.index === settingsRoom.index)
+    .some((client) => client.settingsEvents > settingsBaseline[clients.indexOf(client)]);
+  const foreignSettings = clients.some((client, index) =>
+    client.room.index !== settingsRoom.index && client.settingsEvents !== settingsBaseline[index]
   );
-  if (!sameRoomTheme || foreignTheme) state.crossBoundaryErrors.push('theme');
+  if (!sameRoomSettings || foreignSettings) state.crossBoundaryErrors.push('settings');
 
   const owned = state.accepted[0];
   const foreign = clients.find((client) => client.room.index !== owned.client.room.index);

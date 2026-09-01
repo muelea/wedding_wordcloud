@@ -1,0 +1,31 @@
+<%
+  const pickerClass = typeof languagePickerClass === 'string' ? languagePickerClass.trim() : '';
+  const currentLanguage = languages.find((language) => language.code === locale) || languages[0];
+%>
+<details class="ww-language-picker<%= pickerClass ? ` ${pickerClass}` : '' %>" data-language-picker data-i18n-ignore>
+  <summary
+    class="ww-language-trigger"
+    data-language-trigger
+    aria-label="<%= t('Sprache') %>: <%= currentLanguage.name %>"
+  >
+    <span class="ww-language-flag ww-language-current-flag" aria-hidden="true"><%= currentLanguage.flag %></span>
+    <span class="ww-language-current-name"><%= currentLanguage.name %></span>
+    <span class="ww-language-chevron" aria-hidden="true"></span>
+  </summary>
+  <nav class="ww-language-menu" data-language-menu aria-label="<%= t('Sprache') %>">
+    <% for (const language of languages) { %>
+      <a
+        class="ww-language-option<%= language.code === locale ? ' is-selected' : '' %>"
+        data-language-code="<%= language.code %>"
+        href="<%= language.href %>"
+        lang="<%= language.code %>"
+        hreflang="<%= language.code %>"
+        <% if (language.code === locale) { %>aria-current="true"<% } %>
+      >
+        <span class="ww-language-flag" aria-hidden="true"><%= language.flag %></span>
+        <span class="ww-language-option-name"><%= language.name %></span>
+        <span class="ww-language-check" aria-hidden="true">✓</span>
+      </a>
+    <% } %>
+  </nav>
+</details>

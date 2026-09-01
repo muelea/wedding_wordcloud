@@ -70,17 +70,27 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
 
   await t.test('uses the migrated Postgres schema and opaque bigint ids', async () => {
     const schema = await db.getPool().query(`
-      SELECT column_name, data_type, is_nullable
+      SELECT table_name, column_name, data_type, is_nullable
       FROM information_schema.columns
       WHERE table_schema = current_schema()
         AND table_name IN ('events', 'configurations', 'orders', 'order_items')
     `);
     const byColumn = new Map(schema.rows.map((column) => [column.column_name, column]));
-    assert.equal(byColumn.get('expires_at').data_type, 'timestamp with time zone');
-    assert.equal(byColumn.get('title').is_nullable, 'NO');
-    assert.equal(byColumn.has('couple_name'), false);
-    assert.equal(byColumn.get('subtitle').is_nullable, 'YES');
-    assert.equal(byColumn.has('event_label'), false);
+    const eventColumns = new Map(schema.rows
+      .filter((column) => column.table_name === 'events')
+      .map((column) => [column.column_name, column]));
+    assert.equal(eventColumns.get('expires_at').data_type, 'timestamp with time zone');
+    assert.equal(eventColumns.get('title').is_nullable, 'NO');
+    assert.equal(eventColumns.has('couple_name'), false);
+    assert.equal(eventColumns.has('subtitle'), false);
+    assert.equal(eventColumns.has('theme'), false);
+    assert.equal(eventColumns.has('is_draft'), false);
+    assert.equal(eventColumns.has('draft_owner_hash'), false);
+    assert.equal(eventColumns.get('organizer_pin_hash').is_nullable, 'YES');
+    assert.equal(eventColumns.get('organizer_pin_salt').is_nullable, 'YES');
+    assert.equal(eventColumns.has('admin_pin_hash'), false);
+    assert.equal(eventColumns.has('admin_pin_salt'), false);
+    assert.equal(eventColumns.has('event_label'), false);
     assert.equal(byColumn.get('event_title_snapshot').is_nullable, 'NO');
     assert.equal(byColumn.has('event_label_snapshot'), false);
     assert.equal(byColumn.get('design_json').data_type, 'jsonb');

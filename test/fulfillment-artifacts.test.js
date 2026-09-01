@@ -151,6 +151,16 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     assert.equal(valid.headers.get('cache-control'), 'private, no-store');
     const bytes = Buffer.from(await valid.arrayBuffer());
     assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), artifacts[0].sha256);
+    const [orderItem] = await db.getOrderItems(paid.order.id);
+    const snapshot = JSON.parse(orderItem.configuration_snapshot_json);
+    const { buildProductPrintSvg } = require('../src/mugPrint');
+    const { getProduct, resolveProductOrientation } = require('../src/products');
+    const product = resolveProductOrientation(getProduct(snapshot.productKey), snapshot.orientation);
+    assert.equal(
+      bytes.toString('utf8'),
+      buildProductPrintSvg(product, snapshot.design.surfaces.default),
+      'the exact immutable snapshot rendered by preview is the file URL handed to Printful'
+    );
 
     const wrongNonce = await fetch(`${hosted.baseUrl}/api/print-files/${artifacts[0].id}/${'x'.repeat(32)}`);
     assert.equal(wrongNonce.status, 404);

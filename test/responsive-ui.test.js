@@ -12,6 +12,7 @@ const configure = fs.readFileSync(path.join(ROOT, 'views', 'configure.ejs'), 'ut
 const shipping = fs.readFileSync(path.join(ROOT, 'views', 'shipping.ejs'), 'utf8');
 const siteHeader = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'site-header.ejs'), 'utf8');
 const legalStyles = fs.readFileSync(path.join(ROOT, 'public', 'legal.css'), 'utf8');
+const i18nStyles = fs.readFileSync(path.join(ROOT, 'public', 'i18n.css'), 'utf8');
 const mobileStyles = fs.readFileSync(path.join(ROOT, 'public', 'mobile-foundation.css'), 'utf8');
 const mobileRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mobile-ui.js'), 'utf8');
 const documentViews = [
@@ -32,6 +33,12 @@ const titleMigration = fs.readFileSync(path.join(
   'migrations',
   '20260901000000_generalize_event_naming.sql'
 ), 'utf8');
+const organizerMigration = fs.readFileSync(path.join(
+  ROOT,
+  'supabase',
+  'migrations',
+  '20260901010000_organizer_pin_and_personal_palettes.sql'
+), 'utf8');
 
 test('event titles use the general title contract and a data-preserving migration', () => {
   assert.match(titleMigration, /alter table events rename column couple_name to title/i);
@@ -41,7 +48,14 @@ test('event titles use the general title contract and a data-preserving migratio
   assert.doesNotMatch(database, /couple_name|coupleName|event_label|eventLabel/);
   assert.doesNotMatch(eventsRoute, /couple_name|coupleName|invalid_couple_name|event_label|eventLabel/);
   assert.match(eventsRoute, /title: event\.title/);
-  assert.match(eventsRoute, /subtitle: event\.subtitle/);
+  assert.match(organizerMigration, /drop column subtitle/i);
+  assert.match(organizerMigration, /drop column theme/i);
+  assert.match(organizerMigration, /drop column is_draft/i);
+  assert.match(organizerMigration, /rename column admin_pin_hash to organizer_pin_hash/i);
+  assert.match(organizerMigration, /rename to organizer_pin_failures/i);
+  assert.match(organizerMigration, /app_schema_versions \(version\) values \(3\)/i);
+  assert.doesNotMatch(database, /admin_pin_hash|admin_pin_salt|admin_pin_failures/);
+  assert.doesNotMatch(eventsRoute, /subtitle: event\.subtitle|event\.theme|event\.is_draft/);
   assert.match(eventsRoute, /error: 'invalid_title'/);
 });
 
@@ -52,6 +66,15 @@ test('live word cloud uses a font-ready HiDPI backing canvas', () => {
   assert.match(display, /canvas\.style\.width = `\$\{side\}px`/);
   assert.match(display, /ctx\.setTransform\(drawingScale, 0, 0, drawingScale, 0, 0\)/);
   assert.match(display, /document\.fonts\?\.load/);
+});
+
+test('the personal display palette is handed off to the configurator', () => {
+  assert.match(siteHeader, /id="display-palette-select"/);
+  assert.match(display, /paletteStorageKey = `wordcloud-palette:\$\{slug\}`/);
+  assert.match(display, /localStorage\.setItem\(paletteStorageKey, resolvedKey\)/);
+  assert.match(configure, /paletteStorageKey = `wordcloud-palette:\$\{slug\}`/);
+  assert.match(configure, /localStorage\.getItem\(paletteStorageKey\)/);
+  assert.match(configure, /option\.key === preferredPalette && option\.key !== 'custom'/);
 });
 
 test('landing page reflows into bounded cards without hiding the opening menu', () => {
@@ -98,7 +121,8 @@ test('mobile foundation contains horizontal gestures and respects safe areas', (
   assert.match(mobileStyles, /padding-left: max\(16px, var\(--ww-safe-left\)\)/);
   assert.match(mobileStyles, /padding-right: max\(16px, var\(--ww-safe-right\)\)/);
   assert.match(mobileStyles, /dialog\.ww-mobile-dialog[\s\S]*?--ww-visual-viewport-height/);
-  assert.match(mobileStyles, /@media \(max-width: 360px\)[\s\S]*?\.ww-language-inline \.ww-language-trigger[\s\S]*?width: 64px/);
+  assert.match(i18nStyles, /@media \(max-width: 620px\)[\s\S]*?\.ww-language-trigger \{ width: 112px/);
+  assert.doesNotMatch(mobileStyles, /\.ww-language-inline \.ww-language-trigger|\.ww-language-current-name\s*\{\s*display:\s*none/);
 });
 
 test('mobile forms prevent iOS input zoom and expose full-size controls', () => {

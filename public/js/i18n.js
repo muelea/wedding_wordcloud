@@ -292,11 +292,9 @@
     }
   }
 
-  function updateLanguageSelector() {
-    const picker = root.document?.querySelector('.ww-language-picker');
-    if (!picker) return;
-    const trigger = picker.querySelector('#ww-language-select');
-    const menu = picker.querySelector('#ww-language-menu');
+  function updateLanguagePicker(picker) {
+    const trigger = picker.querySelector('[data-language-trigger]');
+    const menu = picker.querySelector('[data-language-menu]');
     const currentFlag = picker.querySelector('.ww-language-current-flag');
     const currentName = picker.querySelector('.ww-language-current-name');
     if (currentFlag) currentFlag.textContent = LANGUAGE_FLAGS[locale];
@@ -312,23 +310,29 @@
     });
   }
 
+  function updateLanguageSelector() {
+    for (const picker of root.document?.querySelectorAll('[data-language-picker]') || []) {
+      updateLanguagePicker(picker);
+    }
+  }
+
   function languageUrl(href, code) {
     const url = new URL(href);
     url.searchParams.set('lang', normalizeLocale(code));
     return url.toString();
   }
 
-  function enhanceLanguageSelector() {
-    const picker = root.document?.querySelector('.ww-language-picker');
-    if (!picker || picker.dataset.enhanced === 'true') return;
+  function enhanceLanguagePicker(picker) {
+    if (picker.dataset.enhanced === 'true') return;
     picker.dataset.enhanced = 'true';
-    const trigger = picker.querySelector('#ww-language-select');
+    const trigger = picker.querySelector('[data-language-trigger]');
     const options = Array.from(picker.querySelectorAll('[data-language-code]'));
     const stackingHost = picker.closest('header');
     let selectionId = 0;
 
     picker.addEventListener('toggle', () => {
-      stackingHost?.classList.toggle('ww-language-host-open', picker.open);
+      const hasOpenPicker = Boolean(stackingHost?.querySelector('[data-language-picker][open]'));
+      stackingHost?.classList.toggle('ww-language-host-open', hasOpenPicker);
     });
     options.forEach((option) => {
       option.addEventListener('click', async (event) => {
@@ -359,7 +363,13 @@
         trigger?.focus();
       }
     });
-    updateLanguageSelector();
+    updateLanguagePicker(picker);
+  }
+
+  function enhanceLanguageSelectors() {
+    for (const picker of root.document?.querySelectorAll('[data-language-picker]') || []) {
+      enhanceLanguagePicker(picker);
+    }
   }
 
   function startObserver() {
@@ -387,7 +397,7 @@
     root.document.documentElement.lang = locale;
     readyPromise = setLocale(locale, { source: localeSource });
     root.document.addEventListener('DOMContentLoaded', async () => {
-      enhanceLanguageSelector();
+      enhanceLanguageSelectors();
       startObserver();
       await readyPromise;
       translateTree(root.document);

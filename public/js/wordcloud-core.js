@@ -31,6 +31,12 @@
   // Same font list, but with single quotes — FONT_FAMILY's double quotes
   // would prematurely close the SVG's font-family="..." XML attribute.
   const SVG_FONT_FAMILY = "'Wolkenworte Classic', Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif";
+  // One product-design text geometry contract for browser packing, the
+  // editor boundary guard, canvas previews and the immutable SVG renderer.
+  // Fabric's centred IText line box is slightly taller than the nominal font
+  // size, while Canvas/SVG use an alphabetic baseline.
+  const TEXT_LINE_HEIGHT = 1.18;
+  const TEXT_BASELINE_OFFSET = 0.34;
 
   const THEMES = {
     pastel: {
@@ -50,6 +56,20 @@
   };
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+  function measureTextBox(text, fontPx, measureCtx, fontFamily = FONT_FAMILY) {
+    const size = Number(fontPx);
+    if (!Number.isFinite(size) || size <= 0 || !measureCtx ||
+        typeof measureCtx.measureText !== 'function') {
+      throw new TypeError('A positive font size and a canvas measurement context are required');
+    }
+    measureCtx.font = `${size}px ${fontFamily}`;
+    const metrics = measureCtx.measureText(String(text || ''));
+    return {
+      width: Math.max(1, Number(metrics.width) || 0),
+      height: Math.max(1, size * TEXT_LINE_HEIGHT),
+    };
+  }
 
   function makePaletteAssigner(colors) {
     const palette = Array.isArray(colors) && colors.length ? colors : THEMES.pastel.colors;
@@ -203,9 +223,9 @@
 
       for (const item of sized) {
         const fontPx = item.weight * fontUnit;
-        measureCtx.font = `${fontPx}px ${FONT_FAMILY}`;
-        const textHalf = measureCtx.measureText(item.word).width / 2 + collisionPadding;
-        const fontHalf = fontPx / 2 + collisionPadding;
+        const textBox = measureTextBox(item.word, fontPx, measureCtx);
+        const textHalf = textBox.width / 2 + collisionPadding;
+        const fontHalf = textBox.height / 2 + collisionPadding;
         const halfW = item.rotated ? fontHalf : textHalf;
         const halfH = item.rotated ? textHalf : fontHalf;
         const maxX = width / 2 - halfW;
@@ -331,7 +351,7 @@
     }
     const texts = placed.map((p) => {
       const rotate = p.rotated ? ` transform="rotate(-90 ${p.x.toFixed(1)} ${p.y.toFixed(1)})"` : '';
-      return `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * 0.34).toFixed(1)}" ` +
+      return `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
         `font-size="${p.fontPx.toFixed(1)}" font-family="${SVG_FONT_FAMILY}" ` +
         `fill="${p.color}" text-anchor="middle"${rotate}>${escapeXML(p.word)}</text>`;
     }).join('\n  ');
@@ -344,11 +364,14 @@
   return {
     FONT_FAMILY,
     SVG_FONT_FAMILY,
+    TEXT_LINE_HEIGHT,
+    TEXT_BASELINE_OFFSET,
     THEMES,
     makePaletteAssigner,
     makeColorAssigner,
     getFontSizeRange,
     sizeForCount,
+    measureTextBox,
     layoutWords,
     layoutWordsInArea,
     buildSVG,

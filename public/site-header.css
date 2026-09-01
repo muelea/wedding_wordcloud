@@ -92,7 +92,7 @@
 
 .ww-back-link:hover { color: var(--berry, var(--primary2, #9c1c4c)); }
 
-.ww-site-header a:focus-visible {
+.ww-site-header a:not(.ww-language-option):focus-visible {
   outline: 2px solid var(--berry, var(--primary2, #9c1c4c));
   outline-offset: 5px;
   border-radius: 4px;
@@ -123,7 +123,6 @@
 @media (max-width: 360px) {
   .ww-nav { gap: 8px !important; }
   .ww-brand { font-size: 1.06rem; }
-  .ww-language-trigger { width: 108px; padding-inline: 8px; }
 }
 
 @media (max-width: 460px) {

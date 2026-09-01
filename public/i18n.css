@@ -10,6 +10,7 @@
 }
 
 .ww-language-picker {
+  position: relative;
   z-index: 10000;
   display: inline-flex;
   align-items: center;
@@ -18,7 +19,6 @@
 }
 
 .ww-language-inline {
-  position: relative;
   flex: 0 0 auto;
 }
 
@@ -161,10 +161,6 @@
 }
 
 @media (max-width: 620px) {
-  .ww-site-header .ww-language-inline {
-    position: relative;
-    inset: auto;
-  }
   .ww-language-trigger { width: 112px; height: 36px; font-size: 11px; }
   .ww-language-menu { width: 158px; }
 }

@@ -41,6 +41,8 @@ test('real canvas measureText distinguishes narrow vs wide glyphs at equal strin
 
   const narrowWidth = ctx.measureText(narrow).width;
   const wideWidth = ctx.measureText(wide).width;
+  const sharedNarrowBox = WordCloudCore.measureTextBox(narrow, 60, ctx, 'Georgia, serif');
+  const sharedWideBox = WordCloudCore.measureTextBox(wide, 60, ctx, 'Georgia, serif');
 
   const oldApproxWidth = 10 * 60 * 0.42; // what BOTH strings measured as under the old code
 
@@ -49,6 +51,9 @@ test('real canvas measureText distinguishes narrow vs wide glyphs at equal strin
   // Neither real measurement should coincide with the old length-only estimate.
   assert.notEqual(narrowWidth, oldApproxWidth);
   assert.notEqual(wideWidth, oldApproxWidth);
+  assert.equal(sharedNarrowBox.width, narrowWidth);
+  assert.equal(sharedWideBox.width, wideWidth);
+  assert.equal(sharedNarrowBox.height, 60 * WordCloudCore.TEXT_LINE_HEIGHT);
 });
 
 test('the actual /export.svg code path (src/exportSvg.js) measures narrow- and wide-glyph words at the same font size with genuinely different widths, not a length-based estimate', () => {

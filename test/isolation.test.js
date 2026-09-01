@@ -101,7 +101,7 @@ test('multi-tenant isolation: a word submitted to event A never reaches event B'
   assert.deepEqual(bWords, [], 'event B word list must remain empty — no leakage from event A');
 });
 
-test('multi-tenant isolation: theme-change on event A does not affect event B', async (t) => {
+test('multi-tenant isolation: organizer title change on event A does not affect event B', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
@@ -112,12 +112,19 @@ test('multi-tenant isolation: theme-change on event A does not affect event B', 
   const { socket: socketB } = await connectSocket(baseUrl, eventB.slug);
   t.after(() => { socketA.close(); socketB.close(); });
 
-  const bThemeEvents = collectFor(socketB, 'theme-change', 700);
-  socketA.emit('theme-change', 'neon');
+  const aSettingsEvent = waitFor(socketA, 'event-settings-updated');
+  const bSettingsEvents = collectFor(socketB, 'event-settings-updated', 700);
+  const response = await fetch(`${baseUrl}/api/events/${eventA.slug}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Gamma aktualisiert', pin: eventA.pin }),
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await aSettingsEvent, { title: 'Gamma aktualisiert' });
   await new Promise((r) => setTimeout(r, 700));
 
-  const events = await bThemeEvents;
-  assert.equal(events.length, 0, 'event B must not receive event A\'s theme-change');
+  const events = await bSettingsEvents;
+  assert.equal(events.length, 0, 'event B must not receive event A\'s title change');
 });
 
 test('an unknown slug is rejected and disconnected rather than silently joined', async (t) => {

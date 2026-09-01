@@ -1,10 +1,13 @@
 (function (root, factory) {
   'use strict';
 
-  const api = factory();
+  const wordCloudCore = typeof module === 'object' && module.exports
+    ? require('./wordcloud-core.js')
+    : root.WordCloudCore;
+  const api = factory(wordCloudCore);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.DesignLayout = api;
-})(typeof window !== 'undefined' ? window : globalThis, function () {
+})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore) {
   'use strict';
 
   function round(value) {
@@ -46,7 +49,7 @@
   }
 
   function copyId(item, usedIds) {
-    const type = item.type === 'icon' ? 'motiv' : 'wort';
+    const type = item.type === 'icon' ? 'motiv' : item.type === 'image' ? 'bild' : 'wort';
     const base = String(item.id || type).slice(0, 48);
     let index = 2;
     let candidate = `${base}-seite-${index}`;
@@ -61,7 +64,10 @@
   function itemDimensions(item, scale, measureContext, fontFamily) {
     let width;
     let height;
-    if (item.type === 'icon') {
+    if (item.type === 'image') {
+      width = Math.max(1, Number(item.width) || 24);
+      height = Math.max(1, Number(item.height) || 24);
+    } else if (item.type === 'icon') {
       width = height = Math.max(1, Number(item.size) || 48);
     } else {
       const fontSize = Math.max(1, Number(item.fontSize) || 12);
@@ -69,15 +75,18 @@
         const itemFontFamily = typeof fontFamily === 'function'
           ? fontFamily(item)
           : fontFamily;
-        measureContext.font = `${fontSize}px ${itemFontFamily}`;
-        width = Math.max(1, measureContext.measureText(String(item.text || '')).width);
+        const textBox = WordCloudCore.measureTextBox(
+          item.text,
+          fontSize,
+          measureContext,
+          itemFontFamily
+        );
+        width = textBox.width;
+        height = textBox.height;
       } else {
         width = Math.max(1, String(item.text || '').length * fontSize * .58);
+        height = fontSize * WordCloudCore.TEXT_LINE_HEIGHT;
       }
-      // Fabric's IText line box is slightly taller than its nominal font size.
-      // Reserve that real height so a fitted word never gets nudged by the
-      // editor's boundary guard after packing.
-      height = fontSize * 1.18;
     }
 
     const radians = (Number(item.angle) || 0) * Math.PI / 180;
@@ -90,6 +99,9 @@
   }
 
   function minimumScale(item) {
+    if (item.type === 'image') {
+      return 24 / Math.max(1, Math.min(Number(item.width) || 24, Number(item.height) || 24));
+    }
     if (item.type === 'icon') return 48 / Math.max(1, Number(item.size) || 48);
     return 12 / Math.max(1, Number(item.fontSize) || 12);
   }
@@ -147,7 +159,11 @@
 
   function scaleItem(item, scale, x, y) {
     const optimized = { ...item, x: round(x), y: round(y) };
-    if (item.type === 'icon') {
+    if (item.type === 'image') {
+      const imageScale = Math.max(scale, minimumScale(item));
+      optimized.width = round((Number(item.width) || 24) * imageScale);
+      optimized.height = round((Number(item.height) || 24) * imageScale);
+    } else if (item.type === 'icon') {
       optimized.size = round(Math.max(48, (Number(item.size) || 48) * scale));
     } else {
       optimized.fontSize = round(Math.max(12, (Number(item.fontSize) || 12) * scale));
