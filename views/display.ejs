@@ -85,19 +85,6 @@
       padding-top: env(safe-area-inset-top, 0px);
     }
 
-    .cloud-status {
-      position: fixed;
-      top: calc(var(--site-header-height) + 26px);
-      right: 40px;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 14px;
-      pointer-events: none;
-    }
-
-
     #cloud-container {
       position: fixed;
       top: var(--site-header-height);
@@ -125,7 +112,8 @@
     }
     #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', system-ui, sans-serif; }
     #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', system-ui, sans-serif; cursor: pointer; }
-    .ww-display-menu { position: relative; z-index: 10000; flex: 0 0 auto; margin-left: auto; }
+    .ww-display-header-actions { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; }
+    .ww-display-menu { position: relative; z-index: 10000; flex: 0 0 auto; }
     .ww-display-menu summary { list-style: none; }
     .ww-display-menu summary::-webkit-details-marker { display: none; }
     .ww-display-menu-trigger {
@@ -163,11 +151,63 @@
     }
     .ww-display-menu-language-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 4px; }
     .ww-display-menu-palette-row { display: grid; gap: 8px; margin-top: 10px; padding: 12px 4px 0; border-top: 1px solid var(--border); }
-    .ww-display-menu-palette-control { display: flex; align-items: center; gap: 10px; }
-    .ww-display-menu-palette-swatches { display: flex; flex: 0 0 auto; overflow: hidden; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 9%, transparent); }
-    .ww-display-menu-palette-swatches i { width: 10px; height: 20px; }
-    #display-palette-select { min-width: 0; flex: 1; height: 42px; padding: 0 34px 0 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 600 14px 'Jost', system-ui, sans-serif; }
-    #display-palette-select:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 2px; }
+    .ww-display-menu-palette-control { min-width: 0; }
+    .ww-palette-picker { position: relative; width: 100%; }
+    .ww-palette-picker[open] { z-index: 2; }
+    .ww-palette-picker summary { list-style: none; }
+    .ww-palette-picker summary::-webkit-details-marker { display: none; }
+    .ww-palette-trigger,
+    .ww-palette-option {
+      appearance: none;
+      -webkit-appearance: none;
+      color: var(--text);
+      font: 600 13px 'Jost', system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .ww-palette-trigger {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      height: 44px;
+      padding: 0 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--bg) 96%, transparent);
+      box-shadow: 0 4px 14px rgba(64,15,38,.05);
+      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    .ww-palette-trigger:hover,
+    .ww-palette-picker[open] .ww-palette-trigger { border-color: color-mix(in srgb, var(--primary) 38%, var(--border)); background: var(--bg); box-shadow: 0 6px 18px rgba(64,15,38,.09); }
+    .ww-palette-trigger:focus-visible,
+    .ww-palette-option:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 50%, transparent); outline-offset: 2px; }
+    .ww-palette-swatches { display: flex; width: 58px; height: 20px; flex: 0 0 58px; overflow: hidden; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent); }
+    .ww-palette-swatches i { min-width: 0; flex: 1 1 0; }
+    .ww-palette-current { min-width: 0; flex: 1 1 auto; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .ww-palette-chevron { width: 7px; height: 7px; flex: 0 0 7px; margin: -3px 2px 0 3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; opacity: .58; transform: rotate(45deg); transition: transform .18s ease, margin .18s ease; }
+    .ww-palette-picker[open] .ww-palette-chevron { margin-top: 3px; transform: rotate(225deg); }
+    .ww-palette-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      left: 0;
+      display: grid;
+      gap: 3px;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--bg) 98%, transparent);
+      box-shadow: 0 18px 42px rgba(64,15,38,.16);
+      backdrop-filter: blur(18px) saturate(1.25);
+      -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    }
+    .ww-palette-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 7px 9px; border: 0; border-radius: 10px; background: transparent; text-align: left; transition: color .14s ease, background .14s ease; }
+    .ww-palette-option:hover,
+    .ww-palette-option:focus-visible { background: color-mix(in srgb, var(--primary) 7%, transparent); }
+    .ww-palette-option.is-selected { background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); }
+    .ww-palette-option-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ww-palette-check { flex: 0 0 14px; color: var(--primary); opacity: 0; text-align: center; }
+    .ww-palette-option.is-selected .ww-palette-check { opacity: 1; }
     .ww-display-menu-label { padding: 0 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
     .ww-display-menu-language { width: auto; flex: 0 0 auto; }
     .ww-display-menu-actions { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
@@ -190,6 +230,8 @@
     .ww-display-menu-action:hover, .ww-display-menu-action:focus-visible { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
     .ww-display-menu-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; }
     .ww-display-menu-action[hidden] { display: none !important; }
+    .ww-display-menu-action-label { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+    .ww-display-menu-action-label svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .ww-display-menu-count { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); font-size: 12px; }
     .ww-display-menu-switch { position: relative; width: 38px; height: 22px; flex: 0 0 38px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 24%, transparent); transition: background .18s ease; }
     .ww-display-menu-switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); box-shadow: 0 1px 4px rgba(64,15,38,.2); transition: transform .18s ease; }
@@ -343,25 +385,42 @@
     }
     .qr-code svg { display: block; width: 100%; height: 100%; }
 
-    /* ── Memory configurator CTA ── */
-    #memory-cta {
+    /* ── Keepsake configurator CTA ── */
+    .ww-keepsake-cta {
       display: none;
       align-items: center;
+      justify-content: center;
       gap: 10px;
+      height: 44px;
+      min-width: 44px;
+      padding: 0 17px;
+      border: 1px solid var(--primary);
+      border-radius: 999px;
       background: var(--primary);
       color: #fff;
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 14px;
-      padding: 12px 20px;
-      border-radius: 999px;
-      border: none;
+      font: 600 13px/1 'Jost', system-ui, sans-serif;
+      white-space: nowrap;
       cursor: pointer;
-      box-shadow: 0 6px 20px var(--border);
-      transition: transform 0.15s, background 0.6s;
-      pointer-events: auto;
+      box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
+      transition: transform .18s ease, background .6s, border-color .6s, box-shadow .18s ease;
     }
-    #memory-cta.visible { display: inline-flex; }
-    #memory-cta:hover { transform: translateY(-1px); }
+    .ww-keepsake-cta.visible { display: inline-flex; }
+    .ww-keepsake-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 28%, transparent); }
+    .ww-keepsake-cta:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 3px; }
+    .ww-keepsake-cta-icon { width: 14px; height: 14px; flex: 0 0 auto; fill: currentColor; }
+    .ww-keepsake-cta-label-compact { display: none; }
+
+    .word-submission-status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
     /* ── Toast ── */
     .toast-container {
@@ -479,9 +538,11 @@
         --footer-height: 122px;
       }
 
-      .cloud-status { top: calc(var(--site-header-height) + 18px); right: 16px; gap: 10px; }
       .word-counter .label { letter-spacing: 1.5px; }
-      #memory-cta { padding: 10px 15px; font-size: 12px; }
+      .ww-display-header-actions { gap: 8px; }
+      .ww-keepsake-cta { padding: 0 13px; }
+      .ww-keepsake-cta-label-full { display: none; }
+      .ww-keepsake-cta-label-compact { display: inline; }
       #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 68px); }
       .display-word-entry { min-height: 48px; bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); }
       #display-word-input { padding: 0 10px; }
@@ -507,7 +568,14 @@
       .reset-dialog-button { width: 100%; }
     }
     @media (max-width: 360px) {
+      .ww-keepsake-cta { width: 44px; padding: 0; }
+      .ww-keepsake-cta-label-compact { display: none; }
       .reset-dialog-actions { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ww-palette-trigger,
+      .ww-palette-option,
+      .ww-palette-chevron { transition: none; }
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
@@ -516,12 +584,6 @@
 <body>
 
 <%- include('partials/site-header') %>
-
-<aside class="cloud-status" aria-label="Live-Wortwolke">
-  <button id="memory-cta" title="Wortwolke verewigen">
-    Wortwolke verewigen
-  </button>
-</aside>
 
 <div id="cloud-container">
   <canvas id="cloud-canvas"></canvas>
@@ -536,6 +598,7 @@
   <input id="display-word-input" maxlength="30" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
   <button id="display-word-submit" type="submit">Hinzufügen</button>
 </form>
+<p class="word-submission-status" id="word-submission-status" role="status" aria-live="polite" aria-atomic="true"></p>
 
 <footer class="footer">
   <span class="footer-event-name" id="cloud-title" data-i18n-ignore><%= pageData.cloudTitle %></span>
@@ -619,7 +682,7 @@
 
 <dialog class="draft-settings ww-mobile-dialog" id="draft-settings" aria-labelledby="draft-settings-title">
   <form id="draft-settings-form">
-    <div class="dialog-heading"><h2 id="draft-settings-title">Einstellungen</h2><button class="dialog-close" type="button" aria-label="Einstellungen schließen" onclick="this.closest('dialog').close()">×</button></div>
+    <div class="dialog-heading"><h2 id="draft-settings-title">Wortwolke verwalten</h2><button class="dialog-close" type="button" aria-label="Organisatorbereich schließen" data-i18n-aria-label-source="Organisatorbereich schließen" onclick="this.closest('dialog').close()">×</button></div>
     <p>Hier verwaltet ihr die Wortwolke mit eurer Organisator-PIN.</p>
     <label for="draft-name">Name der Wortwolke
       <input id="draft-name" maxlength="80" placeholder="z. B. Sommerfest 2026" required />
@@ -658,7 +721,7 @@
 <dialog class="draft-settings ww-mobile-dialog" id="pin-change-dialog" aria-labelledby="pin-change-title">
   <form id="pin-change-form">
     <div class="dialog-heading"><h2 id="pin-change-title">Organisator-PIN ändern</h2><button class="dialog-close" type="button" aria-label="Dialog schließen" onclick="this.closest('dialog').close()">×</button></div>
-    <p>Nach dem Ändern werden die Einstellungen wieder gesperrt. Es gibt keine „PIN vergessen“-Funktion.</p>
+    <p>Nach dem Ändern wird der Organisatorbereich wieder gesperrt. Es gibt keine „PIN vergessen“-Funktion.</p>
     <label for="pin-change-input">Neue Organisator-PIN
       <input id="pin-change-input" type="tel" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off" placeholder="4–6 Ziffern" required />
     </label>
@@ -690,6 +753,7 @@
   const resetSubmit     = document.getElementById('reset-submit');
   const displayWordEntry = document.getElementById('display-word-entry');
   const displayWordInput = document.getElementById('display-word-input');
+  const wordSubmissionStatus = document.getElementById('word-submission-status');
   const displayPageMenu = document.getElementById('display-page-menu');
   const displayMenuTrigger = document.getElementById('display-menu-trigger');
   const displayOwnWordsButton = document.getElementById('display-own-words-button');
@@ -699,8 +763,12 @@
   const displayOwnWordsEmpty = document.getElementById('display-own-words-empty');
   const displayOwnWordsError = document.getElementById('display-own-words-error');
   const presentationModeButton = document.getElementById('presentation-mode-button');
-  const paletteSelect = document.getElementById('display-palette-select');
+  const palettePicker = document.getElementById('display-palette-picker');
+  const paletteTrigger = document.getElementById('display-palette-trigger');
+  const paletteCurrent = document.getElementById('display-palette-current');
   const paletteSwatches = document.getElementById('display-palette-swatches');
+  const paletteOptionButtons = Array.from(document.querySelectorAll('[data-palette-key]'));
+  const displayLanguagePicker = displayPageMenu.querySelector('.ww-display-menu-language');
   const draftSettings = document.getElementById('draft-settings');
   const draftSettingsButton = document.getElementById('draft-settings-button');
   const pinUnlockDialog = document.getElementById('pin-unlock-dialog');
@@ -724,7 +792,7 @@
   let currentWords = [];
   let renderTimer  = null;
   let renderRevision = 0;
-  let lastWords    = null;
+  let wordSubmissionAnnouncementTimer = null;
   const MAX_CANVAS_PIXEL_RATIO = 3;
   const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
     ? WordCloudCore.TEXT_BASELINE_OFFSET
@@ -756,6 +824,17 @@
     }));
   }
 
+  function syncPalettePicker(palette) {
+    if (!palette) return;
+    setText(paletteCurrent, palette.label);
+    paletteTrigger?.setAttribute('aria-label', `${t('Farbwelt')}: ${t(palette.label)}`);
+    for (const option of paletteOptionButtons) {
+      const selected = option.dataset.paletteKey === palette.key;
+      option.classList.toggle('is-selected', selected);
+      option.setAttribute('aria-checked', String(selected));
+    }
+  }
+
   function applyPalette(key, { persist = false } = {}) {
     const resolvedKey = PALETTES[key] ? key : defaultPaletteKey;
     const palette = PALETTES[resolvedKey];
@@ -767,8 +846,8 @@
     root.setProperty('--rad1', palette.background[2]); root.setProperty('--rad2', palette.background[3]);
     themeColorMeta.content = palette.background[0];
     document.documentElement.dataset.palette = resolvedKey;
-    if (paletteSelect) paletteSelect.value = resolvedKey;
     renderPaletteSwatches(palette.colors);
+    syncPalettePicker(palette);
     if (persist) {
       try { localStorage.setItem(paletteStorageKey, resolvedKey); } catch {}
     }
@@ -776,7 +855,49 @@
   }
 
   applyPalette(storedPaletteKey());
-  paletteSelect?.addEventListener('change', () => applyPalette(paletteSelect.value, { persist: true }));
+
+  function closePalettePicker({ focus = false } = {}) {
+    if (!palettePicker?.open) return;
+    palettePicker.open = false;
+    if (focus) paletteTrigger?.focus();
+  }
+
+  paletteOptionButtons.forEach((option) => {
+    option.addEventListener('click', () => {
+      applyPalette(option.dataset.paletteKey, { persist: true });
+      closePalettePicker({ focus: true });
+    });
+  });
+  palettePicker?.addEventListener('toggle', () => {
+    if (palettePicker.open && displayLanguagePicker) displayLanguagePicker.open = false;
+  });
+  displayLanguagePicker?.addEventListener('toggle', () => {
+    if (displayLanguagePicker.open) closePalettePicker();
+  });
+  palettePicker?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && palettePicker.open) {
+      event.preventDefault();
+      event.stopPropagation();
+      closePalettePicker({ focus: true });
+      return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    if (!palettePicker.open) palettePicker.open = true;
+    const selectedIndex = Math.max(0, paletteOptionButtons.findIndex((option) => option.classList.contains('is-selected')));
+    const focusedIndex = paletteOptionButtons.indexOf(document.activeElement);
+    let nextIndex = focusedIndex < 0 ? selectedIndex : focusedIndex;
+    if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = paletteOptionButtons.length - 1;
+    else if (focusedIndex >= 0) {
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      nextIndex = (focusedIndex + direction + paletteOptionButtons.length) % paletteOptionButtons.length;
+    }
+    paletteOptionButtons[nextIndex]?.focus();
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (palettePicker?.open && !palettePicker.contains(event.target)) closePalettePicker();
+  });
 
   function renderCloud(words) {
     if (!words || words.length === 0) return;
@@ -826,16 +947,18 @@
     }, delay);
   }
 
-  function showToast(word) {
+  function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.textContent = '✦  ' + word;
+    toast.textContent = '✦  ' + message;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 2400);
   }
 
   function closeDisplayMenu({ focus = false } = {}) {
     if (!displayPageMenu.open) return;
+    closePalettePicker();
+    if (displayLanguagePicker) displayLanguagePicker.open = false;
     displayPageMenu.open = false;
     if (focus) displayMenuTrigger.focus();
   }
@@ -1044,6 +1167,14 @@
     renderOwnContributions();
   }
 
+  function announceWordAccepted() {
+    clearTimeout(wordSubmissionAnnouncementTimer);
+    clearText(wordSubmissionStatus);
+    wordSubmissionAnnouncementTimer = setTimeout(() => {
+      setText(wordSubmissionStatus, 'Neues Wort hinzugefügt');
+    }, 50);
+  }
+
   displayOwnWordsButton.addEventListener('click', () => {
     closeDisplayMenu();
     clearText(displayOwnWordsError);
@@ -1051,11 +1182,15 @@
     displayOwnWordsDialog.showModal();
   });
   window.addEventListener('wolkenworte:localechange', () => {
+    syncPalettePicker(PALETTES[document.documentElement.dataset.palette] || PALETTES[defaultPaletteKey]);
     renderOwnContributions();
     if (draftSettings.open) renderWordManager();
   });
   socket.on('own-word-update', hydrateOwnContributions);
-  socket.on('word-accepted', (word, receipt) => addOwnContribution(word, receipt));
+  socket.on('word-accepted', (word, receipt) => {
+    addOwnContribution(word, receipt);
+    announceWordAccepted();
+  });
 
   function openSettings() {
     clearText(document.getElementById('draft-settings-error'));
@@ -1202,13 +1337,6 @@
     }
     emptyState.classList.add('hidden');
 
-    if (lastWords) {
-      const prev = new Map(lastWords);
-      for (const [word, count] of words) {
-        if (!prev.has(word) || prev.get(word) < count) { showToast(word); break; }
-      }
-    }
-    lastWords = words;
     scheduleRender(words);
   });
 

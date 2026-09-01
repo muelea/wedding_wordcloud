@@ -13,6 +13,7 @@
   <% } %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <title data-i18n-source="Wolkenworte – Eure Erinnerungen in einem Wort"><%= t('Wolkenworte – Eure Erinnerungen in einem Wort') %></title>
   <style>
@@ -250,55 +251,10 @@
     /* ── Inspiration ── */
     .inspiration-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
     .inspiration-card { text-align: center; padding: 36px 26px; border-radius: 18px; background: #fffefc; border: 1px solid var(--line); }
+    .step-badge { display: grid; width: 58px; height: 58px; place-items: center; margin: 0 auto 22px; border: 1px solid var(--gold-line); border-radius: 50%; background: var(--paper); color: var(--sage-deep); }
+    .step-badge svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
     .inspiration-card h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; font-weight: 500; margin: 0 0 9px; }
     .inspiration-card p { color: var(--muted); font-size: .9rem; line-height: 1.68; font-weight: 300; }
-
-    /* ── Steps ── */
-    .steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
-    .step { min-width: 0; padding: 26px 18px 28px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #fffefc; text-align: center; box-shadow: 0 14px 34px rgba(64,15,38,.05); }
-    .step-badge { width: 58px; height: 58px; margin: 0 auto 22px; border-radius: 50%; border: 1px solid var(--gold-line); display: grid; place-items: center; color: var(--sage-deep); background: var(--paper); }
-    .step-badge svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-    .step-n { display: block; color: var(--champagne); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 8px; }
-    .step h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.26rem; font-weight: 500; margin: 0 0 9px; }
-    .step p { color: var(--muted); font-size: .87rem; line-height: 1.68; font-weight: 300; overflow-wrap: anywhere; }
-
-    /* Each step shows a small mockup of what that moment actually looks
-       like in the product, instead of an abstract icon — a mini browser for
-       creating the event, the QR/direct-entry choice, the growing display,
-       and the finished keepsake formats. */
-    .step-visual { width: 100%; height: 168px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
-    .mock-browser { width: 100%; max-width: 220px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #fffefc; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
-    .mock-browser-bar { height: 22px; background: var(--cream); display: flex; align-items: center; gap: 5px; padding: 0 9px; }
-    .mock-browser-bar i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-line); display: block; }
-    .mock-browser-body { padding: 18px 16px; }
-    .mock-field { height: 9px; border-radius: 4px; background: var(--line); margin-bottom: 9px; }
-    .mock-field.short { width: 58%; }
-    .mock-button { margin-top: 14px; background: var(--ink); color: #fff; font-size: .66rem; letter-spacing: .02em; text-align: center; padding: 8px; border-radius: 999px; }
-    .mock-collect { display: flex; align-items: center; justify-content: center; gap: 14px; }
-    .mock-qr { width: 62px; height: 62px; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: #fffefc; color: var(--ink); box-shadow: 0 10px 24px rgba(64,15,38,.08); }
-    .mock-or { color: var(--muted); font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; }
-    .mock-phone-mini { width: 62px; height: 86px; border-radius: 12px; border: 2px solid var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #fffefc; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
-    .mock-phone-mini-line { width: 34px; height: 6px; border-radius: 3px; background: var(--line); }
-    .mock-phone-mini-heart { width: 16px; height: auto; color: var(--sage-deep); }
-    .mock-phone { width: 100%; max-width: 128px; background: #fffefc; padding: 16px 12px 12px; position: relative; border-radius: 2px; border: 1px solid var(--gold-line); box-shadow: 0 10px 24px rgba(64,15,38,.08); }
-    .mock-phone-notch { width: 9px; height: 9px; margin: 0 auto 8px; border-radius: 50%; background: var(--champagne); }
-    .mock-phone-question { font-family: 'Playfair Display', Georgia, serif; font-size: .66rem; text-align: center; line-height: 1.35; margin: 0 0 10px; font-weight: 500; }
-    .mock-phone-entry { display: flex; align-items: center; gap: 5px; padding: 6px 2px; border-bottom: 1px solid var(--gold-line); color: #a98b93; font-size: .58rem; font-weight: 300; }
-    .mock-phone-entry-heart { margin-left: auto; width: 11px; height: auto; color: var(--sage-deep); }
-    .mock-screen { width: 100%; max-width: 220px; aspect-ratio: 4 / 3; border-radius: 8px; border: 3px solid var(--ink); background: #fffefc; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 10px 24px rgba(64,15,38,.08); }
-    .mock-screen::after { content: ''; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); width: 34%; height: 10px; background: var(--ink); border-radius: 0 0 4px 4px; }
-    .mock-cloud-mini { display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 5px 8px; padding: 10px; }
-    .mock-cloud-mini span { font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; line-height: 1; white-space: nowrap; }
-    .mock-cloud-mini span:nth-child(1) { font-size: 1.1rem; color: var(--sage-deep); font-weight: 600; }
-    .mock-cloud-mini span:nth-child(2) { font-size: .85rem; color: var(--coral); }
-    .mock-cloud-mini span:nth-child(3) { font-size: .7rem; color: var(--ink); }
-    .mock-cloud-mini span:nth-child(4) { font-size: .95rem; color: var(--champagne); }
-    .mock-cloud-mini span:nth-child(5) { font-size: .75rem; color: var(--coral); }
-    .mock-cloud-mini span:nth-child(6) { font-size: .68rem; color: var(--ink); }
-    .mock-keep { display: flex; align-items: center; justify-content: center; gap: 16px; }
-    .mock-keep img { width: 62px; height: auto; }
-    .steps-cta { margin-top: 56px; text-align: center; }
-
 
     /* ── Print / mug-duo ── */
     .print-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 84px; position: relative; }
@@ -352,7 +308,7 @@
        visible by default, and only hidden pre-animation once JS confirms
        IntersectionObserver support and the visitor hasn't asked for
        reduced motion (see the script at the end of the page). */
-    html.js-reveal-ready .section-top, html.js-reveal-ready .step,
+    html.js-reveal-ready .section-top,
     html.js-reveal-ready .inspiration-card, html.js-reveal-ready .print-copy,
     html.js-reveal-ready .cup-stage, html.js-reveal-ready .cta-box {
       opacity: 0; transform: translateY(18px);
@@ -371,10 +327,6 @@
     html.js-reveal-ready .quote blockquote.is-visible, html.js-reveal-ready .quote cite.is-visible {
       opacity: 1; transform: translateY(0); filter: blur(0);
     }
-    html.js-reveal-ready .step:nth-child(2) { transition-delay: .08s; }
-    html.js-reveal-ready .step:nth-child(3) { transition-delay: .16s; }
-    html.js-reveal-ready .step:nth-child(4) { transition-delay: .24s; }
-    html.js-reveal-ready .step:nth-child(5) { transition-delay: .32s; }
     html.js-reveal-ready .inspiration-card:nth-child(2) { transition-delay: .08s; }
     html.js-reveal-ready .inspiration-card:nth-child(3) { transition-delay: .16s; }
     html.js-reveal-ready .inspiration-card:nth-child(4) { transition-delay: .08s; }
@@ -393,8 +345,6 @@
       #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language .ww-language-trigger { width: 100%; }
       #site-header .landing-header-actions { margin-left: 12px; }
-      .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .step:last-child:nth-child(odd) { grid-column: 1 / -1; width: calc((100% - 20px) / 2); justify-self: center; }
     }
     @media (max-width: 760px) { .cta-box .deco, .heart-accent { display: none; } }
     @media (max-width: 760px) {
@@ -412,13 +362,6 @@
       .reel { padding: 34px 22px 30px; }
       .cloud { margin-bottom: 6px; }
       section { padding: 72px 0; }
-      .steps { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-      .step { padding: 24px 20px 26px; }
-      .step:last-child:nth-child(odd) { grid-column: auto; width: 100%; }
-      .step-visual { height: 150px; margin-bottom: 16px; }
-      .mock-browser, .mock-screen { max-width: 180px; }
-      .mock-phone { max-width: 150px; }
-      .mock-qr, .mock-phone-mini, .mock-keep img { transform: scale(.88); }
       .inspiration-grid { grid-template-columns: 1fr; gap: 18px; }
       .print-grid { text-align: center; }
       .print-copy p { margin-left: auto; margin-right: auto; }
@@ -533,104 +476,153 @@
       </div>
     </section>
 
-    <section id="so-gehts">
+    <section id="so-gehts" aria-labelledby="workflow-title">
       <div class="shell">
-        <div class="section-top">
-          <div class="flourish"><i></i></div>
-          <p class="eyebrow center">Ganz unkompliziert</p>
-          <h2>Ein Moment, den alle mitgestalten.</h2>
-          <p>Kein Download, keine Accounts und keine komplizierte Technik. Nur ein QR-Code – und am Ende wird daraus mehr, als ihr euch vorstellen könnt.</p>
+        <div class="workflow-story" data-workflow>
+          <div class="workflow-sticky" data-workflow-sticky>
+            <header class="workflow-intro">
+              <p class="eyebrow">Ganz unkompliziert</p>
+              <h2 id="workflow-title">Ein Moment, den alle mitgestalten.</h2>
+              <p>Kein Download, keine Accounts und keine komplizierte Technik. Nur ein QR-Code – und am Ende wird daraus mehr, als ihr euch vorstellen könnt.</p>
+            </header>
+
+            <div class="workflow-scene">
+              <ol class="workflow-steps">
+                <li class="workflow-step">
+                  <button class="workflow-step-copy" id="workflow-step-0" type="button" aria-controls="workflow-panel-0" aria-current="step" data-workflow-trigger="0" data-active="true">
+                    <span class="workflow-step-number" data-i18n-ignore>01</span>
+                    <span class="workflow-step-text"><strong>Wolke anlegen</strong><span>Erstellt in wenigen Sekunden eure eigene Wortwolke – ganz ohne Anmeldung.</span></span>
+                  </button>
+                </li>
+                <li class="workflow-step">
+                  <button class="workflow-step-copy" id="workflow-step-1" type="button" aria-controls="workflow-panel-1" data-workflow-trigger="1" data-active="false">
+                    <span class="workflow-step-number" data-i18n-ignore>02</span>
+                    <span class="workflow-step-text"><strong>Wolke teilen</strong><span>Teilt den QR-Code oder Link mit euren Liebsten – ganz gleich, wo sie sind.</span></span>
+                  </button>
+                </li>
+                <li class="workflow-step">
+                  <button class="workflow-step-copy" id="workflow-step-2" type="button" aria-controls="workflow-panel-2" data-workflow-trigger="2" data-active="false">
+                    <span class="workflow-step-number" data-i18n-ignore>03</span>
+                    <span class="workflow-step-text"><strong>Wünsche sammeln</strong><span>Jede und jeder gibt ihr persönliches Wort direkt auf dem eigenen Handy ein. Ganz einfach, jeder kann mitmachen.</span></span>
+                  </button>
+                </li>
+                <li class="workflow-step">
+                  <button class="workflow-step-copy" id="workflow-step-3" type="button" aria-controls="workflow-panel-3" data-workflow-trigger="3" data-active="false">
+                    <span class="workflow-step-number" data-i18n-ignore>04</span>
+                    <span class="workflow-step-text"><strong>Staunen</strong><span>Auf dem großen Screen wächst eure Wortwolke in Echtzeit – Wort für Wort.</span></span>
+                  </button>
+                </li>
+                <li class="workflow-step">
+                  <button class="workflow-step-copy" id="workflow-step-4" type="button" aria-controls="workflow-panel-4" data-workflow-trigger="4" data-active="false">
+                    <span class="workflow-step-number" data-i18n-ignore>05</span>
+                    <span class="workflow-step-text"><strong>Bewahren</strong><span>Lasst eure Wortwolke als Tasse, Poster oder anderes Erinnerungsstück weiterleben.</span></span>
+                  </button>
+                </li>
+              </ol>
+
+              <div class="workflow-stage" data-workflow-stage>
+                <figure class="workflow-panel workflow-panel--create" id="workflow-panel-0" aria-labelledby="workflow-step-0" aria-hidden="false" data-workflow-panel="0" data-active="true">
+                  <figcaption><b data-i18n-ignore>01</b><span>Wolke anlegen</span></figcaption>
+                  <div class="workflow-panel-art" aria-hidden="true">
+                    <div class="workflow-browser">
+                      <div class="workflow-browser-bar"><i></i><i></i><i></i><span class="workflow-browser-address" data-i18n-ignore>wolkenworte.io</span></div>
+                      <div class="workflow-create-body">
+                        <div class="workflow-create-card">
+                          <span class="workflow-create-kicker">Eure Wortwolke</span>
+                          <h4>Wie soll eure Wortwolke heißen?</h4>
+                          <div class="workflow-create-fields">
+                            <span class="workflow-create-field">Name der Wortwolke<span class="workflow-create-input" data-i18n-ignore>Lea &amp; Julian</span></span>
+                            <span class="workflow-create-field">Organisator-PIN<span class="workflow-create-input" data-i18n-ignore>••••</span></span>
+                          </div>
+                          <span class="workflow-create-button">Wortwolke erstellen&nbsp; →</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+
+                <figure class="workflow-panel workflow-panel--share" id="workflow-panel-1" aria-labelledby="workflow-step-1" aria-hidden="false" data-workflow-panel="1" data-active="false">
+                  <figcaption><b data-i18n-ignore>02</b><span>Wolke teilen</span></figcaption>
+                  <div class="workflow-panel-art" aria-hidden="true">
+                    <div class="workflow-invitation">
+                      <svg class="workflow-invitation-mark" viewBox="0 0 80 70"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+                      <small>Wolke teilen</small>
+                      <h4 data-i18n-ignore>Lea &amp; Julian</h4>
+                      <p data-i18n-ignore>wolkenworte.io/e/lea-und-julian</p>
+                      <svg class="workflow-qr" viewBox="0 0 40 40" fill="currentColor">
+                        <rect x="2" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="5.5" y="5.5" width="3" height="3"/>
+                        <rect x="28" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="31.5" y="5.5" width="3" height="3"/>
+                        <rect x="2" y="28" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="5.5" y="31.5" width="3" height="3"/>
+                        <rect x="17" y="4" width="3" height="3"/><rect x="23" y="9" width="3" height="3"/><rect x="17" y="14" width="3" height="3"/>
+                        <rect x="4" y="17" width="3" height="3"/><rect x="11" y="17" width="3" height="3"/><rect x="23" y="17" width="3" height="3"/>
+                        <rect x="29" y="17" width="3" height="3"/><rect x="35" y="17" width="3" height="3"/><rect x="17" y="23" width="3" height="3"/>
+                        <rect x="29" y="23" width="3" height="3"/><rect x="23" y="29" width="3" height="3"/><rect x="35" y="29" width="3" height="3"/><rect x="17" y="35" width="3" height="3"/>
+                      </svg>
+                    </div>
+                    <div class="workflow-share-phone">
+                      <div class="workflow-phone-top"></div>
+                      <div class="workflow-share-screen">
+                        <span class="workflow-mini-eyebrow">Eure Wortwolke</span>
+                        <h4 data-i18n-ignore>Lea &amp; Julian</h4>
+                        <p>Dein Wort für<br />diesen Moment</p>
+                        <div class="workflow-phone-field">Liebe, Glück, Freude</div>
+                        <div class="workflow-phone-action">Wünsche sammeln</div>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+
+                <figure class="workflow-panel workflow-panel--collect" id="workflow-panel-2" aria-labelledby="workflow-step-2" aria-hidden="false" data-workflow-panel="2" data-active="false">
+                  <figcaption><b data-i18n-ignore>03</b><span>Wünsche sammeln</span></figcaption>
+                  <div class="workflow-panel-art" aria-hidden="true">
+                    <div class="workflow-guest-phone">
+                      <div class="workflow-phone-top"></div>
+                      <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Liebe</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
+                    </div>
+                    <div class="workflow-guest-phone">
+                      <div class="workflow-phone-top"></div>
+                      <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Freude</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
+                    </div>
+                    <div class="workflow-guest-phone">
+                      <div class="workflow-phone-top"></div>
+                      <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Zusammen</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
+                    </div>
+                  </div>
+                </figure>
+
+                <figure class="workflow-panel workflow-panel--live" id="workflow-panel-3" aria-labelledby="workflow-step-3" aria-hidden="false" data-workflow-panel="3" data-active="false">
+                  <figcaption><b data-i18n-ignore>04</b><span>Staunen</span></figcaption>
+                  <div class="workflow-panel-art" aria-hidden="true">
+                    <div class="workflow-display">
+                      <div class="workflow-display-frame">
+                        <span class="workflow-display-live">Live-Vorschau</span>
+                        <div class="workflow-cloud"><span>Liebe</span><span>Glück</span><span>Freude</span><span>Zusammen</span><span>Herzklopfen</span><span>für immer</span><span>Sommerabend</span><span>Geborgenheit</span><span>Lachen</span></div>
+                        <div class="workflow-new-word"><span data-i18n-ignore>+1</span><b>Hand in Hand</b></div>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+
+                <figure class="workflow-panel workflow-panel--keepsake" id="workflow-panel-4" aria-labelledby="workflow-step-4" aria-hidden="false" data-workflow-panel="4" data-active="false">
+                  <figcaption><b data-i18n-ignore>05</b><span>Bewahren</span></figcaption>
+                  <div class="workflow-panel-art workflow-keepsake-art" aria-hidden="true">
+                    <div class="workflow-keepsake-copy"><small>Bewahren</small><h4>Gemeinsam gestaltet · für immer bewahrt</h4></div>
+                    <div class="workflow-product workflow-product--poster">
+                      <img src="<%= asset('/assets/product-mockups/framed-poster-black-30x40.png') %>" alt="" loading="lazy" decoding="async" />
+                      <div class="workflow-product-design"><span>Liebe</span><span>Glück</span><span>Zusammen</span><span>für immer</span></div>
+                    </div>
+                    <div class="workflow-product workflow-product--tote">
+                      <img src="<%= asset('/assets/product-mockups/tote-front.jpg') %>" alt="" loading="lazy" decoding="async" />
+                      <div class="workflow-product-design"><span>Liebe</span><span>Freude</span><span>Zusammen</span><span>für immer</span></div>
+                    </div>
+                    <div class="workflow-product workflow-product--mug"><img src="<%= asset('/assets/product-thumbnails/mug.svg') %>" alt="" loading="lazy" decoding="async" /></div>
+                  </div>
+                </figure>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="steps">
-          <article class="step">
-            <span class="step-n">Schritt 01</span>
-            <div class="step-visual">
-              <div class="mock-browser">
-                <div class="mock-browser-bar"><i></i><i></i><i></i></div>
-                <div class="mock-browser-body">
-                  <div class="mock-field"></div>
-                  <div class="mock-field short"></div>
-                  <div class="mock-button">Wolke erstellen</div>
-                </div>
-              </div>
-            </div>
-            <h3>Wolke anlegen</h3>
-            <p>Erstellt in wenigen Sekunden eure eigene Wortwolke – ganz ohne Anmeldung.</p>
-          </article>
-          <article class="step">
-            <span class="step-n">Schritt 02</span>
-            <div class="step-visual">
-              <div class="mock-collect">
-                <div class="mock-qr" aria-hidden="true">
-                  <svg viewBox="0 0 40 40" fill="currentColor">
-                    <rect x="2" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
-                    <rect x="5.5" y="5.5" width="3" height="3"/>
-                    <rect x="28" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
-                    <rect x="31.5" y="5.5" width="3" height="3"/>
-                    <rect x="2" y="28" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
-                    <rect x="5.5" y="31.5" width="3" height="3"/>
-                    <rect x="17" y="4" width="3" height="3"/>
-                    <rect x="23" y="9" width="3" height="3"/>
-                    <rect x="17" y="14" width="3" height="3"/>
-                    <rect x="4" y="17" width="3" height="3"/>
-                    <rect x="11" y="17" width="3" height="3"/>
-                    <rect x="23" y="17" width="3" height="3"/>
-                    <rect x="29" y="17" width="3" height="3"/>
-                    <rect x="35" y="17" width="3" height="3"/>
-                    <rect x="17" y="23" width="3" height="3"/>
-                    <rect x="29" y="23" width="3" height="3"/>
-                    <rect x="23" y="29" width="3" height="3"/>
-                    <rect x="35" y="29" width="3" height="3"/>
-                    <rect x="17" y="35" width="3" height="3"/>
-                  </svg>
-                </div>
-                <span class="mock-or">oder</span>
-                <div class="mock-phone-mini">
-                  <div class="mock-phone-mini-line"></div>
-                  <svg class="mock-phone-mini-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-              </div>
-            </div>
-            <h3>Wolke teilen</h3>
-            <p>Teilt den QR-Code oder Link mit euren Liebsten – ganz gleich, wo sie sind.</p>
-          </article>
-          <article class="step">
-            <span class="step-n">Schritt 03</span>
-            <div class="step-visual">
-              <div class="mock-phone">
-                <div class="mock-phone-notch"></div>
-                <p class="mock-phone-question">Dein Wort für<br>diesen Moment</p>
-                <div class="mock-phone-entry">Liebe, Glück, Freude <svg class="mock-phone-entry-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              </div>
-            </div>
-            <h3>Wünsche sammeln</h3>
-            <p>Jede und jeder gibt ihr persönliches Wort direkt auf dem eigenen Handy ein. Ganz einfach, jeder kann mitmachen.</p>
-          </article>
-          <article class="step">
-            <span class="step-n">Schritt 04</span>
-            <div class="step-visual">
-              <div class="mock-screen">
-                <div class="mock-cloud-mini">
-                  <span>Liebe</span><span>Glück</span><span>Wir</span><span>Zusammen</span><span>Freude</span><span>für immer</span>
-                </div>
-              </div>
-            </div>
-            <h3>Staunen</h3>
-            <p>Auf dem großen Screen wächst eure Wortwolke in Echtzeit – Wort für Wort.</p>
-          </article>
-          <article class="step">
-            <span class="step-n">Schritt 05</span>
-            <div class="step-visual">
-              <div class="mock-keep">
-                <img src="/assets/product-thumbnails/mug.svg" alt="" />
-                <img src="/assets/product-thumbnails/poster.svg" alt="" />
-                <img src="/assets/product-thumbnails/tote.svg" alt="" />
-              </div>
-            </div>
-            <h3>Bewahren</h3>
-            <p>Lasst eure Wortwolke als Tasse, Poster oder anderes Erinnerungsstück weiterleben.</p>
-          </article>
-        </div>
+
         <div class="steps-cta">
           <button class="button primary" type="submit" form="start-dialog-form" data-open-start-dialog>Hier starten <span>→</span></button>
         </div>
@@ -766,7 +758,7 @@
           />
         </label>
       </div>
-      <p class="start-dialog-pin-help" id="start-organizer-pin-help"><strong>Wichtig:</strong> Wer diese PIN kennt, kann die Wortwolke umbenennen, beliebige Wörter entfernen, sie zurücksetzen und die PIN ändern. Es gibt keine „PIN vergessen“-Funktion – bewahrt sie daher sicher auf und teilt sie nicht mit euren Gästen.</p>
+      <p class="start-dialog-pin-help" id="start-organizer-pin-help"><strong>Wichtig:</strong> Wer diese PIN kennt, kann die Wortwolke umbenennen, beliebige Wörter entfernen, sie zurücksetzen und die PIN ändern. Es gibt keine „PIN vergessen“-Funktion – bewahrt sie daher sicher auf.</p>
       <p class="start-dialog-error" id="start-dialog-error" role="alert" aria-live="polite"><%= startDialog.error ? t(startDialog.error) : '' %></p>
       <div class="start-dialog-actions">
         <button class="button primary" type="submit">Wortwolke erstellen <span aria-hidden="true">→</span></button>
@@ -782,6 +774,7 @@
   </footer>
 
   <script src="<%= asset('/js/site-header.js') %>"></script>
+  <script src="<%= asset('/js/landing-workflow.js') %>"></script>
   <script>
     (function () {
       var dialog = document.getElementById('start-dialog');
@@ -888,7 +881,7 @@
       if ('IntersectionObserver' in window && !reduceMotion) {
         document.documentElement.classList.add('js-reveal-ready');
         var targets = document.querySelectorAll(
-          '.section-top, .step, .inspiration-card, .print-copy, .cup-stage, .quote blockquote, .quote cite, .cta-box'
+          '.section-top, .inspiration-card, .print-copy, .cup-stage, .quote blockquote, .quote cite, .cta-box'
         );
         var io = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {

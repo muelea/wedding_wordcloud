@@ -42,7 +42,21 @@
     <% } %>
 
     <% if (variant === 'display') { %>
-    <details class="ww-display-menu" id="display-page-menu">
+    <div class="ww-display-header-actions">
+      <button
+        class="ww-keepsake-cta"
+        id="memory-cta"
+        type="button"
+        aria-label="<%= t('Erinnerung gestalten') %>"
+        data-i18n-aria-label-source="Erinnerung gestalten"
+      >
+        <svg class="ww-keepsake-cta-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2c.8 5.2 4.8 9.2 10 10-5.2.8-9.2 4.8-10 10-.8-5.2-4.8-9.2-10-10 5.2-.8 9.2-4.8 10-10Z" />
+        </svg>
+        <span class="ww-keepsake-cta-label ww-keepsake-cta-label-full" data-i18n-source="Erinnerung gestalten"><%= t('Erinnerung gestalten') %></span>
+        <span class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"><%= t('Andenken') %></span>
+      </button>
+      <details class="ww-display-menu" id="display-page-menu">
       <summary id="display-menu-trigger" class="ww-display-menu-trigger" aria-label="Menü öffnen">
         <span class="ww-display-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
       </summary>
@@ -53,16 +67,38 @@
         </section>
         <% if (paletteOptions.length) { %>
         <section class="ww-display-menu-palette-row" aria-labelledby="display-menu-palette-label">
-          <label class="ww-display-menu-label" id="display-menu-palette-label" for="display-palette-select">Farbwelt</label>
+          <span class="ww-display-menu-label" id="display-menu-palette-label">Farbwelt</span>
           <div class="ww-display-menu-palette-control">
-            <span class="ww-display-menu-palette-swatches" id="display-palette-swatches" aria-hidden="true">
-              <% for (const color of paletteOptions[0].colors) { %><i style="background:<%= color %>"></i><% } %>
-            </span>
-            <select id="display-palette-select" aria-label="Farbwelt">
+            <details class="ww-palette-picker" id="display-palette-picker">
+              <summary
+                class="ww-palette-trigger"
+                id="display-palette-trigger"
+                aria-label="<%= t('Farbwelt') %>: <%= t(paletteOptions[0].label) %>"
+              >
+                <span class="ww-palette-swatches" id="display-palette-swatches" aria-hidden="true">
+                  <% for (const color of paletteOptions[0].colors) { %><i style="background:<%= color %>"></i><% } %>
+                </span>
+                <span class="ww-palette-current" id="display-palette-current" data-i18n-source="<%= paletteOptions[0].label %>"><%= t(paletteOptions[0].label) %></span>
+                <span class="ww-palette-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="ww-palette-menu" role="radiogroup" aria-labelledby="display-menu-palette-label">
               <% for (const palette of paletteOptions) { %>
-                <option value="<%= palette.key %>" data-i18n-source="<%= palette.label %>"><%= t(palette.label) %></option>
+                <button
+                  class="ww-palette-option<%= palette.key === paletteOptions[0].key ? ' is-selected' : '' %>"
+                  type="button"
+                  role="radio"
+                  aria-checked="<%= palette.key === paletteOptions[0].key ? 'true' : 'false' %>"
+                  data-palette-key="<%= palette.key %>"
+                >
+                  <span class="ww-palette-swatches" aria-hidden="true">
+                    <% for (const color of palette.colors) { %><i style="background:<%= color %>"></i><% } %>
+                  </span>
+                  <span class="ww-palette-option-name" data-i18n-source="<%= palette.label %>"><%= t(palette.label) %></span>
+                  <span class="ww-palette-check" aria-hidden="true">✓</span>
+                </button>
               <% } %>
-            </select>
+              </div>
+            </details>
           </div>
         </section>
         <% } %>
@@ -71,14 +107,20 @@
             <span>Deine Wörter</span>
             <span class="ww-display-menu-count" id="display-own-words-count" aria-live="polite">0</span>
           </button>
-          <button class="ww-display-menu-action" id="draft-settings-button" type="button" hidden>Einstellungen</button>
+          <button class="ww-display-menu-action" id="draft-settings-button" type="button" hidden>
+            <span class="ww-display-menu-action-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span data-i18n-source="Organisatorbereich"><%= t('Organisatorbereich') %></span>
+            </span>
+          </button>
           <button class="ww-display-menu-action" id="presentation-mode-button" type="button" role="switch" aria-checked="false">
             <span>Präsentationsmodus</span>
             <span class="ww-display-menu-switch" aria-hidden="true"><i></i></span>
           </button>
         </div>
       </div>
-    </details>
+      </details>
+    </div>
     <% } else if (variant !== 'landing') { %>
     <%- include('language-picker', { languagePickerClass: 'ww-language-inline' }) %>
     <% } %>

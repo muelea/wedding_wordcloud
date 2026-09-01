@@ -15,6 +15,8 @@ const legalStyles = fs.readFileSync(path.join(ROOT, 'public', 'legal.css'), 'utf
 const i18nStyles = fs.readFileSync(path.join(ROOT, 'public', 'i18n.css'), 'utf8');
 const mobileStyles = fs.readFileSync(path.join(ROOT, 'public', 'mobile-foundation.css'), 'utf8');
 const mobileRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mobile-ui.js'), 'utf8');
+const landingWorkflowStyles = fs.readFileSync(path.join(ROOT, 'public', 'landing-workflow.css'), 'utf8');
+const landingWorkflowRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'landing-workflow.js'), 'utf8');
 const documentViews = [
   '404.ejs',
   'configure.ejs',
@@ -68,8 +70,21 @@ test('live word cloud uses a font-ready HiDPI backing canvas', () => {
   assert.match(display, /document\.fonts\?\.load/);
 });
 
+test('word cloud header keeps the keepsake action compact at mobile widths', () => {
+  assert.match(siteHeader, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?id="display-page-menu"/);
+  assert.match(display, /\.ww-keepsake-cta \{[\s\S]*?height: 44px;[\s\S]*?min-width: 44px;/);
+  assert.match(display, /@media \(max-width: 620px\)[\s\S]*?\.ww-keepsake-cta-label-full \{ display: none; \}[\s\S]*?\.ww-keepsake-cta-label-compact \{ display: inline; \}/);
+  assert.match(display, /@media \(max-width: 360px\)[\s\S]*?\.ww-keepsake-cta \{ width: 44px; padding: 0; \}[\s\S]*?\.ww-keepsake-cta-label-compact \{ display: none; \}/);
+});
+
 test('the personal display palette is handed off to the configurator', () => {
-  assert.match(siteHeader, /id="display-palette-select"/);
+  assert.match(siteHeader, /id="display-palette-picker"/);
+  assert.match(siteHeader, /class="ww-palette-menu" role="radiogroup"/);
+  assert.match(siteHeader, /class="ww-palette-option[^\"]*"[\s\S]*?role="radio"[\s\S]*?aria-checked=/);
+  assert.doesNotMatch(siteHeader, /id="display-palette-select"|<select[^>]*aria-label="Farbwelt"/);
+  assert.match(display, /\.ww-palette-menu \{[\s\S]*?position: absolute;[\s\S]*?border-radius: 14px;/);
+  assert.match(display, /palettePicker\?\.addEventListener\('keydown'/);
+  assert.match(display, /\['ArrowDown', 'ArrowUp', 'Home', 'End'\]/);
   assert.match(display, /paletteStorageKey = `wordcloud-palette:\$\{slug\}`/);
   assert.match(display, /localStorage\.setItem\(paletteStorageKey, resolvedKey\)/);
   assert.match(configure, /paletteStorageKey = `wordcloud-palette:\$\{slug\}`/);
@@ -77,12 +92,34 @@ test('the personal display palette is handed off to the configurator', () => {
   assert.match(configure, /option\.key === preferredPalette && option\.key !== 'custom'/);
 });
 
-test('landing page reflows into bounded cards without hiding the opening menu', () => {
+test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {
   assert.match(landing, /html \{ max-width: 100%;[\s\S]*?overflow-x: clip; \}/);
-  assert.match(landing, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
-  assert.match(landing, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(landing, /\.steps \{ grid-template-columns: minmax\(0, 1fr\); gap: 18px; \}/);
-  assert.match(landing, /\.step \{ min-width: 0;[\s\S]*?border-radius: 18px;[\s\S]*?background: #fffefc/);
+  assert.match(landing, /asset\('\/landing-workflow\.css'\)/);
+  assert.match(landing, /asset\('\/js\/landing-workflow\.js'\)/);
+  assert.equal((landing.match(/data-workflow-trigger="/g) || []).length, 5);
+  assert.equal((landing.match(/data-workflow-panel="/g) || []).length, 5);
+  assert.equal((landing.match(/aria-hidden="false" data-workflow-panel=/g) || []).length, 5);
+  assert.match(landing, /id="workflow-step-0"[^>]*aria-controls="workflow-panel-0"[^>]*aria-current="step"/);
+  assert.match(landing, /id="workflow-panel-0"[^>]*aria-labelledby="workflow-step-0"[^>]*aria-hidden="false"/);
+  assert.match(landingWorkflowStyles, /min-height: calc\(var\(--workflow-sticky-height\) \+ 200vh\)/);
+  assert.match(landingWorkflowStyles, /html\.workflow-scroll-ready \.workflow-sticky \{[\s\S]*?position: sticky;/);
+  assert.match(landingWorkflowStyles, /grid-template-columns: minmax\(340px, \.76fr\) minmax\(0, 1\.42fr\)/);
+  assert.match(landingWorkflowStyles, /@media \(max-width: 1050px\)[\s\S]*?html\.workflow-scroll-ready \.workflow-stage \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-step > \.workflow-panel \{[\s\S]*?margin: 4px auto 34px;/);
+  assert.match(landingWorkflowStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(landingWorkflowRuntime, /matchMedia\('\(min-width: 1051px\)'\)/);
+  assert.match(landingWorkflowRuntime, /window\.requestAnimationFrame\(renderScrollProgress\)/);
+  assert.match(landingWorkflowRuntime, /window\.addEventListener\('scroll', requestScrollUpdate, \{ passive: true \}\)/);
+  assert.match(landingWorkflowRuntime, /var scrubDurationMs = 240/);
+  assert.match(landingWorkflowRuntime, /var opacity = clamp\(reveal \* 1\.65\) \* clamp\(3\.15 - depth\)/);
+  assert.match(landingWorkflowRuntime, /--workflow-panel-stack-y/);
+  assert.match(landingWorkflowRuntime, /--workflow-panel-grayscale/);
+  assert.doesNotMatch(landingWorkflowRuntime, /index < activeIndex \? 0/);
+  assert.doesNotMatch(landingWorkflowRuntime, /--workflow-panel-saturation/);
+  assert.doesNotMatch(landingWorkflowStyles, /box-shadow: 0 34px 80px/);
+  assert.match(landingWorkflowStyles, /filter: brightness\(var\(--workflow-panel-brightness\)\) grayscale\(var\(--workflow-panel-grayscale\)\)/);
+  assert.match(landingWorkflowRuntime, /steps\[index\]\.appendChild\(panel\)/);
+  assert.match(landingWorkflowRuntime, /panel\.setAttribute\('aria-hidden', desktopLayout\.matches \? String\(!isActive\) : 'false'\)/);
   assert.match(landing, /#mug-canvas \{ width: min\(360px, 100%\); height: auto/);
   assert.match(landing, /#site-header:not\(\.landing-menu-open\) \.landing-section-links/);
   assert.doesNotMatch(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-menu-toggle/);
@@ -140,4 +177,13 @@ test('mobile legal copy and configurator controls reflow instead of widening the
   assert.match(legalStyles, /\.legal-section a \{[\s\S]*?overflow-wrap: anywhere/);
   assert.match(configure, /\.editor-selection:not\(\.is-active\) \.editor-selection-row,[\s\S]*?display: none/);
   assert.match(configure, /\.page \{[\s\S]*?margin-left: max\(14px, var\(--ww-safe-left\)\);[\s\S]*?margin-right: max\(14px, var\(--ww-safe-right\)\)/);
+});
+
+test('compact configurator widths keep color controls horizontal and separate from actions', () => {
+  assert.match(configure, /\.editor-field-label-color \{ min-width: 197px;/);
+  assert.match(configure, /\.editor-swatches \{ min-width: 163px;[\s\S]*?flex-wrap: wrap;/);
+  assert.match(configure, /\.editor-swatch \{[\s\S]*?flex: 0 0 23px;/);
+  assert.match(configure, /\.editor-color-input \{[\s\S]*?flex: 0 0 28px;/);
+  assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-selection \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  assert.match(configure, /@media \(max-width: 620px\)[\s\S]*?\.editor-selection\.is-active \.editor-actions \{ margin-top: 12px; \}[\s\S]*?\.editor-selection-row \{ grid-template-columns: 1fr; \}/);
 });

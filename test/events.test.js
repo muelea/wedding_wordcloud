@@ -65,7 +65,9 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /body\.presentation-mode #memory-cta/);
   assert.match(displayHtml, /classList\.toggle\('presentation-mode', active\)/);
   assert.match(displayHtml, /presentationModeButton\.setAttribute\('aria-checked', String\(active\)\)/);
-  assert.match(displayHtml, /id="memory-cta" title="Wortwolke verewigen"/);
+  assert.match(displayHtml, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?data-i18n-source="Erinnerung gestalten"[\s\S]*?id="display-page-menu"/);
+  assert.match(displayHtml, /class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"/);
+  assert.match(displayHtml, /id="word-submission-status" role="status" aria-live="polite" aria-atomic="true"/);
   assert.match(displayHtml, /id="share-cloud"/);
   assert.match(displayHtml, /id="copy-cloud-link"/);
   assert.match(displayHtml, /id="share-dialog"/);
@@ -73,7 +75,12 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /url:\s*eventUrl/);
   assert.doesNotMatch(displayHtml, /id="save-cloud"|beforeinstallprompt|appinstalled|serviceWorker\.register/);
   assert.match(displayHtml, /id="draft-settings-button"/);
-  assert.match(displayHtml, /id="display-palette-select"/);
+  assert.match(displayHtml, /id="draft-settings-button"[\s\S]*?data-i18n-source="Organisatorbereich"/);
+  assert.match(displayHtml, /id="draft-settings-title">Wortwolke verwalten</);
+  assert.doesNotMatch(displayHtml, /id="draft-settings-button"[^>]*>Einstellungen<\/button>/);
+  assert.match(displayHtml, /id="display-palette-picker"/);
+  assert.match(displayHtml, /id="display-palette-trigger"[\s\S]*?role="radiogroup"[\s\S]*?data-palette-key="pastel"/);
+  assert.doesNotMatch(displayHtml, /id="display-palette-select"|<select[^>]*aria-label="Farbwelt"/);
   assert.match(displayHtml, /wordcloud-palette:\$\{slug\}/);
   assert.match(displayHtml, /id="change-pin-button"/);
   assert.match(displayHtml, /id="reset-cloud-button"/);
@@ -84,6 +91,8 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /<svg\b[\s\S]*?<path\b/);
   assert.doesNotMatch(displayHtml, /id="qr-img"|src=""|\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
   assert.match(displayHtml, /socket\.on\('word-update', \(words\) =>/);
+  assert.match(displayHtml, /socket\.on\('word-accepted',[\s\S]*?announceWordAccepted\(\)/);
+  assert.doesNotMatch(displayHtml, /lastWords|showToast\(word\)/);
   assert.equal((await fetch(`${baseUrl}${event.eventUrl}/manifest.webmanifest`)).status, 404);
   assert.equal((await fetch(`${baseUrl}/sw.js`)).status, 404);
   const removedDisplayRoute = await fetch(`${baseUrl}${event.eventUrl}/display`);

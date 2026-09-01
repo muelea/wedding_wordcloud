@@ -738,7 +738,7 @@
     .editor-selection-head { display: none; }
     .editor-selection-row {
       display: grid;
-      grid-template-columns: minmax(150px, 1fr) minmax(155px, .55fr) auto;
+      grid-template-columns: minmax(150px, 1fr) minmax(155px, .55fr) minmax(197px, 1fr);
       align-items: center;
       gap: 12px;
     }
@@ -841,10 +841,11 @@
       font-size: 9.5px;
       line-height: 1.25;
     }
-    .editor-field-label-color { align-self: center; }
+    .editor-field-label-color { min-width: 197px; align-self: center; }
     .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 0; }
-    .editor-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .editor-swatches { min-width: 163px; display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 5px; }
     .editor-swatch {
+      flex: 0 0 23px;
       width: 23px;
       height: 23px;
       padding: 0;
@@ -858,6 +859,7 @@
     .editor-color-input {
       -webkit-appearance: none;
       appearance: none;
+      flex: 0 0 28px;
       width: 28px;
       height: 28px;
       padding: 0;
@@ -1546,6 +1548,8 @@
       .design-toolbar-controls.has-orientation {
         grid-template-columns: minmax(280px, 1.1fr) repeat(3, minmax(170px, .72fr));
       }
+      .editor-selection { grid-template-columns: minmax(0, 1fr); }
+      .editor-actions { justify-content: flex-end; }
     }
 
     @media (max-width: 940px) {
@@ -1617,12 +1621,14 @@
       .editor-selection:not(.is-active) .editor-selection-row,
       .editor-selection:not(.is-active) .editor-actions { display: none; }
       .editor-selection.is-active .editor-selection-head { margin-bottom: 10px; }
+      .editor-selection.is-active .editor-actions { margin-top: 12px; }
       .editor-actions { justify-content: flex-start; }
       .editor-button { min-height: var(--ww-touch-target); }
       .editor-icon-button { width: var(--ww-touch-target); }
       .editor-motif-menu { width: min(350px, calc(100vw - 70px)); }
       .editor-motif-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
       .editor-selection-row { grid-template-columns: 1fr; }
+      .editor-field-label-color { min-width: 0; }
       .editor-text-input,
       .editor-font-toggle { height: var(--ww-touch-target); font-size: 16px; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }

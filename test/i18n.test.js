@@ -54,9 +54,14 @@ function renderView(filename, header = {}, locale = 'de') {
 }
 const REQUIRED_MESSAGES = [
   'Wortwolke starten',
+  'Erinnerung gestalten',
+  'Andenken',
   'Ein Wort eingeben',
   'Gib dein Wort hier ein…',
   'Deine Wörter',
+  'Organisatorbereich',
+  'Wortwolke verwalten',
+  'Organisatorbereich schließen',
   'Eine Eingabe von „{{word}}“ entfernen',
   'Einstellungen',
   'Präsentationsmodus',
@@ -70,12 +75,14 @@ const REQUIRED_MESSAGES = [
   'Ihr seid eingeladen, die Wortwolke „{{name}}“ mitzugestalten. Fügt ein Wort hinzu und erlebt live, wie sie gemeinsam wächst.',
   'Live-Wortwolke',
   'Wortwolke zurücksetzen?',
+  'Nach dem Ändern wird der Organisatorbereich wieder gesperrt. Es gibt keine „PIN vergessen“-Funktion.',
   'Eure Worte. Eure Erinnerung.',
   '{{count}} Elemente ausgewählt',
   'Wählt, wie viele Produkte an welche Adresse gehen sollen. Für eine einzelne Lieferung bleibt einfach diese eine Adresse stehen.',
   '{{count}} Lieferadressen',
   'Eure Zahlung wurde bestätigt und eure Bestellung ist bei uns eingegangen.',
   'Diese Wortwolke gibt es nicht.',
+  'Neues Wort hinzugefügt',
   'und',
   'Die gewählte Sprache wird in einem funktionalen Cookie gespeichert. Die persönliche Farbpalette der Wortwolke und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Wortwolke, Konfiguration und Lieferadresse erhalten bleiben. Die Organisator-PIN wird nicht im Browser gespeichert.',
 ];
@@ -109,6 +116,8 @@ test('locale catalogs cover the complete user journey and preserve interpolation
   }
 
   assert.equal(I18n.translate('Wolkenworte', 'tr'), 'Wolkenworte');
+  assert.equal(I18n.translate('Organisatorbereich', 'en'), 'Organizer controls');
+  assert.equal(I18n.translate('Wortwolke verwalten', 'en'), 'Manage word cloud');
   assert.equal(I18n.translate('{{count}} Elemente ausgewählt', 'fr', { count: 3 }), '3 éléments sélectionnés');
 });
 
@@ -229,7 +238,8 @@ test('the event page keeps its content below a dedicated branded header', () => 
 
   assert.match(displayPage, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/);
 
-  assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="memory-cta"/);
+  assert.match(displayPage, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?id="display-page-menu"/);
+  assert.doesNotMatch(displayPage, /cloud-status/);
   assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="cloud-title" data-i18n-ignore/);
   assert.doesNotMatch(displayPage, /id="qr-url"/,
     'the footer must not expose the raw event URL as visible copy');
