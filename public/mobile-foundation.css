@@ -1,0 +1,91 @@
+:root {
+  --ww-touch-target: 44px;
+  --ww-safe-top: env(safe-area-inset-top, 0px);
+  --ww-safe-right: env(safe-area-inset-right, 0px);
+  --ww-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ww-safe-left: env(safe-area-inset-left, 0px);
+  --ww-visual-viewport-height: 100vh;
+  --ww-keyboard-inset: 0px;
+}
+
+@supports (height: 100dvh) {
+  :root { --ww-visual-viewport-height: 100dvh; }
+}
+
+html,
+body {
+  max-inline-size: 100%;
+  overscroll-behavior-x: none;
+}
+
+html { overflow-x: hidden; }
+
+body {
+  overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+  html,
+  body { overflow-x: clip; }
+}
+
+img,
+svg,
+canvas,
+video { max-inline-size: 100%; }
+
+.ww-nav {
+  padding-left: max(40px, var(--ww-safe-left)) !important;
+  padding-right: max(40px, var(--ww-safe-right)) !important;
+}
+
+@media (max-width: 620px), (pointer: coarse) {
+  .ww-brand,
+  .ww-back-link,
+  .ww-language-trigger {
+    min-height: var(--ww-touch-target);
+  }
+
+  .ww-back-link {
+    min-width: var(--ww-touch-target);
+    justify-content: center;
+  }
+
+  .ww-language-trigger { height: var(--ww-touch-target); }
+  .ww-language-option { min-height: var(--ww-touch-target); }
+}
+
+@media (max-width: 620px) {
+  .ww-nav {
+    padding-left: max(16px, var(--ww-safe-left)) !important;
+    padding-right: max(16px, var(--ww-safe-right)) !important;
+  }
+
+  dialog.ww-mobile-dialog {
+    inset: auto 0 var(--ww-keyboard-inset);
+    width: 100%;
+    max-width: none;
+    max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 12px);
+    margin: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 24px 24px 0 0;
+  }
+
+  dialog.ww-mobile-dialog > form {
+    max-height: inherit;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(22px, calc(14px + var(--ww-safe-bottom)));
+  }
+}
+
+@media (max-width: 360px) {
+  .ww-language-inline .ww-language-trigger {
+    width: 64px;
+    padding-inline: 10px;
+  }
+
+  .ww-language-inline .ww-language-current-name { display: none; }
+}

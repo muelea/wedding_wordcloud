@@ -199,7 +199,7 @@
     .own-word-copy { display: inline-flex; align-items: baseline; gap: 7px; min-width: 0; }
     .own-word-label { overflow-wrap: anywhere; }
     .own-word-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
-    .own-word-remove { flex: 0 0 auto; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
+    .own-word-remove { flex: 0 0 auto; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
     .own-word-remove:hover, .own-word-remove:focus-visible { background: rgba(164,14,76,.1); color: var(--primary); }
     .own-word-remove:disabled { cursor: wait; opacity: .45; }
     .own-words-empty, .own-words-error { color: var(--muted); font-size: 13px; }
@@ -215,9 +215,9 @@
     .word-manager { border-top: 1px solid var(--border); padding-top: 14px; }
     .word-manager summary { cursor: pointer; font: 600 15px 'Jost', sans-serif; color: var(--text); }
     .word-manager-list { display: grid; gap: 7px; max-height: 210px; margin: 11px 0 0; overflow: auto; }
-    .word-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; padding: 4px 4px 4px 11px; border: 1px solid var(--border); border-radius: 10px; }
+    .word-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 4px 4px 4px 11px; border: 1px solid var(--border); border-radius: 10px; }
     .word-manager-count { color: var(--muted); font-size: 12px; }
-    .word-manager-remove { width: 29px; height: 29px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
+    .word-manager-remove { width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
     .word-manager-remove:hover { background: rgba(164,14,76,.1); color: var(--primary); }
     .word-manager-empty { margin: 11px 0 0; color: var(--muted); font-size: 13px; }
 
@@ -441,10 +441,10 @@
     .draft-settings h2 { font: 500 25px 'Playfair Display', Georgia, serif; color: var(--primary); }
     .draft-settings p { color: var(--muted); font-size: 13px; line-height: 1.5; }
     .draft-settings label { display: grid; gap: 6px; color: var(--text); font-size: 14px; font-weight: 600; }
-    .draft-settings input { height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 15px 'Jost', sans-serif; }
+    .draft-settings input { height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 16px 'Jost', sans-serif; }
     .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
     .dialog-heading h2 { margin: 0; }
-    .dialog-close { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 26px/1 system-ui, sans-serif; cursor: pointer; }
+    .dialog-close { width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 26px/1 system-ui, sans-serif; cursor: pointer; }
     .dialog-close:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
     .share-dialog { width: min(500px, calc(100% - 32px)); }
     .share-dialog-copy { margin-top: -4px; }
@@ -502,8 +502,15 @@
       body.presentation-mode .footer-tools { display: none; }
       .share-options { grid-template-columns: 1fr; }
       .share-dialog-qr { padding: 12px; }
+      .reset-dialog-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .reset-dialog-button { width: 100%; }
+    }
+    @media (max-width: 360px) {
+      .reset-dialog-actions { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
+  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
 <body>
 
@@ -561,7 +568,7 @@
 
 <div class="toast-container" id="toast-container"></div>
 
-<dialog class="draft-settings own-words-dialog" id="display-own-words-dialog" aria-labelledby="display-own-words-title">
+<dialog class="draft-settings own-words-dialog ww-mobile-dialog" id="display-own-words-dialog" aria-labelledby="display-own-words-title">
   <form method="dialog">
     <div class="dialog-heading"><h2 id="display-own-words-title">Deine Wörter</h2><button class="dialog-close" type="submit" aria-label="Dialog schließen">×</button></div>
     <p class="own-words-intro">Hier kannst du deine eigenen Eingaben verwalten. Mit jedem Entfernen wird ein Beitrag gelöscht.</p>
@@ -571,7 +578,7 @@
   </form>
 </dialog>
 
-<dialog class="draft-settings share-dialog" id="share-dialog" aria-labelledby="share-dialog-title">
+<dialog class="draft-settings share-dialog ww-mobile-dialog" id="share-dialog" aria-labelledby="share-dialog-title">
   <form method="dialog">
     <div class="dialog-heading"><h2 id="share-dialog-title">Wortwolke teilen</h2><button class="dialog-close" type="submit" aria-label="Teilen-Dialog schließen" data-i18n-aria-label-source="Teilen-Dialog schließen">×</button></div>
     <p class="share-dialog-copy">Ladet eure Gäste ein, ein Wort beizutragen und die Wortwolke live wachsen zu sehen.</p>
@@ -597,7 +604,7 @@
   </form>
 </dialog>
 
-<dialog class="reset-dialog" id="reset-dialog" aria-labelledby="reset-dialog-title">
+<dialog class="reset-dialog ww-mobile-dialog" id="reset-dialog" aria-labelledby="reset-dialog-title">
   <form class="reset-dialog-card" id="reset-form">
     <h2 id="reset-dialog-title">Neue Runde starten?</h2>
     <p class="reset-dialog-copy">Die aktuellen Wörter werden archiviert. Anschließend beginnt eure Wortwolke wieder leer.</p>
@@ -612,7 +619,7 @@
   </form>
 </dialog>
 
-<dialog class="draft-settings" id="draft-settings" aria-labelledby="draft-settings-title">
+<dialog class="draft-settings ww-mobile-dialog" id="draft-settings" aria-labelledby="draft-settings-title">
   <form id="draft-settings-form">
     <div class="dialog-heading"><h2 id="draft-settings-title">Einstellungen</h2><button class="dialog-close" type="button" aria-label="Einstellungen schließen" onclick="this.closest('dialog').close()">×</button></div>
     <p>Gebt eurer Wortwolke einen Titel, ergänzt optional einen Untertitel und wählt eine Farbwelt.</p>
@@ -629,7 +636,7 @@
   </form>
 </dialog>
 
-<dialog class="draft-settings" id="pin-choice-dialog" aria-labelledby="pin-choice-title">
+<dialog class="draft-settings ww-mobile-dialog" id="pin-choice-dialog" aria-labelledby="pin-choice-title">
   <form method="dialog">
     <h2 id="pin-choice-title">Einstellungen schützen?</h2>
     <p>Möchtet ihr einen Admin-PIN festlegen? Damit können nur Personen mit dem PIN die Einstellungen ändern.</p>
@@ -640,7 +647,7 @@
   </form>
 </dialog>
 
-<dialog class="draft-settings" id="pin-setup-dialog" aria-labelledby="pin-setup-title">
+<dialog class="draft-settings ww-mobile-dialog" id="pin-setup-dialog" aria-labelledby="pin-setup-title">
   <form id="pin-setup-form">
     <h2 id="pin-setup-title">Admin-PIN festlegen</h2>
     <p>Dieser PIN schützt spätere Änderungen an eurer Wortwolke.</p>
@@ -650,7 +657,7 @@
   </form>
 </dialog>
 
-<dialog class="draft-settings" id="pin-unlock-dialog" aria-labelledby="pin-unlock-title">
+<dialog class="draft-settings ww-mobile-dialog" id="pin-unlock-dialog" aria-labelledby="pin-unlock-title">
   <form id="pin-unlock-form">
     <h2 id="pin-unlock-title">Admin-PIN eingeben</h2>
     <p>Gebt den Admin-PIN ein, um die Einstellungen zu ändern.</p>

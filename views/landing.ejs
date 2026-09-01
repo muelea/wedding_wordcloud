@@ -88,6 +88,7 @@
     #site-header .landing-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; margin-left: auto; white-space: nowrap; }
     #site-header .landing-header-actions .button { white-space: nowrap; }
     #site-header .landing-header-actions .landing-start-button { height: 38px; padding: 0 17px; }
+    #site-header .landing-menu-start { display: none; }
     /* The overlay is the source of truth. A stale document class can never
        keep the links hidden after the teaser has been dismissed. */
     #intro-overlay:not(.fade-out) ~ #site-header:not(.landing-menu-open) .landing-section-links { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -124,7 +125,7 @@
     .start-dialog-form { display: grid; gap: 20px; max-height: inherit; padding: 30px; overflow-y: auto; overscroll-behavior: contain; }
     .start-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
     .start-dialog h2 { margin: 0; font: 500 clamp(1.65rem, 4vw, 2rem)/1.15 'Playfair Display', Georgia, serif; letter-spacing: -.02em; }
-    .start-dialog-close { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 28px/1 system-ui, sans-serif; cursor: pointer; }
+    .start-dialog-close { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 28px/1 system-ui, sans-serif; cursor: pointer; }
     .start-dialog-close:hover, .start-dialog-close:focus-visible { background: rgba(156,28,76,.08); color: var(--sage-deep); }
     .start-dialog-copy { margin: -9px 0 0; color: var(--muted); font-size: .94rem; line-height: 1.6; }
     .start-dialog-label { display: grid; gap: 8px; color: var(--ink); font-size: .84rem; font-weight: 600; }
@@ -374,8 +375,11 @@
 
     @media (max-width: 1050px) {
       #site-header .landing-header-actions .landing-menu-toggle { display: inline-flex; margin-left: 0; }
+      #site-header .landing-header-actions .landing-menu-toggle,
+      #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
       #site-header .landing-section-links { display: none; }
-      #site-header.landing-menu-open .landing-section-links { position: absolute; top: calc(100% + 8px); right: 20px; display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,250,.98); box-shadow: 0 14px 32px rgba(64,15,38,.13); }
+      #site-header.landing-menu-open .landing-section-links { position: absolute; top: calc(100% + 8px); right: max(20px, var(--ww-safe-right)); display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,250,.98); box-shadow: 0 14px 32px rgba(64,15,38,.13); }
+      #site-header.landing-menu-open .landing-section-links .landing-menu-start { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 5px; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; font: 600 .82rem 'Jost', system-ui, sans-serif; cursor: pointer; }
       #site-header.landing-menu-open .landing-section-links a { padding: 11px 13px; color: var(--ink); }
       #site-header.landing-menu-open .landing-section-links a::after { display: none; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }
@@ -416,10 +420,10 @@
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
       .start-dialog {
-        inset: auto 0 var(--start-dialog-keyboard-inset, 0px);
+        inset: auto 0 var(--ww-keyboard-inset, 0px);
         width: 100%;
         max-width: none;
-        max-height: calc(var(--start-dialog-visual-height, 100dvh) - 12px);
+        max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 12px);
         margin: 0;
         border-right: 0;
         border-bottom: 0;
@@ -429,8 +433,16 @@
       .start-dialog-form { padding: 24px 20px calc(22px + env(safe-area-inset-bottom, 0px)); }
       .start-dialog-actions .button { width: 100%; }
     }
+    @media (max-width: 360px) {
+      #site-header .landing-header-actions .landing-start-button { display: none; }
+      #site-header .landing-header-actions { margin-left: auto; }
+      #site-header .landing-header-actions .landing-menu-toggle { width: var(--ww-touch-target); }
+      #site-header.landing-menu-open .landing-section-links { right: max(16px, var(--ww-safe-right)); }
+    }
   </style>
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
+  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
 <body>
   <div id="intro-overlay">
@@ -685,7 +697,7 @@
   </main>
 
   <dialog
-    class="start-dialog"
+    class="start-dialog ww-mobile-dialog"
     id="start-dialog"
     aria-labelledby="start-dialog-title"
     data-open-on-load="<%= startDialog.open ? 'true' : 'false' %>"
@@ -731,21 +743,12 @@
       var form = document.getElementById('start-dialog-form');
       var input = document.getElementById('start-cloud-name');
       var closeButton = document.getElementById('start-dialog-close');
-      var visualViewport = window.visualViewport;
       if (!dialog || !form || !input || !closeButton) return;
-
-      function syncDialogViewport() {
-        if (!visualViewport || !dialog.open) return;
-        var visualBottom = Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop);
-        dialog.style.setProperty('--start-dialog-visual-height', visualViewport.height + 'px');
-        dialog.style.setProperty('--start-dialog-keyboard-inset', visualBottom + 'px');
-      }
 
       function openDialog() {
         var header = document.getElementById('site-header');
         if (header) header.classList.remove('landing-menu-open');
         if (!dialog.open) dialog.showModal();
-        syncDialogViewport();
         if (window.matchMedia('(pointer: fine)').matches) {
           window.requestAnimationFrame(function () { input.focus(); });
         }
@@ -762,14 +765,6 @@
         if (event.target === dialog) dialog.close();
       });
       input.addEventListener('input', function () { input.setCustomValidity(''); });
-      if (visualViewport) {
-        visualViewport.addEventListener('resize', syncDialogViewport);
-        visualViewport.addEventListener('scroll', syncDialogViewport);
-      }
-      dialog.addEventListener('close', function () {
-        dialog.style.removeProperty('--start-dialog-visual-height');
-        dialog.style.removeProperty('--start-dialog-keyboard-inset');
-      });
       form.addEventListener('submit', function (event) {
         if (input.value.trim()) return;
         event.preventDefault();

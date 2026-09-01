@@ -2,7 +2,8 @@
 <html lang="<%= locale %>">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#fffdfa" />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
   <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
@@ -124,7 +125,7 @@
       flex: 0 0 auto;
       display: grid;
       grid-template-columns: 38px 56px 38px;
-      height: 42px;
+      height: 46px;
       overflow: hidden;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -139,7 +140,7 @@
       line-height: 1;
     }
     .quantity-control input {
-      height: 40px;
+      height: 44px;
       padding: 0;
       border: 0;
       border-inline: 1px solid var(--line);
@@ -212,9 +213,9 @@
     }
     .search-input-wrap { position: relative; }
     .search-input {
-      height: 42px;
-      padding: 0 40px 0 36px;
-      font-size: 15px;
+      height: 44px;
+      padding: 0 48px 0 36px;
+      font-size: 16px;
     }
     .search-input-icon {
       position: absolute;
@@ -226,11 +227,11 @@
       pointer-events: none;
     }
     .search-input-clear {
-      width: 32px;
-      height: 32px;
+      width: 44px;
+      height: 44px;
       position: absolute;
-      right: 5px;
-      top: 5px;
+      right: 0;
+      top: 0;
       border: 0;
       border-radius: 9px;
       background: transparent;
@@ -249,7 +250,7 @@
     }
     .search-option {
       width: 100%;
-      min-height: 40px;
+      min-height: 44px;
       padding: 8px 10px;
       display: flex;
       align-items: center;
@@ -310,7 +311,14 @@
       .brand { font-size: 18px; }
       .brand-icon { width: 28px; height: 26px; }
       .back-link span:first-child { margin-right: 3px; }
-      main { width: min(100% - 20px, 1120px); padding-top: 26px; }
+      main {
+        width: auto;
+        max-width: 1120px;
+        margin-left: max(10px, var(--ww-safe-left));
+        margin-right: max(10px, var(--ww-safe-right));
+        padding-top: 26px;
+        padding-bottom: max(72px, calc(56px + var(--ww-safe-bottom)));
+      }
       .intro-copy { font-size: 15px; }
       .steps .step-label { display: none; }
       .steps .step.active .step-label { display: inline; }
@@ -320,11 +328,14 @@
       .shipment-product .quantity-control { grid-column: 1 / -1; }
       .quantity-control { width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; }
       .quantity-control input { width: 100%; }
+      .shipment-remove { min-width: var(--ww-touch-target); min-height: var(--ww-touch-target); }
       .design-preview { width: 78px; height: 64px; }
     }
   </style>
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
   <script src="/js/site-header.js" defer></script>
+  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
 <body>
   <%- include('partials/site-header') %>

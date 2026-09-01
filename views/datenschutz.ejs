@@ -2,7 +2,8 @@
 <html lang="<%= locale %>">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Datenschutzerklärung für Wolkenworte.') %>" data-i18n-content-source="Datenschutzerklärung für Wolkenworte." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
@@ -11,7 +12,9 @@
   <title data-i18n-source="Datenschutz – Wolkenworte"><%= t('Datenschutz – Wolkenworte') %></title>
   <link rel="stylesheet" href="/legal.css" />
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
   <script src="/js/site-header.js" defer></script>
+  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
 <body>
   <%- include('partials/site-header') %>

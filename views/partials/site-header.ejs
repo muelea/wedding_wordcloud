@@ -25,10 +25,10 @@
 
     <% if (variant === 'landing') { %>
       <nav id="landing-section-links" class="landing-section-links" aria-label="Seitennavigation">
-        <a href="#erinnerungsstuecke">Erinnerungsstücke</a>
-        <a href="#so-gehts">So geht's</a>
-        <a href="#inspiration">Inspiration</a>
-        <a href="#testimonials">Stimmen</a>
+        <button class="landing-menu-start" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
+        <% for (const link of navLinks) { %>
+          <a href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
+        <% } %>
         <details class="ww-language-picker landing-menu-language" data-i18n-ignore>
           <summary
             id="ww-language-select"

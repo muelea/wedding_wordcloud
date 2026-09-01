@@ -2,7 +2,8 @@
 <html lang="<%= locale %>" data-theme="pastel">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Eure Worte. Eure Erinnerung.') %>" data-i18n-content-source="Eure Worte. Eure Erinnerung." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
@@ -1011,6 +1012,7 @@
     .product-dialog {
       width: min(780px, calc(100% - 32px));
       max-height: min(780px, calc(100vh - 42px));
+      max-height: min(780px, calc(100dvh - 42px));
       padding: 0;
       overflow: hidden;
       border: 1px solid rgba(123, 70, 82, .16);
@@ -1535,7 +1537,13 @@
       .topbar, .page { width: min(100% - 28px, 560px); }
       .topbar { height: 72px; }
       .back-link span:last-child { display: none; }
-      .page { padding: 38px 0 50px; }
+      .page {
+        width: auto;
+        max-width: 560px;
+        margin-left: max(14px, var(--ww-safe-left));
+        margin-right: max(14px, var(--ww-safe-right));
+        padding: 38px 0 max(50px, calc(34px + var(--ww-safe-bottom)));
+      }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
       .workspace-tools { padding: 12px; border-radius: 16px; }
@@ -1563,17 +1571,42 @@
       .surface-copy { width: auto; }
       .editor-toolbar { align-items: flex-start; }
       .editor-tools { flex-wrap: wrap; }
-      .editor-selection { grid-template-columns: 1fr; }
+      .editor-selection {
+        display: block;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 254, 253, .72);
+      }
+      .editor-selection-head { display: block; }
+      .editor-selection-status { display: block; color: var(--ink); font-size: 12px; }
+      .editor-selection-hint { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+      .editor-selection:not(.is-active) .editor-selection-row,
+      .editor-selection:not(.is-active) .editor-actions { display: none; }
+      .editor-selection.is-active .editor-selection-head { margin-bottom: 10px; }
       .editor-actions { justify-content: flex-start; }
-      .editor-button { min-height: 40px; }
-      .editor-icon-button { width: 40px; }
+      .editor-button { min-height: var(--ww-touch-target); }
+      .editor-icon-button { width: var(--ww-touch-target); }
       .editor-motif-menu { width: min(350px, calc(100vw - 70px)); }
       .editor-motif-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
       .editor-selection-row { grid-template-columns: 1fr; }
+      .editor-text-input,
+      .editor-font-toggle { height: var(--ww-touch-target); font-size: 16px; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
       .selected-product { grid-template-columns: 52px minmax(0, 1fr); }
       .selected-product-thumb { width: 52px; height: 52px; }
       .product-change { grid-column: 1 / -1; width: 100%; }
+      .product-change,
+      .surface-tab,
+      .surface-copy,
+      .product-dialog-close,
+      .custom-color-add { min-height: var(--ww-touch-target); }
+      .product-dialog-close { min-width: var(--ww-touch-target); }
+      .custom-color-item { grid-template-columns: var(--ww-touch-target) minmax(0, 1fr) var(--ww-touch-target); }
+      .custom-color-input,
+      .custom-color-remove { width: var(--ww-touch-target); height: var(--ww-touch-target); }
+      .order-edit,
+      .order-remove { min-width: var(--ww-touch-target); min-height: var(--ww-touch-target); }
       .product-dialog { width: min(100% - 20px, 560px); max-height: calc(100vh - 20px); border-radius: 20px; }
       .product-dialog-head,
       .product-dialog-body,
@@ -1584,7 +1617,9 @@
     }
   </style>
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
+  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-1" />
   <script src="/js/site-header.js" defer></script>
+  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
 </head>
 <body>
   <%- include('partials/site-header') %>
@@ -1789,7 +1824,7 @@
     </div>
   </main>
 
-  <dialog class="product-dialog" id="product-dialog" aria-labelledby="product-dialog-title" tabindex="-1">
+  <dialog class="product-dialog ww-mobile-dialog" id="product-dialog" aria-labelledby="product-dialog-title" tabindex="-1">
     <div class="product-dialog-shell">
       <div class="product-dialog-head">
         <div>

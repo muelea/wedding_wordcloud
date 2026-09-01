@@ -149,7 +149,7 @@ test('customer-facing actions stay calm and do not expose staging or provider na
   assert.doesNotMatch(shipping, /Weiter zur Testzahlung|Preis wird noch einmal geprüft|Der Preis ist kurzzeitig reserviert/);
   assert.doesNotMatch(confirmation, /Stripe-Testmodus|Testzahlung erfolgreich|Dies war eine Testzahlung/);
   assert.doesNotMatch(display, /(?:^|[^\w$.])(?:window\.)?(?:confirm|prompt|alert)\s*\(/m);
-  assert.match(display, /<dialog class="reset-dialog" id="reset-dialog"/);
+  assert.match(display, /<dialog class="reset-dialog ww-mobile-dialog" id="reset-dialog"/);
   assert.match(display, /<button class="reset-dialog-button" id="reset-cancel" type="button">Abbrechen<\/button>/);
 
   for (const filename of ['configure.ejs', 'shipping.ejs', 'display.ejs']) {
