@@ -34,10 +34,10 @@ function viewSource(filename) {
   return fs.readFileSync(path.join(VIEW_ROOT, filename), 'utf8');
 }
 
-function renderView(filename, header = {}) {
+function renderView(filename, header = {}, locale = 'de') {
   const fullPath = path.join(VIEW_ROOT, filename);
   return ejs.render(fs.readFileSync(fullPath, 'utf8'), {
-    locale: 'de',
+    locale,
     localeSource: 'default',
     header,
     pageData: {
@@ -190,6 +190,16 @@ test('interface fonts are locally served, pinned and licensed', () => {
     assert.ok(fs.statSync(path.join(publicRoot, 'assets', 'site-fonts', family, 'OFL.txt')).size > 0,
       `${family} must retain its OFL license`);
   }
+
+  const englishLanding = renderView('landing.ejs', { variant: 'landing' }, 'en');
+  const turkishLanding = renderView('landing.ejs', { variant: 'landing' }, 'tr');
+  const basePreload = /<link rel="preload" href="\/assets\/site-fonts\/jost\/jost-latin\.woff2" as="font" type="font\/woff2" crossorigin \/>/;
+  const extendedPreload = /<link rel="preload" href="\/assets\/site-fonts\/jost\/jost-latin-ext\.woff2" as="font" type="font\/woff2" crossorigin \/>/;
+
+  assert.match(englishLanding, basePreload, 'the above-the-fold landing CTA must preload its primary Jost subset');
+  assert.doesNotMatch(englishLanding, extendedPreload, 'non-Turkish pages must not preload an unused extended subset');
+  assert.match(turkishLanding, basePreload);
+  assert.match(turkishLanding, extendedPreload, 'Turkish needs the extended Jost glyph subset before first paint');
 });
 
 test('legal pages describe the hosted product and enforced retention', () => {
