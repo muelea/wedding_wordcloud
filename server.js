@@ -19,6 +19,8 @@ const { makeWebhookRouter } = require('./src/routes/webhook');
 const { makeMaintenanceRouter } = require('./src/routes/maintenance');
 const { makePerformanceRouter } = require('./src/routes/performance');
 const { getBaseUrl } = require('./src/baseUrl');
+const { buildEventUrl, renderEventQrSvg } = require('./src/eventQr');
+const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('./src/eventNames');
 const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
 const emailDelivery = require('./src/emailDelivery');
@@ -116,27 +118,6 @@ app.use(staticCacheMiddleware, express.static(path.join(__dirname, 'public')));
 const wordBroadcasts = createWordUpdateBroadcaster({ io, getWords: db.getWords });
 app.use('/api', makeEventsRouter({ io, port: PORT, wordBroadcasts }));
 
-// Each saved cloud gets an installable manifest whose start URL is that exact
-// display, rather than a generic shortcut to the marketing homepage.
-app.get('/e/:slug/manifest.webmanifest', asyncRoute(async (req, res) => {
-  const event = await db.getEventBySlug(req.params.slug);
-  if (!event) return res.status(404).end();
-  const eventPath = `/e/${encodeURIComponent(event.slug)}`;
-  res.type('application/manifest+json');
-  res.set('Cache-Control', 'private, no-store');
-  return res.json({
-    id: eventPath,
-    name: `${event.couple_name} – Wortwolke`,
-    short_name: 'Wortwolke',
-    start_url: eventPath,
-    scope: eventPath,
-    display: 'standalone',
-    background_color: '#fffdfa',
-    theme_color: '#9c1c4c',
-    icons: [{ src: '/z_icons/icon.svg?v=20260829-1', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
-  });
-}));
-
 app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   const artifactId = String(req.params.artifactId || '');
@@ -161,8 +142,8 @@ app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
 // landing page's CTAs have a real, working flow to link into rather than
 // being a dead-end mockup. See README "Public landing page" for the full
 // routing rationale.
-app.get('/', asyncRoute(async (req, res) => {
-  return renderPage(req, res, 'landing', {
+function landingPageOptions(pageData = {}) {
+  return {
     header: {
       variant: 'landing',
       headerClass: 'site-header',
@@ -175,10 +156,28 @@ app.get('/', asyncRoute(async (req, res) => {
         { href: '#testimonials', label: 'Testimonials' },
       ],
     },
-  });
+    pageData,
+  };
+}
+
+app.get('/', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'landing', landingPageOptions());
 }));
 
-app.post('/start', asyncRoute(async (req, res) => {
+app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncRoute(async (req, res) => {
+  const submittedName = typeof req.body?.cloudName === 'string' ? req.body.cloudName : '';
+  const coupleName = normalizeEventName(submittedName);
+  if (!coupleName || coupleName.length > MAX_EVENT_NAME_LENGTH) {
+    const error = !coupleName
+      ? 'Bitte gebt eurer Wortwolke einen Namen.'
+      : 'Der Name darf höchstens 80 Zeichen lang sein.';
+    return renderPage(req, res, 'landing', {
+      ...landingPageOptions({
+        startDialog: { open: true, name: submittedName.slice(0, MAX_EVENT_NAME_LENGTH), error },
+      }),
+      status: 400,
+    });
+  }
   const sourceHash = sourceHashForRequest(req);
   if (!rateLimits.consume([{
     name: 'event:create', key: sourceHash, ...rateLimits.LIMITS.eventCreate,
@@ -191,7 +190,7 @@ app.post('/start', asyncRoute(async (req, res) => {
   for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
     try {
       event = await db.createDraftEvent({
-        slug: makeUniqueSlug('wortwolke', () => false), locale, ownerHash,
+        slug: makeUniqueSlug('wortwolke', () => false), coupleName, locale, ownerHash,
       });
     } catch (error) {
       if (error?.code !== '23505') throw error;
@@ -220,7 +219,18 @@ app.get('/datenschutz', asyncRoute(async (req, res) => {
 app.get('/e/:slug', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });
-  return renderPage(req, res, 'display', { eventLocale: event.locale });
+  const eventUrl = buildEventUrl(getBaseUrl(req, PORT), event.slug);
+  const qrSvg = await renderEventQrSvg(eventUrl);
+  return renderPage(req, res, 'display', {
+    eventLocale: event.locale,
+    header: { variant: 'display' },
+    pageData: {
+      eventUrl,
+      qrSvg,
+      cloudName: event.couple_name,
+      eventLabel: event.event_label || '',
+    },
+  });
 }));
 
 app.get('/e/:slug/configure', asyncRoute(async (req, res) => {

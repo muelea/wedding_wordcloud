@@ -187,15 +187,15 @@ async function createEvent({ slug, coupleName, pin, locale = 'de' }) {
   });
 }
 
-async function createDraftEvent({ slug, locale = 'de', ownerHash, pin = null }) {
+async function createDraftEvent({ slug, coupleName, locale = 'de', ownerHash, pin = null }) {
   const credentials = pin ? await hashPin(pin) : { hash: null, salt: null };
   return withTransaction(async (client) => {
     await client.query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, transaction_timestamp())', [slug]);
     const result = await client.query(`
       INSERT INTO events (slug, couple_name, admin_pin_hash, admin_pin_salt, locale, is_draft, draft_owner_hash, created_at, expires_at)
-      VALUES ($1, 'Eure Wortwolke', $2, $3, $4, true, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
+      VALUES ($1, $2, $3, $4, $5, true, $6, transaction_timestamp(), transaction_timestamp() + interval '365 days')
       RETURNING *
-    `, [slug, credentials.hash, credentials.salt, locale, ownerHash]);
+    `, [slug, coupleName, credentials.hash, credentials.salt, locale, ownerHash]);
     return rowToBoundary(result.rows[0]);
   });
 }

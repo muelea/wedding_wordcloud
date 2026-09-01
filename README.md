@@ -9,9 +9,9 @@ frozen snapshot of the word cloud.
 
 ## How it works
 
-1. A visitor selects “Hier starten”. The landing page posts to `/start`, which
-   creates an owner-bound setup event and redirects to its sole public URL,
-   `/e/<slug>`.
+1. A visitor selects “Hier starten”, gives the word cloud a recognizable name,
+   and submits the naming dialog to `/start`. This creates an owner-bound setup
+   event and redirects to its sole public URL, `/e/<slug>`.
 2. The event page works on phones and on a big screen. Its creator can add the
    name and optionally a 4–6 digit admin PIN there; there is no separate setup,
    guest or display route.

@@ -23,7 +23,15 @@ test('event creation uses one canonical event URL', async (t) => {
 
   // Starting now creates an owner-bound draft immediately and sends the
   // browser straight to its unified live display.
-  const startResponse = await fetch(`${baseUrl}/start`, { method: 'POST', redirect: 'manual' });
+  const missingNameResponse = await fetch(`${baseUrl}/start`, { method: 'POST', redirect: 'manual' });
+  assert.equal(missingNameResponse.status, 400);
+  assert.match(await missingNameResponse.text(), /id="start-dialog"[\s\S]*?data-open-on-load="true"/);
+
+  const startResponse = await fetch(`${baseUrl}/start`, {
+    method: 'POST',
+    body: new URLSearchParams({ cloudName: '  Sommerfest   2026  ' }),
+    redirect: 'manual',
+  });
   assert.equal(startResponse.status, 303);
   const startLocation = startResponse.headers.get('location') || '';
   const draftLocationMatch = /^\/e\/(wortwolke-[23456789abcdefghjkmnpqrstuvwxyz]{5})$/.exec(startLocation);
@@ -37,9 +45,10 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.equal(draftInfo.isDraft, true);
   assert.equal(draftInfo.isDraftOwner, true);
   assert.equal(draftInfo.hasAdminPin, false);
+  assert.equal(draftInfo.coupleName, 'Sommerfest 2026');
 
   // Creators and contributors use one canonical event page, which contains
-  // contribution, sharing and save controls.
+  // contribution and distinct sharing/copy-link controls.
   const eventPageResponse = await fetch(`${baseUrl}${event.eventUrl}`);
   assert.equal(eventPageResponse.status, 200);
   const displayHtml = await eventPageResponse.text();
@@ -47,17 +56,33 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /id="display-word-entry"/);
   assert.match(displayHtml, /id="display-word-input"/);
   assert.match(displayHtml, /id="display-word-submit"/);
-  assert.match(displayHtml, /id="display-own-words"/);
+  assert.doesNotMatch(displayHtml, /id="display-word-close"/);
+  assert.match(displayHtml, /id="display-page-menu"/);
+  assert.match(displayHtml, /id="display-own-words-button"/);
+  assert.match(displayHtml, /id="display-own-words-dialog"/);
+  assert.match(displayHtml, /id="presentation-mode-button"/);
+  assert.match(displayHtml, /body\.presentation-mode \.display-word-entry/);
+  assert.match(displayHtml, /body\.presentation-mode \.footer-actions/);
+  assert.match(displayHtml, /body\.presentation-mode #memory-cta/);
+  assert.match(displayHtml, /classList\.toggle\('presentation-mode', active\)/);
+  assert.match(displayHtml, /presentationModeButton\.setAttribute\('aria-checked', String\(active\)\)/);
   assert.match(displayHtml, /id="memory-cta" title="Wortwolke verewigen"/);
   assert.match(displayHtml, /id="share-cloud"/);
-  assert.match(displayHtml, /id="save-cloud"/);
+  assert.match(displayHtml, /id="copy-cloud-link"/);
+  assert.match(displayHtml, /id="share-dialog"/);
+  assert.match(displayHtml, /navigator\.share\(data\)/);
+  assert.match(displayHtml, /url:\s*eventUrl/);
+  assert.doesNotMatch(displayHtml, /id="save-cloud"|beforeinstallprompt|appinstalled|serviceWorker\.register/);
   assert.match(displayHtml, /id="draft-settings-button"/);
-  assert.match(displayHtml, /\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
+  assert.match(
+    displayHtml,
+    new RegExp(`id="event-qr"[\\s\\S]*?data-event-url="http://[^"]+/e/${event.slug}"[\\s\\S]*?<svg\\b`)
+  );
+  assert.match(displayHtml, /<svg\b[\s\S]*?<path\b/);
+  assert.doesNotMatch(displayHtml, /id="qr-img"|src=""|\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);
   assert.match(displayHtml, /socket\.on\('word-update', \(words\) =>/);
-  const manifest = await fetch(`${baseUrl}${event.eventUrl}/manifest.webmanifest`).then((response) => response.json());
-  assert.equal(manifest.id, event.eventUrl);
-  assert.equal(manifest.start_url, event.eventUrl);
-  assert.equal(manifest.scope, event.eventUrl);
+  assert.equal((await fetch(`${baseUrl}${event.eventUrl}/manifest.webmanifest`)).status, 404);
+  assert.equal((await fetch(`${baseUrl}/sw.js`)).status, 404);
   const removedDisplayRoute = await fetch(`${baseUrl}${event.eventUrl}/display`);
   assert.equal(removedDisplayRoute.status, 404);
   assert.equal((await fetch(`${baseUrl}/start`)).status, 404);

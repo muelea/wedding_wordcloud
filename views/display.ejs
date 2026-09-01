@@ -2,10 +2,8 @@
 <html lang="<%= locale %>" data-theme="pastel">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" id="event-manifest" />
-  <meta name="theme-color" content="#9c1c4c" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" id="theme-color" content="#fffdfa" />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
@@ -14,7 +12,7 @@
   <script src="/js/i18n.js?v=20260829-3"></script>
   <script src="/js/action-state.js?v=20260829-1"></script>
   <script src="/js/site-header.js" defer></script>
-  <title data-i18n-source="Wortwolke – Anzeige"><%= t('Wortwolke – Anzeige') %></title>
+  <title data-i18n-ignore><%= t('{{name}} – Wortwolke', { name: pageData.cloudName }) %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -31,7 +29,8 @@
       --rad2:    rgba(209,96,126,0.08);
       --orn:     rgba(193,146,47,0.55);
       --qr-bd:   rgba(193,146,47,0.35);
-      --site-header-height: 85px;
+      --site-header-height: calc(85px + env(safe-area-inset-top, 0px));
+      --footer-height: 100px;
     }
 
     /* ── Neon theme ── */
@@ -62,6 +61,10 @@
       transition: background 0.6s, color 0.6s;
     }
 
+    @supports (height: 100dvh) {
+      html, body { height: 100dvh; }
+    }
+
     body::before {
       content: '';
       position: fixed;
@@ -79,6 +82,7 @@
       top: 0;
       left: 0;
       right: 0;
+      padding-top: env(safe-area-inset-top, 0px);
     }
 
     .cloud-status {
@@ -97,7 +101,8 @@
     #cloud-container {
       position: fixed;
       top: var(--site-header-height);
-      left: 0; right: 0; bottom: 180px;
+      left: 0; right: 0;
+      bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 80px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -106,7 +111,7 @@
     .display-word-entry {
       position: fixed;
       z-index: 12;
-      bottom: 116px;
+      bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 16px);
       left: 50%;
       display: flex;
       width: min(560px, calc(100% - 32px));
@@ -118,15 +123,91 @@
       background: color-mix(in srgb, var(--bg) 94%, transparent);
       box-shadow: 0 10px 28px rgba(64,15,38,.1);
     }
-    .display-word-entry[hidden] { display: none !important; }
     #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', system-ui, sans-serif; }
     #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', system-ui, sans-serif; cursor: pointer; }
-    #display-word-close { width: 34px; border: 0; background: transparent; color: var(--muted); font: 300 25px/1 system-ui, sans-serif; cursor: pointer; }
-    .display-own-words { position: fixed; z-index: 11; bottom: 176px; left: 50%; display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; width: min(560px, calc(100% - 32px)); transform: translateX(-50%); }
-    .display-own-words[hidden] { display: none !important; }
-    .display-own-word { display: inline-flex; align-items: center; gap: 5px; min-height: 29px; padding: 3px 5px 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--bg) 94%, transparent); color: var(--text); font-size: 13px; box-shadow: 0 4px 14px rgba(64,15,38,.06); }
-    .display-own-remove { width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 19px/1 system-ui, sans-serif; cursor: pointer; }
-    .display-own-remove:hover { color: var(--primary); background: rgba(164,14,76,.1); }
+    .ww-display-menu { position: relative; z-index: 10000; flex: 0 0 auto; margin-left: auto; }
+    .ww-display-menu summary { list-style: none; }
+    .ww-display-menu summary::-webkit-details-marker { display: none; }
+    .ww-display-menu-trigger {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid color-mix(in srgb, var(--text) 13%, transparent);
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--bg) 94%, transparent);
+      color: var(--text);
+      box-shadow: 0 5px 18px rgba(64,15,38,.08);
+      cursor: pointer;
+    }
+    .ww-display-menu-trigger:hover, .ww-display-menu-trigger:focus-visible, .ww-display-menu[open] .ww-display-menu-trigger { border-color: color-mix(in srgb, var(--primary) 45%, transparent); color: var(--primary); }
+    .ww-display-menu-trigger:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 3px; }
+    .ww-display-menu-icon { display: flex; width: 18px; flex-direction: column; align-items: center; gap: 4px; }
+    .ww-display-menu-icon i { display: block; width: 18px; min-width: 18px; max-width: 18px; height: 2px; flex: 0 0 2px; border-radius: 999px; background: currentColor; transition: transform .18s ease, opacity .18s ease; }
+    .ww-display-menu[open] .ww-display-menu-icon i:first-child { transform: translateY(6px) rotate(45deg); }
+    .ww-display-menu[open] .ww-display-menu-icon i:nth-child(2) { opacity: 0; }
+    .ww-display-menu[open] .ww-display-menu-icon i:last-child { transform: translateY(-6px) rotate(-45deg); }
+    .ww-display-menu-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: min(330px, calc(100vw - 32px));
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--bg) 97%, transparent);
+      color: var(--text);
+      box-shadow: 0 22px 60px rgba(64,15,38,.18);
+      backdrop-filter: blur(18px) saturate(1.25);
+      -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    }
+    .ww-display-menu-language-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 4px; }
+    .ww-display-menu-label { padding: 0 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
+    .ww-display-menu-language { position: relative; width: auto; flex: 0 0 auto; color: var(--text); }
+    .ww-display-menu .ww-language-option { min-width: 0; color: var(--text); }
+    .ww-display-menu .ww-language-option:hover, .ww-display-menu .ww-language-option:focus-visible { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+    .ww-display-menu .ww-language-option.is-selected { background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); }
+    .ww-display-menu-actions { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .ww-display-menu-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      min-height: 44px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--text);
+      font: 600 14px 'Jost', system-ui, sans-serif;
+      text-align: left;
+      cursor: pointer;
+    }
+    .ww-display-menu-action:hover, .ww-display-menu-action:focus-visible { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
+    .ww-display-menu-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; }
+    .ww-display-menu-action[hidden] { display: none !important; }
+    .ww-display-menu-count { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); font-size: 12px; }
+    .ww-display-menu-switch { position: relative; width: 38px; height: 22px; flex: 0 0 38px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 24%, transparent); transition: background .18s ease; }
+    .ww-display-menu-switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); box-shadow: 0 1px 4px rgba(64,15,38,.2); transition: transform .18s ease; }
+    #presentation-mode-button[aria-checked="true"] .ww-display-menu-switch { background: var(--primary); }
+    #presentation-mode-button[aria-checked="true"] .ww-display-menu-switch i { transform: translateX(16px); }
+    .own-words-dialog { width: min(480px, calc(100% - 32px)); }
+    .own-words-intro { margin: 0; }
+    .own-words-list { display: grid; gap: 8px; max-height: min(50vh, 390px); overflow: auto; }
+    .own-word-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 5px 6px 5px 13px; border: 1px solid var(--border); border-radius: 12px; }
+    .own-word-copy { display: inline-flex; align-items: baseline; gap: 7px; min-width: 0; }
+    .own-word-label { overflow-wrap: anywhere; }
+    .own-word-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .own-word-remove { flex: 0 0 auto; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
+    .own-word-remove:hover, .own-word-remove:focus-visible { background: rgba(164,14,76,.1); color: var(--primary); }
+    .own-word-remove:disabled { cursor: wait; opacity: .45; }
+    .own-words-empty, .own-words-error { color: var(--muted); font-size: 13px; }
+    .own-words-error { color: var(--primary); }
+    body.presentation-mode .display-word-entry,
+    body.presentation-mode .footer-actions,
+    body.presentation-mode #memory-cta { display: none !important; }
+    body.presentation-mode #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px)); }
     .palette-options { display: grid; gap: 9px; }
     .palette-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
     .palette-swatches { display: flex; overflow: hidden; border-radius: 999px; }
@@ -188,18 +269,23 @@
     .footer {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      height: 100px;
+      min-height: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px));
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 40px;
+      gap: 28px;
+      padding: 0 max(40px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(40px, env(safe-area-inset-left, 0px));
       border-top: 1px solid var(--border);
-      transition: border-color 0.6s;
+      background: color-mix(in srgb, var(--bg) 94%, transparent);
+      backdrop-filter: blur(18px) saturate(1.2);
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      transition: border-color 0.6s, background 0.6s;
+      z-index: 11;
     }
 
     .footer-event-name {
       min-width: 0;
-      max-width: 30vw;
+      max-width: min(34vw, 520px);
       overflow: hidden;
       color: var(--primary);
       font-family: 'Playfair Display', Georgia, serif;
@@ -211,10 +297,29 @@
       transition: color 0.6s;
     }
 
-    .qr-wrap { display: flex; align-items: center; gap: 14px; }
-    .share-save-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
-    .share-save-actions button { padding: 0; border: 0; background: transparent; color: var(--muted); font: 600 11px/1 'Jost', system-ui, sans-serif; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
-    .share-save-actions button:hover, .share-save-actions button:focus-visible { color: var(--primary); }
+    .footer-tools { display: flex; align-items: center; gap: 28px; }
+    .footer-actions { display: flex; align-items: center; gap: 9px; }
+    .footer-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 15px;
+      border: 1px solid color-mix(in srgb, var(--text) 13%, transparent);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bg) 94%, transparent);
+      color: var(--text);
+      font: 600 12px/1 'Jost', system-ui, sans-serif;
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+    }
+    .footer-action svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .footer-action:hover, .footer-action:focus-visible { border-color: color-mix(in srgb, var(--primary) 42%, transparent); background: color-mix(in srgb, var(--primary) 7%, var(--bg)); color: var(--primary); }
+    .footer-action:hover { transform: translateY(-1px); }
+    .footer-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 2px; }
+
+    .desktop-qr { display: flex; align-items: center; gap: 13px; }
 
     .qr-label { text-align: right; }
     .qr-label .line1 {
@@ -224,44 +329,18 @@
       color: var(--muted);
       transition: color 0.6s;
     }
-    .qr-label .line2 {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 14px;
-      color: var(--primary);
-      margin-top: 2px;
-      transition: color 0.6s;
-    }
+    .qr-label .line2 { margin-top: 3px; color: var(--text); font-size: 12px; font-weight: 600; transition: color .6s; }
 
     .qr-code {
       width: 84px; height: 84px;
       border-radius: 10px;
       border: 2px solid var(--qr-bd);
       padding: 3px;
+      overflow: hidden;
       background: var(--bg);
       transition: border-color 0.6s, background 0.6s;
     }
-
-    .footer-actions {
-      display: flex;
-      align-items: center;
-      gap: 22px;
-    }
-    .footer-actions button {
-      padding: 0;
-      border: 0;
-      background: transparent;
-      font-family: inherit;
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.6s;
-      cursor: pointer;
-      user-select: none;
-    }
-    .footer-actions button:hover,
-    .footer-actions button:focus-visible { opacity: 1; }
+    .qr-code svg { display: block; width: 100%; height: 100%; }
 
     /* ── Memory configurator CTA ── */
     #memory-cta {
@@ -286,7 +365,7 @@
     /* ── Toast ── */
     .toast-container {
       position: fixed;
-      bottom: 90px;
+      bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 18px);
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -356,8 +435,8 @@
     }
     .reset-dialog-button.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
     .reset-dialog-button:disabled { cursor: wait; opacity: .58; }
-    .draft-settings { width: min(420px, calc(100% - 32px)); border: 0; border-radius: 20px; padding: 0; color: var(--text); background: var(--bg); box-shadow: 0 24px 70px rgba(64,15,38,.22); }
-    .draft-settings::backdrop { background: rgba(64,15,38,.3); }
+    .draft-settings { width: min(420px, calc(100% - 32px)); margin: auto; border: 0; border-radius: 20px; padding: 0; color: var(--text); background: var(--bg); box-shadow: 0 24px 70px rgba(64,15,38,.22); }
+    .draft-settings::backdrop { background: rgba(64,15,38,.3); backdrop-filter: blur(4px); }
     .draft-settings form { padding: 25px; display: grid; gap: 12px; }
     .draft-settings h2 { font: 500 25px 'Playfair Display', Georgia, serif; color: var(--primary); }
     .draft-settings p { color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -367,22 +446,62 @@
     .dialog-heading h2 { margin: 0; }
     .dialog-close { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 26px/1 system-ui, sans-serif; cursor: pointer; }
     .dialog-close:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
+    .share-dialog { width: min(500px, calc(100% - 32px)); }
+    .share-dialog-copy { margin-top: -4px; }
+    .share-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .share-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 50px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: transparent;
+      color: var(--text);
+      font: 600 14px 'Jost', system-ui, sans-serif;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .share-option svg { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .share-option:hover, .share-option:focus-visible { border-color: color-mix(in srgb, var(--primary) 45%, transparent); background: color-mix(in srgb, var(--primary) 7%, transparent); color: var(--primary); }
+    #share-dialog-copy-link { grid-column: 1 / -1; }
+    .share-dialog-qr { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 3px; padding: 14px; border-radius: 14px; background: color-mix(in srgb, var(--primary) 5%, transparent); }
+    .share-dialog-qr-copy strong { display: block; margin-bottom: 3px; font: 500 16px 'Playfair Display', Georgia, serif; }
+    .share-dialog-qr-copy span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .share-dialog .qr-code { width: 88px; height: 88px; flex: 0 0 auto; }
+    .share-feedback { min-height: 18px; margin: -4px 0 0; color: var(--primary); font-size: 12px; }
 
     @media (max-width: 620px) {
       :root {
-        --site-header-height: 73px;
+        --site-header-height: calc(73px + env(safe-area-inset-top, 0px));
+        --footer-height: 122px;
       }
 
       .cloud-status { top: calc(var(--site-header-height) + 18px); right: 16px; gap: 10px; }
       .word-counter .label { letter-spacing: 1.5px; }
       #memory-cta { padding: 10px 15px; font-size: 12px; }
-      #cloud-container { bottom: 90px; }
-      .footer { height: 90px; padding: 0 16px; }
-      .footer-event-name { max-width: 36vw; font-size: 18px; }
-      .footer-actions { display: none; }
-      .qr-label .line2 { display: none; }
-      .qr-code { width: 72px; height: 72px; }
-      .share-save-actions { gap: 8px; }
+      #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 68px); }
+      .display-word-entry { min-height: 48px; bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); }
+      #display-word-input { padding: 0 10px; }
+      #display-word-submit { padding: 0 13px; }
+      body.presentation-mode #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px)); }
+      .footer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-content: center;
+        gap: 10px;
+        padding: 11px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+      }
+      .footer-event-name { width: 100%; max-width: 100%; font-size: 18px; text-align: center; }
+      .footer-tools { width: 100%; }
+      .footer-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 10px; }
+      .footer-action { width: 100%; min-height: 48px; font-size: 13px; }
+      .desktop-qr { display: none; }
+      body.presentation-mode { --footer-height: 58px; }
+      body.presentation-mode .footer-tools { display: none; }
+      .share-options { grid-template-columns: 1fr; }
+      .share-dialog-qr { padding: 12px; }
     }
   </style>
 </head>
@@ -408,29 +527,76 @@
 <form class="display-word-entry" id="display-word-entry">
   <input id="display-word-input" maxlength="30" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
   <button id="display-word-submit" type="submit">Hinzufügen</button>
-  <button id="display-word-close" type="button" aria-label="Eingabe schließen" onclick="this.closest('form').hidden = true">×</button>
 </form>
-<section class="display-own-words" id="display-own-words" aria-label="Deine eingegebenen Wörter" hidden></section>
 
 <footer class="footer">
-  <span class="footer-event-name" id="couple-name" data-i18n-ignore>♡</span>
-  <div class="footer-actions">
-    <button id="draft-settings-button" type="button" hidden>Einstellungen</button>
-  </div>
-  <div class="qr-wrap">
-    <div class="share-save-actions">
-      <button id="share-cloud" type="button">Teilen</button>
-      <button id="save-cloud" type="button">Speichern</button>
+  <span class="footer-event-name" id="couple-name" data-i18n-ignore><%= pageData.cloudName %></span>
+  <div class="footer-tools">
+    <div class="footer-actions" aria-label="Wortwolke teilen" data-i18n-aria-label-source="Wortwolke teilen">
+      <button class="footer-action" id="share-cloud" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
+        <span>Teilen</span>
+      </button>
+      <button class="footer-action" id="copy-cloud-link" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 14.5 14.5 9"/><path d="m7.2 17.8-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0" transform="translate(3)"/><path d="m16.8 6.2 1-1a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0" transform="translate(-3)"/></svg>
+        <span>Link kopieren</span>
+      </button>
     </div>
-    <div class="qr-label">
-      <div class="line1">Scannen &amp; mitmachen</div>
-      <div class="line2" id="qr-url"></div>
+    <div class="desktop-qr">
+      <div class="qr-label">
+        <div class="line1">Auf dem Handy mitmachen</div>
+        <div class="line2">QR-Code scannen</div>
+      </div>
+      <div
+        class="qr-code"
+        id="event-qr"
+        role="img"
+        aria-label="<%= t('QR-Code') %>"
+        data-i18n-aria-label-source="QR-Code"
+        data-event-url="<%= pageData.eventUrl %>"
+        data-event-label="<%= pageData.eventLabel %>"
+      ><%- pageData.qrSvg %></div>
     </div>
-    <img class="qr-code" id="qr-img" src="" alt="QR-Code" />
   </div>
 </footer>
 
 <div class="toast-container" id="toast-container"></div>
+
+<dialog class="draft-settings own-words-dialog" id="display-own-words-dialog" aria-labelledby="display-own-words-title">
+  <form method="dialog">
+    <div class="dialog-heading"><h2 id="display-own-words-title">Deine Wörter</h2><button class="dialog-close" type="submit" aria-label="Dialog schließen">×</button></div>
+    <p class="own-words-intro">Hier kannst du deine eigenen Eingaben verwalten. Mit jedem Entfernen wird ein Beitrag gelöscht.</p>
+    <div class="own-words-list" id="display-own-words-list"></div>
+    <p class="own-words-empty" id="display-own-words-empty" hidden>Du hast noch keine Wörter hinzugefügt.</p>
+    <p class="own-words-error" id="display-own-words-error" role="alert" aria-live="polite"></p>
+  </form>
+</dialog>
+
+<dialog class="draft-settings share-dialog" id="share-dialog" aria-labelledby="share-dialog-title">
+  <form method="dialog">
+    <div class="dialog-heading"><h2 id="share-dialog-title">Wortwolke teilen</h2><button class="dialog-close" type="submit" aria-label="Teilen-Dialog schließen" data-i18n-aria-label-source="Teilen-Dialog schließen">×</button></div>
+    <p class="share-dialog-copy">Ladet eure Gäste ein, ein Wort beizutragen und die Wortwolke live wachsen zu sehen.</p>
+    <div class="share-options">
+      <a class="share-option" id="share-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.7a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.3-4.7a8.5 8.5 0 1 1 16.2-4.1Z"/><path d="M8.1 7.8c.3 3.8 2.4 5.9 6.2 6.2l1.1-1.5 2.1 1c-.2 1.4-1 2.2-2.4 2.4-4.9-.4-8.6-4.1-9-9 .2-1.4 1-2.2 2.4-2.4l1 2.1-1.4 1.2Z"/></svg>
+        <span>Per WhatsApp teilen</span>
+      </a>
+      <a class="share-option" id="share-email" href="#">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+        <span>Per E-Mail teilen</span>
+      </a>
+      <button class="share-option" id="share-dialog-copy-link" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 14.5 14.5 9"/><path d="m7.2 17.8-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0" transform="translate(3)"/><path d="m16.8 6.2 1-1a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0" transform="translate(-3)"/></svg>
+        <span>Link kopieren</span>
+      </button>
+    </div>
+    <p class="share-feedback" id="share-feedback" role="status" aria-live="polite"></p>
+    <div class="share-dialog-qr">
+      <div class="share-dialog-qr-copy"><strong>QR-Code zeigen</strong><span>Gäste können ihn direkt mit ihrer Kamera scannen.</span></div>
+      <div class="qr-code" role="img" aria-label="<%= t('QR-Code') %>" data-i18n-aria-label-source="QR-Code"><%- pageData.qrSvg %></div>
+    </div>
+  </form>
+</dialog>
 
 <dialog class="reset-dialog" id="reset-dialog" aria-labelledby="reset-dialog-title">
   <form class="reset-dialog-card" id="reset-form">
@@ -447,15 +613,6 @@
   </form>
 </dialog>
 
-<dialog class="draft-settings" id="save-cloud-dialog" aria-labelledby="save-cloud-title">
-  <form method="dialog">
-    <div class="dialog-heading"><h2 id="save-cloud-title">Wortwolke speichern</h2><button class="dialog-close" type="submit" aria-label="Hinweis schließen">×</button></div>
-    <p>Ihr könnt diese Wortwolke als App auf eurem Gerät ablegen und später direkt wieder öffnen.</p>
-    <p><strong>iPhone / iPad:</strong> Im Teilen-Menü auf „Zum Home-Bildschirm“ tippen.</p>
-    <p><strong>Computer oder Android:</strong> Im Browser-Menü „Installieren“ oder „App installieren“ wählen.</p>
-  </form>
-</dialog>
-
 <dialog class="draft-settings" id="draft-settings" aria-labelledby="draft-settings-title">
   <form id="draft-settings-form">
     <div class="dialog-heading"><h2 id="draft-settings-title">Einstellungen</h2><button class="dialog-close" type="button" aria-label="Einstellungen schließen" onclick="this.closest('dialog').close()">×</button></div>
@@ -468,7 +625,6 @@
     </label>
     <div><h2 style="font-size:20px">Farbwelt</h2><div class="palette-options" id="palette-options"></div></div>
     <details class="word-manager" id="word-manager"><summary>Wörter verwalten</summary><div class="word-manager-list" id="word-manager-list"></div><p class="word-manager-empty" id="word-manager-empty" hidden>Noch keine Wörter vorhanden.</p></details>
-    <button class="reset-dialog-button" id="show-word-entry" type="button">Eingabefeld anzeigen</button>
     <p class="reset-dialog-error" id="draft-settings-error" role="alert" aria-live="polite"></p>
     <button class="reset-dialog-button primary" type="submit">Speichern</button>
   </form>
@@ -507,10 +663,10 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/wordcloud-core.js?v=20260819-2"></script>
+<script src="/js/own-word-groups.js?v=20260831-1"></script>
 <script>
   // Slug comes from the canonical event URL: /e/<slug>
   const slug = location.pathname.split('/').filter(Boolean)[1];
-  document.getElementById('event-manifest').href = `/e/${encodeURIComponent(slug)}/manifest.webmanifest`;
 
   const canvas         = document.getElementById('cloud-canvas');
   const ctx             = canvas.getContext('2d');
@@ -526,20 +682,33 @@
   const resetSubmit     = document.getElementById('reset-submit');
   const displayWordEntry = document.getElementById('display-word-entry');
   const displayWordInput = document.getElementById('display-word-input');
-  const displayOwnWords = document.getElementById('display-own-words');
+  const displayPageMenu = document.getElementById('display-page-menu');
+  const displayMenuTrigger = document.getElementById('display-menu-trigger');
+  const displayOwnWordsButton = document.getElementById('display-own-words-button');
+  const displayOwnWordsCount = document.getElementById('display-own-words-count');
+  const displayOwnWordsDialog = document.getElementById('display-own-words-dialog');
+  const displayOwnWordsList = document.getElementById('display-own-words-list');
+  const displayOwnWordsEmpty = document.getElementById('display-own-words-empty');
+  const displayOwnWordsError = document.getElementById('display-own-words-error');
+  const presentationModeButton = document.getElementById('presentation-mode-button');
   const draftSettings = document.getElementById('draft-settings');
   const draftSettingsButton = document.getElementById('draft-settings-button');
+  const shareButton = document.getElementById('share-cloud');
+  const copyLinkButton = document.getElementById('copy-cloud-link');
+  const shareDialog = document.getElementById('share-dialog');
+  const shareDialogCopyButton = document.getElementById('share-dialog-copy-link');
+  const shareFeedback = document.getElementById('share-feedback');
+  const themeColorMeta = document.getElementById('theme-color');
   let eventHasAdminPin = false;
   let eventIsDraft = false;
   let unlockedAdminPin = '';
   let pendingAdminPin = '';
-  let eventUrl = '';
-  let cloudName = '';
-  let cloudEventLabel = '';
-  let deferredInstallPrompt = null;
-  const ownDisplayWords = new Map();
+  const eventUrl = document.getElementById('event-qr').dataset.eventUrl;
+  let cloudName = document.getElementById('couple-name').textContent.trim();
+  const ownContributions = new Map();
   const t = (source, params) => WolkenworteI18n.t(source, params);
   const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
+  const setI18nAttribute = (element, name, source, params) => WolkenworteI18n.setAttribute(element, name, source, params);
   const clearText = (element) => WolkenworteI18n.clearText(element);
 
   let currentWords = [];
@@ -559,6 +728,7 @@
   function applyTheme(t) {
     currentTheme = t;
     document.documentElement.dataset.theme = t;
+    themeColorMeta.content = t === 'neon' ? '#000000' : '#fffdfa';
     if (currentWords.length > 0) scheduleRender(currentWords);
   }
   function applyPalette(key) {
@@ -569,6 +739,7 @@
     root.setProperty('--accent', palette.colors[4]);
     root.setProperty('--bg', palette.background[0]); root.setProperty('--bg2', palette.background[1]);
     root.setProperty('--rad1', palette.background[2]); root.setProperty('--rad2', palette.background[3]);
+    if (currentTheme !== 'neon') themeColorMeta.content = palette.background[0];
     if (currentWords.length) scheduleRender(currentWords);
   }
 
@@ -614,12 +785,52 @@
     setTimeout(() => toast.remove(), 2400);
   }
 
+  function closeDisplayMenu({ focus = false } = {}) {
+    if (!displayPageMenu.open) return;
+    displayPageMenu.open = false;
+    if (focus) displayMenuTrigger.focus();
+  }
+
+  function setPresentationMode(enabled) {
+    const active = enabled === true;
+    document.body.classList.toggle('presentation-mode', active);
+    presentationModeButton.setAttribute('aria-checked', String(active));
+    if (active && document.activeElement === displayWordInput) displayWordInput.blur();
+    closeDisplayMenu();
+    if (currentWords.length) scheduleRender(currentWords);
+  }
+
+  displayPageMenu.addEventListener('toggle', () => {
+    setI18nAttribute(
+      displayMenuTrigger,
+      'aria-label',
+      displayPageMenu.open ? 'Menü schließen' : 'Menü öffnen'
+    );
+  });
+  displayPageMenu.querySelectorAll('[data-language-code]').forEach((option) => {
+    option.addEventListener('click', () => closeDisplayMenu());
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (displayPageMenu.open && !displayPageMenu.contains(event.target)) closeDisplayMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+    if (displayPageMenu.open) {
+      closeDisplayMenu({ focus: true });
+    } else if (document.body.classList.contains('presentation-mode')) {
+      setPresentationMode(false);
+      displayMenuTrigger.focus();
+    }
+  });
+  presentationModeButton.addEventListener('click', () => {
+    setPresentationMode(!document.body.classList.contains('presentation-mode'));
+  });
+
   // ── Config & QR ──────────────────────────────────────────────────────────
   fetch(`/api/events/${encodeURIComponent(slug)}`).then(r => r.json()).then(async ({ coupleName, eventLabel, theme, locale, isDraft, isDraftOwner, hasAdminPin }) => {
     await WolkenworteI18n.useEventLocale(locale);
     document.getElementById('couple-name').textContent = coupleName;
     cloudName = coupleName || '';
-    cloudEventLabel = eventLabel || '';
     setText(document.querySelector('title'), '{{name}} – Wortwolke', { name: coupleName });
     if (!urlTheme && (theme === 'neon' || theme === 'pastel')) applyTheme(theme);
     draftSettingsButton.hidden = false;
@@ -627,56 +838,80 @@
     eventIsDraft = isDraft === true;
     document.getElementById('draft-name').value = coupleName || '';
     document.getElementById('draft-event-label').value = eventLabel || '';
-    if (isDraftOwner) displayWordInput.focus();
+    if (isDraftOwner && !document.body.classList.contains('presentation-mode')) displayWordInput.focus();
   }).catch(() => {});
 
-  fetch(`/api/events/${encodeURIComponent(slug)}/qr`).then(r => r.json()).then(({ dataUrl, url }) => {
-    document.getElementById('qr-img').src = dataUrl;
-    document.getElementById('qr-url').textContent = url.replace('http://', '').replace('https://', '');
-    eventUrl = url;
-  }).catch(() => {});
+  function eventShareData() {
+    const name = cloudName || t('Eure Wortwolke');
+    return {
+      title: t('{{name}} – Wolkenworte', { name }),
+      text: t('Ihr seid eingeladen, die Wortwolke „{{name}}“ mitzugestalten. Fügt ein Wort hinzu und erlebt live, wie sie gemeinsam wächst.', { name }),
+      url: eventUrl || `${location.origin}/e/${encodeURIComponent(slug)}`,
+    };
+  }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-  });
-  window.addEventListener('appinstalled', () => {
-    deferredInstallPrompt = null;
-    document.getElementById('save-cloud').textContent = 'Gespeichert ✓';
-  });
-  document.getElementById('share-cloud').addEventListener('click', async () => {
-    const url = eventUrl || `${location.origin}/e/${encodeURIComponent(slug)}`;
-    const eventSuffix = cloudEventLabel ? ` zum ${cloudEventLabel}` : '';
-    const message = `Hallo,\n\ndu bist herzlich eingeladen, dich an der Wortwolke für ${cloudName || 'uns'}${eventSuffix} zu beteiligen.\n\nWort eingeben & Wortwolke ansehen: ${url}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `Wortwolke für ${cloudName || 'uns'}`, text: message });
-        return;
-      }
-      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(message);
-      else {
-        const temporaryInput = document.createElement('textarea');
-        temporaryInput.value = message; temporaryInput.setAttribute('readonly', '');
-        temporaryInput.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
-        document.body.appendChild(temporaryInput); temporaryInput.select();
-        const copied = document.execCommand('copy'); temporaryInput.remove();
-        if (!copied) throw new Error('copy_failed');
-      }
-      document.getElementById('share-cloud').textContent = 'Link kopiert ✓';
-      setTimeout(() => { document.getElementById('share-cloud').textContent = 'Teilen'; }, 1800);
-    } catch (error) {
-      if (error?.name !== 'AbortError') document.getElementById('share-cloud').textContent = 'Link kopieren';
-    }
-  });
-  document.getElementById('save-cloud').addEventListener('click', async () => {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
+  function prepareShareDialog() {
+    const data = eventShareData();
+    const messageWithUrl = `${data.text}\n\n${data.url}`;
+    document.getElementById('share-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(messageWithUrl)}`;
+    document.getElementById('share-email').href = `mailto:?subject=${encodeURIComponent(data.title)}&body=${encodeURIComponent(messageWithUrl)}`;
+    clearText(shareFeedback);
+    if (!shareDialog.open) shareDialog.showModal();
+  }
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
       return;
     }
-    document.getElementById('save-cloud-dialog').showModal();
+    const temporaryInput = document.createElement('textarea');
+    temporaryInput.value = text;
+    temporaryInput.readOnly = true;
+    temporaryInput.style.cssText = 'position:fixed;inset:0 auto auto -9999px;opacity:0';
+    document.body.appendChild(temporaryInput);
+    temporaryInput.select();
+    const copied = document.execCommand('copy');
+    temporaryInput.remove();
+    if (!copied) throw new Error('copy_failed');
+  }
+
+  let copyFeedbackTimer = null;
+  async function copyEventLink() {
+    try {
+      await copyText(eventShareData().url);
+      setText(copyLinkButton.querySelector('span'), 'Link kopiert ✓');
+      setText(shareDialogCopyButton.querySelector('span'), 'Link kopiert ✓');
+      setText(shareFeedback, 'Link kopiert ✓');
+      clearTimeout(copyFeedbackTimer);
+      copyFeedbackTimer = setTimeout(() => {
+        setText(copyLinkButton.querySelector('span'), 'Link kopieren');
+        setText(shareDialogCopyButton.querySelector('span'), 'Link kopieren');
+        clearText(shareFeedback);
+      }, 1800);
+    } catch {
+      prepareShareDialog();
+      setText(shareFeedback, 'Der Link konnte nicht automatisch kopiert werden.');
+    }
+  }
+
+  shareButton.addEventListener('click', async () => {
+    const data = eventShareData();
+    const canShare = typeof navigator.share === 'function' &&
+      (typeof navigator.canShare !== 'function' || navigator.canShare(data));
+    if (!canShare) {
+      prepareShareDialog();
+      return;
+    }
+    try {
+      await navigator.share(data);
+    } catch (error) {
+      if (error?.name !== 'AbortError') prepareShareDialog();
+    }
+  });
+  copyLinkButton.addEventListener('click', copyEventLink);
+  shareDialogCopyButton.addEventListener('click', copyEventLink);
+  shareDialog.addEventListener('click', (event) => {
+    if (event.target === shareDialog) shareDialog.close();
   });
 
   applyTheme(currentTheme);
@@ -709,32 +944,75 @@
     socket.emit('submit-word', word);
     displayWordInput.value = '';
   });
-  document.getElementById('display-word-close').addEventListener('click', () => { displayWordEntry.hidden = true; });
-  function addOwnDisplayWord(word, receipt) {
-    if (!word || !receipt || ownDisplayWords.has(receipt)) return;
-    const tag = document.createElement('span'); tag.className = 'display-own-word';
-    const label = document.createElement('span'); label.textContent = word;
-    const remove = document.createElement('button'); remove.className = 'display-own-remove'; remove.type = 'button'; remove.textContent = '×';
-    remove.setAttribute('aria-label', `„${word}“ entfernen`);
-    remove.addEventListener('click', () => {
-      remove.disabled = true;
-      socket.emit('remove-word', { receipt }, (result) => {
-        if (result?.ok || result?.error === 'not_found') {
-          ownDisplayWords.delete(receipt); tag.remove();
-          displayOwnWords.hidden = ownDisplayWords.size === 0;
-        } else remove.disabled = false;
-      });
+
+  function groupedOwnContributions() {
+    return WolkenworteOwnWords.groupContributions(
+      [...ownContributions],
+      document.documentElement.lang || 'de'
+    );
+  }
+
+  function removeOwnContribution(receipt, removeButton) {
+    clearText(displayOwnWordsError);
+    removeButton.disabled = true;
+    socket.emit('remove-word', { receipt }, (result) => {
+      if (result?.ok || result?.error === 'not_found') {
+        ownContributions.delete(receipt);
+        renderOwnContributions();
+      } else {
+        removeButton.disabled = false;
+        setText(displayOwnWordsError, 'Das Wort konnte nicht entfernt werden. Bitte versucht es erneut.');
+      }
     });
-    tag.append(label, remove); displayOwnWords.appendChild(tag);
-    ownDisplayWords.set(receipt, tag); displayOwnWords.hidden = false;
   }
-  function renderOwnDisplayWords(contributions) {
-    ownDisplayWords.clear(); displayOwnWords.replaceChildren();
-    for (const contribution of Array.isArray(contributions) ? contributions : []) addOwnDisplayWord(contribution?.word, contribution?.receipt);
-    displayOwnWords.hidden = ownDisplayWords.size === 0;
+
+  function renderOwnContributions() {
+    const total = ownContributions.size;
+    displayOwnWordsButton.hidden = total === 0;
+    displayOwnWordsCount.textContent = WolkenworteI18n.formatNumber(total);
+    setI18nAttribute(displayOwnWordsButton, 'aria-label', 'Deine Wörter verwalten ({{count}})', { count: total });
+    displayOwnWordsList.replaceChildren();
+    const groups = groupedOwnContributions();
+    displayOwnWordsEmpty.hidden = groups.length > 0;
+    for (const [word, receipts] of groups) {
+      const item = document.createElement('div'); item.className = 'own-word-item';
+      const copy = document.createElement('span'); copy.className = 'own-word-copy';
+      const label = document.createElement('span'); label.className = 'own-word-label'; label.textContent = word;
+      const count = document.createElement('span'); count.className = 'own-word-count';
+      count.textContent = receipts.length > 1 ? `× ${WolkenworteI18n.formatNumber(receipts.length)}` : '';
+      const remove = document.createElement('button'); remove.className = 'own-word-remove'; remove.type = 'button'; remove.textContent = '×';
+      setI18nAttribute(remove, 'aria-label', 'Eine Eingabe von „{{word}}“ entfernen', { word });
+      remove.addEventListener('click', () => removeOwnContribution(receipts[receipts.length - 1], remove));
+      copy.append(label, count); item.append(copy, remove); displayOwnWordsList.appendChild(item);
+    }
   }
-  socket.on('own-word-update', renderOwnDisplayWords);
-  socket.on('word-accepted', (word, receipt) => addOwnDisplayWord(word, receipt));
+
+  function hydrateOwnContributions(contributions) {
+    ownContributions.clear();
+    for (const contribution of Array.isArray(contributions) ? contributions : []) {
+      if (contribution?.word && contribution?.receipt) ownContributions.set(contribution.receipt, contribution.word);
+    }
+    renderOwnContributions();
+  }
+
+  function addOwnContribution(word, receipt) {
+    if (!word || !receipt || ownContributions.has(receipt)) return;
+    ownContributions.set(receipt, word);
+    renderOwnContributions();
+  }
+
+  displayOwnWordsButton.addEventListener('click', () => {
+    closeDisplayMenu();
+    clearText(displayOwnWordsError);
+    renderOwnContributions();
+    displayOwnWordsDialog.showModal();
+  });
+  window.addEventListener('wolkenworte:localechange', () => {
+    renderOwnContributions();
+    if (draftSettings.open) renderWordManager();
+  });
+  socket.on('own-word-update', hydrateOwnContributions);
+  socket.on('word-accepted', (word, receipt) => addOwnContribution(word, receipt));
   for (const [key, palette] of Object.entries(PALETTES)) {
     const button = document.createElement('button'); button.className = 'palette-option'; button.type = 'button';
     button.innerHTML = `<strong>${palette.label}</strong><span class="palette-swatches">${palette.colors.map((color) => `<i style="background:${color}"></i>`).join('')}</span>`;
@@ -743,16 +1021,17 @@
   }
   applyPalette('pastel');
   function openSettings() {
-    document.getElementById('draft-settings-error').textContent = '';
+    clearText(document.getElementById('draft-settings-error'));
     renderWordManager();
     draftSettings.showModal();
     document.getElementById('draft-name').focus();
   }
   draftSettingsButton.addEventListener('click', () => {
+    closeDisplayMenu();
     unlockedAdminPin = ''; pendingAdminPin = '';
     if (eventHasAdminPin) {
       document.getElementById('pin-unlock-input').value = '';
-      document.getElementById('pin-unlock-error').textContent = '';
+      clearText(document.getElementById('pin-unlock-error'));
       document.getElementById('pin-unlock-dialog').showModal();
       document.getElementById('pin-unlock-input').focus();
     } else if (eventIsDraft) {
@@ -765,14 +1044,14 @@
   document.getElementById('pin-choice-yes').addEventListener('click', () => {
     document.getElementById('pin-choice-dialog').close();
     document.getElementById('pin-setup-input').value = '';
-    document.getElementById('pin-setup-error').textContent = '';
+    clearText(document.getElementById('pin-setup-error'));
     document.getElementById('pin-setup-dialog').showModal();
     document.getElementById('pin-setup-input').focus();
   });
   document.getElementById('pin-setup-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const pin = document.getElementById('pin-setup-input').value.trim();
-    if (!/^\d{4,6}$/.test(pin)) { document.getElementById('pin-setup-error').textContent = 'Bitte 4–6 Ziffern eingeben.'; return; }
+    if (!/^\d{4,6}$/.test(pin)) { setText(document.getElementById('pin-setup-error'), 'Bitte 4–6 Ziffern eingeben.'); return; }
     pendingAdminPin = pin;
     document.getElementById('pin-setup-dialog').close(); openSettings();
   });
@@ -780,14 +1059,9 @@
     event.preventDefault();
     const pin = document.getElementById('pin-unlock-input').value.trim();
     const response = await fetch(`/api/events/${encodeURIComponent(slug)}/verify-settings-pin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
-    if (!response.ok) { document.getElementById('pin-unlock-error').textContent = 'Der Admin-PIN ist nicht korrekt.'; return; }
+    if (!response.ok) { setText(document.getElementById('pin-unlock-error'), 'Der Admin-PIN ist nicht korrekt.'); return; }
     unlockedAdminPin = pin;
     document.getElementById('pin-unlock-dialog').close(); openSettings();
-  });
-  document.getElementById('show-word-entry').addEventListener('click', () => {
-    displayWordEntry.hidden = false;
-    draftSettings.close();
-    displayWordInput.focus();
   });
   function renderWordManager() {
     const list = document.getElementById('word-manager-list');
@@ -798,12 +1072,13 @@
     for (const [word, count] of words) {
       const item = document.createElement('div'); item.className = 'word-manager-item';
       const label = document.createElement('span'); label.textContent = word;
-      const countLabel = document.createElement('span'); countLabel.className = 'word-manager-count'; countLabel.textContent = count > 1 ? `× ${count}` : '';
-      const remove = document.createElement('button'); remove.className = 'word-manager-remove'; remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', `„${word}“ entfernen`);
+      const countLabel = document.createElement('span'); countLabel.className = 'word-manager-count'; countLabel.textContent = count > 1 ? `× ${WolkenworteI18n.formatNumber(count)}` : '';
+      const remove = document.createElement('button'); remove.className = 'word-manager-remove'; remove.type = 'button'; remove.textContent = '×';
+      setI18nAttribute(remove, 'aria-label', '„{{word}}“ entfernen', { word });
       remove.addEventListener('click', async () => {
         remove.disabled = true;
         const response = await fetch(`/api/events/${encodeURIComponent(slug)}/remove-word`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word, pin: unlockedAdminPin }) });
-        if (!response.ok) { document.getElementById('draft-settings-error').textContent = 'Das Wort konnte nicht entfernt werden.'; remove.disabled = false; }
+        if (!response.ok) { setText(document.getElementById('draft-settings-error'), 'Das Wort konnte nicht entfernt werden.'); remove.disabled = false; }
       });
       const left = document.createElement('span'); left.append(label, countLabel);
       item.append(left, remove); list.appendChild(item);
@@ -816,14 +1091,14 @@
     if (!coupleName) return;
     const response = await fetch(`/api/events/${encodeURIComponent(slug)}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coupleName, eventLabel, pin: unlockedAdminPin, newPin: pendingAdminPin }) });
     if (!response.ok) {
-      document.getElementById('draft-settings-error').textContent = response.status === 401
-        ? 'Der Admin-PIN ist nicht korrekt.'
-        : 'Die Einstellungen konnten nicht gespeichert werden.';
+      setText(
+        document.getElementById('draft-settings-error'),
+        response.status === 401 ? 'Der Admin-PIN ist nicht korrekt.' : 'Die Einstellungen konnten nicht gespeichert werden.'
+      );
       return;
     }
     document.getElementById('couple-name').textContent = coupleName;
     cloudName = coupleName;
-    cloudEventLabel = eventLabel;
     eventHasAdminPin = eventHasAdminPin || Boolean(pendingAdminPin);
     eventIsDraft = false;
     draftSettings.close();
@@ -839,6 +1114,14 @@
 
   socket.on('word-update', (words) => {
     currentWords = words;
+    const activeWords = new Set(words.map(([word]) => word));
+    let ownContributionsChanged = false;
+    for (const [receipt, word] of ownContributions) {
+      if (activeWords.has(word)) continue;
+      ownContributions.delete(receipt);
+      ownContributionsChanged = true;
+    }
+    if (ownContributionsChanged) renderOwnContributions();
     if (draftSettings.open) renderWordManager();
     memoryCta.classList.toggle('visible', words.length > 0);
 

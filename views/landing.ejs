@@ -1,8 +1,10 @@
+<% const startDialog = pageData.startDialog || {}; %>
 <!DOCTYPE html>
 <html lang="<%= locale %>">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass.') %>" data-i18n-content-source="Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass." />
   <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
   <link rel="stylesheet" href="/i18n.css?v=20260829-2" />
@@ -106,6 +108,30 @@
     .button.primary { background: var(--ink); color: #fff; }
     .button.outline { border-color: var(--line); color: var(--ink); background: transparent; transition: transform .25s ease, box-shadow .25s ease, color .6s ease, border-color .6s ease; }
     .button.outline:hover { border-color: var(--gold-line); }
+
+    .start-dialog {
+      width: min(500px, calc(100% - 32px));
+      margin: auto;
+      padding: 0;
+      border: 1px solid var(--gold-line);
+      border-radius: 24px;
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: 0 28px 80px rgba(64,15,38,.22);
+    }
+    .start-dialog::backdrop { background: rgba(38,9,23,.44); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+    .start-dialog-form { display: grid; gap: 20px; padding: 30px; }
+    .start-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+    .start-dialog h2 { margin: 0; font: 500 clamp(1.65rem, 4vw, 2rem)/1.15 'Playfair Display', Georgia, serif; letter-spacing: -.02em; }
+    .start-dialog-close { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 28px/1 system-ui, sans-serif; cursor: pointer; }
+    .start-dialog-close:hover, .start-dialog-close:focus-visible { background: rgba(156,28,76,.08); color: var(--sage-deep); }
+    .start-dialog-copy { margin: -9px 0 0; color: var(--muted); font-size: .94rem; line-height: 1.6; }
+    .start-dialog-label { display: grid; gap: 8px; color: var(--ink); font-size: .84rem; font-weight: 600; }
+    .start-dialog-input { width: 100%; height: 54px; padding: 0 16px; border: 1px solid var(--gold-line); border-radius: 14px; outline: none; background: #fff; color: var(--ink); font: 1rem 'Jost', system-ui, sans-serif; }
+    .start-dialog-input:focus { border-color: var(--sage-deep); box-shadow: 0 0 0 4px rgba(156,28,76,.1); }
+    .start-dialog-error { min-height: 20px; margin: -9px 0 0; color: #a40e4c; font-size: .82rem; }
+    .start-dialog-actions { display: flex; justify-content: flex-end; }
+    .start-dialog-actions .button { min-height: 48px; }
 
     /* ── Hero ── */
     .hero { padding: 60px 0 48px; position: relative; overflow: hidden; }
@@ -384,6 +410,8 @@
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
+      .start-dialog-form { padding: 24px 20px 22px; }
+      .start-dialog-actions .button { width: 100%; }
     }
   </style>
   <link rel="stylesheet" href="/site-header.css?v=20260829-2" />
@@ -420,7 +448,7 @@
           <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
           <p class="lead">Ihr sammelt Wünsche und Erinnerungen für Menschen die euch wichtig sind. Wolkenworte macht daraus eine lebendige Wortwolke. Ob auf großen Feiern oder in kleiner Runde – mit Wolkenworte entsteht eine Erinnerung, die für immer bleibt.</p>
           <div class="hero-actions">
-            <form action="/start" method="post"><button class="button primary" type="submit">Hier starten <span>→</span></button></form>
+            <button class="button primary" type="submit" form="start-dialog-form" data-open-start-dialog>Hier starten <span>→</span></button>
           </div>
           <div class="trust">
             <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
@@ -567,7 +595,7 @@
           </article>
         </div>
         <div class="steps-cta">
-          <form action="/start" method="post"><button class="button primary" type="submit">Hier starten <span>→</span></button></form>
+          <button class="button primary" type="submit" form="start-dialog-form" data-open-start-dialog>Hier starten <span>→</span></button>
         </div>
       </div>
     </section>
@@ -634,11 +662,45 @@
           <p class="eyebrow">Bereit für euren Moment?</p>
           <h2>Lasst eure Worte<br>Wellen schlagen.</h2>
           <p>Probiert die Live-Wortwolke jetzt aus – kostenlos und ohne Anmeldung.</p>
-          <form action="/start" method="post"><button class="button primary" type="submit">Hier starten <span>→</span></button></form>
+          <button class="button primary" type="submit" form="start-dialog-form" data-open-start-dialog>Hier starten <span>→</span></button>
         </div>
       </div>
     </section>
   </main>
+
+  <dialog
+    class="start-dialog"
+    id="start-dialog"
+    aria-labelledby="start-dialog-title"
+    data-open-on-load="<%= startDialog.open ? 'true' : 'false' %>"
+    <%= startDialog.open ? 'open' : '' %>
+  >
+    <form class="start-dialog-form" id="start-dialog-form" action="/start" method="post">
+      <div class="start-dialog-heading">
+        <h2 id="start-dialog-title">Wie soll eure Wortwolke heißen?</h2>
+        <button class="start-dialog-close" id="start-dialog-close" type="button" aria-label="Startdialog schließen" data-i18n-aria-label-source="Startdialog schließen">×</button>
+      </div>
+      <p class="start-dialog-copy">Wählt einen Namen, den eure Gäste sofort erkennen. Ihr könnt ihn später ändern.</p>
+      <label class="start-dialog-label" for="start-cloud-name">Name der Wortwolke
+        <input
+          class="start-dialog-input"
+          id="start-cloud-name"
+          name="cloudName"
+          value="<%= startDialog.name || '' %>"
+          maxlength="80"
+          autocomplete="off"
+          placeholder="z. B. Lea &amp; Julian"
+          data-i18n-placeholder-source="z. B. Lea & Julian"
+          required
+          autofocus
+        />
+      </label>
+      <p class="start-dialog-error" id="start-dialog-error" role="alert" aria-live="polite"><%= startDialog.error ? t(startDialog.error) : '' %></p>
+      <div class="start-dialog-actions">
+        <button class="button primary" type="submit">Wortwolke erstellen <span aria-hidden="true">→</span></button>
+      </div>
+    </form>
+  </dialog>
 
   <footer>
     <div class="shell footer-inner">
@@ -648,6 +710,44 @@
   </footer>
 
   <script src="/js/site-header.js"></script>
+  <script>
+    (function () {
+      var dialog = document.getElementById('start-dialog');
+      var form = document.getElementById('start-dialog-form');
+      var input = document.getElementById('start-cloud-name');
+      var closeButton = document.getElementById('start-dialog-close');
+      if (!dialog || !form || !input || !closeButton) return;
+
+      function openDialog() {
+        var header = document.getElementById('site-header');
+        if (header) header.classList.remove('landing-menu-open');
+        if (!dialog.open) dialog.showModal();
+        window.requestAnimationFrame(function () { input.focus(); });
+      }
+
+      document.querySelectorAll('[data-open-start-dialog]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          openDialog();
+        });
+      });
+      closeButton.addEventListener('click', function () { dialog.close(); });
+      dialog.addEventListener('click', function (event) {
+        if (event.target === dialog) dialog.close();
+      });
+      input.addEventListener('input', function () { input.setCustomValidity(''); });
+      form.addEventListener('submit', function (event) {
+        if (input.value.trim()) return;
+        event.preventDefault();
+        input.setCustomValidity(WolkenworteI18n.t('Bitte gebt eurer Wortwolke einen Namen.'));
+        input.reportValidity();
+      });
+      if (dialog.dataset.openOnLoad === 'true') {
+        if (dialog.open) dialog.close();
+        openDialog();
+      }
+    })();
+  </script>
   <script>
     (function () {
       var overlay = document.getElementById('intro-overlay');

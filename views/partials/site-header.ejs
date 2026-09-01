@@ -59,7 +59,7 @@
         </details>
       </nav>
       <div class="landing-header-actions">
-        <form action="/start" method="post"><button class="button primary landing-start-button" type="submit" data-i18n-source="Hier starten"><%= t('Hier starten') %></button></form>
+        <button class="button primary landing-start-button" type="submit" form="start-dialog-form" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
         <button class="landing-menu-toggle" type="button" aria-label="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
           <span class="landing-menu-toggle-icon" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>
@@ -68,7 +68,57 @@
       <a class="back-link ww-back-link"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
     <% } %>
 
-    <% if (variant !== 'landing') { %>
+    <% if (variant === 'display') { %>
+    <details class="ww-display-menu" id="display-page-menu">
+      <summary id="display-menu-trigger" class="ww-display-menu-trigger" aria-label="Menü öffnen">
+        <span class="ww-display-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+      </summary>
+      <div class="ww-display-menu-panel">
+        <section class="ww-display-menu-language-row" aria-labelledby="display-menu-language-label">
+          <span class="ww-display-menu-label" id="display-menu-language-label">Sprache</span>
+          <details class="ww-language-picker ww-display-menu-language" data-i18n-ignore>
+            <summary
+              id="ww-language-select"
+              class="ww-language-trigger"
+              aria-label="<%= t('Sprache') %>: <%= currentLanguage.name %>"
+            >
+              <span class="ww-language-flag ww-language-current-flag" aria-hidden="true"><%= currentLanguage.flag %></span>
+              <span class="ww-language-current-name"><%= currentLanguage.name %></span>
+              <span class="ww-language-chevron" aria-hidden="true"></span>
+            </summary>
+            <nav id="ww-language-menu" class="ww-language-menu" aria-label="<%= t('Sprache') %>">
+              <% for (const language of languages) { %>
+                <a
+                  id="ww-language-option-<%= language.code %>"
+                  class="ww-language-option<%= language.code === locale ? ' is-selected' : '' %>"
+                  data-language-code="<%= language.code %>"
+                  href="<%= language.href %>"
+                  lang="<%= language.code %>"
+                  hreflang="<%= language.code %>"
+                  <% if (language.code === locale) { %>aria-current="true"<% } %>
+                >
+                  <span class="ww-language-flag" aria-hidden="true"><%= language.flag %></span>
+                  <span class="ww-language-option-name"><%= language.name %></span>
+                  <span class="ww-language-check" aria-hidden="true">✓</span>
+                </a>
+              <% } %>
+            </nav>
+          </details>
+        </section>
+        <div class="ww-display-menu-actions">
+          <button class="ww-display-menu-action" id="display-own-words-button" type="button" aria-haspopup="dialog" aria-controls="display-own-words-dialog" hidden>
+            <span>Deine Wörter</span>
+            <span class="ww-display-menu-count" id="display-own-words-count" aria-live="polite">0</span>
+          </button>
+          <button class="ww-display-menu-action" id="draft-settings-button" type="button" hidden>Einstellungen</button>
+          <button class="ww-display-menu-action" id="presentation-mode-button" type="button" role="switch" aria-checked="false">
+            <span>Präsentationsmodus</span>
+            <span class="ww-display-menu-switch" aria-hidden="true"><i></i></span>
+          </button>
+        </div>
+      </div>
+    </details>
+    <% } else if (variant !== 'landing') { %>
     <details class="ww-language-picker ww-language-inline" data-i18n-ignore>
       <summary
         id="ww-language-select"

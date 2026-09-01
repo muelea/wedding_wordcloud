@@ -40,6 +40,12 @@ function renderView(filename, header = {}) {
     locale: 'de',
     localeSource: 'default',
     header,
+    pageData: {
+      eventUrl: 'https://example.test/e/wortwolke-test',
+      qrSvg: '<svg viewBox="0 0 1 1"><path d="M0 0h1v1H0z" /></svg>',
+      cloudName: 'Lea & Max',
+      eventLabel: '',
+    },
     languages: TEST_LANGUAGES,
     t: (source) => source,
   }, { filename: fullPath });
@@ -47,6 +53,19 @@ function renderView(filename, header = {}) {
 const REQUIRED_MESSAGES = [
   'Wortwolke starten',
   'Ein Wort eingeben',
+  'Gib dein Wort hier ein…',
+  'Deine Wörter',
+  'Eine Eingabe von „{{word}}“ entfernen',
+  'Einstellungen',
+  'Präsentationsmodus',
+  'Speichern',
+  'Scannen & mitmachen',
+  'Wie soll eure Wortwolke heißen?',
+  'Wortwolke erstellen',
+  'Link kopieren',
+  'Per WhatsApp teilen',
+  '{{name}} – Wolkenworte',
+  'Ihr seid eingeladen, die Wortwolke „{{name}}“ mitzugestalten. Fügt ein Wort hinzu und erlebt live, wie sie gemeinsam wächst.',
   'Live-Wortwolke',
   'Neue Runde starten?',
   'Eure Worte. Eure Erinnerung.',
@@ -106,9 +125,15 @@ test('every public page loads the shared language layer', () => {
     assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260829-2" \/>/, filename);
     assert.match(html, /include\('partials\/site-header'\)/,
       `${filename} needs the shared server-rendered site header`);
-    const rendered = renderView(filename);
+    const rendered = renderView(filename, filename === 'display.ejs' ? { variant: 'display' } : {});
     assert.match(rendered, /<header\b[^>]*\bww-site-header\b/, filename);
-    assert.match(rendered, /<details class="ww-language-picker ww-language-inline"/, filename);
+    if (filename === 'display.ejs') {
+      assert.match(rendered, /<details class="ww-display-menu" id="display-page-menu">/, filename);
+      assert.match(rendered, /<details class="ww-language-picker ww-display-menu-language"/, filename);
+      assert.match(rendered, /id="ww-language-select"[\s\S]*?class="ww-language-trigger"/, filename);
+    } else {
+      assert.match(rendered, /<details class="ww-language-picker ww-language-inline"/, filename);
+    }
   }
 
   const displayPage = viewSource('display.ejs');
@@ -180,12 +205,16 @@ test('legal pages describe the hosted product and enforced retention', () => {
 });
 
 test('the event page keeps its content below a dedicated branded header', () => {
-  const displayPage = renderView('display.ejs');
+  const displayPage = renderView('display.ejs', { variant: 'display' });
 
   assert.match(displayPage, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/);
 
   assert.match(displayPage, /<aside class="cloud-status" aria-label="Live-Wortwolke">[\s\S]*?id="memory-cta"/);
   assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="couple-name" data-i18n-ignore/);
+  assert.doesNotMatch(displayPage, /id="qr-url"/,
+    'the footer must not expose the raw event URL as visible copy');
+  assert.match(displayPage, /class="line2">QR-Code scannen</);
+  assert.match(displayPage, /id="display-page-menu"[\s\S]*?id="display-own-words-button"[\s\S]*?id="draft-settings-button"[\s\S]*?id="presentation-mode-button"/);
   assert.doesNotMatch(displayPage, /display-meta/,
     'the display must not add a second header-like metadata bar');
   assert.doesNotMatch(displayPage, /<header class="header">/);
@@ -327,6 +356,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
   const rememberedStart = await fetch(`${baseUrl}/start`, {
     method: 'POST',
     headers: { Cookie: 'wolkenworte-language=fr' },
+    body: new URLSearchParams({ cloudName: 'Nuage des amis' }),
     redirect: 'manual',
   });
   assert.equal(rememberedStart.status, 303);
@@ -337,6 +367,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
     `${baseUrl}/api/events/${rememberedDraftMatch[1]}`
   ).then((response) => response.json());
   assert.equal(rememberedDraftInfo.locale, 'fr');
+  assert.equal(rememberedDraftInfo.coupleName, 'Nuage des amis');
   const draftCookie = (rememberedStart.headers.get('set-cookie') || '').split(';')[0];
   const rememberedDisplay = await fetch(`${baseUrl}${rememberedStartLocation}`, {
     headers: { Cookie: `wolkenworte-language=fr; ${draftCookie}` },

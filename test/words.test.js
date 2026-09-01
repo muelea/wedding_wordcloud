@@ -4,6 +4,23 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
+const { groupContributions } = require('../public/js/own-word-groups');
+
+test('owned contributions group repeated words while retaining one removable receipt per entry', () => {
+  const groups = groupContributions([
+    ['receipt-love-1', 'Love'],
+    ['receipt-joy-1', 'Joy'],
+    ['receipt-love-2', 'Love'],
+  ], 'en');
+
+  assert.deepEqual(groups, [
+    ['Joy', ['receipt-joy-1']],
+    ['Love', ['receipt-love-1', 'receipt-love-2']],
+  ]);
+  groups[1][1].pop();
+  assert.deepEqual(groups[1], ['Love', ['receipt-love-1']],
+    'removing one grouped entry must decrement the count instead of deleting the whole word');
+});
 
 // Resolves once the server's initial `word-update` has actually been
 // received (not just once the transport-level `connect` fires) — see the

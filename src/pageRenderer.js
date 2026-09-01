@@ -100,6 +100,7 @@ async function renderPage(req, res, view, options = {}) {
     locale: resolved.locale,
     localeSource: resolved.source,
     header: options.header || {},
+    pageData: options.pageData || {},
     languages: SUPPORTED_LOCALES.map((code) => ({
       code,
       name: LANGUAGE_NAMES[code],

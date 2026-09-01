@@ -2,16 +2,17 @@
 
 const express = require('express');
 const crypto = require('crypto');
-const QRCode = require('qrcode');
 const db = require('../db');
 const { slugify, makeUniqueSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
+const { buildEventUrl, renderEventQrDataUrl } = require('../eventQr');
 const { sourceHashForRequest } = require('../clientIdentity');
 const rateLimits = require('../rateLimits');
 const stripe = require('../stripe');
 const printful = require('../printful');
 const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
+const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('../eventNames');
 const {
   DEFAULT_PRODUCT,
   getProduct,
@@ -29,7 +30,6 @@ const log = require('../structuredLog');
 const performanceProbe = require('../performanceProbe');
 
 const PIN_RE = /^\d{4,6}$/;
-const MAX_NAME_LENGTH = 80;
 const MAX_SNAPSHOT_WORDS = 200;
 // Two-sided layouts duplicate every approved cloud word, with a little room
 // left for words the couple adds manually in the editor.
@@ -712,17 +712,18 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       key: sourceHash,
       ...rateLimits.LIMITS.eventCreate,
     }])) return rateLimited(res);
-    const { coupleName, pin } = req.body || {};
+    const { coupleName: submittedCoupleName, pin } = req.body || {};
+    const coupleName = normalizeEventName(submittedCoupleName);
     if (req.body?.locale != null && !I18n.isSupportedLocale(req.body.locale)) {
       return res.status(400).json({ error: 'invalid_locale' });
     }
     const locale = I18n.normalizeLocale(req.body?.locale);
     let { slug } = req.body || {};
 
-    if (!coupleName || typeof coupleName !== 'string' || !coupleName.trim()) {
+    if (!coupleName) {
       return res.status(400).json({ error: 'invalid_couple_name' });
     }
-    if (coupleName.length > MAX_NAME_LENGTH) {
+    if (coupleName.length > MAX_EVENT_NAME_LENGTH) {
       return res.status(400).json({ error: 'couple_name_too_long' });
     }
     if (!pin || !PIN_RE.test(String(pin))) {
@@ -747,7 +748,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         // suffix instead of relying on a stale availability pre-check.
         event = await db.createEvent({
           slug: finalSlug,
-          coupleName: coupleName.trim(),
+          coupleName,
           pin,
           locale,
         });
@@ -794,11 +795,11 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
   router.post('/events/:slug/settings', express.json(), asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
-    const coupleName = String(req.body?.coupleName || '').trim();
-    const eventLabel = String(req.body?.eventLabel || '').trim().slice(0, MAX_NAME_LENGTH);
+    const coupleName = normalizeEventName(req.body?.coupleName);
+    const eventLabel = String(req.body?.eventLabel || '').trim().slice(0, MAX_EVENT_NAME_LENGTH);
     const pin = String(req.body?.pin || '');
     const newPin = String(req.body?.newPin || '');
-    if (!event || !coupleName || coupleName.length > MAX_NAME_LENGTH) return res.status(400).json({ error: 'invalid_couple_name' });
+    if (!event || !coupleName || coupleName.length > MAX_EVENT_NAME_LENGTH) return res.status(400).json({ error: 'invalid_couple_name' });
     if (event.is_draft) {
       if (newPin && !PIN_RE.test(newPin)) return res.status(400).json({ error: 'invalid_pin' });
       const claimed = await db.claimDraftEvent({ eventId: event.id, ownerHash: draftOwnerHash(req, event.slug), coupleName, pin: newPin || null });
@@ -844,13 +845,9 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   router.get('/events/:slug/qr', asyncRoute(async (req, res) => {
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
-    const url = `${getBaseUrl(req, port)}/e/${event.slug}`;
+    const url = buildEventUrl(getBaseUrl(req, port), event.slug);
     try {
-      const dataUrl = await QRCode.toDataURL(url, {
-        width: 220,
-        margin: 1,
-        color: { dark: '#5a3e36', light: '#fdf8f4' },
-      });
+      const dataUrl = await renderEventQrDataUrl(url);
       res.json({ dataUrl, url });
     } catch (err) {
       res.status(500).json({ error: 'QR generation failed' });
