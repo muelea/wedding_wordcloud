@@ -9,6 +9,7 @@ const {
   normalizeLocale,
   translate,
 } = require('./i18n');
+const { publicAssetUrl } = require('./publicAssets');
 
 const LANGUAGE_COOKIE = 'wolkenworte-language';
 const LANGUAGE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -107,6 +108,7 @@ async function renderPage(req, res, view, options = {}) {
       flag: LANGUAGE_FLAGS[code],
       href: relativeLanguageUrl(req.originalUrl, code),
     })),
+    asset: publicAssetUrl,
     t: (source, params) => translate(source, resolved.locale, params),
   };
   const html = await ejs.renderFile(path.join(VIEW_ROOT, `${view}.ejs`), locals);

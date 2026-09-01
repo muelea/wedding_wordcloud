@@ -8,6 +8,7 @@ const ejs = require('ejs');
 const { startTestServer, createEvent } = require('./helpers');
 const I18n = require('../src/i18n');
 const PageRenderer = require('../src/pageRenderer');
+const { publicAssetUrl } = require('../src/publicAssets');
 const { normalizeWord } = require('../src/words');
 
 const LOCALES = ['de', 'en', 'fr', 'it', 'es', 'tr'];
@@ -47,6 +48,7 @@ function renderView(filename, header = {}, locale = 'de') {
       paletteOptions: [],
     },
     languages: TEST_LANGUAGES,
+    asset: publicAssetUrl,
     t: (source) => source,
   }, { filename: fullPath });
 }
@@ -112,23 +114,21 @@ test('locale catalogs cover the complete user journey and preserve interpolation
 
 test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
-    const html = viewSource(filename);
-    assert.match(html, /<link rel="stylesheet" href="\/i18n\.css\?v=20260901-1" \/>/, filename);
-    assert.match(
-      html,
-      filename === 'landing.ejs'
-        ? /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-3" \/>/
-        : /<link rel="stylesheet" href="\/site-fonts\.css\?v=20260829-1" \/>/,
-      filename
-    );
-    assert.match(html, /<script src="\/js\/i18n\.js\?v=20260901-1"><\/script>/, filename);
-    assert.match(html, /<link rel="stylesheet" href="\/site-header\.css\?v=20260901-1" \/>/, filename);
-    assert.match(html, /include\('partials\/site-header'\)/,
+    const source = viewSource(filename);
+    assert.match(source, /asset\('\/i18n\.css'\)/, filename);
+    assert.match(source, /asset\('\/site-fonts\.css'\)/, filename);
+    assert.match(source, /asset\('\/js\/i18n\.js'\)/, filename);
+    assert.match(source, /asset\('\/site-header\.css'\)/, filename);
+    assert.match(source, /include\('partials\/site-header'\)/,
       `${filename} needs the shared server-rendered site header`);
     const header = filename === 'landing.ejs'
       ? { variant: 'landing' }
       : filename === 'display.ejs' ? { variant: 'display' } : {};
     const rendered = renderView(filename, header);
+    assert.ok(rendered.includes(publicAssetUrl('/i18n.css')), filename);
+    assert.ok(rendered.includes(publicAssetUrl('/site-fonts.css')), filename);
+    assert.ok(rendered.includes(publicAssetUrl('/js/i18n.js')), filename);
+    assert.ok(rendered.includes(publicAssetUrl('/site-header.css')), filename);
     assert.match(rendered, /<header\b[^>]*\bww-site-header\b/, filename);
     assert.equal((rendered.match(/data-language-picker/g) || []).length, 1, filename);
     assert.match(rendered, /<summary\s+class="ww-language-trigger"\s+data-language-trigger/, filename);
@@ -160,9 +160,9 @@ test('customer-facing actions stay calm and do not expose staging or provider na
   assert.match(display, /<button class="reset-dialog-button" id="reset-cancel" type="button">Abbrechen<\/button>/);
 
   for (const filename of ['configure.ejs', 'shipping.ejs', 'display.ejs']) {
-    const page = viewSource(filename);
-    assert.match(page, /\/action-state\.css\?v=20260829-1/, filename);
-    assert.match(page, /\/js\/action-state\.js\?v=20260829-1/, filename);
+    const page = renderView(filename, filename === 'display.ejs' ? { variant: 'display' } : {});
+    assert.ok(page.includes(publicAssetUrl('/action-state.css')), filename);
+    assert.ok(page.includes(publicAssetUrl('/js/action-state.js')), filename);
   }
 
   const actionStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'action-state.css'), 'utf8');
@@ -200,13 +200,16 @@ test('interface fonts are locally served, pinned and licensed', () => {
 
   const englishLanding = renderView('landing.ejs', { variant: 'landing' }, 'en');
   const turkishLanding = renderView('landing.ejs', { variant: 'landing' }, 'tr');
-  const basePreload = /<link rel="preload" href="\/assets\/site-fonts\/jost\/jost-latin\.woff2" as="font" type="font\/woff2" crossorigin \/>/;
-  const extendedPreload = /<link rel="preload" href="\/assets\/site-fonts\/jost\/jost-latin-ext\.woff2" as="font" type="font\/woff2" crossorigin \/>/;
+  const basePreload = publicAssetUrl('/assets/site-fonts/jost/jost-latin.woff2');
+  const extendedPreload = publicAssetUrl('/assets/site-fonts/jost/jost-latin-ext.woff2');
 
-  assert.match(englishLanding, basePreload, 'the above-the-fold landing CTA must preload its primary Jost subset');
-  assert.doesNotMatch(englishLanding, extendedPreload, 'non-Turkish pages must not preload an unused extended subset');
-  assert.match(turkishLanding, basePreload);
-  assert.match(turkishLanding, extendedPreload, 'Turkish needs the extended Jost glyph subset before first paint');
+  assert.ok(englishLanding.includes(basePreload),
+    'the above-the-fold landing CTA must preload its primary Jost subset');
+  assert.ok(!englishLanding.includes(extendedPreload),
+    'non-Turkish pages must not preload an unused extended subset');
+  assert.ok(turkishLanding.includes(basePreload));
+  assert.ok(turkishLanding.includes(extendedPreload),
+    'Turkish needs the extended Jost glyph subset before first paint');
 });
 
 test('legal pages describe the hosted product and enforced retention', () => {

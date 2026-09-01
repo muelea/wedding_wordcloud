@@ -7,6 +7,7 @@ const { io: ioClient } = require('socket.io-client');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { connectionOptions } = require('../src/dbConfig');
+const { publicAssetUrl } = require('../src/publicAssets');
 
 const requestedBaseUrl = process.argv.slice(2).find((argument) => !argument.startsWith('--'));
 const baseUrl = String(requestedBaseUrl || process.env.PUBLIC_URL || 'https://wolkenworte.fly.dev')
@@ -127,9 +128,17 @@ async function runSmoke(fixture) {
       !String(html.headers.get('content-type')).includes('text/html')) {
     throw new Error('landing-page/cache smoke failed');
   }
-  const versionedAsset = await fetchWithTimeout('/js/wordcloud-core.js?v=20260819-2');
+  const wordCloudAssetUrl = publicAssetUrl('/js/wordcloud-core.js');
+  const landingHtml = await html.text();
+  if (!landingHtml.includes(wordCloudAssetUrl)) {
+    throw new Error('landing page does not reference the released word-cloud runtime');
+  }
+  const versionedAsset = await fetchWithTimeout(wordCloudAssetUrl);
   if (versionedAsset.status !== 200 || !String(versionedAsset.headers.get('cache-control')).includes('immutable')) {
     throw new Error('versioned static-asset cache smoke failed');
+  }
+  if (!(await versionedAsset.text()).includes('TEXT_BASELINE_OFFSET')) {
+    throw new Error('released word-cloud runtime is missing its baseline contract');
   }
 
   const adminPin = String(crypto.randomInt(1000, 10_000));
@@ -149,6 +158,13 @@ async function runSmoke(fixture) {
     throw new Error(`event creation smoke failed (${eventResponse.status})`);
   }
   fixture.slug = event.slug;
+
+  const eventPage = await fetchWithTimeout(`/e/${encodeURIComponent(event.slug)}`);
+  const eventHtml = await eventPage.text();
+  if (eventPage.status !== 200 || !eventHtml.includes(wordCloudAssetUrl) ||
+      !eventHtml.includes('const TEXT_BASELINE_OFFSET')) {
+    throw new Error('event page/runtime compatibility smoke failed');
+  }
 
   const { socket } = await connectSocket(event.slug);
   try {

@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" id="theme-color" content="#fffdfa" />
-  <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
-  <link rel="stylesheet" href="/site-header.css?v=20260901-1" />
-  <link rel="stylesheet" href="/i18n.css?v=20260901-1" />
-  <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
-  <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260901-1"></script>
-  <script src="/js/action-state.js?v=20260829-1"></script>
-  <script src="/js/site-header.js" defer></script>
+  <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
+  <script src="<%= asset('/js/i18n.js') %>"></script>
+  <script src="<%= asset('/js/action-state.js') %>"></script>
+  <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <title data-i18n-ignore><%= t('{{name}} – Wortwolke', { name: pageData.cloudTitle }) %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -510,8 +510,8 @@
       .reset-dialog-actions { grid-template-columns: 1fr; }
     }
   </style>
-  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-2" />
-  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
+  <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
+  <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
 </head>
 <body>
 
@@ -671,8 +671,8 @@
 </dialog>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/js/wordcloud-core.js?v=20260819-2"></script>
-<script src="/js/own-word-groups.js?v=20260831-1"></script>
+<script src="<%= asset('/js/wordcloud-core.js') %>"></script>
+<script src="<%= asset('/js/own-word-groups.js') %>"></script>
 <script>
   // Slug comes from the canonical event URL: /e/<slug>
   const slug = location.pathname.split('/').filter(Boolean)[1];
@@ -726,6 +726,9 @@
   let renderRevision = 0;
   let lastWords    = null;
   const MAX_CANVAS_PIXEL_RATIO = 3;
+  const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
+    ? WordCloudCore.TEXT_BASELINE_OFFSET
+    : 0.34;
   const cloudFontReady = document.fonts?.load
     ? document.fonts.load('16px "Wolkenworte Classic"', 'Wolkenworte').catch(() => [])
     : Promise.resolve();
@@ -804,10 +807,10 @@
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(-Math.PI / 2);
-        ctx.fillText(p.word, 0, p.fontPx * WordCloudCore.TEXT_BASELINE_OFFSET);
+        ctx.fillText(p.word, 0, p.fontPx * TEXT_BASELINE_OFFSET);
         ctx.restore();
       } else {
-        ctx.fillText(p.word, p.x, p.y + p.fontPx * WordCloudCore.TEXT_BASELINE_OFFSET);
+        ctx.fillText(p.word, p.x, p.y + p.fontPx * TEXT_BASELINE_OFFSET);
       }
     }
     canvas.classList.add('visible');

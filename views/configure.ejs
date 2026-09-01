@@ -5,39 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Eure Worte. Eure Erinnerung.') %>" data-i18n-content-source="Eure Worte. Eure Erinnerung." />
-  <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
-  <link rel="stylesheet" href="/i18n.css?v=20260901-1" />
-  <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
-  <link rel="stylesheet" href="/action-state.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260901-1"></script>
-  <script src="/js/action-state.js?v=20260829-1"></script>
+  <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
+  <script src="<%= asset('/js/i18n.js') %>"></script>
+  <script src="<%= asset('/js/action-state.js') %>"></script>
   <title data-i18n-source="Erinnerung gestalten – Wolkenworte"><%= t('Erinnerung gestalten – Wolkenworte') %></title>
   <style>
 
     @font-face {
       font-family: 'Wolkenworte Lora';
-      src: url('/assets/design-fonts/lora/Lora.ttf?v=20260826-1') format('truetype');
+      src: url('<%= asset('/assets/design-fonts/lora/Lora.ttf') %>') format('truetype');
       font-style: normal;
       font-weight: 400;
       font-display: swap;
     }
     @font-face {
       font-family: 'Wolkenworte Montserrat';
-      src: url('/assets/design-fonts/montserrat/Montserrat.ttf?v=20260826-1') format('truetype');
+      src: url('<%= asset('/assets/design-fonts/montserrat/Montserrat.ttf') %>') format('truetype');
       font-style: normal;
       font-weight: 400;
       font-display: swap;
     }
     @font-face {
       font-family: 'Wolkenworte Caveat';
-      src: url('/assets/design-fonts/caveat/Caveat.ttf?v=20260826-1') format('truetype');
+      src: url('<%= asset('/assets/design-fonts/caveat/Caveat.ttf') %>') format('truetype');
       font-style: normal;
       font-weight: 400;
       font-display: swap;
     }
     @font-face {
       font-family: 'Wolkenworte Baloo 2';
-      src: url('/assets/design-fonts/baloo-2/Baloo2.ttf?v=20260826-1') format('truetype');
+      src: url('<%= asset('/assets/design-fonts/baloo-2/Baloo2.ttf') %>') format('truetype');
       font-style: normal;
       font-weight: 400;
       font-display: swap;
@@ -1649,10 +1649,10 @@
       .option-card { min-height: 76px; }
     }
   </style>
-  <link rel="stylesheet" href="/site-header.css?v=20260901-1" />
-  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-2" />
-  <script src="/js/site-header.js" defer></script>
-  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
+  <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
+  <script src="<%= asset('/js/site-header.js') %>" defer></script>
+  <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
 </head>
 <body>
   <%- include('partials/site-header') %>
@@ -1890,13 +1890,13 @@
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
-  <script src="/js/wordcloud-core.js?v=20260901-1"></script>
-  <script src="/js/mug-3d-viewer.js?v=20260821-1"></script>
-  <script src="/js/mug-icons.js?v=20260826-1"></script>
-  <script src="/js/design-fonts.js?v=20260826-1"></script>
-  <script src="/js/design-layout.js?v=20260901-2"></script>
-  <script src="/js/image-quality.js?v=20260901-1"></script>
-  <script src="/js/mug-editor.js?v=20260901-4"></script>
+  <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
+  <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
+  <script src="<%= asset('/js/mug-icons.js') %>"></script>
+  <script src="<%= asset('/js/design-fonts.js') %>"></script>
+  <script src="<%= asset('/js/design-layout.js') %>"></script>
+  <script src="<%= asset('/js/image-quality.js') %>"></script>
+  <script src="<%= asset('/js/mug-editor.js') %>"></script>
   <script>
     'use strict';
 
@@ -1904,6 +1904,9 @@
     const paletteStorageKey = `wordcloud-palette:${slug}`;
     const guestId = getOrCreateGuestId();
     const t = (source, params) => WolkenworteI18n.t(source, params);
+    const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
+      ? WordCloudCore.TEXT_BASELINE_OFFSET
+      : 0.34;
     const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
     const clearText = (element) => WolkenworteI18n.clearText(element);
     const setTranslatedAttribute = (element, name, source, params) =>
@@ -2368,10 +2371,9 @@
       applyCustomPalette();
     });
 
-    // Keep drawing even if a browser still has the pre-palette version of
-    // wordcloud-core.js in its memory cache. The versioned script URL above
-    // prevents that mismatch on future loads; this fallback also repairs an
-    // already-open tab as soon as the page is refreshed.
+    // Keep drawing if an already-open tab still holds a pre-palette runtime.
+    // New page loads use content-addressed asset URLs, while this compatibility
+    // path protects a tab that was open across a deployment.
     function makePaletteAssigner(colors) {
       if (typeof WordCloudCore.makePaletteAssigner === 'function') {
         return WordCloudCore.makePaletteAssigner(colors);
@@ -2421,13 +2423,13 @@
           ctx.save();
           ctx.translate(itemX, itemY);
           ctx.rotate(-Math.PI / 2);
-          ctx.fillText(item.word, 0, item.fontPx * WordCloudCore.TEXT_BASELINE_OFFSET);
+          ctx.fillText(item.word, 0, item.fontPx * TEXT_BASELINE_OFFSET);
           ctx.restore();
         } else {
           ctx.fillText(
             item.word,
             itemX,
-            itemY + item.fontPx * WordCloudCore.TEXT_BASELINE_OFFSET
+            itemY + item.fontPx * TEXT_BASELINE_OFFSET
           );
         }
       }
@@ -2694,7 +2696,7 @@
           ctx.fillText(
             item.text,
             0,
-            item.fontSize * scale * WordCloudCore.TEXT_BASELINE_OFFSET
+            item.fontSize * scale * TEXT_BASELINE_OFFSET
           );
         }
         ctx.restore();

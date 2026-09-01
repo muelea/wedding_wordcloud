@@ -368,6 +368,7 @@ reports/                   Sanitized retained capacity evidence
 src/
   db.js                    async Postgres data boundary and transaction logic
   dbConfig.js              verified-TLS and bounded pg pool configuration
+  publicAssets.js          content-addressed first-party asset URLs + cache validation
   privateStorage.js        backend-only Supabase Storage boundary
   lifecycle.js             expired-event cleanup + paid-data detachment
   maintenance.js           bounded fulfillment/retention orchestration + heartbeat
@@ -511,6 +512,10 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   font-metric probes are part of the container verification suite.
 - `/health/live` is process-only. `/health/ready` performs a bounded Postgres
   and schema/role check and is the Fly service health check. Both are `no-store`.
+- First-party scripts, styles, icons and bundled fonts use SHA-256-derived URL
+  versions. Only the version matching the shipped bytes is immutable; stale
+  or invented versions must revalidate. Views use the shared `asset()` helper
+  rather than hand-maintained release labels.
 - Keep one web Machine until both an official Socket.io cross-Machine adapter
   and tested Fly affinity/replay for long-polling exist. Increasing the Machine
   count with the current in-memory adapter would split rooms and is unsupported.

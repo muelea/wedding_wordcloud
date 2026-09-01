@@ -1,5 +1,7 @@
 'use strict';
 
+const { hasCurrentPublicAssetVersion } = require('./publicAssets');
+
 const VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const STATIC_EXTENSION_RE = /\.(?:css|gif|html?|ico|jpe?g|js|json|mp4|png|svg|webp|woff2?|ttf)$/i;
 
@@ -18,7 +20,17 @@ function cacheControlForStaticRequest(req) {
   // immutable response. Revalidation still allows an ETag/304 while ensuring
   // a deployment can never strand a browser on an older set of translations.
   if (isLocaleManifest(pathname)) return 'no-cache';
-  if (VERSION_RE.test(version)) return 'public, max-age=31536000, immutable';
+  if (VERSION_RE.test(version)) {
+    // First-party immutable URLs are content-addressed. A stale or invented
+    // version must be revalidated instead of pinning mismatched bytes for a
+    // year. Vendor routes are pinned to npm package versions and do not live
+    // under public/, so they keep their explicit immutable version contract.
+    if (pathname.startsWith('/vendor/')) return 'public, max-age=31536000, immutable';
+    if (hasCurrentPublicAssetVersion(pathname, version)) {
+      return 'public, max-age=31536000, immutable';
+    }
+    return 'no-cache';
+  }
   return 'public, max-age=0, must-revalidate';
 }
 

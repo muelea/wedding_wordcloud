@@ -19,7 +19,7 @@
 <header class="<%= headerClass %> ww-site-header"<% if (config.id) { %> id="<%= config.id %>"<% } %>>
   <div class="<%= navClass ? `${navClass} ` : '' %>ww-nav ww-language-mounted">
     <a class="brand ww-brand"<% if (brandId) { %> id="<%= brandId %>"<% } %> href="/" aria-label="Wolkenworte">
-      <img class="brand-icon ww-brand-icon" src="/z_icons/icon.svg?v=20260829-1" alt="" aria-hidden="true" />
+      <img class="brand-icon ww-brand-icon" src="<%= asset('/z_icons/icon.svg') %>" alt="" aria-hidden="true" />
       <%- include('brand-wordmark') %>
     </a>
 

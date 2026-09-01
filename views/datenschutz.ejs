@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Datenschutzerklärung für Wolkenworte.') %>" data-i18n-content-source="Datenschutzerklärung für Wolkenworte." />
-  <link rel="icon" type="image/svg+xml" href="/z_icons/icon.svg?v=20260829-1" />
-  <link rel="stylesheet" href="/i18n.css?v=20260901-1" />
-  <link rel="stylesheet" href="/site-fonts.css?v=20260829-1" />
-  <script src="/js/i18n.js?v=20260901-1"></script>
+  <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
+  <script src="<%= asset('/js/i18n.js') %>"></script>
   <title data-i18n-source="Datenschutz – Wolkenworte"><%= t('Datenschutz – Wolkenworte') %></title>
-  <link rel="stylesheet" href="/legal.css" />
-  <link rel="stylesheet" href="/site-header.css?v=20260901-1" />
-  <link rel="stylesheet" href="/mobile-foundation.css?v=20260901-2" />
-  <script src="/js/site-header.js" defer></script>
-  <script src="/js/mobile-ui.js?v=20260901-1" defer></script>
+  <link rel="stylesheet" href="<%= asset('/legal.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
+  <script src="<%= asset('/js/site-header.js') %>" defer></script>
+  <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
 </head>
 <body>
   <%- include('partials/site-header') %>

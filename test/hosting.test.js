@@ -7,6 +7,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
+const { publicAssetUrl } = require('../src/publicAssets');
 const {
   assertGitReleaseCandidate,
   releaseSteps,
@@ -56,6 +57,7 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   const html = await fetch(`${baseUrl}/`);
   assert.equal(html.status, 200);
   assert.equal(html.headers.get('cache-control'), 'no-cache');
+  assert.ok((await html.text()).includes(publicAssetUrl('/js/wordcloud-core.js')));
 
   const directHtml = await fetch(`${baseUrl}/landing.html?v=stale-release`);
   assert.equal(directHtml.status, 404);
@@ -72,8 +74,12 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   const unversionedJs = await fetch(`${baseUrl}/js/site-header.js`);
   assert.equal(unversionedJs.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
 
-  const versionedJs = await fetch(`${baseUrl}/js/wordcloud-core.js?v=20260819-2`);
+  const versionedJs = await fetch(`${baseUrl}${publicAssetUrl('/js/wordcloud-core.js')}`);
   assert.equal(versionedJs.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+
+  const staleVersionedJs = await fetch(`${baseUrl}/js/wordcloud-core.js?v=stale-release`);
+  assert.equal(staleVersionedJs.status, 200);
+  assert.equal(staleVersionedJs.headers.get('cache-control'), 'no-cache');
 
   const bundledSerif = await fetch(`${baseUrl}/vendor/fonts/gelasio-latin-ext-400-normal.woff?v=5.3.0`);
   assert.equal(bundledSerif.status, 200);

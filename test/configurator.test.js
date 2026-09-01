@@ -10,6 +10,7 @@ const DesignLayout = require('../public/js/design-layout.js');
 const DesignFonts = require('../public/js/design-fonts.js');
 const ImagePrintQuality = require('../public/js/image-quality.js');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
+const { publicAssetUrl } = require('../src/publicAssets');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../src/mugPrint');
 
@@ -600,7 +601,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(threeBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await threeBrowserBuild.text()).length > 600000, 'the local Three.js build should be served in full');
 
-  const sharedMugViewer = await fetch(`${baseUrl}/js/mug-3d-viewer.js?v=20260821-1`);
+  const sharedMugViewer = await fetch(`${baseUrl}${publicAssetUrl('/js/mug-3d-viewer.js')}`);
   assert.equal(sharedMugViewer.status, 200);
   assert.match(sharedMugViewer.headers.get('cache-control') || '', /immutable/);
   assert.match(await sharedMugViewer.text(), /Mug3DViewer/);
@@ -608,7 +609,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.deepEqual(DesignFonts.FONTS.map((font) => font.key), [
     'classic', 'lora', 'montserrat', 'caveat', 'baloo-2',
   ]);
-  const bundledFont = await fetch(`${baseUrl}/assets/design-fonts/lora/Lora.ttf?v=20260826-1`);
+  const bundledFont = await fetch(`${baseUrl}${publicAssetUrl('/assets/design-fonts/lora/Lora.ttf')}`);
   assert.equal(bundledFont.status, 200);
   assert.ok((await bundledFont.arrayBuffer()).byteLength > 100000);
 
@@ -616,11 +617,11 @@ test('configurator exposes every curated product with verified Printful geometry
     fetch(`${baseUrl}/`).then((response) => response.text()),
     fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
   ]);
-  assert.match(landingPage, /mug-3d-viewer\.js\?v=20260821-1/);
+  assert.ok(landingPage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(landingPage, /x: 200, y: 450, angle: -90/);
   assert.match(landingPage, /fontSize: configuration\.fontSize \|\| Math\.round\(configuration\.displayScale \* 100\)/);
   assert.match(landingPage, /x: configuration\.x,[\s\S]*?y: configuration\.y,[\s\S]*?angle: configuration\.angle/);
-  assert.match(configurePage, /mug-3d-viewer\.js\?v=20260821-1/);
+  assert.ok(configurePage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="variant-options"/);
   assert.match(configurePage, /id="flat-product-preview"/);
@@ -641,12 +642,14 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /\.workspace-tools \{[\s\S]*?position: relative;[\s\S]*?z-index: 20;/);
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(configurePage, /wordcloud-core\.js\?v=20260901-1/);
-  assert.match(configurePage, /design-fonts\.js\?v=20260826-1/);
-  assert.match(configurePage, /design-layout\.js\?v=20260901-2/);
-  assert.match(configurePage, /mug-icons\.js\?v=20260826-1/);
-  assert.match(configurePage, /image-quality\.js\?v=20260901-1/);
-  assert.match(configurePage, /mug-editor\.js\?v=20260901-4/);
+  for (const assetPath of [
+    '/js/wordcloud-core.js',
+    '/js/design-fonts.js',
+    '/js/design-layout.js',
+    '/js/mug-icons.js',
+    '/js/image-quality.js',
+    '/js/mug-editor.js',
+  ]) assert.ok(configurePage.includes(publicAssetUrl(assetPath)), assetPath);
   assert.match(configurePage, /id="editor-image"[^>]*type="button"/);
   assert.match(configurePage, /id="editor-image-input"[^>]*type="file"[^>]*accept="image\/png,image\/jpeg/);
   assert.match(configurePage, /id="editor-image-quality"[^>]*role="status"[^>]*aria-live="polite"[^>]*hidden/);
@@ -718,11 +721,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(fabricBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await fabricBrowserBuild.text()).length > 250000, 'the local Fabric.js build should be served in full');
 
-  const qualityRuntime = await fetch(`${baseUrl}/js/image-quality.js?v=20260901-1`);
+  const qualityRuntime = await fetch(`${baseUrl}${publicAssetUrl('/js/image-quality.js')}`);
   assert.equal(qualityRuntime.status, 200);
   assert.match(await qualityRuntime.text(), /effectiveDpi/);
 
-  const mugEditor = await fetch(`${baseUrl}/js/mug-editor.js?v=20260901-4`);
+  const mugEditor = await fetch(`${baseUrl}${publicAssetUrl('/js/mug-editor.js')}`);
   assert.equal(mugEditor.status, 200);
   const mugEditorSource = await mugEditor.text();
   assert.match(mugEditorSource, /resizePrintArea/);
@@ -767,7 +770,7 @@ test('configurator exposes every curated product with verified Printful geometry
     assert.ok((await response.arrayBuffer()).byteLength > 2000);
   }
 
-  const motifLibrary = await fetch(`${baseUrl}/js/mug-icons.js?v=20260826-1`);
+  const motifLibrary = await fetch(`${baseUrl}${publicAssetUrl('/js/mug-icons.js')}`);
   assert.equal(motifLibrary.status, 200);
   assert.equal(MugIcons.VIEWBOX_SIZE, 48);
   assert.equal(MugIcons.STROKE_WIDTH, 1.5);
