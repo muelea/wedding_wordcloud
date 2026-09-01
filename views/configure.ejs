@@ -2158,6 +2158,40 @@
       await loadOrderItem(openingCurrentItem ? editingOrderItemId : configurationId);
     }
 
+    function createOrderItemThumbnail(item, itemProduct) {
+      const fallback = document.createElement('img');
+      fallback.alt = '';
+      const fallbackUrl = itemProduct?.thumbnail || product?.thumbnail || '';
+      if (fallbackUrl) fallback.src = fallbackUrl;
+      else fallback.hidden = true;
+
+      if (!item.printFileUrl) return fallback;
+      const preview = new Image();
+      preview.alt = '';
+      preview.decoding = 'async';
+
+      let ready;
+      if (typeof preview.decode === 'function') {
+        preview.src = item.printFileUrl;
+        ready = preview.decode();
+      } else {
+        ready = new Promise((resolve, reject) => {
+          preview.onload = resolve;
+          preview.onerror = reject;
+          preview.src = item.printFileUrl;
+        });
+      }
+
+      ready.then(() => {
+        if (!fallback.isConnected) return;
+        fallback.replaceWith(preview);
+      }).catch(() => {
+        // The stable product thumbnail remains visible if the custom preview
+        // cannot be decoded. Never expose the browser's broken-image icon.
+      });
+      return fallback;
+    }
+
     function renderOrderBox() {
       const items = loadOrderItems();
       const hasItems = items.length > 0;
@@ -2177,9 +2211,7 @@
         const row = document.createElement('div');
         row.className = 'order-item';
         row.classList.toggle('is-editing', isEditing);
-        const image = document.createElement('img');
-        image.src = item.printFileUrl;
-        image.alt = '';
+        const image = createOrderItemThumbnail(item, itemProduct);
         const copy = document.createElement('div');
         copy.className = 'order-copy';
         const title = document.createElement('strong');

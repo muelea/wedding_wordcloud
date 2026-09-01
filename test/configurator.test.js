@@ -715,6 +715,11 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /if \(!await saveCurrentDesign\(designAnotherButton\)\) return/);
   assert.match(configurePage, /if \(await saveCurrentDesign\(continueOrderButton\)\) navigateToShipping\(\)/);
   assert.match(configurePage, /const missingSurface = productSurfaces\(\)\.find/);
+  assert.match(configurePage, /function createOrderItemThumbnail\(item, itemProduct\)/);
+  assert.match(configurePage, /if \(fallbackUrl\) fallback\.src = fallbackUrl/);
+  assert.match(configurePage, /ready = preview\.decode\(\)/);
+  assert.match(configurePage, /fallback\.replaceWith\(preview\)/);
+  assert.doesNotMatch(configurePage, /image\.src = item\.printFileUrl/);
 
   const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
   assert.equal(fabricBrowserBuild.status, 200);
