@@ -10,6 +10,7 @@ const I18n = require('../src/i18n');
 const PageRenderer = require('../src/pageRenderer');
 const { localizeHtml } = require('../src/htmlLocalizer');
 const { publicAssetUrl } = require('../src/publicAssets');
+const { SITE_FONT_ASSETS, siteFontPreloads } = require('../src/siteFonts');
 const { normalizeWord } = require('../src/words');
 
 const LOCALES = ['de', 'en', 'fr', 'it', 'es', 'tr'];
@@ -54,6 +55,8 @@ function renderView(filename, header = {}, locale = 'de') {
     },
     languages: TEST_LANGUAGES,
     asset: publicAssetUrl,
+    siteFontAssets: SITE_FONT_ASSETS,
+    siteFontPreloads,
     localeCatalogUrls: TEST_LOCALE_CATALOG_URLS,
     localeCatalogUrl: locale === 'de' ? '' : publicAssetUrl(`/locales/${locale}.json`),
     t: (source) => source,
@@ -150,7 +153,7 @@ test('every public page loads the shared language layer', () => {
   for (const filename of PUBLIC_PAGES) {
     const source = viewSource(filename);
     assert.match(source, /asset\('\/i18n\.css'\)/, filename);
-    assert.match(source, /asset\('\/site-fonts\.css'\)/, filename);
+    assert.match(source, /include\('partials\/site-fonts'/, filename);
     assert.match(source, /asset\('\/js\/i18n\.js'\)/, filename);
     assert.match(source, /asset\('\/site-header\.css'\)/, filename);
     assert.match(source, /include\('partials\/site-header'\)/,
@@ -160,7 +163,7 @@ test('every public page loads the shared language layer', () => {
       : filename === 'display.ejs' ? { variant: 'display' } : {};
     const rendered = renderView(filename, header);
     assert.ok(rendered.includes(publicAssetUrl('/i18n.css')), filename);
-    assert.ok(rendered.includes(publicAssetUrl('/site-fonts.css')), filename);
+    assert.match(rendered, /<style data-ww-site-fonts>/, filename);
     assert.ok(rendered.includes(publicAssetUrl('/js/i18n.js')), filename);
     assert.ok(rendered.includes(publicAssetUrl('/site-header.css')), filename);
     assert.match(rendered, /<header\b[^>]*\bww-site-header\b/, filename);
@@ -206,7 +209,7 @@ test('customer-facing actions stay calm and do not expose staging or provider na
   assert.match(actionRuntime, /aria-busy/);
 });
 
-test('interface fonts are locally served, pinned and licensed', () => {
+test('interface fonts are locally served, reusable from preload and consistently fall back', () => {
   const publicRoot = path.join(__dirname, '..', 'public');
   const textFiles = [];
   const visit = (directory) => {
@@ -221,41 +224,87 @@ test('interface fonts are locally served, pinned and licensed', () => {
 
   for (const filename of textFiles) {
     const content = fs.readFileSync(filename, 'utf8');
+    const relative = path.relative(path.join(__dirname, '..'), filename);
     assert.doesNotMatch(content, /fonts\.(?:googleapis|gstatic)\.com/i,
-      `${path.relative(publicRoot, filename)} must not load fonts from a third party`);
+      `${relative} must not load fonts from a third party`);
+    assert.doesNotMatch(content, /['"]Jost['"]\s*,(?!\s*['"]Wolkenworte Jost Fallback['"])/,
+      `${relative} bypasses the metric-adjusted Jost fallback`);
+    assert.doesNotMatch(content, /['"]Playfair Display['"]\s*,(?!\s*['"]Wolkenworte Playfair Fallback['"])/,
+      `${relative} bypasses the metric-adjusted Playfair fallback`);
+    assert.doesNotMatch(content, /['"]Cormorant Garamond['"]\s*,(?!\s*['"]Playfair Display['"])/,
+      `${relative} needs the shared decorative fallback chain`);
+    assert.doesNotMatch(content, /['"]Shadows Into Light['"]\s*,(?!\s*['"]Playfair Display['"])/,
+      `${relative} needs the shared handwritten fallback chain`);
   }
 
-  const styles = fs.readFileSync(path.join(publicRoot, 'site-fonts.css'), 'utf8');
-  for (const family of ['jost', 'playfair-display', 'cormorant-garamond']) {
-    assert.match(styles, new RegExp(`/assets/site-fonts/${family}/`));
+  for (const family of ['jost', 'playfair-display', 'cormorant-garamond', 'shadows-into-light']) {
     assert.ok(fs.statSync(path.join(publicRoot, 'assets', 'site-fonts', family, 'OFL.txt')).size > 0,
       `${family} must retain its OFL license`);
   }
 
   const englishLanding = renderView('landing.ejs', { variant: 'landing' }, 'en');
   const turkishLanding = renderView('landing.ejs', { variant: 'landing' }, 'tr');
-  const basePreload = publicAssetUrl('/assets/site-fonts/jost/jost-latin.woff2');
-  const extendedPreload = publicAssetUrl('/assets/site-fonts/jost/jost-latin-ext.woff2');
-  const playfairPreload = publicAssetUrl('/assets/site-fonts/playfair-display/playfair-display-latin.woff2');
-  const playfairExtendedPreload = publicAssetUrl('/assets/site-fonts/playfair-display/playfair-display-latin-ext.woff2');
+  const displayPage = renderView('display.ejs', { variant: 'display' }, 'en');
+  const basePreload = publicAssetUrl(SITE_FONT_ASSETS.jostLatin);
+  const extendedPreload = publicAssetUrl(SITE_FONT_ASSETS.jostLatinExtended);
+  const playfairPreload = publicAssetUrl(SITE_FONT_ASSETS.playfairLatin);
+  const playfairExtendedPreload = publicAssetUrl(SITE_FONT_ASSETS.playfairLatinExtended);
+  const playfairItalicPreload = publicAssetUrl(SITE_FONT_ASSETS.playfairItalicLatin);
+  const playfairItalicExtendedPreload = publicAssetUrl(SITE_FONT_ASSETS.playfairItalicLatinExtended);
+  const cormorantPreload = publicAssetUrl(SITE_FONT_ASSETS.cormorantItalicLatin);
+  const cormorantExtendedPreload = publicAssetUrl(SITE_FONT_ASSETS.cormorantItalicLatinExtended);
+  const shadowsUrl = publicAssetUrl(SITE_FONT_ASSETS.shadowsLatin);
+
+  const preloads = (html) => new Set([...html.matchAll(
+    /<link rel="preload" href="([^"]+)" as="font" type="font\/woff2" crossorigin \/>/g
+  )].map((match) => match[1]));
+  const faceUrls = (html) => new Set([...html.matchAll(
+    /src:\s*url\("([^"]+)"\) format\("woff2"\)/g
+  )].map((match) => match[1]));
 
   for (const filename of PUBLIC_PAGES) {
     const header = filename === 'landing.ejs'
       ? { variant: 'landing' }
       : filename === 'display.ejs' ? { variant: 'display' } : {};
     const englishPage = renderView(filename, header, 'en');
-    assert.ok(englishPage.includes(basePreload), `${filename} must preload its primary Jost subset`);
-    assert.ok(englishPage.includes(playfairPreload), `${filename} must preload its heading font`);
+    const pagePreloads = preloads(englishPage);
+    const pageFaceUrls = faceUrls(englishPage);
+    assert.ok(pagePreloads.has(basePreload), `${filename} must preload its primary Jost subset`);
+    assert.ok(pagePreloads.has(playfairPreload), `${filename} must preload its heading font`);
+    for (const preload of pagePreloads) {
+      assert.ok(pageFaceUrls.has(preload), `${filename} preload must exactly match an @font-face URL: ${preload}`);
+    }
+    for (const fontPath of Object.values(SITE_FONT_ASSETS)) {
+      assert.ok(pageFaceUrls.has(publicAssetUrl(fontPath)),
+        `${filename} must give ${fontPath} its content-addressed URL`);
+    }
+    assert.doesNotMatch(englishPage, /url\("\/assets\/site-fonts\/[^"?]+\.woff2"\)/,
+      `${filename} must not emit an unversioned site-font request`);
   }
-  assert.ok(!englishLanding.includes(extendedPreload),
+
+  assert.ok(!preloads(englishLanding).has(extendedPreload),
     'non-Turkish pages must not preload an unused extended subset');
-  assert.ok(turkishLanding.includes(basePreload));
-  assert.ok(turkishLanding.includes(extendedPreload),
+  assert.ok(preloads(turkishLanding).has(basePreload));
+  assert.ok(preloads(turkishLanding).has(extendedPreload),
     'Turkish needs the extended Jost glyph subset before first paint');
-  assert.ok(turkishLanding.includes(playfairExtendedPreload),
+  assert.ok(preloads(turkishLanding).has(playfairExtendedPreload),
     'Turkish headings need the extended Playfair subset before first paint');
-  assert.match(styles, /font-family:\s*"Wolkenworte Jost Fallback"[\s\S]*?size-adjust:/);
-  assert.match(styles, /font-family:\s*"Wolkenworte Playfair Fallback"[\s\S]*?size-adjust:/);
+  assert.ok(preloads(displayPage).has(playfairItalicPreload),
+    'the event empty state needs italic Playfair before first paint');
+  assert.ok(preloads(englishLanding).has(playfairItalicPreload),
+    'the landing hero needs italic Playfair before first paint');
+  assert.ok(preloads(englishLanding).has(cormorantPreload),
+    'the landing hero word cloud needs Cormorant before first paint');
+  assert.ok(preloads(turkishLanding).has(playfairItalicExtendedPreload));
+  assert.ok(preloads(turkishLanding).has(cormorantExtendedPreload));
+  assert.ok(!preloads(englishLanding).has(shadowsUrl),
+    'the below-the-fold testimonial font should load on demand');
+
+  const fontPartial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-fonts.ejs'), 'utf8');
+  assert.match(fontPartial,
+    /font-family:\s*"Wolkenworte Jost Fallback"[\s\S]*?font-weight:\s*300 600;[\s\S]*?size-adjust:/);
+  assert.match(fontPartial,
+    /font-family:\s*"Wolkenworte Playfair Fallback"[\s\S]*?font-style:\s*italic;[\s\S]*?font-weight:\s*500 600;[\s\S]*?size-adjust:/);
 });
 
 test('server localization produces the selected language before browser scripts run', () => {

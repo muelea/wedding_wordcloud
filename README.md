@@ -161,6 +161,9 @@ The website interface also serves its pinned Jost, Playfair Display and
 Cormorant Garamond WOFF2 files locally from `public/assets/site-fonts/`.
 Browsers therefore do not contact Google Fonts or another font CDN during page
 loads. Each interface-font family keeps its OFL license beside the binaries.
+The shared server-rendered font partial gives every preload and matching
+`@font-face` the same content-addressed URL. Pages preload only the variants
+needed above the fold; other decorative faces remain available on demand.
 
 ## Collaborator quick start
 
@@ -376,6 +379,7 @@ src/
   clientIdentity.js        trusted normalized/HMAC source identity
   rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
   asyncRoute.js            rejected-promise boundary for Express routes
+  siteFonts.js             shared interface-font manifest + page preload selection
   slug.js                  German-aware slugify + unique random-suffix generation
   words.js                 Word normalization (trim/case-fold/emoji-strip)
   baseUrl.js               LAN-IP / PUBLIC_URL resolution

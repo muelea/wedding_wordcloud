@@ -25,7 +25,7 @@
 
 .workflow-intro h2 {
   margin: 0 0 18px;
-  font: 500 clamp(2.25rem, 4vw, 3.65rem)/1.03 'Playfair Display', Georgia, serif;
+  font: 500 clamp(2.25rem, 4vw, 3.65rem)/1.03 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   letter-spacing: -.035em;
 }
 
@@ -94,7 +94,7 @@
 .workflow-step-text strong {
   display: block;
   padding-top: 3px;
-  font: 500 1.12rem/1.25 'Playfair Display', Georgia, serif;
+  font: 500 1.12rem/1.25 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   letter-spacing: -.015em;
 }
 
@@ -277,7 +277,7 @@
 .workflow-create-card h4 {
   max-width: 320px;
   margin: 0 0 20px;
-  font: 500 clamp(1.3rem, 2.5vw, 2rem)/1.08 'Playfair Display', Georgia, serif;
+  font: 500 clamp(1.3rem, 2.5vw, 2rem)/1.08 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   letter-spacing: -.025em;
 }
 
@@ -356,7 +356,7 @@
 
 .workflow-invitation h4 {
   margin: 9px 0 5px;
-  font: italic 500 clamp(1.35rem, 2.6vw, 2.2rem)/1 'Cormorant Garamond', 'Playfair Display', serif;
+  font: italic 500 clamp(1.35rem, 2.6vw, 2.2rem)/1 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
 }
 
 .workflow-invitation p {
@@ -428,7 +428,7 @@
 
 .workflow-share-screen h4 {
   margin: 10px 0 9px;
-  font: 500 clamp(1.15rem, 2.2vw, 1.75rem)/1.05 'Playfair Display', Georgia, serif;
+  font: 500 clamp(1.15rem, 2.2vw, 1.75rem)/1.05 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
 }
 
 .workflow-share-screen p {
@@ -503,7 +503,7 @@
 
 .workflow-guest-screen h4 {
   margin: 10px 0 15px;
-  font: 500 clamp(.9rem, 1.75vw, 1.38rem)/1.14 'Playfair Display', Georgia, serif;
+  font: 500 clamp(.9rem, 1.75vw, 1.38rem)/1.14 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
 }
 
 .workflow-word-entry {
@@ -513,7 +513,7 @@
   background: #fff;
   padding: 12px 7px;
   color: var(--sage-deep);
-  font: italic 500 clamp(.82rem, 1.7vw, 1.22rem)/1 'Cormorant Garamond', serif;
+  font: italic 500 clamp(.82rem, 1.7vw, 1.22rem)/1 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   box-shadow: 0 12px 24px rgba(64, 15, 38, .07);
 }
 
@@ -638,7 +638,7 @@
 
 .workflow-new-word b {
   color: var(--sage-deep);
-  font: italic 600 1rem/1 'Cormorant Garamond', serif;
+  font: italic 600 1rem/1 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
 }
 
 /* Step 05: existing high-resolution product assets with one shared artwork. */
@@ -664,7 +664,7 @@
 
 .workflow-keepsake-copy h4 {
   margin: 8px 0 0;
-  font: 500 clamp(1.35rem, 2.8vw, 2.3rem)/1.03 'Playfair Display', Georgia, serif;
+  font: 500 clamp(1.35rem, 2.8vw, 2.3rem)/1.03 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   letter-spacing: -.025em;
 }
 
@@ -718,7 +718,7 @@
 }
 
 .workflow-product-design span {
-  font-family: 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', serif;
+  font-family: 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   font-style: italic;
   font-weight: 600;
   line-height: .9;

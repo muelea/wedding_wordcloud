@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" id="theme-color" content="#fffdfa" />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
-  <%- include('partials/font-preloads') %>
+  <%- include('partials/site-fonts', { preloadPlayfairItalic: true }) %>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
-  <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
@@ -129,8 +128,8 @@
       background: color-mix(in srgb, var(--bg) 94%, transparent);
       box-shadow: 0 10px 28px rgba(64,15,38,.1);
     }
-    #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', system-ui, sans-serif; }
-    #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', system-ui, sans-serif; cursor: pointer; }
+    #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
+    #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; cursor: pointer; }
     .display-emoji-trigger { display: none; }
     .display-emoji-trigger {
       place-items: center;
@@ -205,7 +204,7 @@
       appearance: none;
       -webkit-appearance: none;
       color: var(--text);
-      font: 600 13px 'Jost', system-ui, sans-serif;
+      font: 600 13px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       cursor: pointer;
     }
     .ww-palette-trigger {
@@ -267,7 +266,7 @@
       border-radius: 11px;
       background: transparent;
       color: var(--text);
-      font: 600 14px 'Jost', system-ui, sans-serif;
+      font: 600 14px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       text-align: left;
       cursor: pointer;
     }
@@ -298,7 +297,7 @@
     body.presentation-mode #memory-cta { display: none !important; }
     body.presentation-mode #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px)); }
     .organizer-settings-section { display: grid; gap: 9px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--border); }
-    .organizer-settings-section h3 { margin: 0; color: var(--text); font: 600 16px 'Jost', system-ui, sans-serif; }
+    .organizer-settings-section h3 { margin: 0; color: var(--text); font: 600 16px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
     .organizer-danger-zone { padding: 15px; border: 1px solid color-mix(in srgb, #b33a4d 28%, var(--border)); border-radius: 14px; background: color-mix(in srgb, #b33a4d 5%, transparent); }
     .organizer-danger-zone .reset-dialog-button { border-color: color-mix(in srgb, #b33a4d 42%, var(--border)); color: #9d263e; }
     .word-manager-list { display: grid; gap: 7px; max-height: 210px; margin: 11px 0 0; overflow: auto; }
@@ -330,6 +329,7 @@
     .empty-ornament {
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(60px, 8vw, 100px);
+      font-weight: 500;
       color: var(--rad1);
       line-height: 1;
       opacity: 0.5;
@@ -339,6 +339,7 @@
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(18px, 2.5vw, 28px);
       font-style: italic;
+      font-weight: 500;
       color: var(--muted);
       opacity: 0.7;
       transition: color 0.6s;
@@ -377,7 +378,7 @@
       color: var(--primary);
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(18px, 2.1vw, 28px);
-      font-weight: 400;
+      font-weight: 500;
       line-height: 1.15;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -397,7 +398,7 @@
       border-radius: 999px;
       background: color-mix(in srgb, var(--bg) 94%, transparent);
       color: var(--text);
-      font: 600 12px/1 'Jost', system-ui, sans-serif;
+      font: 600 12px/1 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       cursor: pointer;
       transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
     }
@@ -442,7 +443,7 @@
       border-radius: 999px;
       background: var(--primary);
       color: #fff;
-      font: 600 13px/1 'Jost', system-ui, sans-serif;
+      font: 600 13px/1 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       white-space: nowrap;
       cursor: pointer;
       box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
@@ -485,6 +486,7 @@
       color: #fff;
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: 16px;
+      font-weight: 500;
       padding: 10px 24px;
       border-radius: 999px;
       animation: toastIn 0.3s ease both, toastOut 0.4s ease 1.8s both;
@@ -510,7 +512,7 @@
     }
     .reset-dialog::backdrop { background: rgba(30, 7, 18, .42); backdrop-filter: blur(4px); }
     .reset-dialog-card { padding: 30px; }
-    .reset-dialog h2 { margin: 0; font: 600 27px/1.15 'Playfair Display', Georgia, serif; }
+    .reset-dialog h2 { margin: 0; font: 600 27px/1.15 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
     .reset-dialog-copy { margin: 10px 0 22px; color: var(--muted); font-size: 14px; line-height: 1.55; }
     .reset-dialog label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
     .reset-dialog input {
@@ -522,7 +524,7 @@
       outline: none;
       background: color-mix(in srgb, var(--bg) 92%, var(--primary));
       color: var(--text);
-      font: 18px/1 'Jost', system-ui, sans-serif;
+      font: 18px/1 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
     }
     .reset-dialog input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 13%, transparent); }
     .reset-dialog-error { min-height: 20px; margin: 9px 0 0; color: #b33a4d; font-size: 13px; }
@@ -535,17 +537,17 @@
       background: transparent;
       color: var(--text);
       cursor: pointer;
-      font: 600 13px/1 'Jost', system-ui, sans-serif;
+      font: 600 13px/1 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
     }
     .reset-dialog-button.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
     .reset-dialog-button:disabled { cursor: wait; opacity: .58; }
     .draft-settings { width: min(420px, calc(100% - 32px)); margin: auto; border: 0; border-radius: 20px; padding: 0; color: var(--text); background: var(--bg); box-shadow: 0 24px 70px rgba(64,15,38,.22); }
     .draft-settings::backdrop { background: rgba(64,15,38,.3); backdrop-filter: blur(4px); }
     .draft-settings form { padding: 25px; display: grid; gap: 12px; }
-    .draft-settings h2 { font: 500 25px 'Playfair Display', Georgia, serif; color: var(--primary); }
+    .draft-settings h2 { font: 500 25px 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; color: var(--primary); }
     .draft-settings p { color: var(--muted); font-size: 13px; line-height: 1.5; }
     .draft-settings label { display: grid; gap: 6px; color: var(--text); font-size: 14px; font-weight: 600; }
-    .draft-settings input { height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 16px 'Jost', sans-serif; }
+    .draft-settings input { height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 16px 'Jost', 'Wolkenworte Jost Fallback', sans-serif; }
     .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
     .dialog-heading h2 { margin: 0; }
     .dialog-close { width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 26px/1 system-ui, sans-serif; cursor: pointer; }
@@ -563,7 +565,7 @@
       border-radius: 13px;
       background: transparent;
       color: var(--text);
-      font: 600 14px 'Jost', system-ui, sans-serif;
+      font: 600 14px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       text-decoration: none;
       cursor: pointer;
     }
@@ -571,7 +573,7 @@
     .share-option:hover, .share-option:focus-visible { border-color: color-mix(in srgb, var(--primary) 45%, transparent); background: color-mix(in srgb, var(--primary) 7%, transparent); color: var(--primary); }
     #share-dialog-copy-link { grid-column: 1 / -1; }
     .share-dialog-qr { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 3px; padding: 14px; border-radius: 14px; background: color-mix(in srgb, var(--primary) 5%, transparent); }
-    .share-dialog-qr-copy strong { display: block; margin-bottom: 3px; font: 500 16px 'Playfair Display', Georgia, serif; }
+    .share-dialog-qr-copy strong { display: block; margin-bottom: 3px; font: 500 16px 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
     .share-dialog-qr-copy span { color: var(--muted); font-size: 12px; line-height: 1.45; }
     .share-dialog .qr-code { width: 88px; height: 88px; flex: 0 0 auto; }
     .share-feedback { min-height: 18px; margin: -4px 0 0; color: var(--primary); font-size: 12px; }

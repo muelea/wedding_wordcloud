@@ -19,7 +19,7 @@
 .ww-emoji-picker[data-placement="above-right"] { right: 0; bottom: calc(100% + 12px); }
 .ww-emoji-picker[data-placement="below-left"] { top: calc(100% + 8px); left: 0; }
 .ww-emoji-picker-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 2px 8px 7px; }
-.ww-emoji-picker-title { font: 600 14px/1.2 'Jost', system-ui, sans-serif; }
+.ww-emoji-picker-title { font: 600 14px/1.2 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
 .ww-emoji-picker-close {
   display: grid;
   place-items: center;
@@ -68,7 +68,7 @@
   appearance: none;
   background: transparent;
   color: var(--ww-emoji-text);
-  font: 14px 'Jost', system-ui, sans-serif;
+  font: 14px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
 }
 .ww-emoji-search-input::-webkit-search-cancel-button { display: none; }
 .ww-emoji-search-clear {
@@ -142,7 +142,7 @@
 .ww-emoji-option:focus-visible { background: color-mix(in srgb, var(--ww-emoji-primary) 10%, transparent); outline: 2px solid color-mix(in srgb, var(--ww-emoji-primary) 50%, transparent); outline-offset: -2px; }
 .ww-emoji-option:disabled { cursor: wait; opacity: .55; }
 .ww-emoji-option .ww-emoji { width: 100%; height: 100%; max-width: 27px; max-height: 27px; }
-.ww-emoji-empty { margin: 0; padding: 28px 12px; color: var(--ww-emoji-muted); font: 13px/1.45 'Jost', system-ui, sans-serif; text-align: center; }
+.ww-emoji-empty { margin: 0; padding: 28px 12px; color: var(--ww-emoji-muted); font: 13px/1.45 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; text-align: center; }
 .ww-emoji-status {
   position: absolute;
   width: 1px;

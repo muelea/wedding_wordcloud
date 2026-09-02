@@ -11,6 +11,7 @@ const {
 } = require('./i18n');
 const { publicAssetUrl } = require('./publicAssets');
 const { localizeHtml } = require('./htmlLocalizer');
+const { SITE_FONT_ASSETS, siteFontPreloads } = require('./siteFonts');
 
 const LANGUAGE_COOKIE = 'wolkenworte-language';
 const LANGUAGE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -115,6 +116,8 @@ async function renderPage(req, res, view, options = {}) {
       href: relativeLanguageUrl(req.originalUrl, code),
     })),
     asset: publicAssetUrl,
+    siteFontAssets: SITE_FONT_ASSETS,
+    siteFontPreloads,
     localeCatalogUrls: LOCALE_CATALOG_URLS,
     localeCatalogUrl: resolved.locale === DEFAULT_LOCALE
       ? ''

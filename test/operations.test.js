@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { publicAssetUrl } = require('../src/publicAssets');
+const { SITE_FONT_ASSETS } = require('../src/siteFonts');
 
 async function createPaidTestOrder(db, event, suffix) {
   const configuration = await db.createConfiguration({
@@ -193,9 +195,13 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
     const english = await fetch(`${hosted.baseUrl}/?lang=en`);
     assert.equal(english.status, 503);
     assert.match(await english.text(), /We’ll be right back\./);
-    const maintenanceStyles = await fetch(`${hosted.baseUrl}/site-fonts.css`);
-    assert.equal(maintenanceStyles.status, 200,
+    const maintenanceFont = await fetch(
+      `${hosted.baseUrl}${publicAssetUrl(SITE_FONT_ASSETS.jostLatin)}`
+    );
+    assert.equal(maintenanceFont.status, 200,
       'the maintenance page must be able to load its local presentation assets');
+    assert.equal(maintenanceFont.headers.get('cache-control'),
+      'public, max-age=31536000, immutable');
     const publicExport = await fetch(`${hosted.baseUrl}/e/unavailable/export.svg`);
     assert.equal(publicExport.status, 503,
       'only immutable presentation assets may pass the stop-the-world maintenance gate');

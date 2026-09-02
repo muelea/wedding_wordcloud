@@ -8,6 +8,7 @@ const path = require('node:path');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
 const { publicAssetUrl } = require('../src/publicAssets');
+const { SITE_FONT_ASSETS } = require('../src/siteFonts');
 const {
   assertGitReleaseCandidate,
   releaseSteps,
@@ -76,6 +77,11 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
 
   const versionedJs = await fetch(`${baseUrl}${publicAssetUrl('/js/wordcloud-core.js')}`);
   assert.equal(versionedJs.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+
+  const versionedSiteFont = await fetch(`${baseUrl}${publicAssetUrl(SITE_FONT_ASSETS.jostLatin)}`);
+  assert.equal(versionedSiteFont.status, 200);
+  assert.equal(versionedSiteFont.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.ok((await versionedSiteFont.arrayBuffer()).byteLength > 10_000);
 
   const staleVersionedJs = await fetch(`${baseUrl}/js/wordcloud-core.js?v=stale-release`);
   assert.equal(staleVersionedJs.status, 200);

@@ -184,10 +184,8 @@ function collectRepositoryAssetPaths(root = ROOT) {
       }
     }
   }
-  const siteFontCss = fs.readFileSync(path.join(root, 'public', 'site-fonts.css'), 'utf8');
-  for (const match of siteFontCss.matchAll(/url\((['"]?)(\/assets\/[^)'"\s]+)\1\)/g)) {
-    urls.add(match[2]);
-  }
+  const { SITE_FONT_ASSETS } = requireFromRoot('./src/siteFonts.js');
+  for (const fontPath of Object.values(SITE_FONT_ASSETS)) urls.add(fontPath);
   return [...urls].sort().map((url) => path.join('public', url.slice(1)));
 }
 

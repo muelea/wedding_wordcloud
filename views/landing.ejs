@@ -7,9 +7,8 @@
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass.') %>" data-i18n-content-source="Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass." />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
-  <%- include('partials/font-preloads', { preloadPlayfairItalic: true }) %>
+  <%- include('partials/site-fonts', { preloadPlayfairItalic: true, preloadCormorantItalic: true }) %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
-  <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <title data-i18n-source="Wolkenworte – Eure Erinnerungen in einem Wort"><%= t('Wolkenworte – Eure Erinnerungen in einem Wort') %></title>
@@ -126,12 +125,12 @@
     .start-dialog::backdrop { background: rgba(38,9,23,.44); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
     .start-dialog-form { display: grid; gap: 20px; max-height: inherit; padding: 30px; overflow-y: auto; overscroll-behavior: contain; }
     .start-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-    .start-dialog h2 { margin: 0; font: 500 clamp(1.65rem, 4vw, 2rem)/1.15 'Playfair Display', Georgia, serif; letter-spacing: -.02em; }
+    .start-dialog h2 { margin: 0; font: 500 clamp(1.65rem, 4vw, 2rem)/1.15 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; letter-spacing: -.02em; }
     .start-dialog-close { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 28px/1 system-ui, sans-serif; cursor: pointer; }
     .start-dialog-close:hover, .start-dialog-close:focus-visible { background: rgba(156,28,76,.08); color: var(--sage-deep); }
     .start-dialog-copy { margin: -9px 0 0; color: var(--muted); font-size: .94rem; line-height: 1.6; }
     .start-dialog-label { display: grid; gap: 8px; color: var(--ink); font-size: .84rem; font-weight: 600; }
-    .start-dialog-input { width: 100%; height: 54px; padding: 0 16px; border: 1px solid var(--gold-line); border-radius: 14px; outline: none; background: #fff; color: var(--ink); font: 1rem 'Jost', system-ui, sans-serif; }
+    .start-dialog-input { width: 100%; height: 54px; padding: 0 16px; border: 1px solid var(--gold-line); border-radius: 14px; outline: none; background: #fff; color: var(--ink); font: 1rem 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
     .start-dialog-input:focus { border-color: var(--sage-deep); box-shadow: 0 0 0 4px rgba(156,28,76,.1); }
     .start-dialog-field-hint { color: var(--muted); font-size: .76rem; font-weight: 400; line-height: 1.45; }
     .start-dialog-pin-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -257,11 +256,11 @@
     .print-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 84px; position: relative; }
     .print-copy h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
     .print-copy p { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
-    .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; letter-spacing: .03em; font-style: italic; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
+    .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; font-style: italic; font-weight: 500; letter-spacing: .03em; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
 
     .quote { text-align: center; position: relative; }
-    .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Shadows Into Light', 'Playfair Display', cursive; font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-style: normal; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
-    .quote cite { color: var(--sage-deep); font-family: 'Shadows Into Light', cursive; font-size: 1.25rem; font-style: normal; letter-spacing: .01em; }
+    .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Shadows Into Light', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, cursive; font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-style: normal; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
+    .quote cite { color: var(--sage-deep); font-family: 'Shadows Into Light', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, cursive; font-size: 1.25rem; font-style: normal; letter-spacing: .01em; }
     /* The shared procedural mug renderer uses the locally served Three.js
        browser build; the homepage and configurator render the same geometry. */
     .cup-stage { min-height: 400px; display: grid; place-items: center; position: relative; gap: 4px; }
@@ -336,7 +335,7 @@
       #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
       #site-header .landing-section-links { display: none; }
       #site-header.landing-menu-open .landing-section-links { position: absolute; top: calc(100% + 8px); right: max(20px, var(--ww-safe-right)); display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,250,.98); box-shadow: 0 14px 32px rgba(64,15,38,.13); }
-      #site-header.landing-menu-open .landing-section-links .landing-menu-start { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 5px; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; font: 600 .82rem 'Jost', system-ui, sans-serif; cursor: pointer; }
+      #site-header.landing-menu-open .landing-section-links .landing-menu-start { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 5px; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; font: 600 .82rem 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; cursor: pointer; }
       #site-header.landing-menu-open .landing-section-link { padding: 11px 13px; color: var(--ink); }
       #site-header.landing-menu-open .landing-section-link::after { display: none; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }
