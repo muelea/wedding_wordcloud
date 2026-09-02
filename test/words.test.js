@@ -189,3 +189,41 @@ test('a newly connecting socket receives current state, not an empty board', asy
   t.after(() => second.close());
   assert.deepEqual(initialWords, [['vertrauen', 1]]);
 });
+
+test('emoji survive socket normalization, Postgres storage and receipt hydration', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+
+  const event = await createEvent(baseUrl, { title: 'Emoji Ende zu Ende' });
+  const guestId = 'e'.repeat(32);
+  const { socket, initialWords } = await connectSocket(baseUrl, event.slug, guestId);
+  t.after(() => socket.close());
+  assert.deepEqual(initialWords, []);
+
+  const accepted = waitForArgs(socket, 'word-accepted');
+  const updated = waitFor(socket, 'word-update');
+  socket.emit('submit-word', '  LIEBE ❤ 👨‍👩‍👧‍👦  ');
+  const [word, receipt] = await accepted;
+  assert.equal(word, 'liebe ❤️ 👨‍👩‍👧‍👦');
+  assert.match(receipt, /^[A-Za-z0-9_-]{24}$/);
+  assert.deepEqual(await updated, [['liebe ❤️ 👨‍👩‍👧‍👦', 1]]);
+
+  let sawUnsupportedUpdate = false;
+  const updateGuard = () => { sawUnsupportedUpdate = true; };
+  socket.on('word-update', updateGuard);
+  const rejected = waitFor(socket, 'word-error');
+  socket.emit('submit-word', '😀‍😀');
+  assert.deepEqual(await rejected, { error: 'unsupported_emoji' });
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  socket.off('word-update', updateGuard);
+  assert.equal(sawUnsupportedUpdate, false);
+
+  const { socket: reloaded, initialWords: storedWords, ownWords } = await connectSocket(
+    baseUrl,
+    event.slug,
+    guestId
+  );
+  t.after(() => reloaded.close());
+  assert.deepEqual(storedWords, [['liebe ❤️ 👨‍👩‍👧‍👦', 1]]);
+  assert.deepEqual(ownWords, [{ receipt, word: 'liebe ❤️ 👨‍👩‍👧‍👦' }]);
+});

@@ -38,6 +38,9 @@
       if (!root.MugIcons) throw new Error('MugIcons is required for the mug editor');
       if (!root.DesignFonts) throw new Error('DesignFonts is required for the mug editor');
       if (!root.ImagePrintQuality) throw new Error('ImagePrintQuality is required for the mug editor');
+      if (!root.WordCloudCore || !root.WolkenworteEmoji) {
+        throw new Error('The shared emoji renderer is required for the mug editor');
+      }
       this.width = options.printWidth;
       this.height = options.printHeight;
       this.printFileDpi = Number(options.printFileDpi) || 300;
@@ -93,6 +96,8 @@
       this.imageRefsBySource = new Map();
       this.imageSourcesByRef = new Map();
       this.imageRefCounter = 0;
+      this.measureContext = document.createElement('canvas').getContext('2d');
+      this.textChangeRevision = 0;
 
       this.canvas = new root.fabric.Canvas(options.canvas, {
         width: this.canvasWidth,
@@ -126,6 +131,7 @@
     makeObject(item) {
       if (item.type === 'icon') return this.makeIconObject(item);
       if (item.type === 'image') return this.makeImageObject(item);
+      if (root.WolkenworteEmoji.hasEmoji(item.text)) return this.makeRichTextObject(item);
       const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
       const text = new root.fabric.IText(item.text, {
         left: item.x * this.editorScale,
@@ -159,6 +165,138 @@
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
+    }
+
+    makeRichTextObject(item) {
+      const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
+      const font = root.DesignFonts.get(fontKey);
+      const fontSize = Math.max(
+        MIN_PRINT_FONT_SIZE * this.editorScale,
+        item.fontSize * this.editorScale
+      );
+      const box = root.WordCloudCore.measureTextBox(
+        item.text,
+        fontSize,
+        this.measureContext,
+        font.cssFamily
+      );
+      const frame = new root.fabric.Rect({
+        left: 0,
+        top: 0,
+        originX: 'center',
+        originY: 'center',
+        width: box.width,
+        height: box.height,
+        fill: 'rgba(0,0,0,0)',
+        strokeWidth: 0,
+        evented: false,
+      });
+      const children = [frame];
+      const textChildren = [];
+      for (const run of box.runs) {
+        const centerX = -box.width / 2 + run.x + run.width / 2;
+        if (run.type === 'emoji') {
+          const element = root.WolkenworteEmoji.getLoadedImage(run);
+          if (!element) throw new Error('Emoji artwork must be loaded before restoring the design');
+          const image = new root.fabric.FabricImage(element, {
+            left: centerX,
+            top: 0,
+            originX: 'center',
+            originY: 'center',
+            evented: false,
+            selectable: false,
+          });
+          const sourceWidth = image.width || 1;
+          const sourceHeight = image.height || 1;
+          const scale = Math.min(run.width / sourceWidth, fontSize / sourceHeight);
+          image.set({ scaleX: scale, scaleY: scale });
+          children.push(image);
+          continue;
+        }
+        const text = new root.fabric.FabricText(run.text, {
+          left: centerX,
+          top: 0,
+          originX: 'center',
+          originY: 'center',
+          fontFamily: font.family,
+          fontSize,
+          fill: item.color,
+          evented: false,
+          selectable: false,
+        });
+        textChildren.push(text);
+        children.push(text);
+      }
+      const group = new root.fabric.Group(children, {
+        left: item.x * this.editorScale,
+        top: item.y * this.editorScale,
+        originX: 'center',
+        originY: 'center',
+        angle: item.angle || 0,
+        lockScalingFlip: true,
+        centeredScaling: true,
+        centeredRotation: true,
+        transparentCorners: false,
+        cornerColor: '#ffffff',
+        cornerStrokeColor: '#9c1c4c',
+        borderColor: '#9c1c4c',
+        cornerStyle: 'circle',
+        cornerSize: 14,
+        touchCornerSize: 28,
+        padding: 3,
+        hoverCursor: 'move',
+        moveCursor: 'grabbing',
+      });
+      group.editorKind = 'text';
+      group.editorId = item.id || this.nextId();
+      group.editorFontKey = fontKey;
+      group.editorFontSize = fontSize;
+      group.editorText = item.text;
+      group.editorColor = item.color;
+      group.editorTextChildren = textChildren;
+      group.text = item.text;
+      group.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+      group.setCoords();
+      return group;
+    }
+
+    objectText(object) {
+      return object?.editorText ?? object?.text ?? '';
+    }
+
+    replaceTextObject(object, updates = {}) {
+      const objects = this.canvas.getObjects();
+      const index = objects.indexOf(object);
+      if (index < 0) return object;
+      const wasActive = this.canvas.getActiveObject() === object;
+      const item = { ...this.serializeObject(object), ...updates };
+      if (wasActive) this.canvas.discardActiveObject();
+      this.canvas.remove(object);
+      const replacement = this.makeObject(item);
+      this.canvas.insertAt(index, replacement);
+      this.keepInside(replacement);
+      if (wasActive) this.canvas.setActiveObject(replacement);
+      return replacement;
+    }
+
+    async applyTextChange(object, rawText, { finalize = false, record = false } = {}) {
+      const previous = this.objectText(object);
+      const text = this.normalizeText(rawText, finalize) || previous || 'wort';
+      const revision = ++this.textChangeRevision;
+      await root.WolkenworteEmoji.preloadTexts([text]);
+      if (revision !== this.textChangeRevision || !this.canvas.getObjects().includes(object)) return object;
+      let next = object;
+      const needsReplacement = root.WolkenworteEmoji.hasEmoji(text) || object.editorText !== undefined;
+      if (needsReplacement) next = this.replaceTextObject(object, { text });
+      else next.set({ text });
+      this.textInput.value = text;
+      this.keepInside(next);
+      next.setCoords();
+      this.canvas.requestRenderAll();
+      if (record) this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      return next;
     }
 
     makeImageObject(item) {
@@ -314,7 +452,7 @@
 
       this.canvas.on('text:editing:entered', (event) => {
         if (!event.target || event.target.editorKind !== 'text') return;
-        event.target.editorTextBeforeEditing = event.target.text;
+        event.target.editorTextBeforeEditing = this.objectText(event.target);
         this.updateSelectionPanel();
       });
       this.canvas.on('text:changed', (event) => {
@@ -331,34 +469,50 @@
       this.canvas.on('text:editing:exited', (event) => {
         const object = event.target;
         if (!object || object.editorKind !== 'text') return;
-        const text = this.normalizeText(object.text, true) || object.editorTextBeforeEditing || 'wort';
-        object.set({ text });
-        this.keepInside(object);
-        object.setCoords();
-        this.canvas.requestRenderAll();
-        this.recordHistory();
-        this.emitChange();
-        this.updateSelectionPanel();
+        this.applyTextChange(
+          object,
+          object.text || object.editorTextBeforeEditing || 'wort',
+          { finalize: true, record: true }
+        ).catch(() => this.setFeedback('Das Emoji konnte nicht geladen werden.'));
       });
 
       this.canvas.on('mouse:dblclick', (event) => {
-        const object = event.target;
-        if (!object || typeof object.enterEditing !== 'function') return;
-        this.canvas.setActiveObject(object);
+        this.beginTextEditing(event.target);
+      });
+    }
+
+    beginTextEditing(object) {
+      if (!object || object.editorKind !== 'text') return false;
+      const usesToolbarField = object.editorText !== undefined;
+      if (!usesToolbarField && typeof object.enterEditing !== 'function') return false;
+
+      this.canvas.setActiveObject(object);
+      if (usesToolbarField) {
+        this.updateSelectionPanel();
+        this.textInput.focus();
+        this.textInput.select();
+      } else {
         object.enterEditing();
         object.selectAll();
         if (object.hiddenTextarea) object.hiddenTextarea.focus();
         this.updateSelectionPanel();
-        this.canvas.requestRenderAll();
-      });
+      }
+      this.canvas.requestRenderAll();
+      return true;
     }
 
     normalizeText(rawText, finalize = false) {
       let text = String(rawText || '').normalize('NFC')
-        .replace(/[\x00-\x1f\x7f]/g, '')
-        .slice(0, 30);
+        .replace(/[\x00-\x1f\x7f]/g, '');
       if (finalize) text = text.replace(/ {2,}/g, ' ').trim();
-      return text;
+      if (root.WolkenworteEmoji.containsUnsupportedEmoji(text)) {
+        this.setFeedback('Dieses Emoji wird noch nicht unterstützt. Bitte wählt ein anderes.');
+        return '';
+      }
+      return root.WolkenworteEmoji.truncateGraphemes(
+        root.WolkenworteEmoji.canonicalizeText(text),
+        30
+      );
     }
 
     loadImageElement(src) {
@@ -386,10 +540,17 @@
     }
 
     preloadImages(design) {
-      const sources = [...new Set((Array.isArray(design) ? design : [])
+      const items = Array.isArray(design) ? design : [];
+      const sources = [...new Set(items
         .filter((item) => item?.type === 'image' && typeof item.src === 'string')
         .map((item) => item.src))];
-      return Promise.all(sources.map((src) => this.loadImageSource(src)));
+      return Promise.all([
+        ...sources.map((src) => this.loadImageSource(src)),
+        root.WolkenworteEmoji.preloadTexts(
+          items.filter((item) => item && item.type !== 'image' && item.type !== 'icon')
+            .map((item) => item.text)
+        ),
+      ]);
     }
 
     getImageElement(src) {
@@ -481,27 +642,23 @@
         const active = this.canvas.getActiveObject();
         const text = this.normalizeText(this.textInput.value);
         if (!active || active.editorKind !== 'text' || !text.trim()) return;
-        active.set({ text });
-        this.keepInside(active);
-        active.setCoords();
-        this.canvas.requestRenderAll();
-        this.emitChange();
+        this.applyTextChange(active, text).catch(() => {
+          this.setFeedback('Das Emoji konnte nicht geladen werden.');
+        });
       });
       this.textInput.addEventListener('change', () => {
         const active = this.canvas.getActiveObject();
         if (!active || active.editorKind !== 'text') return;
-        const text = this.normalizeText(this.textInput.value, true) || active.text;
-        active.set({ text });
-        this.textInput.value = text;
-        this.keepInside(active);
-        active.setCoords();
-        this.canvas.requestRenderAll();
-        this.recordHistory();
-        this.emitChange();
+        this.applyTextChange(active, this.textInput.value, {
+          finalize: true,
+          record: true,
+        }).catch(() => this.setFeedback('Das Emoji konnte nicht geladen werden.'));
       });
       this.textInput.addEventListener('blur', () => {
         const active = this.canvas.getActiveObject();
-        if (active?.editorKind === 'text' && !this.textInput.value.trim()) this.textInput.value = active.text;
+        if (active?.editorKind === 'text' && !this.textInput.value.trim()) {
+          this.textInput.value = this.objectText(active);
+        }
       });
       options.colorInput.addEventListener('input', () => this.setActiveColor(options.colorInput.value));
       this.fontSelect.addEventListener('change', () => {
@@ -941,6 +1098,7 @@
         object.setCoords();
         return;
       }
+      if (object.editorText !== undefined) return;
       const nextSize = Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, object.fontSize * object.scaleX);
       object.set({ fontSize: nextSize, scaleX: 1, scaleY: 1 });
       object.setCoords();
@@ -954,7 +1112,11 @@
 
     getObjectColor(object) {
       if (object.editorKind === 'image') return null;
-      return String(object.editorKind === 'icon' ? object.editorDrawing.stroke : object.fill);
+      return String(object.editorKind === 'icon'
+        ? object.editorDrawing.stroke
+        : object.editorText !== undefined
+          ? object.editorColor
+          : object.fill);
     }
 
     selectionColor(objects) {
@@ -969,6 +1131,10 @@
       if (object.editorKind === 'image') return;
       if (object.editorKind === 'icon') {
         object.editorDrawing.set({ stroke: color });
+        object.dirty = true;
+      } else if (object.editorText !== undefined) {
+        object.editorColor = color;
+        object.editorTextChildren.forEach((child) => child.set({ fill: color }));
         object.dirty = true;
       } else {
         object.set({ fill: color });
@@ -1080,6 +1246,41 @@
       this.textInput.focus();
       this.textInput.select();
       this.setFeedback('Neues Wort hinzugefügt');
+    }
+
+    async addEmoji(value) {
+      const canonical = root.WolkenworteEmoji.canonicalizeText(String(value || ''));
+      const runs = root.WolkenworteEmoji.parse(canonical);
+      if (runs.length !== 1 || runs[0].type !== 'emoji') {
+        throw new TypeError('A single supported emoji is required');
+      }
+      const emoji = runs[0].text;
+      await root.WolkenworteEmoji.preloadTexts([emoji]);
+      this.closeIconPicker();
+      this.closeFontPicker();
+      const color = this.palette[this.canvas.getObjects().length % this.palette.length];
+      const object = this.makeObject({
+        id: this.nextId('emoji'),
+        type: 'text',
+        text: emoji,
+        x: this.defaultX,
+        y: this.defaultY,
+        fontSize: 170,
+        fontFamily: root.DesignFonts.DEFAULT_FONT_KEY,
+        angle: 0,
+        color,
+      });
+      const offset = (this.canvas.getObjects().length % 5) * 18;
+      object.set({ left: object.left + offset, top: object.top + offset });
+      this.keepInside(object);
+      this.canvas.add(object);
+      this.canvas.setActiveObject(object);
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.setFeedback('Emoji hinzugefügt');
+      return object;
     }
 
     addIcon(iconId) {
@@ -1274,8 +1475,8 @@
       }
       return {
         ...common,
-        text: object.text,
-        fontSize: object.fontSize * Math.abs(transform.scaleX) / this.editorScale,
+        text: this.objectText(object),
+        fontSize: (object.editorFontSize || object.fontSize) * Math.abs(transform.scaleX) / this.editorScale,
         fontFamily: root.DesignFonts.normalizeKey(object.editorFontKey),
       };
     }
@@ -1326,14 +1527,21 @@
         await document.fonts.load(`16px "${font.family}"`);
       }
 
+      const replacements = new Map();
+      const replacementItems = textObjects.map((object) => ({
+        object,
+        index: this.canvas.getObjects().indexOf(object),
+        item: { ...this.serializeObject(object), fontFamily: font.key },
+      }));
       this.canvas.discardActiveObject();
-      for (const object of textObjects) {
-        object.editorFontKey = font.key;
-        object.set({ fontFamily: font.family });
-        object.initDimensions();
-        object.setCoords();
+      for (const entry of replacementItems) {
+        this.canvas.remove(entry.object);
+        const replacement = this.makeObject(entry.item);
+        this.canvas.insertAt(entry.index, replacement);
+        replacements.set(entry.object, replacement);
       }
-      const selection = this.setActiveObjects(selected);
+      const nextSelected = selected.map((object) => replacements.get(object) || object);
+      const selection = this.setActiveObjects(nextSelected);
       this.keepInside(selection);
       this.canvas.requestRenderAll();
       this.recordHistory();
@@ -1446,10 +1654,13 @@
         this.textLabel.textContent = translate('Ausgewähltes Bild');
         this.textInput.value = translate('Bild');
       } else {
-        this.selectionStatus.textContent = translate('„{{text}}“ bearbeiten', { text: active.text });
-        this.selectionHint.textContent = translate('Doppelklick: Wort direkt bearbeiten');
+        const activeText = this.objectText(active);
+        this.selectionStatus.textContent = translate('„{{text}}“ bearbeiten', { text: activeText });
+        this.selectionHint.textContent = active.editorText !== undefined
+          ? translate('Text und Emoji im Feld bearbeiten')
+          : translate('Doppelklick: Wort direkt bearbeiten');
         this.textLabel.textContent = translate('Ausgewähltes Wort');
-        this.textInput.value = active.text;
+        this.textInput.value = activeText;
       }
       const activeColor = isMultiple ? this.selectionColor(selected) : this.getObjectColor(active);
       if (activeColor) this.colorInput.value = activeColor;

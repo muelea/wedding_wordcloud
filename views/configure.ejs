@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <title data-i18n-source="Erinnerung gestalten – Wolkenworte"><%= t('Erinnerung gestalten – Wolkenworte') %></title>
@@ -529,6 +530,7 @@
     }
     .editor-tools { display: flex; align-items: center; gap: 6px; }
     .editor-tools-primary { flex-wrap: wrap; }
+    .editor-emoji-picker { position: relative; display: none; }
     .editor-motif-picker { position: static; }
     .editor-motif-menu {
       position: absolute;
@@ -1570,6 +1572,10 @@
       .preview-card { order: 2; position: static; min-height: 0; }
     }
 
+    @media (min-width: 621px) and (hover: hover) and (pointer: fine) {
+      .editor-emoji-picker { display: block; }
+    }
+
     @media (max-width: 620px) {
       .topbar, .page { width: min(100% - 28px, 560px); }
       .topbar { height: 72px; }
@@ -1749,7 +1755,10 @@
                     <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
                   </div>
                   <button class="editor-button editor-button-primary" id="editor-add" type="button"><span aria-hidden="true">＋</span> Wort</button>
-                  <div class="editor-motif-picker">
+                  <div class="editor-emoji-picker" id="editor-emoji-picker">
+                    <button class="editor-button editor-button-primary" id="editor-emoji-toggle" type="button" aria-label="Emoji hinzufügen" data-i18n-aria-label-source="Emoji hinzufügen"><span aria-hidden="true">＋</span> Emoji</button>
+                  </div>
+                  <div class="editor-motif-picker" hidden>
                     <button class="editor-button editor-button-primary" id="editor-icon-toggle" type="button" aria-expanded="false" aria-controls="editor-icon-menu" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Motiv</button>
                     <div class="editor-motif-menu" id="editor-icon-menu" role="dialog" aria-label="Motiv auswählen" hidden>
                       <strong class="editor-motif-title">Welches Motiv möchtet ihr hinzufügen?</strong>
@@ -1776,7 +1785,7 @@
                 </div>
                 <div class="editor-selection-row">
                   <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
-                    <input class="editor-text-input" id="editor-text" type="text" maxlength="30" autocomplete="off" placeholder="Wort auswählen" disabled />
+                    <input class="editor-text-input" id="editor-text" type="text" maxlength="1024" autocomplete="off" placeholder="Wort auswählen" disabled />
                   </label>
                   <div class="editor-field-label editor-field-label-font">
                     <span class="editor-field-label-text">Schriftart</span>
@@ -1896,6 +1905,11 @@
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
+  <script src="<%= asset('/js/emoji-data.js') %>"></script>
+  <script src="<%= asset('/js/emoji-catalog.js') %>"></script>
+  <script src="<%= asset('/js/emoji-search.js') %>"></script>
+  <script src="<%= asset('/js/emoji-virtual-grid.js') %>"></script>
+  <script src="<%= asset('/js/emoji-picker.js') %>"></script>
   <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
   <script src="<%= asset('/js/mug-icons.js') %>"></script>
@@ -1908,6 +1922,16 @@
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
     const paletteStorageKey = `wordcloud-palette:${slug}`;
+    const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
+    const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
+      de: <%- JSON.stringify(asset('/emoji-search/48.2/de.json')) %>,
+      en: <%- JSON.stringify(asset('/emoji-search/48.2/en.json')) %>,
+      es: <%- JSON.stringify(asset('/emoji-search/48.2/es.json')) %>,
+      fr: <%- JSON.stringify(asset('/emoji-search/48.2/fr.json')) %>,
+      it: <%- JSON.stringify(asset('/emoji-search/48.2/it.json')) %>,
+      tr: <%- JSON.stringify(asset('/emoji-search/48.2/tr.json')) %>,
+    });
+    const EMOJI_CATALOG_URL = <%- JSON.stringify(asset('/emoji-search/48.2/catalog.json')) %>;
     const guestId = getOrCreateGuestId();
     const t = (source, params) => WolkenworteI18n.t(source, params);
     const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
@@ -1999,6 +2023,7 @@
     let mug3D = null;
     let mug3DLoadPromise = null;
     let mugEditor = null;
+    let configuratorEmojiPicker = null;
     let activeSurface = 'default';
     let surfaceStates = new Map();
     let fallbackOrderItems = [];
@@ -2443,8 +2468,6 @@
       const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
       const placed = WordCloudCore.layoutWords(words, height, ctx, colors);
       const xScale = width / height;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
       for (const item of placed) {
         const itemX = x + item.x * xScale;
         const itemY = y + item.y;
@@ -2455,21 +2478,9 @@
           const bottom = y + item.y2;
           if (left < 0 || right > ctx.canvas.width || top < 0 || bottom > ctx.canvas.height) continue;
         }
-        ctx.font = `${item.fontPx}px ${WordCloudCore.FONT_FAMILY}`;
-        ctx.fillStyle = item.color;
-        if (item.rotated) {
-          ctx.save();
-          ctx.translate(itemX, itemY);
-          ctx.rotate(-Math.PI / 2);
-          ctx.fillText(item.word, 0, item.fontPx * TEXT_BASELINE_OFFSET);
-          ctx.restore();
-        } else {
-          ctx.fillText(
-            item.word,
-            itemX,
-            itemY + item.fontPx * TEXT_BASELINE_OFFSET
-          );
-        }
+        WordCloudCore.drawPlacedWord(ctx, { ...item, x: itemX, y: itemY }, {
+          emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
+        });
       }
     }
 
@@ -2729,13 +2740,11 @@
             ctx.stroke(new Path2D(icon.path));
           }
         } else {
-          ctx.font = `${item.fontSize * scale}px ${DesignFonts.cssFamily(item.fontFamily)}`;
-          ctx.fillStyle = item.color;
-          ctx.fillText(
-            item.text,
-            0,
-            item.fontSize * scale * TEXT_BASELINE_OFFSET
-          );
+          WordCloudCore.drawRichText(ctx, item.text, 0, 0, item.fontSize * scale, {
+            fontFamily: DesignFonts.cssFamily(item.fontFamily),
+            color: item.color,
+            emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
+          });
         }
         ctx.restore();
       }
@@ -3418,6 +3427,23 @@
       });
       mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
       resetSurfaceStates(mugEditor.getState());
+      if (!configuratorEmojiPicker) {
+        configuratorEmojiPicker = WolkenworteEmojiPicker.create({
+          trigger: document.getElementById('editor-emoji-toggle'),
+          mount: document.getElementById('editor-emoji-picker'),
+          idPrefix: 'editor-emoji',
+          placement: 'below-left',
+          mediaQuery: configuratorEmojiPickerMedia,
+          catalogUrl: EMOJI_CATALOG_URL,
+          searchIndexUrls: EMOJI_SEARCH_INDEX_URLS,
+          onOpen: () => {
+            mugEditor.closeIconPicker();
+            mugEditor.closeFontPicker();
+          },
+          onSelect: (emoji) => mugEditor.addEmoji(emoji),
+          onError: () => mugEditor.setFeedback('Das Emoji konnte nicht geladen werden.'),
+        });
+      }
     }
 
     window.addEventListener('resize', () => {
@@ -3563,6 +3589,7 @@
         updateProductPresentation();
 
         await ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]);
+        await WolkenworteEmoji.preloadTexts(words.map(([word]) => word));
         loading.hidden = true;
         content.hidden = false;
         initEditor();

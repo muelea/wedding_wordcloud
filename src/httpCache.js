@@ -20,6 +20,12 @@ function cacheControlForStaticRequest(req) {
   // immutable response. Revalidation still allows an ETag/304 while ensuring
   // a deployment can never strand a browser on an older set of translations.
   if (isLocaleManifest(pathname)) return 'no-cache';
+  // Noto artwork is pinned in the URL by its upstream release and never
+  // changes in place. This avoids thousands of per-file query fingerprints
+  // while retaining the same immutable-cache contract.
+  if (/^\/assets\/noto-emoji\/[0-9.]+\//.test(pathname)) {
+    return 'public, max-age=31536000, immutable';
+  }
   if (VERSION_RE.test(version)) {
     // First-party immutable URLs are content-addressed. A stale or invented
     // version must be revalidated instead of pinning mismatched bytes for a

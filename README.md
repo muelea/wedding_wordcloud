@@ -400,6 +400,13 @@ src/
     performance.js         secret-authenticated aggregate capacity snapshot
     webhook.js             raw-body Stripe, signed Printful and signed Resend callbacks
 public/
+  assets/noto-emoji/      Pinned Noto Emoji SVG artwork used by browser previews and print files
+  emoji-search/           Pinned localized CLDR names and keyword indexes for the desktop picker
+  emoji-picker.css        Shared responsive picker presentation for display and configurator
+  js/emoji-data.js        Generated Unicode Emoji 17 sequence-to-artwork catalog
+  js/emoji-catalog.js     Shared mixed-text parser, canonicalizer and browser asset loader
+  js/emoji-picker.js      Shared accessible, virtualized picker controller and recents
+  js/emoji-search.js      Accent-insensitive CLDR emoji search and relevance ranking
   js/mug-3d-viewer.js      Shared rotatable Three.js mug preview
   js/mug-editor.js         Bounded, dynamically scaled text/motif print-area editor
   js/mug-icons.js          Curated editorial fine-line motif library
@@ -415,6 +422,47 @@ views/
   404.ejs                  Unknown-event page
   partials/site-header.ejs Shared server-rendered header and language navigation
 test/                      node:test suite — see "Testing" below
+```
+
+### Emoji rendering
+
+Guest words and product text support the complete Unicode Emoji 17 RGI set,
+including skin tones, flags, keycaps and joined family/couple sequences. The
+application canonicalizes equivalent Unicode spellings and renders the pinned
+Noto Emoji 2.051 SVG artwork everywhere. Browser canvases and the configurator
+load those tracked local files; generated SVG print files inline the same
+artwork. The physical product therefore does not depend on whichever native
+emoji font happens to be installed on a phone, browser, server or Printful
+renderer. The bundled Noto and regional-flag licenses live beside the artwork.
+
+The live word entry and configurator mount the same shared desktop picker;
+each page supplies only its trigger, placement and selection action. The
+picker lazy-loads a compact search index for the active language and the
+official Unicode category order. Its complete catalog uses a
+virtualized eight-column grid, so only the visible rows and a small overscan
+buffer create DOM elements or load SVG artwork. Recent choices are kept in a
+small shared local browser list; no picker data is loaded on mobile or before
+the desktop picker is opened.
+Those indexes are generated from Unicode CLDR 48.2 short names and keyword
+annotations, cover the same 3,944 supported Emoji 17 sequences and include
+English terms as a fallback. The pinned Unicode license and version manifest
+live beside the generated indexes in `public/emoji-search/48.2/`.
+
+To deliberately upgrade the catalog, download the chosen Noto Emoji source
+release and Unicode `emoji-test.txt`, then run:
+
+```bash
+node scripts/build-emoji-assets.js --noto-root /path/to/noto-emoji --emoji-test /path/to/emoji-test.txt
+```
+
+To rebuild the localized picker indexes from an extracted CLDR JSON release:
+
+```bash
+node scripts/build-emoji-search-index.js \
+  --annotations-root /path/to/cldr-annotations-full/annotations \
+  --derived-root /path/to/cldr-annotations-derived-full/annotationsDerived \
+  --emoji-test /path/to/emoji-test.txt \
+  --license /path/to/cldr-json/LICENSE
 ```
 
 ## Testing

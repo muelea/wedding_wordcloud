@@ -29,6 +29,7 @@
 require('./designFonts');
 const { createCanvas } = require('canvas');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
+const EmojiAssets = require('./emojiAssets');
 
 // A real CanvasRenderingContext2D used purely for text measurement. Pixel
 // dimensions are irrelevant here (measureText() doesn't render anything) —
@@ -41,7 +42,9 @@ const measureCtx = measureCanvas.getContext('2d');
 function layoutForExport(words, theme, side = 2000) {
   const colorFn = WordCloudCore.makeColorAssigner(theme || 'pastel');
   const placed = WordCloudCore.layoutWords(words, side, measureCtx, colorFn);
-  return WordCloudCore.buildSVG(placed, side, theme || 'pastel');
+  return WordCloudCore.buildSVG(placed, side, theme || 'pastel', {
+    emojiSvg: EmojiAssets.inlineSvg,
+  });
 }
 
 module.exports = { layoutForExport };

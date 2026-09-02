@@ -147,8 +147,23 @@ function ensureDependencies(root = ROOT, run = spawnSync) {
 function collectRepositoryAssetPaths(root = ROOT) {
   const requireFromRoot = createRequire(path.join(root, 'package.json'));
   const { FONTS } = requireFromRoot('./public/js/design-fonts.js');
+  const emojiData = requireFromRoot('./public/js/emoji-data.js');
   const { PRODUCT_FAMILIES, PRODUCTS, getPublicProduct } = requireFromRoot('./src/products.js');
   const urls = new Set();
+  const emojiRoot = path.join('public', 'assets', 'noto-emoji', emojiData.artworkVersion);
+  urls.add(`/${path.join('assets', 'noto-emoji', emojiData.artworkVersion, 'LICENSE')}`);
+  urls.add(`/${path.join('assets', 'noto-emoji', emojiData.artworkVersion, 'FLAGS-LICENSE')}`);
+  urls.add(`/${path.join('assets', 'noto-emoji', emojiData.artworkVersion, 'VERSION')}`);
+  for (const reference of new Set(Object.values(emojiData.canonicalAssets))) {
+    urls.add(`/${path.join('assets', 'noto-emoji', emojiData.artworkVersion, reference)}`);
+  }
+  const emojiSearchVersion = '48.2';
+  for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+    urls.add(`/${path.join('emoji-search', emojiSearchVersion, `${locale}.json`)}`);
+  }
+  urls.add(`/${path.join('emoji-search', emojiSearchVersion, 'catalog.json')}`);
+  urls.add(`/${path.join('emoji-search', emojiSearchVersion, 'LICENSE')}`);
+  urls.add(`/${path.join('emoji-search', emojiSearchVersion, 'VERSION')}`);
 
   for (const font of FONTS) {
     if (font.file?.startsWith('/assets/')) urls.add(font.file);

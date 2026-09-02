@@ -19,7 +19,7 @@
 
 const db = require('./db');
 const crypto = require('crypto');
-const { normalizeWord } = require('./words');
+const { normalizeWordInput } = require('./words');
 const { sourceHashForSocket } = require('./clientIdentity');
 const rateLimits = require('./rateLimits');
 const performanceProbe = require('./performanceProbe');
@@ -106,8 +106,14 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
     }
 
     socket.on('submit-word', async (rawWord) => {
-      const word = normalizeWord(rawWord, event.locale);
-      if (!word) return;
+      const normalized = normalizeWordInput(rawWord, event.locale);
+      if (!normalized.word) {
+        if (normalized.error === 'unsupported_emoji') {
+          socket.emit('word-error', { error: normalized.error });
+        }
+        return;
+      }
+      const word = normalized.word;
       const guestKey = `${event.id}:${socket.data.guestId}`;
       if (!rateLimits.consumeTokens([
         { name: 'word:burst', key: guestKey, ...rateLimits.LIMITS.wordBurst },

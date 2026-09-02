@@ -20,23 +20,24 @@
  */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = factory();
+    module.exports = factory(require('./emoji-catalog.js'));
   } else {
-    root.WordCloudCore = factory();
+    root.WordCloudCore = factory(root.WolkenworteEmoji);
   }
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (EmojiCatalog) {
   'use strict';
 
-  const FONT_FAMILY = '"Wolkenworte Classic", Georgia, "Times New Roman", "Apple Color Emoji", "Segoe UI Emoji", serif';
+  const FONT_FAMILY = '"Wolkenworte Classic", Georgia, "Times New Roman", serif';
   // Same font list, but with single quotes — FONT_FAMILY's double quotes
   // would prematurely close the SVG's font-family="..." XML attribute.
-  const SVG_FONT_FAMILY = "'Wolkenworte Classic', Georgia, 'Times New Roman', 'Apple Color Emoji', 'Segoe UI Emoji', serif";
+  const SVG_FONT_FAMILY = "'Wolkenworte Classic', Georgia, 'Times New Roman', serif";
   // One product-design text geometry contract for browser packing, the
   // editor boundary guard, canvas previews and the immutable SVG renderer.
   // Fabric's centred IText line box is slightly taller than the nominal font
   // size, while Canvas/SVG use an alphabetic baseline.
   const TEXT_LINE_HEIGHT = 1.18;
   const TEXT_BASELINE_OFFSET = 0.34;
+  const EMOJI_SIZE_RATIO = 1;
 
   const THEMES = {
     pastel: {
@@ -57,18 +58,100 @@
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
-  function measureTextBox(text, fontPx, measureCtx, fontFamily = FONT_FAMILY) {
+  function richTextRuns(text, fontPx, measureCtx, fontFamily = FONT_FAMILY) {
     const size = Number(fontPx);
     if (!Number.isFinite(size) || size <= 0 || !measureCtx ||
         typeof measureCtx.measureText !== 'function') {
       throw new TypeError('A positive font size and a canvas measurement context are required');
     }
     measureCtx.font = `${size}px ${fontFamily}`;
-    const metrics = measureCtx.measureText(String(text || ''));
+    const sourceRuns = EmojiCatalog?.parse
+      ? EmojiCatalog.parse(String(text || ''))
+      : [{ type: 'text', text: String(text || '') }];
+    let cursor = 0;
+    return sourceRuns.map((run) => {
+      const width = run.type === 'emoji'
+        ? size * EMOJI_SIZE_RATIO
+        : Math.max(0, Number(measureCtx.measureText(run.text).width) || 0);
+      const measured = { ...run, x: cursor, width };
+      cursor += width;
+      return measured;
+    });
+  }
+
+  function measureTextBox(text, fontPx, measureCtx, fontFamily = FONT_FAMILY) {
+    const size = Number(fontPx);
+    const runs = richTextRuns(text, size, measureCtx, fontFamily);
     return {
-      width: Math.max(1, Number(metrics.width) || 0),
+      width: Math.max(1, runs.reduce((sum, run) => sum + run.width, 0)),
       height: Math.max(1, size * TEXT_LINE_HEIGHT),
+      runs,
     };
+  }
+
+  function scaleTextBox(box, scale) {
+    return {
+      width: box.width * scale,
+      height: box.height * scale,
+      runs: box.runs.map((run) => ({ ...run, x: run.x * scale, width: run.width * scale })),
+    };
+  }
+
+  function drawContainedImage(ctx, image, x, y, width, height) {
+    if (!image) return;
+    const sourceWidth = image.naturalWidth || image.width || width;
+    const sourceHeight = image.naturalHeight || image.height || height;
+    const scale = Math.min(width / Math.max(1, sourceWidth), height / Math.max(1, sourceHeight));
+    const drawWidth = sourceWidth * scale;
+    const drawHeight = sourceHeight * scale;
+    ctx.drawImage(
+      image,
+      x + (width - drawWidth) / 2,
+      y + (height - drawHeight) / 2,
+      drawWidth,
+      drawHeight
+    );
+  }
+
+  function drawRichText(ctx, text, x, y, fontPx, options = {}) {
+    const fontFamily = options.fontFamily || FONT_FAMILY;
+    const box = options.box || measureTextBox(text, fontPx, ctx, fontFamily);
+    const startX = x - box.width / 2;
+    const emojiSize = fontPx * EMOJI_SIZE_RATIO;
+    ctx.font = `${fontPx}px ${fontFamily}`;
+    ctx.fillStyle = options.color || '#000000';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    for (const run of box.runs) {
+      const runX = startX + run.x;
+      if (run.type === 'emoji') {
+        const image = options.emojiImage?.(run) || EmojiCatalog?.getLoadedImage?.(run);
+        drawContainedImage(ctx, image, runX, y - emojiSize / 2, run.width, emojiSize);
+      } else {
+        ctx.fillText(run.text, runX, y + fontPx * TEXT_BASELINE_OFFSET);
+      }
+    }
+    return box;
+  }
+
+  function drawPlacedWord(ctx, placed, options = {}) {
+    ctx.save();
+    if (placed.rotated) {
+      ctx.translate(placed.x, placed.y);
+      ctx.rotate(-Math.PI / 2);
+      drawRichText(ctx, placed.word, 0, 0, placed.fontPx, {
+        ...options,
+        color: placed.color,
+        box: placed.textBox,
+      });
+    } else {
+      drawRichText(ctx, placed.word, placed.x, placed.y, placed.fontPx, {
+        ...options,
+        color: placed.color,
+        box: placed.textBox,
+      });
+    }
+    ctx.restore();
   }
 
   function makePaletteAssigner(colors) {
@@ -100,7 +183,10 @@
   // Longer words are scaled down a bit relative to short ones of the same
   // frequency, so a single long word can't dominate/overflow the square.
   function lengthPenalty(word) {
-    return clamp(1 - Math.max(0, word.length - 5) * 0.018, 0.6, 1);
+    const length = EmojiCatalog?.graphemeLength
+      ? EmojiCatalog.graphemeLength(word)
+      : String(word || '').length;
+    return clamp(1 - Math.max(0, length - 5) * 0.018, 0.6, 1);
   }
 
   // Frequency affects size smoothly and absolutely rather than in relative
@@ -156,8 +242,8 @@
       let spot = null;
 
       for (let attempt = 0; attempt < 8 && !spot; attempt++) {
-        measureCtx.font = `${fontPx}px ${FONT_FAMILY}`;
-        const textHalf = measureCtx.measureText(item.word).width / 2 + side * 0.004;
+        const textBox = measureTextBox(item.word, fontPx, measureCtx);
+        const textHalf = textBox.width / 2 + side * 0.004;
         const fontHalf = fontPx / 2 + side * 0.004;
         // Rotated words occupy a footprint with width/height swapped.
         const halfW = item.rotated ? fontHalf : textHalf;
@@ -172,7 +258,7 @@
           if (box.x1 < 0 || box.y1 < 0 || box.x2 > side || box.y2 > side) continue;
           const collides = placed.some((p) =>
             !(box.x2 < p.x1 || box.x1 > p.x2 || box.y2 < p.y1 || box.y1 > p.y2));
-          if (!collides) { spot = { x, y, halfW, halfH }; break; }
+          if (!collides) { spot = { x, y, halfW, halfH, textBox }; break; }
         }
         if (!spot) fontPx *= 0.82; // didn't fit at this size — shrink and retry
       }
@@ -183,6 +269,7 @@
         x1: spot.x - spot.halfW, x2: spot.x + spot.halfW,
         y1: spot.y - spot.halfH, y2: spot.y + spot.halfH,
         color: getColor(item.word),
+        textBox: spot.textBox,
       });
     }
     return placed;
@@ -259,6 +346,7 @@
           y1: spot.y - spot.halfH,
           y2: spot.y + spot.halfH,
           color: getColor(item.word),
+          textBox,
         });
       }
       return placed;
@@ -303,6 +391,7 @@
         x,
         y,
         fontPx: item.fontPx * fitScale,
+        textBox: scaleTextBox(item.textBox, fitScale),
         x1: width / 2 + (item.x1 - sourceCx) * fitScale,
         x2: width / 2 + (item.x2 - sourceCx) * fitScale,
         y1: height / 2 + (item.y1 - sourceCy) * fitScale,
@@ -339,7 +428,35 @@
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function buildSVG(placed, side, theme) {
+  function richTextSvg(text, x, y, fontPx, color, fontFamily, textBox, options = {}) {
+    const box = textBox || {
+      width: 1,
+      runs: [{ type: 'text', text: String(text || ''), x: 0, width: 1 }],
+    };
+    const startX = x - box.width / 2;
+    return box.runs.map((run, index) => {
+      const runX = startX + run.x;
+      if (run.type === 'emoji') {
+        const geometry = {
+          x: runX,
+          y: y - fontPx * EMOJI_SIZE_RATIO / 2,
+          width: run.width,
+          height: fontPx * EMOJI_SIZE_RATIO,
+          id: `emoji-${index}`,
+        };
+        if (typeof options.emojiSvg === 'function') return options.emojiSvg(run, geometry);
+        const href = EmojiCatalog?.assetUrl?.(run) || '';
+        return `<image data-emoji="${run.key}" x="${geometry.x.toFixed(1)}" y="${geometry.y.toFixed(1)}" ` +
+          `width="${geometry.width.toFixed(1)}" height="${geometry.height.toFixed(1)}" ` +
+          `preserveAspectRatio="xMidYMid meet" href="${escapeXML(href)}"/>`;
+      }
+      return `<text x="${runX.toFixed(1)}" y="${(y + fontPx * TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
+        `font-size="${fontPx.toFixed(1)}" font-family="${fontFamily}" ` +
+        `fill="${color}" text-anchor="start">${escapeXML(run.text)}</text>`;
+    }).join('\n  ');
+  }
+
+  function buildSVG(placed, side, theme, options = {}) {
     let defs = '', bg;
     if (theme === 'neon') {
       bg = `<rect width="${side}" height="${side}" fill="#000000"/>`;
@@ -349,11 +466,25 @@
         `</linearGradient></defs>`;
       bg = `<rect width="${side}" height="${side}" fill="url(#bg)"/>`;
     }
-    const texts = placed.map((p) => {
-      const rotate = p.rotated ? ` transform="rotate(-90 ${p.x.toFixed(1)} ${p.y.toFixed(1)})"` : '';
-      return `<text x="${p.x.toFixed(1)}" y="${(p.y + p.fontPx * TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
-        `font-size="${p.fontPx.toFixed(1)}" font-family="${SVG_FONT_FAMILY}" ` +
-        `fill="${p.color}" text-anchor="middle"${rotate}>${escapeXML(p.word)}</text>`;
+    const texts = placed.map((p, placedIndex) => {
+      const contents = richTextSvg(
+        p.word,
+        p.x,
+        p.y,
+        p.fontPx,
+        p.color,
+        SVG_FONT_FAMILY,
+        p.textBox,
+        {
+          ...options,
+          emojiSvg: typeof options.emojiSvg === 'function'
+            ? (run, geometry) => options.emojiSvg(run, { ...geometry, id: `word-${placedIndex}-${geometry.id}` })
+            : null,
+        }
+      );
+      return p.rotated
+        ? `<g transform="rotate(-90 ${p.x.toFixed(1)} ${p.y.toFixed(1)})">${contents}</g>`
+        : contents;
     }).join('\n  ');
 
     return `<?xml version="1.0" encoding="UTF-8"?>\n` +
@@ -366,12 +497,17 @@
     SVG_FONT_FAMILY,
     TEXT_LINE_HEIGHT,
     TEXT_BASELINE_OFFSET,
+    EMOJI_SIZE_RATIO,
     THEMES,
     makePaletteAssigner,
     makeColorAssigner,
     getFontSizeRange,
     sizeForCount,
+    richTextRuns,
     measureTextBox,
+    drawRichText,
+    drawPlacedWord,
+    richTextSvg,
     layoutWords,
     layoutWordsInArea,
     buildSVG,

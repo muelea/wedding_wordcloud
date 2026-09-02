@@ -5,6 +5,7 @@ const WordCloudCore = require('../public/js/wordcloud-core.js');
 const MugIcons = require('../public/js/mug-icons.js');
 const DesignFonts = require('./designFonts');
 const { inspectRasterDataUrl } = require('./designImages');
+const EmojiAssets = require('./emojiAssets');
 
 const measureCanvas = createCanvas(10, 10);
 const measureCtx = measureCanvas.getContext('2d');
@@ -63,7 +64,7 @@ function isPrintDesignWithinBounds(
 }
 
 function designElements(design) {
-  return design.map((item) => {
+  return design.map((item, itemIndex) => {
     if (item.type === 'image') {
       const x = item.x - item.width / 2;
       const y = item.y - item.height / 2;
@@ -84,15 +85,42 @@ function designElements(design) {
         `stroke-width="${MugIcons.STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round" ` +
         `transform="${transform}"/>`;
     }
-    const rotate = item.angle
-      ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
-      : '';
     const fontKey = DesignFonts.normalizeKey(item.fontFamily);
-    return `<text x="${item.x.toFixed(1)}" ` +
-      `y="${(item.y + item.fontSize * WordCloudCore.TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
-      `font-size="${item.fontSize.toFixed(1)}" font-family="${DesignFonts.svgFamily(fontKey)}" ` +
-      `data-font="${fontKey}" ` +
-      `fill="${item.color}" text-anchor="middle"${rotate}>${WordCloudCore.escapeXML(item.text)}</text>`;
+    const textBox = WordCloudCore.measureTextBox(
+      item.text,
+      item.fontSize,
+      measureCtx,
+      DesignFonts.cssFamily(fontKey)
+    );
+    if (!textBox.runs.some((run) => run.type === 'emoji')) {
+      const rotate = item.angle
+        ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
+        : '';
+      return `<text x="${item.x.toFixed(1)}" ` +
+        `y="${(item.y + item.fontSize * WordCloudCore.TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
+        `font-size="${item.fontSize.toFixed(1)}" font-family="${DesignFonts.svgFamily(fontKey)}" ` +
+        `data-font="${fontKey}" ` +
+        `fill="${item.color}" text-anchor="middle"${rotate}>${WordCloudCore.escapeXML(item.text)}</text>`;
+    }
+    const contents = WordCloudCore.richTextSvg(
+      item.text,
+      item.x,
+      item.y,
+      item.fontSize,
+      item.color,
+      DesignFonts.svgFamily(fontKey),
+      textBox,
+      {
+        emojiSvg: (run, geometry) => EmojiAssets.inlineSvg(run, {
+          ...geometry,
+          id: `design-${itemIndex}-${item.id || 'item'}-${geometry.id}`,
+        }),
+      }
+    );
+    const tagged = `<g data-font="${fontKey}">${contents}</g>`;
+    return item.angle
+      ? `<g transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})">${tagged}</g>`
+      : tagged;
   }).join('\n  ');
 }
 

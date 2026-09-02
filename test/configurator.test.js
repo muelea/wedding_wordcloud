@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
 const { createCanvas } = require('canvas');
 const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
@@ -9,10 +11,18 @@ const MugIcons = require('../public/js/mug-icons.js');
 const DesignLayout = require('../public/js/design-layout.js');
 const DesignFonts = require('../public/js/design-fonts.js');
 const ImagePrintQuality = require('../public/js/image-quality.js');
+const EmojiCatalog = require('../public/js/emoji-catalog.js');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 const { publicAssetUrl } = require('../src/publicAssets');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../src/mugPrint');
+
+const mugEditorBrowserRoot = {};
+vm.runInNewContext(
+  fs.readFileSync(require.resolve('../public/js/mug-editor.js'), 'utf8'),
+  { window: mugEditorBrowserRoot }
+);
+const { MugPrintEditor } = mugEditorBrowserRoot;
 
 function connectSocket(baseUrl, slug) {
   return new Promise((resolve, reject) => {
@@ -40,6 +50,114 @@ function submitWord(socket, word) {
 function oneSurfaceDesign(design) {
   return { designs: { default: design } };
 }
+
+test('double-clicking emoji text focuses the dedicated editor field', () => {
+  const calls = [];
+  const editor = Object.create(MugPrintEditor.prototype);
+  editor.canvas = {
+    setActiveObject: (object) => calls.push(['activate', object]),
+    requestRenderAll: () => calls.push(['render']),
+  };
+  editor.textInput = {
+    focus: () => calls.push(['focus']),
+    select: () => calls.push(['select']),
+  };
+  editor.updateSelectionPanel = () => calls.push(['sync']);
+  const emojiText = { editorKind: 'text', editorText: '💍 Hochzeit' };
+
+  assert.equal(editor.beginTextEditing(emojiText), true);
+  assert.deepEqual(calls, [
+    ['activate', emojiText],
+    ['sync'],
+    ['focus'],
+    ['select'],
+    ['render'],
+  ]);
+});
+
+test('double-clicking plain text keeps direct canvas editing', () => {
+  const calls = [];
+  const editor = Object.create(MugPrintEditor.prototype);
+  editor.canvas = {
+    setActiveObject: (object) => calls.push(['activate', object]),
+    requestRenderAll: () => calls.push(['render']),
+  };
+  editor.textInput = {
+    focus: () => calls.push(['toolbar-focus']),
+    select: () => calls.push(['toolbar-select']),
+  };
+  editor.updateSelectionPanel = () => calls.push(['sync']);
+  const plainText = {
+    editorKind: 'text',
+    enterEditing: () => calls.push(['enter-editing']),
+    selectAll: () => calls.push(['select-all']),
+    hiddenTextarea: { focus: () => calls.push(['canvas-focus']) },
+  };
+
+  assert.equal(editor.beginTextEditing(plainText), true);
+  assert.deepEqual(calls, [
+    ['activate', plainText],
+    ['enter-editing'],
+    ['select-all'],
+    ['canvas-focus'],
+    ['sync'],
+    ['render'],
+  ]);
+});
+
+test('the configurator adds a picked emoji as a standalone editable design object', async () => {
+  const calls = [];
+  mugEditorBrowserRoot.DesignFonts = DesignFonts;
+  mugEditorBrowserRoot.WolkenworteEmoji = {
+    canonicalizeText: EmojiCatalog.canonicalizeText,
+    parse: EmojiCatalog.parse,
+    preloadTexts: async (values) => calls.push(['preload', values]),
+  };
+  const editor = Object.create(MugPrintEditor.prototype);
+  editor.palette = ['#9c1c4c'];
+  editor.defaultX = 600;
+  editor.defaultY = 240;
+  editor.idCounter = 0;
+  editor.canvas = {
+    getObjects: () => [],
+    add: (object) => calls.push(['add', object]),
+    setActiveObject: (object) => calls.push(['activate', object]),
+    requestRenderAll: () => calls.push(['render']),
+  };
+  let designItem = null;
+  const object = {
+    left: 300,
+    top: 120,
+    set(updates) { Object.assign(this, updates); },
+  };
+  editor.makeObject = (item) => {
+    designItem = item;
+    return object;
+  };
+  editor.closeIconPicker = () => calls.push(['close-icons']);
+  editor.closeFontPicker = () => calls.push(['close-fonts']);
+  editor.keepInside = (item) => calls.push(['bound', item]);
+  editor.recordHistory = () => calls.push(['history']);
+  editor.emitChange = () => calls.push(['change']);
+  editor.updateSelectionPanel = () => calls.push(['sync']);
+  editor.setFeedback = (source) => calls.push(['feedback', source]);
+
+  assert.equal(await editor.addEmoji('🫶🏽'), object);
+  assert.equal(designItem.type, 'text');
+  assert.equal(designItem.text, '🫶🏽');
+  assert.equal(designItem.x, 600);
+  assert.equal(designItem.y, 240);
+  assert.equal(designItem.fontSize, 170);
+  assert.equal(designItem.fontFamily, DesignFonts.DEFAULT_FONT_KEY);
+  assert.match(designItem.id, /^emoji-/);
+  assert.equal(calls[0][0], 'preload');
+  assert.equal(calls[0][1].length, 1);
+  assert.equal(calls[0][1][0], '🫶🏽');
+  assert.ok(calls.some(([name]) => name === 'add'));
+  assert.ok(calls.some(([name]) => name === 'activate'));
+  assert.deepEqual(calls.at(-1), ['feedback', 'Emoji hinzugefügt']);
+  await assert.rejects(() => editor.addEmoji('Liebe ❤️'), /single supported emoji/);
+});
 
 test('uploaded-image quality follows effective print DPI and product targets', () => {
   const optimal = ImagePrintQuality.evaluate({
@@ -636,6 +754,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /--product-mockup-rotation/);
   assert.match(configurePage, /id="surface-tabs"/);
   assert.match(configurePage, /class="editor-tools editor-tools-primary">[\s\S]*?id="surface-editor"[\s\S]*?id="editor-add"/);
+  assert.match(configurePage, /id="editor-add"[\s\S]*?id="editor-emoji-toggle"[\s\S]*?id="editor-image"/);
+  assert.match(configurePage, /id="editor-emoji-toggle"[^>]*aria-label="Emoji hinzufügen"/);
+  assert.match(configurePage, /class="editor-motif-picker" hidden>[\s\S]*?id="editor-icon-toggle"/);
   assert.match(configurePage, /id="selected-theme-swatches"/);
   assert.doesNotMatch(configurePage, /id="selected-theme-detail"/);
   assert.match(configurePage, /class="workspace-tools"/);
@@ -643,6 +764,12 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /--workspace-stage-height: clamp\(440px, 58vh, 600px\)/);
   assert.match(configurePage, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   for (const assetPath of [
+    '/emoji-picker.css',
+    '/js/emoji-data.js',
+    '/js/emoji-catalog.js',
+    '/js/emoji-search.js',
+    '/js/emoji-virtual-grid.js',
+    '/js/emoji-picker.js',
     '/js/wordcloud-core.js',
     '/js/design-fonts.js',
     '/js/design-layout.js',
@@ -746,6 +873,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /new root\.fabric\.ActiveSelection\(selectable/);
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'a'/);
   assert.match(mugEditorSource, /async addImageFile\(file\)/);
+  assert.match(mugEditorSource, /async addEmoji\(value\)/);
+  assert.match(mugEditorSource, /this\.nextId\('emoji'\)/);
   assert.match(mugEditorSource, /new root\.fabric\.FabricImage\(element/);
   assert.match(mugEditorSource, /MAX_EMBEDDED_IMAGE_BYTES/);
   assert.match(mugEditorSource, /ImagePrintQuality\.evaluate/);

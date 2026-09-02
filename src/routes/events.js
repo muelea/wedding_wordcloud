@@ -11,6 +11,7 @@ const stripe = require('../stripe');
 const printful = require('../printful');
 const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
+const EmojiCatalog = require('../../public/js/emoji-catalog.js');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('../eventNames');
 const {
   DEFAULT_PRODUCT,
@@ -455,11 +456,15 @@ function normalizeSnapshotWords(rawWords, locale = I18n.DEFAULT_LOCALE) {
 
 function normalizeDesignText(rawText, locale = I18n.DEFAULT_LOCALE) {
   if (typeof rawText !== 'string') return '';
-  const text = rawText.normalize('NFC').trim()
+  let text = rawText.normalize('NFC').trim()
     .replace(/[\x00-\x1f\x7f]/g, '')
     .replace(/ {2,}/g, ' ')
-    .slice(0, MAX_WORD_LENGTH)
     .trim();
+  if (EmojiCatalog.containsUnsupportedEmoji(text)) return '';
+  text = EmojiCatalog.truncateGraphemes(
+    EmojiCatalog.canonicalizeText(text),
+    MAX_WORD_LENGTH
+  ).trim();
   // Reuse the guest-word sanitizer as the source of truth for unsupported
   // characters, but preserve intentional capitalization in the editor.
   return normalizeWord(text, locale) === text.toLocaleLowerCase(locale) ? text : '';

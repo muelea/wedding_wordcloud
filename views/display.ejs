@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
@@ -112,6 +113,31 @@
     }
     #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', system-ui, sans-serif; }
     #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', system-ui, sans-serif; cursor: pointer; }
+    .display-emoji-trigger { display: none; }
+    .display-emoji-trigger {
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      align-self: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .18s ease, color .18s ease, transform .18s ease;
+    }
+    .display-emoji-trigger:hover,
+    .display-emoji-trigger:focus-visible,
+    .display-emoji-trigger[aria-expanded="true"] {
+      background: color-mix(in srgb, var(--primary) 9%, transparent);
+      color: var(--primary);
+    }
+    .display-emoji-trigger:active { transform: scale(.95); }
+    .display-emoji-trigger:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; }
+    .display-emoji-trigger svg { width: 31px; height: 31px; fill: none; stroke: currentColor; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+    .display-emoji-trigger .display-emoji-eye { fill: currentColor; stroke: none; }
     .ww-display-header-actions { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; }
     .ww-display-menu { position: relative; z-index: 10000; flex: 0 0 auto; }
     .ww-display-menu summary { list-style: none; }
@@ -532,6 +558,10 @@
     .share-dialog .qr-code { width: 88px; height: 88px; flex: 0 0 auto; }
     .share-feedback { min-height: 18px; margin: -4px 0 0; color: var(--primary); font-size: 12px; }
 
+    @media (min-width: 621px) and (hover: hover) and (pointer: fine) {
+      .display-emoji-trigger { display: grid; }
+    }
+
     @media (max-width: 620px) {
       :root {
         --site-header-height: calc(73px + env(safe-area-inset-top, 0px));
@@ -573,6 +603,7 @@
       .reset-dialog-actions { grid-template-columns: 1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
+      .display-emoji-trigger,
       .ww-palette-trigger,
       .ww-palette-option,
       .ww-palette-chevron { transition: none; }
@@ -595,7 +626,24 @@
 </div>
 
 <form class="display-word-entry" id="display-word-entry">
-  <input id="display-word-input" maxlength="30" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
+  <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
+  <button
+    class="display-emoji-trigger"
+    id="display-emoji-trigger"
+    type="button"
+    aria-label="Emoji hinzufügen"
+    data-i18n-aria-label-source="Emoji hinzufügen"
+    aria-haspopup="dialog"
+    aria-controls="display-emoji-picker"
+    aria-expanded="false"
+  >
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M15.1 3.7a13.25 13.25 0 1 0 13.1 11.6" />
+      <circle class="display-emoji-eye" cx="10.7" cy="14.6" r="1.75" />
+      <circle class="display-emoji-eye" cx="19" cy="14.6" r="1.75" />
+      <path d="M10.5 20.6c.9 3.7 7.5 4.8 9.2 0M24.5 3v9M20 7.4h9" />
+    </svg>
+  </button>
   <button id="display-word-submit" type="submit">Hinzufügen</button>
 </form>
 <p class="word-submission-status" id="word-submission-status" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -734,6 +782,11 @@
 </dialog>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="<%= asset('/js/emoji-data.js') %>"></script>
+<script src="<%= asset('/js/emoji-catalog.js') %>"></script>
+<script src="<%= asset('/js/emoji-search.js') %>"></script>
+<script src="<%= asset('/js/emoji-virtual-grid.js') %>"></script>
+<script src="<%= asset('/js/emoji-picker.js') %>"></script>
 <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
 <script src="<%= asset('/js/own-word-groups.js') %>"></script>
 <script>
@@ -753,6 +806,7 @@
   const resetSubmit     = document.getElementById('reset-submit');
   const displayWordEntry = document.getElementById('display-word-entry');
   const displayWordInput = document.getElementById('display-word-input');
+  const displayEmojiTrigger = document.getElementById('display-emoji-trigger');
   const wordSubmissionStatus = document.getElementById('word-submission-status');
   const displayPageMenu = document.getElementById('display-page-menu');
   const displayMenuTrigger = document.getElementById('display-menu-trigger');
@@ -804,8 +858,39 @@
   const PALETTES = Object.fromEntries(PALETTE_OPTIONS.map((palette) => [palette.key, palette]));
   const defaultPaletteKey = PALETTE_OPTIONS[0]?.key || 'pastel';
   const paletteStorageKey = `wordcloud-palette:${slug}`;
+  const desktopEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
+  const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
+    de: <%- JSON.stringify(asset('/emoji-search/48.2/de.json')) %>,
+    en: <%- JSON.stringify(asset('/emoji-search/48.2/en.json')) %>,
+    es: <%- JSON.stringify(asset('/emoji-search/48.2/es.json')) %>,
+    fr: <%- JSON.stringify(asset('/emoji-search/48.2/fr.json')) %>,
+    it: <%- JSON.stringify(asset('/emoji-search/48.2/it.json')) %>,
+    tr: <%- JSON.stringify(asset('/emoji-search/48.2/tr.json')) %>,
+  });
+  const EMOJI_CATALOG_URL = <%- JSON.stringify(asset('/emoji-search/48.2/catalog.json')) %>;
   let getWordColor = WordCloudCore.makePaletteAssigner(PALETTES.pastel.colors);
 
+  function insertDisplayEmoji(emoji) {
+    const value = displayWordInput.value;
+    const start = displayWordInput.selectionStart ?? value.length;
+    const end = displayWordInput.selectionEnd ?? start;
+    displayWordInput.value = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
+    const caret = start + emoji.length;
+    displayWordInput.focus({ preventScroll: true });
+    displayWordInput.setSelectionRange(caret, caret);
+    displayWordInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  const displayEmojiPicker = WolkenworteEmojiPicker.create({
+    trigger: displayEmojiTrigger,
+    mount: displayWordEntry,
+    idPrefix: 'display-emoji',
+    placement: 'above-right',
+    mediaQuery: desktopEmojiPickerMedia,
+    catalogUrl: EMOJI_CATALOG_URL,
+    searchIndexUrls: EMOJI_SEARCH_INDEX_URLS,
+    onSelect: insertDisplayEmoji,
+  });
   function storedPaletteKey() {
     try {
       const stored = localStorage.getItem(paletteStorageKey);
@@ -919,20 +1004,10 @@
     const placed = WordCloudCore.layoutWords(words, side, ctx, getWordColor);
 
     ctx.clearRect(0, 0, side, side);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
     for (const p of placed) {
-      ctx.font = `${p.fontPx}px ${WordCloudCore.FONT_FAMILY}`;
-      ctx.fillStyle = p.color;
-      if (p.rotated) {
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText(p.word, 0, p.fontPx * TEXT_BASELINE_OFFSET);
-        ctx.restore();
-      } else {
-        ctx.fillText(p.word, p.x, p.y + p.fontPx * TEXT_BASELINE_OFFSET);
-      }
+      WordCloudCore.drawPlacedWord(ctx, p, {
+        emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
+      });
     }
     canvas.classList.add('visible');
   }
@@ -941,8 +1016,13 @@
     const revision = ++renderRevision;
     clearTimeout(renderTimer);
     renderTimer = setTimeout(() => {
-      cloudFontReady.then(() => {
+      Promise.all([
+        cloudFontReady,
+        WolkenworteEmoji.preloadTexts(words.map(([word]) => word)),
+      ]).then(() => {
         if (revision === renderRevision) renderCloud(words);
+      }).catch(() => {
+        if (revision === renderRevision) showToast(t('Ein Emoji konnte nicht geladen werden.'));
       });
     }, delay);
   }
@@ -1103,10 +1183,12 @@
     tryAllTransports: true,
     timeout: 7000,
   });
+  let pendingWordSubmission = '';
   displayWordEntry.addEventListener('submit', (event) => {
     event.preventDefault();
     const word = displayWordInput.value.trim();
     if (!word) return;
+    pendingWordSubmission = word;
     socket.emit('submit-word', word);
     displayWordInput.value = '';
   });
@@ -1143,7 +1225,8 @@
     for (const [word, receipts] of groups) {
       const item = document.createElement('div'); item.className = 'own-word-item';
       const copy = document.createElement('span'); copy.className = 'own-word-copy';
-      const label = document.createElement('span'); label.className = 'own-word-label'; label.textContent = word;
+      const label = document.createElement('span'); label.className = 'own-word-label';
+      WolkenworteEmoji.renderInline(label, word);
       const count = document.createElement('span'); count.className = 'own-word-count';
       count.textContent = receipts.length > 1 ? `× ${WolkenworteI18n.formatNumber(receipts.length)}` : '';
       const remove = document.createElement('button'); remove.className = 'own-word-remove'; remove.type = 'button'; remove.textContent = '×';
@@ -1188,8 +1271,22 @@
   });
   socket.on('own-word-update', hydrateOwnContributions);
   socket.on('word-accepted', (word, receipt) => {
+    pendingWordSubmission = '';
     addOwnContribution(word, receipt);
     announceWordAccepted();
+  });
+  socket.on('word-error', ({ error } = {}) => {
+    if (pendingWordSubmission && !displayWordInput.value) displayWordInput.value = pendingWordSubmission;
+    pendingWordSubmission = '';
+    const message = error === 'unsupported_emoji'
+      ? 'Dieses Emoji wird noch nicht unterstützt. Bitte wählt ein anderes.'
+      : error === 'rate_limited'
+        ? 'Bitte wartet kurz, bevor ihr ein weiteres Wort hinzufügt.'
+        : error === 'limit_reached'
+          ? 'Für diese Wortwolke wurde das Eingabelimit erreicht.'
+          : 'Das Wort konnte nicht hinzugefügt werden. Bitte versucht es erneut.';
+    setText(wordSubmissionStatus, message);
+    showToast(t(message));
   });
 
   function openSettings() {
@@ -1239,7 +1336,8 @@
     empty.hidden = words.length > 0;
     for (const [word, count] of words) {
       const item = document.createElement('div'); item.className = 'word-manager-item';
-      const label = document.createElement('span'); label.textContent = word;
+      const label = document.createElement('span');
+      WolkenworteEmoji.renderInline(label, word);
       const countLabel = document.createElement('span'); countLabel.className = 'word-manager-count'; countLabel.textContent = count > 1 ? `× ${WolkenworteI18n.formatNumber(count)}` : '';
       const remove = document.createElement('button'); remove.className = 'word-manager-remove'; remove.type = 'button'; remove.textContent = '×';
       setI18nAttribute(remove, 'aria-label', '„{{word}}“ entfernen', { word });
