@@ -722,10 +722,7 @@
       min-height: 0;
       margin: 10px 0 0;
       padding: 10px 0 0;
-      display: grid;
-      grid-template-columns: minmax(320px, 1fr) auto;
-      align-items: center;
-      gap: 14px;
+      display: block;
       border: 0;
       border-top: 1px solid var(--line);
       border-radius: 0;
@@ -738,6 +735,12 @@
       box-shadow: none;
     }
     .editor-selection-head { display: none; }
+    .editor-properties {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+    }
     .editor-selection-row {
       display: grid;
       grid-template-columns: minmax(150px, 1fr) minmax(155px, .55fr) minmax(197px, 1fr);
@@ -912,11 +915,11 @@
     }
     .toolbar-menu {
       min-width: 0;
-      position: relative;
+      display: grid;
     }
     .toolbar-menu[hidden] { display: none; }
     .toolbar-summary {
-      height: 100%;
+      width: 100%;
       min-height: 82px;
       padding: 13px 15px;
       display: grid;
@@ -929,10 +932,11 @@
       border-radius: 17px;
       background: rgba(255, 255, 255, .7);
       cursor: pointer;
-      list-style: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
       transition: border-color .2s, background .2s, box-shadow .2s;
     }
-    .toolbar-summary::-webkit-details-marker { display: none; }
     .toolbar-summary::after {
       content: '⌄';
       grid-column: 2;
@@ -943,12 +947,12 @@
       line-height: 1;
       transition: transform .2s, color .2s;
     }
-    .toolbar-menu[open] .toolbar-summary::after {
+    .toolbar-summary[aria-expanded="true"]::after {
       color: var(--berry);
       transform: rotate(180deg);
     }
     .toolbar-summary:hover,
-    .toolbar-menu[open] .toolbar-summary {
+    .toolbar-summary[aria-expanded="true"] {
       border-color: rgba(156, 28, 76, .3);
       background: #fff;
       box-shadow: 0 8px 20px rgba(64, 15, 38, .06);
@@ -992,20 +996,6 @@
       height: 12px;
       margin: 2px 0 0;
     }
-    .toolbar-panel {
-      position: absolute;
-      z-index: 40;
-      top: calc(100% + 8px);
-      right: 0;
-      width: min(560px, calc(100vw - 72px));
-      padding: 14px;
-      border: 1px solid rgba(123, 70, 82, .16);
-      border-radius: 18px;
-      background: rgba(255, 253, 250, .98);
-      box-shadow: 0 24px 60px rgba(64, 15, 38, .15);
-      backdrop-filter: blur(12px);
-    }
-
     .selected-product {
       min-height: 82px;
       padding: 12px;
@@ -1550,7 +1540,7 @@
       .design-toolbar-controls.has-orientation {
         grid-template-columns: minmax(280px, 1.1fr) repeat(3, minmax(170px, .72fr));
       }
-      .editor-selection { grid-template-columns: minmax(0, 1fr); }
+      .editor-properties { grid-template-columns: minmax(0, 1fr); }
       .editor-actions { justify-content: flex-end; }
     }
 
@@ -1559,11 +1549,6 @@
       .controls-sub { max-width: none; text-align: left; }
       .design-toolbar-controls { grid-template-columns: 1fr; }
       .design-toolbar-controls.has-orientation { grid-template-columns: 1fr; }
-      .toolbar-panel {
-        position: static;
-        width: 100%;
-        margin-top: 8px;
-      }
       .workbench {
         --workspace-stage-height: clamp(400px, 66vh, 560px);
         grid-template-columns: 1fr;
@@ -1614,20 +1599,6 @@
       .surface-copy { width: auto; }
       .editor-toolbar { align-items: flex-start; }
       .editor-tools { flex-wrap: wrap; }
-      .editor-selection {
-        display: block;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: rgba(255, 254, 253, .72);
-      }
-      .editor-selection-head { display: block; }
-      .editor-selection-status { display: block; color: var(--ink); font-size: 12px; }
-      .editor-selection-hint { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.4; }
-      .editor-selection:not(.is-active) .editor-selection-row,
-      .editor-selection:not(.is-active) .editor-actions { display: none; }
-      .editor-selection.is-active .editor-selection-head { margin-bottom: 10px; }
-      .editor-selection.is-active .editor-actions { margin-top: 12px; }
       .editor-actions { justify-content: flex-start; }
       .editor-button { min-height: var(--ww-touch-target); }
       .editor-icon-button { width: var(--ww-touch-target); }
@@ -1663,6 +1634,7 @@
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/configurator-workspace.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
 </head>
@@ -1695,28 +1667,33 @@
               <button class="product-change" id="change-product" type="button">Produkt ändern</button>
             </div>
 
-            <details class="toolbar-menu" id="orientation-step" hidden>
-              <summary class="toolbar-summary">
+            <div class="toolbar-menu" id="orientation-step" hidden>
+              <button class="toolbar-summary" type="button" data-panel-trigger="orientation-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="orientation-panel">
                 <span>
                   <span class="toolbar-kicker">Ausrichtung</span>
                   <strong id="selected-orientation-name">Hochformat</strong>
                 </span>
                 <span class="toolbar-summary-detail" id="selected-orientation-detail">Vertikal</span>
-              </summary>
-              <div class="toolbar-panel">
+              </button>
+              <dialog class="config-panel" id="orientation-panel" aria-labelledby="orientation-panel-title">
+                <div class="config-panel-head"><h2 id="orientation-panel-title" tabindex="-1">Ausrichtung</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+                <div class="config-panel-body">
                 <div class="option-grid orientation-grid" id="orientation-options"></div>
-              </div>
-            </details>
+                </div>
+              </dialog>
+            </div>
 
-            <details class="toolbar-menu" id="theme-step">
-              <summary class="toolbar-summary">
+            <div class="toolbar-menu" id="theme-step">
+              <button class="toolbar-summary" type="button" data-panel-trigger="theme-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="theme-panel">
                 <span>
                   <span class="toolbar-kicker">Farbwelt</span>
                   <strong id="selected-theme-name">Farbwelt wählen</strong>
                 </span>
                 <span class="swatches toolbar-theme-swatches" id="selected-theme-swatches" aria-hidden="true"></span>
-              </summary>
-              <div class="toolbar-panel">
+              </button>
+              <dialog class="config-panel" id="theme-panel" aria-labelledby="theme-panel-title">
+                <div class="config-panel-head"><h2 id="theme-panel-title" tabindex="-1">Farbwelt</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+                <div class="config-panel-body">
                 <div class="option-grid" id="theme-options"></div>
                 <div class="custom-palette-panel" id="custom-palette-panel" hidden>
                   <div class="custom-palette-head">
@@ -1729,21 +1706,25 @@
                   <div class="custom-color-list" id="custom-color-list"></div>
                   <p class="custom-palette-note">Die Farben werden gleichmäßig auf eure Wörter verteilt. Einzelne Wörter könnt ihr unten auf der Druckfläche weiterhin separat ändern.</p>
                 </div>
-              </div>
-            </details>
+                </div>
+              </dialog>
+            </div>
 
-            <details class="toolbar-menu" id="placement-step">
-              <summary class="toolbar-summary">
+            <div class="toolbar-menu" id="placement-step">
+              <button class="toolbar-summary" type="button" data-panel-trigger="placement-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="placement-panel">
                 <span>
                   <span class="toolbar-kicker">Platzierung</span>
                   <strong id="placement-summary-name">Design anordnen</strong>
                 </span>
                 <span class="toolbar-summary-detail" id="placement-summary-detail">Wählt eine Anordnung für euer aktuelles Design.</span>
-              </summary>
-              <div class="toolbar-panel">
+              </button>
+              <dialog class="config-panel" id="placement-panel" aria-labelledby="placement-panel-title">
+                <div class="config-panel-head"><h2 id="placement-panel-title" tabindex="-1">Platzierung</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+                <div class="config-panel-body">
                 <div class="option-grid placement-grid" id="placement-options"></div>
-              </div>
-            </details>
+                </div>
+              </dialog>
+            </div>
           </div>
         </section>
 
@@ -1778,16 +1759,24 @@
                   <button class="editor-button editor-icon-button" id="editor-zoom-in" type="button" aria-label="Ansicht vergrößern" title="Ansicht vergrößern">＋</button>
                 </div>
               </div>
-              <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element">
+              <div id="editor-desktop-inspector">
+              <div class="editor-selection" id="editor-selection" aria-label="Werkzeuge für das ausgewählte Element" tabindex="-1">
                 <div class="editor-selection-head">
-                  <strong class="editor-selection-status" id="editor-selection-status">Element auswählen</strong>
+                  <strong class="editor-selection-status" id="editor-selection-status" aria-live="polite" aria-atomic="true">Element auswählen</strong>
                   <span class="editor-selection-hint" id="editor-selection-hint">Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere</span>
                 </div>
+                <div class="editor-dock" aria-label="Werkzeuge für das ausgewählte Element">
+                  <button type="button" class="editor-button" data-editor-tool="text" aria-haspopup="dialog" aria-controls="editor-tool-panel" disabled>Text</button>
+                  <button type="button" class="editor-button" data-editor-tool="font" aria-haspopup="dialog" aria-controls="editor-tool-panel" disabled>Schrift</button>
+                  <button type="button" class="editor-button" data-editor-tool="color" aria-haspopup="dialog" aria-controls="editor-tool-panel" disabled>Farbe</button>
+                  <button type="button" class="editor-button" data-editor-tool="transform" aria-haspopup="dialog" aria-controls="editor-tool-panel" disabled>Anpassen</button>
+                </div>
+                <div class="editor-properties" id="editor-properties">
                 <div class="editor-selection-row">
-                  <label class="editor-field-label"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
+                  <label class="editor-field-label" data-editor-section="text"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
                     <input class="editor-text-input" id="editor-text" type="text" maxlength="1024" autocomplete="off" placeholder="Wort auswählen" disabled />
                   </label>
-                  <div class="editor-field-label editor-field-label-font">
+                  <div class="editor-field-label editor-field-label-font" data-editor-section="font">
                     <span class="editor-field-label-text">Schriftart</span>
                     <div class="editor-font-picker" id="editor-font-picker">
                       <button class="editor-font-toggle" id="editor-font-toggle" type="button" aria-label="Schriftart wählen" aria-haspopup="listbox" aria-expanded="false" aria-controls="editor-font-menu" disabled>
@@ -1798,14 +1787,14 @@
                     </div>
                     <select class="editor-font-select" id="editor-font" aria-label="Schriftart" hidden disabled></select>
                   </div>
-                  <div class="editor-field-label editor-field-label-color" role="group" aria-label="Farbe auswählen">
+                  <div class="editor-field-label editor-field-label-color" data-editor-section="color" role="group" aria-label="Farbe auswählen">
                     <div class="editor-colors">
                       <div class="editor-swatches" id="editor-swatches"></div>
                       <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
                     </div>
                   </div>
                 </div>
-                <div class="editor-actions">
+                <div class="editor-actions" data-editor-section="transform">
                   <button class="editor-button" id="editor-smaller" type="button" disabled>− Kleiner</button>
                   <button class="editor-button" id="editor-larger" type="button" disabled>＋ Größer</button>
                   <button class="editor-button" id="editor-rotate-left" type="button" aria-label="Nach links drehen" title="Nach links drehen" disabled><span class="editor-rotate-symbol" aria-hidden="true">↺</span> Drehen</button>
@@ -1814,6 +1803,8 @@
                   <button class="editor-button" id="editor-bring-front" type="button" aria-label="Ganz nach vorn" title="Ganz nach vorn" disabled><span aria-hidden="true">↥</span> Nach vorn</button>
                   <button class="editor-button editor-delete" id="editor-delete" type="button" disabled>Löschen</button>
                 </div>
+                </div>
+              </div>
               </div>
         </section>
 
@@ -1833,6 +1824,7 @@
               </div>
               <p class="editor-status" id="editor-feedback" aria-live="polite"></p>
             </div>
+            <div id="editor-compact-inspector"></div>
           </section>
 
           <section class="preview-card" aria-labelledby="preview-title">
@@ -1878,6 +1870,12 @@
     </div>
   </main>
 
+  <dialog class="config-panel editor-tool-panel" id="editor-tool-panel" aria-labelledby="editor-tool-title">
+    <div class="config-panel-head"><h2 id="editor-tool-title" tabindex="-1">Anpassen</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+    <div class="config-panel-body" id="editor-tool-body"></div>
+    <div class="config-panel-foot"><button type="button" class="editor-button" data-panel-close>Fertig</button></div>
+  </dialog>
+
   <dialog class="product-dialog ww-mobile-dialog" id="product-dialog" aria-labelledby="product-dialog-title" tabindex="-1">
     <div class="product-dialog-shell">
       <div class="product-dialog-head">
@@ -1917,6 +1915,7 @@
   <script src="<%= asset('/js/design-layout.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
   <script src="<%= asset('/js/mug-editor.js') %>"></script>
+  <script src="<%= asset('/js/configurator-workspace.js') %>"></script>
   <script>
     'use strict';
 
@@ -2007,6 +2006,7 @@
     const checkoutPanel = document.getElementById('checkout-panel');
     const designAnotherButton = document.getElementById('design-another');
     const continueOrderButton = document.getElementById('continue-order');
+    const workspace = new WolkenworteWorkspace(document, { commitText: () => mugEditor?.commitTextInput() });
 
     let words = [];
     let products = [];
@@ -2016,7 +2016,8 @@
     let pendingProductKey = null;
     let pendingFamilyKey = null;
     let productDialogCloseReason = 'cancel';
-    let selectedTheme = 'pastel';
+    // Resolved from the shared catalog (or a saved choice) when the product loads.
+    let selectedTheme = null;
     let selectedOrientation = 'default';
     let customColors = [];
     let renderFrame = null;
@@ -2334,21 +2335,7 @@
       setText(placementSummaryDetail, 'Wählt eine Anordnung für euer aktuelles Design.');
     }
 
-    function closeToolbarMenus(except = null) {
-      [orientationStep, themeStep, placementStep].forEach((menu) => {
-        if (menu && menu !== except) menu.open = false;
-      });
-    }
-
-    [orientationStep, themeStep, placementStep].forEach((menu) => {
-      menu?.addEventListener('toggle', () => {
-        if (menu.open) closeToolbarMenus(menu);
-      });
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!event.target.closest('.toolbar-menu')) closeToolbarMenus();
-    });
+    function closeToolbarMenus() { workspace.closeChooser(); }
 
     function colorWithAlpha(hex, alpha) {
       const value = hex.replace('#', '');
@@ -2443,7 +2430,7 @@
       }
       const palette = Array.isArray(colors) && colors.length
         ? colors
-        : WordCloudCore.THEMES.pastel.colors;
+        : product.themes[0].colors;
       const assigned = new Map();
       return (word) => {
         if (!assigned.has(word)) {
@@ -3415,6 +3402,8 @@
         defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         palette: getPalette(selectedTheme).colors,
+        onSelectionChange: (capabilities) => workspace.updateSelection(capabilities),
+        openTextEditor: () => workspace.openTextEditor(),
         onChange: () => {
           markDirty();
           renderAll();

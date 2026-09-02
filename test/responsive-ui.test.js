@@ -15,6 +15,7 @@ const legalStyles = fs.readFileSync(path.join(ROOT, 'public', 'legal.css'), 'utf
 const i18nStyles = fs.readFileSync(path.join(ROOT, 'public', 'i18n.css'), 'utf8');
 const mobileStyles = fs.readFileSync(path.join(ROOT, 'public', 'mobile-foundation.css'), 'utf8');
 const mobileRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mobile-ui.js'), 'utf8');
+const workspaceStyles = fs.readFileSync(path.join(ROOT, 'public', 'configurator-workspace.css'), 'utf8');
 const landingWorkflowStyles = fs.readFileSync(path.join(ROOT, 'public', 'landing-workflow.css'), 'utf8');
 const landingWorkflowRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'landing-workflow.js'), 'utf8');
 const documentViews = [
@@ -175,7 +176,8 @@ test('mobile forms prevent iOS input zoom and expose full-size controls', () => 
 test('mobile legal copy and configurator controls reflow instead of widening the page', () => {
   assert.match(legalStyles, /h1 \{[\s\S]*?overflow-wrap: anywhere;[\s\S]*?hyphens: auto;/);
   assert.match(legalStyles, /\.legal-section a \{[\s\S]*?overflow-wrap: anywhere/);
-  assert.match(configure, /\.editor-selection:not\(\.is-active\) \.editor-selection-row,[\s\S]*?display: none/);
+  assert.doesNotMatch(configure, /\.editor-selection:not\(\.is-active\)/);
+  assert.match(workspaceStyles, /\.editor-dock \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(configure, /\.page \{[\s\S]*?margin-left: max\(14px, var\(--ww-safe-left\)\);[\s\S]*?margin-right: max\(14px, var\(--ww-safe-right\)\)/);
 });
 
@@ -184,6 +186,6 @@ test('compact configurator widths keep color controls horizontal and separate fr
   assert.match(configure, /\.editor-swatches \{ min-width: 163px;[\s\S]*?flex-wrap: wrap;/);
   assert.match(configure, /\.editor-swatch \{[\s\S]*?flex: 0 0 23px;/);
   assert.match(configure, /\.editor-color-input \{[\s\S]*?flex: 0 0 28px;/);
-  assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-selection \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-  assert.match(configure, /@media \(max-width: 620px\)[\s\S]*?\.editor-selection\.is-active \.editor-actions \{ margin-top: 12px; \}[\s\S]*?\.editor-selection-row \{ grid-template-columns: 1fr; \}/);
+  assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-properties \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  assert.match(workspaceStyles, /\.editor-tool-panel \.editor-actions \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });

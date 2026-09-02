@@ -491,6 +491,31 @@ node scripts/build-emoji-search-index.js \
 
 ## Testing
 
+### Responsive configurator
+
+The editing dock has a selection-independent footprint. At compact widths
+(up to 940 CSS pixels), it sits below the canvas and opens individual tools in
+native modal sheets. Wide layouts keep the same controls in the toolbar.
+Controls are moved, never cloned; selection, history and immutable print data
+stay in the existing editor. Text-sheet dismissal explicitly commits its edit
+to history. Palette, orientation and arrangement use native top-layer popovers
+on wide screens, and native dialogs on compact screens (also the fallback when
+Popover is unavailable). Choosers do not take space in the document layout.
+
+Run `npm run test:configurator:browser` for an isolated, database-free instance
+of the actual configurator template, product catalog and editor. Add `&probe=1`
+to the printed URL and choose **Run layout regression** at each viewport size.
+The report checks real DOM geometry across word, emoji, image and multiple
+selection; repeated select/deselect; tool sheets; focus return; text history;
+chooser containment and option hit-testing. Repeat at 320, 390, 580, 620, 621,
+800, 940, 941, 1180 and 1440px, including short landscape viewports and browser
+zoom. Run in Chromium, Firefox and Safari; also verify actual touch, virtual
+keyboard, Tab/Shift-Tab, Escape, and resize while a panel is open. The fixture
+has no configuration-write endpoints, database or provider credentials and is
+never mounted in production. Node tests do not replace real-engine sign-off.
+
+### Automated suite
+
 ```bash
 npm test
 ```

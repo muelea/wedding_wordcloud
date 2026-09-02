@@ -54,6 +54,8 @@
       this.palette = options.palette || ['#8f3a58'];
       this.onChange = options.onChange || (() => {});
       this.onReset = options.onReset || (() => {});
+      this.onSelectionChange = options.onSelectionChange;
+      this.openTextEditor = options.openTextEditor;
       this.shell = options.shell;
       this.scroll = options.scroll;
       this.updatePrintAreaPresentation();
@@ -487,6 +489,14 @@
       if (!usesToolbarField && typeof object.enterEditing !== 'function') return false;
 
       this.canvas.setActiveObject(object);
+      if (this.openTextEditor) {
+        this.updateSelectionPanel();
+        if (this.openTextEditor()) {
+          if (object.isEditing) object.exitEditing();
+          this.canvas.requestRenderAll();
+          return true;
+        }
+      }
       if (usesToolbarField) {
         this.updateSelectionPanel();
         this.textInput.focus();
@@ -647,12 +657,7 @@
         });
       });
       this.textInput.addEventListener('change', () => {
-        const active = this.canvas.getActiveObject();
-        if (!active || active.editorKind !== 'text') return;
-        this.applyTextChange(active, this.textInput.value, {
-          finalize: true,
-          record: true,
-        }).catch(() => this.setFeedback('Das Emoji konnte nicht geladen werden.'));
+        this.commitTextInput();
       });
       this.textInput.addEventListener('blur', () => {
         const active = this.canvas.getActiveObject();
@@ -704,6 +709,7 @@
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
+        if (document.querySelector('dialog[open], [data-panel-trigger][aria-expanded="true"]')) return;
         const activeElement = document.activeElement;
         const editingField = /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement?.tagName || '') ||
           Boolean(activeElement?.isContentEditable);
@@ -764,6 +770,15 @@
         object.type === 'ActiveSelection' ||
         object.type === 'activeSelection'
       ));
+    }
+
+    commitTextInput() {
+      const active = this.canvas.getActiveObject();
+      if (!active || active.editorKind !== 'text') return;
+      return this.applyTextChange(active, this.textInput.value, {
+        finalize: true,
+        record: true,
+      }).catch(() => this.setFeedback('Das Emoji konnte nicht geladen werden.'));
     }
 
     selectedObjects(active = this.canvas.getActiveObject()) {
@@ -1607,10 +1622,16 @@
       this.colorInput.disabled = !hasSelection || !canColor;
       this.fontSelect.disabled = !hasSelection || !canChangeFont;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
-      this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
+      this.swatches.querySelectorAll('.editor-swatch').forEach((button) => {
         button.disabled = !hasSelection || !canColor;
       });
       this.selectAllButton.disabled = this.canvas.getObjects().length === 0;
+      this.onSelectionChange?.({
+        text: hasSelection && !isMultiple && !isIcon && !isImage,
+        font: hasSelection && canChangeFont,
+        color: hasSelection && canColor,
+        transform: hasSelection,
+      });
       if (!active) {
         this.selectionStatus.textContent = translate('Element auswählen');
         this.selectionHint.textContent = translate('Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere');
@@ -1619,7 +1640,7 @@
         this.fontPlaceholder.textContent = translate('Schrift wählen');
         this.fontSelect.value = '';
         this.syncFontPicker('', translate('Schrift wählen'), true);
-        this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
+        this.swatches.querySelectorAll('.editor-swatch').forEach((button) => {
           button.classList.remove('is-selected');
         });
         return;
@@ -1664,7 +1685,7 @@
       }
       const activeColor = isMultiple ? this.selectionColor(selected) : this.getObjectColor(active);
       if (activeColor) this.colorInput.value = activeColor;
-      this.selectionPanel.querySelectorAll('.editor-swatch').forEach((button) => {
+      this.swatches.querySelectorAll('.editor-swatch').forEach((button) => {
         button.classList.toggle('is-selected', Boolean(activeColor) && button.dataset.color === activeColor.toLowerCase());
       });
     }

@@ -1,0 +1,130 @@
+/* Panels live in the browser's top layer, never in a toolbar grid track. */
+html { scrollbar-gutter: stable; }
+html:has(.config-panel[open]) { overflow-y: hidden; }
+.config-panel {
+  position: fixed;
+  inset: 0;
+  width: min(560px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(123, 70, 82, .16);
+  border-radius: 20px;
+  color: var(--ink);
+  background: #fffdfb;
+  box-shadow: 0 24px 70px rgba(64, 15, 38, .18);
+}
+.config-panel[open] { display: flex; flex-direction: column; }
+.config-panel:popover-open { display: flex; flex-direction: column; }
+.config-panel[data-presentation="popover"] { inset: auto; margin: 0; }
+.config-panel::backdrop { background: rgba(38, 17, 26, .25); }
+.config-panel[data-presentation="popover"]::backdrop { background: transparent; }
+.config-panel-head {
+  flex: 0 0 auto;
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.config-panel-head h2 { margin: 0; font-size: 22px; }
+.config-panel-head h2:focus { outline: none; }
+.config-panel-close {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: 24px;
+  cursor: pointer;
+}
+.config-panel-close:focus-visible, .editor-dock .editor-button:focus-visible {
+  outline: 3px solid rgba(156, 28, 76, .4);
+  outline-offset: 2px;
+}
+.config-panel-body {
+  min-height: 0;
+  padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.config-panel-foot { flex: 0 0 auto; padding: 12px 18px; border-top: 1px solid var(--line); }
+.config-panel-foot .editor-button { width: 100%; min-height: 44px; }
+.editor-dock, #editor-compact-inspector { display: none; }
+
+@media (max-width: 940px) {
+  .config-panel {
+    inset: auto 0 var(--ww-keyboard-inset, 0px);
+    width: min(100%, 620px);
+    max-height: min(75vh, calc(var(--ww-visual-viewport-height, 100vh) - 12px));
+    max-height: min(75dvh, calc(var(--ww-visual-viewport-height, 100dvh) - 12px));
+    margin: 0 auto;
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .config-panel-body { padding-bottom: max(18px, var(--ww-safe-bottom)); }
+  .config-panel-foot { padding-bottom: max(12px, var(--ww-safe-bottom)); }
+  .config-panel .option-grid { grid-template-columns: 1fr; }
+  .config-panel .option-card { min-height: 76px; }
+  #editor-desktop-inspector, .editor-properties { display: none; }
+  #editor-compact-inspector { display: block; }
+  .editor-selection {
+    margin: 16px 0 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--line);
+  }
+  .editor-selection-head { display: block; min-width: 0; }
+  .editor-selection-status {
+    display: block;
+    height: 22px;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .editor-selection-hint { display: none; }
+  .editor-dock { margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .editor-dock .editor-button { min-width: 0; min-height: 44px; padding: 8px 4px; font-size: 12px; }
+  .editor-tool-panel [data-editor-section] { min-width: 0; }
+  .editor-tool-panel .editor-field-label-text {
+    position: static;
+    display: block;
+    width: auto;
+    height: auto;
+    margin: 0 0 8px;
+    overflow: visible;
+    clip: auto;
+    font-size: 12px;
+    white-space: normal;
+  }
+  .editor-tool-panel .editor-text-input, .editor-tool-panel .editor-font-select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    background: #fff;
+    font: 16px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
+  }
+  .editor-tool-panel .editor-font-picker { display: none; }
+  .editor-tool-panel .editor-colors { gap: 12px; align-items: flex-start; }
+  .editor-tool-panel .editor-swatches { min-width: 0; gap: 10px; }
+  .editor-tool-panel .editor-swatch { width: 44px; height: 44px; flex-basis: 44px; }
+  .editor-tool-panel .editor-color-input { width: 44px; height: 44px; flex-basis: 44px; }
+  .editor-tool-panel .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .editor-tool-panel .editor-actions .editor-button { min-height: 44px; }
+  .editor-tool-panel .editor-delete { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-summary, .editor-selection { transition: none; }
+}

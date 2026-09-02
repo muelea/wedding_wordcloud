@@ -105,6 +105,33 @@ test('double-clicking plain text keeps direct canvas editing', () => {
   ]);
 });
 
+test('ending a text sheet commits normalization and an undoable history entry', async () => {
+  const editor = Object.create(MugPrintEditor.prototype);
+  const active = { editorKind: 'text' };
+  const calls = [];
+  editor.canvas = { getActiveObject: () => active };
+  editor.textInput = { value: 'edited 🎲' };
+  editor.applyTextChange = async (...args) => calls.push(args);
+  await editor.commitTextInput();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], active);
+  assert.equal(calls[0][1], 'edited 🎲');
+  assert.equal(calls[0][2].finalize, true);
+  assert.equal(calls[0][2].record, true);
+});
+
+test('compact text editing does not leave Fabric inline editing active', () => {
+  const editor = Object.create(MugPrintEditor.prototype);
+  const calls = [];
+  editor.canvas = { setActiveObject() {}, requestRenderAll() {} };
+  editor.updateSelectionPanel = () => calls.push('sync');
+  editor.openTextEditor = () => { calls.push('sheet'); return true; };
+  const object = { editorKind: 'text', isEditing: true, enterEditing() {},
+    exitEditing: () => calls.push('exit-inline') };
+  assert.equal(editor.beginTextEditing(object), true);
+  assert.deepEqual(calls, ['sync', 'sheet', 'exit-inline']);
+});
+
 test('the configurator adds a picked emoji as a standalone editable design object', async () => {
   const calls = [];
   mugEditorBrowserRoot.DesignFonts = DesignFonts;
@@ -605,7 +632,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.equal(tote.previewMockup.blendMode, 'multiply');
   assert.deepEqual(
     data.product.themes.map((theme) => theme.key),
-    ['pastel', 'sage-gold', 'ocean', 'custom']
+    ['konfetti', 'dopamin-pop', 'pastel', 'sage-gold', 'ocean', 'custom']
   );
   assert.ok(data.product.themes.every((theme) => theme.colors.length >= 6));
   assert.deepEqual(data.product.layouts.map((layout) => layout.key), ['single', 'both-sides', 'full-wrap', 'fit-area']);

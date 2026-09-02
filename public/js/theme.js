@@ -4,7 +4,7 @@
   function applyVariables(palette, document = root.document) {
     if (!palette || !document?.documentElement) return;
     const style = document.documentElement.style;
-    style.setProperty('--primary', palette.colors[0]);
+    style.setProperty('--primary', palette.uiPrimary || palette.colors[0]);
     style.setProperty('--accent', palette.colors[4]);
     style.setProperty('--bg', palette.background[0]);
     style.setProperty('--bg2', palette.background[1]);

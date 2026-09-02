@@ -19,7 +19,7 @@
     (function () {
       var palettes = Object.fromEntries(<%- JSON.stringify(pageData.paletteOptions || []).replace(/</g, '\\u003c') %>
         .map(function (palette) { return [palette.key, palette]; }));
-      var fallback = <%- JSON.stringify(pageData.paletteOptions?.[0]?.key || 'pastel') %>;
+      var fallback = <%- JSON.stringify(pageData.paletteOptions?.[0]?.key || 'konfetti') %>;
       var slug = location.pathname.split('/').filter(Boolean)[1] || '';
       window.WolkenworteTheme.restore('wordcloud-palette:' + slug, palettes, fallback);
     })();
@@ -34,7 +34,7 @@
     html.ww-theme-booting .qr-code,
     html.ww-theme-booting .ww-keepsake-cta { transition: none !important; }
 
-    /* ── Pastel theme (default) — matches the landing/create/guest palette ── */
+    /* Brand fallback; the selected word palette is applied before first paint. */
     :root {
       --bg:      #fffdfa;
       --bg2:     #fffdfa;
@@ -875,7 +875,7 @@
     : Promise.resolve();
   const PALETTE_OPTIONS = <%- JSON.stringify(pageData.paletteOptions || []).replace(/</g, '\\u003c') %>;
   const PALETTES = Object.fromEntries(PALETTE_OPTIONS.map((palette) => [palette.key, palette]));
-  const defaultPaletteKey = PALETTE_OPTIONS[0]?.key || 'pastel';
+  const defaultPaletteKey = PALETTE_OPTIONS[0]?.key || 'konfetti';
   const paletteStorageKey = `wordcloud-palette:${slug}`;
   const desktopEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
   const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
@@ -887,7 +887,7 @@
     tr: <%- JSON.stringify(asset('/emoji-search/48.2/tr.json')) %>,
   });
   const EMOJI_CATALOG_URL = <%- JSON.stringify(asset('/emoji-search/48.2/catalog.json')) %>;
-  let getWordColor = WordCloudCore.makePaletteAssigner(PALETTES.pastel.colors);
+  let getWordColor = WordCloudCore.makePaletteAssigner(PALETTES[defaultPaletteKey].colors);
 
   function insertDisplayEmoji(emoji) {
     const value = displayWordInput.value;

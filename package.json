@@ -30,7 +30,8 @@
     "ops:retry-fulfillment": "node scripts/retry-blocked-fulfillment.js",
     "ops:prelive-cleanup": "node scripts/prelive-cleanup.js",
     "test": "node --test test/*.test.js",
-    "test:emoji:browser": "node scripts/check-emoji-browser.js"
+    "test:emoji:browser": "node scripts/check-emoji-browser.js",
+    "test:configurator:browser": "node scripts/check-configurator-browser.js"
   },
   "dependencies": {
     "@fontsource/gelasio": "^5.3.0",

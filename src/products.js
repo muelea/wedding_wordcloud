@@ -10,6 +10,23 @@
  */
 
 const THEMES = Object.freeze([
+  // The first palette is the shared default for the live cloud and every product.
+  Object.freeze({
+    key: 'konfetti',
+    label: 'Konfetti',
+    description: 'Bunte Kontraste mit Kobaltblau, Sonnengelb und Fuchsia',
+    colors: Object.freeze(['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8']),
+    background: Object.freeze(['#fffdfa', '#fff7ef', 'rgba(239,191,0,.10)', 'rgba(230,0,184,.05)']),
+  }),
+  Object.freeze({
+    key: 'dopamin-pop',
+    label: 'Dopamin Pop',
+    description: 'Leuchtendes Orange, Pink, Türkis, Gelb, Violett und Apfelgrün',
+    colors: Object.freeze(['#ff6a00', '#f500a6', '#00bfc4', '#ffd400', '#7b2cff', '#7ccc00']),
+    background: Object.freeze(['#fffdfa', '#fff5fa', 'rgba(255,212,0,.10)', 'rgba(0,191,196,.07)']),
+    // Keep white button labels readable without darkening the approved word colors.
+    uiPrimary: '#b84700',
+  }),
   Object.freeze({
     key: 'pastel',
     label: 'Sorbet Pop',
