@@ -434,10 +434,30 @@ Guest words and product text support the complete Unicode Emoji 17 RGI set,
 including skin tones, flags, keycaps and joined family/couple sequences. The
 application canonicalizes equivalent Unicode spellings and renders the pinned
 Noto Emoji 2.051 SVG artwork everywhere. Browser canvases and the configurator
-load those tracked local files; generated SVG print files inline the same
+load locally served renditions of those tracked files; generated SVG print files inline the same
 artwork. The physical product therefore does not depend on whichever native
 emoji font happens to be installed on a phone, browser, server or Printful
 renderer. The bundled Noto and regional-flag licenses live beside the artwork.
+
+Browser artwork is served under the separately versioned
+`/assets/noto-emoji/2.051/dimensions-v1/` namespace. The shared asset endpoint
+gives each SVG explicit intrinsic pixel dimensions before browser decoding,
+preserving its viewBox, presentation attributes, aspect ratio and vector paths.
+This avoids browser-dependent source cropping when Fabric draws an SVG whose
+upstream file supplies only a viewBox. Only catalog-listed files can be served;
+responses support ETags and immutable caching. The upstream URLs and bytes stay
+unchanged, and no client-side XML processing, bitmap conversion or build step
+is needed. Change the rendition revision if the normalization contract changes.
+
+`npm test` checks all 3,944 renditions, the HTTP/cache contract and real Fabric
+pixel rendering (including transforms and history). For browser-engine signoff,
+run `npm run test:emoji:browser` and open its loopback URL in Chrome, Firefox and
+Safari; the same 35 pixel checks execute in each real engine and display a JSON
+report with the browser version. Also check the production configurator's
+word-cloud import and add-emoji flows on desktop Chrome/Opera and Android Chrome.
+The fixture is read-only, needs no `.env` or database, and is not served by the
+production application. Passing Node tests is not a substitute for this browser
+verification.
 
 The live word entry and configurator mount the same shared desktop picker;
 each page supplies only its trigger, placement and selection action. The

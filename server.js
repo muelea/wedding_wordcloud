@@ -17,6 +17,8 @@ const { makeRouter: makeEventsRouter } = require('./src/routes/events');
 const { makeWebhookRouter } = require('./src/routes/webhook');
 const { makeMaintenanceRouter } = require('./src/routes/maintenance');
 const { makePerformanceRouter } = require('./src/routes/performance');
+const { makeEmojiArtworkRouter } = require('./src/routes/emojiArtwork');
+const { ASSET_BASE: EMOJI_BROWSER_ASSET_BASE } = require('./public/js/emoji-catalog');
 const { getBaseUrl } = require('./src/baseUrl');
 const { buildEventUrl, renderEventQrSvg } = require('./src/eventQr');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('./src/eventNames');
@@ -113,6 +115,9 @@ app.get('/vendor/fonts/gelasio-latin-ext-400-normal.woff', staticCacheMiddleware
   res.sendFile(require.resolve('@fontsource/gelasio/files/gelasio-latin-ext-400-normal.woff'));
 });
 
+// Normalized SVG renditions have their own immutable URL; legacy upstream
+// artwork remains available unchanged for existing clients and print exports.
+app.use(EMOJI_BROWSER_ASSET_BASE, makeEmojiArtworkRouter());
 app.use(staticCacheMiddleware, express.static(path.join(__dirname, 'public')));
 
 const wordBroadcasts = createWordUpdateBroadcaster({ io, getWords: db.getWords });

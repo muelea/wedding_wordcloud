@@ -9,6 +9,8 @@ const { io: ioClient } = require('socket.io-client');
 const { startTestServer, createEvent } = require('./helpers');
 const { publicAssetUrl } = require('../src/publicAssets');
 const { SITE_FONT_ASSETS } = require('../src/siteFonts');
+const EmojiCatalog = require('../public/js/emoji-catalog');
+const { loadBrowserSvg } = require('../src/emojiBrowserAssets');
 const {
   assertGitReleaseCandidate,
   releaseSteps,
@@ -82,6 +84,15 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   assert.equal(versionedSiteFont.status, 200);
   assert.equal(versionedSiteFont.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.ok((await versionedSiteFont.arrayBuffer()).byteLength > 10_000);
+
+  const emojiUrl = EmojiCatalog.assetUrl(EmojiCatalog.parse('🎲')[0]);
+  const browserEmoji = await fetch(`${baseUrl}${emojiUrl}`);
+  assert.equal(browserEmoji.status, 200);
+  assert.equal(browserEmoji.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.equal(await browserEmoji.text(), await loadBrowserSvg('svg/emoji_u1f3b2.svg'));
+  const legacyEmoji = await fetch(`${baseUrl}/assets/noto-emoji/2.051/svg/emoji_u1f3b2.svg`);
+  assert.equal(await legacyEmoji.text(), fs.readFileSync(path.join(ROOT,
+    'public/assets/noto-emoji/2.051/svg/emoji_u1f3b2.svg'), 'utf8'));
 
   const staleVersionedJs = await fetch(`${baseUrl}/js/wordcloud-core.js?v=stale-release`);
   assert.equal(staleVersionedJs.status, 200);

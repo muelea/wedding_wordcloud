@@ -11,7 +11,10 @@
 
   if (!data?.canonicalAssets || !data?.aliases) throw new Error('Emoji data is required');
 
-  const ASSET_BASE = `/assets/noto-emoji/${data.artworkVersion}/`;
+  // The upstream files stay immutable. This separately versioned rendition
+  // gives every SVG definite pixel dimensions before the browser decodes it.
+  // Bump the rendition revision whenever its normalization contract changes.
+  const ASSET_BASE = `/assets/noto-emoji/${data.artworkVersion}/dimensions-v1/`;
   const UNSUPPORTED_EMOJI_RE = /[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\u200D\uFE0F\u20E3\u{E0020}-\u{E007F}]/u;
   const canonicalKeys = new Set(Object.keys(data.canonicalAssets));
   const imageElements = new Map();

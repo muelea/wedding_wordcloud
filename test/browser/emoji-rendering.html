@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emoji-Renderer prüfen – Wolkenworte</title>
+  <style>
+    body { max-width: 850px; margin: 32px auto; padding: 0 20px; font: 16px/1.5 system-ui, sans-serif; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f5f5f5; padding: 16px; border-radius: 8px; }
+    [data-status="passed"] { color: #176637; }
+    [data-status="failed"] { color: #a01717; }
+  </style>
+</head>
+<body>
+  <h1>Emoji-Renderer prüfen</h1>
+  <p>Vergleicht die Pixel des echten Fabric-Editors mit der vollständigen SVG-Darstellung.
+    Enthält verschiedene Emoji, Flaggen, Größen, Drehung, Skalierung und gespeicherte Zustände.</p>
+  <p id="status" role="status">Prüfung läuft …</p>
+  <pre id="results"></pre>
+  <pre id="report"></pre>
+  <script src="/vendor/fabric.min.js"></script>
+  <script src="/js/emoji-data.js"></script>
+  <script src="/js/emoji-catalog.js"></script>
+  <script src="/js/design-fonts.js"></script>
+  <script src="/js/wordcloud-core.js"></script>
+  <script src="/js/mug-editor.js"></script>
+  <script src="/probe.js"></script>
+  <script>
+    (async () => {
+      const status = document.getElementById('status');
+      const results = document.getElementById('results');
+      const report = { browser: navigator.userAgent, devicePixelRatio, checks: [] };
+      try {
+        const font = DesignFonts.get(DesignFonts.DEFAULT_FONT_KEY);
+        const face = new FontFace(font.family, `url("${font.file}")`);
+        document.fonts.add(await face.load());
+        await EmojiRenderingProbe.run({
+          fabric, MugPrintEditor, WordCloudCore, DesignFonts, emoji: WolkenworteEmoji,
+          createCanvas(width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            return canvas;
+          },
+        }, (result) => {
+          report.checks.push(result);
+          results.textContent += `${result.passed ? '✓' : '✗'} ${result.label} (${(result.error * 100).toFixed(3)} %)\n`;
+        });
+        report.passed = true;
+        status.dataset.status = 'passed';
+        status.textContent = `${report.checks.length} Prüfungen bestanden.`;
+      } catch (error) {
+        report.passed = false;
+        report.error = error.message;
+        status.dataset.status = 'failed';
+        status.textContent = `Prüfung fehlgeschlagen: ${error.message}`;
+      }
+      document.getElementById('report').textContent = JSON.stringify(report, null, 2);
+    })();
+  </script>
+</body>
+</html>
