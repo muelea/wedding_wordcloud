@@ -33,7 +33,6 @@
   let locale = DEFAULT_LOCALE;
   let localeSource = 'default';
   let messages = {};
-  let observer = null;
   let readyPromise = Promise.resolve();
   let localeRequestId = 0;
   const catalogPromises = new Map([[DEFAULT_LOCALE, Promise.resolve({})]]);
@@ -75,7 +74,12 @@
     const cookieLocale = normalizeLocale(readCookieLocale(), '');
     if (SUPPORTED_LOCALES.includes(cookieLocale)) return { locale: cookieLocale, source: 'stored' };
     const renderedLocale = normalizeLocale(root.document?.documentElement?.lang, '');
-    if (SUPPORTED_LOCALES.includes(renderedLocale)) return { locale: renderedLocale, source: 'server' };
+    if (SUPPORTED_LOCALES.includes(renderedLocale)) {
+      return {
+        locale: renderedLocale,
+        source: root.document?.documentElement?.dataset?.localeSource || 'server',
+      };
+    }
     const browserLocale = normalizeLocale(root.navigator?.languages?.[0] || root.navigator?.language);
     return { locale: browserLocale, source: 'browser' };
   }
@@ -143,13 +147,26 @@
     sources[name] = { source: normalizedSource, params: { ...params } };
   }
 
-  function translateTextNode(node, preserveSource = false) {
+  function translateTextNode(node) {
     if (!node || node.nodeType !== 3 || !node.parentElement) return;
     if (node.parentElement.closest('script, style, [data-i18n-ignore]')) return;
     const current = node.nodeValue || '';
-    const trimmed = current.trim();
-    if (!trimmed) return;
-    const declaredSource = node.parentElement.getAttribute('data-i18n-source');
+    const parent = node.parentElement;
+    const directSource = parent.childNodes.length === 1
+      ? parent.getAttribute('data-i18n-source')
+      : '';
+    let indexedSource = '';
+    if (!directSource) {
+      const encodedSources = parent.getAttribute('data-i18n-text-sources');
+      if (encodedSources) {
+        try {
+          const sources = JSON.parse(encodedSources);
+          const childIndex = Array.prototype.indexOf.call(parent.childNodes, node);
+          indexedSource = sources?.[childIndex] || '';
+        } catch {}
+      }
+    }
+    const declaredSource = directSource || indexedSource;
     let binding = textSources.get(node);
     if (declaredSource) {
       binding = {
@@ -157,10 +174,8 @@
         params: parseParams(node.parentElement, 'data-i18n-params'),
       };
       textSources.set(node, binding);
-    } else if (!binding || (!preserveSource && current !== replaceTrimmed(current, t(binding.source, binding.params)))) {
-      binding = { source: trimmed, params: {} };
-      textSources.set(node, binding);
     }
+    if (!binding) return;
     const translated = replaceTrimmed(current, t(binding.source, binding.params));
     if (translated !== current) node.nodeValue = translated;
   }
@@ -171,7 +186,7 @@
     return `${start}${replacement}${end}`;
   }
 
-  function translateAttributes(element, preserveSource = false) {
+  function translateAttributes(element) {
     if (!element || element.nodeType !== 1 || element.closest('[data-i18n-ignore]')) return;
     let sources = attributeSources.get(element);
     if (!sources) {
@@ -188,28 +203,26 @@
           source: declaredSource,
           params: parseParams(element, `data-i18n-${name}-params`),
         };
-      } else if (!sources[name] ||
-          (!preserveSource && current !== t(sources[name].source, sources[name].params))) {
-        sources[name] = { source: current, params: {} };
       }
+      if (!sources[name]) continue;
       const translated = t(sources[name].source, sources[name].params);
       if (translated !== current) element.setAttribute(name, translated);
     }
   }
 
-  function translateTree(scope, preserveSource = false) {
+  function translateTree(scope) {
     if (!root.document || !scope) return;
     if (scope.nodeType === 3) {
-      translateTextNode(scope, preserveSource);
+      translateTextNode(scope);
       return;
     }
     if (scope.nodeType !== 1 && scope.nodeType !== 9 && scope.nodeType !== 11) return;
-    if (scope.nodeType === 1) translateAttributes(scope, preserveSource);
+    if (scope.nodeType === 1) translateAttributes(scope);
     const walker = root.document.createTreeWalker(scope, root.NodeFilter.SHOW_ELEMENT | root.NodeFilter.SHOW_TEXT);
     let node = walker.nextNode();
     while (node) {
-      if (node.nodeType === 3) translateTextNode(node, preserveSource);
-      else translateAttributes(node, preserveSource);
+      if (node.nodeType === 3) translateTextNode(node);
+      else translateAttributes(node);
       node = walker.nextNode();
     }
     root.document.documentElement.lang = locale;
@@ -219,16 +232,21 @@
     if (catalogPromises.has(nextLocale)) return catalogPromises.get(nextLocale);
     if (!root.fetch) return {};
     const request = (async () => {
-      const locales = nextLocale === 'en' ? ['en'] : ['en', nextLocale];
-      const loaded = await Promise.all(locales.map(async (code) => {
-        const response = await root.fetch(
-          `/locales/${encodeURIComponent(code)}.json`,
-          { cache: 'no-cache' }
-        );
-        if (!response.ok) throw new Error(`Could not load locale ${code}`);
-        return response.json();
-      }));
-      return Object.assign({}, ...loaded);
+      const renderedRoot = root.document?.documentElement;
+      const renderedLocale = normalizeLocale(renderedRoot?.lang, '');
+      let catalogUrls = {};
+      try {
+        catalogUrls = JSON.parse(renderedRoot?.dataset?.localeCatalogUrls || '{}');
+      } catch {}
+      const renderedUrl = catalogUrls[nextLocale] || (renderedLocale === nextLocale
+        ? renderedRoot?.dataset?.localeCatalogUrl
+        : '');
+      const response = await root.fetch(
+        renderedUrl || `/locales/${encodeURIComponent(nextLocale)}.json`,
+        { cache: renderedUrl ? 'force-cache' : 'no-cache' }
+      );
+      if (!response.ok) throw new Error(`Could not load locale ${nextLocale}`);
+      return response.json();
     })();
     catalogPromises.set(nextLocale, request);
     try {
@@ -261,7 +279,7 @@
       localeSource = 'stored';
       persistLocale(locale);
     }
-    if (root.document) translateTree(root.document, true);
+    if (root.document) translateTree(root.document);
     updateLanguageSelector();
     if (root.dispatchEvent && typeof root.CustomEvent === 'function') {
       root.dispatchEvent(new root.CustomEvent('wolkenworte:localechange', {
@@ -272,8 +290,11 @@
   }
 
   async function useEventLocale(eventLocale) {
-    if (localeSource === 'query' || localeSource === 'stored') return locale;
-    return setLocale(eventLocale, { source: 'event' });
+    await readyPromise;
+    if (localeSource === 'query' || localeSource === 'stored' || localeSource === 'cookie') return locale;
+    const nextLocale = normalizeLocale(eventLocale);
+    if (nextLocale === locale) return locale;
+    return setLocale(nextLocale, { source: 'event' });
   }
 
   function formatCurrency(cents, currency = 'EUR') {
@@ -329,7 +350,6 @@
     const options = Array.from(picker.querySelectorAll('[data-language-code]'));
     const stackingHost = picker.closest('header');
     let selectionId = 0;
-
     picker.addEventListener('toggle', () => {
       const hasOpenPicker = Boolean(stackingHost?.querySelector('[data-language-picker][open]'));
       stackingHost?.classList.toggle('ww-language-host-open', hasOpenPicker);
@@ -372,24 +392,6 @@
     }
   }
 
-  function startObserver() {
-    if (!root.document || observer || typeof root.MutationObserver !== 'function') return;
-    observer = new root.MutationObserver((records) => {
-      for (const record of records) {
-        if (record.type === 'characterData') translateTextNode(record.target);
-        if (record.type === 'attributes') translateAttributes(record.target);
-        for (const node of record.addedNodes || []) translateTree(node);
-      }
-    });
-    observer.observe(root.document.documentElement, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ATTRIBUTE_NAMES,
-    });
-  }
-
   if (root.document) {
     const initial = initialLocale();
     locale = initial.locale;
@@ -398,7 +400,6 @@
     readyPromise = setLocale(locale, { source: localeSource });
     root.document.addEventListener('DOMContentLoaded', async () => {
       enhanceLanguageSelectors();
-      startObserver();
       await readyPromise;
       translateTree(root.document);
     });

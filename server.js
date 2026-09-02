@@ -25,7 +25,7 @@ const { layoutForExport } = require('./src/exportSvg');
 const fulfillment = require('./src/fulfillment');
 const emailDelivery = require('./src/emailDelivery');
 const printArtifacts = require('./src/printArtifacts');
-const { asyncRoute, sanitizedErrorHandler } = require('./src/asyncRoute');
+const { asyncRoute, makeSanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
 const { staticCacheMiddleware } = require('./src/httpCache');
 const { renderPage, resolvePageLocale } = require('./src/pageRenderer');
@@ -90,7 +90,7 @@ app.use('/internal/performance', makePerformanceRouter());
 // The one-time pre-live cleanup requires a verifiable stop-the-world window.
 // Liveness/readiness remain reachable, while every public HTTP and Socket.io
 // operation is rejected before it can write business data.
-app.use(maintenanceMode.middleware);
+app.use(maintenanceMode.makeMiddleware({ renderPage }));
 io.use(maintenanceMode.socketGuard);
 
 // Stripe webhook needs the raw, unparsed body for signature verification —
@@ -192,7 +192,18 @@ app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncR
   const sourceHash = sourceHashForRequest(req);
   if (!rateLimits.consume([{
     name: 'event:create', key: sourceHash, ...rateLimits.LIMITS.eventCreate,
-  }])) return res.status(429).send('Bitte versucht es in einem Moment erneut.');
+  }])) {
+    return renderPage(req, res, 'landing', {
+      ...landingPageOptions({
+        startDialog: {
+          open: true,
+          name: submittedName.slice(0, MAX_EVENT_NAME_LENGTH),
+          error: 'Bitte versucht es in einem Moment erneut.',
+        },
+      }),
+      status: 429,
+    });
+  }
 
   const locale = resolvePageLocale(req).locale;
   let event = null;
@@ -205,7 +216,18 @@ app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncR
       if (error?.code !== '23505') throw error;
     }
   }
-  if (!event) return res.status(500).send('Die Wortwolke konnte nicht erstellt werden.');
+  if (!event) {
+    return renderPage(req, res, 'landing', {
+      ...landingPageOptions({
+        startDialog: {
+          open: true,
+          name: submittedName.slice(0, MAX_EVENT_NAME_LENGTH),
+          error: 'Die Wortwolke konnte nicht erstellt werden.',
+        },
+      }),
+      status: 500,
+    });
+  }
   return res.redirect(303, `/e/${encodeURIComponent(event.slug)}`);
 }));
 
@@ -225,16 +247,20 @@ app.get('/e/:slug', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });
   const eventUrl = buildEventUrl(getBaseUrl(req, PORT), event.slug);
-  const qrSvg = await renderEventQrSvg(eventUrl);
+  const [qrSvg, initialWords] = await Promise.all([
+    renderEventQrSvg(eventUrl),
+    db.getWords(event.id),
+  ]);
   const paletteOptions = getPublicProduct(DEFAULT_PRODUCT).themes
     .filter((palette) => palette.key !== 'custom');
   return renderPage(req, res, 'display', {
     eventLocale: event.locale,
-    header: { variant: 'display', paletteOptions },
+    header: { variant: 'display', paletteOptions, hasWords: initialWords.length > 0 },
     pageData: {
       eventUrl,
       qrSvg,
       cloudTitle: event.title,
+      initialWords,
       paletteOptions,
     },
   });
@@ -295,6 +321,16 @@ app.get('/e/:slug/export.svg', asyncRoute(async (req, res) => {
 
 const socketRuntime = attachSocketHandlers(io, { wordBroadcasts });
 
+// Unknown browser routes use the same localized, branded page as expired
+// events. API, provider and asset requests retain their machine-readable 404s.
+app.get('*', asyncRoute(async (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/webhook/') ||
+      req.path.startsWith('/internal/') || path.extname(req.path)) {
+    return next();
+  }
+  return renderPage(req, res, '404', { status: 404 });
+}));
+
 // Resume paid orders that were safely persisted before a restart. Claiming
 // in the database prevents duplicate processing when a Stripe retry arrives
 // at the same time.
@@ -314,7 +350,7 @@ server.on('close', () => {
 
 // Rejected async route promises end here. SQL text, credentials and driver
 // errors are logged server-side and never sent to a browser.
-app.use(sanitizedErrorHandler);
+app.use(makeSanitizedErrorHandler({ renderPage }));
 
 let initialization = null;
 async function initialize() {

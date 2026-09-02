@@ -39,6 +39,7 @@ function translate(source, locale, params = {}) {
 module.exports = {
   DEFAULT_LOCALE,
   SUPPORTED_LOCALES,
+  getCatalog,
   isSupportedLocale,
   normalizeLocale,
   translate,

@@ -4,6 +4,26 @@
  * releases; each family retains its OFL.txt beside the binaries.
  */
 
+/* Metric-compatible local fallbacks keep the first layout stable during the
+   very short interval before the preloaded interface fonts are decoded. */
+@font-face {
+  font-family: "Wolkenworte Jost Fallback";
+  src: local("Arial");
+  size-adjust: 88.72%;
+  ascent-override: 107%;
+  descent-override: 37.5%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Wolkenworte Playfair Fallback";
+  src: local("Georgia");
+  size-adjust: 106.76%;
+  ascent-override: 108.2%;
+  descent-override: 25.1%;
+  line-gap-override: 0%;
+}
+
 /* Jost variable font: 300–600 */
 @font-face {
   font-family: "Jost";

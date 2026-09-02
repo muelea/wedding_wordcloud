@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="<%= locale %>" data-theme="pastel">
+<html lang="<%= locale %>" data-theme="pastel" data-locale-source="<%= localeSource %>" data-locale-catalog-url="<%= localeCatalogUrl %>" data-locale-catalog-urls="<%= JSON.stringify(localeCatalogUrls) %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" id="theme-color" content="#fffdfa" />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <%- include('partials/font-preloads') %>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
@@ -13,9 +14,26 @@
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
+  <script src="<%= asset('/js/theme.js') %>"></script>
   <title data-i18n-ignore><%= t('{{name}} – Wortwolke', { name: pageData.cloudTitle }) %></title>
+  <script>
+    (function () {
+      var palettes = Object.fromEntries(<%- JSON.stringify(pageData.paletteOptions || []).replace(/</g, '\\u003c') %>
+        .map(function (palette) { return [palette.key, palette]; }));
+      var fallback = <%- JSON.stringify(pageData.paletteOptions?.[0]?.key || 'pastel') %>;
+      var slug = location.pathname.split('/').filter(Boolean)[1] || '';
+      window.WolkenworteTheme.restore('wordcloud-palette:' + slug, palettes, fallback);
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html.ww-theme-booting,
+    html.ww-theme-booting body,
+    html.ww-theme-booting body::before,
+    html.ww-theme-booting .footer,
+    html.ww-theme-booting .qr-code,
+    html.ww-theme-booting .ww-keepsake-cta { transition: none !important; }
 
     /* ── Pastel theme (default) — matches the landing/create/guest palette ── */
     :root {
@@ -57,7 +75,7 @@
       width: 100%; height: 100%;
       overflow: hidden;
       background: var(--bg);
-      font-family: 'Jost', system-ui, -apple-system, sans-serif;
+      font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, -apple-system, sans-serif;
       color: var(--text);
       transition: background 0.6s, color 0.6s;
     }
@@ -293,7 +311,7 @@
     #cloud-canvas {
       display: block;
       opacity: 0;
-      transition: opacity 0.7s ease;
+      transition: opacity 0.25s ease;
     }
     #cloud-canvas.visible { opacity: 1; }
 
@@ -310,7 +328,7 @@
     #empty-state.hidden { opacity: 0; }
 
     .empty-ornament {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(60px, 8vw, 100px);
       color: var(--rad1);
       line-height: 1;
@@ -318,7 +336,7 @@
     }
     .empty-text {
       margin-top: 18px;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(18px, 2.5vw, 28px);
       font-style: italic;
       color: var(--muted);
@@ -357,7 +375,7 @@
       max-width: min(34vw, 520px);
       overflow: hidden;
       color: var(--primary);
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(18px, 2.1vw, 28px);
       font-weight: 400;
       line-height: 1.15;
@@ -465,7 +483,7 @@
     .toast {
       background: var(--primary);
       color: #fff;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: 16px;
       padding: 10px 24px;
       border-radius: 999px;
@@ -618,7 +636,7 @@
 
 <div id="cloud-container">
   <canvas id="cloud-canvas"></canvas>
-  <div id="empty-state">
+  <div id="empty-state"<% if ((pageData.initialWords || []).length) { %> class="hidden"<% } %>>
     <div class="empty-ornament">♡</div>
     <p class="empty-text">Wir warten auf eure Wörter&hellip;</p>
     <p class="empty-sub">QR-Code scannen &amp; mitmachen</p>
@@ -832,7 +850,6 @@
   const shareDialog = document.getElementById('share-dialog');
   const shareDialogCopyButton = document.getElementById('share-dialog-copy-link');
   const shareFeedback = document.getElementById('share-feedback');
-  const themeColorMeta = document.getElementById('theme-color');
   let eventHasOrganizerPin = false;
   let unlockedOrganizerPin = '';
   const eventUrl = document.getElementById('event-qr').dataset.eventUrl;
@@ -843,7 +860,7 @@
   const setI18nAttribute = (element, name, source, params) => WolkenworteI18n.setAttribute(element, name, source, params);
   const clearText = (element) => WolkenworteI18n.clearText(element);
 
-  let currentWords = [];
+  let currentWords = <%- JSON.stringify(pageData.initialWords || []).replace(/</g, '\\u003c') %>;
   let renderTimer  = null;
   let renderRevision = 0;
   let wordSubmissionAnnouncementTimer = null;
@@ -892,12 +909,7 @@
     onSelect: insertDisplayEmoji,
   });
   function storedPaletteKey() {
-    try {
-      const stored = localStorage.getItem(paletteStorageKey);
-      return PALETTES[stored] ? stored : defaultPaletteKey;
-    } catch {
-      return defaultPaletteKey;
-    }
+    return WolkenworteTheme.restoredKey(paletteStorageKey, PALETTES, defaultPaletteKey);
   }
 
   function renderPaletteSwatches(colors) {
@@ -923,14 +935,8 @@
   function applyPalette(key, { persist = false } = {}) {
     const resolvedKey = PALETTES[key] ? key : defaultPaletteKey;
     const palette = PALETTES[resolvedKey];
-    const root = document.documentElement.style;
     getWordColor = WordCloudCore.makePaletteAssigner(palette.colors);
-    root.setProperty('--primary', palette.colors[0]);
-    root.setProperty('--accent', palette.colors[4]);
-    root.setProperty('--bg', palette.background[0]); root.setProperty('--bg2', palette.background[1]);
-    root.setProperty('--rad1', palette.background[2]); root.setProperty('--rad2', palette.background[3]);
-    themeColorMeta.content = palette.background[0];
-    document.documentElement.dataset.palette = resolvedKey;
+    WolkenworteTheme.applyVariables(palette);
     renderPaletteSwatches(palette.colors);
     syncPalettePicker(palette);
     if (persist) {
@@ -940,6 +946,7 @@
   }
 
   applyPalette(storedPaletteKey());
+  WolkenworteTheme.finishBoot();
 
   function closePalettePicker({ focus = false } = {}) {
     if (!palettePicker?.open) return;
@@ -1012,7 +1019,7 @@
     canvas.classList.add('visible');
   }
 
-  function scheduleRender(words, delay = 300) {
+  function scheduleRender(words, delay = 100) {
     const revision = ++renderRevision;
     clearTimeout(renderTimer);
     renderTimer = setTimeout(() => {
@@ -1026,6 +1033,8 @@
       });
     }, delay);
   }
+
+  if (currentWords.length) scheduleRender(currentWords, 0);
 
   function showToast(message) {
     const toast = document.createElement('div');

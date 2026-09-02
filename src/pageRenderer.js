@@ -10,6 +10,7 @@ const {
   translate,
 } = require('./i18n');
 const { publicAssetUrl } = require('./publicAssets');
+const { localizeHtml } = require('./htmlLocalizer');
 
 const LANGUAGE_COOKIE = 'wolkenworte-language';
 const LANGUAGE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -30,6 +31,11 @@ const LANGUAGE_FLAGS = Object.freeze({
   es: '🇪🇸',
   tr: '🇹🇷',
 });
+const LOCALE_CATALOG_URLS = Object.freeze(Object.fromEntries(
+  SUPPORTED_LOCALES
+    .filter((locale) => locale !== DEFAULT_LOCALE)
+    .map((locale) => [locale, publicAssetUrl(`/locales/${locale}.json`)])
+));
 
 function parseCookies(header) {
   const cookies = {};
@@ -109,9 +115,14 @@ async function renderPage(req, res, view, options = {}) {
       href: relativeLanguageUrl(req.originalUrl, code),
     })),
     asset: publicAssetUrl,
+    localeCatalogUrls: LOCALE_CATALOG_URLS,
+    localeCatalogUrl: resolved.locale === DEFAULT_LOCALE
+      ? ''
+      : LOCALE_CATALOG_URLS[resolved.locale],
     t: (source, params) => translate(source, resolved.locale, params),
   };
-  const html = await ejs.renderFile(path.join(VIEW_ROOT, `${view}.ejs`), locals);
+  const renderedHtml = await ejs.renderFile(path.join(VIEW_ROOT, `${view}.ejs`), locals);
+  const html = localizeHtml(renderedHtml, resolved.locale);
   res.status(options.status || 200);
   res.set('Cache-Control', options.cacheControl || 'no-cache');
   res.vary('Accept-Language');

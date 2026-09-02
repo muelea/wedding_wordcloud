@@ -8,6 +8,7 @@ const ejs = require('ejs');
 const { startTestServer, createEvent } = require('./helpers');
 const I18n = require('../src/i18n');
 const PageRenderer = require('../src/pageRenderer');
+const { localizeHtml } = require('../src/htmlLocalizer');
 const { publicAssetUrl } = require('../src/publicAssets');
 const { normalizeWord } = require('../src/words');
 
@@ -30,6 +31,10 @@ const TEST_LANGUAGES = I18n.SUPPORTED_LOCALES.map((code) => ({
   flag: PageRenderer.LANGUAGE_FLAGS[code],
   href: `/?lang=${code}`,
 }));
+const TEST_LOCALE_CATALOG_URLS = Object.fromEntries(CATALOG_LOCALES.map((locale) => [
+  locale,
+  publicAssetUrl(`/locales/${locale}.json`),
+]));
 
 function viewSource(filename) {
   return fs.readFileSync(path.join(VIEW_ROOT, filename), 'utf8');
@@ -49,6 +54,8 @@ function renderView(filename, header = {}, locale = 'de') {
     },
     languages: TEST_LANGUAGES,
     asset: publicAssetUrl,
+    localeCatalogUrls: TEST_LOCALE_CATALOG_URLS,
+    localeCatalogUrl: locale === 'de' ? '' : publicAssetUrl(`/locales/${locale}.json`),
     t: (source) => source,
   }, { filename: fullPath });
 }
@@ -229,14 +236,67 @@ test('interface fonts are locally served, pinned and licensed', () => {
   const turkishLanding = renderView('landing.ejs', { variant: 'landing' }, 'tr');
   const basePreload = publicAssetUrl('/assets/site-fonts/jost/jost-latin.woff2');
   const extendedPreload = publicAssetUrl('/assets/site-fonts/jost/jost-latin-ext.woff2');
+  const playfairPreload = publicAssetUrl('/assets/site-fonts/playfair-display/playfair-display-latin.woff2');
+  const playfairExtendedPreload = publicAssetUrl('/assets/site-fonts/playfair-display/playfair-display-latin-ext.woff2');
 
-  assert.ok(englishLanding.includes(basePreload),
-    'the above-the-fold landing CTA must preload its primary Jost subset');
+  for (const filename of PUBLIC_PAGES) {
+    const header = filename === 'landing.ejs'
+      ? { variant: 'landing' }
+      : filename === 'display.ejs' ? { variant: 'display' } : {};
+    const englishPage = renderView(filename, header, 'en');
+    assert.ok(englishPage.includes(basePreload), `${filename} must preload its primary Jost subset`);
+    assert.ok(englishPage.includes(playfairPreload), `${filename} must preload its heading font`);
+  }
   assert.ok(!englishLanding.includes(extendedPreload),
     'non-Turkish pages must not preload an unused extended subset');
   assert.ok(turkishLanding.includes(basePreload));
   assert.ok(turkishLanding.includes(extendedPreload),
     'Turkish needs the extended Jost glyph subset before first paint');
+  assert.ok(turkishLanding.includes(playfairExtendedPreload),
+    'Turkish headings need the extended Playfair subset before first paint');
+  assert.match(styles, /font-family:\s*"Wolkenworte Jost Fallback"[\s\S]*?size-adjust:/);
+  assert.match(styles, /font-family:\s*"Wolkenworte Playfair Fallback"[\s\S]*?size-adjust:/);
+});
+
+test('server localization produces the selected language before browser scripts run', () => {
+  const cases = [
+    ['landing.ejs', { variant: 'landing' }, 'Collect wishes &amp; memories'],
+    ['display.ejs', { variant: 'display' }, 'Waiting for your words…'],
+    ['configure.ejs', {}, 'Preparing your word cloud…'],
+    ['shipping.ejs', {}, 'Loading your design…'],
+    ['order-confirmation.ejs', {}, 'Confirming payment'],
+    ['404.ejs', {}, 'This word cloud does not exist.'],
+    ['impressum.ejs', {}, 'Legal information'],
+    ['datenschutz.ejs', {}, 'Privacy policy'],
+  ];
+  for (const [filename, header, expected] of cases) {
+    const localized = localizeHtml(renderView(filename, header, 'en'), 'en');
+    assert.ok(localized.includes(expected), `${filename} must contain English in the HTTP response`);
+    assert.match(localized, /data-locale-catalog-url="\/locales\/en\.json\?v=/, filename);
+  }
+
+  const ignored = localizeHtml(
+    '<!doctype html><html><body><p>Wir warten auf eure Wörter…</p><code data-i18n-ignore>Wir warten auf eure Wörter…</code></body></html>',
+    'en'
+  );
+  assert.match(ignored, /<p data-i18n-source="Wir warten auf eure Wörter…">Waiting for your words…<\/p>/);
+  assert.match(ignored, /<code data-i18n-ignore="">Wir warten auf eure Wörter…<\/code>/);
+
+  const germanBindings = localizeHtml(
+    '<!doctype html><html><body><p>Wir warten auf eure Wörter…</p><input placeholder="Gib dein Wort hier ein…"></body></html>',
+    'de'
+  );
+  assert.match(germanBindings, /<p data-i18n-source="Wir warten auf eure Wörter…">Wir warten auf eure Wörter…<\/p>/,
+    'the default-language response must retain stable sources for an in-place switch');
+  assert.match(germanBindings, /data-i18n-placeholder-source="Gib dein Wort hier ein…"/);
+
+  const nested = localizeHtml(
+    '<!doctype html><html><body><button>Hier starten <span aria-hidden="true">→</span></button></body></html>',
+    'en'
+  );
+  assert.match(nested, /data-i18n-text-sources="\{&quot;0&quot;:&quot;Hier starten&quot;\}"/,
+    'mixed-content controls need a source binding without adding layout-changing wrapper elements');
+  assert.match(nested, />Start here <span aria-hidden="true">→<\/span><\/button>/);
 });
 
 test('legal pages describe the hosted product and enforced retention', () => {
@@ -341,15 +401,24 @@ test('language switcher is server-rendered, progressively enhanced and uses Unic
   assert.match(runtime, /querySelectorAll\('\[data-language-picker\]'\)/);
   assert.match(runtime, /stackingHost\?\.classList\.toggle\('ww-language-host-open', hasOpenPicker\)/);
   assert.match(styles, /\.ww-language-host-open\s*\{[^}]*z-index:\s*10001\s*!important/s);
-  assert.match(runtime, /await setLocale\(nextLocale, \{ persist: true, source: 'stored' \}\)/);
-  assert.match(runtime, /history\?\.replaceState/);
+  assert.match(runtime, /option\.addEventListener\('click', async \(event\) =>/);
+  assert.match(runtime, /event\.preventDefault\(\)[\s\S]{0,400}await setLocale\(nextLocale, \{ persist: true, source: 'stored' \}\)/,
+    'an ordinary language selection must update the existing document in place');
+  assert.match(runtime, /history\?\.replaceState/,
+    'the selected language must remain reloadable and shareable without navigating now');
+  assert.doesNotMatch(runtime, /location\.assign|location\.replace|location\.reload/,
+    'language changes must not rebuild the page or restart media');
+  assert.doesNotMatch(runtime, /MutationObserver/,
+    'the language layer must not rewrite arbitrary page text after paint');
   assert.doesNotMatch(runtime, /localStorage\?\.(?:getItem|setItem)/,
     'the client and server must not compete over duplicate language preferences');
-  assert.doesNotMatch(runtime, /location\.assign/,
-    'language changes must not destroy and rebuild the document');
-  assert.match(runtime, /`\/locales\/\$\{encodeURIComponent\(code\)\}\.json`/);
-  assert.match(runtime, /cache:\s*'no-cache'/,
-    'translation catalogs must revalidate so deployments cannot leave mixed-language copy behind');
+  assert.match(runtime, /`\/locales\/\$\{encodeURIComponent\(nextLocale\)\}\.json`/);
+  assert.match(runtime, /dataset\?\.localeCatalogUrls/,
+    'every in-place target must use the exact fingerprinted catalog published by the server render');
+  assert.match(runtime, /cache:\s*renderedUrl \? 'force-cache' : 'no-cache'/,
+    'fingerprinted catalogs should reuse the browser cache without risking mixed deployment versions');
+  assert.match(runtime, /data-i18n-text-sources/,
+    'mixed-content controls must translate from explicit server-provided sources');
   assert.match(runtime, /function setText\(element, source, params = \{\}\)/,
     'dynamic UI must retain an explicit translation source');
 });
@@ -419,7 +488,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
   assert.equal(frenchLanding.status, 200);
   assert.match(frenchLanding.headers.get('set-cookie') || '', /wolkenworte-language=fr/);
   const frenchLandingHtml = await frenchLanding.text();
-  assert.match(frenchLandingHtml, /<html lang="fr">/);
+  assert.match(frenchLandingHtml, /<html lang="fr"(?:\s|>)/);
   assert.match(frenchLandingHtml, /Wolkenworte – Vos souvenirs en un mot/);
   assert.match(frenchLandingHtml, /Commencer ici/);
   assert.match(frenchLandingHtml, /ww-language-current-name">Français/);

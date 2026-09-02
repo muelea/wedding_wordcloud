@@ -745,7 +745,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /class="flat-product-composite"/);
   assert.match(configurePage, /id="flat-product-mockup"/);
-  assert.match(configurePage, /class="preview-disclaimer">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen\.<\/p>/);
+  assert.match(configurePage, /class="preview-disclaimer"[^>]*>Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen\.<\/p>/);
   assert.match(configurePage, /id="placement-options"/);
   assert.match(configurePage, /id="orientation-step" hidden/);
   assert.match(configurePage, /id="orientation-options"/);
@@ -756,7 +756,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="editor-tools editor-tools-primary">[\s\S]*?id="surface-editor"[\s\S]*?id="editor-add"/);
   assert.match(configurePage, /id="editor-add"[\s\S]*?id="editor-emoji-toggle"[\s\S]*?id="editor-image"/);
   assert.match(configurePage, /id="editor-emoji-toggle"[^>]*aria-label="Emoji hinzufügen"/);
-  assert.match(configurePage, /class="editor-motif-picker" hidden>[\s\S]*?id="editor-icon-toggle"/);
+  assert.match(configurePage, /class="editor-motif-picker" hidden[^>]*>[\s\S]*?id="editor-icon-toggle"/);
   assert.match(configurePage, /id="selected-theme-swatches"/);
   assert.doesNotMatch(configurePage, /id="selected-theme-detail"/);
   assert.match(configurePage, /class="workspace-tools"/);
@@ -797,7 +797,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.doesNotMatch(configurePage, /Gestaltet eure persönliche Erinnerung/);
   assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
   assert.match(configurePage, /return `wolkenworte-order:\$\{slug\}`/);
-  assert.match(configurePage, /<strong id="placement-summary-name">Design anordnen<\/strong>/);
+  assert.match(configurePage, /<strong id="placement-summary-name"[^>]*>Design anordnen<\/strong>/);
   assert.match(configurePage, /Wählt eine Anordnung für euer aktuelles Design\./);
   assert.match(configurePage, /DesignLayout\.applyLayoutAction\(currentDesign, slots/);
   assert.match(configurePage, /button\.className = 'option placement-action'/);
@@ -827,8 +827,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /edit\.setAttribute\('aria-current', 'true'\)/);
   assert.doesNotMatch(configurePage, /save-button/);
   assert.doesNotMatch(configurePage, /design-save-button/);
-  assert.match(configurePage, /class="secondary-button" id="design-another" type="button">/);
-  assert.match(configurePage, /class="primary-button continue-button" id="continue-order" type="button">/);
+  assert.match(configurePage, /class="secondary-button" id="design-another" type="button"[^>]*>/);
+  assert.match(configurePage, /class="primary-button continue-button" id="continue-order" type="button"[^>]*>/);
   assert.match(configurePage, /async function saveCurrentDesign\(activeButton, \{ allowEmptyDraft = false \} = \{\}\)/);
   assert.match(configurePage, /if \(!currentDesignNeedsSave\) return true/);
   assert.match(configurePage, /if \(!await saveCurrentDesign\(null, \{ allowEmptyDraft: true \}\)\) return/);

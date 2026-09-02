@@ -4,6 +4,14 @@
   var headers = document.querySelectorAll('.ww-site-header');
   if (!headers.length) return;
 
+  function setLabel(element, source) {
+    if (window.WolkenworteI18n?.setAttribute) {
+      window.WolkenworteI18n.setAttribute(element, 'aria-label', source);
+    } else {
+      element.setAttribute('aria-label', source);
+    }
+  }
+
   function updateHeaderState() {
     var scrolled = window.scrollY > 4;
     headers.forEach(function (header) {
@@ -22,13 +30,13 @@
     function closeMenu() {
       header.classList.remove('landing-menu-open');
       toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Seitennavigation öffnen');
+      setLabel(toggle, 'Seitennavigation öffnen');
     }
 
     toggle.addEventListener('click', function () {
       var isOpen = header.classList.toggle('landing-menu-open');
       toggle.setAttribute('aria-expanded', String(isOpen));
-      toggle.setAttribute('aria-label', isOpen ? 'Seitennavigation schließen' : 'Seitennavigation öffnen');
+      setLabel(toggle, isOpen ? 'Seitennavigation schließen' : 'Seitennavigation öffnen');
     });
     menu.querySelectorAll('a[href^="#"]').forEach(function (link) {
       link.addEventListener('click', closeMenu);

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="<%= locale %>" data-theme="pastel">
+<html lang="<%= locale %>" data-theme="pastel" data-locale-source="<%= localeSource %>" data-locale-catalog-url="<%= localeCatalogUrl %>" data-locale-catalog-urls="<%= JSON.stringify(localeCatalogUrls) %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Eure Worte. Eure Erinnerung.') %>" data-i18n-content-source="Eure Worte. Eure Erinnerung." />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <%- include('partials/font-preloads') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
@@ -65,7 +66,7 @@
       margin: 0;
       color: var(--ink);
       background: var(--paper);
-      font-family: 'Jost', system-ui, sans-serif;
+      font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
     }
 
     button, input { font: inherit; }
@@ -86,7 +87,7 @@
       display: inline-flex;
       align-items: center;
       gap: 9px;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: 21px;
       font-weight: 600;
     }
@@ -119,7 +120,7 @@
     }
     h1 {
       margin: 0;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: clamp(38px, 5vw, 62px);
       font-weight: 500;
       line-height: 1.06;
@@ -194,7 +195,7 @@
     .editor-title,
     .design-toolbar h2 {
       margin: 0;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: 25px;
       font-weight: 500;
     }
@@ -695,7 +696,7 @@
       border-radius: 5px;
       box-shadow: 0 4px 14px rgba(25, 20, 22, .2);
       color: #fff;
-      font-family: 'Jost', system-ui, sans-serif;
+      font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       font-size: 10px;
       line-height: 1;
       pointer-events: none;
@@ -801,7 +802,7 @@
     .editor-font-caret {
       flex: 0 0 auto;
       color: var(--muted);
-      font-family: 'Jost', system-ui, sans-serif;
+      font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       font-size: 12px;
       transition: transform .18s ease;
     }
@@ -839,7 +840,7 @@
     .editor-font-option-name { font-size: 15px; line-height: 1.2; }
     .editor-font-option-description {
       color: var(--muted);
-      font-family: 'Jost', system-ui, sans-serif;
+      font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
       font-size: 9.5px;
       line-height: 1.25;
     }
@@ -1071,7 +1072,7 @@
     }
     .product-dialog-head h2 {
       margin: 0;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-size: 26px;
       font-weight: 500;
     }
@@ -1522,7 +1523,7 @@
       display: grid;
       place-items: center;
       color: var(--muted);
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-style: italic;
     }
     .config-content[hidden], .loading[hidden] { display: none; }
@@ -2148,7 +2149,7 @@
       if (orderActionPending) return;
       const item = loadOrderItems().find((candidate) => candidate.id === configurationId);
       if (!item) {
-        errorText.textContent = 'Dieses Design ist nicht mehr in eurer Bestellung.';
+        setText(errorText, 'Dieses Design ist nicht mehr in eurer Bestellung.');
         renderOrderBox();
         return;
       }
@@ -2169,7 +2170,7 @@
         document.getElementById('preview-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
         mugEditor?.setFeedback('Design aus eurer Bestellung geöffnet');
       } catch {
-        errorText.textContent = 'Dieses Design konnte nicht geöffnet werden. Bitte versucht es noch einmal.';
+        setText(errorText, 'Dieses Design konnte nicht geöffnet werden. Bitte versucht es noch einmal.');
       } finally {
         orderActionPending = false;
         setOrderActionsBusy(false);
@@ -2180,7 +2181,7 @@
       if (orderActionPending) return;
       const item = loadOrderItems().find((candidate) => candidate.id === configurationId);
       if (!item) {
-        errorText.textContent = 'Dieses Design ist nicht mehr in eurer Bestellung.';
+        setText(errorText, 'Dieses Design ist nicht mehr in eurer Bestellung.');
         renderOrderBox();
         return;
       }
@@ -2287,7 +2288,7 @@
     function navigateToShipping() {
       const ids = loadOrderItems().map((item) => item.id);
       if (!ids.length) {
-        errorText.textContent = 'Das Design konnte nicht zur Bestellung hinzugefügt werden.';
+        setText(errorText, 'Das Design konnte nicht zur Bestellung hinzugefügt werden.');
         return;
       }
       const query = ids.length === 1
@@ -3459,9 +3460,11 @@
       if (missingSurface) {
         const isCompletelyEmpty = Object.values(designs).every((design) => !design.length);
         if (allowEmptyDraft && !editingOrderItemId && isCompletelyEmpty) return true;
-        errorText.textContent = productSurfaces().length > 1
-          ? t('Gestaltet bitte auch die {{item}}.', { item: t(missingSurface.label) })
-          : t('Fügt mindestens ein Wort, Motiv oder Bild zu eurem Design hinzu.');
+        if (productSurfaces().length > 1) {
+          setText(errorText, 'Gestaltet bitte auch die {{item}}.', { item: t(missingSurface.label) });
+        } else {
+          setText(errorText, 'Fügt mindestens ein Wort, Motiv oder Bild zu eurem Design hinzu.');
+        }
         mugEditor.setFeedback('{{item}} ist noch leer.', { item: t(missingSurface.label) });
         return false;
       }

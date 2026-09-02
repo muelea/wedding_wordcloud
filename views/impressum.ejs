@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="<%= locale %>">
+<html lang="<%= locale %>" data-locale-source="<%= localeSource %>" data-locale-catalog-url="<%= localeCatalogUrl %>" data-locale-catalog-urls="<%= JSON.stringify(localeCatalogUrls) %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Impressum von Wolkenworte, einem Produkt der JUSA Engineering UG (haftungsbeschränkt).') %>" data-i18n-content-source="Impressum von Wolkenworte, einem Produkt der JUSA Engineering UG (haftungsbeschränkt)." />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <%- include('partials/font-preloads') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>

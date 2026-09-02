@@ -1,16 +1,13 @@
 <% const startDialog = pageData.startDialog || {}; %>
 <!DOCTYPE html>
-<html lang="<%= locale %>">
+<html lang="<%= locale %>" data-locale-source="<%= localeSource %>" data-locale-catalog-url="<%= localeCatalogUrl %>" data-locale-catalog-urls="<%= JSON.stringify(localeCatalogUrls) %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass.') %>" data-i18n-content-source="Wolkenworte macht aus euren Wünschen und Erinnerungen eine lebendige Wortwolke – in Echtzeit, für jeden besonderen Anlass." />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
-  <link rel="preload" href="<%= asset('/assets/site-fonts/jost/jost-latin.woff2') %>" as="font" type="font/woff2" crossorigin />
-  <% if (locale === 'tr') { %>
-    <link rel="preload" href="<%= asset('/assets/site-fonts/jost/jost-latin-ext.woff2') %>" as="font" type="font/woff2" crossorigin />
-  <% } %>
+  <%- include('partials/font-preloads', { preloadPlayfairItalic: true }) %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-fonts.css') %>" />
   <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
@@ -34,7 +31,7 @@
 
     * { box-sizing: border-box; }
     html { max-width: 100%; scroll-behavior: smooth; overflow-x: clip; }
-    body { max-width: 100%; margin: 0; overflow-x: clip; background: var(--paper); color: var(--ink); font-family: 'Jost', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
+    body { max-width: 100%; margin: 0; overflow-x: clip; background: var(--paper); color: var(--ink); font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
     h1, h2, h3, p { margin-top: 0; }
     .shell { width: min(1120px, calc(100% - 48px)); margin: auto; }
@@ -100,7 +97,7 @@
     .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(64,15,38,.06); }
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
     #so-gehts, #erinnerungsstuecke, #inspiration, #testimonials { scroll-margin-top: 84px; }
-    .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; transition: color .6s ease; }
+    .brand { display: flex; align-items: center; gap: 9px; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 1.4rem; font-weight: 600; letter-spacing: .01em; transition: color .6s ease; }
     .brand-icon { width: 32px; height: 30px; flex: 0 0 auto; object-fit: contain; transition: filter .6s ease; }
     .nav-links { display: flex; gap: 30px; align-items: center; color: var(--muted); font-size: .85rem; letter-spacing: .01em; }
     .nav-links a { position: relative; padding-bottom: 3px; transition: color .6s ease; }
@@ -148,7 +145,7 @@
     .hero { padding: 60px 0 48px; position: relative; overflow: hidden; }
     .hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: 58px; position: relative; z-index: 1; }
     .hero-copy .eyebrow { margin-bottom: 18px; }
-    h1 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.9rem, 4.8vw, 4.5rem); line-height: 1.07; letter-spacing: -.03em; margin: 0 0 22px; font-weight: 500; }
+    h1 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.9rem, 4.8vw, 4.5rem); line-height: 1.07; letter-spacing: -.03em; margin: 0 0 22px; font-weight: 500; }
     h1 em { color: var(--sage-deep); font-style: italic; font-weight: 500; }
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -165,11 +162,11 @@
     .reel-label { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: .62rem; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 18px; }
     .reel-label .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: pulse 1.8s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-    .demo-title { color: var(--ink); font-family: 'Playfair Display', Georgia, serif; font-size: 1.55rem; font-style: italic; font-weight: 500; }
+    .demo-title { color: var(--ink); font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 1.55rem; font-style: italic; font-weight: 500; }
     .demo-subtitle { margin-top: 7px; color: var(--muted); font-size: .64rem; letter-spacing: .18em; text-transform: uppercase; }
     .cloud { margin-top: 22px; padding: 10px 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; align-items: center; gap: 20px 18px; }
     .reel-caption { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; }
-    .cloud span { display: inline-block; color: var(--ink); font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; line-height: 1.05; white-space: nowrap; will-change: transform; }
+    .cloud span { display: inline-block; color: var(--ink); font-family: 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; font-weight: 500; line-height: 1.05; white-space: nowrap; will-change: transform; }
     /* Size/color repeat in a 4-word cycle rather than one hand-tuned rule
        per word — stays balanced no matter how many words are in the list.
        Word 1 is the single deliberate stand-out ("hero" word), overridden
@@ -245,7 +242,7 @@
     .section-top { max-width: 580px; margin: 0 auto 44px; text-align: center; }
     .section-top .eyebrow { justify-content: center; }
     .section-top .eyebrow::before { display: none; }
-    .section-top h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); letter-spacing: -.025em; line-height: 1.15; margin: 14px 0; font-weight: 500; }
+    .section-top h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); letter-spacing: -.025em; line-height: 1.15; margin: 14px 0; font-weight: 500; }
     .section-top p { color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
 
     /* ── Inspiration ── */
@@ -253,14 +250,14 @@
     .inspiration-card { text-align: center; padding: 36px 26px; border-radius: 18px; background: #fffefc; border: 1px solid var(--line); }
     .step-badge { display: grid; width: 58px; height: 58px; place-items: center; margin: 0 auto 22px; border: 1px solid var(--gold-line); border-radius: 50%; background: var(--paper); color: var(--sage-deep); }
     .step-badge svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-    .inspiration-card h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; font-weight: 500; margin: 0 0 9px; }
+    .inspiration-card h3 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 1.2rem; font-weight: 500; margin: 0 0 9px; }
     .inspiration-card p { color: var(--muted); font-size: .9rem; line-height: 1.68; font-weight: 300; }
 
     /* ── Print / mug-duo ── */
     .print-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 84px; position: relative; }
-    .print-copy h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
+    .print-copy h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
     .print-copy p { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
-    .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; letter-spacing: .03em; font-style: italic; font-family: 'Playfair Display', Georgia, serif; }
+    .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; letter-spacing: .03em; font-style: italic; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
 
     .quote { text-align: center; position: relative; }
     .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Shadows Into Light', 'Playfair Display', cursive; font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-style: normal; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
@@ -294,7 +291,7 @@
     .cta-box .heart-icon.deco { position: absolute; width: 40px; height: auto; color: var(--gold-line); opacity: .55; }
     .cta-box .deco.tl { left: 5%; top: 14%; transform: rotate(-8deg); }
     .cta-box .deco.br { right: 5%; bottom: 12%; transform: rotate(10deg); }
-    .cta h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; margin: 10px 0 15px; letter-spacing: -.025em; }
+    .cta h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; margin: 10px 0 15px; letter-spacing: -.025em; }
     .cta p { color: var(--muted); font-size: .95rem; margin-bottom: 26px; font-weight: 300; }
     .cta .eyebrow { justify-content: center; }
     .cta .eyebrow::before { display: none; }
@@ -913,19 +910,19 @@
       // refine an individual word without giving up the automatic layout as a
       // safe starting point.
       var WORDS = [
-        { text: 'Liebe', count: 45, displayScale: 2.15, x: 200, y: 450, angle: -90, color: '#a40e4c' },
-        { text: 'unvergesslich', count: 14, displayScale: 2.08, x: 655, y: 835, angle: 0, color: '#168f83' },
-        { text: 'Freude', count: 22, displayScale: 2.2, x: 780, y: 435, angle: 0, color: '#d90368' },
-        { text: 'für immer', count: 9, displayScale: 1.5, x: 2550, y: 530, angle: -90, color: '#6a4c93' },
-        { text: 'Zusammen', count: 17, displayScale: 1.02, x: 800, y: 195, angle: 0, color: '#ff7f3f' },
-        { text: 'Herzklopfen', count: 6, displayScale: 1.02, x: 1990, y: 570, angle: 0, color: '#d90368' },
-        { text: 'Sommerabend', count: 38, displayScale: .78, x: 1995, y: 915, angle: 0, color: '#f45b69' },
-        { text: 'Gänsehaut', count: 11, displayScale: 1.02, x: 2000, y: 750, angle: 0, color: '#168f83' },
-        { text: 'Vertrauen', count: 27, displayScale: 1.5, x: 1295, y: 505, angle: -90, color: '#6a4c93' },
-        { text: 'goldenes Licht', count: 20, displayScale: .72, x: 2000, y: 420, angle: 0, color: '#a40e4c' },
-        { text: 'Lachen', count: 32, displayScale: 1.48, x: 1950, y: 220, angle: 0, color: '#f45b69' },
-        { text: 'Geborgenheit', count: 4, displayScale: 1.5, x: 1475, y: 505, angle: -90, color: '#ff7f3f' },
-        { text: 'Hand in Hand', count: 24, displayScale: .86, x: 780, y: 665, angle: 0, color: '#6a4c93' }
+        { source: 'Liebe', text: <%- JSON.stringify(t('Liebe')) %>, count: 45, displayScale: 2.15, x: 200, y: 450, angle: -90, color: '#a40e4c' },
+        { source: 'unvergesslich', text: <%- JSON.stringify(t('unvergesslich')) %>, count: 14, displayScale: 2.08, x: 655, y: 835, angle: 0, color: '#168f83' },
+        { source: 'Freude', text: <%- JSON.stringify(t('Freude')) %>, count: 22, displayScale: 2.2, x: 780, y: 435, angle: 0, color: '#d90368' },
+        { source: 'für immer', text: <%- JSON.stringify(t('für immer')) %>, count: 9, displayScale: 1.5, x: 2550, y: 530, angle: -90, color: '#6a4c93' },
+        { source: 'Zusammen', text: <%- JSON.stringify(t('Zusammen')) %>, count: 17, displayScale: 1.02, x: 800, y: 195, angle: 0, color: '#ff7f3f' },
+        { source: 'Herzklopfen', text: <%- JSON.stringify(t('Herzklopfen')) %>, count: 6, displayScale: 1.02, x: 1990, y: 570, angle: 0, color: '#d90368' },
+        { source: 'Sommerabend', text: <%- JSON.stringify(t('Sommerabend')) %>, count: 38, displayScale: .78, x: 1995, y: 915, angle: 0, color: '#f45b69' },
+        { source: 'Gänsehaut', text: <%- JSON.stringify(t('Gänsehaut')) %>, count: 11, displayScale: 1.02, x: 2000, y: 750, angle: 0, color: '#168f83' },
+        { source: 'Vertrauen', text: <%- JSON.stringify(t('Vertrauen')) %>, count: 27, displayScale: 1.5, x: 1295, y: 505, angle: -90, color: '#6a4c93' },
+        { source: 'goldenes Licht', text: <%- JSON.stringify(t('goldenes Licht')) %>, count: 20, displayScale: .72, x: 2000, y: 420, angle: 0, color: '#a40e4c' },
+        { source: 'Lachen', text: <%- JSON.stringify(t('Lachen')) %>, count: 32, displayScale: 1.48, x: 1950, y: 220, angle: 0, color: '#f45b69' },
+        { source: 'Geborgenheit', text: <%- JSON.stringify(t('Geborgenheit')) %>, count: 4, displayScale: 1.5, x: 1475, y: 505, angle: -90, color: '#ff7f3f' },
+        { source: 'Hand in Hand', text: <%- JSON.stringify(t('Hand in Hand')) %>, count: 24, displayScale: .86, x: 780, y: 665, angle: 0, color: '#6a4c93' }
       ];
 
       // This is the configurator's "Fläche optimal nutzen" print geometry.
@@ -933,17 +930,16 @@
       // path, rather than merely using its rectangular bounds.
       var optimalLayout = [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }];
 
-      // The mug's word cloud is baked onto a canvas texture, so it's invisible
-      // to i18n.js's DOM-text scan (unlike the hero's <span> cloud) — the
-      // words must be re-translated and the texture redrawn by hand whenever
-      // the locale changes.
-      function buildDrawTexture() {
+      // The first texture is translated by the server. Later in-place language
+      // changes redraw it from the stable German source strings.
+      function buildDrawTexture(useRuntimeTranslations) {
         var i18n = window.WolkenworteI18n;
-        var translate = i18n && i18n.t ? i18n.t : function (source) { return source; };
         var placed = WORDS.map(function (configuration, index) {
           return {
             id: 'homepage-word-' + index,
-            text: translate(configuration.text),
+            text: useRuntimeTranslations && i18n
+              ? i18n.t(configuration.source)
+              : configuration.text,
             x: configuration.x,
             y: configuration.y,
             // This is intentionally independent per word: changing one
@@ -986,15 +982,8 @@
         autoRotateDurationMs: 9000
       });
       window.addEventListener('resize', mug.resize);
-
-      // Redraw once more after the initial locale's message catalog finishes
-      // loading (the first draw above may have run before it arrived), and
-      // again on every subsequent language switch.
-      if (window.WolkenworteI18n && window.WolkenworteI18n.ready) {
-        window.WolkenworteI18n.ready().then(function () { mug.updateTexture(buildDrawTexture()); });
-      }
       window.addEventListener('wolkenworte:localechange', function () {
-        mug.updateTexture(buildDrawTexture());
+        mug.updateTexture(buildDrawTexture(true));
       });
     })();
   </script>

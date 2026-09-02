@@ -76,12 +76,14 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.doesNotMatch(displayHtml, /id="save-cloud"|beforeinstallprompt|appinstalled|serviceWorker\.register/);
   assert.match(displayHtml, /id="draft-settings-button"/);
   assert.match(displayHtml, /id="draft-settings-button"[\s\S]*?data-i18n-source="Organisatorbereich"/);
-  assert.match(displayHtml, /id="draft-settings-title">Wortwolke verwalten</);
+  assert.match(displayHtml, /id="draft-settings-title"[^>]*>Wortwolke verwalten</);
   assert.doesNotMatch(displayHtml, /id="draft-settings-button"[^>]*>Einstellungen<\/button>/);
   assert.match(displayHtml, /id="display-palette-picker"/);
   assert.match(displayHtml, /id="display-palette-trigger"[\s\S]*?role="radiogroup"[\s\S]*?data-palette-key="pastel"/);
   assert.doesNotMatch(displayHtml, /id="display-palette-select"|<select[^>]*aria-label="Farbwelt"/);
   assert.match(displayHtml, /wordcloud-palette:\$\{slug\}/);
+  assert.match(displayHtml, /WolkenworteTheme\.restore\([\s\S]*?<style>/,
+    'the saved palette must be restored in the head before display CSS can paint');
   assert.match(displayHtml, /id="change-pin-button"/);
   assert.match(displayHtml, /id="reset-cloud-button"/);
   assert.match(
@@ -93,6 +95,17 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /socket\.on\('word-update', \(words\) =>/);
   assert.match(displayHtml, /socket\.on\('word-accepted',[\s\S]*?announceWordAccepted\(\)/);
   assert.doesNotMatch(displayHtml, /lastWords|showToast\(word\)/);
+
+  // A reload renders the committed snapshot and its dependent CTA directly
+  // into the response; it must not briefly show the empty state first.
+  const database = require('../src/db');
+  const eventRecord = await database.getEventBySlug(event.slug);
+  await database.addWordContribution(eventRecord.id, 'reload-ready', 'f'.repeat(32));
+  const populatedHtml = await fetch(`${baseUrl}${event.eventUrl}`).then((response) => response.text());
+  assert.match(populatedHtml, /class="ww-keepsake-cta visible"/);
+  assert.match(populatedHtml, /id="empty-state" class="hidden"/);
+  assert.match(populatedHtml, /let currentWords = \[\["reload-ready",1\]\]/);
+  assert.match(populatedHtml, /if \(currentWords\.length\) scheduleRender\(currentWords, 0\)/);
   assert.equal((await fetch(`${baseUrl}${event.eventUrl}/manifest.webmanifest`)).status, 404);
   assert.equal((await fetch(`${baseUrl}/sw.js`)).status, 404);
   const removedDisplayRoute = await fetch(`${baseUrl}${event.eventUrl}/display`);

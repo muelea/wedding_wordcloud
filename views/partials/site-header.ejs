@@ -33,7 +33,7 @@
       </nav>
       <div class="landing-header-actions">
         <button class="button primary landing-start-button" type="submit" form="start-dialog-form" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
-        <button class="landing-menu-toggle" type="button" aria-label="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
+        <button class="landing-menu-toggle" type="button" aria-label="<%= t('Seitennavigation öffnen') %>" data-i18n-aria-label-source="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
           <span class="landing-menu-toggle-icon" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>
       </div>
@@ -44,7 +44,7 @@
     <% if (variant === 'display') { %>
     <div class="ww-display-header-actions">
       <button
-        class="ww-keepsake-cta"
+        class="ww-keepsake-cta<%= config.hasWords ? ' visible' : '' %>"
         id="memory-cta"
         type="button"
         aria-label="<%= t('Erinnerung gestalten') %>"

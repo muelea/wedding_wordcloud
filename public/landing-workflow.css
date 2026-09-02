@@ -603,7 +603,7 @@
 }
 
 .workflow-cloud span {
-  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  font-family: 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
   font-style: italic;
   font-weight: 500;
   line-height: .85;
@@ -718,7 +718,7 @@
 }
 
 .workflow-product-design span {
-  font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+  font-family: 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', serif;
   font-style: italic;
   font-weight: 600;
   line-height: .9;
