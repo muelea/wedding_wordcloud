@@ -221,7 +221,7 @@
     const inset = Math.min(slot.width, slot.height) * .012;
     const centred = Math.abs((bounds.x1 + bounds.x2) / 2 - slot.x - slot.width / 2) < .5 &&
       Math.abs((bounds.y1 + bounds.y2) / 2 - slot.y - slot.height / 2) < .5;
-    const fullSize = Math.max(
+    const fullSize = (items.length <= 10 ? Math.min : Math.max)(
       (slot.width - inset * 2) / (bounds.x2 - bounds.x1),
       (slot.height - inset * 2) / (bounds.y2 - bounds.y1)
     ) < 1.03;
@@ -230,10 +230,9 @@
       x1: box.x1 - slot.x, x2: box.x2 - slot.x,
       y1: box.y1 - slot.y, y2: box.y2 - slot.y,
     })), slot.width, slot.height);
-    // A complete, centred rectangle with occupied corners already satisfies
-    // fit-area. Avoid an expensive repack on every click or JSON round-trip.
-    if (safe && centred && fullSize && Math.min(...currentQuality.corners) >= .4 &&
-        currentQuality.worstRegion >= .45 && currentQuality.separation >= .8) {
+    // Use the same hole/balance check as the live packer. Filled corners alone
+    // must not preserve an internal gap on repeated fit-area clicks.
+    if (safe && centred && fullSize && WordCloudCore.isLayoutBalanced(currentQuality, items.length)) {
       return items.map(item => ({ ...item }));
     }
     const packed = WordCloudCore.layoutBoxesInArea(boxes, slot.width, slot.height);

@@ -1092,6 +1092,10 @@ test('200, 201 and 500 word snapshots save, reopen and freeze complete multi-pro
     }
     const payload = { productKey: key, orientation, theme: 'pastel', words,
       designs: Object.fromEntries(product.printSurfaces.map(surface => [surface.key, design])) };
+    // Large synchronous layouts can outlast an idle HTTP connection under
+    // parallel test load. Let the client process its pending socket close
+    // before issuing the next request; all persistence assertions stay exact.
+    await new Promise(resolve => setImmediate(resolve));
     const response = await save(payload);
     const created = await response.json();
     assert.equal(response.status, 201, JSON.stringify(created));

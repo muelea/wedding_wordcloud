@@ -43,6 +43,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
   assert.match(await shippingPage.text(), /Wohin darf eure Erinnerung reisen\?/);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
   const captured = [];
@@ -120,17 +121,6 @@ test('shipping page uses the immutable configuration and returns a server-side P
               country_code: 'Deutschland',
             },
           },
-          {
-            quantity: 1,
-            recipient: {
-              name: 'Elke Musterfrau',
-              address1: '702 Clara Dr',
-              city: 'Palo Alto',
-              zip: '94303',
-              country_code: 'Vereinigte Staaten',
-              state_code: 'California',
-            },
-          },
         ],
       }),
     }
@@ -139,20 +129,21 @@ test('shipping page uses the immutable configuration and returns a server-side P
   const { quote } = await estimateResponse.json();
   assert.match(quote.id, /^[A-Za-z0-9_-]{24}$/);
   assert.ok(Date.parse(quote.expiresAt) > Date.now());
-  assert.deepEqual({ ...quote, id: undefined, expiresAt: undefined }, {
+  assert.deepEqual({ ...quote, id: undefined, expiresAt: undefined, shippingDetails: undefined }, {
     id: undefined,
     currency: 'EUR',
-    quantity: 3,
+    quantity: 2,
     configurationCount: 1,
-    shipmentCount: 2,
-    itemsCents: 2561,
-    paymentReserveCents: 161,
-    shippingCents: 1049,
-    taxCents: 686,
-    totalCents: 4296,
+    shipmentCount: 1,
+    shippingDetails: undefined,
+    itemsCents: 1602,
+    paymentReserveCents: 102,
+    shippingCents: 449,
+    taxCents: 390,
+    totalCents: 2441,
     expiresAt: undefined,
   });
-  assert.equal(captured.length, 2);
+  assert.equal(captured.length, 1);
   assert.equal(captured[0].variantId, 1320);
   assert.equal(captured[0].quantity, 2);
   assert.deepEqual(captured[0].recipient, {
@@ -162,6 +153,17 @@ test('shipping page uses the immutable configuration and returns a server-side P
     zip: '74080',
     country_code: 'DE',
   });
+  const usEstimate = await fetch(
+    `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/estimate-costs`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shipments: [{ quantity: 1, recipient: {
+        name: 'Elke Musterfrau', address1: '702 Clara Dr', city: 'Palo Alto', zip: '94303',
+        country_code: 'Vereinigte Staaten', state_code: 'California',
+      } }] }),
+    }
+  );
+  assert.equal(usEstimate.status, 200);
+  assert.equal((await usEstimate.json()).quote.shipmentCount, 1);
   assert.equal(captured[1].quantity, 1);
   assert.equal(captured[1].recipient.country_code, 'US');
   assert.equal(captured[1].recipient.state_code, 'CA');
@@ -207,6 +209,7 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   });
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
   const captured = [];
@@ -268,6 +271,37 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   ]);
   assert.equal(captured[0].variantId, undefined);
   assert.equal(captured[0].quantity, undefined);
+  assert.equal(quote.shippingDetails.delivery.maxDate, '2030-01-17');
+  assert.equal(quote.shippingDetails.shipments[0].customsFeesPossible, false);
+  assert.deepEqual(quote.shippingDetails.shipments[0].items.map(item => item.productKey),
+    ['white-glossy-mug-duo-11oz', 'cork-back-coaster']);
+  const restored = await (await fetch(`${baseUrl}/api/events/${event.slug}/cart/quotes/${quote.id}?ids=${mug.id},${coaster.id}`)).json();
+  assert.deepEqual(restored.quote.shippingDetails, quote.shippingDetails, 'restore keeps the exact provider assessment');
+
+  printful.getShippingRates = async (options) => {
+    const result = require('./support/printful-fixtures').shippingEstimate(options);
+    result.shipments[0].departureCountry = 'US';
+    result.shipments[0].customsFeesPossible = true;
+    return result;
+  };
+  const recheck = await fetch(`${baseUrl}/api/events/${event.slug}/cart/checkout`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configurationIds: [mug.id, coaster.id], quoteId: quote.id,
+      shippingDetails: { shipments: [{ customsFeesPossible: false }] } }),
+  });
+  assert.equal(recheck.status, 409, 'changed import risk requires review even when the amount is unchanged');
+  const updated = await recheck.json();
+  assert.equal(updated.error, 'quote_shipping_changed');
+  assert.equal(updated.quote.shippingDetails.shipments[0].customsFeesPossible, true);
+  assert.equal(await require('../src/db').getOrderByQuoteId(quote.id), null, 'no payment created before review');
+
+  printful.getShippingRates = async () => { throw new printful.PrintfulApiError('PRINTFUL_UNAVAILABLE', 'Timeout', 502); };
+  const unavailable = await fetch(`${baseUrl}/api/events/${event.slug}/cart/checkout`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configurationIds: [mug.id, coaster.id], quoteId: quote.id }),
+  });
+  assert.equal(unavailable.status, 502, 'failed shipping recheck cannot reuse an old assessment to start payment');
+  assert.equal(await require('../src/db').getOrderByQuoteId(quote.id), null);
 });
 
 test('a configuration can never be quoted through another event slug', async (t) => {

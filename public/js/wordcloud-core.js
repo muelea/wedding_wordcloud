@@ -323,11 +323,11 @@
           const targetX = scatterEmoji ? width * emojiAnchor[0] - w / 2
             : (!placed.length && dominant) || !variant ? (width - w) / 2
             : variant === 1 ? (space.x1 + space.x2 - w) / 2
-              : anchor % 2 ? space.x2 - w : space.x1;
+              : space.x1;
           const targetY = scatterEmoji ? height * emojiAnchor[1] - h / 2
             : (!placed.length && dominant) || !variant ? (height - h) / 2
             : variant === 1 ? (space.y1 + space.y2 - h) / 2
-              : anchor < 2 ? space.y1 : space.y2 - h;
+              : sized.length <= 10 || anchor < 2 ? space.y1 : space.y2 - h;
           const x = clamp(targetX, space.x1, space.x2 - w);
           const y = clamp(targetY, space.y1, space.y2 - h);
           const distance = Math.abs((x + w / 2) / width - .5) +
@@ -339,7 +339,7 @@
           }
           const candidateScore = Math.min(dw / width, dh / height) +
             Math.max(dw / width, dh / height) * .05 + distance * .001 +
-            (1 - separation / emojiSpacing) * .12;
+            (1 - separation / emojiSpacing) * .3;
           if (candidateScore < score) {
             score = candidateScore;
             best = { x1: x, y1: y, x2: x + w, y2: y + h };
@@ -403,8 +403,7 @@
     // each with at most three fit attempts, bound the extra work even at 500
     // words. A clearly dominant contribution stays central; equally weighted
     // words can start at an edge when that fills the rectangle better.
-    const balanced = Math.min(...initialQuality.corners) >= .4 &&
-      initialQuality.worstRegion >= .45 && initialQuality.separation >= .8;
+    const balanced = isLayoutBalanced(initialQuality, sized.length);
     if (best && sized.length > 2 && !balanced) {
       const tail = sized.slice(1);
       const orders = [sized,
@@ -417,12 +416,15 @@
           const candidate = tryScale(low * ratio, order, index === 0 ? 1 : index === 3 ? 3 : 2);
           if (!candidate) continue;
           const fitted = fitAreaBoxes(candidate, width, height);
-          const nextQuality = layoutQuality(fitted, width, height).score;
+          const candidateQuality = layoutQuality(fitted, width, height);
+          const nextQuality = candidateQuality.score;
           if (fitted[0].scale >= minimumScale && nextQuality > quality + .001) {
             result = fitted;
             quality = nextQuality;
           }
-          break;
+          // A fitting arrangement may still contain a hole. Try the remaining
+          // bounded scales unless this arrangement already meets the target.
+          if (isLayoutBalanced(candidateQuality, sized.length)) break;
         }
       });
     }
@@ -453,7 +455,57 @@
     return area / (width * height * .25);
   }
 
+  function largestEmptyRegion(boxes, width, height) {
+    // Mark intersecting cells conservatively, then find the largest empty
+    // rectangle with a histogram sweep. Work is bounded by a fixed grid;
+    // individual letters' counters and normal line spacing are not holes.
+    const side = 64;
+    const occupied = new Uint8Array(side * side);
+    for (const box of boxes) {
+      const left = clamp(Math.floor(box.x1 / width * side), 0, side);
+      const right = clamp(Math.ceil(box.x2 / width * side), 0, side);
+      const top = clamp(Math.floor(box.y1 / height * side), 0, side);
+      const bottom = clamp(Math.ceil(box.y2 / height * side), 0, side);
+      for (let row = top; row < bottom; row++) occupied.fill(1, row * side + left, row * side + right);
+    }
+    const heights = new Uint8Array(side);
+    let largest = 0;
+    for (let row = 0; row < side; row++) {
+      for (let col = 0; col < side; col++) {
+        heights[col] = occupied[row * side + col] ? 0 : heights[col] + 1;
+      }
+      const stack = [];
+      for (let col = 0; col <= side; col++) {
+        const height = col === side ? 0 : heights[col];
+        while (stack.length && heights[stack[stack.length - 1]] > height) {
+          const previous = stack.pop();
+          const left = stack.length ? stack[stack.length - 1] + 1 : 0;
+          largest = Math.max(largest, heights[previous] * (col - left));
+        }
+        stack.push(col);
+      }
+    }
+    return largest / (side * side);
+  }
+
+  function isLayoutBalanced(quality, count) {
+    return quality.emptyRegion <= (count <= 10 ? .08 : .025) &&
+      (count <= 10 || Math.min(...quality.corners) >= .4) &&
+      quality.worstRegion >= .45 && quality.separation >= .8;
+  }
+
   function layoutQuality(boxes, width, height) {
+    const sparse = boxes.length <= 10;
+    if (sparse && boxes.length) {
+      // A few words should form one centred composition. Judge its interior,
+      // not the intentional outer margins left by proportional fitting.
+      const left = Math.min(...boxes.map(box => box.x1));
+      const top = Math.min(...boxes.map(box => box.y1));
+      width = Math.max(...boxes.map(box => box.x2)) - left;
+      height = Math.max(...boxes.map(box => box.y2)) - top;
+      boxes = boxes.map(box => ({ ...box,
+        x1: box.x1 - left, x2: box.x2 - left, y1: box.y1 - top, y2: box.y2 - top }));
+    }
     // A fixed 4x4 occupancy grid measures each corner and all nine overlapping
     // quarter-area regions. A full opposite corner cannot conceal a bare one.
     const cells = Array(16).fill(0);
@@ -493,9 +545,10 @@
         return sum + Math.min(1, nearest / target);
       }, 0) / emoji.length;
     }
-    return { coverage, corners, worstRegion: Math.min(...regions), separation,
-      score: coverage + Math.min(...corners) * .35 + Math.min(...regions) * .35 -
-        Math.sqrt(variance) * .2 + separation * .12 };
+    const emptyRegion = largestEmptyRegion(boxes, width, height);
+    return { coverage, corners, worstRegion: Math.min(...regions), separation, emptyRegion,
+      score: coverage + Math.min(...corners) * (sparse ? .05 : .2) + Math.min(...regions) * .35 -
+        Math.sqrt(variance) * .2 + separation * .12 - emptyRegion * 4 };
   }
 
   function fitAreaBoxes(items, width, height) {
@@ -510,7 +563,9 @@
     }));
     // Expand centre spacing on both axes, never the artwork. Check the envelope: an
     // interior word can be wider than the leftmost/rightmost centre's word.
-    const span = Math.max(...fitted.map(item => item.x)) - Math.min(...fitted.map(item => item.x));
+    // Sparse clouds keep their natural spacing and balanced outer margins.
+    const spread = items.length > 10;
+    const span = spread ? Math.max(...fitted.map(item => item.x)) - Math.min(...fitted.map(item => item.x)) : 0;
     let low = 1;
     let high = span > 0 ? Math.max(1, (width - inset * 2) / span) : 1;
     for (let attempt = 0; attempt < 18; attempt++) {
@@ -520,7 +575,7 @@
       else high = scale;
     }
     const horizontalScale = low;
-    const verticalSpan = Math.max(...fitted.map(item => item.y)) - Math.min(...fitted.map(item => item.y));
+    const verticalSpan = spread ? Math.max(...fitted.map(item => item.y)) - Math.min(...fitted.map(item => item.y)) : 0;
     low = 1;
     high = verticalSpan > 0 ? Math.max(1, (height - inset * 2) / verticalSpan) : 1;
     for (let attempt = 0; attempt < 18; attempt++) {
@@ -680,6 +735,7 @@
     layoutBoxesInArea,
     cornerCoverage,
     layoutQuality,
+    isLayoutBalanced,
     buildSVG,
     escapeXML,
   };

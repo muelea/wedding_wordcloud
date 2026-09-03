@@ -48,6 +48,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const stripe = require('../src/stripe');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
@@ -151,6 +152,7 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const stripe = require('../src/stripe');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
@@ -209,6 +211,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   });
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const stripe = require('../src/stripe');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
@@ -297,6 +300,7 @@ test('cart checkout follows the latest selected locale across repeated Stripe ro
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const stripe = require('../src/stripe');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
@@ -422,6 +426,7 @@ test('a concurrently completed Stripe payment wins over a locale replacement', a
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const stripe = require('../src/stripe');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
@@ -478,6 +483,7 @@ test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const stripe = require('../src/stripe');
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;

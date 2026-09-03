@@ -31,6 +31,7 @@ printful.getShippingCountries = async () => [
     { code: 'CA', name: 'California' }, { code: 'NY', name: 'New York' },
   ] },
 ];
+printful.getShippingRates = async (options) => require('./printful-fixtures').shippingEstimate(options);
 printful.estimateOrderCosts = async (options) => {
   if (estimateDelay) await new Promise(resolve => setTimeout(resolve, estimateDelay));
   if (estimateFailure) throw new printful.PrintfulApiError('PRINTFUL_UNAVAILABLE', 'Test: Preisdienst nicht erreichbar.', 502);

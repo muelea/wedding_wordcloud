@@ -52,6 +52,13 @@
       display: inline-flex; margin-top: 28px; min-height: 48px; padding: 12px 24px; align-items: center; justify-content: center;
       border-radius: 999px; background: var(--ink); color: #fff; text-decoration: none; font-weight: 600;
     }
+    .reorder-button {
+      display: block; width: 100%; margin-top: 24px; min-height: 48px; padding: 12px 20px;
+      border: 0; border-radius: 20px; background: var(--berry); color: #fff;
+      font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .reorder-button:disabled { opacity: .65; cursor: wait; }
+    .reorder-button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     .error { color: #b33a4d; }
     [hidden] { display: none !important; }
     @media (max-width: 620px) {
@@ -77,6 +84,8 @@
         <div class="summary-row"><span>Bestellung</span><strong id="quantity" data-i18n-ignore></strong></div>
         <div class="summary-row"><span>Gesamtbetrag</span><strong id="total" data-i18n-ignore></strong></div>
       </div>
+      <button type="button" class="reorder-button" id="reorder-button" hidden>Erneut an eine andere Adresse bestellen</button>
+      <p class="copy error" id="reorder-error" role="alert" hidden></p>
       <a class="home-link" id="home-link" href="/">Zurück zur Wortwolke</a>
     </section>
   </main>
@@ -94,7 +103,12 @@
     const copy = document.getElementById('copy');
     const summary = document.getElementById('summary');
     const homeLink = document.getElementById('home-link');
+    const reorderButton = document.getElementById('reorder-button');
+    const reorderError = document.getElementById('reorder-error');
     let confirmedOrder = null;
+    let reorderPending = false;
+    let reorderRequestId = null;
+    let reorderConfigurations = null;
     homeLink.href = `/e/${encodeURIComponent(slug)}`;
 
     function money(cents, currency) {
@@ -128,6 +142,63 @@
       if (confirmedOrder) renderConfirmedSummary(confirmedOrder);
     });
 
+    function resetReorderButton() {
+      reorderPending = false;
+      reorderButton.disabled = false;
+      reorderButton.removeAttribute('aria-busy');
+      setText(reorderButton, 'Erneut an eine andere Adresse bestellen');
+    }
+
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) resetReorderButton();
+    });
+
+    async function reorder() {
+      if (reorderPending || !confirmedOrder?.paymentConfirmed) return;
+      reorderPending = true;
+      reorderButton.disabled = true;
+      reorderButton.setAttribute('aria-busy', 'true');
+      setText(reorderButton, 'Designs werden übernommen…');
+      reorderError.hidden = true;
+      try {
+        if (!WolkenworteConfiguratorSession.clearPurchased(slug, confirmedOrder)) {
+          throw new Error('storage_unavailable');
+        }
+        if (!reorderRequestId) {
+          reorderRequestId = [...crypto.getRandomValues(new Uint8Array(16))]
+            .map((byte) => byte.toString(16).padStart(2, '0')).join('');
+        }
+        if (!reorderConfigurations) {
+          reorderConfigurations = await WolkenworteConfiguratorSession.withTimeout((async () => {
+            const response = await fetch(`/api/events/${encodeURIComponent(slug)}/orders/reorder`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store',
+              body: JSON.stringify({ sessionId, requestId: reorderRequestId }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'reorder_failed');
+            return result.configurations;
+          })(), 20000);
+        }
+        const ids = WolkenworteConfiguratorSession.prepareReorder(slug, reorderConfigurations);
+        location.assign(`/e/${encodeURIComponent(slug)}/shipping?configurations=${encodeURIComponent(ids.join(','))}`);
+        reorderRequestId = null;
+        reorderConfigurations = null;
+      } catch (error) {
+        const message = error.message === 'cart_full'
+          ? 'Euer Warenkorb ist voll. Bitte entfernt zuerst einige Designs im Konfigurator.'
+          : error.message === 'reorder_unavailable' || error.message === 'order_not_found'
+            ? 'Diese Bestellung kann nicht erneut übernommen werden. Bitte erstellt ein neues Design.'
+            : error.message === 'storage_unavailable'
+              ? 'Euer Warenkorb kann in diesem Browser nicht gespeichert werden. Bitte erlaubt den Browserspeicher und versucht es erneut.'
+              : 'Die Designs konnten gerade nicht übernommen werden. Bitte versucht es erneut.';
+        setText(reorderError, message);
+        reorderError.hidden = false;
+        resetReorderButton();
+      }
+    }
+
+    reorderButton.addEventListener('click', reorder);
+
     async function checkStatus(attempt = 0) {
       if (!/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
         showError('Der Zahlungslink ist unvollständig. Bitte kehrt zur Zahlungsseite zurück.');
@@ -149,6 +220,7 @@
           renderConfirmedSummary(order);
           summary.hidden = false;
           void WolkenworteConfiguratorSession.clearPurchased(slug, order);
+          reorderButton.hidden = false;
           return;
         }
         if (attempt < 20) {

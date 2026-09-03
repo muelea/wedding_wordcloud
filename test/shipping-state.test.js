@@ -190,6 +190,17 @@ test('deadline covers response body stalls and permits a safe retry after a chec
   assert.deepEqual(page.calls.navigation, []);
 });
 
+test('updated delivery terms remain visible and require an explicit second checkout action', async () => {
+  const page = harness(async () => response({ error: 'quote_shipping_changed',
+    message: 'Die Lieferangaben haben sich geändert.', quote: { id: 'updated-shipping' } }, 409));
+  page.scope.currentQuote = { id: 'old-shipping' };
+  await page.checkout();
+  assert.equal(page.scope.currentQuote.id, 'updated-shipping');
+  assert.equal(page.scope.checkoutButton.label, 'Aktualisierte Lieferung bestätigen');
+  assert.deepEqual(page.calls.navigation, []);
+  assert.equal(page.scope.checkoutButton.disabled, false);
+});
+
 test('invalid JSON does not leave checkout busy or navigate to an undefined destination', async () => {
   const page = harness(async () => ({ ok: true, json: async () => { throw new SyntaxError('bad json'); } }));
   page.scope.currentQuote = { id: 'confirmed-price' };

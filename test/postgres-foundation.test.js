@@ -216,6 +216,7 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
     const { row: event } = await storedEvent(db, baseUrl, 'Route Recovery Rosa & Stripe Ralf');
     const configuration = await configurationFor(db, event.id);
     const printful = require('../src/printful');
+    require('./support/printful-fixtures').mockShippingRates(t, printful);
     const stripe = require('../src/stripe');
     const originalCountries = printful.getShippingCountries;
     const originalEstimate = printful.estimateOrderCosts;

@@ -7,6 +7,8 @@ require('../src/designFonts');
 const Core = require('../public/js/wordcloud-core');
 const Live = require('../public/js/live-cloud-layout');
 const Quality = require('../public/js/text-print-quality');
+const { GAP_WORDS, FIVE_WORDS } = require('./support/area-layout-cases');
+const { largestEmptyFraction, occupiedFraction, envelope } = require('./support/layout-space');
 
 function safe(placed, words, width, height) {
   assert.deepEqual(placed.map(item => item.word).sort(), words.map(([word]) => word).sort());
@@ -17,6 +19,32 @@ function safe(placed, words, width, height) {
     }
   }
 }
+
+test('the reported live clouds avoid internal holes at desktop, phone and print proportions', () => {
+  const context = createCanvas(1, 1).getContext('2d');
+  for (const [width, height] of [[1460, 984], [390, 620], [2628, 978], [1200, 1200]]) {
+    for (const words of [GAP_WORDS, FIVE_WORDS]) {
+      const label = `${words.length} words at ${width}x${height}`;
+      const placed = Core.layoutWordsInArea(words, width, height, context);
+      safe(placed, words, width, height);
+      const used = envelope(placed);
+      const sparse = words === FIVE_WORDS;
+      const area = sparse ? used : { x1: 0, y1: 0, x2: width, y2: height };
+      assert.ok(largestEmptyFraction(placed, area) < (sparse ? .14 : .035),
+        label + ': bounded internal whitespace');
+      assert.ok(occupiedFraction(placed, {
+        x1: width * .25, y1: height * .25, x2: width * .75, y2: height * .75,
+      }) > (sparse ? .7 : .5), label + ': words occupy the centre');
+      if (sparse) {
+        assert.ok(occupiedFraction(placed, used) > .65, label + ': a compact composition');
+        assert.ok(Math.abs(used.x1 + used.x2 - width) < .01 &&
+          Math.abs(used.y1 + used.y2 - height) < .01, label + ': balanced outer margins');
+      }
+      assert.deepEqual(Core.layoutWordsInArea(words, width, height, context), placed,
+        label + ': deterministic');
+    }
+  }
+});
 
 test('dense rectangular live clouds keep every word at portrait, phone and projector sizes', () => {
   const context = createCanvas(1, 1).getContext('2d');

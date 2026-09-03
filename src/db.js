@@ -1585,6 +1585,90 @@ function isCheckoutQuoteExpired(quote) {
 }
 
 // ── Configurations ──────────────────────────────────────────────────────
+async function assertConfigurationCapacity(client, eventId, additional = 1) {
+  const activeConfigurations = await client.query(`
+    SELECT count(*)::integer AS count
+    FROM configurations configuration
+    WHERE configuration.event_id = $1
+      AND configuration.expires_at > transaction_timestamp()
+      AND NOT EXISTS (
+        SELECT 1 FROM order_items item
+        JOIN orders ON orders.id = item.order_id
+        WHERE item.configuration_id = configuration.id
+          AND orders.status IN ('paid_test', 'paid', 'fulfilled')
+      )
+  `, [eventId]);
+  if (Number(activeConfigurations.rows[0].count) + additional > MAX_ACTIVE_UNPAID_CONFIGURATIONS) {
+    throw limitError('configuration_limit');
+  }
+}
+
+async function createReorderConfigurations(slug, sessionId, requestId) {
+  return withTransaction(async (client) => {
+    // Shares the event lock with configuration creation and expiry cleanup.
+    const eventResult = await client.query(`
+      SELECT id, expires_at FROM events
+      WHERE slug = $1 AND expires_at > transaction_timestamp() FOR UPDATE
+    `, [slug]);
+    const event = eventResult.rows[0];
+    if (!event) return null;
+    const orderResult = await client.query(`
+      SELECT id FROM orders
+      WHERE stripe_session_id = $1 AND event_id = $2 AND event_slug_snapshot = $3
+        AND status IN ('paid_test', 'paid', 'fulfilled')
+    `, [sessionId, event.id, slug]);
+    const order = orderResult.rows[0];
+    if (!order) return null;
+    const items = await client.query(`
+      SELECT configuration_snapshot_json, quantity FROM order_items
+      WHERE order_id = $1 ORDER BY shipment_index, item_index
+    `, [order.id]);
+    const copies = new Map();
+    for (const item of items.rows) {
+      const snapshot = parseJson(item.configuration_snapshot_json);
+      const product = resolveProductOrientation(getProduct(snapshot?.productKey), snapshot?.orientation);
+      if (!product || !snapshot.design || !uniqueConfigurationIds([snapshot.configurationId]).length ||
+          Number(snapshot.printfulVariantId) !== product.printful.variantId ||
+          Number(snapshot.printWidth) !== product.printFile.width ||
+          Number(snapshot.printHeight) !== product.printFile.height) {
+        throw limitError('reorder_unavailable');
+      }
+      const previous = copies.get(snapshot.configurationId);
+      const quantity = (previous?.quantity || 0) + Number(item.quantity);
+      if (!Number.isSafeInteger(quantity) || quantity < product.minQuantity || quantity > product.maxQuantity) {
+        throw limitError('reorder_unavailable');
+      }
+      // A retry after a lost response returns the same copies. A new explicit
+      // reorder uses a new request id. No schema or paid-artifact mutation.
+      const id = crypto.createHash('sha256')
+        .update(JSON.stringify(['reorder', sessionId, requestId, snapshot.configurationId]))
+        .digest('base64url').slice(0, 16);
+      copies.set(snapshot.configurationId, { id, snapshot, quantity });
+    }
+    if (!copies.size || copies.size > 20) throw limitError('reorder_unavailable');
+    const ids = [...copies.values()].map((entry) => entry.id);
+    const existing = await client.query(`
+      SELECT * FROM configurations WHERE event_id = $1 AND id = ANY($2::text[])
+    `, [event.id, ids]);
+    const byId = new Map(rowsToBoundary(existing.rows).map((entry) => [entry.id, entry]));
+    await assertConfigurationCapacity(client, event.id, copies.size - byId.size);
+    for (const { id, snapshot, quantity } of copies.values()) {
+      if (byId.has(id)) continue;
+      const result = await client.query(`
+        INSERT INTO configurations (
+          id, event_id, product_key, printful_variant_id, quantity, unit_price_cents,
+          theme, words_json, design_json, orientation, print_width, print_height, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12)
+        RETURNING *
+      `, [id, event.id, snapshot.productKey, snapshot.printfulVariantId, quantity,
+        snapshot.theme, jsonValue(snapshot.words), jsonValue(snapshot.design), snapshot.orientation,
+        snapshot.printWidth, snapshot.printHeight, event.expires_at]);
+      byId.set(id, rowToBoundary(result.rows[0]));
+    }
+    return ids.map((id) => byId.get(id));
+  });
+}
+
 async function createConfiguration({
   eventId,
   productKey,
@@ -1608,22 +1692,7 @@ async function createConfiguration({
     const event = eventResult.rows[0];
     if (!event) throw new Error('event not found');
 
-    const activeConfigurations = await client.query(`
-      SELECT count(*)::integer AS count
-      FROM configurations configuration
-      WHERE configuration.event_id = $1
-        AND configuration.expires_at > transaction_timestamp()
-        AND NOT EXISTS (
-          SELECT 1
-          FROM order_items item
-          JOIN orders on orders.id = item.order_id
-          WHERE item.configuration_id = configuration.id
-            AND orders.status in ('paid_test', 'paid', 'fulfilled')
-        )
-    `, [eventId]);
-    if (Number(activeConfigurations.rows[0].count) >= MAX_ACTIVE_UNPAID_CONFIGURATIONS) {
-      throw limitError('configuration_limit');
-    }
+    await assertConfigurationCapacity(client, eventId);
 
     const id = crypto.randomBytes(12).toString('base64url');
     const result = await client.query(`
@@ -2653,6 +2722,7 @@ module.exports = {
   updateCheckoutQuote,
   isCheckoutQuoteExpired,
   createConfiguration,
+  createReorderConfigurations,
   getConfiguration,
   getEventConfiguration,
   getEventConfigurations,

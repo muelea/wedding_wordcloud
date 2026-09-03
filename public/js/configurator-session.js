@@ -60,15 +60,17 @@
     function read() {
       try {
         const record = JSON.parse(storage.getItem(key));
-        if (record?.version === 1 && record.expiresAt > now() && Array.isArray(record.shipments)) return record;
+        if (record?.version === 1 && record.expiresAt > now() &&
+            Array.isArray(record.shipments) && record.shipments.length === 1) return record;
         storage.removeItem(key);
       } catch {}
       return null;
     }
     function write(shipments) {
+      if (!Array.isArray(shipments) || shipments.length !== 1) return false;
       try {
         storage.setItem(key, JSON.stringify({ version: 1, expiresAt: now() + SHIPPING_TTL_MS,
-          shipments: copy(shipments).slice(0, 20) }));
+          shipments: copy(shipments) }));
         return true;
       } catch { return false; }
     }
@@ -83,7 +85,7 @@
     function restore(ids) {
       const record = read();
       if (!record) return null;
-      return record.shipments.filter((shipment) => shipment && typeof shipment === 'object').slice(0, 10)
+      return record.shipments.filter((shipment) => shipment && typeof shipment === 'object')
         .map((shipment) => ({
           recipient: Object.fromEntries(['name', 'address1', 'address2', 'zip', 'city', 'country_code', 'state_code']
             .map((field) => [field, String(shipment.recipient?.[field] || '').slice(0, 200)])),
@@ -129,6 +131,31 @@
     } catch { return false; }
   }
 
+  function prepareReorder(slug, configurations, suppliedStorage) {
+    const storage = suppliedStorage === undefined ? sessionStorage : suppliedStorage;
+    const copies = normalizeCart(configurations);
+    if (!copies.length || copies.length !== configurations.length ||
+        copies.some((entry) => purchasedIds(slug, storage).includes(entry.id))) throw new Error('invalid_reorder');
+    const cart = createCart(slug, storage);
+    const previous = cart.read();
+    const combined = [...previous.filter((entry) => !copies.some((item) => item.id === entry.id)), ...copies];
+    if (combined.length > MAX_CART_ITEMS) throw new Error('cart_full');
+    const shipping = createShippingDraft(slug, storage);
+    const previousShipping = shipping.restore(previous.map((entry) => entry.id));
+    const quantities = new Map((previousShipping?.[0]?.items || [])
+      .map((item) => [item.configurationId, item.quantity]));
+    configurations.forEach((item) => quantities.set(item.id, Number(item.quantity) || 1));
+    cart.write(combined);
+    // An explicit reorder always asks for a new address and a fresh quote.
+    if (!shipping.write([{ recipient: {}, items: combined.map((entry) => ({
+      configurationId: entry.id, quantity: quantities.get(entry.id) ?? 1,
+    })) }])) {
+      cart.write(previous);
+      throw new Error('storage_unavailable');
+    }
+    return combined.map((entry) => entry.id);
+  }
+
   return { createCart, createShippingDraft, normalizeCart, validId, withTimeout, purchasedIds, clearPurchased,
-    MAX_CART_ITEMS };
+    prepareReorder, MAX_CART_ITEMS };
 }));

@@ -45,6 +45,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
   const configuration = await saveConfiguration(baseUrl, event.slug);
 
   const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
   const originalCreate = printful.createPrintfulOrder;

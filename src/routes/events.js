@@ -9,6 +9,7 @@ const { sourceHashForRequest } = require('../clientIdentity');
 const rateLimits = require('../rateLimits');
 const stripe = require('../stripe');
 const printful = require('../printful');
+const { shippingTermsDiffer } = require('../printfulShipping');
 const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const EmojiCatalog = require('../../public/js/emoji-catalog.js');
@@ -42,9 +43,18 @@ const ADDRESS_LIMITS = Object.freeze({
   city: 100,
   zip: 20,
 });
-const MAX_CHECKOUT_SHIPMENTS = 10;
+const MAX_CHECKOUT_SHIPMENTS = 1;
 const MAX_CART_CONFIGURATIONS = 20;
 const MAX_CART_ITEMS = 99;
+
+function rejectMultipleShippingAddresses(res, shipments) {
+  if (!Array.isArray(shipments) || shipments.length <= 1) return false;
+  res.status(400).json({
+    error: 'single_address_required',
+    message: 'Pro Bestellung ist eine Lieferadresse möglich. Bitte gebt eine einzelne Lieferadresse ein.',
+  });
+  return true;
+}
 
 function normalizeConfigurationIdList(value) {
   const rawIds = Array.isArray(value)
@@ -233,6 +243,12 @@ function normalizeCartShipments(rawBody, countries, configurations) {
 }
 
 function sendPrintfulError(res, error) {
+  if (error?.code === 'PRINTFUL_SHIPPING_UNAVAILABLE') {
+    return res.status(422).json({
+      error: 'shipping_unavailable',
+      message: 'Für diese Produktauswahl ist an eure Adresse kein Standardversand verfügbar.',
+    });
+  }
   if (error?.code === 'PRINTFUL_NOT_CONFIGURED') {
     return res.status(501).json({
       error: 'pricing_not_configured',
@@ -274,6 +290,7 @@ function checkoutQuoteResponse(quote) {
     taxCents: Number(quote.tax_cents),
     totalCents: Number(quote.total_cents),
     expiresAt: quote.expires_at,
+    ...(shipments[0]?.printfulShipping ? { shippingDetails: shipments[0].printfulShipping } : {}),
   };
 }
 
@@ -681,20 +698,27 @@ function printfulEstimateItemsForShipment(shipment, configurationById) {
   });
 }
 
+async function estimatePrintfulQuote(options) {
+  const [printfulCosts, printfulShipping] = await Promise.all([
+    printful.estimateOrderCosts(options), printful.getShippingRates(options),
+  ]);
+  return { printfulCosts, printfulShipping };
+}
+
 async function estimateCartShipments({ body, countries, configurations }) {
   const { shipments, invalidFields } = normalizeCartShipments(body, countries, configurations);
   if (invalidFields.length) return { invalidFields };
   const configurationById = new Map(configurations.map((configuration) => [configuration.id, configuration]));
   const pricedShipments = await Promise.all(shipments.map(async (shipment) => {
     const items = printfulEstimateItemsForShipment(shipment, configurationById);
-    const printfulCosts = await printful.estimateOrderCosts({
+    const estimate = await estimatePrintfulQuote({
       recipient: shipment.recipient,
       items,
     });
     return {
       ...shipment,
       items: shipment.items,
-      printfulCosts,
+      ...estimate,
     };
   }));
   const calculatedQuote = buildCustomerQuoteForShipments(
@@ -1064,6 +1088,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         rateLimits.LIMITS.estimateGuest,
         rateLimits.LIMITS.estimateSource
       )) return rateLimited(res);
+      if (rejectMultipleShippingAddresses(res, req.body?.shipments)) return;
       try {
         const product = getProduct(configuration.product_key);
         if (!product) return res.status(500).json({ error: 'configuration_invalid' });
@@ -1082,12 +1107,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           });
         }
         const pricedShipments = await Promise.all(shipments.map(async (shipment) => {
-          const printfulCosts = await printful.estimateOrderCosts({
+          const estimate = await estimatePrintfulQuote({
             variantId: Number(configuration.printful_variant_id),
             quantity: shipment.quantity,
             recipient: shipment.recipient,
           });
-          return { ...shipment, printfulCosts };
+          return { ...shipment, ...estimate };
         }));
         const calculatedQuote = buildCustomerQuoteForShipments(
           pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
@@ -1139,6 +1164,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       rateLimits.LIMITS.estimateGuest,
       rateLimits.LIMITS.estimateSource
     )) return rateLimited(res);
+    if (rejectMultipleShippingAddresses(res, req.body?.shipments)) return;
     try {
       const countries = await printful.getShippingCountries();
       const { invalidFields, pricedShipments, calculatedQuote } = await estimateCartShipments({
@@ -1193,6 +1219,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       req.params.quoteId
     );
     if (!quote) return res.status(404).json({ error: 'quote_not_found' });
+    if (rejectMultipleShippingAddresses(res, db.getCheckoutQuoteShipments(quote))) return;
     const order = await db.getOrderByQuoteId(quote.id);
     if (db.isCheckoutQuoteExpired(quote) && !order) {
       return res.status(410).json({ error: 'quote_expired' });
@@ -1213,6 +1240,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const ids = normalizeConfigurationIdList(req.query.ids);
     const quote = await db.getEventCartCheckoutQuote(req.params.slug, ids, req.params.quoteId);
     if (!quote) return res.status(404).json({ error: 'quote_not_found' });
+    if (rejectMultipleShippingAddresses(res, db.getCheckoutQuoteShipments(quote))) return;
     const order = await db.getOrderByQuoteId(quote.id);
     if (db.isCheckoutQuoteExpired(quote) && !order) {
       return res.status(410).json({ error: 'quote_expired' });
@@ -1287,6 +1315,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         message: 'Die Preisberechnung wurde nicht gefunden. Bitte berechnet den Preis erneut.',
       });
     }
+    if (rejectMultipleShippingAddresses(res, db.getCheckoutQuoteShipments(storedQuote))) return;
     const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
 
     let order = await db.getOrderByQuoteId(storedQuote.id);
@@ -1333,14 +1362,16 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       }
 
       const changed = quoteAmountsDiffer(storedQuote, freshQuote);
+      const shippingChanged = shippingTermsDiffer(storedShipments, pricedShipments);
       const refreshedQuote = await db.updateCheckoutQuote(storedQuote.id, {
         shipments: pricedShipments,
         quote: freshQuote,
       });
-      if (changed) {
+      if (changed || shippingChanged) {
         return res.status(409).json({
-          error: 'quote_changed',
-          message: 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.',
+          error: changed ? 'quote_changed' : 'quote_shipping_changed',
+          message: changed ? 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.'
+            : 'Die Lieferangaben haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.',
           quote: { ...checkoutQuoteResponse(refreshedQuote), ...cartSummary(configurations) },
         });
       }
@@ -1434,6 +1465,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           message: 'Die Preisberechnung wurde nicht gefunden. Bitte berechnet den Preis erneut.',
         });
       }
+      if (rejectMultipleShippingAddresses(res, db.getCheckoutQuoteShipments(storedQuote))) return;
       const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
 
       // A repeated click returns the same Stripe Session. No re-estimate is
@@ -1463,7 +1495,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
       try {
         const refreshedShipments = await Promise.all(storedShipments.map(async (shipment) => {
-          const costs = await printful.estimateOrderCosts({
+          const estimate = await estimatePrintfulQuote({
             variantId: Number(configuration.printful_variant_id),
             quantity: Number(shipment.quantity),
             recipient: shipment.recipient,
@@ -1471,7 +1503,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           return {
             quantity: Number(shipment.quantity),
             recipient: shipment.recipient,
-            printfulCosts: costs,
+            ...estimate,
           };
         }));
         const freshQuote = buildCustomerQuoteForShipments(
@@ -1489,14 +1521,16 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         }
 
         const changed = quoteAmountsDiffer(storedQuote, freshQuote);
+        const shippingChanged = shippingTermsDiffer(storedShipments, quotedShipments);
         const refreshedQuote = await db.updateCheckoutQuote(storedQuote.id, {
           shipments: quotedShipments,
           quote: freshQuote,
         });
-        if (changed) {
+        if (changed || shippingChanged) {
           return res.status(409).json({
-            error: 'quote_changed',
-            message: 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.',
+            error: changed ? 'quote_changed' : 'quote_shipping_changed',
+            message: changed ? 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.'
+              : 'Die Lieferangaben haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.',
             quote: checkoutQuoteResponse(refreshedQuote),
           });
         }
@@ -1559,6 +1593,34 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       }
     })
   );
+
+  // The opaque Stripe Session is the same capability used by confirmation.
+  // Only paid, server-owned snapshots can seed a fresh, unpaid basket.
+  router.post('/events/:slug/orders/reorder', express.json({ limit: '4kb' }), asyncRoute(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const sessionId = req.body?.sessionId;
+    const requestId = req.body?.requestId;
+    if (typeof sessionId !== 'string' || !/^cs_[A-Za-z0-9_]{1,250}$/.test(sessionId) ||
+        typeof requestId !== 'string' || !/^[a-f0-9]{32}$/.test(requestId)) {
+      return res.status(400).json({ error: 'invalid_reorder' });
+    }
+    const event = await db.getEventBySlug(req.params.slug);
+    if (!event) return res.status(404).json({ error: 'order_not_found' });
+    if (!consumeEventRequest(req, event, 'configuration',
+      rateLimits.LIMITS.configurationGuest, rateLimits.LIMITS.configurationSource)) return rateLimited(res);
+    try {
+      const configurations = await db.createReorderConfigurations(event.slug, sessionId, requestId);
+      if (!configurations) return res.status(404).json({ error: 'order_not_found' });
+      return res.json({ configurations: configurations.map((configuration) => ({
+        ...configurationResponse(event.slug, configuration),
+        productKey: configuration.product_key,
+      })) });
+    } catch (error) {
+      if (error.code === 'configuration_limit') return rateLimited(res);
+      if (error.code === 'reorder_unavailable') return res.status(409).json({ error: 'reorder_unavailable' });
+      throw error;
+    }
+  }));
 
   router.get('/events/:slug/orders/status', asyncRoute(async (req, res) => {
     res.set('Cache-Control', 'no-store');

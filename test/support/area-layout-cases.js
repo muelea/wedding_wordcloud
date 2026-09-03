@@ -14,6 +14,15 @@ const REPORTED_WORDS = [['dg', 3], ['rtrt', 3], ['😊', 2], ['20', 2], ['efefe'
     'rfrg', 'rgrg', 'rtr', 'sdfdsf', 'se', 'sfsfs', 'yr'].map(word => [word, 1])];
 const EMOJI_WORDS = ['liebe', 'glück', 'familie', 'zusammen', '😊', '🌷', '🎉', '💖']
   .map(word => [word, 1]);
+// test6 and test7 exposed internal gaps despite well-filled outer corners.
+const GAP_WORDS = [['h', 4], ['sfsf', 4], ['00', 3], ['d', 3], ['dgdg', 3], ['efef', 3],
+  ...['1', '2', '3', '4', 'e', 'f', 'k', 's'].map(word => [word, 2]),
+  ...['0', '11', '22', '33', '44', '4r', '5', '55', '6', '62', '73', '74', '75',
+    '76', '88', '99', 'a', 'ad', 'adad', 'dede', 'df', 'dgg', 'ef', 'fefe', 'fefef',
+    'fhf', 'g', 'grg', 'gt', 'hjsfh', 'hrt', 'j', 'jy', 'r', 'rgr', 'rthrt', 'rtrt',
+    'sdg', 'sf', 'sgsg', 'sgsgs', 'tg', 'ty', 'v', 'we', 'wer', 'wewe', 'wfwf', 'x']
+    .map(word => [word, 1])];
+const FIVE_WORDS = ['ef', 'efe', 'g4g', 'sdfdf', 'sfs'].map(word => [word, 1]);
 const AREA_CASES = [
   SCREENSHOT_WORDS,
   [['liebe', 1]],
@@ -26,4 +35,4 @@ const AREA_CASES = [
   ]),
 ];
 
-module.exports = { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, AREA_CASES };
+module.exports = { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, GAP_WORDS, FIVE_WORDS, AREA_CASES };

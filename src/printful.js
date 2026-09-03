@@ -3,6 +3,8 @@
 const crypto = require('crypto');
 const log = require('./structuredLog');
 const performanceProbe = require('./performanceProbe');
+const { PRODUCTS } = require('./products');
+const { normalizeShippingRate } = require('./printfulShipping');
 
 /**
  * Printful catalog, pricing and safely gated order creation.
@@ -110,7 +112,7 @@ async function printfulRequest(path, options = {}) {
   performanceProbe.recordExternalCall('printful', {
     durationMs: Date.now() - startedAt, succeeded: true,
   });
-  return data.result;
+  return path.startsWith('/v2/') ? (data.data ?? data.result) : data.result;
 }
 
 let countriesCache = null;
@@ -144,10 +146,10 @@ async function getShippingCountries() {
 
 /**
  * Ask Printful for the current fulfillment cost without creating an order.
- * Artwork is deliberately omitted: the curated product variant(s) and
- * quantities determine the cost estimate, while Printful cannot fetch a local
- * development artwork URL. The immutable configuration still supplies the
- * trusted variant and later supplies the artwork during fulfillment.
+ * All current catalog print placements have no additional print fee (verified
+ * against Printful's catalog). Artwork is therefore not uploaded for pricing.
+ * Required product options still apply, and must match fulfillment. A future
+ * paid print placement needs a corresponding estimate file before launch.
  */
 async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
   const orderItems = Array.isArray(items) && items.length
@@ -163,6 +165,10 @@ async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
         item.quantity < 1)) {
     throw new PrintfulApiError('PRINTFUL_INVALID_ORDER', 'Die Printful-Artikel sind ungültig.', 500);
   }
+  for (const item of orderItems) {
+    const product = PRODUCTS.find((entry) => entry.printful.variantId === item.variant_id);
+    if (product?.printful.options.length) item.options = product.printful.options;
+  }
   const result = await printfulRequest('/orders/estimate-costs', {
     method: 'POST',
     body: JSON.stringify({
@@ -175,6 +181,40 @@ async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
     throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keinen gültigen Preis geliefert.', 502);
   }
   return result.costs;
+}
+
+async function getShippingRates({ variantId, quantity, recipient, items }) {
+  const sourceItems = Array.isArray(items) && items.length ? items : [{ variantId, quantity }];
+  const orderItems = sourceItems.map((item) => {
+    const id = Number(item.variantId || item.variant_id);
+    const product = PRODUCTS.find((entry) => entry.printful.variantId === id);
+    const count = Number(item.quantity);
+    if (!product || !Number.isSafeInteger(count) || count < 1) {
+      throw new PrintfulApiError('PRINTFUL_INVALID_ORDER', 'Die Printful-Artikel sind ungültig.', 500);
+    }
+    return {
+      source: 'catalog', catalog_variant_id: id, quantity: count,
+      placements: product.printful.placements.map((placement) => ({ placement, technique: product.printful.technique })),
+      ...(product.printful.options.length ? { product_options: product.printful.options.map((option) => ({
+        name: option.id, value: option.value,
+      })) } : {}),
+    };
+  });
+  const rates = await printfulRequest('/v2/shipping-rates', {
+    method: 'POST', body: JSON.stringify({ recipient, order_items: orderItems, currency: 'EUR' }),
+  });
+  if (!Array.isArray(rates)) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine gültigen Versandinformationen geliefert.', 502);
+  }
+  const rate = rates.find((entry) => entry.shipping === 'STANDARD');
+  if (!rate) {
+    throw new PrintfulApiError('PRINTFUL_SHIPPING_UNAVAILABLE', 'Standardversand ist für diese Auswahl nicht verfügbar.', 422);
+  }
+  try {
+    return normalizeShippingRate(rate, orderItems);
+  } catch {
+    throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine gültigen Versandinformationen geliefert.', 502);
+  }
 }
 
 /**
@@ -356,6 +396,7 @@ module.exports = {
   isConfigured,
   getShippingCountries,
   estimateOrderCosts,
+  getShippingRates,
   createPrintfulOrder,
   getPrintfulOrderByExternalId,
   confirmPrintfulOrder,

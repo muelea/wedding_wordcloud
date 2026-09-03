@@ -340,6 +340,49 @@ test('payment cleanup removes only confirmed purchased IDs in this event and tab
   assert.deepEqual(Session.purchasedIds('a', session), [id('a')]);
 });
 
+test('legacy address splits are discarded instead of silently moving products to the first address', () => {
+  const session = storage();
+  session.setItem('wolkenworte-shipping-draft:a', JSON.stringify({ version: 1,
+    expiresAt: Date.now() + 10000, shipments: [
+      { recipient: { city: 'Berlin' }, items: [{ configurationId: id('a'), quantity: 2 }] },
+      { recipient: { city: 'Paris' }, items: [{ configurationId: id('b'), quantity: 3 }] },
+    ] }));
+  const draft = Session.createShippingDraft('a', session);
+  assert.equal(draft.restore([id('a'), id('b')]), null);
+  assert.equal(session.getItem('wolkenworte-shipping-draft:a'), null);
+  assert.equal(draft.write([{}, {}]), false);
+});
+
+test('reorder preserves other basket positions and quantities but starts with an empty address', () => {
+  const session = storage(), cart = Session.createCart('a', session);
+  cart.write([{ id: id('a') }]);
+  const shipping = Session.createShippingDraft('a', session);
+  shipping.write([{ recipient: { name: 'Alte Adresse', city: 'Berlin' },
+    items: [{ configurationId: id('a'), quantity: 4 }] }]);
+  const copies = [{ id: id('b'), productKey: 'mug', quantity: 2 }];
+  assert.deepEqual(Session.prepareReorder('a', copies, session), [id('a'), id('b')]);
+  const draft = shipping.restore([id('a'), id('b')])[0];
+  assert.ok(Object.values(draft.recipient).every((value) => value === ''));
+  assert.deepEqual(draft.items.map((item) => item.quantity), [4, 2]);
+  assert.deepEqual(Session.prepareReorder('a', copies, session), [id('a'), id('b')], 'storage retries do not duplicate copies');
+  assert.deepEqual(Session.createCart('other', session).read(), []);
+});
+
+test('reorder never silently truncates a full basket or navigates with unsaved shipping state', () => {
+  const session = storage(), cart = Session.createCart('a', session);
+  const full = Array.from({ length: 20 }, (_, index) => ({ id: String(index).padStart(16, 'a') }));
+  cart.write(full);
+  assert.throws(() => Session.prepareReorder('a', [{ id: id('z'), quantity: 1 }], session), /cart_full/);
+  assert.equal(cart.read().length, 20);
+  cart.write([{ id: id('a') }]);
+  const failing = { ...session, setItem(key, value) {
+    if (key.includes('shipping-draft')) throw new Error('quota');
+    session.setItem(key, value);
+  } };
+  assert.throws(() => Session.prepareReorder('a', [{ id: id('b'), quantity: 1 }], failing), /storage_unavailable/);
+  assert.deepEqual(cart.read().map((item) => item.id), [id('a')]);
+});
+
 test('final text is awaited before capture and unchanged text does not dirty a restored design', async () => {
   let design = [{ text: 'liebe' }];
   let dirty = 0;

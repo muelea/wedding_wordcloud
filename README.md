@@ -80,18 +80,35 @@ frozen snapshot of the word cloud.
    plus a link to its current tab's basket, without storing a PIN or introducing
    an account. The previous IndexedDB draft store is no longer read or written.
 6. The saved designs continue to a dedicated, mobile-first shipping-address
-   page. There the customer chooses the quantity of each design per delivery
-   address. Countries and state/province choices come directly from Printful;
-   the server sends one Printful estimate per recipient address containing all
+   page. Each purchase has exactly one delivery address, with an independently
+   selectable quantity for every design. Countries and state/province choices
+   come directly from Printful; the server sends one Printful estimate containing all
    positive-quantity items for that address, so Printful can apply its mixed
-   product shipping rules. Customer tax/VAT is recalculated on the
+   product shipping rules. In parallel, `POST /v2/shipping-rates` obtains the
+   `STANDARD` service's estimated delivery dates, expected package split,
+   departure countries and per-package customs-risk flags. Product variants,
+   print placements/techniques and required options come from the server catalog.
+   The estimate and fulfillment both use white stitching for the pillow and
+   black stitching for the tote. All current catalog placements have no
+   additional print charge (checked against Printful on 2026-09-03), so pricing
+   does not upload artwork. Future paid placements require matching print files
+   in the cost estimate before enabling the product.
+   Shipping details are persisted in the quote's existing shipment JSON and
+   displayed with the affected products, including a clear unknown state when
+   Printful omits a country, date or customs assessment. Delivery dates are
+   estimates, and departure country is not a guaranteed production location.
+   The shipping-rate amount remains provider metadata; the cost estimate stays
+   the basis of the existing price calculation. Customer tax/VAT is recalculated on the
    customer-facing product subtotal plus shipping, using the destination rate
    implied by Printful's estimate. The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
 7. "Weiter zur Zahlung" re-estimates the same trusted design basket and
-   address split immediately before creating a dynamic Stripe-hosted Checkout
-   Session. A changed price must be confirmed again. Signed Stripe webhooks
+   delivery address immediately before creating a dynamic Stripe-hosted Checkout
+   Session. A changed price or shipping assessment must be reviewed and confirmed
+   again; failed shipping checks never silently reuse stale data to create a
+   payment. Customs flags currently inform the buyer and do not impose a new
+   country-blocking policy. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted
    fulfillment snapshot. Test payments are then completed by the local `mock`
    worker without making any Printful order request; the confirmation page
@@ -101,6 +118,16 @@ frozen snapshot of the word cloud.
    from the local cart and shipping draft. Other products, newer design versions
    remain intact; stale history entries cannot silently
    resume a purchased or changed cart.
+   After confirmed payment, “Erneut an eine andere Adresse bestellen” copies only
+   the purchased designs and quantities into new, unpaid basket positions. The
+   server copies the immutable order-item snapshots; retries of the same action
+   reuse those copies. Existing unrelated basket positions remain available.
+   The next shipping form starts with a blank address and requires a fresh quote
+   and payment. Reordering requires an unexpired event and the opaque confirmation
+   Session ID. Paid orders and print artifacts are never modified. Older local
+   drafts with multiple addresses are discarded; old split quotes cannot start
+   or resume Checkout through the application, while existing paid orders retain
+   their original fulfillment data.
 
 ## Languages
 
@@ -385,8 +412,8 @@ single [launch-readiness checklist](docs/launch-readiness.md).
 
 The current checkout does not use a fixed price per product. It calculates one
 customer price from Printful's live EUR estimate(s) and the catalog-wide markup
-setting above. For multiple delivery addresses, each address is estimated as
-one Printful shipment containing all products assigned to that address. All
+setting above. The single delivery address is estimated as one Printful order
+containing all selected products. All
 calculations use integer cents.
 
 Let `C` be Printful's product cost for the complete order after any Printful
@@ -633,14 +660,18 @@ to history. Palette, orientation and arrangement use native top-layer popovers
 on wide screens, and native dialogs on compact screens (also the fallback when
 Popover is unavailable). Choosers do not take space in the document layout.
 
-The initial product cloud and “Fläche optimal nutzen” share one deterministic
-rectangular spiral packer. It measures the actual selected fonts once, retains
-every current element and its styling, and scales artwork proportionally.
-Wide areas also consider packing tall elements after horizontal ones; that
-variant is used only when it fits larger. Spatial collision buckets and
-density-aware spacing bound the cost of large clouds. Existing equally good
-arrangements are retained, and rounded results are checked for a fixed point
-before use. Repeated unchanged actions do not dirty the design or reset history.
+The live cloud, initial product cloud and “Fläche optimal nutzen” share one
+deterministic free-rectangle packer. It measures the actual selected fonts,
+retains every element and its styling, and scales artwork proportionally.
+A bounded set of orders and anchors is scored for coverage, corner balance,
+emoji spacing and the largest empty region on a fixed 64×64 grid. Good corner
+coverage cannot hide a large internal hole. Clouds with ten or fewer elements
+keep compact spacing and balanced outer margins instead of stretching words
+toward all four edges. Existing equally good arrangements are retained, and
+rounded results are checked for a fixed point before use. Repeated unchanged
+actions do not dirty the design or reset history. Regression tests independently
+measure empty rectangles using box edges, including the reported dense and
+five-word examples at live and print proportions.
 
 The font picker has one custom listbox generated from `DesignFonts.FONTS`:
 the desktop dropdown and compact Font sheet reuse the same DOM nodes, font

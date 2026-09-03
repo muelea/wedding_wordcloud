@@ -10,7 +10,8 @@ const Layout = require('../public/js/design-layout');
 const Fonts = require('../src/designFonts');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
-const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, AREA_CASES } = require('./support/area-layout-cases');
+const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, GAP_WORDS, FIVE_WORDS, AREA_CASES } = require('./support/area-layout-cases');
+const { largestEmptyFraction, occupiedFraction, envelope } = require('./support/layout-space');
 
 const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
 const automaticSource = template.slice(template.indexOf('    function buildAutomaticDesign()'),
@@ -79,13 +80,42 @@ test('the reported mug uses every corner and keeps its emoji separated', () => {
   }
 });
 
-test('layout scoring prefers four occupied corners to three equally dense corners', () => {
-  const uneven = [[0, 0], [0, 75], [75, 75]].map(([x, y]) =>
-    ({ x1: x, x2: x + 25, y1: y, y2: y + 25 }));
-  const balanced = [[0, 0], [75, 0], [0, 81.25], [75, 81.25]].map(([x, y]) =>
-    ({ x1: x, x2: x + 25, y1: y, y2: y + 18.75 }));
-  assert.equal(Core.cornerCoverage(uneven, 100, 100), Core.cornerCoverage(balanced, 100, 100));
-  assert.ok(Core.layoutQuality(balanced, 100, 100).score > Core.layoutQuality(uneven, 100, 100).score);
+test('filled corners cannot outweigh a large internal hole at equal word coverage', () => {
+  const boxes = positions => positions.flatMap(x => positions.map(y =>
+    ({ x1: x, x2: x + 20, y1: y, y2: y + 20 })));
+  const hollow = boxes([0, 20, 60, 80]);
+  const balanced = boxes([0, 80 / 3, 160 / 3, 80]);
+  const area = { x1: 0, y1: 0, x2: 100, y2: 100 };
+  assert.equal(occupiedFraction(hollow, area), occupiedFraction(balanced, area));
+  assert.ok(Core.cornerCoverage(hollow, 100, 100) > Core.cornerCoverage(balanced, 100, 100));
+  assert.equal(largestEmptyFraction(hollow, area), .2);
+  assert.ok(largestEmptyFraction(balanced, area) < .07);
+  assert.ok(Core.layoutQuality(balanced, 100, 100).score > Core.layoutQuality(hollow, 100, 100).score);
+  assert.equal(Core.isLayoutBalanced(Core.layoutQuality(hollow, 100, 100), hollow.length), false);
+});
+
+test('the reported gaps stay closed in automatic print designs and repeated fill-area actions', () => {
+  for (const key of ['white-glossy-mug-duo-11oz', 'cork-back-coaster', 'matte-poster-30x40cm']) {
+    const product = getProduct(key);
+    const slot = product.layoutGeometry['fit-area'][0];
+    for (const words of [GAP_WORDS, FIVE_WORDS]) {
+      const design = automatic(product, words);
+      const label = `${key}/${words.length}`;
+      assert.equal(design.length, words.length, label);
+      assertSafe(design, product, label);
+      const boxes = design.map(bounds);
+      const area = words === FIVE_WORDS ? envelope(boxes)
+        : { x1: slot.x, y1: slot.y, x2: slot.x + slot.width, y2: slot.y + slot.height };
+      assert.ok(largestEmptyFraction(boxes, area) < (words === FIVE_WORDS ? .14 : .035),
+        label + ': no large uninterrupted empty region');
+      assert.ok(occupiedFraction(boxes, {
+        x1: slot.x + slot.width * .25, x2: slot.x + slot.width * .75,
+        y1: slot.y + slot.height * .25, y2: slot.y + slot.height * .75,
+      }) > .5, label + ': the centre participates');
+      assert.deepEqual(apply(JSON.parse(JSON.stringify(design)), product), design,
+        label + ': saved/reloaded designs remain stable');
+    }
+  }
 });
 
 test('the actual start layout survives repeated fit-area clicks on every product and orientation', () => {
