@@ -81,7 +81,7 @@ async function capture() {
               x: 100 + index * 250, y: 200, fontSize: 100, angle: index * 5, color: '#2455f5',
             }));
             const design = DesignLayout.applyLayoutAction(input, slots, editor.measureContext,
-              item => DesignFonts.cssFamily(item.fontFamily));
+              { fontFamily: item => DesignFonts.cssFamily(item.fontFamily) });
             editor.setDesign(design);
             record(`${font.key}/layout-${layoutName}`, design.length);
             assert.ok(design.length >= input.length, layoutName + ': all content retained');

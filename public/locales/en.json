@@ -773,6 +773,8 @@
   "Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.": "The current word cloud could not be loaded. Please try again.",
   "Hier weitermachen:": "Continue here:",
   "Zum Warenkorb": "View cart",
+  "Zuletzt geöffnet": "Recently opened",
+  "Warenkorb öffnen": "Open cart",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Only explicitly approved designs are saved in the cart. Their technical identifiers are retained for the session in that browser tab. Unsaved editor changes are not saved automatically. Shipping details and quantities are stored in the browser tab for up to 24 hours for recovery. This does not place an order.",
   "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "To help you return, this browser remembers the last opened word cloud for seven days. Technical identifiers of purchased designs are stored for the session in that browser tab to prevent them from reappearing in the cart when going back."
 }

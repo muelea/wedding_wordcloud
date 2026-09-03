@@ -773,6 +773,8 @@
   "Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.": "Güncel kelime bulutu yüklenemedi. Lütfen tekrar deneyin.",
   "Hier weitermachen:": "Buradan devam edin:",
   "Zum Warenkorb": "Sepete git",
+  "Zuletzt geöffnet": "Son açılan",
+  "Warenkorb öffnen": "Sepeti aç",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Sepete yalnızca açıkça onaylanan tasarımlar kaydedilir. Teknik kimlikleri ilgili tarayıcı sekmesindeki oturum boyunca saklanır. Düzenleyicideki kaydedilmemiş değişiklikler otomatik olarak kaydedilmez. Teslimat bilgileri ve adetler, geri yüklenebilmesi için tarayıcı sekmesinde en fazla 24 saat saklanır. Bu işlem sipariş oluşturmaz.",
   "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Geri dönmenizi kolaylaştırmak için bu tarayıcı son açılan kelime bulutunu yedi gün hatırlar. Satın alınan tasarımların teknik kimlikleri, geri dönüldüğünde sepette yeniden görünmelerini önlemek için ilgili tarayıcı sekmesindeki oturum boyunca saklanır."
 }

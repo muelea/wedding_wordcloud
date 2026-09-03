@@ -275,153 +275,172 @@
     return placed;
   }
 
-  // Packs one copy of every word into a rectangular print area. Unlike the
-  // square cloud above, every font size is derived from one shared multiplier:
-  // if the whole arrangement grows or shrinks, the visual size hierarchy is
-  // preserved exactly. The final uniform fit expands the result without
-  // crossing the area. A second, horizontal-only distribution pass then
-  // moves the word centres towards both side edges. It does not stretch the
-  // letters or change their sizes; because horizontal distances only grow,
-  // it also cannot introduce new collisions.
-  function layoutWordsInArea(words, width, height, measureCtx, colorFn) {
-    if (!Array.isArray(words) || !words.length || width <= 0 || height <= 0) return [];
-    const getColor = colorFn || makeColorAssigner('pastel');
-    const counts = words.map(([, count]) => count);
-    const maxCount = Math.max(...counts);
-    const minCount = Math.min(...counts);
-    const sized = words
-      .map(([word, count]) => ({
-        word,
-        weight: sizeForCount(word, count, minCount, maxCount, .24, 1),
-      }))
-      .sort((a, b) => b.weight - a.weight);
-    sized.forEach((item, index) => {
-      item.rotated = index % ROTATE_EVERY_N === ROTATE_EVERY_N - 1;
+  // One deterministic rectangular packer for both the initial cloud and the
+  // current editor design. Callers measure their own text/image/icon boxes
+  // once; all sizes then share one multiplier (no font or aspect-ratio drift).
+  function layoutBoxesInArea(boxes, width, height) {
+    if (!Array.isArray(boxes) || !boxes.length || !Number.isFinite(width) ||
+        !Number.isFinite(height) || width <= 0 || height <= 0) return [];
+    if (boxes.some(box => ![box.width, box.height, box.priority].every(Number.isFinite) ||
+        box.width <= 0 || box.height <= 0 || box.priority <= 0)) return [];
+    const sized = boxes.map((box, index) => ({ ...box, index }))
+      .sort((a, b) => b.priority - a.priority || a.index - b.index);
+    const minSide = Math.min(width, height);
+    // A fixed percentage would spend most of a dense cloud's space on gaps.
+    const collisionPadding = Math.max(2, minSide * Math.min(.01, .1 / Math.sqrt(sized.length)));
+    const steps = Math.max(3200, Math.min(9000, 1200 + sized.length * 140));
+    const spiral = Array.from({ length: steps }, (_, step) => {
+      const radius = Math.sqrt(step / (steps - 1));
+      return { x: radius * Math.cos(step * .37), y: radius * Math.sin(step * .37) };
     });
 
-    const minSide = Math.min(width, height);
-    const collisionPadding = Math.max(4, minSide * .01);
-    const steps = Math.max(3200, Math.min(9000, 1200 + sized.length * 140));
-
-    function tryFontUnit(fontUnit) {
+    function tryScale(items, scale) {
       const placed = [];
       const cx = width / 2;
       const cy = height / 2;
-
-      for (const item of sized) {
-        const fontPx = item.weight * fontUnit;
-        const textBox = measureTextBox(item.word, fontPx, measureCtx);
-        const textHalf = textBox.width / 2 + collisionPadding;
-        const fontHalf = textBox.height / 2 + collisionPadding;
-        const halfW = item.rotated ? fontHalf : textHalf;
-        const halfH = item.rotated ? textHalf : fontHalf;
+      // Spatial buckets keep dense clouds from checking every prior box at
+      // every spiral point. This changes only lookup cost, not placements.
+      const cellSize = minSide / Math.sqrt(items.length);
+      const columns = Math.ceil(width / cellSize);
+      const rows = Math.ceil(height / cellSize);
+      const cells = new Array(columns * rows);
+      const cellsFor = box => ({
+        x1: Math.max(0, Math.floor(box.x1 / cellSize)),
+        x2: Math.min(columns - 1, Math.floor(box.x2 / cellSize)),
+        y1: Math.max(0, Math.floor(box.y1 / cellSize)),
+        y2: Math.min(rows - 1, Math.floor(box.y2 / cellSize)),
+      });
+      const collides = box => {
+        const range = cellsFor(box);
+        for (let y = range.y1; y <= range.y2; y++) {
+          for (let x = range.x1; x <= range.x2; x++) {
+            if (cells[y * columns + x]?.some(other => !(box.x2 < other.x1 ||
+                box.x1 > other.x2 || box.y2 < other.y1 || box.y1 > other.y2))) return true;
+          }
+        }
+        return false;
+      };
+      for (const item of items) {
+        const halfW = item.width * scale / 2 + collisionPadding;
+        const halfH = item.height * scale / 2 + collisionPadding;
         const maxX = width / 2 - halfW;
         const maxY = height / 2 - halfH;
         if (maxX < 0 || maxY < 0) return null;
-
         let spot = null;
-        for (let step = 0; step < steps; step++) {
-          const progress = step / Math.max(1, steps - 1);
-          const radius = Math.sqrt(progress);
-          const angle = step * .37;
-          const x = cx + maxX * radius * Math.cos(angle);
-          const y = cy + maxY * radius * Math.sin(angle);
+        for (const point of spiral) {
+          const x = cx + maxX * point.x;
+          const y = cy + maxY * point.y;
           const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
-          const collides = placed.some((other) =>
-            !(box.x2 < other.x1 || box.x1 > other.x2 || box.y2 < other.y1 || box.y1 > other.y2));
-          if (!collides) {
-            spot = { x, y, halfW, halfH };
+          if (!collides(box)) {
+            spot = { ...item, x, y, scale, ...box };
             break;
           }
         }
         if (!spot) return null;
-        placed.push({
-          word: item.word,
-          fontPx,
-          rotated: item.rotated,
-          x: spot.x,
-          y: spot.y,
-          x1: spot.x - spot.halfW,
-          x2: spot.x + spot.halfW,
-          y1: spot.y - spot.halfH,
-          y2: spot.y + spot.halfH,
-          color: getColor(item.word),
-          textBox,
-        });
+        placed.push(spot);
+        const range = cellsFor(spot);
+        for (let y = range.y1; y <= range.y2; y++) {
+          for (let x = range.x1; x <= range.x2; x++) {
+            (cells[y * columns + x] ||= []).push(spot);
+          }
+        }
       }
       return placed;
     }
 
-    let best = null;
-    let low = 2;
-    let high = height * .9;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const fontUnit = (low + high) / 2;
-      const candidate = tryFontUnit(fontUnit);
-      if (candidate) {
-        best = candidate;
-        low = fontUnit;
-      } else {
-        high = fontUnit;
+    function search(items) {
+      let best = null;
+      let low = 0;
+      let high = Math.min(...items.map(item => Math.min(
+        (width - collisionPadding * 2) / item.width,
+        (height - collisionPadding * 2) / item.height
+      )));
+      for (let attempt = 0; attempt < 14; attempt++) {
+        const scale = (low + high) / 2;
+        const candidate = tryScale(items, scale);
+        if (candidate) { best = candidate; low = scale; }
+        else high = scale;
+      }
+      return best && fitAreaBoxes(best, width, height);
+    }
+
+    // Keep the original font-size-first spiral as the baseline. In wide print
+    // areas, also try tall elements last so they can flank the horizontal words
+    // instead of splitting them in the middle. Adopt only a larger result.
+    let best = search(sized);
+    if (width > height * 1.25 && sized.length <= 80) {
+      const uprightFirst = [...sized].sort((a, b) =>
+        Number(a.height > a.width * 1.5) - Number(b.height > b.width * 1.5) ||
+        b.priority - a.priority || a.index - b.index);
+      if (uprightFirst.some((item, index) => item.index !== sized[index].index)) {
+        const candidate = search(uprightFirst);
+        if (candidate && (!best || candidate[0].scale > best[0].scale * 1.005)) best = candidate;
       }
     }
-    if (!best) best = tryFontUnit(low);
-    if (!best) return [];
+    return best ? best.sort((a, b) => a.index - b.index) : [];
+  }
 
-    const bounds = best.reduce((result, item) => ({
-      x1: Math.min(result.x1, item.x1),
-      x2: Math.max(result.x2, item.x2),
-      y1: Math.min(result.y1, item.y1),
-      y2: Math.max(result.y2, item.y2),
+  function areaBounds(items, horizontalScale = 1) {
+    return items.reduce((bounds, item) => ({
+      x1: Math.min(bounds.x1, item.x * horizontalScale - item.width * item.scale / 2),
+      x2: Math.max(bounds.x2, item.x * horizontalScale + item.width * item.scale / 2),
+      y1: Math.min(bounds.y1, item.y - item.height * item.scale / 2),
+      y2: Math.max(bounds.y2, item.y + item.height * item.scale / 2),
     }), { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
-    const inset = minSide * .012;
-    const contentWidth = Math.max(1, bounds.x2 - bounds.x1);
-    const contentHeight = Math.max(1, bounds.y2 - bounds.y1);
-    const fitScale = Math.min(
-      (width - inset * 2) / contentWidth,
-      (height - inset * 2) / contentHeight
-    );
-    const sourceCx = (bounds.x1 + bounds.x2) / 2;
-    const sourceCy = (bounds.y1 + bounds.y2) / 2;
-    const fitted = best.map((item) => {
-      const x = width / 2 + (item.x - sourceCx) * fitScale;
-      const y = height / 2 + (item.y - sourceCy) * fitScale;
-      return {
-        ...item,
-        x,
-        y,
-        fontPx: item.fontPx * fitScale,
-        textBox: scaleTextBox(item.textBox, fitScale),
-        x1: width / 2 + (item.x1 - sourceCx) * fitScale,
-        x2: width / 2 + (item.x2 - sourceCx) * fitScale,
-        y1: height / 2 + (item.y1 - sourceCy) * fitScale,
-        y2: height / 2 + (item.y2 - sourceCy) * fitScale,
-      };
+  }
+
+  function fitAreaBoxes(items, width, height) {
+    const inset = Math.min(width, height) * .012;
+    const bounds = areaBounds(items);
+    const fitScale = Math.min((width - inset * 2) / (bounds.x2 - bounds.x1),
+      (height - inset * 2) / (bounds.y2 - bounds.y1));
+    const fitted = items.map(item => ({ ...item,
+      x: (item.x - (bounds.x1 + bounds.x2) / 2) * fitScale,
+      y: (item.y - (bounds.y1 + bounds.y2) / 2) * fitScale,
+      scale: item.scale * fitScale,
+    }));
+    // Widen centre spacing, never the artwork. Check the entire envelope: an
+    // interior word can be wider than the leftmost/rightmost centre's word.
+    const span = Math.max(...fitted.map(item => item.x)) - Math.min(...fitted.map(item => item.x));
+    let low = 1;
+    let high = span > 0 ? Math.max(1, (width - inset * 2) / span) : 1;
+    for (let attempt = 0; attempt < 18; attempt++) {
+      const scale = (low + high) / 2;
+      const expanded = areaBounds(fitted, scale);
+      if (expanded.x2 - expanded.x1 <= width - inset * 2) low = scale;
+      else high = scale;
+    }
+    const expanded = areaBounds(fitted, low);
+    const centerX = (expanded.x1 + expanded.x2) / 2;
+    return fitted.map(item => {
+      const x = width / 2 + item.x * low - centerX;
+      const y = height / 2 + item.y;
+      return { ...item, x, y,
+        x1: x - item.width * item.scale / 2, x2: x + item.width * item.scale / 2,
+        y1: y - item.height * item.scale / 2, y2: y + item.height * item.scale / 2 };
     });
+  }
 
-    const leftItem = fitted.reduce((left, item) => item.x1 < left.x1 ? item : left);
-    const rightItem = fitted.reduce((right, item) => item.x2 > right.x2 ? item : right);
-    const sourceSpan = rightItem.x - leftItem.x;
-    if (leftItem === rightItem || sourceSpan <= 0) return fitted;
-
-    const leftHalfWidth = (leftItem.x2 - leftItem.x1) / 2;
-    const rightHalfWidth = (rightItem.x2 - rightItem.x1) / 2;
-    const targetLeftX = inset + leftHalfWidth;
-    const targetRightX = width - inset - rightHalfWidth;
-    const horizontalScale = (targetRightX - targetLeftX) / sourceSpan;
-    if (horizontalScale <= 1) return fitted;
-
-    const horizontalOffset = targetLeftX - leftItem.x * horizontalScale;
-    return fitted.map((item) => {
-      const halfWidth = (item.x2 - item.x1) / 2;
-      const x = item.x * horizontalScale + horizontalOffset;
-      return {
-        ...item,
-        x,
-        x1: x - halfWidth,
-        x2: x + halfWidth,
-      };
+  function layoutWordsInArea(words, width, height, measureCtx, colorFn) {
+    if (!Array.isArray(words) || !words.length || width <= 0 || height <= 0) return [];
+    const getColor = colorFn || makeColorAssigner('pastel');
+    const counts = words.map(([, count]) => count);
+    const minCount = Math.min(...counts);
+    const maxCount = Math.max(...counts);
+    const sized = words.map(([word, count]) => ({ word,
+      fontPx: 1000 * sizeForCount(word, count, minCount, maxCount, .24, 1),
+    })).sort((a, b) => b.fontPx - a.fontPx);
+    const boxes = sized.map((item, index) => {
+      const rotated = index % ROTATE_EVERY_N === ROTATE_EVERY_N - 1;
+      const textBox = measureTextBox(item.word, item.fontPx, measureCtx);
+      return { ...item, rotated, textBox, color: getColor(item.word), priority: item.fontPx,
+        width: rotated ? textBox.height : textBox.width,
+        height: rotated ? textBox.width : textBox.height };
     });
+    return layoutBoxesInArea(boxes, width, height).map(item => ({ ...item,
+      fontPx: item.fontPx * item.scale,
+      textBox: scaleTextBox(item.textBox, item.scale),
+    }));
   }
 
   function escapeXML(s) {
@@ -510,6 +529,7 @@
     richTextSvg,
     layoutWords,
     layoutWordsInArea,
+    layoutBoxesInArea,
     buildSVG,
     escapeXML,
   };

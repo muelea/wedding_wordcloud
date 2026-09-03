@@ -592,6 +592,15 @@ to history. Palette, orientation and arrangement use native top-layer popovers
 on wide screens, and native dialogs on compact screens (also the fallback when
 Popover is unavailable). Choosers do not take space in the document layout.
 
+The initial product cloud and “Fläche optimal nutzen” share one deterministic
+rectangular spiral packer. It measures the actual selected fonts once, retains
+every current element and its styling, and scales artwork proportionally.
+Wide areas also consider packing tall elements after horizontal ones; that
+variant is used only when it fits larger. Spatial collision buckets and
+density-aware spacing bound the cost of large clouds. Existing equally good
+arrangements are retained, and rounded results are checked for a fixed point
+before use. Repeated unchanged actions do not dirty the design or reset history.
+
 The font picker has one custom listbox generated from `DesignFonts.FONTS`:
 the desktop dropdown and compact Font sheet reuse the same DOM nodes, font
 previews, descriptions and selection handler. The sheet shows the list directly,
@@ -620,6 +629,14 @@ zoom. Run in Chromium, Firefox and Safari; also verify actual touch, virtual
 keyboard, Tab/Shift-Tab, Escape, and resize while a panel is open. The fixture
 has no configuration-write endpoints, database or provider credentials and is
 never mounted in production. Node tests do not replace real-engine sign-off.
+
+For the reported area-layout regression, run
+`npm run test:configurator:browser -- --layout`, add `&probe=area` to the URL,
+and choose **Check repeated fit-area clicks**. This uses the reconstructed
+13-word example and checks exact design/history and dirty-state stability
+after initial loading, restoration and all five fonts in the real editor.
+`test/area-layout.test.js` also covers every product/orientation, mixed content,
+rounding edge cases and a 500-word capacity case with real font metrics.
 
 ### Automated suite
 

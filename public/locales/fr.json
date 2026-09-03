@@ -773,6 +773,8 @@
   "Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.": "Le nuage de mots actuel n’a pas pu être chargé. Veuillez réessayer.",
   "Hier weitermachen:": "Reprendre ici :",
   "Zum Warenkorb": "Voir le panier",
+  "Zuletzt geöffnet": "Ouvert récemment",
+  "Warenkorb öffnen": "Ouvrir le panier",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Seuls les designs expressément validés sont enregistrés dans le panier. Leurs identifiants techniques sont conservés pour la session dans cet onglet du navigateur. Les modifications non enregistrées dans l’éditeur ne sont pas sauvegardées automatiquement. Les coordonnées de livraison et les quantités sont conservées dans l’onglet jusqu’à 24 heures pour permettre leur restauration. Cela ne constitue pas une commande.",
   "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Pour faciliter votre retour, ce navigateur mémorise le dernier nuage de mots ouvert pendant sept jours. Les identifiants techniques des designs achetés sont conservés pour la session dans cet onglet afin qu’ils ne réapparaissent pas dans le panier lors d’un retour en arrière."
 }

@@ -773,6 +773,8 @@
   "Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.": "No se ha podido cargar la nube de palabras actual. Inténtalo de nuevo.",
   "Hier weitermachen:": "Continúa aquí:",
   "Zum Warenkorb": "Ver carrito",
+  "Zuletzt geöffnet": "Abierto recientemente",
+  "Warenkorb öffnen": "Abrir carrito",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Solo se guardan en el carrito los diseños confirmados expresamente. Sus identificadores técnicos se conservan durante la sesión en esa pestaña del navegador. Los cambios sin guardar del editor no se guardan automáticamente. Los datos de envío y las cantidades se conservan en la pestaña hasta 24 horas para recuperarlos. Esto no constituye un pedido.",
   "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Para facilitar el regreso, este navegador recuerda la última nube de palabras abierta durante siete días. Los identificadores técnicos de los diseños comprados se conservan durante la sesión en esa pestaña para evitar que reaparezcan en el carrito al volver atrás."
 }

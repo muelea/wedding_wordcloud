@@ -111,52 +111,6 @@
       first.y2 <= second.y1 || first.y1 >= second.y2);
   }
 
-  function packAtScale(items, slot, scale, measureContext, fontFamily, gap) {
-    const placed = [];
-    const centerX = slot.x + slot.width / 2;
-    const centerY = slot.y + slot.height / 2;
-    const steps = Math.max(1800, Math.min(6000, 1000 + items.length * 70));
-
-    for (const descriptor of items) {
-      const dimensions = itemDimensions(descriptor.item, scale, measureContext, fontFamily);
-      const halfWidth = dimensions.width / 2;
-      const halfHeight = dimensions.height / 2;
-      const collisionHalfWidth = halfWidth + gap;
-      const collisionHalfHeight = halfHeight + gap;
-      const maxX = slot.width / 2 - collisionHalfWidth;
-      const maxY = slot.height / 2 - collisionHalfHeight;
-      if (maxX < 0 || maxY < 0) return null;
-
-      let position = null;
-      for (let step = 0; step < steps; step += 1) {
-        const progress = step / Math.max(1, steps - 1);
-        const radius = Math.sqrt(progress);
-        const angle = step * .37 + descriptor.index * 1.7;
-        const x = centerX + maxX * radius * Math.cos(angle);
-        const y = centerY + maxY * radius * Math.sin(angle);
-        const collisionBox = {
-          x1: x - collisionHalfWidth,
-          x2: x + collisionHalfWidth,
-          y1: y - collisionHalfHeight,
-          y2: y + collisionHalfHeight,
-        };
-        if (placed.some((other) => boxesOverlap(collisionBox, other.collisionBox))) continue;
-        position = { x, y, collisionBox };
-        break;
-      }
-      if (!position) return null;
-      placed.push({
-        ...descriptor,
-        x: position.x,
-        y: position.y,
-        halfWidth,
-        halfHeight,
-        collisionBox: position.collisionBox,
-      });
-    }
-    return placed;
-  }
-
   function scaleItem(item, scale, x, y) {
     const optimized = { ...item, x: round(x), y: round(y) };
     if (item.type === 'image') {
@@ -169,40 +123,6 @@
       optimized.fontSize = round(Math.max(12, (Number(item.fontSize) || 12) * scale));
     }
     return optimized;
-  }
-
-  // Once an optimized group is safely packed, stretch only the distances
-  // between its centres towards the left and right print edges. The item
-  // dimensions do not change, and horizontal distances only increase, so this
-  // cannot create a new overlap. It prevents a sparse, short-word design from
-  // looking like a compact square in a wide print area such as a mug wrap.
-  function spreadItemsHorizontally(items, slot, measureContext, fontFamily, inset) {
-    if (items.length < 2) return items;
-    const dimensionsByItem = new Map(items.map((item) => [
-      item,
-      itemDimensions(item, 1, measureContext, fontFamily),
-    ]));
-    const leftItem = items.reduce((left, item) => (
-      item.x - dimensionsByItem.get(item).width / 2 < left.x - dimensionsByItem.get(left).width / 2
-        ? item
-        : left
-    ));
-    const rightItem = items.reduce((right, item) => (
-      item.x + dimensionsByItem.get(item).width / 2 > right.x + dimensionsByItem.get(right).width / 2
-        ? item
-        : right
-    ));
-    const sourceSpan = rightItem.x - leftItem.x;
-    if (leftItem === rightItem || sourceSpan <= 0) return items;
-
-    const leftHalfWidth = dimensionsByItem.get(leftItem).width / 2;
-    const rightHalfWidth = dimensionsByItem.get(rightItem).width / 2;
-    const targetLeftX = slot.x + inset + leftHalfWidth;
-    const targetRightX = slot.x + slot.width - inset - rightHalfWidth;
-    const scale = (targetRightX - targetLeftX) / sourceSpan;
-    if (scale <= 1) return items;
-    const offset = targetLeftX - leftItem.x * scale;
-    return items.map((item) => ({ ...item, x: round(item.x * scale + offset) }));
   }
 
   function fitItemsInSlot(items, slot, measureContext, fontFamily) {
@@ -263,73 +183,61 @@
     ));
   }
 
-  function optimizeItemsInSlot(items, slot, measureContext, fontFamily) {
+  function repackItemsInSlot(items, slot, measureContext, fontFamily) {
     if (!items.length) return [];
-    const minSide = Math.min(slot.width, slot.height);
-    const gap = Math.max(2, minSide * .008);
-    const sorted = items
-      .map((item, index) => {
-        const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
-        return { item, index, area: dimensions.width * dimensions.height };
-      })
-      .sort((first, second) => second.area - first.area || first.index - second.index);
-
-    const lowerBound = Math.max(...items.map(minimumScale));
-    const upperBound = Math.min(...items.map((item) => {
+    const boxes = items.map(item => {
       const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
-      return Math.min(
-        Math.max(0, slot.width - gap * 2) / dimensions.width,
-        Math.max(0, slot.height - gap * 2) / dimensions.height
-      );
-    }));
-    if (!Number.isFinite(upperBound) || upperBound < lowerBound) {
-      return items.map((item) => ({ ...item }));
-    }
-
-    let best = packAtScale(sorted, slot, lowerBound, measureContext, fontFamily, gap);
-    if (!best) return items.map((item) => ({ ...item }));
-    let low = lowerBound;
-    let high = upperBound;
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      const candidateScale = (low + high) / 2;
-      const candidate = packAtScale(sorted, slot, candidateScale, measureContext, fontFamily, gap);
-      if (candidate) {
-        best = candidate;
-        low = candidateScale;
-      } else {
-        high = candidateScale;
-      }
-    }
-
-    const bounds = best.reduce((result, item) => ({
-      x1: Math.min(result.x1, item.x - item.halfWidth),
-      x2: Math.max(result.x2, item.x + item.halfWidth),
-      y1: Math.min(result.y1, item.y - item.halfHeight),
-      y2: Math.max(result.y2, item.y + item.halfHeight),
-    }), { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
-    const inset = minSide * .012;
-    const contentWidth = Math.max(1, bounds.x2 - bounds.x1);
-    const contentHeight = Math.max(1, bounds.y2 - bounds.y1);
-    const fitScale = Math.min(
-      (slot.width - inset * 2) / contentWidth,
-      (slot.height - inset * 2) / contentHeight
-    );
-    const sourceCenterX = (bounds.x1 + bounds.x2) / 2;
-    const sourceCenterY = (bounds.y1 + bounds.y2) / 2;
-    const targetCenterX = slot.x + slot.width / 2;
-    const targetCenterY = slot.y + slot.height / 2;
-    const packedByIndex = new Map(best.map((item) => [item.index, item]));
-
-    const optimized = items.map((item, index) => {
-      const packed = packedByIndex.get(index);
-      return scaleItem(
-        item,
-        low * fitScale,
-        targetCenterX + (packed.x - sourceCenterX) * fitScale,
-        targetCenterY + (packed.y - sourceCenterY) * fitScale
-      );
+      return { ...dimensions, priority: item.type === 'image' || item.type === 'icon'
+        ? Math.sqrt(dimensions.width * dimensions.height) : item.fontSize };
     });
-    return spreadItemsHorizontally(optimized, slot, measureContext, fontFamily, inset);
+    const packed = WordCloudCore.layoutBoxesInArea(boxes, slot.width, slot.height);
+    if (packed.length !== items.length ||
+        packed.some((box, index) => box.scale < minimumScale(items[index]))) {
+      return items.map(item => ({ ...item }));
+    }
+
+    // The editor rounds to 0.1 print pixels. That must not make another click
+    // shuffle an already centred, full-size cloud into an equivalent layout.
+    // Keep a safe existing arrangement unless repacking makes it meaningfully
+    // larger. This also protects a manually composed, equally good design.
+    const current = items.map((item, index) => ({
+      x1: item.x - boxes[index].width / 2, x2: item.x + boxes[index].width / 2,
+      y1: item.y - boxes[index].height / 2, y2: item.y + boxes[index].height / 2,
+    }));
+    const safe = current.every((box, index) =>
+      box.x1 >= slot.x && box.x2 <= slot.x + slot.width &&
+      box.y1 >= slot.y && box.y2 <= slot.y + slot.height &&
+      current.slice(0, index).every(other => !boxesOverlap(box, other)));
+    const bounds = {
+      x1: Math.min(...current.map(box => box.x1)), x2: Math.max(...current.map(box => box.x2)),
+      y1: Math.min(...current.map(box => box.y1)), y2: Math.max(...current.map(box => box.y2)),
+    };
+    const inset = Math.min(slot.width, slot.height) * .012;
+    const centred = Math.abs((bounds.x1 + bounds.x2) / 2 - slot.x - slot.width / 2) < .5 &&
+      Math.abs((bounds.y1 + bounds.y2) / 2 - slot.y - slot.height / 2) < .5;
+    const fullSize = Math.min(
+      (slot.width - inset * 2) / (bounds.x2 - bounds.x1),
+      (slot.height - inset * 2) / (bounds.y2 - bounds.y1)
+    ) < 1.01;
+    if (safe && centred && fullSize && packed[0].scale <= 1.01) {
+      return items.map(item => ({ ...item }));
+    }
+    return items.map((item, index) => scaleItem(item, packed[index].scale,
+      slot.x + packed[index].x, slot.y + packed[index].y));
+  }
+
+  function optimizeItemsInSlot(items, slot, measureContext, fontFamily) {
+    // Round-trip through the same 0.1px representation as Fabric/JSON before
+    // accepting a layout. Tiny metric rounding can change a spiral's first
+    // free gap. Return only a fixed point, so a second click cannot improve or
+    // reshuffle the result. A bounded failure leaves the source untouched.
+    let current = items;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const next = repackItemsInSlot(current, slot, measureContext, fontFamily);
+      if (JSON.stringify(next) === JSON.stringify(current)) return next;
+      current = next;
+    }
+    return items.map(item => ({ ...item }));
   }
 
   function optimizeDesign(design, slots, measureContext, options = {}) {

@@ -12,6 +12,22 @@ function storage() {
     setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) };
 }
 const template = fs.readFileSync(path.join(__dirname, '../views/configure.ejs'), 'utf8');
+
+test('checkout actions keep only errors visible and use quiet idle and hover states', () => {
+  assert.doesNotMatch(template, /cart-action-hint|save-status|Nur ausdrücklich übernommene Designs|Design im Warenkorb gespeichert/);
+  assert.match(template, /\.primary-button:disabled\s*\{[^}]*cursor:\s*default/);
+  assert.match(template, /\.primary-button\.ww-is-busy:disabled\s*\{[^}]*cursor:\s*wait/);
+  const secondaryHover = template.match(/\.secondary-button:hover:not\(:disabled\)\s*\{([^}]*)\}/)?.[1] || '';
+  assert.match(secondaryHover, /background:/);
+  assert.doesNotMatch(secondaryHover, /border(?:-color)?:/);
+  assert.match(template, /\.secondary-button:focus\s*\{[^}]*outline:\s*none/);
+  const secondaryFocus = template.match(/\.secondary-button:focus-visible\s*\{([^}]*)\}/)?.[1] || '';
+  assert.match(secondaryFocus, /background:/);
+  assert.doesNotMatch(secondaryFocus, /border|outline|box-shadow/);
+  assert.doesNotMatch(template, /id="leave-design-cancel"[^>]*autofocus/);
+  assert.match(template, /leaveDialog\.showModal\(\);\s*leaveTitle\.focus/);
+});
+
 function pageFunction(name) {
   const start = template.search(new RegExp('    (?:async )?function ' + name + '\\('));
   assert.notEqual(start, -1, name);
@@ -112,9 +128,11 @@ test('empty-cart dialog offers current-design confirmation and no impossible dis
   page.leaveDescription = {};
   page.leaveSaveButton = {};
   page.leaveDiscardButton = {};
+  page.leaveTitle = { focus: () => { page.focusedLeaveElement = 'title'; } };
   page.leaveDialog = { addEventListener: (_, listener) => { close = listener; }, showModal() {} };
   vm.runInContext(pageFunction('askBeforeLeaving'), page);
   const choice = page.askBeforeLeaving({ shipping: true });
+  assert.equal(page.focusedLeaveElement, 'title');
   assert.equal(page.leaveDiscardButton.hidden, true);
   assert.match(page.leaveDescription.textContent, /Warenkorb ist noch leer/);
   page.leaveDialog.returnValue = 'cancel'; close();

@@ -2,8 +2,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 const Journey = require('../public/js/site-journey');
+const landingTemplate = fs.readFileSync(path.join(__dirname, '../views/landing.ejs'), 'utf8');
+
+test('Home gives the remembered journey a clear unboxed re-entry hierarchy', () => {
+  assert.match(landingTemplate, /class="resume-kicker">Zuletzt geöffnet</);
+  assert.match(landingTemplate, /class="resume-title" data-resume-title/);
+  assert.match(landingTemplate, /resume-link resume-link-primary[^>]*data-resume-cloud/);
+  assert.match(landingTemplate, /resume-link resume-link-secondary[^>]*data-resume-design/);
+  assert.match(landingTemplate, /Warenkorb öffnen/);
+  const resumeStyle = landingTemplate.match(/#resume-journey\s*\{([^}]*)\}/)?.[1] || '';
+  assert.doesNotMatch(resumeStyle, /background|border|box-shadow/);
+});
 function storage() { const values = new Map(); return {
   getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key),
 }; }

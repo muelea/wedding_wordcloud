@@ -150,12 +150,59 @@
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
     #resume-journey[hidden], #resume-journey a[hidden] { display: none; }
-    #resume-journey { margin-top: 24px; color: var(--muted); font-size: 14px; }
-    #resume-journey p { margin: 0 0 8px; }
-    #resume-journey strong { color: var(--ink); font-weight: 500; }
-    .resume-links { display: flex; flex-wrap: wrap; gap: 10px 24px; }
-    .resume-links a { color: var(--berry); text-underline-offset: 4px; padding: 8px 0; }
-    .resume-links a:hover { color: var(--ink); }
+    #resume-journey {
+      position: relative;
+      max-width: 460px;
+      margin-top: 30px;
+      padding: 3px 0 3px 21px;
+      text-align: left;
+    }
+    #resume-journey::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 2px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--champagne), var(--sage-deep));
+    }
+    .resume-kicker {
+      margin: 0;
+      color: var(--sage-deep);
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .resume-title {
+      display: block;
+      margin-top: 5px;
+      overflow: hidden;
+      color: var(--ink);
+      font: 500 1.45rem/1.25 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
+      letter-spacing: -.015em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .resume-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+    .resume-link {
+      min-height: 44px;
+      padding: 10px 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .resume-link:hover { transform: translateY(-1px); }
+    .resume-link:focus-visible { outline: 3px solid rgba(156,28,76,.2); outline-offset: 2px; }
+    .resume-link-primary { background: var(--sage-deep); color: #fff; box-shadow: 0 6px 15px rgba(156,28,76,.14); }
+    .resume-link-primary:hover { background: var(--ink); box-shadow: 0 9px 20px rgba(64,15,38,.16); }
+    .resume-link-secondary { border-color: var(--gold-line); background: transparent; color: var(--ink); }
+    .resume-link-secondary:hover { background: rgba(193,146,47,.07); border-color: rgba(193,146,47,.38); }
     .trust { margin-top: 26px; display: flex; align-items: center; gap: 9px; }
     .trust + .trust { margin-top: 10px; }
     .trust-heart { width: 18px; height: auto; color: var(--coral); transform: rotate(-6deg); }
@@ -363,6 +410,7 @@
       .hero-copy .eyebrow { justify-content: center; }
       .lead { margin-inline: auto; }
       .hero-actions, .trust { justify-content: center; }
+      #resume-journey { margin-inline: auto; }
       .reel { padding: 34px 22px 30px; }
       .cloud { margin-bottom: 6px; }
       section { padding: 72px 0; }
@@ -394,6 +442,8 @@
       #site-header .landing-header-actions { margin-left: auto; }
       #site-header .landing-header-actions .landing-menu-toggle { width: var(--ww-touch-target); }
       #site-header.landing-menu-open .landing-section-links { right: max(16px, var(--ww-safe-right)); }
+      .resume-links { display: grid; }
+      .resume-link { width: 100%; }
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -435,10 +485,11 @@
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
           </div>
           <aside id="resume-journey" hidden aria-label="Hier weitermachen">
-            <p><span>Hier weitermachen:</span> <strong data-resume-title data-i18n-ignore></strong></p>
+            <p class="resume-kicker">Zuletzt geöffnet</p>
+            <strong class="resume-title" data-resume-title data-i18n-ignore></strong>
             <div class="resume-links">
-              <a data-resume-cloud href="/">Zur Wortwolke</a>
-              <a data-resume-design href="/">Zum Warenkorb</a>
+              <a class="resume-link resume-link-primary" data-resume-cloud href="/">Zur Wortwolke <span aria-hidden="true">→</span></a>
+              <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
             </div>
           </aside>
           <div class="trust">

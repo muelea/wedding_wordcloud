@@ -1331,7 +1331,8 @@
       transition: transform .2s, border-color .2s, background .2s, box-shadow .2s, opacity .2s;
     }
     .primary-button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(64,15,38,.17); }
-    .primary-button:disabled { cursor: wait; opacity: .6; transform: none; }
+    .primary-button:disabled { cursor: default; opacity: .6; transform: none; }
+    .primary-button.ww-is-busy:disabled { cursor: wait; }
     .order-box {
       margin-top: 0;
       padding: 16px 18px;
@@ -1445,8 +1446,6 @@
     #leave-design-discard[hidden] { display: none; }
     #leave-design-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
     #leave-design-dialog .config-panel-foot button { min-width: 0; flex: 1 1 160px; }
-    .cart-help { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-    .cart-help:empty { display: none; }
     .secondary-button {
       width: auto;
       min-width: 210px;
@@ -1461,7 +1460,9 @@
       font-weight: 600;
       transition: border-color .2s, background .2s, color .2s;
     }
-    .secondary-button:hover { border-color: rgba(123, 70, 82, .12); background: rgba(123, 70, 82, .055); color: var(--ink); }
+    .secondary-button:hover:not(:disabled) { background: rgba(123, 70, 82, .055); color: var(--ink); }
+    .secondary-button:focus { outline: none; }
+    .secondary-button:focus-visible { background: rgba(123, 70, 82, .055); color: var(--ink); }
     .secondary-button:disabled { cursor: wait; opacity: .6; }
     .order-actions .continue-button {
       min-width: 190px;
@@ -1836,8 +1837,6 @@
             <button class="primary-button" id="save-design" type="button">In den Warenkorb</button>
             <button class="primary-button continue-button" id="continue-order" type="button">Zur Lieferadresse <span aria-hidden="true">→</span></button>
           </div>
-          <p class="cart-help" id="cart-action-hint">Nur ausdrücklich übernommene Designs werden im Warenkorb gespeichert. Noch keine Bestellung.</p>
-          <p class="cart-help" id="save-status" role="status" aria-live="polite"></p>
           <p class="error-text" id="error-text" aria-live="polite"></p>
           <button class="secondary-button" id="retry-configurator" type="button" hidden>Konfigurator erneut laden</button>
         </section>
@@ -1846,10 +1845,10 @@
   </main>
 
   <dialog class="config-panel" id="leave-design-dialog" aria-labelledby="leave-design-title" aria-describedby="leave-design-description">
-    <div class="config-panel-head"><h2 id="leave-design-title">Design übernehmen?</h2></div>
+    <div class="config-panel-head"><h2 id="leave-design-title" tabindex="-1">Design übernehmen?</h2></div>
     <div class="config-panel-body"><p id="leave-design-description"></p></div>
     <div class="config-panel-foot">
-      <button class="secondary-button" id="leave-design-cancel" type="button" autofocus>Weiter gestalten</button>
+      <button class="secondary-button" id="leave-design-cancel" type="button">Weiter gestalten</button>
       <button class="secondary-button" id="leave-design-discard" type="button">Änderungen verwerfen und weiter</button>
       <button class="primary-button" id="leave-design-save" type="button">In den Warenkorb und weiter</button>
     </div>
@@ -2011,8 +2010,8 @@
     const designAnotherButton = document.getElementById('design-another');
     const continueOrderButton = document.getElementById('continue-order');
     const saveDesignButton = document.getElementById('save-design');
-    const saveStatus = document.getElementById('save-status');
     const leaveDialog = document.getElementById('leave-design-dialog');
+    const leaveTitle = document.getElementById('leave-design-title');
     const leaveDescription = document.getElementById('leave-design-description');
     const leaveSaveButton = document.getElementById('leave-design-save');
     const leaveDiscardButton = document.getElementById('leave-design-discard');
@@ -2075,9 +2074,6 @@
       setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
       continueOrderButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
-      setText(saveStatus, currentDesignNeedsSave
-        ? 'Dieses Design enthält ungesicherte Änderungen.'
-        : 'Design im Warenkorb gespeichert. Noch keine Bestellung.');
     }
 
     function hasUnsavedDesign() {
@@ -2097,6 +2093,7 @@
       return new Promise((resolve) => {
         leaveDialog.addEventListener('close', () => resolve(leaveDialog.returnValue), { once: true });
         leaveDialog.showModal();
+        leaveTitle.focus({ preventScroll: true });
       });
     }
 
@@ -2542,7 +2539,11 @@
           });
         });
       });
-      return design;
+      return slots.some(slot => slot.optimize)
+        ? DesignLayout.optimizeDesign(design, slots, measurementContext, {
+          fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
+        })
+        : design;
     }
 
     function cloneDesign(design) {
@@ -3316,13 +3317,20 @@
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const nextStates = new Map();
+      let changed = false;
       for (const surface of productSurfaces()) {
         const currentDesign = surfaceStates.get(surface.key)?.design || [];
         const design = DesignLayout.applyLayoutAction(currentDesign, slots, measurementContext, {
           fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
         });
-        nextStates.set(surface.key, cloneEditorState({ design }, false));
+        if (JSON.stringify(design) === JSON.stringify(currentDesign)) {
+          nextStates.set(surface.key, surfaceStates.get(surface.key));
+        } else {
+          changed = true;
+          nextStates.set(surface.key, cloneEditorState({ design }, false));
+        }
       }
+      if (!changed) return false;
       surfaceStates = nextStates;
       mugEditor.setState(surfaceStates.get(activeSurface));
       updateSurfaceControlSelection();
@@ -3396,8 +3404,8 @@
     function activatePlacement(layout) {
       if (!layout) return;
       closeToolbarMenus();
+      if (!applyPlacementToCurrentDesign(layout.key)) return;
       markDirty();
-      applyPlacementToCurrentDesign(layout.key);
       renderAll();
     }
 
