@@ -42,6 +42,7 @@ function harness(extra = {}) {
   const context = vm.createContext({
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, console: { warn() {} },
     WolkenworteConfiguratorSession: Session, sessionStorage: local, cart,
+    CloudLimits: require('../public/js/cloud-limits'),
     slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' },
     words: [['sonne', 1]], liveWords: [['sonne', 1], ['neu', 1]],
     selectedOrientation: 'default', selectedTheme: 'confetti',

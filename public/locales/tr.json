@@ -412,7 +412,6 @@
   "Steuern und MwSt.": "Vergiler ve KDV",
   "Gesamtpreis": "Toplam",
   "Auswählen": "Seç",
-  "Suche löschen": "Aramayı temizle",
   "Vollständiger Name": "Ad soyad",
   "Straße und Hausnummer": "Sokak ve kapı numarası",
   "Adresszusatz": "Adres satırı 2",
@@ -525,7 +524,6 @@
   "Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.": "Fiyatın süresi doldu. Lütfen toplamı yeniden hesaplayın.",
   "Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.": "Ödeme sayfası hazırlanamadı. Lütfen tekrar deneyin.",
   "Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.": "Önce teslimat adresi sayfasında güncel fiyatı hesaplayın.",
-  "Link kopiert ✓": "Bağlantı kopyalandı ✓",
   "{{count}} Elemente": "{{count}} öğe",
   "{{count}} Elemente dupliziert": "{{count}} öğe çoğaltıldı",
   "Motiv dupliziert": "Motif çoğaltıldı",
@@ -666,7 +664,6 @@
   "Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN wird nicht im Browser gespeichert.": "Oluşturan cihazın tek seferlik kurulum bildirimini gösterebilmesi için Session Storage’da yalnızca işlevsel işaretler de saklanır. Seçilen dil işlevsel bir çerezde saklanır; sepet taslakları, sonraki sayfa görüntülemelerinde ve yapılandırma ile teslimat adresi arasında geçiş yaparken korunmaları için yerel olarak saklanır. Yönetici PIN’i tarayıcıda saklanmaz.",
   "Erinnerungsstücke": "Hatıralar",
   "Eure Erinnerung": "Hatıranız",
-  "Link kopieren": "Bağlantıyı kopyala",
   "Neue Runde starten?": "Yeni bir tur başlatılsın mı?",
   "Die aktuellen Wörter werden archiviert. Anschließend beginnt eure Wortwolke wieder leer.": "Mevcut kelimeler arşivlenecek. Ardından kelime bulutunuz yeniden boş başlayacak.",
   "Verbindung fehlgeschlagen. Bitte versucht es erneut.": "Bağlantı başarısız oldu. Lütfen tekrar deneyin.",
@@ -781,5 +778,13 @@
   "Zuletzt geöffnet": "Son açılan",
   "Warenkorb öffnen": "Sepeti aç",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Sepete yalnızca açıkça onaylanan tasarımlar kaydedilir. Teknik kimlikleri ilgili tarayıcı sekmesindeki oturum boyunca saklanır. Düzenleyicideki kaydedilmemiş değişiklikler otomatik olarak kaydedilmez. Teslimat bilgileri ve adetler, geri yüklenebilmesi için tarayıcı sekmesinde en fazla 24 saat saklanır. Bu işlem sipariş oluşturmaz.",
-  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Geri dönmenizi kolaylaştırmak için bu tarayıcı son açılan kelime bulutunu yedi gün hatırlar. Satın alınan tasarımların teknik kimlikleri, geri dönüldüğünde sepette yeniden görünmelerini önlemek için ilgili tarayıcı sekmesindeki oturum boyunca saklanır."
+  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Geri dönmenizi kolaylaştırmak için bu tarayıcı son açılan kelime bulutunu yedi gün hatırlar. Satın alınan tasarımların teknik kimlikleri, geri dönüldüğünde sepette yeniden görünmelerini önlemek için ilgili tarayıcı sekmesindeki oturum boyunca saklanır.",
+  "Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.": "Bu tarayıcıdan bu kelime bulutuna zaten {{count}} katkı eklediniz.",
+  "Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.": "Bu bulutta zaten {{count}} farklı kelime var. Mevcut kelimeleri desteklemeye devam edebilirsiniz.",
+  "Diese Wortwolke hat insgesamt {{count}} Beiträge erreicht.": "Bu kelime bulutu toplam {{count}} katkıya ulaştı.",
+  "Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.": "Kelime bulutu düzenlenemedi. Lütfen sayfayı yeniden yükleyin.",
+  "Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.": "Her baskı alanına en fazla {{count}} öğe eklenebilir. Önce bazı öğeleri kaldırın.",
+  "Auf euren Druckflächen sind {{count}} Texte sehr klein (kleinste Schrift: {{size}} pt). Vergrößert die Schrift, wählt ein größeres Produkt oder reduziert die Texte im Druckdesign. Die Live-Wortwolke bleibt vollständig.": "Baskı alanlarınızda {{count}} metin çok küçük (en küçük yazı: {{size}} pt). Yazıyı büyütün, daha büyük bir ürün seçin veya baskı tasarımındaki metinleri azaltın. Canlı kelime bulutu eksiksiz kalır.",
+  "Auf euren Druckflächen sind {{count}} Texte klein (kleinste Schrift: {{size}} pt). Prüft die Lesbarkeit; ein größeres Produkt bietet mehr Platz.": "Baskı alanlarınızda {{count}} metin küçük (en küçük yazı: {{size}} pt). Okunabilirliği kontrol edin; daha büyük bir ürün daha fazla alan sunar.",
+  "Wortwolke mit {{count}} verschiedenen Wörtern": "{{count}} farklı kelime içeren kelime bulutu"
 }

@@ -4,7 +4,8 @@
   const MAX_EDITOR_SCALE = .5;
   const MAX_EDITOR_DIMENSION = 1536;
   const DEFAULT_PRINT_MARGIN = 24;
-  const MIN_PRINT_FONT_SIZE = 12;
+  const MIN_PRINT_FONT_SIZE = root.CloudLimits?.MIN_PRINT_FONT_SIZE || 1;
+  const MAX_DESIGN_ELEMENTS = root.CloudLimits?.MAX_DESIGN_ELEMENTS || 1200;
   const MIN_PRINT_ICON_SIZE = 48;
   const MIN_PRINT_IMAGE_SIZE = 24;
   const MAX_UPLOAD_FILE_BYTES = 15 * 1024 * 1024;
@@ -1332,7 +1333,15 @@
       this.redoButton.disabled = this.historyIndex >= this.history.length - 1;
     }
 
+    canAddElements(count = 1) {
+      if (this.canvas.getObjects().length + count <= MAX_DESIGN_ELEMENTS) return true;
+      this.setFeedback('Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.',
+        { count: MAX_DESIGN_ELEMENTS });
+      return false;
+    }
+
     addWord() {
+      if (!this.canAddElements()) return;
       this.closeIconPicker();
       const color = this.palette[this.canvas.getObjects().length % this.palette.length];
       const object = this.makeObject({
@@ -1366,6 +1375,7 @@
       }
       const emoji = runs[0].text;
       await root.WolkenworteEmoji.preloadTexts([emoji]);
+      if (!this.canAddElements()) return;
       this.closeIconPicker();
       this.closeFontPicker();
       const color = this.palette[this.canvas.getObjects().length % this.palette.length];
@@ -1394,6 +1404,7 @@
     }
 
     addIcon(iconId) {
+      if (!this.canAddElements()) return;
       const definition = root.MugIcons.get(iconId);
       if (!definition) return;
       const color = this.palette[this.canvas.getObjects().length % this.palette.length];
@@ -1424,6 +1435,7 @@
       this.closeIconPicker();
       const upload = await this.normalizedImageUpload(file);
       await this.loadImageSource(upload.dataUrl);
+      if (!this.canAddElements()) return;
       const availableWidth = this.width - this.printMargin * 2;
       const availableHeight = this.height - this.printMargin * 2;
       const maximumScale = Math.min(
@@ -1481,6 +1493,7 @@
     }
 
     duplicateDesignItems(designs) {
+      if (!this.canAddElements(designs.length)) return [];
       const copies = designs.map((design) => {
         const nextDesign = { ...design };
         nextDesign.id = this.nextId(
@@ -1506,7 +1519,7 @@
       if (!active) return;
       const selected = this.selectedObjects(active);
       const designs = selected.map((object) => this.serializeObject(object));
-      this.duplicateDesignItems(designs);
+      if (!this.duplicateDesignItems(designs).length) return;
       this.setFeedback(selected.length > 1
         ? '{{count}} Elemente dupliziert'
         : '{{item}} dupliziert', { count: selected.length, item: translate(this.objectKindLabel(active)) });
@@ -1526,6 +1539,7 @@
     pasteClipboard() {
       if (!Array.isArray(this.clipboard) || !this.clipboard.length) return false;
       const copies = this.duplicateDesignItems(this.clipboard.map((item) => ({ ...item })));
+      if (!copies.length) return false;
       this.clipboard = copies.map((copy) => ({ ...this.serializeObject(copy) }));
       this.setFeedback(copies.length > 1
         ? '{{count}} Elemente eingefügt'

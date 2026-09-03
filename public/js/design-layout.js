@@ -4,11 +4,16 @@
   const wordCloudCore = typeof module === 'object' && module.exports
     ? require('./wordcloud-core.js')
     : root.WordCloudCore;
-  const api = factory(wordCloudCore);
+  const cloudLimits = typeof module === 'object' && module.exports
+    ? require('./cloud-limits.js')
+    : root.CloudLimits;
+  const api = factory(wordCloudCore, cloudLimits);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.DesignLayout = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore) {
+})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore, CloudLimits) {
   'use strict';
+
+  const MIN_PRINT_FONT_SIZE = CloudLimits.MIN_PRINT_FONT_SIZE;
 
   function round(value) {
     return Math.round(value * 10) / 10;
@@ -108,7 +113,7 @@
       return 24 / Math.max(1, Math.min(Number(item.width) || 24, Number(item.height) || 24));
     }
     if (item.type === 'icon') return 48 / Math.max(1, Number(item.size) || 48);
-    return 12 / Math.max(1, Number(item.fontSize) || 12);
+    return MIN_PRINT_FONT_SIZE / Math.max(1, Number(item.fontSize) || 12);
   }
 
   function boxesOverlap(first, second) {
@@ -125,7 +130,8 @@
     } else if (item.type === 'icon') {
       optimized.size = round(Math.max(48, (Number(item.size) || 48) * scale));
     } else {
-      optimized.fontSize = round(Math.max(12, (Number(item.fontSize) || 12) * scale));
+      optimized.fontSize = Math.max(MIN_PRINT_FONT_SIZE,
+        Math.floor((Number(item.fontSize) || 12) * scale * 10) / 10);
     }
     return optimized;
   }
@@ -195,12 +201,6 @@
       return { ...dimensions, priority: item.type === 'image' || item.type === 'icon'
         ? Math.sqrt(dimensions.width * dimensions.height) : item.fontSize };
     });
-    const packed = WordCloudCore.layoutBoxesInArea(boxes, slot.width, slot.height);
-    if (packed.length !== items.length ||
-        packed.some((box, index) => box.scale < minimumScale(items[index]))) {
-      return items.map(item => ({ ...item }));
-    }
-
     // The editor rounds to 0.1 print pixels. That must not make another click
     // shuffle an already centred, full-size cloud into an equivalent layout.
     // Keep a safe existing arrangement unless repacking makes it meaningfully
@@ -224,7 +224,23 @@
       (slot.width - inset * 2) / (bounds.x2 - bounds.x1),
       (slot.height - inset * 2) / (bounds.y2 - bounds.y1)
     ) < 1.01;
-    if (safe && centred && fullSize && packed[0].scale <= 1.01) {
+    const currentCoverage = WordCloudCore.cornerCoverage(current.map(box => ({
+      x1: box.x1 - slot.x, x2: box.x2 - slot.x,
+      y1: box.y1 - slot.y, y2: box.y2 - slot.y,
+    })), slot.width, slot.height);
+    // A complete, centred rectangle with occupied corners already satisfies
+    // fit-area. Avoid an expensive repack on every click or JSON round-trip.
+    if (safe && centred && fullSize && currentCoverage >= .45) {
+      return items.map(item => ({ ...item }));
+    }
+    const packed = WordCloudCore.layoutBoxesInArea(boxes, slot.width, slot.height);
+    if (packed.length !== items.length ||
+        packed.some((box, index) => box.scale < minimumScale(items[index]))) {
+      return items.map(item => ({ ...item }));
+    }
+    const packedCoverage = WordCloudCore.cornerCoverage(packed, slot.width, slot.height);
+    if (safe && centred && fullSize && packed[0].scale <= 1.01 &&
+        (packed[0].scale < .98 || currentCoverage >= packedCoverage - .025)) {
       return items.map(item => ({ ...item }));
     }
     return items.map((item, index) => scaleItem(item, packed[index].scale,
@@ -233,8 +249,8 @@
 
   function optimizeItemsInSlot(items, slot, measureContext, fontFamily) {
     // Round-trip through the same 0.1px representation as Fabric/JSON before
-    // accepting a layout. Tiny metric rounding can change a spiral's first
-    // free gap. Return only a fixed point, so a second click cannot improve or
+    // accepting a layout. Tiny metric rounding can change which free rectangle
+    // fits best. Return only a fixed point, so a second click cannot improve or
     // reshuffle the result. A bounded failure leaves the source untouched.
     let current = items;
     for (let attempt = 0; attempt < 4; attempt++) {

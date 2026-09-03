@@ -25,6 +25,7 @@ function automatic(product, words) {
     document: { createElement: () => createCanvas(1, 1) }, selectedTheme: 'konfetti',
     getPalette: () => ({ colors: ['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8'] }),
     makePaletteAssigner: Core.makePaletteAssigner,
+    CloudLimits: require('../public/js/cloud-limits'),
   })));
 }
 
@@ -106,6 +107,7 @@ test('no-op placement keeps the saved state and undo history untouched', () => {
     productView: () => product, productSurfaces: () => [{ key: 'default' }],
     surfaceStates: new Map([['default', { design, history: ['untouched'], historyIndex: 0 }]]),
     document: { createElement: () => createCanvas(1, 1) }, DesignLayout: Layout, DesignFonts: Fonts,
+    CloudLimits: require('../public/js/cloud-limits'),
   });
   assert.equal(result, false);
   assert.equal(writes, 0);
@@ -117,8 +119,21 @@ test('a capacity-sized cloud remains complete, printable and repeatable', () => 
   const words = Array.from({ length: 500 }, (_, index) => ['wort' + index, 1 + index * 7 % 20]);
   const initial = automatic(product, words);
   assert.equal(initial.length, 500);
-  assert.ok(initial.every(item => item.fontSize >= 12), 'no later Fabric minimum-size clamping');
+  assert.ok(initial.every(item => item.fontSize >= 1), 'no later Fabric minimum-size clamping');
   assertSafe(initial, product, 'capacity');
+  assert.deepEqual(apply(initial, product), initial);
+});
+
+test('500 long words fit a small print surface without minimum-size inflation or dropped text', () => {
+  const product = getProduct('cork-back-coaster');
+  const words = Array.from({ length: 500 }, (_, index) => [
+    'w'.repeat(27) + String(index).padStart(3, '0'), 1 + index * 7 % 20,
+  ]);
+  const initial = automatic(product, words);
+  assert.equal(initial.length, words.length);
+  assert.ok(initial.some(item => item.fontSize < 12), 'the old technical floor would distort this design');
+  assert.ok(initial.every(item => item.fontSize >= 1));
+  assertSafe(initial, product, 'long words on a coaster');
   assert.deepEqual(apply(initial, product), initial);
 });
 

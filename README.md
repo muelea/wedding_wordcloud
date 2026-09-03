@@ -167,6 +167,25 @@ guest can decrement only a word that this same browser session submitted. The
 API deliberately gives the same `not_found` response for an unknown receipt
 and another guest's receipt.
 
+An event accepts up to 500 different words and 5,000 active contributions,
+including up to 500 from one browser session. Existing words can still receive
+contributions after the different-word limit is reached. Short-term rate limits
+remain independent. The same 500-word capacity applies to approved configuration
+snapshots; each print surface allows 1,200 design elements for repeated clouds,
+motifs and personal additions. These limits live in `public/js/cloud-limits.js`.
+
+Live clouds use the available rectangular container and reflow on resize or
+presentation-mode changes. A worker packs measured boxes while keeping one
+active request and one latest pending snapshot; removal/reset fences stale
+results. Print layouts use the same rectangular packing geometry, preserve all
+words and use the product's safe area. Already full, safe arrangements remain
+stable on repeated optimization. Fonts retain their proportions and weights.
+Type smaller than 8 pt shows a readability hint; below 6 pt the hint is stronger.
+These are provisional product guidance thresholds, calculated from actual print
+size and product DPI, to be calibrated with physical samples. The 1-pixel
+technical font floor is not a readability guarantee. Small type never silently
+removes words from the live cloud or changes an approved print file.
+
 The authenticated 15-second maintenance runner invokes race-safe cleanup
 primitives in bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
 so due work wakes a stopped Machine; completion is recorded separately from

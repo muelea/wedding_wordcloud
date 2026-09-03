@@ -143,7 +143,7 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
           'event_contribution_limit',
           'unique_word_limit',
         ]).has(error?.code);
-        socket.emit('word-error', { error: limited ? 'limit_reached' : 'server_error' });
+        socket.emit('word-error', { error: limited ? error.code : 'server_error' });
         return;
       }
 

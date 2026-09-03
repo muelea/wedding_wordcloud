@@ -476,7 +476,6 @@
   "Steuern und MwSt.": "Taxes and VAT",
   "Gesamtpreis": "Total",
   "Auswählen": "Select",
-  "Suche löschen": "Clear search",
   "Vollständiger Name": "Full name",
   "Straße und Hausnummer": "Street and house number",
   "Adresszusatz": "Address line 2",
@@ -525,7 +524,6 @@
   "Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.": "The price has expired. Please calculate the total again.",
   "Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.": "The payment page could not be prepared. Please try again.",
   "Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.": "Please calculate the current price on the shipping-address page first.",
-  "Link kopiert ✓": "Link copied ✓",
   "{{count}} Elemente": "{{count}} elements",
   "{{count}} Elemente dupliziert": "{{count}} elements duplicated",
   "Motiv dupliziert": "Motif duplicated",
@@ -666,7 +664,6 @@
   "Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN wird nicht im Browser gespeichert.": "Purely functional flags are also stored in Session Storage so that the creating device can show the one-time setup notice. The selected language is stored in a functional cookie; basket drafts are stored locally so they remain available on later page views and when moving between configuration and the shipping address. The admin PIN is not stored in the browser.",
   "Erinnerungsstücke": "Keepsakes",
   "Eure Erinnerung": "Your keepsake",
-  "Link kopieren": "Copy link",
   "Neue Runde starten?": "Start a new round?",
   "Die aktuellen Wörter werden archiviert. Anschließend beginnt eure Wortwolke wieder leer.": "The current words will be archived. Your word cloud will then start empty again.",
   "Verbindung fehlgeschlagen. Bitte versucht es erneut.": "Connection failed. Please try again.",
@@ -781,5 +778,13 @@
   "Zuletzt geöffnet": "Recently opened",
   "Warenkorb öffnen": "Open cart",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Only explicitly approved designs are saved in the cart. Their technical identifiers are retained for the session in that browser tab. Unsaved editor changes are not saved automatically. Shipping details and quantities are stored in the browser tab for up to 24 hours for recovery. This does not place an order.",
-  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "To help you return, this browser remembers the last opened word cloud for seven days. Technical identifiers of purchased designs are stored for the session in that browser tab to prevent them from reappearing in the cart when going back."
+  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "To help you return, this browser remembers the last opened word cloud for seven days. Technical identifiers of purchased designs are stored for the session in that browser tab to prevent them from reappearing in the cart when going back.",
+  "Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.": "You have already added {{count}} contributions to this word cloud in this browser.",
+  "Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.": "This cloud already contains {{count}} different words. You can still support existing words.",
+  "Diese Wortwolke hat insgesamt {{count}} Beiträge erreicht.": "This word cloud has reached {{count}} contributions in total.",
+  "Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.": "The word cloud could not be arranged. Please reload the page.",
+  "Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.": "Each print area supports up to {{count}} elements. Please remove some elements first.",
+  "Auf euren Druckflächen sind {{count}} Texte sehr klein (kleinste Schrift: {{size}} pt). Vergrößert die Schrift, wählt ein größeres Produkt oder reduziert die Texte im Druckdesign. Die Live-Wortwolke bleibt vollständig.": "{{count}} text elements on your print areas are very small (smallest type: {{size}} pt). Enlarge the type, choose a larger product or reduce the text in the print design. The live word cloud stays complete.",
+  "Auf euren Druckflächen sind {{count}} Texte klein (kleinste Schrift: {{size}} pt). Prüft die Lesbarkeit; ein größeres Produkt bietet mehr Platz.": "{{count}} text elements on your print areas are small (smallest type: {{size}} pt). Check readability; a larger product provides more space.",
+  "Wortwolke mit {{count}} verschiedenen Wörtern": "Word cloud with {{count}} different words"
 }

@@ -65,9 +65,10 @@ test('event titles use the general title contract and a data-preserving migratio
 test('live word cloud uses a font-ready HiDPI backing canvas', () => {
   assert.match(display, /MAX_CANVAS_PIXEL_RATIO = 3/);
   assert.match(display, /window\.devicePixelRatio/);
-  assert.match(display, /backingSide = Math\.max\(1, Math\.round\(side \* pixelRatio\)\)/);
-  assert.match(display, /canvas\.style\.width = `\$\{side\}px`/);
-  assert.match(display, /ctx\.setTransform\(drawingScale, 0, 0, drawingScale, 0, 0\)/);
+  assert.match(display, /canvas\.width = Math\.max\(1, Math\.round\(width \* pixelRatio\)\)/);
+  assert.match(display, /canvas\.height = Math\.max\(1, Math\.round\(height \* pixelRatio\)\)/);
+  assert.match(display, /canvas\.style\.width = `\$\{width\}px`/);
+  assert.match(display, /ctx\.setTransform\(canvas\.width \/ width, 0, 0, canvas\.height \/ height, 0, 0\)/);
   assert.match(display, /document\.fonts\?\.load/);
 });
 

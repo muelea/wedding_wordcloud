@@ -809,6 +809,8 @@
 <script src="<%= asset('/js/emoji-virtual-grid.js') %>"></script>
 <script src="<%= asset('/js/emoji-picker.js') %>"></script>
 <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
+<script src="<%= asset('/js/cloud-limits.js') %>"></script>
+<script src="<%= asset('/js/live-cloud-layout.js') %>"></script>
 <script src="<%= asset('/js/own-word-groups.js') %>"></script>
 <script>
   // Slug comes from the canonical event URL: /e/<slug>
@@ -867,6 +869,9 @@
   let currentWords = <%- JSON.stringify(pageData.initialWords || []).replace(/</g, '\\u003c') %>;
   let renderTimer  = null;
   let renderRevision = 0;
+  let scheduledWords = currentWords;
+  let liveLayout = null;
+  let desiredCloudSize = null;
   let wordSubmissionAnnouncementTimer = null;
   const MAX_CANVAS_PIXEL_RATIO = 3;
   const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
@@ -995,43 +1000,66 @@
     if (palettePicker?.open && !palettePicker.contains(event.target)) closePalettePicker();
   });
 
-  function renderCloud(words) {
-    if (!words || words.length === 0) return;
-
+  function cloudSize() {
     const rect = container.getBoundingClientRect();
-    const side = Math.min(rect.width, rect.height) * 0.94;
-    if (side < 1) return;
-    const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), MAX_CANVAS_PIXEL_RATIO);
-    const backingSide = Math.max(1, Math.round(side * pixelRatio));
-    canvas.style.width = `${side}px`;
-    canvas.style.height = `${side}px`;
-    if (canvas.width !== backingSide || canvas.height !== backingSide) {
-      canvas.width = backingSide;
-      canvas.height = backingSide;
-    }
-    const drawingScale = backingSide / side;
-    ctx.setTransform(drawingScale, 0, 0, drawingScale, 0, 0);
+    const margin = Math.min(24, Math.min(rect.width, rect.height) * .025);
+    return { width: Math.max(0, Math.floor(rect.width - margin * 2)),
+      height: Math.max(0, Math.floor(rect.height - margin * 2)) };
+  }
 
-    const placed = WordCloudCore.layoutWords(words, side, ctx, getWordColor);
-
-    ctx.clearRect(0, 0, side, side);
-    for (const p of placed) {
-      WordCloudCore.drawPlacedWord(ctx, p, {
+  function drawCloud(placed, size) {
+    if (!currentWords.length || size.width !== desiredCloudSize?.width ||
+        size.height !== desiredCloudSize?.height) return;
+    const current = new Set(currentWords.map(([word]) => word));
+    // An older completed addition snapshot can be displayed while the latest
+    // is packing, but removal/reset must never resurrect a deleted word.
+    if (placed.some(item => !current.has(item.word))) return;
+    const { width, height } = size;
+    const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), MAX_CANVAS_PIXEL_RATIO,
+      Math.sqrt(16000000 / (width * height)));
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    canvas.width = Math.max(1, Math.round(width * pixelRatio));
+    canvas.height = Math.max(1, Math.round(height * pixelRatio));
+    ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    for (const item of placed) {
+      WordCloudCore.drawPlacedWord(ctx, { ...item, color: getWordColor(item.word) }, {
         emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
       });
     }
+    setI18nAttribute(canvas, 'aria-label', 'Wortwolke mit {{count}} verschiedenen Wörtern', { count: placed.length });
     canvas.classList.add('visible');
   }
 
+  function renderCloud(words) {
+    if (!words?.length) return;
+    desiredCloudSize = cloudSize();
+    if (desiredCloudSize.width < 1 || desiredCloudSize.height < 1) return;
+    liveLayout ||= LiveCloudLayout.create({
+      core: WordCloudCore,
+      workerUrl: <%- JSON.stringify(asset('/js/cloud-layout-worker.js')) %>,
+      coreUrl: <%- JSON.stringify(asset('/js/wordcloud-core.js')) %>,
+      onLayout: drawCloud,
+      onError: () => showToast(t('Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.')),
+    });
+    liveLayout.request(WordCloudCore.measureWords(words, ctx, getWordColor),
+      desiredCloudSize.width, desiredCloudSize.height);
+  }
+
   function scheduleRender(words, delay = 100) {
-    const revision = ++renderRevision;
-    clearTimeout(renderTimer);
+    scheduledWords = words;
+    ++renderRevision;
+    if (renderTimer !== null) return;
     renderTimer = setTimeout(() => {
+      renderTimer = null;
+      const revision = renderRevision;
+      const snapshot = scheduledWords;
       Promise.all([
         cloudFontReady,
-        WolkenworteEmoji.preloadTexts(words.map(([word]) => word)),
+        WolkenworteEmoji.preloadTexts(snapshot.map(([word]) => word)),
       ]).then(() => {
-        if (revision === renderRevision) renderCloud(words);
+        if (revision === renderRevision) renderCloud(snapshot);
       }).catch(() => {
         if (revision === renderRevision) showToast(t('Ein Emoji konnte nicht geladen werden.'));
       });
@@ -1291,15 +1319,21 @@
   socket.on('word-error', ({ error } = {}) => {
     if (pendingWordSubmission && !displayWordInput.value) displayWordInput.value = pendingWordSubmission;
     pendingWordSubmission = '';
-    const message = error === 'unsupported_emoji'
+    const limit = {
+      guest_contribution_limit: ['Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.', CloudLimits.MAX_OWNER_CONTRIBUTIONS],
+      unique_word_limit: ['Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.', CloudLimits.MAX_EVENT_UNIQUE_WORDS],
+      event_contribution_limit: ['Diese Wortwolke hat insgesamt {{count}} Beiträge erreicht.', CloudLimits.MAX_EVENT_CONTRIBUTIONS],
+    }[error];
+    const message = limit?.[0] || (error === 'unsupported_emoji'
       ? 'Dieses Emoji wird noch nicht unterstützt. Bitte wählt ein anderes.'
       : error === 'rate_limited'
         ? 'Bitte wartet kurz, bevor ihr ein weiteres Wort hinzufügt.'
         : error === 'limit_reached'
           ? 'Für diese Wortwolke wurde das Eingabelimit erreicht.'
-          : 'Das Wort konnte nicht hinzugefügt werden. Bitte versucht es erneut.';
-    setText(wordSubmissionStatus, message);
-    showToast(t(message));
+          : 'Das Wort konnte nicht hinzugefügt werden. Bitte versucht es erneut.');
+    const params = limit ? { count: WolkenworteI18n.formatNumber(limit[1]) } : {};
+    setText(wordSubmissionStatus, message, params);
+    showToast(t(message, params));
   });
 
   function openSettings() {
@@ -1428,9 +1462,10 @@
   });
 
   socket.on('word-update', (words) => {
+    const activeWords = new Set(words.map(([word]) => word));
+    if (currentWords.some(([word]) => !activeWords.has(word))) liveLayout?.clear();
     currentWords = words;
     document.getElementById('reset-cloud-button').disabled = words.length === 0;
-    const activeWords = new Set(words.map(([word]) => word));
     let ownContributionsChanged = false;
     for (const [receipt, word] of ownContributions) {
       if (activeWords.has(word)) continue;
@@ -1442,6 +1477,11 @@
     memoryCta.classList.toggle('visible', words.length > 0);
 
     if (words.length === 0) {
+      ++renderRevision;
+      clearTimeout(renderTimer);
+      renderTimer = null;
+      scheduledWords = [];
+      liveLayout?.clear();
       emptyState.classList.remove('hidden');
       canvas.classList.remove('visible');
       return;
@@ -1460,6 +1500,12 @@
   });
 
   socket.on('fatal-error', () => {
+    ++renderRevision;
+    clearTimeout(renderTimer);
+    renderTimer = null;
+    scheduledWords = [];
+    currentWords = [];
+    liveLayout?.dispose();
     const errorState = document.createElement('p');
     errorState.style.cssText = 'padding:60px;font-family:Georgia,serif;';
     setText(errorState, 'Diese Wortwolke wurde nicht gefunden.');
@@ -1511,13 +1557,26 @@
     }
   })();
 
-  // ── Resize ───────────────────────────────────────────────────────────────
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      if (currentWords.length > 0) scheduleRender(currentWords, 0);
-    }, 200);
+  // Observe the actual available rectangle, including presentation-mode and
+  // mobile viewport changes. Throttle, rather than continually postponing work.
+  const resizeCloud = () => {
+    if (currentWords.length) scheduleRender(currentWords);
+  };
+  const cloudResizeObserver = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(resizeCloud) : null;
+  cloudResizeObserver?.observe(container);
+  window.addEventListener('resize', resizeCloud);
+  window.addEventListener('pagehide', () => {
+    ++renderRevision;
+    clearTimeout(renderTimer);
+    renderTimer = null;
+    liveLayout?.dispose();
+    liveLayout = null;
+    cloudResizeObserver?.disconnect();
+  });
+  window.addEventListener('pageshow', () => {
+    cloudResizeObserver?.observe(container);
+    resizeCloud();
   });
 </script>
 </body>

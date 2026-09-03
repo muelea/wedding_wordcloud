@@ -1,10 +1,7 @@
 /**
- * Shared spiral + collision-detection word-cloud layout engine.
- *
- * Evolved from the original prototype's display.ejs. The same
- * layoutWords()/buildSVG() geometry drives both the live on-screen canvas
- * render and the print-ready SVG export, so the two stay visually identical
- * by construction.
+ * Shared rectangular word-cloud packing and text geometry.
+ * Live displays and product designs use their own available dimensions;
+ * saved print output retains the editor's exact geometry.
  *
  * Loaded two ways:
  *   - In the browser via <script src="/js/wordcloud-core.js"></script>,
@@ -269,16 +266,6 @@
   // the size spectrum rather than clustering them at one end.
   const ROTATE_EVERY_N = 5;
 
-  function stableSpiralPhase(value) {
-    let hash = 2166136261;
-    for (const character of String(value || '')) {
-      const codePoint = character.codePointAt(0);
-      hash ^= codePoint;
-      hash = Math.imul(hash, 16777619);
-    }
-    return ((hash >>> 0) / 0x100000000) * Math.PI * 2;
-  }
-
   function assignRotations(items) {
     let textIndex = 0;
     for (const item of items) {
@@ -291,75 +278,14 @@
     }
   }
 
-  // Shared spiral+collision layout used by both the live canvas and the SVG
-  // export, so the two are always identical by construction — and retries
-  // at a smaller size instead of ever dropping a word that doesn't fit.
-  //
-  // `measureCtx` must provide `.font` (settable) and `.measureText(str)`
-  // returning `{ width }` — a real CanvasRenderingContext2D in the browser,
-  // or a stub with the same shape in tests.
-  // `colorFn(word)` returns a CSS color string for a word (see
-  // makeColorAssigner above for the default browser/export behavior).
+  // The legacy square entry point shares the complete rectangular layout.
   function layoutWords(words, side, measureCtx, colorFn) {
-    const getColor = colorFn || makeColorAssigner('pastel');
-    const counts = words.map(([, c]) => c);
-    const maxCount = Math.max(...counts);
-    const minCount = Math.min(...counts);
-    const { minPx, maxPx } = getFontSizeRange(words, side);
-
-    const sized = words
-      .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx) }))
-      .sort((a, b) => b.fontPx - a.fontPx);
-
-    assignRotations(sized);
-
-    const placed = [];
-    const cx = side / 2, cy = side / 2;
-    const maxRadius = side * 0.72;
-    const steps = 2000;
-
-    for (const item of sized) {
-      let fontPx = item.fontPx;
-      let spot = null;
-      const spiralPhase = stableSpiralPhase(item.word);
-
-      for (let attempt = 0; attempt < 12 && !spot; attempt++) {
-        const textBox = measureTextBox(item.word, fontPx, measureCtx);
-        const textHalf = textBox.width / 2 + side * 0.004;
-        const fontHalf = textBox.height / 2 + side * 0.004;
-        // Rotated words occupy a footprint with width/height swapped.
-        const halfW = item.rotated ? fontHalf : textHalf;
-        const halfH = item.rotated ? textHalf : fontHalf;
-
-        for (let t = 0; t < steps; t++) {
-          const angle = 0.3 * t + spiralPhase;
-          const radius = (maxRadius / Math.sqrt(steps)) * Math.sqrt(t);
-          const x = cx + radius * Math.cos(angle);
-          const y = cy + radius * Math.sin(angle);
-          const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
-          if (box.x1 < 0 || box.y1 < 0 || box.x2 > side || box.y2 > side) continue;
-          const collides = placed.some((p) =>
-            !(box.x2 < p.x1 || box.x1 > p.x2 || box.y2 < p.y1 || box.y1 > p.y2));
-          if (!collides) { spot = { x, y, halfW, halfH, textBox }; break; }
-        }
-        if (!spot) fontPx *= 0.82; // didn't fit at this size — shrink and retry
-      }
-      if (!spot) continue; // extremely unlikely after 12 shrink attempts
-
-      placed.push({
-        word: item.word, fontPx, rotated: item.rotated, x: spot.x, y: spot.y,
-        x1: spot.x - spot.halfW, x2: spot.x + spot.halfW,
-        y1: spot.y - spot.halfH, y2: spot.y + spot.halfH,
-        color: getColor(item.word),
-        textBox: spot.textBox,
-      });
-    }
-    return placed;
+    return layoutWordsInArea(words, side, side, measureCtx, colorFn);
   }
 
-  // One deterministic rectangular packer for both the initial cloud and the
-  // current editor design. Callers measure their own text/image/icon boxes
-  // once; all sizes then share one multiplier (no font or aspect-ratio drift).
+  // Deterministic free-rectangle packing. Every candidate is inside the actual
+  // rectangular print/display area, including its corners. Text, icons and
+  // images use measured, rotated boxes and one common size multiplier.
   function layoutBoxesInArea(boxes, width, height) {
     if (!Array.isArray(boxes) || !boxes.length || !Number.isFinite(width) ||
         !Number.isFinite(height) || width <= 0 || height <= 0) return [];
@@ -368,103 +294,85 @@
     const sized = boxes.map((box, index) => ({ ...box, index }))
       .sort((a, b) => b.priority - a.priority || a.index - b.index);
     const minSide = Math.min(width, height);
-    // A fixed percentage would spend most of a dense cloud's space on gaps.
-    const collisionPadding = Math.max(2, minSide * Math.min(.01, .1 / Math.sqrt(sized.length)));
-    const steps = Math.max(3200, Math.min(9000, 1200 + sized.length * 140));
-    const spiral = Array.from({ length: steps }, (_, step) => {
-      const radius = Math.sqrt(step / (steps - 1));
-      return { x: radius * Math.cos(step * .37), y: radius * Math.sin(step * .37) };
-    });
+    const padding = minSide * Math.min(.007, .055 / Math.sqrt(sized.length));
+    const overlaps = (a, b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+    const contains = (a, b) => a.x1 <= b.x1 && a.x2 >= b.x2 && a.y1 <= b.y1 && a.y2 >= b.y2;
 
-    function tryScale(items, scale) {
+    function tryScale(scale) {
+      let free = [{ x1: 0, y1: 0, x2: width, y2: height }];
       const placed = [];
-      const cx = width / 2;
-      const cy = height / 2;
-      // Spatial buckets keep dense clouds from checking every prior box at
-      // every spiral point. This changes only lookup cost, not placements.
-      const cellSize = minSide / Math.sqrt(items.length);
-      const columns = Math.ceil(width / cellSize);
-      const rows = Math.ceil(height / cellSize);
-      const cells = new Array(columns * rows);
-      const cellsFor = box => ({
-        x1: Math.max(0, Math.floor(box.x1 / cellSize)),
-        x2: Math.min(columns - 1, Math.floor(box.x2 / cellSize)),
-        y1: Math.max(0, Math.floor(box.y1 / cellSize)),
-        y2: Math.min(rows - 1, Math.floor(box.y2 / cellSize)),
-      });
-      const collides = box => {
-        const range = cellsFor(box);
-        for (let y = range.y1; y <= range.y2; y++) {
-          for (let x = range.x1; x <= range.x2; x++) {
-            if (cells[y * columns + x]?.some(other => !(box.x2 < other.x1 ||
-                box.x1 > other.x2 || box.y2 < other.y1 || box.y1 > other.y2))) return true;
+      for (const item of sized) {
+        const w = item.width * scale + padding * 2;
+        const h = item.height * scale + padding * 2;
+        let best = null;
+        let score = Infinity;
+        for (const space of free) {
+          const dw = space.x2 - space.x1 - w;
+          const dh = space.y2 - space.y1 - h;
+          if (dw < 0 || dh < 0) continue;
+          // Keep the dominant word central. Subsequent words choose the best
+          // fitting free rectangle; ties favour the centre, not a fixed corner.
+          const x = clamp((width - w) / 2, space.x1, space.x2 - w);
+          const y = clamp((height - h) / 2, space.y1, space.y2 - h);
+          const distance = Math.abs((x + w / 2) / width - .5) +
+            Math.abs((y + h / 2) / height - .5);
+          const candidateScore = Math.min(dw / width, dh / height) +
+            Math.max(dw / width, dh / height) * .05 + distance * .001;
+          if (candidateScore < score) {
+            score = candidateScore;
+            best = { x1: x, y1: y, x2: x + w, y2: y + h };
           }
         }
-        return false;
-      };
-      for (const item of items) {
-        const halfW = item.width * scale / 2 + collisionPadding;
-        const halfH = item.height * scale / 2 + collisionPadding;
-        const maxX = width / 2 - halfW;
-        const maxY = height / 2 - halfH;
-        if (maxX < 0 || maxY < 0) return null;
-        let spot = null;
-        const phase = Number(item.spiralPhase) || 0;
-        const phaseCos = Math.cos(phase);
-        const phaseSin = Math.sin(phase);
-        for (const point of spiral) {
-          const pointX = point.x * phaseCos - point.y * phaseSin;
-          const pointY = point.x * phaseSin + point.y * phaseCos;
-          const x = cx + maxX * pointX;
-          const y = cy + maxY * pointY;
-          const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
-          if (!collides(box)) {
-            spot = { ...item, x, y, scale, ...box };
-            break;
-          }
+        if (!best) return null;
+        placed.push({ ...item, x: (best.x1 + best.x2) / 2,
+          y: (best.y1 + best.y2) / 2, scale });
+        const next = [];
+        for (const space of free) {
+          if (!overlaps(space, best)) { next.push(space); continue; }
+          if (best.x1 > space.x1) next.push({ ...space, x2: best.x1 });
+          if (best.x2 < space.x2) next.push({ ...space, x1: best.x2 });
+          if (best.y1 > space.y1) next.push({ ...space, y2: best.y1 });
+          if (best.y2 < space.y2) next.push({ ...space, y1: best.y2 });
         }
-        if (!spot) return null;
-        placed.push(spot);
-        const range = cellsFor(spot);
-        for (let y = range.y1; y <= range.y2; y++) {
-          for (let x = range.x1; x <= range.x2; x++) {
-            (cells[y * columns + x] ||= []).push(spot);
-          }
-        }
+        // Split rectangles may overlap, but never intersect a placed item.
+        // Remove contained duplicates to keep the search bounded in practice.
+        free = next.filter((space, index) => !next.some((other, otherIndex) =>
+          otherIndex !== index && contains(other, space) &&
+          (!contains(space, other) || otherIndex < index)));
       }
       return placed;
     }
 
-    function search(items) {
-      let best = null;
-      let low = 0;
-      let high = Math.min(...items.map(item => Math.min(
-        (width - collisionPadding * 2) / item.width,
-        (height - collisionPadding * 2) / item.height
-      )));
-      for (let attempt = 0; attempt < 14; attempt++) {
-        const scale = (low + high) / 2;
-        const candidate = tryScale(items, scale);
-        if (candidate) { best = candidate; low = scale; }
-        else high = scale;
-      }
-      return best && fitAreaBoxes(best, width, height);
+    let low = 0;
+    let high = Math.min(...sized.map(item => Math.min(
+      (width - padding * 2) / item.width, (height - padding * 2) / item.height
+    )));
+    // A complete grid is the deterministic fallback, including extreme word
+    // lengths/aspect ratios. Partial layouts are never returned.
+    const maxWidth = Math.max(...sized.map(item => item.width));
+    const maxHeight = Math.max(...sized.map(item => item.height));
+    let gridScale = 0;
+    let columns = 1;
+    for (let cols = 1; cols <= sized.length; cols++) {
+      const rows = Math.ceil(sized.length / cols);
+      const scale = Math.min((width / cols - padding * 2) / maxWidth,
+        (height / rows - padding * 2) / maxHeight);
+      if (scale > gridScale) { gridScale = scale; columns = cols; }
     }
-
-    // Keep the original font-size-first spiral as the baseline. In wide print
-    // areas, also try tall elements last so they can flank the horizontal words
-    // instead of splitting them in the middle. Adopt only a larger result.
-    let best = search(sized);
-    if (width > height * 1.25 && sized.length <= 80) {
-      const uprightFirst = [...sized].sort((a, b) =>
-        Number(a.height > a.width * 1.5) - Number(b.height > b.width * 1.5) ||
-        b.priority - a.priority || a.index - b.index);
-      if (uprightFirst.some((item, index) => item.index !== sized[index].index)) {
-        const candidate = search(uprightFirst);
-        if (candidate && (!best || candidate[0].scale > best[0].scale * 1.005)) best = candidate;
-      }
+    const rows = Math.ceil(sized.length / columns);
+    const fallback = sized.map((item, index) => ({ ...item, scale: gridScale,
+      x: (index % columns + .5) * width / columns,
+      y: (Math.floor(index / columns) + .5) * height / rows }));
+    let best = null;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const scale = (low + high) / 2;
+      const candidate = tryScale(scale);
+      if (candidate) {
+        best = candidate;
+        low = scale;
+      } else high = scale;
     }
-    return best ? best.sort((a, b) => a.index - b.index) : [];
+    return fitAreaBoxes(best || fallback, width, height).sort((a, b) => a.index - b.index);
   }
 
   function areaBounds(items, horizontalScale = 1) {
@@ -474,6 +382,21 @@
       y1: Math.min(bounds.y1, item.y - item.height * item.scale / 2),
       y2: Math.max(bounds.y2, item.y + item.height * item.scale / 2),
     }), { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
+  }
+
+  // Mean occupied box area in the four outer quarters. Unlike overall bounds,
+  // this detects an ellipse that only touches the middle of each edge.
+  function cornerCoverage(boxes, width, height) {
+    let area = 0;
+    for (const x of [0, width * .75]) {
+      for (const y of [0, height * .75]) {
+        for (const box of boxes) {
+          area += Math.max(0, Math.min(x + width * .25, box.x2) - Math.max(x, box.x1)) *
+            Math.max(0, Math.min(y + height * .25, box.y2) - Math.max(y, box.y1));
+        }
+      }
+    }
+    return area / (width * height * .25);
   }
 
   function fitAreaBoxes(items, width, height) {
@@ -508,8 +431,8 @@
     });
   }
 
-  function layoutWordsInArea(words, width, height, measureCtx, colorFn) {
-    if (!Array.isArray(words) || !words.length || width <= 0 || height <= 0) return [];
+  function measureWords(words, measureCtx, colorFn) {
+    if (!Array.isArray(words) || !words.length) return [];
     const getColor = colorFn || makeColorAssigner('pastel');
     const counts = words.map(([, count]) => count);
     const minCount = Math.min(...counts);
@@ -522,14 +445,22 @@
       const rotated = item.rotated;
       const textBox = measureTextBox(item.word, item.fontPx, measureCtx);
       return { ...item, rotated, textBox, color: getColor(item.word), priority: item.fontPx,
-        spiralPhase: stableSpiralPhase(item.word),
         width: rotated ? textBox.height : textBox.width,
         height: rotated ? textBox.width : textBox.height };
     });
-    return layoutBoxesInArea(boxes, width, height).map(item => ({ ...item,
+    return boxes;
+  }
+
+  function finalizeWords(boxes) {
+    return boxes.map(item => ({ ...item,
       fontPx: item.fontPx * item.scale,
       textBox: scaleTextBox(item.textBox, item.scale),
     }));
+  }
+
+  function layoutWordsInArea(words, width, height, measureCtx, colorFn) {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return [];
+    return finalizeWords(layoutBoxesInArea(measureWords(words, measureCtx, colorFn), width, height));
   }
 
   function escapeXML(s) {
@@ -634,7 +565,10 @@
     richTextSvg,
     layoutWords,
     layoutWordsInArea,
+    measureWords,
+    finalizeWords,
     layoutBoxesInArea,
+    cornerCoverage,
     buildSVG,
     escapeXML,
   };

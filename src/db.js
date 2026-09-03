@@ -9,9 +9,8 @@ const I18n = require('./i18n');
 const log = require('./structuredLog');
 
 const REQUIRED_SCHEMA_VERSION = '3';
-const MAX_EVENT_CONTRIBUTIONS = 5000;
-const MAX_EVENT_UNIQUE_WORDS = 500;
-const MAX_OWNER_CONTRIBUTIONS = 100;
+const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
+  MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
 const MAX_ACTIVE_UNPAID_CONFIGURATIONS = 2000;
 const JSON_COLUMNS = new Set([
   'words_json',

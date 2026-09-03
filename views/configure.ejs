@@ -676,6 +676,12 @@
       border-color: rgba(156, 28, 76, .74);
       box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
     }
+    .print-readability {
+      margin: 16px 0; padding: 12px 16px; border-radius: 12px;
+      background: #fff5df; color: #73500c; font-size: 14px; line-height: 1.5;
+    }
+    .print-readability[data-level="low"] { background: #fff0eb; color: #923c27; }
+    .print-readability[hidden] { display: none; }
     .editor-image-quality {
       position: absolute;
       z-index: 6;
@@ -1907,6 +1913,8 @@
           </section>
         </div>
 
+        <p class="print-readability" id="print-readability" role="status" aria-live="polite" hidden></p>
+
         <section class="checkout-panel" id="checkout-panel" aria-label="Bestellung fortsetzen">
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
@@ -1989,6 +1997,8 @@
   <script src="<%= asset('/js/emoji-virtual-grid.js') %>"></script>
   <script src="<%= asset('/js/emoji-picker.js') %>"></script>
   <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
+  <script src="<%= asset('/js/cloud-limits.js') %>"></script>
+  <script src="<%= asset('/js/text-print-quality.js') %>"></script>
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
   <script src="<%= asset('/js/mug-icons.js') %>"></script>
   <script src="<%= asset('/js/design-fonts.js') %>"></script>
@@ -2615,7 +2625,7 @@
             text: item.word,
             x: Math.round((slot.x + item.x * xScale) * 10) / 10,
             y: Math.round((slot.y + item.y) * 10) / 10,
-            fontSize: Math.round(item.fontPx * 10) / 10,
+            fontSize: Math.max(CloudLimits.MIN_PRINT_FONT_SIZE, Math.floor(item.fontPx * 10) / 10),
             angle: item.rotated ? -90 : 0,
             color: item.color,
             fontFamily: DesignFonts.DEFAULT_FONT_KEY,
@@ -3018,10 +3028,27 @@
       if (product.previewType === 'mug') updateMug3DTexture();
     }
 
+    function updatePrintReadability() {
+      const notice = document.getElementById('print-readability');
+      if (!mugEditor || !product) { notice.hidden = true; return; }
+      const design = productSurfaces().flatMap(surface => surface.key === activeSurface
+        ? mugEditor.getDesign() : (surfaceStates.get(surface.key)?.design || []));
+      const quality = TextPrintQuality.evaluate(design, Number(productView().printFile.dpi));
+      notice.hidden = !quality || quality.level === 'good';
+      if (notice.hidden) { clearText(notice); return; }
+      notice.dataset.level = quality.level;
+      setText(notice, quality.level === 'low'
+        ? 'Auf euren Druckflächen sind {{count}} Texte sehr klein (kleinste Schrift: {{size}} pt). Vergrößert die Schrift, wählt ein größeres Produkt oder reduziert die Texte im Druckdesign. Die Live-Wortwolke bleibt vollständig.'
+        : 'Auf euren Druckflächen sind {{count}} Texte klein (kleinste Schrift: {{size}} pt). Prüft die Lesbarkeit; ein größeres Produkt bietet mehr Platz.',
+      { count: quality.level === 'low' ? quality.tiny : quality.small,
+        size: WolkenworteI18n.formatNumber(quality.minPt, { maximumFractionDigits: 1 }) });
+    }
+
     function renderAll() {
       cancelAnimationFrame(renderFrame);
       renderFrame = requestAnimationFrame(() => {
         renderProductPreview();
+        updatePrintReadability();
       });
     }
 
@@ -3414,6 +3441,11 @@
         const design = DesignLayout.applyLayoutAction(currentDesign, slots, measurementContext, {
           fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
         });
+        if (design.length > CloudLimits.MAX_DESIGN_ELEMENTS) {
+          mugEditor.setFeedback('Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.',
+            { count: CloudLimits.MAX_DESIGN_ELEMENTS });
+          return false;
+        }
         if (JSON.stringify(design) === JSON.stringify(currentDesign)) {
           nextStates.set(surface.key, surfaceStates.get(surface.key));
         } else {
@@ -3685,6 +3717,11 @@
         return false;
       }
       const designs = getAllSurfaceDesigns();
+      if (Object.values(designs).some(design => design.length > CloudLimits.MAX_DESIGN_ELEMENTS)) {
+        setText(errorText, 'Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.',
+          { count: CloudLimits.MAX_DESIGN_ELEMENTS });
+        return false;
+      }
       const missingSurface = productSurfaces().find((surface) => !designs[surface.key]?.length);
       if (missingSurface) {
         setText(errorText, productSurfaces().length > 1

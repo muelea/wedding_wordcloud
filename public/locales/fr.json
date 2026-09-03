@@ -412,7 +412,6 @@
   "Steuern und MwSt.": "Taxes et TVA",
   "Gesamtpreis": "Total",
   "Auswählen": "Sélectionner",
-  "Suche löschen": "Effacer la recherche",
   "Vollständiger Name": "Nom complet",
   "Straße und Hausnummer": "Rue et numéro",
   "Adresszusatz": "Complément d’adresse",
@@ -525,7 +524,6 @@
   "Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.": "Le prix a expiré. Veuillez recalculer le total.",
   "Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.": "La page de paiement n’a pas pu être préparée. Veuillez réessayer.",
   "Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.": "Calculez d’abord le prix actuel sur la page des adresses de livraison.",
-  "Link kopiert ✓": "Lien copié ✓",
   "{{count}} Elemente": "{{count}} éléments",
   "{{count}} Elemente dupliziert": "{{count}} éléments dupliqués",
   "Motiv dupliziert": "Motif dupliqué",
@@ -666,7 +664,6 @@
   "Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN wird nicht im Browser gespeichert.": "Des indicateurs purement fonctionnels sont également conservés dans le stockage de session afin que l’appareil créateur puisse afficher le message de configuration unique. La langue choisie est enregistrée dans un cookie fonctionnel ; les brouillons du panier sont stockés localement afin de rester disponibles lors de consultations ultérieures et du passage entre la configuration et l’adresse de livraison. Le code PIN administrateur n’est pas stocké dans le navigateur.",
   "Erinnerungsstücke": "Souvenirs",
   "Eure Erinnerung": "Votre souvenir",
-  "Link kopieren": "Copier le lien",
   "Neue Runde starten?": "Commencer une nouvelle manche ?",
   "Die aktuellen Wörter werden archiviert. Anschließend beginnt eure Wortwolke wieder leer.": "Les mots actuels seront archivés. Votre nuage de mots repartira ensuite à zéro.",
   "Verbindung fehlgeschlagen. Bitte versucht es erneut.": "La connexion a échoué. Veuillez réessayer.",
@@ -781,5 +778,13 @@
   "Zuletzt geöffnet": "Ouvert récemment",
   "Warenkorb öffnen": "Ouvrir le panier",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Seuls les designs expressément validés sont enregistrés dans le panier. Leurs identifiants techniques sont conservés pour la session dans cet onglet du navigateur. Les modifications non enregistrées dans l’éditeur ne sont pas sauvegardées automatiquement. Les coordonnées de livraison et les quantités sont conservées dans l’onglet jusqu’à 24 heures pour permettre leur restauration. Cela ne constitue pas une commande.",
-  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Pour faciliter votre retour, ce navigateur mémorise le dernier nuage de mots ouvert pendant sept jours. Les identifiants techniques des designs achetés sont conservés pour la session dans cet onglet afin qu’ils ne réapparaissent pas dans le panier lors d’un retour en arrière."
+  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Pour faciliter votre retour, ce navigateur mémorise le dernier nuage de mots ouvert pendant sept jours. Les identifiants techniques des designs achetés sont conservés pour la session dans cet onglet afin qu’ils ne réapparaissent pas dans le panier lors d’un retour en arrière.",
+  "Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.": "Vous avez déjà ajouté {{count}} contributions à ce nuage de mots dans ce navigateur.",
+  "Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.": "Ce nuage contient déjà {{count}} mots différents. Vous pouvez encore soutenir les mots existants.",
+  "Diese Wortwolke hat insgesamt {{count}} Beiträge erreicht.": "Ce nuage de mots a atteint {{count}} contributions au total.",
+  "Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.": "Le nuage de mots n’a pas pu être disposé. Veuillez recharger la page.",
+  "Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.": "Chaque surface d’impression peut contenir {{count}} éléments au maximum. Supprimez d’abord quelques éléments.",
+  "Auf euren Druckflächen sind {{count}} Texte sehr klein (kleinste Schrift: {{size}} pt). Vergrößert die Schrift, wählt ein größeres Produkt oder reduziert die Texte im Druckdesign. Die Live-Wortwolke bleibt vollständig.": "{{count}} textes sur vos surfaces d’impression sont très petits (taille minimale : {{size}} pt). Agrandissez le texte, choisissez un produit plus grand ou réduisez les textes du motif imprimé. Le nuage de mots en direct reste complet.",
+  "Auf euren Druckflächen sind {{count}} Texte klein (kleinste Schrift: {{size}} pt). Prüft die Lesbarkeit; ein größeres Produkt bietet mehr Platz.": "{{count}} textes sur vos surfaces d’impression sont petits (taille minimale : {{size}} pt). Vérifiez la lisibilité ; un produit plus grand offre plus de place.",
+  "Wortwolke mit {{count}} verschiedenen Wörtern": "Nuage de {{count}} mots différents"
 }

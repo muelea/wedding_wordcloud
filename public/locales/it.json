@@ -412,7 +412,6 @@
   "Steuern und MwSt.": "Imposte e IVA",
   "Gesamtpreis": "Totale",
   "Auswählen": "Seleziona",
-  "Suche löschen": "Cancella ricerca",
   "Vollständiger Name": "Nome completo",
   "Straße und Hausnummer": "Via e numero civico",
   "Adresszusatz": "Indirizzo aggiuntivo",
@@ -525,7 +524,6 @@
   "Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.": "Il prezzo è scaduto. Calcola di nuovo il totale.",
   "Die Zahlungsseite konnte gerade nicht vorbereitet werden. Bitte versucht es erneut.": "Non è stato possibile preparare la pagina di pagamento. Riprova.",
   "Bitte berechnet zuerst den aktuellen Preis auf der Lieferadressseite.": "Calcola prima il prezzo attuale nella pagina degli indirizzi di consegna.",
-  "Link kopiert ✓": "Link copiato ✓",
   "{{count}} Elemente": "{{count}} elementi",
   "{{count}} Elemente dupliziert": "{{count}} elementi duplicati",
   "Motiv dupliziert": "Motivo duplicato",
@@ -666,7 +664,6 @@
   "Zusätzlich werden rein funktionale Kennzeichnungen im Session Storage gespeichert, damit das erstellende Gerät den einmaligen Einrichtungs-Hinweis anzeigen kann. Die gewählte Sprache wird in einem funktionalen Cookie gespeichert; Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Konfiguration und Lieferadresse erhalten bleiben. Der Admin-PIN wird nicht im Browser gespeichert.": "Nel Session Storage vengono inoltre salvati indicatori puramente funzionali, affinché il dispositivo che ha creato l’evento possa mostrare l’avviso di configurazione una tantum. La lingua scelta viene salvata in un cookie funzionale; le bozze del carrello vengono salvate localmente per restare disponibili nelle visite successive e nel passaggio tra configurazione e indirizzo di consegna. Il PIN amministratore non viene memorizzato nel browser.",
   "Erinnerungsstücke": "Ricordi",
   "Eure Erinnerung": "Il vostro ricordo",
-  "Link kopieren": "Copia link",
   "Neue Runde starten?": "Iniziare un nuovo turno?",
   "Die aktuellen Wörter werden archiviert. Anschließend beginnt eure Wortwolke wieder leer.": "Le parole attuali verranno archiviate. La vostra nuvola di parole ripartirà quindi vuota.",
   "Verbindung fehlgeschlagen. Bitte versucht es erneut.": "Connessione non riuscita. Riprovate.",
@@ -781,5 +778,13 @@
   "Zuletzt geöffnet": "Aperto di recente",
   "Warenkorb öffnen": "Apri il carrello",
   "Im Warenkorb werden nur ausdrücklich übernommene Designs gespeichert. Ihre technischen Kennungen bleiben für die Sitzung im jeweiligen Browser-Tab erhalten. Ungesicherte Änderungen im Editor werden nicht automatisch gespeichert. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.": "Nel carrello vengono salvati solo i design confermati espressamente. I relativi identificativi tecnici vengono conservati per la sessione nella scheda del browser. Le modifiche non salvate nell’editor non vengono memorizzate automaticamente. I dati di spedizione e le quantità vengono conservati nella scheda per un massimo di 24 ore per consentirne il ripristino. Questo non costituisce un ordine.",
-  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Per facilitare il ritorno, questo browser ricorda l’ultima nuvola di parole aperta per sette giorni. Gli identificativi tecnici dei design acquistati vengono conservati per la sessione nella scheda del browser, affinché non riappaiano nel carrello tornando indietro."
+  "Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden für die Sitzung im jeweiligen Browser-Tab gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.": "Per facilitare il ritorno, questo browser ricorda l’ultima nuvola di parole aperta per sette giorni. Gli identificativi tecnici dei design acquistati vengono conservati per la sessione nella scheda del browser, affinché non riappaiano nel carrello tornando indietro.",
+  "Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.": "Avete già aggiunto {{count}} contributi a questa nuvola di parole in questo browser.",
+  "Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.": "Questa nuvola contiene già {{count}} parole diverse. Potete ancora sostenere le parole presenti.",
+  "Diese Wortwolke hat insgesamt {{count}} Beiträge erreicht.": "Questa nuvola di parole ha raggiunto {{count}} contributi in totale.",
+  "Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.": "Non è stato possibile disporre la nuvola di parole. Ricaricate la pagina.",
+  "Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.": "Ogni area di stampa può contenere al massimo {{count}} elementi. Rimuovete prima alcuni elementi.",
+  "Auf euren Druckflächen sind {{count}} Texte sehr klein (kleinste Schrift: {{size}} pt). Vergrößert die Schrift, wählt ein größeres Produkt oder reduziert die Texte im Druckdesign. Die Live-Wortwolke bleibt vollständig.": "{{count}} testi nelle aree di stampa sono molto piccoli (dimensione minima: {{size}} pt). Ingrandite il carattere, scegliete un prodotto più grande o riducete i testi nel design di stampa. La nuvola di parole dal vivo resta completa.",
+  "Auf euren Druckflächen sind {{count}} Texte klein (kleinste Schrift: {{size}} pt). Prüft die Lesbarkeit; ein größeres Produkt bietet mehr Platz.": "{{count}} testi nelle aree di stampa sono piccoli (dimensione minima: {{size}} pt). Verificate la leggibilità; un prodotto più grande offre più spazio.",
+  "Wortwolke mit {{count}} verschiedenen Wörtern": "Nuvola con {{count}} parole diverse"
 }

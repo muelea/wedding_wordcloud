@@ -306,16 +306,19 @@ test('lifecycle and abuse boundaries', async (t) => {
 
     const ownerCreated = await createEvent(app.baseUrl, { title: 'Gast Grenze', pin: '1234' });
     const ownerEvent = await db.getEventBySlug(ownerCreated.slug);
-    await app.query(`INSERT INTO words (event_id, word, count) VALUES ($1, 'liebe', 100)`, [ownerEvent.id]);
+    await app.query(`INSERT INTO words (event_id, word, count) VALUES ($1, 'liebe', 499)`, [ownerEvent.id]);
     await app.query(`
       INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
       SELECT 'owner-' || lpad(value::text, 18, '0'), $1, 'liebe', $2
-      FROM generate_series(1, 100) value
+      FROM generate_series(1, 499) value
     `, [ownerEvent.id, OWNER_A]);
+    assert.match(await db.addWordContribution(ownerEvent.id, 'liebe', OWNER_A), /^[A-Za-z0-9_-]{24}$/);
     await assert.rejects(
       db.addWordContribution(ownerEvent.id, 'liebe', OWNER_A),
       (error) => error.code === 'guest_contribution_limit'
     );
+    assert.match(await db.addWordContribution(ownerEvent.id, 'liebe', OWNER_B), /^[A-Za-z0-9_-]{24}$/,
+      'one browser reaching its limit must not block another guest');
 
     const totalCreated = await createEvent(app.baseUrl, { title: 'Event Grenze', pin: '1234' });
     const totalEvent = await db.getEventBySlug(totalCreated.slug);
@@ -329,6 +332,21 @@ test('lifecycle and abuse boundaries', async (t) => {
       db.addWordContribution(totalEvent.id, 'freude', 'd'.repeat(32)),
       (error) => error.code === 'event_contribution_limit'
     );
+
+    for (const [target, guestId, expected] of [
+      [created, OWNER_B, 'unique_word_limit'],
+      [ownerCreated, OWNER_A, 'guest_contribution_limit'],
+      [totalCreated, OWNER_B, 'event_contribution_limit'],
+    ]) {
+      const socket = connectSocket(app.baseUrl, { query: { slug: target.slug, guestId },
+        transports: ['websocket'], forceNew: true });
+      try {
+        await waitFor(socket, 'word-update');
+        const error = waitFor(socket, 'word-error');
+        socket.emit('submit-word', 'neuerbegriff');
+        assert.equal((await error).error, expected);
+      } finally { socket.close(); }
+    }
 
     const configEventCreated = await createEvent(app.baseUrl, { title: 'Konfig Grenzen', pin: '1234' });
     const configEvent = await db.getEventBySlug(configEventCreated.slug);

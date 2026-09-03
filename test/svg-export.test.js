@@ -101,20 +101,11 @@ test('layoutWords places every word exactly once, with no overlapping boxes', ()
 });
 
 test('layoutWords handles a dense word list without dropping words or creating overlaps/duplicates', () => {
-  // At high density the algorithm's own documented fallback (8 shrink
-  // attempts per word, spiral placement — see wordcloud-core.js) can, in
-  // principle, leave a handful of words unplaced rather than ever
-  // overlapping two words. In practice, for a realistically dense event
-  // word cloud (45 unique words — most real events land well under that)
-  // it places everything; this asserts that plus the two guarantees that
-  // must never be violated regardless of density: no duplicates, no
-  // overlaps. The >=90% floor (vs. the 100% actually observed here) leaves
-  // headroom for that documented edge case without making this test flaky.
   const words = wordList(45);
   const side = 900;
   const placed = WordCloudCore.layoutWords(words, side, makeFakeMeasureCtx(), WordCloudCore.makeColorAssigner('neon'));
 
-  assert.ok(placed.length / words.length >= 0.90, `expected >=90% of ${words.length} words placed, got ${placed.length}`);
+  assert.equal(placed.length, words.length);
 
   const placedWords = placed.map((p) => p.word);
   assert.equal(new Set(placedWords).size, placedWords.length, 'no word should be placed twice');
@@ -154,8 +145,8 @@ test('frequency still wins when an emoji is genuinely the most important contrib
   const placed = WordCloudCore.layoutWords(words, side, makeFakeMeasureCtx(), () => '#000000');
   const heart = placed.find((item) => item.word === '❤️');
   assert.ok(heart.fontPx > placed.find((item) => item.word === 'liebe').fontPx);
-  assert.ok(Math.hypot(heart.x - side / 2, heart.y - side / 2) < .01,
-    'the highest-frequency contribution should retain the visual centre');
+  assert.ok(Math.abs(heart.x - side / 2) < side * .25 && Math.abs(heart.y - side / 2) < side * .25,
+    'the highest-frequency contribution stays in the central region of the fitted rectangle');
 });
 
 test('layoutWordsInArea fills a wide print area while preserving every relative font size', () => {

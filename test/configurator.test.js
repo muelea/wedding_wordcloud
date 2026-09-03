@@ -51,6 +51,32 @@ function oneSurfaceDesign(design) {
   return { designs: { default: design } };
 }
 
+test('duplicating a selection respects the design limit atomically and preserves existing objects', () => {
+  const editor = Object.create(MugPrintEditor.prototype);
+  const objects = Array.from({ length: 799 }, (_, id) => ({ id }));
+  const feedback = [];
+  editor.canvas = {
+    getObjects: () => objects,
+    discardActiveObject() {},
+    add: (...copies) => objects.push(...copies),
+    requestRenderAll() {},
+  };
+  editor.nextId = () => String(objects.length);
+  editor.makeObject = item => item;
+  editor.setActiveObjects = copies => copies;
+  editor.keepInside = editor.recordHistory = editor.emitChange = editor.updateSelectionPanel = () => {};
+  editor.setFeedback = (message, params) => feedback.push({ message, params });
+  const selected = Array.from({ length: 401 }, (_, id) => ({ id: String(id), x: 50, y: 50 }));
+  assert.equal(editor.duplicateDesignItems(selected).length, 401);
+  assert.equal(objects.length, 1200);
+  const before = JSON.stringify(objects);
+  assert.equal(editor.duplicateDesignItems(selected).length, 0);
+  editor.addWord();
+  assert.equal(JSON.stringify(objects), before, 'no partial insertion or existing-object mutation');
+  assert.equal(feedback.length, 2);
+  assert.equal(feedback[0].params.count, 1200);
+});
+
 test('double-clicking emoji text focuses the dedicated editor field', () => {
   const calls = [];
   const editor = Object.create(MugPrintEditor.prototype);
@@ -1028,6 +1054,71 @@ test('a sparse automatic design saves and freezes the exact preview geometry', a
   assert.equal(print.status, 200);
   assert.equal(await print.text(), buildProductPrintSvg(product, design),
     'the immutable print must preserve the exact saved coordinates, size, rotation, color and font');
+});
+
+test('200, 201 and 500 word snapshots save, reopen and freeze complete multi-product designs', async (t) => {
+  const app = await startTestServer();
+  t.after(app.close);
+  const event = await createEvent(app.baseUrl, { title: 'Große vollständige Wolke' });
+  const other = await createEvent(app.baseUrl, { title: 'Andere Wolke' });
+  const endpoint = `${app.baseUrl}/api/events/${event.slug}/configurations`;
+  const save = body => fetch(endpoint, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  let lastPayload;
+  for (const [count, key, orientation] of [
+    [200, 'white-glossy-mug-duo-11oz', 'default'],
+    [201, 'matte-poster-30x40cm', 'landscape'],
+    [500, 'all-over-basic-pillow-18in', 'default'],
+    [500, 'cork-back-coaster', 'default'],
+    [500, 'white-glossy-mug-duo-11oz', 'default'],
+  ]) {
+    const product = resolveProductOrientation(getProduct(key), orientation);
+    const words = Array.from({ length: count }, (_, i) => [
+      (key === 'cork-back-coaster' ? 'w'.repeat(27) : 'wort') + String(i).padStart(3, '0'),
+      1 + i * 7 % 20,
+    ]);
+    let design = automaticFitAreaDesign(product, words);
+    if (count === 500 && key.includes('mug')) {
+      const context = createCanvas(1, 1).getContext('2d');
+      design = DesignLayout.applyLayoutAction(design, product.layoutGeometry.single, context,
+        { fontFamily: item => DesignFonts.cssFamily(item.fontFamily) });
+      design = DesignLayout.applyLayoutAction(design, product.layoutGeometry['both-sides'], context,
+        { fontFamily: item => DesignFonts.cssFamily(item.fontFamily) });
+      assert.equal(design.length, 1000, 'both mug placements can retain a full copy');
+      design.push({ id: 'extra-heart', type: 'icon', icon: 'heart', x: 1350, y: 525,
+        size: 48, angle: 0, color: '#a40e4c' });
+    }
+    const payload = { productKey: key, orientation, theme: 'pastel', words,
+      designs: Object.fromEntries(product.printSurfaces.map(surface => [surface.key, design])) };
+    const response = await save(payload);
+    const created = await response.json();
+    assert.equal(response.status, 201, JSON.stringify(created));
+    const restored = await fetch(`${endpoint}/${created.id}/edit`);
+    const body = await restored.json();
+    assert.equal(restored.status, 200);
+    assert.deepEqual(body.words, words);
+    for (const surface of product.printSurfaces) {
+      assert.equal(body.designs[surface.key].length, design.length);
+      body.designs[surface.key].forEach((item, index) => {
+        for (const field of Object.keys(design[index])) assert.equal(item[field], design[index][field], field);
+      });
+      const print = await fetch(app.baseUrl + created.printFileUrls[surface.key]);
+      assert.equal(print.status, 200);
+      const svg = await print.text();
+      assert.equal(svg, buildProductPrintSvg(product, body.designs[surface.key]));
+      assert.equal((svg.match(/<text /g) || []).length, count === 500 && key.includes('mug') ? 1000 : count);
+    }
+    const foreign = await fetch(`${app.baseUrl}/api/events/${other.slug}/configurations/${created.id}/edit`);
+    assert.equal(foreign.status, 404);
+    lastPayload = payload;
+  }
+  const excessWords = await save({ ...lastPayload, words: [...lastPayload.words, ['zu-viel', 1]] });
+  assert.equal(excessWords.status, 400);
+  assert.equal((await excessWords.json()).error, 'invalid_words');
+  const tooMany = Array.from({ length: 1201 }, (_, i) => ({ ...lastPayload.designs.default[0], id: 'extra-' + i }));
+  const excessDesign = await save({ ...lastPayload, designs: { default: tooMany } });
+  assert.equal(excessDesign.status, 400);
+  assert.equal((await excessDesign.json()).error, 'invalid_design');
 });
 
 test('configurations require the exact canvas and store no placement state', async (t) => {

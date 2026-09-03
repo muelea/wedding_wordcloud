@@ -31,10 +31,8 @@ const log = require('../structuredLog');
 const performanceProbe = require('../performanceProbe');
 
 const PIN_RE = /^\d{4,6}$/;
-const MAX_SNAPSHOT_WORDS = 200;
-// Two-sided layouts duplicate every approved cloud word, with a little room
-// left for words the organizer adds manually in the editor.
-const MAX_DESIGN_ELEMENTS = 500;
+const { MAX_EVENT_UNIQUE_WORDS: MAX_SNAPSHOT_WORDS,
+  MAX_DESIGN_ELEMENTS, MIN_PRINT_FONT_SIZE } = require('../../public/js/cloud-limits');
 const MAX_DESIGN_IMAGES = 4;
 const MAX_DESIGN_IMAGE_BYTES = 5_000_000;
 const ADDRESS_LIMITS = Object.freeze({
@@ -548,7 +546,7 @@ function normalizeDesign(
         ![400, 700].includes(fontWeight) ||
         !['normal', 'italic'].includes(fontStyle) ||
         typeof underline !== 'boolean' || typeof linethrough !== 'boolean' ||
-        !text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
+        !text || !Number.isFinite(fontSize) || fontSize < MIN_PRINT_FONT_SIZE || fontSize > height) return null;
     const canStyle = EmojiCatalog.parse(text).some((run) =>
       run.type === 'text' && run.text.trim());
     normalized.push({
