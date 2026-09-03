@@ -149,6 +149,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
   assert.deepEqual(await statusResponse.json(), {
     status: 'paid_test',
     paymentConfirmed: true,
+    configurationIds: [configuration.id],
     fulfillmentCreated: false,
     fulfillmentStatus: 'mocked',
     mode: 'test',

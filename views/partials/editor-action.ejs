@@ -1,0 +1,6 @@
+<button id="<%= action.id %>" type="button" class="editor-button editor-icon-button<%= action.primary ? ' editor-button-primary' : '' %><%= action.danger ? ' editor-delete' : '' %>"
+  aria-label="<%= action.label %>" data-editor-tooltip
+  <% if (action.disabled) { %>disabled<% } %>
+  <% if (action.controls) { %>aria-controls="<%= action.controls %>" aria-haspopup="dialog" aria-expanded="false"<% } %>>
+  <svg class="editor-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><use href="#editor-icon-<%= action.icon %>"></use></svg>
+</button>

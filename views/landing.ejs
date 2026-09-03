@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <script src="<%= asset('/js/site-journey.js') %>"></script>
   <title data-i18n-source="Wolkenworte – Eure Erinnerungen in einem Wort"><%= t('Wolkenworte – Eure Erinnerungen in einem Wort') %></title>
   <style>
 
@@ -148,6 +149,13 @@
     h1 em { color: var(--sage-deep); font-style: italic; font-weight: 500; }
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    #resume-journey[hidden], #resume-journey a[hidden] { display: none; }
+    #resume-journey { margin-top: 24px; color: var(--muted); font-size: 14px; }
+    #resume-journey p { margin: 0 0 8px; }
+    #resume-journey strong { color: var(--ink); font-weight: 500; }
+    .resume-links { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+    .resume-links a { color: var(--berry); text-underline-offset: 4px; padding: 8px 0; }
+    .resume-links a:hover { color: var(--ink); }
     .trust { margin-top: 26px; display: flex; align-items: center; gap: 9px; }
     .trust + .trust { margin-top: 10px; }
     .trust-heart { width: 18px; height: auto; color: var(--coral); transform: rotate(-6deg); }
@@ -405,7 +413,7 @@
   <script>
     (function () {
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (reduceMotion) {
+      if (reduceMotion || WolkenworteJourney.recent()) {
         var overlay = document.getElementById('intro-overlay');
         if (overlay) overlay.remove();
       } else {
@@ -426,6 +434,13 @@
           <div class="hero-actions">
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
           </div>
+          <aside id="resume-journey" hidden aria-label="Hier weitermachen">
+            <p><span>Hier weitermachen:</span> <strong data-resume-title data-i18n-ignore></strong></p>
+            <div class="resume-links">
+              <a data-resume-cloud href="/">Zur Wortwolke</a>
+              <a data-resume-design href="/">Zum Warenkorb</a>
+            </div>
+          </aside>
           <div class="trust">
             <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
             <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
@@ -770,6 +785,10 @@
   </footer>
 
   <script src="<%= asset('/js/site-header.js') %>"></script>
+  <script>
+    void WolkenworteJourney.mountHome(document);
+    window.addEventListener('pageshow', () => { void WolkenworteJourney.mountHome(document); });
+  </script>
   <script src="<%= asset('/js/landing-workflow.js') %>"></script>
   <script>
     (function () {
@@ -970,7 +989,7 @@
         };
       }
 
-      var mug = Mug3DViewer.create({
+      function createHomepageMug() { return Mug3DViewer.create({
         THREE: window.THREE,
         host: canvas,
         canvas: canvas,
@@ -979,10 +998,18 @@
         drawTexture: buildDrawTexture(),
         autoRotate: !reduceMotion,
         autoRotateDurationMs: 9000
-      });
-      window.addEventListener('resize', mug.resize);
+      }); }
+      var mug = null;
+      function resumeHomepageMug() {
+        if (mug) return;
+        try { mug = createHomepageMug(); } catch { /* Never replace a failed 3D scene with a fake mug. */ }
+      }
+      resumeHomepageMug();
+      window.addEventListener('resize', function () { mug?.resize(); });
+      window.addEventListener('pagehide', function () { mug?.destroy(); mug = null; });
+      window.addEventListener('pageshow', resumeHomepageMug);
       window.addEventListener('wolkenworte:localechange', function () {
-        mug.updateTexture(buildDrawTexture(true));
+        mug?.updateTexture(buildDrawTexture(true));
       });
     })();
   </script>

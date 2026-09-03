@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const {
   FINGERPRINT_LENGTH,
   PUBLIC_ROOT,
@@ -68,4 +69,23 @@ test('every word-cloud page uses the same content-addressed runtime', () => {
   const display = fs.readFileSync(path.join(VIEW_ROOT, 'display.ejs'), 'utf8');
   assert.match(display, /Number\.isFinite\(WordCloudCore\.TEXT_BASELINE_OFFSET\)/);
   assert.match(display, /:\s*0\.34;/);
+});
+
+test('development edits cannot reuse a cached immutable asset fingerprint', () => {
+  let contents = Buffer.from('first version'), revision = 1;
+  const context = vm.createContext({ module: { exports: {} }, __dirname: path.join(__dirname, '../src'),
+    process: { env: { NODE_ENV: 'development' } },
+    require(name) { return name === 'node:fs' ? {
+      statSync: () => ({ size: contents.length, mtimeMs: revision, ctimeMs: revision }),
+      readFileSync: () => contents,
+    } : require(name); },
+  });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/publicAssets.js'), 'utf8'), context);
+  const assets = context.module.exports;
+  const first = assets.fingerprintPublicAsset('/js/example.js');
+  contents = Buffer.from('second version'); revision += 1;
+  const second = assets.fingerprintPublicAsset('/js/example.js');
+  assert.notEqual(first, second);
+  assert.equal(assets.hasCurrentPublicAssetVersion('/js/example.js', first), false);
+  assert.equal(assets.hasCurrentPublicAssetVersion('/js/example.js', second), true);
 });

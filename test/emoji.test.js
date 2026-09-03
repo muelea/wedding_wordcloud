@@ -71,7 +71,7 @@ test('both pages mount one shared, desktop-only, accessible emoji picker', () =>
   assert.match(displaySource, /@media \(min-width: 621px\) and \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?\.display-emoji-trigger \{ display: grid; \}/);
   assert.match(displaySource, /WolkenworteEmojiPicker\.create\(\{[\s\S]*?idPrefix: 'display-emoji'/);
   assert.match(displaySource, /value\.slice\(0, start\)\}\$\{emoji\}\$\{value\.slice\(end\)/);
-  assert.match(configureSource, /id="editor-add"[\s\S]*?id="editor-emoji-toggle"[\s\S]*?id="editor-image"/);
+  assert.match(configureSource, /id: 'editor-add'[\s\S]*?id: 'editor-emoji-toggle'[\s\S]*?id: 'editor-image'/);
   assert.match(configureSource, /\.editor-emoji-picker \{ position: relative; display: none; \}/);
   assert.match(configureSource, /WolkenworteEmojiPicker\.create\(\{[\s\S]*?idPrefix: 'editor-emoji'/);
   assert.match(configureSource, /onSelect: \(emoji\) => mugEditor\.addEmoji\(emoji\)/);

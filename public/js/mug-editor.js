@@ -62,7 +62,8 @@
       this.selectionPanel = options.selectionPanel;
       this.textInput = options.textInput;
       this.textLabel = options.textLabel;
-      this.fontSelect = options.fontSelect;
+      this.selectedFontKey = '';
+      this.fontPickerInline = false;
       this.fontButton = options.fontButton;
       this.fontCurrent = options.fontCurrent;
       this.fontMenu = options.fontMenu;
@@ -666,11 +667,6 @@
         }
       });
       options.colorInput.addEventListener('input', () => this.setActiveColor(options.colorInput.value));
-      this.fontSelect.addEventListener('change', () => {
-        this.setActiveFont(this.fontSelect.value).catch(() => {
-          this.setFeedback('Schrift konnte nicht geladen werden');
-        });
-      });
       this.fontButton.addEventListener('click', (event) => {
         event.stopPropagation();
         this.toggleFontPicker();
@@ -680,32 +676,7 @@
         event.preventDefault();
         this.openFontPicker(event.key === 'ArrowUp' ? -1 : 1);
       });
-      this.fontMenu.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          event.preventDefault();
-          this.moveFontOptionFocus(event.key === 'ArrowDown' ? 1 : -1);
-          return;
-        }
-        if (event.key === 'Home' || event.key === 'End') {
-          event.preventDefault();
-          this.fontOptionButtons[event.key === 'Home' ? 0 : this.fontOptionButtons.length - 1]?.focus();
-          return;
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          this.closeFontPicker(true);
-          return;
-        }
-        if (event.key === 'Enter' || event.key === ' ') {
-          const activeOption = this.fontOptionButtons.find((button) => button === document.activeElement);
-          if (!activeOption) return;
-          event.preventDefault();
-          activeOption.click();
-          return;
-        }
-        if (event.key === 'Tab') this.closeFontPicker();
-      });
+      this.fontMenu.addEventListener('keydown', (event) => this.onFontPickerKeyDown(event));
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
@@ -860,25 +831,13 @@
     }
 
     renderFontOptions() {
-      this.fontSelect.replaceChildren();
       this.fontMenu.replaceChildren();
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.textContent = translate('Schrift wählen');
-      placeholder.disabled = true;
-      this.fontSelect.appendChild(placeholder);
-      this.fontPlaceholder = placeholder;
       for (const font of root.DesignFonts.FONTS) {
         const fontLabel = translate(font.label);
         const fontDescription = translate(font.description);
-        const option = document.createElement('option');
-        option.value = font.key;
-        option.textContent = `${fontLabel} – ${fontDescription}`;
-        option.style.fontFamily = font.cssFamily;
-        this.fontSelect.appendChild(option);
-
         const button = document.createElement('button');
         button.type = 'button';
+        button.tabIndex = -1;
         button.className = 'editor-font-option';
         button.dataset.fontKey = font.key;
         button.setAttribute('role', 'option');
@@ -895,18 +854,20 @@
 
         button.append(name, description);
         button.addEventListener('click', () => {
-          this.fontSelect.value = font.key;
-          this.fontSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          if (this.fontButton.disabled) return;
+          this.setActiveFont(font.key).catch(() => {
+            this.setFeedback('Schrift konnte nicht geladen werden');
+          });
           this.closeFontPicker(true);
         });
         this.fontMenu.appendChild(button);
       }
       this.fontOptionButtons = [...this.fontMenu.querySelectorAll('.editor-font-option')];
-      this.fontSelect.value = '';
       this.syncFontPicker('', translate('Schrift wählen'), true);
     }
 
     syncFontPicker(fontKey, placeholder, disabled) {
+      this.selectedFontKey = fontKey;
       const font = fontKey ? root.DesignFonts.get(fontKey) : null;
       const fontLabel = font ? translate(font.label) : '';
       const fontDescription = font ? translate(font.description) : '';
@@ -914,8 +875,11 @@
       this.fontCurrent.textContent = font ? fontLabel : placeholder;
       this.fontCurrent.style.fontFamily = font ? font.cssFamily : '';
       this.fontButton.title = font ? `${fontLabel} – ${fontDescription}` : placeholder;
+      const focused = this.fontOptionButtons.includes(document.activeElement) ? document.activeElement : null;
+      const tabStop = focused || this.fontOptionButtons.find(button => button.dataset.fontKey === fontKey) || this.fontOptionButtons[0];
       this.fontOptionButtons.forEach((button) => {
         button.setAttribute('aria-selected', String(button.dataset.fontKey === fontKey));
+        button.tabIndex = button === tabStop ? 0 : -1;
       });
       if (disabled) this.closeFontPicker();
     }
@@ -931,25 +895,64 @@
       this.fontMenu.hidden = false;
       this.fontButton.setAttribute('aria-expanded', 'true');
       const selectedIndex = this.fontOptionButtons.findIndex((button) =>
-        button.dataset.fontKey === this.fontSelect.value
+        button.dataset.fontKey === this.selectedFontKey
       );
-      const index = focusDirection < 0
-        ? this.fontOptionButtons.length - 1
-        : selectedIndex >= 0 ? selectedIndex : 0;
-      this.fontOptionButtons[index]?.focus();
+      const index = selectedIndex >= 0 ? selectedIndex
+        : focusDirection < 0 ? this.fontOptionButtons.length - 1 : 0;
+      this.focusFontOption(index);
+    }
+
+    setFontPickerInline(inline) {
+      // The workspace reparents this same list into its compact sheet. Only
+      // presentation changes: font previews, state and handlers stay shared.
+      this.fontPickerInline = inline;
+      this.fontButton.hidden = inline;
+      this.fontMenu.hidden = !inline;
+      this.fontButton.setAttribute('aria-expanded', String(inline));
     }
 
     closeFontPicker(restoreFocus = false) {
+      // An inline list remains available for comparing several fonts. Its
+      // containing dialog owns dismissal, focus restoration and Escape.
+      if (this.fontPickerInline) return;
       this.fontMenu.hidden = true;
       this.fontButton.setAttribute('aria-expanded', 'false');
-      if (restoreFocus) this.fontButton.focus();
+      if (restoreFocus) this.fontButton.focus({ preventScroll: true });
+    }
+
+    focusFontOption(index) {
+      this.fontOptionButtons.forEach((button, position) => { button.tabIndex = position === index ? 0 : -1; });
+      this.fontOptionButtons[index]?.focus();
     }
 
     moveFontOptionFocus(direction) {
       const current = this.fontOptionButtons.indexOf(document.activeElement);
       const start = current >= 0 ? current : 0;
       const next = (start + direction + this.fontOptionButtons.length) % this.fontOptionButtons.length;
-      this.fontOptionButtons[next]?.focus();
+      this.focusFontOption(next);
+    }
+
+    onFontPickerKeyDown(event) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.moveFontOptionFocus(event.key === 'ArrowDown' ? 1 : -1);
+      } else if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        this.focusFontOption(event.key === 'Home' ? 0 : this.fontOptionButtons.length - 1);
+      } else if (event.key === 'Escape' && !this.fontPickerInline) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.closeFontPicker(true);
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        const activeOption = this.fontOptionButtons.find(button => button === document.activeElement);
+        if (!activeOption) return;
+        event.preventDefault();
+        activeOption.click();
+      } else if (event.key === 'Tab' && !this.fontPickerInline) {
+        // Resume the document's tab order from the trigger before hiding the
+        // focused option; inline lists use the dialog's normal tab order.
+        this.closeFontPicker(true);
+      }
     }
 
     toggleIconPicker() {
@@ -1156,30 +1159,62 @@
       }
     }
 
+    getConstrainedBounds(object) {
+      const bounds = object.getBoundingRect();
+      let left = bounds.left;
+      let top = bounds.top;
+      let right = left + bounds.width;
+      let bottom = top + bounds.height;
+      // Fabric's selection box and the print renderer use different text line
+      // boxes. Contain both, using the same measured text as server validation.
+      for (const child of this.selectedObjects(object)) {
+        const item = this.serializeObject(child);
+        const box = item.type === 'image' ? item
+          : item.type === 'icon' ? { width: item.size, height: item.size }
+          : root.WordCloudCore.measureTextBox(item.text, item.fontSize, this.measureContext,
+            root.DesignFonts.cssFamily(item.fontFamily));
+        const radians = item.angle * Math.PI / 180;
+        const cos = Math.abs(Math.cos(radians));
+        const sin = Math.abs(Math.sin(radians));
+        const halfWidth = (box.width * cos + box.height * sin) * this.editorScale / 2;
+        const halfHeight = (box.width * sin + box.height * cos) * this.editorScale / 2;
+        const x = item.x * this.editorScale;
+        const y = item.y * this.editorScale;
+        left = Math.min(left, x - halfWidth);
+        right = Math.max(right, x + halfWidth);
+        top = Math.min(top, y - halfHeight);
+        bottom = Math.max(bottom, y + halfHeight);
+      }
+      return { left, top, width: right - left, height: bottom - top };
+    }
+
     keepInside(object) {
       if (!object) return;
       object.setCoords();
-      let bounds = object.getBoundingRect();
-      const availableWidth = this.canvasWidth - this.margin * 2;
-      const availableHeight = this.canvasHeight - this.margin * 2;
+      let bounds = this.getConstrainedBounds(object);
+      // Two print pixels cover decimal serialization and cross-engine metric
+      // rounding without relaxing the server's strict printable-area check.
+      const margin = this.margin + 2 * this.editorScale;
+      const availableWidth = this.canvasWidth - margin * 2;
+      const availableHeight = this.canvasHeight - margin * 2;
       if (bounds.width > availableWidth || bounds.height > availableHeight) {
         const factor = Math.min(availableWidth / bounds.width, availableHeight / bounds.height);
         object.scaleX *= factor;
         object.scaleY *= factor;
         object.setCoords();
-        bounds = object.getBoundingRect();
+        bounds = this.getConstrainedBounds(object);
         this.flashBoundary();
       }
 
       let deltaX = 0;
       let deltaY = 0;
-      if (bounds.left < this.margin) deltaX = this.margin - bounds.left;
-      if (bounds.left + bounds.width > this.canvasWidth - this.margin) {
-        deltaX = this.canvasWidth - this.margin - bounds.left - bounds.width;
+      if (bounds.left < margin) deltaX = margin - bounds.left;
+      if (bounds.left + bounds.width > this.canvasWidth - margin) {
+        deltaX = this.canvasWidth - margin - bounds.left - bounds.width;
       }
-      if (bounds.top < this.margin) deltaY = this.margin - bounds.top;
-      if (bounds.top + bounds.height > this.canvasHeight - this.margin) {
-        deltaY = this.canvasHeight - this.margin - bounds.top - bounds.height;
+      if (bounds.top < margin) deltaY = margin - bounds.top;
+      if (bounds.top + bounds.height > this.canvasHeight - margin) {
+        deltaY = this.canvasHeight - margin - bounds.top - bounds.height;
       }
       if (deltaX || deltaY) {
         object.set({ left: object.left + deltaX, top: object.top + deltaY });
@@ -1202,6 +1237,19 @@
         this.changeFrame = null;
         this.onChange(cloneDesign(this.getDesign()));
       });
+    }
+
+    flushPendingChange() {
+      if (!this.changeFrame) return;
+      cancelAnimationFrame(this.changeFrame);
+      this.changeFrame = null;
+      this.onChange(cloneDesign(this.getDesign()));
+    }
+
+    hasPendingTextChange() {
+      const active = this.canvas.getActiveObject();
+      return active?.editorKind === 'text' && Boolean(this.textInput.value.trim()) &&
+        this.normalizeText(this.textInput.value) !== this.normalizeText(this.objectText(active));
     }
 
     recordHistory() {
@@ -1620,7 +1668,6 @@
       this.updateImageQualityBadge(isImage ? active : null);
       this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
       this.colorInput.disabled = !hasSelection || !canColor;
-      this.fontSelect.disabled = !hasSelection || !canChangeFont;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
       this.swatches.querySelectorAll('.editor-swatch').forEach((button) => {
         button.disabled = !hasSelection || !canColor;
@@ -1637,8 +1684,6 @@
         this.selectionHint.textContent = translate('Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere');
         this.textLabel.textContent = translate('Ausgewähltes Element');
         this.textInput.value = '';
-        this.fontPlaceholder.textContent = translate('Schrift wählen');
-        this.fontSelect.value = '';
         this.syncFontPicker('', translate('Schrift wählen'), true);
         this.swatches.querySelectorAll('.editor-swatch').forEach((button) => {
           button.classList.remove('is-selected');
@@ -1649,10 +1694,6 @@
       const commonFontKey = fontKeys.length && fontKeys.every((key) => key === fontKeys[0])
         ? fontKeys[0]
         : '';
-      this.fontPlaceholder.textContent = !canChangeFont
-        ? translate('Nur für Text')
-        : commonFontKey ? translate('Schrift wählen') : translate('Mehrere Schriften');
-      this.fontSelect.value = commonFontKey;
       this.syncFontPicker(
         commonFontKey,
         translate(!canChangeFont ? 'Nur für Text' : 'Mehrere Schriften'),

@@ -187,5 +187,5 @@ test('compact configurator widths keep color controls horizontal and separate fr
   assert.match(configure, /\.editor-swatch \{[\s\S]*?flex: 0 0 23px;/);
   assert.match(configure, /\.editor-color-input \{[\s\S]*?flex: 0 0 28px;/);
   assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-properties \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-  assert.match(workspaceStyles, /\.editor-tool-panel \.editor-actions \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(workspaceStyles, /\.editor-tool-panel \.editor-actions \{[^}]*display: flex;[^}]*flex-wrap: wrap;/);
 });

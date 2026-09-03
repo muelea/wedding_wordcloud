@@ -367,6 +367,7 @@
             <button class="submit-button" id="submit-button" type="submit" disabled>Gesamtpreis berechnen <span aria-hidden="true">→</span></button>
             <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten im <a href="/datenschutz">Datenschutz</a>.</p>
             <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
+            <p id="shipping-draft-status" role="status" aria-live="polite"></p>
           </form>
         </section>
 
@@ -389,6 +390,8 @@
     <div class="fatal" id="fatal-error" hidden></div>
   </main>
 
+  <script src="<%= asset('/js/configurator-session.js') %>"></script>
+  <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script>
     'use strict';
 
@@ -425,6 +428,10 @@
     let configuration = null;
     let currentQuote = null;
     let countryDisplayNames = null;
+    let shippingDraftReady = false;
+    let shippingDraft = null;
+    let shippingDraftUnstored = false;
+    try { shippingDraft = WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage); } catch {}
     const customerErrorSources = Object.freeze({
       invalid_address: 'Bitte füllt alle benötigten Adressfelder vollständig aus.',
       pricing_not_configured: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
@@ -488,15 +495,50 @@
     refreshCountryDisplayNames();
 
     const backLink = document.getElementById('back-link');
-    backLink.href = `/e/${encodeURIComponent(slug)}/configure`;
-    backLink.addEventListener('click', (event) => {
+    const editingConfigurationId = configurationIds.includes(query.get('edit')) ? query.get('edit') : configurationIds[0];
+    backLink.href = `/e/${encodeURIComponent(slug)}/configure${editingConfigurationId ? `?edit=${encodeURIComponent(editingConfigurationId)}` : ''}`;
+    backLink.addEventListener('click', saveShippingDraft);
+
+    function saveShippingDraft() {
+      if (!shippingDraftReady) return;
+      shippingDraftUnstored = !shippingDraft?.write(collectShipments({ validate: false }).shipments);
+      const status = document.getElementById('shipping-draft-status');
+      if (shippingDraftUnstored) setText(status, 'Eure Lieferangaben können in diesem Browser nicht zwischengespeichert werden.');
+      else clearText(status);
+    }
+
+    window.addEventListener('beforeunload', (event) => {
+      if (!shippingDraftUnstored) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+
+    function shippingReturnIsStale(checkCart = false) {
       try {
-        const previous = new URL(document.referrer);
-        if (previous.origin === location.origin && previous.pathname === backLink.pathname) {
-          event.preventDefault();
-          history.back();
+        if (configurationIds.some((id) => WolkenworteConfiguratorSession.purchasedIds(slug, sessionStorage).includes(id))) return true;
+        const cart = sessionStorage.getItem(`wolkenworte-order:${slug}`);
+        if (checkCart && cart !== null) {
+          const ids = WolkenworteConfiguratorSession.normalizeCart(JSON.parse(cart)).map((item) => item.id);
+          return ids.length !== configurationIds.length || configurationIds.some((id) => !ids.includes(id));
         }
-      } catch { /* A direct visit simply follows the normal link. */ }
+      } catch {}
+      return false;
+    }
+
+    window.addEventListener('pageshow', (event) => {
+      if (!event.persisted) return;
+      WolkenworteActions.setBusy(submitButton, false);
+      WolkenworteActions.setBusy(checkoutButton, false);
+      if (shippingReturnIsStale(true)) {
+        currentQuote = null;
+        backLink.href = `/e/${encodeURIComponent(slug)}/configure`;
+        showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zum Design zurück.');
+      }
+    });
+
+    window.addEventListener('pagehide', saveShippingDraft);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveShippingDraft();
     });
 
     function showFatal(message) {
@@ -1223,6 +1265,7 @@
       if (configurations.length) {
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
       }
+      saveShippingDraft();
     }
 
     function formatMoney(cents, currency) {
@@ -1364,6 +1407,11 @@
     }
 
     async function loadPage() {
+      if (shippingReturnIsStale(true)) {
+        backLink.href = `/e/${encodeURIComponent(slug)}/configure`;
+        showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zum Design zurück.');
+        return;
+      }
       if (!configurationIds.length || configurationIds.some((id) => !/^[A-Za-z0-9_-]{16}$/.test(id))) {
         showFatal('Dieser Entwurf ist nicht gültig. Bitte kehrt zum Konfigurator zurück und bestätigt euer Design erneut.');
         return;
@@ -1384,6 +1432,7 @@
         if (!countriesResponse.ok) throw new Error(countriesData.message || 'countries');
         if (!eventResponse.ok) throw new Error('configuration');
         await WolkenworteI18n.useEventLocale(eventData.locale);
+        WolkenworteJourney.remember(slug, eventData.title, true);
         refreshCountryDisplayNames();
         configurations = Array.isArray(configurationData.configurations)
           ? configurationData.configurations
@@ -1393,9 +1442,17 @@
         countries = countriesData.countries || [];
         if (!countries.length) throw new Error('countries');
 
-        renderShipments([defaultShipment()]);
+        const savedShipping = shippingDraft?.restore(configurationIds);
+        if (savedShipping?.length) {
+          const knownIds = new Set(savedShipping.flatMap((shipment) => shipment.items.map((item) => item.configurationId)));
+          const addedItems = defaultShipment().items.filter((item) => !knownIds.has(item.configurationId));
+          savedShipping[0].items.push(...addedItems);
+        }
+        renderShipments(savedShipping?.length ? savedShipping : [defaultShipment()]);
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
         await restoreSavedQuote();
+        shippingDraftReady = true;
+        saveShippingDraft();
         submitButton.disabled = false;
         loading.hidden = true;
         pageContent.hidden = false;

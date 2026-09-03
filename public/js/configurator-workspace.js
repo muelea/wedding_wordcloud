@@ -18,9 +18,10 @@
   }
 
   class WolkenworteWorkspace {
-    constructor(document, { commitText = () => {} } = {}) {
+    constructor(document, { commitText = () => {}, setFontPickerInline = () => {} } = {}) {
       this.document = document;
       this.commitText = commitText;
+      this.setFontPickerInline = setFontPickerInline;
       this.media = root.matchMedia('(max-width: 940px)');
       this.selection = document.getElementById('editor-selection');
       this.desktopHost = document.getElementById('editor-desktop-inspector');
@@ -28,7 +29,9 @@
       this.toolPanel = document.getElementById('editor-tool-panel');
       this.toolBody = document.getElementById('editor-tool-body');
       this.toolTitle = document.getElementById('editor-tool-title');
-      this.fontSelect = document.getElementById('editor-font');
+      this.resetPanel = document.getElementById('editor-reset-panel');
+      this.resetButton = document.getElementById('editor-reset');
+      document.getElementById('editor-reset-confirm').addEventListener('click', () => this.confirmReset());
       this.capabilities = {};
       this.active = null;
       this.sectionHome = null;
@@ -70,9 +73,11 @@
       }
       this.media.addEventListener('change', () => {
         const trigger = this.active?.trigger;
+        const fontFocused = this.document.activeElement?.closest('.editor-font-picker');
         this.close(false);
+        this.setFontPickerInline(false);
         this.mountInspector();
-        if (trigger) (trigger.disabled || !trigger.getClientRects().length
+        if (trigger || fontFocused) (!trigger || trigger.disabled || !trigger.getClientRects().length
           ? this.selection : trigger).focus({ preventScroll: true });
       });
       const reposition = () => this.positionChooser();
@@ -117,7 +122,7 @@
       }
       // Do not autofocus text on simple selection or opening a chooser. This
       // keeps the mobile keyboard closed and the beginning of long lists visible.
-      panel.querySelector('h2').focus({ preventScroll: true });
+      (panel.querySelector('[data-panel-initial-focus]') || panel.querySelector('h2')).focus({ preventScroll: true });
     }
 
     positionChooser() {
@@ -156,10 +161,11 @@
       const section = this.sections.get(tool);
       this.sectionHome = { section, parent: section.parentNode, next: section.nextSibling };
       this.toolBody.append(section);
-      if (root.WolkenworteI18n) root.WolkenworteI18n.setText(this.toolTitle, trigger.dataset.i18nSource || trigger.textContent);
-      else this.toolTitle.textContent = trigger.textContent;
+      const label = trigger.querySelector('[data-editor-tool-label]');
+      if (root.WolkenworteI18n) root.WolkenworteI18n.setText(this.toolTitle, label.dataset.i18nSource || label.textContent.trim());
+      else this.toolTitle.textContent = label.textContent.trim();
       this.toolPanel.dataset.tool = tool;
-      if (tool === 'font') this.fontSelect.hidden = false;
+      if (tool === 'font') this.setFontPickerInline(true);
       this.show(this.toolPanel, trigger, false, tool);
       if (tool === 'text') {
         const input = section.querySelector('input');
@@ -171,6 +177,21 @@
 
     closeChooser() {
       if (this.active && !this.active.tool) this.close();
+    }
+
+    requestReset(command) {
+      this.close();
+      this.show(this.resetPanel, this.resetButton);
+      this.active.resetCommand = command;
+    }
+
+    confirmReset() {
+      const command = this.active?.resetCommand;
+      if (!command) return;
+      // Consume the confirmation before invoking the command: double-clicks
+      // or a delayed event cannot apply it a second time.
+      this.close();
+      command();
     }
 
     close(restoreFocus = true) {
@@ -201,7 +222,7 @@
         const { section, parent, next } = this.sectionHome;
         parent.insertBefore(section, next);
         this.sectionHome = null;
-        this.fontSelect.hidden = true;
+        if (tool === 'font') this.setFontPickerInline(false);
       }
       if (restoreFocus) (trigger.disabled || !trigger.getClientRects().length
         ? this.selection : trigger).focus({ preventScroll: true });

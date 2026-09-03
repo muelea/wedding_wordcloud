@@ -802,6 +802,7 @@
 </dialog>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="<%= asset('/js/site-journey.js') %>"></script>
 <script src="<%= asset('/js/emoji-data.js') %>"></script>
 <script src="<%= asset('/js/emoji-catalog.js') %>"></script>
 <script src="<%= asset('/js/emoji-search.js') %>"></script>
@@ -812,6 +813,7 @@
 <script>
   // Slug comes from the canonical event URL: /e/<slug>
   const slug = location.pathname.split('/').filter(Boolean)[1];
+  WolkenworteJourney.remember(slug, document.getElementById('cloud-title').textContent);
 
   const canvas         = document.getElementById('cloud-canvas');
   const ctx             = canvas.getContext('2d');

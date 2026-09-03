@@ -29,13 +29,25 @@ frozen snapshot of the word cloud.
    spiral notebook or decorative pillow from grouped product families, any
    color palette and product-specific arrangement actions, and approves an
    immutable Printful-sized file with a transparent background. Each approved
-   design is added to the local order basket automatically when the customer
-   chooses another product or continues to the shipping address, so the
-   customer can design a mug, a coaster, another mug size, etc. before moving
-   to delivery. Basket designs can be opened again for inspection or edits;
-   either onward action, opening another basket design or returning to the
-   word cloud saves the current state as a new immutable configuration and
-   replaces the previous basket entry.
+   design enters the tab-local basket only through “In den Warenkorb” or an
+   explicit confirmation when leaving an unsaved editor. Editing a basket design
+   uses “Änderungen übernehmen” and replaces that position without duplicating it.
+   One shared leave dialog offers save-and-continue, discard-and-continue, or
+   stay. Unchanged basket designs need no dialog. Shipping with an empty basket
+   asks to add the current design and continue; declining keeps the editor open.
+   Failed saves never navigate. Unapproved editor work is not autosaved or
+   restored. Browser back/reload/close uses the browser's own limited unsaved-work
+   warning; an app-specific dialog cannot be guaranteed for those actions.
+   Basket references live in event-scoped sessionStorage, while approved print
+   snapshots continue using the existing server configuration IDs. No new draft
+   service or account is involved. A plain configurator URL always starts from
+   current cloud words; ?edit=<id> opens precisely that server snapshot, and
+   ?cart=1 opens the last basket design. Returning from shipping uses ?edit.
+   Removing a position never automatically re-adds it. Starting another product
+   fetches the current cloud and confirms product selection before replacing the
+   editor. Address/quantity drafts live only in sessionStorage for up to
+   24 hours, survive design round trips, and never restore a trusted price:
+   the existing server-side quote and checkout checks remain authoritative.
    Local illustrated thumbnails make the catalog scannable. A locally served
    Three.js preview maps mug artwork onto a rotatable model; flat products use
    the same design in a proportional print preview. Posters can be designed in
@@ -58,6 +70,14 @@ frozen snapshot of the word cloud.
    selection. The immutable canvas design is the only source for preview and Printful output. Words
    can also be edited directly. Hard bounds keep
    the entire design printable.
+   Mug previews never substitute a CSS/2D mug: unavailable graphics show an
+   explicit retry state. Page-history restoration recreates the viewer, and
+   loading failures cannot leave the workspace permanently inert. Direct
+   design links open the requested immutable design even without a local cart;
+   adding that detached design to a cart remains an explicit action. The home
+   page offers a seven-day, browser-local return link to the last opened cloud
+   plus a link to its current tab's basket, without storing a PIN or introducing
+   an account. The previous IndexedDB draft store is no longer read or written.
 6. The saved designs continue to a dedicated, mobile-first shipping-address
    page. There the customer chooses the quantity of each design per delivery
    address. Countries and state/province choices come directly from Printful;
@@ -76,6 +96,10 @@ frozen snapshot of the word cloud.
    worker without making any Printful order request; the confirmation page
    clearly states that no real fulfillment was created. Live payments and real
    Printful orders remain hard-disabled until the tax review is signed off.
+   Only verified payment confirmation removes the purchased configuration IDs
+   from the local cart and shipping draft. Other products, newer design versions
+   remain intact; stale history entries cannot silently
+   resume a purchased or changed cart.
 
 ## Languages
 
@@ -491,6 +515,20 @@ node scripts/build-emoji-search-index.js \
 
 ## Testing
 
+### Cart and navigation acceptance
+
+In real Safari and Chromium, test the complete journey with an isolated event:
+fresh cloud → configurator → empty-cart shipping confirmation (cancel, then
+accept) → shipping → back to design, followed by native browser Back/Forward.
+The editor must remain interactive with a 3D mug; addresses and quantities must
+survive. Save an edit and verify it replaces one basket position. Test the logo
+and cloud links with save/discard/cancel, then add a cloud word: a fresh design
+must include it, while an explicitly reopened basket design stays unchanged.
+The homepage basket link must reopen the tab's saved basket. Check dialog layout
+at a narrow viewport, storage/network failures, and no unexpected order writes.
+The VM regression tests cover these state transitions but do not replace this
+real-browser acceptance check.
+
 ### Responsive configurator
 
 The editing dock has a selection-independent footprint. At compact widths
@@ -502,12 +540,29 @@ to history. Palette, orientation and arrangement use native top-layer popovers
 on wide screens, and native dialogs on compact screens (also the fallback when
 Popover is unavailable). Choosers do not take space in the document layout.
 
+The font picker has one custom listbox generated from `DesignFonts.FONTS`:
+the desktop dropdown and compact Font sheet reuse the same DOM nodes, font
+previews, descriptions and selection handler. The sheet shows the list directly,
+without a second dropdown or native select. Arrow/Home/End keys move focus;
+Enter/Space selects; Tab leaves the list. Escape dismisses the containing sheet
+or desktop dropdown. Font changes remain part of the existing Undo/Redo history.
+
+Toolbar actions use a locally bundled Lucide SVG subset with consistent 44px
+hit areas and localized accessible names/hover-and-focus tooltips. The four
+compact tool categories retain short visible labels. Reset is scoped to the
+current print side and restores its automatic cloud using the chosen palette;
+it requires a native confirmation dialog with initial focus on “Weiter
+bearbeiten”. Cancel, Escape and backdrop dismissal make no design changes.
+A confirmed reset is one Undo/Redo step, including uploaded images. The SVG
+source/version and upstream licenses are in `public/assets/ui-icons/`.
+
 Run `npm run test:configurator:browser` for an isolated, database-free instance
 of the actual configurator template, product catalog and editor. Add `&probe=1`
 to the printed URL and choose **Run layout regression** at each viewport size.
 The report checks real DOM geometry across word, emoji, image and multiple
 selection; repeated select/deselect; tool sheets; focus return; text history;
-chooser containment and option hit-testing. Repeat at 320, 390, 580, 620, 621,
+shared font options/selection/history, chooser containment and option hit-testing, toolbar hit areas/tooltips, and
+reset cancellation/confirmation/Undo/Redo. Repeat at 320, 390, 580, 620, 621,
 800, 940, 941, 1180 and 1440px, including short landscape viewports and browser
 zoom. Run in Chromium, Firefox and Safari; also verify actual touch, virtual
 keyboard, Tab/Shift-Tab, Escape, and resize while a panel is open. The fixture

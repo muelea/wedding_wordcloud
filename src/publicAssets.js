@@ -30,10 +30,15 @@ function fingerprintPublicAsset(publicPath, { missing = 'throw' } = {}) {
   }
 
   const cached = fingerprintCache.get(resolved.filename);
-  if (cached) return cached;
-
   let contents;
+  let signature;
   try {
+    // The development server stays alive while templates/scripts are edited.
+    // Never serve new bytes under yesterday's immutable fingerprint.
+    if (process.env.NODE_ENV === 'production' && cached) return cached.fingerprint;
+    const stat = fs.statSync(resolved.filename);
+    signature = `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+    if (cached?.signature === signature) return cached.fingerprint;
     contents = fs.readFileSync(resolved.filename);
   } catch (error) {
     if (missing === 'null' && error?.code === 'ENOENT') return null;
@@ -43,7 +48,7 @@ function fingerprintPublicAsset(publicPath, { missing = 'throw' } = {}) {
     .update(contents)
     .digest('hex')
     .slice(0, FINGERPRINT_LENGTH);
-  fingerprintCache.set(resolved.filename, fingerprint);
+  fingerprintCache.set(resolved.filename, { fingerprint, signature });
   return fingerprint;
 }
 

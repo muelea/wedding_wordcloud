@@ -58,6 +58,59 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 .config-panel-foot .editor-button { width: 100%; min-height: 44px; }
 .editor-dock, #editor-compact-inspector { display: none; }
 
+/* One local, stroke-based SVG family; button hit areas never shrink with icons. */
+.editor-symbols { position: absolute; width: 0; height: 0; overflow: hidden; }
+.editor-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.editor-toolbar { justify-content: flex-start; gap: 12px; }
+.editor-toolbar .surface-editor { flex-basis: 100%; }
+.editor-toolbar .editor-tools { flex-wrap: nowrap; }
+.editor-tools-separated { border-left: 1px solid var(--line); padding-left: 12px; }
+.editor-tools-view { margin-left: auto; }
+.editor-button.editor-icon-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  border-radius: 12px;
+}
+.editor-icon-button:focus-visible { outline: 3px solid rgba(156, 28, 76, .45); outline-offset: 2px; }
+.editor-actions .editor-delete { margin-left: 6px; }
+.editor-tooltip {
+  position: fixed;
+  inset: auto;
+  z-index: 100;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 16px));
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ink);
+  color: #fffdfb;
+  box-shadow: 0 5px 18px rgba(64, 15, 38, .15);
+  font: 500 12px/1.4 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+.editor-tooltip[hidden] { display: none; }
+.editor-reset-panel .config-panel-body p { margin: 0; font-size: 15px; line-height: 1.6; }
+.editor-reset-panel .config-panel-body .editor-reset-note { margin-top: 12px; color: var(--muted); font-size: 13px; }
+.editor-reset-actions { display: flex; gap: 10px; }
+.editor-reset-actions .editor-button { font: inherit; font-size: 14px; }
+.editor-reset-actions .editor-reset-confirm { border-color: var(--berry); background: var(--berry); color: #fff; }
+
 @media (max-width: 940px) {
   .config-panel {
     inset: auto 0 var(--ww-keyboard-inset, 0px);
@@ -92,7 +145,7 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
   }
   .editor-selection-hint { display: none; }
   .editor-dock { margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  .editor-dock .editor-button { min-width: 0; min-height: 44px; padding: 8px 4px; font-size: 12px; }
+  .editor-dock .editor-button { min-width: 0; min-height: 62px; padding: 8px 4px; font-size: 12px; flex-direction: column; gap: 4px; }
   .editor-tool-panel [data-editor-section] { min-width: 0; }
   .editor-tool-panel .editor-field-label-text {
     position: static;
@@ -105,7 +158,7 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
     font-size: 12px;
     white-space: normal;
   }
-  .editor-tool-panel .editor-text-input, .editor-tool-panel .editor-font-select {
+  .editor-tool-panel .editor-text-input {
     width: 100%;
     min-height: 44px;
     padding: 10px;
@@ -115,14 +168,41 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
     background: #fff;
     font: 16px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
   }
-  .editor-tool-panel .editor-font-picker { display: none; }
+  .editor-tool-panel .editor-field-label-font > .editor-field-label-text { display: none; }
+  .editor-tool-panel .editor-font-menu {
+    position: static;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  .editor-tool-panel .editor-font-option { min-height: 60px; padding: 10px 12px; gap: 4px; }
+  .editor-tool-panel .editor-font-option-name { font-size: 20px; }
+  .editor-tool-panel .editor-font-option-description { font-size: 13px; }
   .editor-tool-panel .editor-colors { gap: 12px; align-items: flex-start; }
   .editor-tool-panel .editor-swatches { min-width: 0; gap: 10px; }
   .editor-tool-panel .editor-swatch { width: 44px; height: 44px; flex-basis: 44px; }
   .editor-tool-panel .editor-color-input { width: 44px; height: 44px; flex-basis: 44px; }
-  .editor-tool-panel .editor-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .editor-tool-panel .editor-actions .editor-button { min-height: 44px; }
-  .editor-tool-panel .editor-delete { grid-column: 1 / -1; }
+  .editor-tool-panel .editor-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 10px; }
+  .editor-reset-panel { inset: 0; width: min(480px, calc(100% - 24px)); margin: auto; border: 1px solid var(--line); border-radius: 20px; }
+}
+
+@media (max-width: 620px) {
+  .editor-toolbar { display: grid; grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px; gap: 10px 6px;
+    grid-template-areas: 'create create selection history history' 'view view view . reset'; }
+  .editor-toolbar .surface-editor { grid-area: surface; }
+  .editor-tools-primary { grid-area: create; }
+  .editor-tools-selection { grid-area: selection; }
+  .editor-tools-history { grid-area: history; }
+  .editor-tools-view { grid-area: view; justify-self: start; margin-left: 0; }
+  .editor-tools-reset { grid-area: reset; justify-self: end; }
+  .editor-zoom-label { min-width: 36px; }
+  .editor-tools-separated { border-left: 0; padding-left: 0; }
+  .editor-toolbar:has(.surface-editor:not([hidden])) {
+    grid-template-areas: 'surface surface surface surface surface' 'create create selection history history' 'view view view . reset'; }
+  .editor-reset-actions { flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -95,10 +95,9 @@ test('closing restores the same controls and focus without scrolling', () => {
     tool: 'font',
   };
   workspace.sectionHome = { section, next, parent: { insertBefore: (...args) => calls.push(['restore', ...args]) } };
-  workspace.fontSelect = { hidden: false };
+  workspace.setFontPickerInline = inline => calls.push(['inline', inline]);
   workspace.finishClose();
-  assert.deepEqual(calls, [['restore', section, next], ['focus', { preventScroll: true }]]);
-  assert.equal(workspace.fontSelect.hidden, true);
+  assert.deepEqual(calls, [['restore', section, next], ['inline', false], ['focus', { preventScroll: true }]]);
   assert.equal(workspace.active, null);
   assert.equal(workspace.sectionHome, null);
 });
@@ -118,9 +117,11 @@ test('text sheet closure commits before moving the focused field', () => {
 
 test('responsive choosers and inspector use native panels and one copy of each control', () => {
   const source = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
-  for (const id of ['editor-text', 'editor-font', 'editor-color', 'editor-smaller', 'editor-delete']) {
+  for (const id of ['editor-text', 'editor-font-picker', 'editor-font-toggle', 'editor-font-menu', 'editor-color']) {
     assert.equal(source.split(`id="${id}"`).length - 1, 1, id);
   }
+  assert.doesNotMatch(source, /editor-font-select|id="editor-font"|fontSelect:/);
+  for (const id of ['editor-smaller', 'editor-delete']) assert.equal(source.split(`id: '${id}'`).length - 1, 1, id);
   for (const name of ['theme', 'orientation', 'placement']) {
     assert.ok(source.includes(`<dialog class="config-panel" id="${name}-panel"`));
     assert.ok(source.includes(`data-panel-trigger="${name}-panel"`));

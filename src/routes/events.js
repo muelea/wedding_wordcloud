@@ -1568,6 +1568,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.json({
       status: order.status,
       paymentConfirmed,
+      configurationIds: paymentConfirmed ? configurationIds : [],
       fulfillmentCreated,
       fulfillmentStatus: order.fulfillment_status || 'not_started',
       mode: order.mode || 'test',

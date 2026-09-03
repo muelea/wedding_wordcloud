@@ -80,6 +80,8 @@
       <a class="home-link" id="home-link" href="/">Zurück zur Wortwolke</a>
     </section>
   </main>
+  <script src="<%= asset('/js/configurator-session.js') %>"></script>
+  <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script>
     'use strict';
     const parts = location.pathname.split('/').filter(Boolean);
@@ -146,6 +148,7 @@
           confirmedOrder = order;
           renderConfirmedSummary(order);
           summary.hidden = false;
+          void WolkenworteConfiguratorSession.clearPurchased(slug, order);
           return;
         }
         if (attempt < 20) {

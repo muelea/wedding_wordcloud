@@ -216,8 +216,11 @@
     const autoStartRotation = group.rotation.y;
     const interactionElement = options.interactionElement || host;
     const maxVerticalRotation = Math.PI / 6;
+    let destroyed = false;
+    const reportStatus = (status) => options.onStatus?.(status);
 
     function render() {
+      if (destroyed || renderer.getContext().isContextLost()) return;
       renderer.render(scene, camera);
     }
 
@@ -329,8 +332,25 @@
     interactionElement.addEventListener('pointercancel', finishPointer);
     interactionElement.addEventListener('keydown', handleKeydown);
 
-    function destroy() {
+    const onContextLost = (event) => {
+      event.preventDefault();
       stopAutoRotate();
+      reportStatus('error');
+    };
+    const onContextRestored = () => {
+      if (destroyed) return;
+      try { resize(); updateTexture(); reportStatus('ready'); }
+      catch { reportStatus('error'); }
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    canvas.addEventListener('webglcontextrestored', onContextRestored);
+
+    function destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      stopAutoRotate();
+      canvas.removeEventListener('webglcontextlost', onContextLost);
+      canvas.removeEventListener('webglcontextrestored', onContextRestored);
       interactionElement.removeEventListener('pointerdown', handlePointerDown);
       interactionElement.removeEventListener('pointermove', handlePointerMove);
       interactionElement.removeEventListener('pointerup', finishPointer);
@@ -344,12 +364,16 @@
       });
       texture.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       if (ownsCanvas) canvas.remove();
     }
 
-    resize();
-    updateTexture();
-    if (options.autoRotate) startAutoRotate();
+    try {
+      resize();
+      updateTexture();
+      if (renderer.getContext().isContextLost()) throw new Error('webgl_context_lost');
+      if (options.autoRotate) startAutoRotate();
+    } catch (error) { destroy(); throw error; }
 
     return {
       THREE,

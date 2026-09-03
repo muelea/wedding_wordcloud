@@ -59,7 +59,7 @@ function clearApplicationModules() {
  * gives each test file its own process; every server within that file gets a
  * fresh random schema and applies the exact production application migration.
  */
-async function startTestServer() {
+async function startTestServer({ host = '127.0.0.1' } = {}) {
   if (!INITIAL_DATABASE_URL) {
     throw new Error('Tests require TEST_DATABASE_URL, MIGRATION_DATABASE_URL or DATABASE_URL.');
   }
@@ -100,7 +100,7 @@ async function startTestServer() {
     await new Promise((resolve, reject) => {
       const onListenError = (error) => reject(error);
       server.once('error', onListenError);
-      server.listen(0, '127.0.0.1', () => {
+      server.listen(0, host, () => {
         server.off('error', onListenError);
         resolve();
       });
