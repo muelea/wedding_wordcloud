@@ -321,54 +321,59 @@ async function upsertWord(eventId, word) {
 
 async function addWordContribution(eventId, word, ownerId) {
   const receiptId = crypto.randomBytes(18).toString('base64url');
-  const result = await getPool().query(`
-    WITH locked_event AS MATERIALIZED (
+  return withTransaction(async (client) => {
+    // A lock inside the quota CTE would still use the snapshot from before
+    // waiting. Take the lock in a separate statement so the quota reads see
+    // the preceding writer's commit under READ COMMITTED.
+    const event = await client.query(`
       SELECT id FROM events
       WHERE id = $1 AND expires_at > transaction_timestamp()
       FOR UPDATE
-    ), usage AS MATERIALIZED (
-      SELECT
-        (SELECT count(*)::integer FROM word_contributions WHERE event_id = $1) AS event_count,
-        (SELECT count(*)::integer FROM word_contributions WHERE event_id = $1 AND owner_id = $2) AS owner_count,
-        (SELECT count(*)::integer FROM words WHERE event_id = $1) AS unique_count,
-        EXISTS (SELECT 1 FROM words WHERE event_id = $1 AND word = $3) AS word_exists
-      FROM locked_event
-    ), decision AS MATERIALIZED (
-      SELECT case
-        when owner_count >= $5 then 'guest_contribution_limit'
-        when event_count >= $6 then 'event_contribution_limit'
-        when not word_exists and unique_count >= $7 then 'unique_word_limit'
-        else null
-      end AS error
-      FROM usage
-    ), upserted_word AS (
-      INSERT INTO words (event_id, word, count, updated_at)
-      SELECT $1, $3, 1, transaction_timestamp()
-      FROM decision WHERE error IS NULL
-      ON CONFLICT (event_id, word) DO UPDATE SET
-        count = words.count + 1,
-        updated_at = transaction_timestamp()
-      RETURNING event_id, word
-    ), inserted_contribution AS (
-      INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
-      SELECT $4, event_id, word, $2 FROM upserted_word
-      RETURNING receipt_id
-    )
-    SELECT decision.error, inserted_contribution.receipt_id
-    FROM decision
-    LEFT JOIN inserted_contribution ON true
-  `, [
-    eventId,
-    ownerId,
-    word,
-    receiptId,
-    MAX_OWNER_CONTRIBUTIONS,
-    MAX_EVENT_CONTRIBUTIONS,
-    MAX_EVENT_UNIQUE_WORDS,
-  ]);
-  if (!result.rowCount) throw new Error('event not found');
-  if (result.rows[0].error) throw limitError(result.rows[0].error);
-  return result.rows[0].receipt_id;
+    `, [eventId]);
+    if (!event.rowCount) throw new Error('event not found');
+    const result = await client.query(`
+      WITH usage AS MATERIALIZED (
+        SELECT
+          (SELECT count(*)::integer FROM word_contributions WHERE event_id = $1) AS event_count,
+          (SELECT count(*)::integer FROM word_contributions WHERE event_id = $1 AND owner_id = $2) AS owner_count,
+          (SELECT count(*)::integer FROM words WHERE event_id = $1) AS unique_count,
+          EXISTS (SELECT 1 FROM words WHERE event_id = $1 AND word = $3) AS word_exists
+      ), decision AS MATERIALIZED (
+        SELECT case
+          when owner_count >= $5 then 'guest_contribution_limit'
+          when event_count >= $6 then 'event_contribution_limit'
+          when not word_exists and unique_count >= $7 then 'unique_word_limit'
+          else null
+        end AS error
+        FROM usage
+      ), upserted_word AS (
+        INSERT INTO words (event_id, word, count, updated_at)
+        SELECT $1, $3, 1, transaction_timestamp()
+        FROM decision WHERE error IS NULL
+        ON CONFLICT (event_id, word) DO UPDATE SET
+          count = words.count + 1,
+          updated_at = transaction_timestamp()
+        RETURNING event_id, word
+      ), inserted_contribution AS (
+        INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
+        SELECT $4, event_id, word, $2 FROM upserted_word
+        RETURNING receipt_id
+      )
+      SELECT decision.error, inserted_contribution.receipt_id
+      FROM decision
+      LEFT JOIN inserted_contribution ON true
+    `, [
+      eventId,
+      ownerId,
+      word,
+      receiptId,
+      MAX_OWNER_CONTRIBUTIONS,
+      MAX_EVENT_CONTRIBUTIONS,
+      MAX_EVENT_UNIQUE_WORDS,
+    ]);
+    if (result.rows[0].error) throw limitError(result.rows[0].error);
+    return result.rows[0].receipt_id;
+  });
 }
 
 async function getWordContributions(eventId, ownerId) {
@@ -1306,6 +1311,8 @@ async function claimEmailJob({
     UPDATE email_jobs target
     SET status = 'processing',
         attempt_count = target.attempt_count + 1,
+        delivery_ambiguous = target.delivery_ambiguous OR
+          (target.status = 'processing' AND target.first_send_attempt_at IS NOT NULL),
         locked_by = $2,
         locked_until = transaction_timestamp() + ($3::integer * interval '1 millisecond'),
         lease_version = target.lease_version + 1,
@@ -1336,6 +1343,7 @@ async function beginEmailProviderAttempt(jobId, { lockedBy, leaseVersion }) {
   const result = await getPool().query(`
     UPDATE email_jobs
     SET first_send_attempt_at = coalesce(first_send_attempt_at, transaction_timestamp()),
+        delivery_ambiguous = true,
         updated_at = transaction_timestamp()
     WHERE id = $1 AND status = 'processing' AND locked_by = $2 AND lease_version = $3
       AND locked_until > transaction_timestamp()
@@ -1376,7 +1384,7 @@ async function failEmailJob(
   jobId,
   { lockedBy, leaseVersion },
   errorCode,
-  { ambiguous = false, blocked = false } = {}
+  { ambiguous = null, blocked = false } = {}
 ) {
   const safeError = String(errorCode || 'email_delivery_failed')
     .toLowerCase().replace(/[^a-z0-9_:-]/g, '_').slice(0, 240);
@@ -1384,7 +1392,7 @@ async function failEmailJob(
     UPDATE email_jobs
     SET status = CASE WHEN $1 OR attempt_count >= 4 THEN 'blocked' ELSE 'failed' END,
         last_error = $2,
-        delivery_ambiguous = delivery_ambiguous OR $3,
+        delivery_ambiguous = coalesce($3::boolean, delivery_ambiguous),
         next_attempt_at = CASE
           WHEN $1 OR attempt_count >= 4 THEN next_attempt_at
           WHEN attempt_count = 1 THEN transaction_timestamp() + interval '30 seconds'
@@ -1395,7 +1403,7 @@ async function failEmailJob(
     WHERE id = $4 AND status = 'processing' AND locked_by = $5 AND lease_version = $6
       AND locked_until > transaction_timestamp()
     RETURNING *
-  `, [Boolean(blocked), safeError, Boolean(ambiguous), jobId, lockedBy, leaseVersion]);
+  `, [Boolean(blocked), safeError, ambiguous == null ? null : Boolean(ambiguous), jobId, lockedBy, leaseVersion]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -1433,6 +1441,7 @@ async function recoverStaleEmailJobs() {
           WHEN delivery_ambiguous THEN last_error
           ELSE 'email_processing_interrupted'
         END,
+        delivery_ambiguous = delivery_ambiguous OR first_send_attempt_at IS NOT NULL,
         locked_by = null, locked_until = null, next_attempt_at = transaction_timestamp(),
         updated_at = transaction_timestamp()
     WHERE status = 'processing' AND locked_until <= transaction_timestamp()

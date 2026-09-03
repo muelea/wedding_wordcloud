@@ -343,7 +343,9 @@ async function processOrder(orderId, options = {}) {
   try {
     const order = await db.claimFulfillmentOrder({ orderId, lockedBy: WORKER_ID, leaseMs: LEASE_MS });
     if (!order) return db.getOrderById(orderId);
-    return executeClaimedOrder(order, options);
+    // Keep the busy flag until all provider and database work has settled.
+    // Returning the promise without awaiting it runs finally too early.
+    return await executeClaimedOrder(order, options);
   } finally {
     workerBusy = false;
   }

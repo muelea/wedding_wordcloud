@@ -235,6 +235,56 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.equal(keys.length, callsBeforeBoundary, 'no provider request is allowed after the 23-hour boundary');
   });
 
+  await t.test('a crash after provider acceptance preserves the retry boundary across poll and startup recovery', async () => {
+    for (const recoverOnStartup of [false, true]) {
+      const smoke = await db.createEmailSmokeJob({ recipientEmail: 'maintainer@example.test' });
+      const first = await db.claimEmailJob({
+        jobId: smoke.emailJob.id, lockedBy: 'crashed-email-worker', leaseMs: 15_000,
+        providerSmoke: true,
+      });
+      const attempted = await db.beginEmailProviderAttempt(first.id, {
+        lockedBy: first.locked_by, leaseVersion: Number(first.lease_version),
+      });
+      assert.equal(attempted.delivery_ambiguous, true, 'uncertainty must be durable before sending');
+      let sends = 0;
+      resend.setAdapterForTests({
+        async send() { sends += 1; return { data: { id: `accepted-before-crash-${first.id}` } }; },
+      });
+      await resend.sendEmail(attempted);
+      // The process disappears here: no acceptance commit and no catch handler.
+      await hosted.query(`
+        UPDATE email_jobs SET first_send_attempt_at = transaction_timestamp() - interval '25 hours',
+          locked_until = transaction_timestamp() - interval '1 second'
+        WHERE id = $1
+      `, [first.id]);
+      if (recoverOnStartup) await db.recoverStaleEmailJobs();
+      const result = await emailDelivery.processJob(first.id, { providerSmoke: true });
+      assert.equal(result.status, 'blocked');
+      assert.equal(result.last_error, 'delivery_outcome_unknown');
+      assert.equal(sends, 1, 'an unresolved accepted send must not be repeated outside the window');
+    }
+  });
+
+  await t.test('a definitive rejection clears only its own uncertainty, never an earlier lost response', async () => {
+    const smoke = await db.createEmailSmokeJob({ recipientEmail: 'maintainer@example.test' });
+    let loseResponse = false;
+    resend.setAdapterForTests({
+      async send() {
+        if (loseResponse) throw new TypeError('response lost');
+        return { error: { name: 'rate_limit_exceeded', statusCode: 429 } };
+      },
+    });
+    let result = await emailDelivery.processJob(smoke.emailJob.id, { providerSmoke: true });
+    assert.equal(result.status, 'failed');
+    assert.equal(result.delivery_ambiguous, false, 'a rejected first send has no uncertain outcome');
+    loseResponse = true;
+    result = await emailDelivery.processJob(smoke.emailJob.id, { providerSmoke: true });
+    assert.equal(result.delivery_ambiguous, true);
+    loseResponse = false;
+    result = await emailDelivery.processJob(smoke.emailJob.id, { providerSmoke: true });
+    assert.equal(result.delivery_ambiguous, true, 'a later 429 does not settle an earlier accepted send');
+  });
+
   await t.test('expired leases recover and stale owners cannot overwrite a successful retry', async () => {
     const smoke = await db.createEmailSmokeJob({
       recipientEmail: 'maintainer@example.test', locale: 'it',

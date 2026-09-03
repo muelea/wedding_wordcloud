@@ -31,13 +31,61 @@ function createWordUpdateBroadcaster({
 
   const pending = new Map();
   const initialLoads = new Map();
+  // Versions exist only while sockets initialize. They are not a state cache.
+  const initialReaders = new Map();
+  let readerCount = 0;
   let stopped = false;
+
+  function beginInitial(event, ownerId) {
+    if (stopped || readerCount >= maxPendingRooms) throw new Error('socket initialization is busy');
+    let room = initialReaders.get(event.slug);
+    if (!room) {
+      room = { broadcastVersion: 0, ownershipVersion: 0, owners: new Map(), readers: 0 };
+      initialReaders.set(event.slug, room);
+    }
+    let owner = room.owners.get(ownerId);
+    if (!owner) {
+      owner = { version: 0, readers: 0 };
+      room.owners.set(ownerId, owner);
+    }
+    room.readers += 1;
+    owner.readers += 1;
+    readerCount += 1;
+    let released = false;
+    return {
+      get broadcastVersion() { return room.broadcastVersion; },
+      get ownershipVersion() { return `${room.ownershipVersion}:${owner.version}`; },
+      release() {
+        if (released) return;
+        released = true;
+        if (initialReaders.get(event.slug) !== room) return;
+        readerCount -= 1;
+        room.readers -= 1;
+        owner.readers -= 1;
+        if (!owner.readers) room.owners.delete(ownerId);
+        if (!room.readers) initialReaders.delete(event.slug);
+      },
+    };
+  }
+
+  function changedOwnership(slug, ownerId) {
+    const room = initialReaders.get(slug);
+    if (!room) return;
+    if (ownerId == null) room.ownershipVersion += 1;
+    else {
+      const owner = room.owners.get(ownerId);
+      if (owner) owner.version += 1;
+    }
+  }
 
   function roomSize(slug) {
     return Number(io.sockets?.adapter?.rooms?.get(slug)?.size || 0);
   }
 
   function emitSnapshot(slug, words) {
+    initialLoads.delete(slug);
+    const readers = initialReaders.get(slug);
+    if (readers) readers.broadcastVersion += 1;
     io.to(slug).emit('word-update', words);
     performanceProbe.recordWordSnapshot({
       serializedBytes: Buffer.byteLength(JSON.stringify(words)),
@@ -91,8 +139,10 @@ function createWordUpdateBroadcaster({
     pending.delete(entry.slug);
   }
 
-  function schedule(event) {
+  function schedule(event, { ownerId } = {}) {
     if (stopped || !event || event.id === undefined || typeof event.slug !== 'string') return false;
+    initialLoads.delete(event.slug);
+    changedOwnership(event.slug, ownerId);
     let entry = pending.get(event.slug);
     if (!entry) {
       if (pending.size >= maxPendingRooms) {
@@ -140,6 +190,7 @@ function createWordUpdateBroadcaster({
   }
 
   function resetRoom(event, words = []) {
+    changedOwnership(event.slug);
     invalidate(event.slug);
     emitSnapshot(event.slug, words);
   }
@@ -154,15 +205,19 @@ function createWordUpdateBroadcaster({
     }
     pending.clear();
     initialLoads.clear();
+    initialReaders.clear();
+    readerCount = 0;
   }
 
   return {
     schedule,
     invalidate,
     loadInitial,
+    beginInitial,
     resetRoom,
     stop,
     get pendingRoomCount() { return pending.size; },
+    get initialReaderCount() { return readerCount; },
   };
 }
 

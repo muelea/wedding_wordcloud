@@ -8,6 +8,37 @@ const { startTestServer, createEvent } = require('./helpers');
 const OWNER_A = 'a'.repeat(32);
 const OWNER_B = 'b'.repeat(32);
 
+// Hold both real Postgres writers behind the same row lock, then release
+// them together. A sequential boundary check cannot detect a stale snapshot.
+async function competingContributions(db, eventId, submissions) {
+  const lock = await db.getPool().connect();
+  let attempts;
+  try {
+    await lock.query('BEGIN');
+    await lock.query('SELECT id FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    attempts = Promise.allSettled(submissions.map(([word, owner]) =>
+      db.addWordContribution(eventId, word, owner)));
+    const deadline = Date.now() + 4_000;
+    let waiting = 0;
+    while (waiting < submissions.length && Date.now() < deadline) {
+      const result = await db.getPool().query(`
+        SELECT count(*)::integer AS count FROM pg_stat_activity
+        WHERE application_name = $1 AND pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock'
+      `, [process.env.DATABASE_APPLICATION_NAME]);
+      waiting = result.rows[0].count;
+      if (waiting < submissions.length) await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.equal(waiting, submissions.length, 'both writers must be waiting before releasing the lock');
+    await lock.query('COMMIT');
+    return await attempts;
+  } finally {
+    await lock.query('ROLLBACK');
+    lock.release();
+    if (attempts) await attempts;
+  }
+}
+
 function waitFor(socket, eventName, timeoutMs = 4000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timeout waiting for ${eventName}`)), timeoutMs);
@@ -365,6 +396,43 @@ test('lifecycle and abuse boundaries', async (t) => {
       createEventConfiguration(db, configEvent.id),
       (error) => error.code === 'configuration_limit'
     );
+  });
+
+  await t.test('simultaneous submissions cannot both claim the last word, owner or event slot', async () => {
+    for (const boundary of ['unique_word_limit', 'guest_contribution_limit', 'event_contribution_limit']) {
+      const created = await createEvent(app.baseUrl, { title: boundary });
+      const event = await db.getEventBySlug(created.slug);
+      let submissions;
+      if (boundary === 'unique_word_limit') {
+        await app.query(`
+          INSERT INTO words (event_id, word, count)
+          SELECT $1, 'wort-' || value, 1 FROM generate_series(1, 499) value
+        `, [event.id]);
+        submissions = [['neu-eins', OWNER_A], ['neu-zwei', OWNER_B]];
+      } else {
+        const count = boundary === 'guest_contribution_limit' ? 499 : 4999;
+        await app.query("INSERT INTO words (event_id, word, count) VALUES ($1, 'liebe', $2)", [event.id, count]);
+        await app.query(`
+          INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
+          SELECT lpad(($1::bigint)::text || '-' || value::text, 24, 'r'), $1, 'liebe', $2
+          FROM generate_series(1, $3::integer) value
+        `, [event.id, OWNER_A, count]);
+        const owner = boundary === 'guest_contribution_limit' ? OWNER_A : OWNER_B;
+        submissions = [['liebe', owner], ['liebe', owner]];
+      }
+      const results = await competingContributions(db, event.id, submissions);
+      assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1, boundary);
+      assert.deepEqual(results.filter((result) => result.status === 'rejected')
+        .map((result) => result.reason.code), [boundary]);
+      const words = await db.getWords(event.id);
+      if (boundary === 'unique_word_limit') assert.equal(words.length, 500);
+      else {
+        const maximum = boundary === 'guest_contribution_limit' ? 500 : 5000;
+        assert.deepEqual(words, [['liebe', maximum]]);
+        const receipts = await app.query('SELECT count(*)::integer AS count FROM word_contributions WHERE event_id = $1', [event.id]);
+        assert.equal(receipts.rows[0].count, maximum);
+      }
+    }
   });
 
   await t.test('socket word burst limit rejects the fourth immediate submission without a write', async () => {

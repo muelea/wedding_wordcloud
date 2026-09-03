@@ -30,21 +30,23 @@ function connectSocket(baseUrl, slug) {
   });
 }
 
-function waitFor(socket, event, timeoutMs = 2000) {
+// These assertions exercise real Postgres transactions over the configured
+// connection. Performance budgets are checked separately from isolation.
+function waitFor(socket, event, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timed out waiting for "${event}"`)), timeoutMs);
     socket.once(event, (payload) => { clearTimeout(timer); resolve(payload); });
   });
 }
 
-function waitForArgs(socket, event, timeoutMs = 2000) {
+function waitForArgs(socket, event, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timed out waiting for "${event}"`)), timeoutMs);
     socket.once(event, (...args) => { clearTimeout(timer); resolve(args); });
   });
 }
 
-function emitWithAck(socket, event, payload, timeoutMs = 2000) {
+function emitWithAck(socket, event, payload, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timed out waiting for "${event}" acknowledgement`)), timeoutMs);
     socket.emit(event, payload, (result) => { clearTimeout(timer); resolve(result); });
@@ -76,7 +78,10 @@ test('multi-tenant isolation: a word submitted to event A never reaches event B'
 
   assert.deepEqual(initialA, [], 'a fresh event should start with no words');
 
-  const bUpdatesDuringA = collectFor(socketB, 'word-update', 800);
+  // Observe the whole submit/remove sequence, even when database latency
+  // exceeds a fixed collection window.
+  const bUpdates = [];
+  socketB.on('word-update', (words) => bUpdates.push(words));
 
   const aGotUpdate = waitFor(socketA, 'word-update');
   const aGotReceipt = waitForArgs(socketA, 'word-accepted');
@@ -91,7 +96,7 @@ test('multi-tenant isolation: a word submitted to event A never reaches event B'
   assert.deepEqual(removal, { ok: true, word: 'geheimnis-von-a' });
   assert.deepEqual(await aGotRemoval, [], 'event A should see its own contribution removal');
 
-  const bUpdates = await bUpdatesDuringA;
+  await new Promise((resolve) => setTimeout(resolve, 100));
   assert.equal(bUpdates.length, 0, 'event B must receive zero word-update emissions while event A adds or removes words');
 
   // Cross-check via the HTTP-visible state too: fetching event B's public

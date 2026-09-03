@@ -17,6 +17,8 @@ const LIMITS = Object.freeze({
   estimateSource: Object.freeze({ max: 200, windowMs: 10 * 60 * 1000 }),
   checkoutGuest: Object.freeze({ max: 10, windowMs: 10 * 60 * 1000 }),
   checkoutSource: Object.freeze({ max: 100, windowMs: 10 * 60 * 1000 }),
+  exportSource: Object.freeze({ max: 12, windowMs: 60 * 1000 }),
+  exportEvent: Object.freeze({ max: 30, windowMs: 60 * 1000 }),
 });
 
 const windows = new Map();

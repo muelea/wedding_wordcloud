@@ -173,6 +173,15 @@ contributions after the different-word limit is reached. Short-term rate limits
 remain independent. The same 500-word capacity applies to approved configuration
 snapshots; each print surface allows 1,200 design elements for repeated clouds,
 motifs and personal additions. These limits live in `public/js/cloud-limits.js`.
+Quota checks run after acquiring the event lock in a separate transaction
+statement, so simultaneous contributions cannot exceed any of these ceilings.
+
+Socket handlers accept up to three small actions while initialization completes,
+with a 15-second initialization deadline. Initial reads cannot overwrite newer
+room broadcasts. Reset and contribution changes invalidate pending private
+receipt reads for the affected owners; disconnected clients release their slots
+even during a cold event lookup. Initialization versions are discarded when
+hydration finishes.
 
 Live clouds use the available rectangular container and reflow on resize or
 presentation-mode changes. A worker packs measured boxes while keeping one
@@ -185,6 +194,13 @@ These are provisional product guidance thresholds, calculated from actual print
 size and product DPI, to be calibrated with physical samples. The 1-pixel
 technical font floor is not a readability guarantee. Small type never silently
 removes words from the live cloud or changes an approved print file.
+
+The live cloud's SVG download runs in one lazy Node worker thread using the same
+bundled fonts and export engine. At most five requests can be active or queued,
+each with a ten-second total deadline. Disconnects cancel their work and shutdown
+terminates the worker. Downloads are limited to 12 per source per minute across
+events and 30 per event per minute. Overload returns a retryable 429 or 503;
+expensive layout never runs on the HTTP/Socket.io event loop.
 
 The authenticated 15-second maintenance runner invokes race-safe cleanup
 primitives in bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
@@ -888,7 +904,10 @@ the Stripe webhook request.
 Email jobs use database claims, expiring leases and lease versions. Their
 permanent dedupe key is also the Resend `Idempotency-Key`; a non-PII job id is
 sent as a tag. An ambiguous provider response can reuse only that exact key for
-23 hours. If a signed webhook has not resolved the outcome by then, the job is
+23 hours. The uncertain outcome is persisted before sending, so a process crash
+has the same protection as a lost response. A definitive rejection clears only
+that attempt's uncertainty; it cannot settle an earlier unresolved send.
+If a signed webhook has not resolved the outcome by then, the job is
 blocked for manual review instead of risking a duplicate send. Signed Resend
 events are deduplicated by `svix-id` and terminal
 bounce/failure/complaint/suppression states cannot be moved backward by a late

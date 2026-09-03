@@ -23,7 +23,7 @@ const { getBaseUrl } = require('./src/baseUrl');
 const { buildEventUrl, renderEventQrSvg } = require('./src/eventQr');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('./src/eventNames');
 const { DEFAULT_PRODUCT, getPublicProduct } = require('./src/products');
-const { layoutForExport } = require('./src/exportSvg');
+const { createSvgExportQueue } = require('./src/svgExportQueue');
 const fulfillment = require('./src/fulfillment');
 const emailDelivery = require('./src/emailDelivery');
 const printArtifacts = require('./src/printArtifacts');
@@ -121,6 +121,7 @@ app.use(EMOJI_BROWSER_ASSET_BASE, makeEmojiArtworkRouter());
 app.use(staticCacheMiddleware, express.static(path.join(__dirname, 'public')));
 
 const wordBroadcasts = createWordUpdateBroadcaster({ io, getWords: db.getWords });
+const svgExports = createSvgExportQueue();
 app.use('/api', makeEventsRouter({ io, port: PORT, wordBroadcasts }));
 
 app.get('/api/print-files/:artifactId/:nonce', asyncRoute(async (req, res) => {
@@ -308,20 +309,35 @@ app.get('/e/:slug/order-confirmation', asyncRoute(async (req, res) => {
 // Legacy live-event SVG export used by the display/download flow. Paid mug
 // orders use the immutable configuration-specific route under /api instead,
 // so later guest submissions can never change an approved print file.
-// Generated on demand
-// (measured ~10-25ms for a realistic 10-60 word cloud, ~110ms even at 100
-// words — see src/exportSvg.js) rather than cached to disk: the word list
-// can keep growing right up to checkout, and regenerating per-request means
-// there's never a stale file to invalidate.
+// Layout runs in one bounded worker, keeping HTTP and live rooms responsive.
 app.get('/e/:slug/export.svg', asyncRoute(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!rateLimits.consume([{
+    name: 'export:source', key: sourceHashForRequest(req), ...rateLimits.LIMITS.exportSource,
+  }])) return res.set('Retry-After', '60').status(429).send('Bitte versucht den Download in einer Minute erneut.');
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return res.status(404).send('event not found');
-  const words = await db.getWords(event.id);
-  if (!words.length) return res.status(404).send('no words submitted yet');
-  const svg = layoutForExport(words, 'pastel');
-  res.set('Content-Type', 'image/svg+xml; charset=utf-8');
-  res.set('Cache-Control', 'no-store');
-  res.send(svg);
+  if (!rateLimits.consume([{
+    name: 'export:event', key: event.id, ...rateLimits.LIMITS.exportEvent,
+  }])) return res.set('Retry-After', '60').status(429).send('Bitte versucht den Download in einer Minute erneut.');
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  res.once('close', cancel);
+  try {
+    const words = await db.getWords(event.id);
+    if (res.destroyed) return;
+    if (!words.length) return res.status(404).send('no words submitted yet');
+    const svg = await svgExports.render(words, 'pastel', { signal: controller.signal });
+    res.set('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.send(svg);
+  } catch (error) {
+    if (res.destroyed || error.code === 'export_aborted') return;
+    log.warn('svg_export_unavailable', { errorCode: log.errorCode(error, 'export_failed') });
+    res.set('Retry-After', '2').status(503)
+      .send('Der Download ist gerade nicht verfügbar. Bitte versucht es in einem Moment erneut.');
+  } finally {
+    res.off('close', cancel);
+  }
 }));
 
 const socketRuntime = attachSocketHandlers(io, { wordBroadcasts });
@@ -351,6 +367,7 @@ server.on('close', () => {
   socketRuntime.stop();
   wordBroadcasts.stop();
   performanceProbe.stop();
+  svgExports.stop().catch(() => {});
 });
 
 // Rejected async route promises end here. SQL text, credentials and driver
@@ -438,6 +455,7 @@ function shutdown(signal = 'shutdown') {
     wordBroadcasts.stop();
     socketRuntime.stop();
     performanceProbe.stop();
+    await svgExports.stop();
     if (!transportClosed) log.warn('server_transport_drain_timeout', { durationMs: 10_000 });
     if (!fulfillmentWorker.drained) {
       log.warn('server_fulfillment_drain_incomplete', { count: fulfillmentWorker.activeOrders });

@@ -111,3 +111,38 @@ test('GET /e/:slug/export.svg 404s for an unknown slug', async (t) => {
   const res = await fetch(`${baseUrl}/e/does-not-exist/export.svg`);
   assert.equal(res.status, 404);
 });
+
+test('SVG export overload returns retryable responses and source limits span events', async (t) => {
+  const exports = require('../src/svgExportQueue');
+  let renders = 0;
+  t.mock.method(exports, 'createSvgExportQueue', () => ({
+    render: async () => {
+      renders += 1;
+      throw Object.assign(new Error('busy'), { code: 'export_busy' });
+    },
+    stop: async () => {},
+  }));
+  const app = await startTestServer();
+  t.after(app.close);
+  const db = require('../src/db');
+  const events = [];
+  for (let i = 0; i < 2; i += 1) {
+    const event = await createEvent(app.baseUrl);
+    const row = await db.getEventBySlug(event.slug);
+    await db.upsertWord(row.id, 'liebe');
+    events.push(event);
+  }
+  const maximum = require('../src/rateLimits').LIMITS.exportSource.max;
+  for (let i = 0; i < maximum; i += 1) {
+    const response = await fetch(`${app.baseUrl}/e/${events[i % 2].slug}/export.svg`);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('retry-after'), '2');
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    await response.text();
+  }
+  const response = await fetch(`${app.baseUrl}/e/${events[0].slug}/export.svg`);
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get('retry-after'), '60');
+  assert.equal(renders, maximum, 'a rate-limited request must never enter the render queue');
+  await response.text();
+});

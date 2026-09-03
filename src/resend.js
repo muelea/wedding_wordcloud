@@ -50,7 +50,9 @@ function classifyProviderError(error) {
     return new ResendDeliveryError('resend_idempotency_payload_mismatch', { statusCode });
   }
   if (statusCode === 408 || statusCode === 409 || statusCode === 429 || statusCode >= 500) {
-    return new ResendDeliveryError(code, { retryable: true, statusCode });
+    return new ResendDeliveryError(code, {
+      ambiguous: statusCode !== 429, retryable: true, statusCode,
+    });
   }
   return new ResendDeliveryError(code, { statusCode });
 }

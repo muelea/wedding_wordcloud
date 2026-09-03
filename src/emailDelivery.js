@@ -119,7 +119,9 @@ async function executeClaimedJob(job, { deadline = null, providerSmoke = false }
         delivery_ambiguous: true,
       });
       const failed = await db.failEmailJob(job.id, lease, error.code || 'email_delivery_failed', {
-        ambiguous: Boolean(error.ambiguous),
+        // A definitive rejection of this retry cannot resolve an earlier
+        // attempt whose response was lost. Keep that earlier uncertainty.
+        ambiguous: Boolean(job.delivery_ambiguous || error.ambiguous),
         blocked: boundaryExpired || !error.retryable,
       });
       if (failed?.status === 'blocked') {
@@ -163,7 +165,8 @@ async function processJob(jobId, options = {}) {
       providerSmoke: Boolean(options.providerSmoke),
     });
     if (!job) return db.getEmailJobById(jobId);
-    return executeClaimedJob(job, options);
+    // Shutdown and the poller must see this job as active until it settles.
+    return await executeClaimedJob(job, options);
   } finally {
     workerBusy = false;
   }
