@@ -32,14 +32,19 @@ function setup(t) {
   return { editor, downloads };
 }
 
+function resolveFont(downloads, operationIndex) {
+  downloads[operationIndex * 2].resolve();
+  downloads[operationIndex * 2 + 1].resolve();
+}
+
 test('the latest font choice wins even when the earlier font downloads last', async t => {
   const { editor, downloads } = setup(t);
   const first = editor.setActiveFont('lora');
   const second = editor.setActiveFont('caveat');
   assert.equal(editor.hasPendingTextChange(), true, 'Navigation must notice the pending choice');
   assert.equal(editor.pendingFontChange, second, 'Saving must await the latest selected font');
-  downloads[1].resolve(); await second;
-  downloads[0].resolve(); await first;
+  resolveFont(downloads, 1); await second;
+  resolveFont(downloads, 0); await first;
   assert.equal(editor.getDesign()[0].fontFamily, 'caveat');
   assert.equal(editor.pendingFontChange, null);
 });
@@ -48,13 +53,13 @@ test('a downloaded font cannot resurrect a deleted object or overwrite a restore
   const { editor, downloads } = setup(t);
   const pending = editor.setActiveFont('lora');
   editor.canvas.remove(editor.canvas.getObjects()[0]);
-  downloads[0].resolve(); await pending;
+  resolveFont(downloads, 0); await pending;
   assert.equal(editor.getDesign().length, 0);
   editor.setDesign([{ id: 'new-word', text: 'neu', x: 1350, y: 525, fontSize: 100, color: '#2455f5', fontFamily: 'classic' }]);
   editor.canvas.setActiveObject(editor.canvas.getObjects()[0]);
   const next = editor.setActiveFont('montserrat');
   editor.setDesign(editor.getDesign()); // Undo/reset/restore fences previous downloads.
-  downloads[1].resolve(); await next;
+  resolveFont(downloads, 1); await next;
   assert.equal(editor.getDesign()[0].fontFamily, 'classic');
 });
 
@@ -67,6 +72,6 @@ test('font download failure leaves the existing design intact and permits a retr
   assert.equal(editor.pendingFontChange, null);
   assert.equal(JSON.stringify(editor.getDesign()), before);
   const retry = editor.setActiveFont('baloo-2');
-  downloads[1].resolve(); await retry;
+  resolveFont(downloads, 1); await retry;
   assert.equal(editor.getDesign()[0].fontFamily, 'baloo-2');
 });

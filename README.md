@@ -64,8 +64,9 @@ frozen snapshot of the word cloud.
    “Select all” support the familiar temporary multi-selection workflow; desktop
    users can also copy and paste selected elements with the standard keyboard
    shortcuts. Text elements can use the classic default or one of four curated,
-   locally bundled print fonts; a font change also works across a mixed
-   multi-selection and affects only its text elements. Arrangement actions always transform the
+   locally bundled print fonts and can be formatted as bold, italic, underlined
+   or struck through. Formatting and font changes also work across a mixed
+   multi-selection and affect only its text elements. Arrangement actions always transform the
    complete current canvas and can be applied repeatedly; they are commands, not a persisted
    selection. The immutable canvas design is the only source for preview and Printful output. Words
    can also be edited directly. Hard bounds keep
@@ -178,7 +179,10 @@ The product editor ships the OFL-licensed Gelasio font as its deterministic
 preview, local rendering and the Linux container register the same files, and
 used fonts are embedded directly into immutable print SVGs. Rendering therefore
 does not depend on Georgia or another host font being installed. The existing
-design-font `OFL.txt` files live next to their binaries. Gelasio is the complete
+design-font `OFL.txt` files live next to their binaries. Each family includes a
+fixed 700-weight instance for identical bold output in browsers and the Linux
+print renderer; italic styling uses the same deterministic geometric slant in
+the editor, product preview and print SVG. Gelasio is the complete
 168,556-byte TTF pinned to the Google Fonts commit and SHA-256 in
 `public/assets/design-fonts/gelasio/VERSION`. Both renderers use that file;
 the old npm WOFF endpoint is retained only for cached-client compatibility,

@@ -79,13 +79,18 @@
           item.text,
           fontSize,
           measureContext,
-          itemFontFamily
+          itemFontFamily,
+          item
         );
-        width = textBox.width;
-        height = textBox.height;
+        const styledBox = WordCloudCore.styledTextBox(textBox, item);
+        width = styledBox.width;
+        height = styledBox.height;
       } else {
         width = Math.max(1, String(item.text || '').length * fontSize * .58);
         height = fontSize * WordCloudCore.TEXT_LINE_HEIGHT;
+        if (item.fontStyle === 'italic') {
+          width += height * Math.abs(Math.tan(WordCloudCore.ITALIC_SKEW_DEGREES * Math.PI / 180));
+        }
       }
     }
 

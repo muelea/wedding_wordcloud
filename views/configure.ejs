@@ -16,10 +16,24 @@
   <style>
 
     @font-face {
+      font-family: 'Wolkenworte Classic';
+      src: url('<%= asset('/assets/design-fonts/gelasio/Gelasio-Bold.ttf') %>') format('truetype');
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+    }
+    @font-face {
       font-family: 'Wolkenworte Lora';
       src: url('<%= asset('/assets/design-fonts/lora/Lora.ttf') %>') format('truetype');
       font-style: normal;
       font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Wolkenworte Lora';
+      src: url('<%= asset('/assets/design-fonts/lora/Lora-Bold.ttf') %>') format('truetype');
+      font-style: normal;
+      font-weight: 700;
       font-display: swap;
     }
     @font-face {
@@ -30,6 +44,13 @@
       font-display: swap;
     }
     @font-face {
+      font-family: 'Wolkenworte Montserrat';
+      src: url('<%= asset('/assets/design-fonts/montserrat/Montserrat-Bold.ttf') %>') format('truetype');
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+    }
+    @font-face {
       font-family: 'Wolkenworte Caveat';
       src: url('<%= asset('/assets/design-fonts/caveat/Caveat.ttf') %>') format('truetype');
       font-style: normal;
@@ -37,10 +58,24 @@
       font-display: swap;
     }
     @font-face {
+      font-family: 'Wolkenworte Caveat';
+      src: url('<%= asset('/assets/design-fonts/caveat/Caveat-Bold.ttf') %>') format('truetype');
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+    }
+    @font-face {
       font-family: 'Wolkenworte Baloo 2';
       src: url('<%= asset('/assets/design-fonts/baloo-2/Baloo2.ttf') %>') format('truetype');
       font-style: normal;
       font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Wolkenworte Baloo 2';
+      src: url('<%= asset('/assets/design-fonts/baloo-2/Baloo2-Bold.ttf') %>') format('truetype');
+      font-style: normal;
+      font-weight: 700;
       font-display: swap;
     }
 
@@ -699,7 +734,7 @@
     }
     .editor-selection-row {
       display: grid;
-      grid-template-columns: minmax(150px, 1fr) minmax(155px, .55fr) minmax(197px, 1fr);
+      grid-template-columns: minmax(150px, 1fr) minmax(330px, .9fr) minmax(197px, 1fr);
       align-items: center;
       gap: 12px;
     }
@@ -727,6 +762,38 @@
     .editor-text-input:focus { outline: 2px solid rgba(156,28,76,.22); border-color: var(--berry); }
     .editor-text-input:disabled { cursor: not-allowed; color: rgba(62,35,45,.42); background: rgba(246,242,240,.75); }
     .editor-field-label-font { min-width: 0; position: relative; }
+    .editor-font-controls { display: flex; align-items: center; gap: 7px; }
+    .editor-font-picker { flex: 1 1 auto; }
+    .editor-style-group {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .editor-style-button {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      line-height: 1;
+    }
+    .editor-style-button:hover:not(:disabled) { background: rgba(123,70,82,.07); color: var(--ink); }
+    .editor-style-button:focus-visible { outline: 2px solid rgba(156,28,76,.22); outline-offset: 1px; }
+    .editor-style-button.is-active,
+    .editor-style-button.is-mixed { background: rgba(156,28,76,.1); color: var(--berry-dark); }
+    .editor-style-button.is-active { border-color: rgba(156,28,76,.26); }
+    .editor-style-button.is-mixed { box-shadow: inset 0 -2px var(--berry); }
+    .editor-style-button:disabled { cursor: not-allowed; opacity: .34; }
+    .editor-style-italic { font-style: italic; }
+    .editor-style-underline { text-decoration: underline; text-underline-offset: 2px; }
+    .editor-style-linethrough { text-decoration: line-through; }
     .editor-font-picker { min-width: 0; position: relative; }
     .editor-font-toggle[hidden] { display: none; }
     .editor-font-toggle {
@@ -1521,6 +1588,11 @@
       .preview-card { order: 2; position: static; min-height: 0; }
     }
 
+    @media (max-width: 780px) {
+      .editor-selection-row { grid-template-columns: 1fr; }
+      .editor-field-label-color { min-width: 0; }
+    }
+
     @media (min-width: 621px) and (hover: hover) and (pointer: fine) {
       .editor-emoji-picker { display: block; }
     }
@@ -1571,6 +1643,9 @@
       .editor-field-label-color { min-width: 0; }
       .editor-text-input,
       .editor-font-toggle { height: var(--ww-touch-target); font-size: 16px; }
+      .editor-style-button { width: var(--ww-touch-target); height: var(--ww-touch-target); }
+      .editor-font-controls { align-items: stretch; flex-wrap: wrap; }
+      .editor-font-picker { flex-basis: 100%; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
       .selected-product { grid-template-columns: 52px minmax(0, 1fr); }
       .selected-product-thumb { width: 52px; height: 52px; }
@@ -1750,12 +1825,20 @@
                   </label>
                   <div class="editor-field-label editor-field-label-font" data-editor-section="font">
                     <span class="editor-field-label-text">Schriftart</span>
-                    <div class="editor-font-picker" id="editor-font-picker">
-                      <button class="editor-font-toggle" id="editor-font-toggle" type="button" aria-label="Schriftart wählen" aria-haspopup="listbox" aria-expanded="false" aria-controls="editor-font-menu" disabled>
-                        <span class="editor-font-current" id="editor-font-current">Schrift wählen</span>
-                        <span class="editor-font-caret" aria-hidden="true">⌄</span>
-                      </button>
-                      <div class="editor-font-menu" id="editor-font-menu" role="listbox" aria-label="Schriftart" hidden></div>
+                    <div class="editor-font-controls">
+                      <div class="editor-font-picker" id="editor-font-picker">
+                        <button class="editor-font-toggle" id="editor-font-toggle" type="button" aria-label="Schriftart wählen" aria-haspopup="listbox" aria-expanded="false" aria-controls="editor-font-menu" disabled>
+                          <span class="editor-font-current" id="editor-font-current">Schrift wählen</span>
+                          <span class="editor-font-caret" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="editor-font-menu" id="editor-font-menu" role="listbox" aria-label="Schriftart" hidden></div>
+                      </div>
+                      <div class="editor-style-group" role="group" aria-label="Text formatieren">
+                        <button class="editor-style-button" id="editor-bold" type="button" aria-label="Fett" aria-pressed="false" data-editor-tooltip disabled><strong aria-hidden="true">B</strong></button>
+                        <button class="editor-style-button editor-style-italic" id="editor-italic" type="button" aria-label="Kursiv" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">I</span></button>
+                        <button class="editor-style-button editor-style-underline" id="editor-underline" type="button" aria-label="Unterstrichen" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">U</span></button>
+                        <button class="editor-style-button editor-style-linethrough" id="editor-linethrough" type="button" aria-label="Durchgestrichen" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">S</span></button>
+                      </div>
                     </div>
                   </div>
                   <div class="editor-field-label editor-field-label-color" data-editor-section="color" role="group" aria-label="Farbe auswählen">
@@ -2536,6 +2619,10 @@
             angle: item.rotated ? -90 : 0,
             color: item.color,
             fontFamily: DesignFonts.DEFAULT_FONT_KEY,
+            fontWeight: 400,
+            fontStyle: 'normal',
+            underline: false,
+            linethrough: false,
           });
         });
       });
@@ -2783,6 +2870,10 @@
           WordCloudCore.drawRichText(ctx, item.text, 0, 0, item.fontSize * scale, {
             fontFamily: DesignFonts.cssFamily(item.fontFamily),
             color: item.color,
+            fontWeight: item.fontWeight,
+            fontStyle: item.fontStyle,
+            underline: item.underline,
+            linethrough: item.linethrough,
             emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
           });
         }
@@ -3489,6 +3580,10 @@
         fontButton: document.getElementById('editor-font-toggle'),
         fontCurrent: document.getElementById('editor-font-current'),
         fontMenu: document.getElementById('editor-font-menu'),
+        boldButton: document.getElementById('editor-bold'),
+        italicButton: document.getElementById('editor-italic'),
+        underlineButton: document.getElementById('editor-underline'),
+        linethroughButton: document.getElementById('editor-linethrough'),
         swatches: document.getElementById('editor-swatches'),
         colorInput: document.getElementById('editor-color'),
         feedback: document.getElementById('editor-feedback'),

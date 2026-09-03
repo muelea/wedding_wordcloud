@@ -55,7 +55,8 @@ async function capture() {
         assert.equal(restored.length, design.length);
         design.forEach((item, index) => {
           const next = restored[index];
-          for (const key of ['id', 'text', 'fontFamily', 'color', 'angle']) {
+          for (const key of ['id', 'text', 'fontFamily', 'fontWeight', 'fontStyle',
+            'underline', 'linethrough', 'color', 'angle']) {
             assert.equal(next[key], item[key], label + ': reload changed ' + key);
           }
           // Boundary-sized Fabric objects may be clamped by a sub-print-pixel
@@ -70,7 +71,10 @@ async function capture() {
         for (const font of DesignFonts.FONTS) {
           for (const text of TEXTS) for (const angle of [0, 27, 90]) {
             editor.setDesign([{ id: 'text', type: 'text', text, fontFamily: font.key,
-              x: width / 2, y: height / 2, fontSize: Math.min(width, height) * .8, angle, color: '#2455f5' }]);
+              x: width / 2, y: height / 2, fontSize: Math.min(width, height) * .8,
+              angle, color: '#2455f5', fontWeight: angle ? 700 : 400,
+              fontStyle: angle === 90 ? 'italic' : 'normal', underline: angle === 27,
+              linethrough: angle === 90 }]);
             editor.canvas.setActiveObject(editor.canvas.getObjects()[0]);
             editor.resizeActive(1.25);
             record(`${font.key}/${text}/${angle}`, 1);
@@ -79,6 +83,8 @@ async function capture() {
             const input = ['test', '❤️', 'größtes Glück', 'aşk ışık'].map((text, index) => ({
               id: `word-${index}`, type: 'text', text, fontFamily: font.key,
               x: 100 + index * 250, y: 200, fontSize: 100, angle: index * 5, color: '#2455f5',
+              fontWeight: index % 2 ? 700 : 400, fontStyle: index === 2 ? 'italic' : 'normal',
+              underline: index === 0, linethrough: index === 3,
             }));
             const design = DesignLayout.applyLayoutAction(input, slots, editor.measureContext,
               { fontFamily: item => DesignFonts.cssFamily(item.fontFamily) });

@@ -117,7 +117,8 @@ test('text sheet closure commits before moving the focused field', () => {
 
 test('responsive choosers and inspector use native panels and one copy of each control', () => {
   const source = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
-  for (const id of ['editor-text', 'editor-font-picker', 'editor-font-toggle', 'editor-font-menu', 'editor-color']) {
+  for (const id of ['editor-text', 'editor-font-picker', 'editor-font-toggle', 'editor-font-menu',
+    'editor-bold', 'editor-italic', 'editor-underline', 'editor-linethrough', 'editor-color']) {
     assert.equal(source.split(`id="${id}"`).length - 1, 1, id);
   }
   assert.doesNotMatch(source, /editor-font-select|id="editor-font"|fontSelect:/);
@@ -130,6 +131,7 @@ test('responsive choosers and inspector use native panels and one copy of each c
   assert.doesNotMatch(source, /\.editor-selection:not\(\.is-active\)/);
   for (const locale of ['en', 'fr', 'it', 'es', 'tr']) {
     const catalog = require(`../public/locales/${locale}.json`);
-    for (const label of ['Text', 'Schrift', 'Farbe', 'Anpassen', 'Schließen', 'Fertig']) assert.ok(catalog[label]);
+    for (const label of ['Text', 'Schrift', 'Farbe', 'Anpassen', 'Schließen', 'Fertig',
+      'Text formatieren', 'Fett', 'Kursiv', 'Unterstrichen', 'Durchgestrichen']) assert.ok(catalog[label]);
   }
 });

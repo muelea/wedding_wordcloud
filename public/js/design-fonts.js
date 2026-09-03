@@ -17,6 +17,7 @@
       cssFamily: '"Wolkenworte Classic", Georgia, "Times New Roman", serif',
       svgFamily: "'Wolkenworte Classic', Georgia, 'Times New Roman', serif",
       file: '/assets/design-fonts/gelasio/Gelasio.ttf',
+      boldFile: '/assets/design-fonts/gelasio/Gelasio-Bold.ttf',
       format: 'truetype',
     }),
     Object.freeze({
@@ -27,6 +28,7 @@
       cssFamily: '"Wolkenworte Lora", Georgia, serif',
       svgFamily: "'Wolkenworte Lora', Georgia, serif",
       file: '/assets/design-fonts/lora/Lora.ttf',
+      boldFile: '/assets/design-fonts/lora/Lora-Bold.ttf',
       format: 'truetype',
     }),
     Object.freeze({
@@ -37,6 +39,7 @@
       cssFamily: '"Wolkenworte Montserrat", Arial, sans-serif',
       svgFamily: "'Wolkenworte Montserrat', Arial, sans-serif",
       file: '/assets/design-fonts/montserrat/Montserrat.ttf',
+      boldFile: '/assets/design-fonts/montserrat/Montserrat-Bold.ttf',
       format: 'truetype',
     }),
     Object.freeze({
@@ -47,6 +50,7 @@
       cssFamily: '"Wolkenworte Caveat", cursive',
       svgFamily: "'Wolkenworte Caveat', cursive",
       file: '/assets/design-fonts/caveat/Caveat.ttf',
+      boldFile: '/assets/design-fonts/caveat/Caveat-Bold.ttf',
       format: 'truetype',
     }),
     Object.freeze({
@@ -57,6 +61,7 @@
       cssFamily: '"Wolkenworte Baloo 2", sans-serif',
       svgFamily: "'Wolkenworte Baloo 2', sans-serif",
       file: '/assets/design-fonts/baloo-2/Baloo2.ttf',
+      boldFile: '/assets/design-fonts/baloo-2/Baloo2-Bold.ttf',
       format: 'truetype',
     }),
   ]);
@@ -87,7 +92,10 @@
     let timer;
     try {
       const faces = await Promise.race([
-        fontSet.load(`16px "${get(key).family}"`, 'Wolkenworte'),
+        Promise.all([
+          fontSet.load(`400 16px "${get(key).family}"`, 'Wolkenworte'),
+          fontSet.load(`700 16px "${get(key).family}"`, 'Wolkenworte'),
+        ]).then((loaded) => loaded.flat()),
         new Promise((_, reject) => {
           timer = setTimeout(() => reject(new Error('design_font_timeout')), timeoutMs);
         }),

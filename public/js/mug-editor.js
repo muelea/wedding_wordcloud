@@ -67,6 +67,12 @@
       this.fontButton = options.fontButton;
       this.fontCurrent = options.fontCurrent;
       this.fontMenu = options.fontMenu;
+      this.styleButtons = {
+        fontWeight: options.boldButton,
+        fontStyle: options.italicButton,
+        underline: options.underlineButton,
+        linethrough: options.linethroughButton,
+      };
       this.swatches = options.swatches;
       this.zoomLabel = options.zoomLabel;
       this.feedback = options.feedback;
@@ -131,11 +137,19 @@
       }
     }
 
+    normalizedTextStyle(item) {
+      if (!root.WordCloudCore.hasTextRun(item?.text)) {
+        return { fontWeight: 400, fontStyle: 'normal', underline: false, linethrough: false };
+      }
+      return root.WordCloudCore.textStyle(item);
+    }
+
     makeObject(item) {
       if (item.type === 'icon') return this.makeIconObject(item);
       if (item.type === 'image') return this.makeImageObject(item);
       if (root.WolkenworteEmoji.hasEmoji(item.text)) return this.makeRichTextObject(item);
       const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
+      const style = this.normalizedTextStyle(item);
       const text = new root.fabric.IText(item.text, {
         left: item.x * this.editorScale,
         top: item.y * this.editorScale,
@@ -143,6 +157,11 @@
         originY: 'center',
         fontFamily: root.DesignFonts.get(fontKey).family,
         fontSize: Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, item.fontSize * this.editorScale),
+        fontWeight: style.fontWeight,
+        fontStyle: 'normal',
+        underline: style.underline,
+        linethrough: style.linethrough,
+        skewX: style.fontStyle === 'italic' ? root.WordCloudCore.ITALIC_SKEW_DEGREES : 0,
         fill: item.color,
         angle: item.angle || 0,
         lockScalingFlip: true,
@@ -165,6 +184,10 @@
       text.editorKind = 'text';
       text.editorId = item.id || this.nextId();
       text.editorFontKey = fontKey;
+      text.editorFontWeight = style.fontWeight;
+      text.editorFontStyle = style.fontStyle;
+      text.editorUnderline = style.underline;
+      text.editorLinethrough = style.linethrough;
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
@@ -173,6 +196,7 @@
     makeRichTextObject(item) {
       const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
       const font = root.DesignFonts.get(fontKey);
+      const style = this.normalizedTextStyle(item);
       const fontSize = Math.max(
         MIN_PRINT_FONT_SIZE * this.editorScale,
         item.fontSize * this.editorScale
@@ -181,7 +205,8 @@
         item.text,
         fontSize,
         this.measureContext,
-        font.cssFamily
+        font.cssFamily,
+        style
       );
       const frame = new root.fabric.Rect({
         left: 0,
@@ -223,6 +248,10 @@
           originY: 'center',
           fontFamily: font.family,
           fontSize,
+          fontWeight: style.fontWeight,
+          fontStyle: 'normal',
+          underline: style.underline,
+          linethrough: style.linethrough,
           fill: item.color,
           evented: false,
           selectable: false,
@@ -236,6 +265,7 @@
         originX: 'center',
         originY: 'center',
         angle: item.angle || 0,
+        skewX: style.fontStyle === 'italic' ? root.WordCloudCore.ITALIC_SKEW_DEGREES : 0,
         lockScalingFlip: true,
         centeredScaling: true,
         centeredRotation: true,
@@ -253,6 +283,10 @@
       group.editorKind = 'text';
       group.editorId = item.id || this.nextId();
       group.editorFontKey = fontKey;
+      group.editorFontWeight = style.fontWeight;
+      group.editorFontStyle = style.fontStyle;
+      group.editorUnderline = style.underline;
+      group.editorLinethrough = style.linethrough;
       group.editorFontSize = fontSize;
       group.editorText = item.text;
       group.editorColor = item.color;
@@ -648,6 +682,9 @@
       options.duplicateButton.addEventListener('click', () => this.duplicateActive());
       options.bringFrontButton.addEventListener('click', () => this.bringActiveToFront());
       options.deleteButton.addEventListener('click', () => this.deleteActive());
+      Object.entries(this.styleButtons).filter(([, button]) => button).forEach(([property, button]) => {
+        button.addEventListener('click', () => this.toggleActiveTextStyle(property));
+      });
 
       this.textInput.addEventListener('input', () => {
         const active = this.canvas.getActiveObject();
@@ -1172,8 +1209,16 @@
         const item = this.serializeObject(child);
         const box = item.type === 'image' ? item
           : item.type === 'icon' ? { width: item.size, height: item.size }
-          : root.WordCloudCore.measureTextBox(item.text, item.fontSize, this.measureContext,
-            root.DesignFonts.cssFamily(item.fontFamily));
+          : (() => {
+            const measured = root.WordCloudCore.measureTextBox(
+              item.text,
+              item.fontSize,
+              this.measureContext,
+              root.DesignFonts.cssFamily(item.fontFamily),
+              item
+            );
+            return root.WordCloudCore.styledTextBox(measured, item);
+          })();
         const radians = item.angle * Math.PI / 180;
         const cos = Math.abs(Math.cos(radians));
         const sin = Math.abs(Math.sin(radians));
@@ -1543,6 +1588,10 @@
         text: this.objectText(object),
         fontSize: (object.editorFontSize || object.fontSize) * Math.abs(transform.scaleX) / this.editorScale,
         fontFamily: root.DesignFonts.normalizeKey(object.editorFontKey),
+        fontWeight: object.editorFontWeight === 700 ? 700 : 400,
+        fontStyle: object.editorFontStyle === 'italic' ? 'italic' : 'normal',
+        underline: object.editorUnderline === true,
+        linethrough: object.editorLinethrough === true,
       };
     }
 
@@ -1595,6 +1644,47 @@
       };
       operation.then(finished, finished);
       return operation;
+    }
+
+    textStyleActive(object, property) {
+      if (property === 'fontWeight') return object.editorFontWeight === 700;
+      if (property === 'fontStyle') return object.editorFontStyle === 'italic';
+      if (property === 'underline') return object.editorUnderline === true;
+      return object.editorLinethrough === true;
+    }
+
+    toggleActiveTextStyle(property) {
+      if (!Object.prototype.hasOwnProperty.call(this.styleButtons, property)) return;
+      const active = this.canvas.getActiveObject();
+      if (!active) return;
+      const selected = this.selectedObjects(active);
+      const textObjects = selected.filter((object) => object.editorKind === 'text' &&
+        root.WordCloudCore.hasTextRun(this.objectText(object)));
+      if (!textObjects.length) return;
+      const enable = !textObjects.every((object) => this.textStyleActive(object, property));
+      const value = property === 'fontWeight' ? (enable ? 700 : 400)
+        : property === 'fontStyle' ? (enable ? 'italic' : 'normal')
+        : enable;
+      const replacements = new Map();
+      const replacementItems = textObjects.map((object) => ({
+        object,
+        index: this.canvas.getObjects().indexOf(object),
+        item: { ...this.serializeObject(object), [property]: value },
+      }));
+      this.canvas.discardActiveObject();
+      for (const entry of replacementItems) {
+        this.canvas.remove(entry.object);
+        const replacement = this.makeObject(entry.item);
+        this.canvas.insertAt(entry.index, replacement);
+        replacements.set(entry.object, replacement);
+      }
+      const nextSelected = selected.map((object) => replacements.get(object) || object);
+      const selection = this.setActiveObjects(nextSelected);
+      this.keepInside(selection);
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
     }
 
     async applyFontToSelection(fontKey, selected, textObjects, revision) {
@@ -1676,6 +1766,8 @@
       const canColor = selected.some((object) => object.editorKind !== 'image');
       const selectedTexts = selected.filter((object) => object.editorKind === 'text');
       const canChangeFont = selectedTexts.length > 0;
+      const styleableTexts = selectedTexts.filter((object) =>
+        root.WordCloudCore.hasTextRun(this.objectText(object)));
       this.selectionPanel.classList.toggle('is-active', hasSelection);
       this.selectionPanel.classList.toggle('is-multiple', isMultiple);
       this.selectionPanel.setAttribute('aria-disabled', String(!hasSelection));
@@ -1684,6 +1776,16 @@
       this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
       this.colorInput.disabled = !hasSelection || !canColor;
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
+      Object.entries(this.styleButtons).filter(([, button]) => button).forEach(([property, button]) => {
+        button.disabled = styleableTexts.length === 0;
+        const selectedCount = styleableTexts.filter((object) =>
+          this.textStyleActive(object, property)).length;
+        const pressed = selectedCount === 0 ? 'false'
+          : selectedCount === styleableTexts.length ? 'true' : 'mixed';
+        button.setAttribute('aria-pressed', pressed);
+        button.classList.toggle('is-active', pressed === 'true');
+        button.classList.toggle('is-mixed', pressed === 'mixed');
+      });
       this.swatches.querySelectorAll('.editor-swatch').forEach((button) => {
         button.disabled = !hasSelection || !canColor;
       });

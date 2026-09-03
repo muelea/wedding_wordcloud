@@ -540,14 +540,27 @@ function normalizeDesign(
     const text = normalizeDesignText(rawItem.text, locale);
     const fontSize = Number(rawItem.fontSize);
     const rawFontFamily = rawItem.fontFamily;
+    const fontWeight = rawItem.fontWeight == null ? 400 : rawItem.fontWeight;
+    const fontStyle = rawItem.fontStyle == null ? 'normal' : rawItem.fontStyle;
+    const underline = rawItem.underline == null ? false : rawItem.underline;
+    const linethrough = rawItem.linethrough == null ? false : rawItem.linethrough;
     if ((rawFontFamily != null && !DesignFonts.has(rawFontFamily)) ||
+        ![400, 700].includes(fontWeight) ||
+        !['normal', 'italic'].includes(fontStyle) ||
+        typeof underline !== 'boolean' || typeof linethrough !== 'boolean' ||
         !text || !Number.isFinite(fontSize) || fontSize < 12 || fontSize > height) return null;
+    const canStyle = EmojiCatalog.parse(text).some((run) =>
+      run.type === 'text' && run.text.trim());
     normalized.push({
       ...common,
       color,
       text,
       fontSize: Math.round(fontSize * 10) / 10,
       fontFamily: DesignFonts.normalizeKey(rawFontFamily),
+      fontWeight: canStyle ? fontWeight : 400,
+      fontStyle: canStyle ? fontStyle : 'normal',
+      underline: canStyle ? underline : false,
+      linethrough: canStyle ? linethrough : false,
     });
   }
   return isPrintDesignWithinBounds(normalized, width, height, safeMargin) ? normalized : null;

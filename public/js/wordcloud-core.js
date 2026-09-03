@@ -1,11 +1,10 @@
 /**
  * Shared spiral + collision-detection word-cloud layout engine.
  *
- * Ported unchanged (algorithmically) from the original prototype's
- * display.ejs. This is the one piece of the prototype explicitly called
- * out as a real strength: the same layoutWords()/buildSVG() functions
- * drive both the live on-screen canvas render and the print-ready SVG
- * export, so the two are always visually identical by construction.
+ * Evolved from the original prototype's display.ejs. The same
+ * layoutWords()/buildSVG() geometry drives both the live on-screen canvas
+ * render and the print-ready SVG export, so the two stay visually identical
+ * by construction.
  *
  * Loaded two ways:
  *   - In the browser via <script src="/js/wordcloud-core.js"></script>,
@@ -38,6 +37,8 @@
   const TEXT_LINE_HEIGHT = 1.18;
   const TEXT_BASELINE_OFFSET = 0.34;
   const EMOJI_SIZE_RATIO = 1;
+  const ITALIC_SKEW_DEGREES = -12;
+  const EMOJI_LENGTH_PENALTY = .92;
 
   const THEMES = {
     pastel: {
@@ -58,13 +59,36 @@
 
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
-  function richTextRuns(text, fontPx, measureCtx, fontFamily = FONT_FAMILY) {
+  function textStyle(options = {}) {
+    return {
+      fontWeight: Number(options.fontWeight) === 700 ? 700 : 400,
+      fontStyle: options.fontStyle === 'italic' ? 'italic' : 'normal',
+      underline: options.underline === true,
+      linethrough: options.linethrough === true,
+    };
+  }
+
+  function canvasFont(fontPx, fontFamily, options = {}) {
+    return `${textStyle(options).fontWeight} ${fontPx}px ${fontFamily}`;
+  }
+
+  function isEmojiOnly(text) {
+    const runs = EmojiCatalog?.parse?.(String(text || '')) || [];
+    return runs.length > 0 && runs.every((run) => run.type === 'emoji');
+  }
+
+  function hasTextRun(text) {
+    const runs = EmojiCatalog?.parse?.(String(text || '')) || [];
+    return runs.some((run) => run.type === 'text' && run.text.trim());
+  }
+
+  function richTextRuns(text, fontPx, measureCtx, fontFamily = FONT_FAMILY, options = {}) {
     const size = Number(fontPx);
     if (!Number.isFinite(size) || size <= 0 || !measureCtx ||
         typeof measureCtx.measureText !== 'function') {
       throw new TypeError('A positive font size and a canvas measurement context are required');
     }
-    measureCtx.font = `${size}px ${fontFamily}`;
+    measureCtx.font = canvasFont(size, fontFamily, options);
     const sourceRuns = EmojiCatalog?.parse
       ? EmojiCatalog.parse(String(text || ''))
       : [{ type: 'text', text: String(text || '') }];
@@ -79,13 +103,23 @@
     });
   }
 
-  function measureTextBox(text, fontPx, measureCtx, fontFamily = FONT_FAMILY) {
+  function measureTextBox(text, fontPx, measureCtx, fontFamily = FONT_FAMILY, options = {}) {
     const size = Number(fontPx);
-    const runs = richTextRuns(text, size, measureCtx, fontFamily);
+    const runs = richTextRuns(text, size, measureCtx, fontFamily, options);
     return {
       width: Math.max(1, runs.reduce((sum, run) => sum + run.width, 0)),
       height: Math.max(1, size * TEXT_LINE_HEIGHT),
       runs,
+    };
+  }
+
+  function styledTextBox(box, options = {}) {
+    const style = textStyle(options);
+    return {
+      width: box.width + (style.fontStyle === 'italic'
+        ? box.height * Math.abs(Math.tan(ITALIC_SKEW_DEGREES * Math.PI / 180))
+        : 0),
+      height: box.height,
     };
   }
 
@@ -115,10 +149,16 @@
 
   function drawRichText(ctx, text, x, y, fontPx, options = {}) {
     const fontFamily = options.fontFamily || FONT_FAMILY;
-    const box = options.box || measureTextBox(text, fontPx, ctx, fontFamily);
-    const startX = x - box.width / 2;
+    const style = textStyle(options);
+    const box = options.box || measureTextBox(text, fontPx, ctx, fontFamily, style);
+    const startX = -box.width / 2;
     const emojiSize = fontPx * EMOJI_SIZE_RATIO;
-    ctx.font = `${fontPx}px ${fontFamily}`;
+    ctx.save();
+    ctx.translate(x, y);
+    if (style.fontStyle === 'italic') {
+      ctx.transform(1, 0, Math.tan(ITALIC_SKEW_DEGREES * Math.PI / 180), 1, 0, 0);
+    }
+    ctx.font = canvasFont(fontPx, fontFamily, style);
     ctx.fillStyle = options.color || '#000000';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
@@ -126,11 +166,26 @@
       const runX = startX + run.x;
       if (run.type === 'emoji') {
         const image = options.emojiImage?.(run) || EmojiCatalog?.getLoadedImage?.(run);
-        drawContainedImage(ctx, image, runX, y - emojiSize / 2, run.width, emojiSize);
+        drawContainedImage(ctx, image, runX, -emojiSize / 2, run.width, emojiSize);
       } else {
-        ctx.fillText(run.text, runX, y + fontPx * TEXT_BASELINE_OFFSET);
+        ctx.fillText(run.text, runX, fontPx * TEXT_BASELINE_OFFSET);
+        if (style.underline || style.linethrough) {
+          ctx.strokeStyle = options.color || '#000000';
+          ctx.lineWidth = Math.max(1, fontPx * .055);
+          ctx.lineCap = 'butt';
+          for (const lineY of [
+            ...(style.underline ? [fontPx * .48] : []),
+            ...(style.linethrough ? [fontPx * .03] : []),
+          ]) {
+            ctx.beginPath();
+            ctx.moveTo(runX, lineY);
+            ctx.lineTo(runX + run.width, lineY);
+            ctx.stroke();
+          }
+        }
       }
     }
+    ctx.restore();
     return box;
   }
 
@@ -183,6 +238,10 @@
   // Longer words are scaled down a bit relative to short ones of the same
   // frequency, so a single long word can't dominate/overflow the square.
   function lengthPenalty(word) {
+    // A single emoji is one grapheme but visually closer to a short word.
+    // Treating it as length 1 made every count-1 emoji one of the largest
+    // items, so several emoji were inevitably packed together at the centre.
+    if (isEmojiOnly(word)) return EMOJI_LENGTH_PENALTY;
     const length = EmojiCatalog?.graphemeLength
       ? EmojiCatalog.graphemeLength(word)
       : String(word || '').length;
@@ -210,6 +269,28 @@
   // the size spectrum rather than clustering them at one end.
   const ROTATE_EVERY_N = 5;
 
+  function stableSpiralPhase(value) {
+    let hash = 2166136261;
+    for (const character of String(value || '')) {
+      const codePoint = character.codePointAt(0);
+      hash ^= codePoint;
+      hash = Math.imul(hash, 16777619);
+    }
+    return ((hash >>> 0) / 0x100000000) * Math.PI * 2;
+  }
+
+  function assignRotations(items) {
+    let textIndex = 0;
+    for (const item of items) {
+      if (isEmojiOnly(item.word)) {
+        item.rotated = false;
+      } else {
+        item.rotated = textIndex % ROTATE_EVERY_N === ROTATE_EVERY_N - 1;
+        textIndex += 1;
+      }
+    }
+  }
+
   // Shared spiral+collision layout used by both the live canvas and the SVG
   // export, so the two are always identical by construction — and retries
   // at a smaller size instead of ever dropping a word that doesn't fit.
@@ -230,7 +311,7 @@
       .map(([word, count]) => ({ word, fontPx: sizeForCount(word, count, minCount, maxCount, minPx, maxPx) }))
       .sort((a, b) => b.fontPx - a.fontPx);
 
-    sized.forEach((item, i) => { item.rotated = (i % ROTATE_EVERY_N === ROTATE_EVERY_N - 1); });
+    assignRotations(sized);
 
     const placed = [];
     const cx = side / 2, cy = side / 2;
@@ -240,17 +321,18 @@
     for (const item of sized) {
       let fontPx = item.fontPx;
       let spot = null;
+      const spiralPhase = stableSpiralPhase(item.word);
 
-      for (let attempt = 0; attempt < 8 && !spot; attempt++) {
+      for (let attempt = 0; attempt < 12 && !spot; attempt++) {
         const textBox = measureTextBox(item.word, fontPx, measureCtx);
         const textHalf = textBox.width / 2 + side * 0.004;
-        const fontHalf = fontPx / 2 + side * 0.004;
+        const fontHalf = textBox.height / 2 + side * 0.004;
         // Rotated words occupy a footprint with width/height swapped.
         const halfW = item.rotated ? fontHalf : textHalf;
         const halfH = item.rotated ? textHalf : fontHalf;
 
         for (let t = 0; t < steps; t++) {
-          const angle = 0.3 * t;
+          const angle = 0.3 * t + spiralPhase;
           const radius = (maxRadius / Math.sqrt(steps)) * Math.sqrt(t);
           const x = cx + radius * Math.cos(angle);
           const y = cy + radius * Math.sin(angle);
@@ -262,7 +344,7 @@
         }
         if (!spot) fontPx *= 0.82; // didn't fit at this size — shrink and retry
       }
-      if (!spot) continue; // extremely unlikely after 8 shrink attempts
+      if (!spot) continue; // extremely unlikely after 12 shrink attempts
 
       placed.push({
         word: item.word, fontPx, rotated: item.rotated, x: spot.x, y: spot.y,
@@ -327,9 +409,14 @@
         const maxY = height / 2 - halfH;
         if (maxX < 0 || maxY < 0) return null;
         let spot = null;
+        const phase = Number(item.spiralPhase) || 0;
+        const phaseCos = Math.cos(phase);
+        const phaseSin = Math.sin(phase);
         for (const point of spiral) {
-          const x = cx + maxX * point.x;
-          const y = cy + maxY * point.y;
+          const pointX = point.x * phaseCos - point.y * phaseSin;
+          const pointY = point.x * phaseSin + point.y * phaseCos;
+          const x = cx + maxX * pointX;
+          const y = cy + maxY * pointY;
           const box = { x1: x - halfW, x2: x + halfW, y1: y - halfH, y2: y + halfH };
           if (!collides(box)) {
             spot = { ...item, x, y, scale, ...box };
@@ -430,10 +517,12 @@
     const sized = words.map(([word, count]) => ({ word,
       fontPx: 1000 * sizeForCount(word, count, minCount, maxCount, .24, 1),
     })).sort((a, b) => b.fontPx - a.fontPx);
-    const boxes = sized.map((item, index) => {
-      const rotated = index % ROTATE_EVERY_N === ROTATE_EVERY_N - 1;
+    assignRotations(sized);
+    const boxes = sized.map((item) => {
+      const rotated = item.rotated;
       const textBox = measureTextBox(item.word, item.fontPx, measureCtx);
       return { ...item, rotated, textBox, color: getColor(item.word), priority: item.fontPx,
+        spiralPhase: stableSpiralPhase(item.word),
         width: rotated ? textBox.height : textBox.width,
         height: rotated ? textBox.width : textBox.height };
     });
@@ -448,12 +537,13 @@
   }
 
   function richTextSvg(text, x, y, fontPx, color, fontFamily, textBox, options = {}) {
+    const style = textStyle(options);
     const box = textBox || {
       width: 1,
       runs: [{ type: 'text', text: String(text || ''), x: 0, width: 1 }],
     };
     const startX = x - box.width / 2;
-    return box.runs.map((run, index) => {
+    const contents = box.runs.map((run, index) => {
       const runX = startX + run.x;
       if (run.type === 'emoji') {
         const geometry = {
@@ -469,10 +559,20 @@
           `width="${geometry.width.toFixed(1)}" height="${geometry.height.toFixed(1)}" ` +
           `preserveAspectRatio="xMidYMid meet" href="${escapeXML(href)}"/>`;
       }
-      return `<text x="${runX.toFixed(1)}" y="${(y + fontPx * TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
+      const decorations = [
+        ...(style.underline ? [fontPx * .48] : []),
+        ...(style.linethrough ? [fontPx * .03] : []),
+      ].map((offset) => `<line x1="${runX.toFixed(1)}" y1="${(y + offset).toFixed(1)}" ` +
+        `x2="${(runX + run.width).toFixed(1)}" y2="${(y + offset).toFixed(1)}" ` +
+        `stroke="${color}" stroke-width="${Math.max(1, fontPx * .055).toFixed(1)}"/>`).join('\n  ');
+      const node = `<text x="${runX.toFixed(1)}" y="${(y + fontPx * TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
         `font-size="${fontPx.toFixed(1)}" font-family="${fontFamily}" ` +
-        `fill="${color}" text-anchor="start">${escapeXML(run.text)}</text>`;
+        `font-weight="${style.fontWeight}" fill="${color}" text-anchor="start">${escapeXML(run.text)}</text>`;
+      return decorations ? `${node}\n  ${decorations}` : node;
     }).join('\n  ');
+    if (style.fontStyle !== 'italic') return contents;
+    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) ` +
+      `skewX(${ITALIC_SKEW_DEGREES}) translate(${(-x).toFixed(1)} ${(-y).toFixed(1)})">${contents}</g>`;
   }
 
   function buildSVG(placed, side, theme, options = {}) {
@@ -517,13 +617,18 @@
     TEXT_LINE_HEIGHT,
     TEXT_BASELINE_OFFSET,
     EMOJI_SIZE_RATIO,
+    ITALIC_SKEW_DEGREES,
     THEMES,
     makePaletteAssigner,
     makeColorAssigner,
     getFontSizeRange,
     sizeForCount,
+    isEmojiOnly,
+    hasTextRun,
+    textStyle,
     richTextRuns,
     measureTextBox,
+    styledTextBox,
     drawRichText,
     drawPlacedWord,
     richTextSvg,

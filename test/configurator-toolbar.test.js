@@ -28,25 +28,36 @@ async function rendered(locale) {
   return parse(html);
 }
 
-test('every icon action renders one local SVG and a translated accessible name in all languages', async () => {
+test('every toolbar action renders its intended local mark and a translated accessible name in all languages', async () => {
   for (const locale of ['de', 'en', 'fr', 'it', 'es', 'tr']) {
     const page = await rendered(locale);
     const symbols = new Set(nodes(page, node => node.tagName === 'symbol').map(node => attr(node, 'id')));
     const actions = nodes(page, node => attr(node, 'data-editor-tooltip') !== undefined);
-    assert.equal(actions.length, 17);
+    assert.equal(actions.length, 21);
     for (const action of actions) {
       assert.equal(action.tagName, 'button');
       assert.equal(attr(action, 'type'), 'button');
       const source = attr(action, 'data-i18n-aria-label-source');
       assert.ok(source, `${locale}: ${attr(action, 'id')}`);
       assert.equal(attr(action, 'aria-label'), translate(source, locale));
+      const styleAction = (attr(action, 'class') || '').split(/\s+/).includes('editor-style-button');
       const svg = nodes(action, node => node.tagName === 'svg');
-      assert.equal(svg.length, 1);
-      assert.equal(attr(svg[0], 'aria-hidden'), 'true');
-      assert.equal(attr(svg[0], 'focusable'), 'false');
-      const use = nodes(svg[0], node => node.tagName === 'use')[0];
-      assert.ok(symbols.has(attr(use, 'href').slice(1)));
-      assert.equal(nodes(action, node => node.nodeName === '#text').map(node => node.value).join('').trim(), '');
+      if (styleAction) {
+        assert.equal(svg.length, 0);
+        const mark = nodes(action, node => ['span', 'strong'].includes(node.tagName))[0];
+        assert.ok(mark);
+        assert.equal(attr(mark, 'aria-hidden'), 'true');
+        assert.match(nodes(mark, node => node.nodeName === '#text')
+          .map(node => node.value).join('').trim(), /^[BIUS]$/);
+      } else {
+        assert.equal(svg.length, 1);
+        assert.equal(attr(svg[0], 'aria-hidden'), 'true');
+        assert.equal(attr(svg[0], 'focusable'), 'false');
+        const use = nodes(svg[0], node => node.tagName === 'use')[0];
+        assert.ok(symbols.has(attr(use, 'href').slice(1)));
+        assert.equal(nodes(action, node => node.nodeName === '#text')
+          .map(node => node.value).join('').trim(), '');
+      }
       assert.equal(attr(action, 'title'), undefined, 'one custom tooltip, no competing native title');
     }
     assert.equal(nodes(page, node => attr(node, 'data-editor-tool') !== undefined).length, 4);

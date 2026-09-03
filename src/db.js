@@ -2402,6 +2402,10 @@ async function createProviderSmokeOrder({ productKey, recipient }) {
         color: '#a40e4c',
         fontSize: Math.max(24, Math.min(96, product.printFile.height / 6)),
         fontFamily: 'classic',
+        fontWeight: 400,
+        fontStyle: 'normal',
+        underline: false,
+        linethrough: false,
       }],
     ])),
   };

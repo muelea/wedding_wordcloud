@@ -167,6 +167,7 @@ function collectRepositoryAssetPaths(root = ROOT) {
 
   for (const font of FONTS) {
     if (font.file?.startsWith('/assets/')) urls.add(font.file);
+    if (font.boldFile?.startsWith('/assets/')) urls.add(font.boldFile);
   }
   for (const family of PRODUCT_FAMILIES) {
     if (family.thumbnail?.startsWith('/assets/')) urls.add(family.thumbnail);

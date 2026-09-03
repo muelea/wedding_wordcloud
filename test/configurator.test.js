@@ -319,7 +319,7 @@ test('every placement action can be applied repeatedly to the complete current d
   const measurementContext = {
     font: '',
     measureText(text) {
-      const fontSize = Number.parseFloat(this.font) || 12;
+      const fontSize = Number(/(\d+(?:\.\d+)?)px/.exec(this.font)?.[1]) || 12;
       return { width: String(text).length * fontSize * .55 };
     },
   };
@@ -367,7 +367,7 @@ test('area optimization fills the target with the complete current design', () =
   const measurementContext = {
     font: '',
     measureText(text) {
-      const fontSize = Number.parseFloat(this.font) || 12;
+      const fontSize = Number(/(\d+(?:\.\d+)?)px/.exec(this.font)?.[1]) || 12;
       return { width: String(text).length * fontSize * .55 };
     },
   };
@@ -427,7 +427,7 @@ test('area optimization measures every text with its selected design font', () =
     },
     get font() { return this._font; },
     measureText(text) {
-      const fontSize = Number.parseFloat(this._font) || 12;
+      const fontSize = Number(/(\d+(?:\.\d+)?)px/.exec(this._font)?.[1]) || 12;
       return { width: String(text).length * fontSize * .5 };
     },
   };
@@ -756,9 +756,14 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.deepEqual(DesignFonts.FONTS.map((font) => font.key), [
     'classic', 'lora', 'montserrat', 'caveat', 'baloo-2',
   ]);
-  const bundledFont = await fetch(`${baseUrl}${publicAssetUrl('/assets/design-fonts/lora/Lora.ttf')}`);
-  assert.equal(bundledFont.status, 200);
-  assert.ok((await bundledFont.arrayBuffer()).byteLength > 100000);
+  for (const font of DesignFonts.FONTS) {
+    for (const file of [font.file, font.boldFile]) {
+      const bundledFont = await fetch(`${baseUrl}${publicAssetUrl(file)}`);
+      assert.equal(bundledFont.status, 200, file);
+      assert.match(bundledFont.headers.get('cache-control') || '', /immutable/, file);
+      assert.ok((await bundledFont.arrayBuffer()).byteLength > 50000, file);
+    }
+  }
 
   const [landingPage, configurePage] = await Promise.all([
     fetch(`${baseUrl}/`).then((response) => response.text()),
@@ -813,6 +818,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.doesNotMatch(configurePage, /id="editor-font"|editor-font-select|fontSelect:/);
   assert.match(configurePage, /id="editor-font-toggle"[^>]*aria-haspopup="listbox"/);
   assert.match(configurePage, /id="editor-font-menu"[^>]*role="listbox"/);
+  for (const id of ['editor-bold', 'editor-italic', 'editor-underline', 'editor-linethrough']) {
+    assert.match(configurePage, new RegExp(`id="${id}"[^>]*aria-pressed="false"`));
+  }
   assert.match(configurePage, /\.editor-font-toggle \{[\s\S]*?font-size: 11px;/);
   assert.match(configurePage, /setFontPickerInline: inline => mugEditor\?\.setFontPickerInline\(inline\)/);
   assert.match(configurePage, /fontButton: document\.getElementById\('editor-font-toggle'\)/);
@@ -1086,7 +1094,8 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   uploadContext.fillRect(30, 20, 60, 40);
   const imageSrc = uploadCanvas.toDataURL('image/png');
   const design = [
-    { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456', fontFamily: 'lora' },
+    { id: 'wort-1', text: 'Unser Wort', x: 1280, y: 460, fontSize: 118, angle: 15, color: '#123456', fontFamily: 'lora',
+      fontWeight: 700, fontStyle: 'italic', underline: true, linethrough: true },
     { id: 'wort-2', text: 'für immer', x: 1550, y: 655, fontSize: 82, angle: -30, color: '#abcdef', fontFamily: 'caveat' },
     { id: 'motiv-1', type: 'icon', icon: 'heart', x: 1880, y: 390, size: 170, angle: -12, color: '#d90368' },
     { id: 'bild-1', type: 'image', src: imageSrc, x: 2200, y: 700, width: 240, height: 160, angle: 10 },
@@ -1106,7 +1115,7 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.equal(save.status, 201);
   const configuration = await save.json();
   const svg = await fetch(baseUrl + configuration.printFileUrl).then((res) => res.text());
-  assert.match(svg, /x="1280\.0"/);
+  assert.match(svg, /translate\(1280\.0 460\.0\) skewX\(-12\)/);
   assert.match(svg, /font-size="118\.0"/);
   assert.match(svg, /transform="rotate\(15\.0 1280\.0 460\.0\)"/);
   assert.match(svg, /fill="#123456"/);
@@ -1114,6 +1123,9 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.match(svg, /data-font="caveat"/);
   assert.match(svg, /font-family="'Wolkenworte Lora', Georgia, serif"/);
   assert.match(svg, /font-family="'Wolkenworte Caveat', cursive"/);
+  assert.match(svg, /font-weight="700"/);
+  assert.match(svg, /skewX\(-12\)/);
+  assert.equal((svg.match(/<line /g) || []).length, 2);
   assert.match(svg, /@font-face\{font-family:'Wolkenworte Lora';src:url\(data:font\/ttf;base64,/);
   assert.match(svg, /@font-face\{font-family:'Wolkenworte Caveat';src:url\(data:font\/ttf;base64,/);
   assert.match(svg, />Unser Wort<\/text>/);
@@ -1154,6 +1166,15 @@ test('custom editor design is frozen exactly and cannot leave the printable area
     { id: 'motiv-1', type: 'icon', text: undefined, icon: 'heart', color: '#d90368', fontFamily: undefined },
     { id: 'bild-1', type: 'image', text: undefined, icon: undefined, color: undefined, fontFamily: undefined },
   ]);
+  assert.deepEqual(editableBody.designs.default.slice(0, 2).map((item) => ({
+    fontWeight: item.fontWeight,
+    fontStyle: item.fontStyle,
+    underline: item.underline,
+    linethrough: item.linethrough,
+  })), [
+    { fontWeight: 700, fontStyle: 'italic', underline: true, linethrough: true },
+    { fontWeight: 400, fontStyle: 'normal', underline: false, linethrough: false },
+  ]);
   assert.deepEqual(editableBody.designs.default.find((item) => item.id === 'bild-1'), {
     id: 'bild-1',
     type: 'image',
@@ -1180,6 +1201,54 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   });
   assert.equal(unknownFont.status, 400);
   assert.equal((await unknownFont.json()).error, 'invalid_design');
+
+  for (const invalidStyle of [
+    { fontWeight: 500 },
+    { fontWeight: '700' },
+    { fontStyle: 'oblique' },
+    { underline: 'true' },
+    { linethrough: 1 },
+  ]) {
+    const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quantity: 2,
+        theme: 'pastel',
+        words,
+        ...oneSurfaceDesign([{
+          id: 'invalid-style', text: 'bleibt sicher', x: 1300, y: 500,
+          fontSize: 100, angle: 0, color: '#123456', fontFamily: 'classic',
+          ...invalidStyle,
+        }]),
+      }),
+    });
+    assert.equal(response.status, 400, JSON.stringify(invalidStyle));
+    assert.equal((await response.json()).error, 'invalid_design');
+  }
+
+  const emojiStyle = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quantity: 1,
+      theme: 'pastel',
+      words,
+      ...oneSurfaceDesign([{
+        id: 'emoji-style', text: '❤️', x: 1300, y: 500, fontSize: 100,
+        angle: 0, color: '#123456', fontFamily: 'classic', fontWeight: 700,
+        fontStyle: 'italic', underline: true, linethrough: true,
+      }]),
+    }),
+  });
+  assert.equal(emojiStyle.status, 201);
+  const emojiConfiguration = await emojiStyle.json();
+  const emojiEditable = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${emojiConfiguration.id}/edit`).then(res => res.json());
+  assert.deepEqual(emojiEditable.designs.default[0], {
+    id: 'emoji-style', type: 'text', text: '❤️', x: 1300, y: 500, angle: 0,
+    color: '#123456', fontSize: 100, fontFamily: 'classic', fontWeight: 400,
+    fontStyle: 'normal', underline: false, linethrough: false,
+  });
 
   const outside = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',

@@ -74,7 +74,9 @@ test('fit-area preserves all fonts, edits, rotations, duplicates, emoji and imag
   for (const font of Fonts.FONTS) {
     const input = SCREENSHOT_WORDS.map(([text], index) => ({ id: 'word-' + index,
       text, x: 200, y: 200, fontSize: 50 + index * 2, angle: index % 5 === 4 ? -90 : index % 3 * 5,
-      fontFamily: font.key, color: '#2455f5' }));
+      fontFamily: font.key, fontWeight: index % 2 ? 700 : 400,
+      fontStyle: index % 3 ? 'normal' : 'italic', underline: index % 4 === 0,
+      linethrough: index % 6 === 0, color: '#2455f5' }));
     input.push({ ...input[0], id: 'duplicate', text: '❤️ Liebe 👨‍👩‍👧‍👦' },
       { id: 'icon', type: 'icon', icon: 'heart', x: 200, y: 200, size: 60, angle: 15, color: '#ed2446' },
       { id: 'image', type: 'image', src: image, x: 200, y: 200, width: 90, height: 60, angle: -10 });
@@ -82,7 +84,8 @@ test('fit-area preserves all fonts, edits, rotations, duplicates, emoji and imag
     assertSafe(output, product, font.key);
     assert.equal(output.length, input.length);
     output.forEach((item, index) => {
-      for (const key of ['id', 'text', 'fontFamily', 'color', 'angle', 'src', 'type']) {
+      for (const key of ['id', 'text', 'fontFamily', 'fontWeight', 'fontStyle', 'underline',
+        'linethrough', 'color', 'angle', 'src', 'type']) {
         assert.equal(item[key], input[index][key], `${font.key}: preserve ${key}`);
       }
     });
@@ -129,6 +132,8 @@ test('rounded mixed-font packing reaches a fixed point across varied aspect rati
     const design = Array.from({ length: count }, (_, index) => ({ id: String(index),
       text: ['Liebe', 'Zusammen', 'i', 'WWW', 'Glück', '❤️', 'Freundschaft'][index % 7] + index,
       fontSize: 24 + random() * 120, fontFamily: Fonts.FONTS[index % 5].key,
+      fontWeight: index % 2 ? 700 : 400, fontStyle: index % 3 ? 'normal' : 'italic',
+      underline: index % 4 === 0, linethrough: index % 6 === 0,
       angle: index % 5 === 4 ? -90 : 0, x: 200, y: 200, color: '#2455f5',
     }));
     const product = { printFile: { width: width + 60, height: height + 60 }, designSafeMargin: 24,

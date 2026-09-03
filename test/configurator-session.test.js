@@ -37,7 +37,7 @@ const id = character => character.repeat(16);
 function harness(extra = {}) {
   const local = storage();
   const cart = Session.createCart('event-a', local);
-  const calls = { posts: 0, navigations: [], dialogs: [], opened: [], busy: [], replaced: [] };
+  const calls = { posts: 0, bodies: [], navigations: [], dialogs: [], opened: [], busy: [], replaced: [] };
   const element = () => ({ textContent: '', disabled: false, hidden: false });
   const context = vm.createContext({
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, console: { warn() {} },
@@ -64,7 +64,11 @@ function harness(extra = {}) {
     loadOrderItem: async target => calls.opened.push(target),
     history: { replaceState: (_, __, url) => calls.replaced.push(url) },
     location: { search: '', assign: url => calls.navigations.push(url) },
-    fetch: async () => { calls.posts++; return { ok: true, json: async () => ({ id: id(String(calls.posts)), productKey: 'mug' }) }; },
+    fetch: async (_, options = {}) => {
+      calls.posts++;
+      if (options.body) calls.bodies.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ id: id(String(calls.posts)), productKey: 'mug' }) };
+    },
     ...extra,
   });
   vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'confirmLeaving',
@@ -107,6 +111,18 @@ test('explicit Add saves once; unchanged repeats do not duplicate; edits replace
   assert.equal(await page.saveCurrentDesign(page.saveDesignButton), true);
   assert.equal(calls.posts, 2);
   assert.deepEqual(cart.read().map(item => item.id), [id('2')]);
+});
+
+test('explicit approval sends every whole-word style in the immutable surface snapshot', async () => {
+  const styled = [{ id: 'word', text: 'Liebe ❤️', x: 1200, y: 500, fontSize: 140,
+    angle: 12, color: '#2455f5', fontFamily: 'montserrat', fontWeight: 700,
+    fontStyle: 'italic', underline: true, linethrough: true }];
+  const { context: page, calls } = harness({
+    getAllSurfaceDesigns: () => ({ default: styled }),
+  });
+  assert.equal(await page.saveCurrentDesign(page.saveDesignButton), true);
+  assert.equal(calls.bodies.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.bodies[0].designs.default)), styled);
 });
 
 test('empty-cart shipping requires confirmation and never leaves on cancel', async () => {

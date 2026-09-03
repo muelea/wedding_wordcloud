@@ -14,20 +14,25 @@ for (const font of DesignFonts.FONTS) {
     ? require.resolve(font.packageFile)
     : path.join(PUBLIC_DIR, font.file.replace(/^\//, ''));
   registerFont(filePath, { family: font.family, weight: 'normal', style: 'normal' });
-  embeddedFontData.set(font.key, fs.readFileSync(filePath).toString('base64'));
+  embeddedFontData.set(`${font.key}:400`, fs.readFileSync(filePath).toString('base64'));
+  const boldPath = path.join(PUBLIC_DIR, font.boldFile.replace(/^\//, ''));
+  registerFont(boldPath, { family: font.family, weight: 'bold', style: 'normal' });
+  embeddedFontData.set(`${font.key}:700`, fs.readFileSync(boldPath).toString('base64'));
 }
 
 function embeddedSvgFontFaces(design) {
-  const keys = [...new Set((Array.isArray(design) ? design : [])
+  const variants = [...new Set((Array.isArray(design) ? design : [])
     .filter((item) => item && item.type !== 'image' && item.type !== 'icon')
-    .map((item) => DesignFonts.normalizeKey(item.fontFamily)))];
-  if (!keys.length) return '';
-  const rules = keys.map((key) => {
+    .map((item) => `${DesignFonts.normalizeKey(item.fontFamily)}:${item.fontWeight === 700 ? 700 : 400}`))];
+  if (!variants.length) return '';
+  const rules = variants.map((variant) => {
+    const [key, weightText] = variant.split(':');
+    const weight = Number(weightText);
     const font = DesignFonts.get(key);
-    const data = embeddedFontData.get(key);
     const mime = font.format === 'woff' ? 'font/woff' : 'font/ttf';
+    const data = embeddedFontData.get(variant);
     return `@font-face{font-family:'${font.family}';src:url(data:${mime};base64,${data}) ` +
-      `format('${font.format || 'truetype'}');font-weight:400;font-style:normal;}`;
+      `format('${font.format || 'truetype'}');font-weight:${weight};font-style:normal;}`;
   });
   return `  <defs><style type="text/css"><![CDATA[${rules.join('')}]]></style></defs>\n`;
 }

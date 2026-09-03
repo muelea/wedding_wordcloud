@@ -126,6 +126,38 @@ test('layoutWords handles a dense word list without dropping words or creating o
   }
 });
 
+test('standalone emoji are distributed deterministically instead of monopolizing the centre', () => {
+  const words = [
+    ['liebe', 1], ['glück', 1], ['freude', 1], ['familie', 1], ['lachen', 1],
+    ['vertrauen', 1], ['reisen', 1], ['musik', 1], ['🌍', 1], ['❤️', 1], ['🫶', 1],
+  ];
+  const side = 700;
+  assert.equal(WordCloudCore.isEmojiOnly('❤️'), true);
+  assert.equal(WordCloudCore.isEmojiOnly('Liebe ❤️'), false);
+  assert.ok(WordCloudCore.sizeForCount('❤️', 1, 1, 1, 20, 100) <
+    WordCloudCore.sizeForCount('liebe', 1, 1, 1, 20, 100));
+  const first = WordCloudCore.layoutWords(words, side, makeFakeMeasureCtx(), () => '#000000');
+  const second = WordCloudCore.layoutWords(words, side, makeFakeMeasureCtx(), () => '#000000');
+  assert.deepEqual(second, first, 'the same live cloud must never jump between renders');
+  assert.equal(first.length, words.length);
+  const emoji = first.filter((item) => WordCloudCore.isEmojiOnly(item.word));
+  assert.equal(emoji.length, 3);
+  assert.ok(emoji.every((item) => item.rotated === false), 'rotating square emoji wastes text rotation slots');
+  const radii = emoji.map((item) => Math.hypot(item.x - side / 2, item.y - side / 2));
+  assert.ok(radii.filter((radius) => radius > side * .16).length >= 2,
+    `emoji should be spread through the cloud, got radii ${radii.join(', ')}`);
+});
+
+test('frequency still wins when an emoji is genuinely the most important contribution', () => {
+  const words = [['❤️', 30], ['liebe', 1], ['glück', 1], ['familie', 1], ['freude', 1]];
+  const side = 700;
+  const placed = WordCloudCore.layoutWords(words, side, makeFakeMeasureCtx(), () => '#000000');
+  const heart = placed.find((item) => item.word === '❤️');
+  assert.ok(heart.fontPx > placed.find((item) => item.word === 'liebe').fontPx);
+  assert.ok(Math.hypot(heart.x - side / 2, heart.y - side / 2) < .01,
+    'the highest-frequency contribution should retain the visual centre');
+});
+
 test('layoutWordsInArea fills a wide print area while preserving every relative font size', () => {
   const words = wordList(18);
   const width = 2628;

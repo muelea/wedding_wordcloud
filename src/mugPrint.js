@@ -26,10 +26,12 @@ function getDesignBounds(item) {
       item.text,
       item.fontSize,
       measureCtx,
-      DesignFonts.cssFamily(item.fontFamily)
+      DesignFonts.cssFamily(item.fontFamily),
+      item
     );
-    itemWidth = textBox.width;
-    itemHeight = textBox.height;
+    const styledBox = WordCloudCore.styledTextBox(textBox, item);
+    itemWidth = styledBox.width;
+    itemHeight = styledBox.height;
   }
   const radians = item.angle * Math.PI / 180;
   const cos = Math.abs(Math.cos(radians));
@@ -90,18 +92,9 @@ function designElements(design) {
       item.text,
       item.fontSize,
       measureCtx,
-      DesignFonts.cssFamily(fontKey)
+      DesignFonts.cssFamily(fontKey),
+      item
     );
-    if (!textBox.runs.some((run) => run.type === 'emoji')) {
-      const rotate = item.angle
-        ? ` transform="rotate(${item.angle.toFixed(1)} ${item.x.toFixed(1)} ${item.y.toFixed(1)})"`
-        : '';
-      return `<text x="${item.x.toFixed(1)}" ` +
-        `y="${(item.y + item.fontSize * WordCloudCore.TEXT_BASELINE_OFFSET).toFixed(1)}" ` +
-        `font-size="${item.fontSize.toFixed(1)}" font-family="${DesignFonts.svgFamily(fontKey)}" ` +
-        `data-font="${fontKey}" ` +
-        `fill="${item.color}" text-anchor="middle"${rotate}>${WordCloudCore.escapeXML(item.text)}</text>`;
-    }
     const contents = WordCloudCore.richTextSvg(
       item.text,
       item.x,
@@ -111,6 +104,10 @@ function designElements(design) {
       DesignFonts.svgFamily(fontKey),
       textBox,
       {
+        fontWeight: item.fontWeight,
+        fontStyle: item.fontStyle,
+        underline: item.underline,
+        linethrough: item.linethrough,
         emojiSvg: (run, geometry) => EmojiAssets.inlineSvg(run, {
           ...geometry,
           id: `design-${itemIndex}-${item.id || 'item'}-${geometry.id}`,
