@@ -324,6 +324,16 @@ test('final text is awaited before capture and unchanged text does not dirty a r
   await context.finalizeCurrentText();
   assert.equal(dirty, 1);
   assert.equal(context.suppressDirty, false);
+  let finishFont;
+  context.mugEditor.pendingFontChange = new Promise(resolve => { finishFont = resolve; });
+  let committed = false;
+  context.mugEditor.commitTextInput = async () => { committed = true; };
+  const finalizing = context.finalizeCurrentText();
+  await Promise.resolve();
+  assert.equal(committed, false, 'Save must wait for a pending font download before reading the design');
+  finishFont();
+  await finalizing;
+  assert.equal(committed, true);
 });
 
 test('restoration flushes its scheduled editor change while dirty tracking is suppressed', () => {

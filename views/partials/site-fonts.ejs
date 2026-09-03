@@ -10,6 +10,16 @@
 <link rel="preload" href="<%= asset(fontPath) %>" as="font" type="font/woff2" crossorigin />
 <% } %>
 <style data-ww-site-fonts>
+  /* Full, identical print font in every browser and the Linux renderer.
+     A Latin-ext subset alone silently falls back for ordinary Latin words. */
+  @font-face {
+    font-family: "Wolkenworte Classic";
+    src: url("<%= asset('/assets/design-fonts/gelasio/Gelasio.ttf') %>") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+  }
+
   /* Local metric fallbacks keep line boxes stable while the preloaded faces decode. */
   @font-face {
     font-family: "Wolkenworte Jost Fallback";

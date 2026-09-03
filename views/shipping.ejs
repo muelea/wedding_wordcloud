@@ -427,6 +427,8 @@
     let configurations = [];
     let configuration = null;
     let currentQuote = null;
+    let shippingRevision = 0;
+    let activeShippingRequest = null;
     let countryDisplayNames = null;
     let shippingDraftReady = false;
     let shippingDraft = null;
@@ -536,7 +538,10 @@
       }
     });
 
-    window.addEventListener('pagehide', saveShippingDraft);
+    window.addEventListener('pagehide', () => {
+      cancelShippingRequest();
+      saveShippingDraft();
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') saveShippingDraft();
     });
@@ -1256,16 +1261,44 @@
     }
 
     function clearQuote() {
+      shippingRevision += 1;
       currentQuote = null;
       quoteResult.hidden = true;
       quotePlaceholder.hidden = false;
       clearText(checkoutError);
-      if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = false;
+      checkoutButton.disabled = true;
       setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
       if (configurations.length) {
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
       }
       saveShippingDraft();
+    }
+
+    async function fetchShippingJson(url, options = {}, controller = new AbortController()) {
+      // Covers both response headers and body. No automatic retry of writes:
+      // a timed-out checkout is reconciled by the existing server idempotency.
+      const timer = setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        return { response, result: await response.json() };
+      } finally { clearTimeout(timer); }
+    }
+
+    function finishShippingRequest(request) {
+      if (activeShippingRequest !== request) return;
+      activeShippingRequest = null;
+      form.inert = false;
+      WolkenworteActions.setBusy(submitButton, false);
+      WolkenworteActions.setBusy(checkoutButton, false);
+      checkoutButton.disabled = !currentQuote?.id;
+    }
+
+    function cancelShippingRequest() {
+      shippingRevision += 1;
+      if (!activeShippingRequest) return;
+      const request = activeShippingRequest;
+      request.controller.abort();
+      finishShippingRequest(request);
     }
 
     function formatMoney(cents, currency) {
@@ -1387,15 +1420,31 @@
       first?.focus();
     }
 
-    async function restoreSavedQuote() {
+    function shippingSnapshot(shipments) {
+      return JSON.stringify((shipments || []).map(shipment => ({
+        recipient: ['name', 'address1', 'address2', 'zip', 'city', 'country_code', 'state_code']
+          .map(key => String(shipment.recipient?.[key] || '').trim()),
+        items: (shipment.items || []).filter(item => Number(item.quantity) > 0)
+          .map(item => [item.configurationId, Number(item.quantity)])
+          .sort((left, right) => left[0].localeCompare(right[0])),
+      })));
+    }
+
+    async function restoreSavedQuote(savedShipping) {
       if (!savedQuoteId || !/^[A-Za-z0-9_-]{24}$/.test(savedQuoteId)) return;
-      const response = await fetch(
+      const { response, result: saved } = await fetchShippingJson(
         `/api/events/${encodeURIComponent(slug)}/cart/quotes/${encodeURIComponent(savedQuoteId)}` +
         `?ids=${encodeURIComponent(configurationIds.join(','))}`,
         { cache: 'no-store' }
       );
       if (!response.ok) return;
-      const saved = await response.json();
+      if (savedShipping?.length && shippingSnapshot(savedShipping) !== shippingSnapshot(saved.shipments)) {
+        // The URL can still refer to an older, cancelled checkout after the
+        // customer has edited the address/quantity. Keep the newer tab draft.
+        clearQuote();
+        setText(formError, 'Der Gesamtpreis muss neu berechnet werden.');
+        return;
+      }
       renderShipments(Array.isArray(saved.shipments) && saved.shipments.length
         ? saved.shipments
         : [defaultShipment()]);
@@ -1420,14 +1469,14 @@
         const configurationUrl = configurationIds.length === 1
           ? `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationIds[0])}`
           : `/api/events/${encodeURIComponent(slug)}/configurations?ids=${encodeURIComponent(configurationIds.join(','))}`;
-        const [configurationResponse, countriesResponse, eventResponse] = await Promise.all([
-          fetch(configurationUrl),
-          fetch('/api/shipping/countries'),
-          fetch(`/api/events/${encodeURIComponent(slug)}`),
+        const [configurationRequest, countriesRequest, eventRequest] = await Promise.all([
+          fetchShippingJson(configurationUrl),
+          fetchShippingJson('/api/shipping/countries'),
+          fetchShippingJson(`/api/events/${encodeURIComponent(slug)}`),
         ]);
-        const configurationData = await configurationResponse.json();
-        const countriesData = await countriesResponse.json();
-        const eventData = await eventResponse.json();
+        const { response: configurationResponse, result: configurationData } = configurationRequest;
+        const { response: countriesResponse, result: countriesData } = countriesRequest;
+        const { response: eventResponse, result: eventData } = eventRequest;
         if (!configurationResponse.ok) throw new Error('configuration');
         if (!countriesResponse.ok) throw new Error(countriesData.message || 'countries');
         if (!eventResponse.ok) throw new Error('configuration');
@@ -1450,7 +1499,11 @@
         }
         renderShipments(savedShipping?.length ? savedShipping : [defaultShipment()]);
         renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
-        await restoreSavedQuote();
+        try { await restoreSavedQuote(savedShipping); }
+        catch {
+          // An unavailable old price must not hide the editable address form.
+          setText(formError, 'Der Gesamtpreis muss neu berechnet werden.');
+        }
         shippingDraftReady = true;
         saveShippingDraft();
         submitButton.disabled = false;
@@ -1475,13 +1528,17 @@
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (activeShippingRequest) return;
       clearFieldErrors();
       if (!form.reportValidity()) return;
       const { shipments, totalQuantity, quantityError } = collectShipments();
       if (quantityError || totalQuantity < 1 || totalQuantity > 99) return;
+      clearQuote();
+      const request = { controller: new AbortController(), revision: shippingRevision };
+      activeShippingRequest = request;
       WolkenworteActions.setBusy(submitButton, true);
       try {
-        const response = await fetch(
+        const { response, result } = await fetchShippingJson(
           `/api/events/${encodeURIComponent(slug)}/cart/estimate-costs`,
           {
             method: 'POST',
@@ -1490,9 +1547,9 @@
               'X-Wolkenworte-Guest-Id': guestId,
             },
             body: JSON.stringify({ configurationIds, shipments }),
-          }
+          }, request.controller
         );
-        const result = await response.json();
+        if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (!response.ok) {
           if (Array.isArray(result.fields)) markInvalidFields(result.fields);
           throw customerError(customerErrorSource(result, 'Bitte füllt alle benötigten Adressfelder vollständig aus.'));
@@ -1500,21 +1557,27 @@
         showQuote(result.quote);
         setButtonLabel(submitButton, 'Preis aktualisieren');
       } catch (error) {
+        if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         setText(formError,
-          error.customerSource || 'Bitte füllt alle benötigten Adressfelder vollständig aus.');
+          error.customerSource || 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.');
         setButtonLabel(submitButton, 'Erneut versuchen');
       } finally {
-        WolkenworteActions.setBusy(submitButton, false);
+        finishShippingRequest(request);
       }
     });
 
     checkoutButton.addEventListener('click', async () => {
-      if (!currentQuote?.id) return;
+      if (!currentQuote?.id || activeShippingRequest) return;
+      const request = { controller: new AbortController(), revision: shippingRevision };
+      activeShippingRequest = request;
+      // Freeze the address being confirmed, but leave Home/Back available.
+      form.inert = true;
+      submitButton.disabled = true;
       WolkenworteActions.setBusy(checkoutButton, true);
       clearText(checkoutError);
       let navigating = false;
       try {
-        const response = await fetch(
+        const { response, result } = await fetchShippingJson(
           `/api/events/${encodeURIComponent(slug)}/cart/checkout`,
           {
             method: 'POST',
@@ -1527,9 +1590,9 @@
               quoteId: currentQuote.id,
               locale: WolkenworteI18n.getLocale(),
             }),
-          }
+          }, request.controller
         );
-        const result = await response.json();
+        if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (result.quote) showQuote(result.quote);
         if (!response.ok) {
           if (result.error === 'quote_expired') {
@@ -1550,14 +1613,15 @@
         const destination = result.confirmationUrl || result.url;
         if (!destination) throw customerError(
           'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.');
-        navigating = true;
         location.assign(destination);
+        navigating = true;
       } catch (error) {
+        if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         setText(checkoutError,
           error.customerSource || 'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.');
         setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
       } finally {
-        if (!navigating) WolkenworteActions.setBusy(checkoutButton, false);
+        if (!navigating) finishShippingRequest(request);
       }
     });
 

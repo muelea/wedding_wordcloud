@@ -16,9 +16,8 @@
       family: 'Wolkenworte Classic',
       cssFamily: '"Wolkenworte Classic", Georgia, "Times New Roman", serif',
       svgFamily: "'Wolkenworte Classic', Georgia, 'Times New Roman', serif",
-      file: '/vendor/fonts/gelasio-latin-ext-400-normal.woff',
-      packageFile: '@fontsource/gelasio/files/gelasio-latin-ext-400-normal.woff',
-      format: 'woff',
+      file: '/assets/design-fonts/gelasio/Gelasio.ttf',
+      format: 'truetype',
     }),
     Object.freeze({
       key: 'lora',
@@ -83,6 +82,24 @@
     return get(key).svgFamily;
   }
 
+  async function loadFont(key, fontSet, timeoutMs = 10000) {
+    if (!fontSet || typeof fontSet.load !== 'function') throw new Error('design_font_unavailable');
+    let timer;
+    try {
+      const faces = await Promise.race([
+        fontSet.load(`16px "${get(key).family}"`, 'Wolkenworte'),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('design_font_timeout')), timeoutMs);
+        }),
+      ]);
+      // FontFaceSet.load also resolves successfully with [] when no @font-face
+      // matches. That must not permit an OS fallback in a printable design.
+      if (!faces?.length || faces.some(face => face.status !== 'loaded')) {
+        throw new Error('design_font_unavailable');
+      }
+    } finally { clearTimeout(timer); }
+  }
+
   return Object.freeze({
     DEFAULT_FONT_KEY,
     FONTS,
@@ -91,5 +108,6 @@
     normalizeKey,
     cssFamily,
     svgFamily,
+    loadFont,
   });
 });

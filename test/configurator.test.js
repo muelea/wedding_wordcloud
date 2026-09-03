@@ -268,7 +268,9 @@ function automaticFitAreaDesign(product, words) {
 test('automatic fit-area geometry is accepted by every product and orientation', () => {
   const sparse = [['liebe', 1]];
   for (const baseProduct of PRODUCTS) {
-    for (const orientation of baseProduct.orientationOptions) {
+    const orientations = baseProduct.orientationOptions.length
+      ? baseProduct.orientationOptions : [{ key: 'default' }];
+    for (const orientation of orientations) {
       const product = resolveProductOrientation(baseProduct, orientation.key);
       const design = automaticFitAreaDesign(product, sparse);
       assert.equal(design.length, sparse.length, `${product.key}/${orientation.key} keeps the sparse cloud`);

@@ -2127,6 +2127,7 @@
       const wasSuppressed = suppressDirty;
       suppressDirty = true;
       try {
+        await WolkenworteConfiguratorSession.withTimeout(mugEditor.pendingFontChange);
         await WolkenworteConfiguratorSession.withTimeout(mugEditor.commitTextInput());
         mugEditor.flushPendingChange();
       } finally { suppressDirty = wasSuppressed; }
@@ -2488,14 +2489,8 @@
     }
 
     async function ensureDesignFonts(fontKeys) {
-      if (!document.fonts || typeof document.fonts.load !== 'function') {
-        throw new Error('design_font_unavailable');
-      }
       const keys = [...new Set(fontKeys.map((key) => DesignFonts.normalizeKey(key)))];
-      await Promise.all(keys.map((key) => {
-        const font = DesignFonts.get(key);
-        return document.fonts.load(`16px "${font.family}"`, 'Wolkenworte');
-      }));
+      await Promise.all(keys.map(key => DesignFonts.loadFont(key, document.fonts)));
     }
 
     function drawCloud(ctx, x, y, width, height = width, showOnlyFullyVisible = false) {

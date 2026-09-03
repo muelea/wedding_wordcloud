@@ -969,6 +969,7 @@
     }
 
     setDesign(design, { resetHistory = false, record = false } = {}) {
+      this.fontChangeRevision = (this.fontChangeRevision || 0) + 1;
       this.suspended = true;
       this.canvas.discardActiveObject();
       for (const object of [...this.canvas.getObjects()]) this.canvas.remove(object);
@@ -1247,6 +1248,7 @@
     }
 
     hasPendingTextChange() {
+      if (this.pendingFontChange) return true;
       const active = this.canvas.getActiveObject();
       return active?.editorKind === 'text' && Boolean(this.textInput.value.trim()) &&
         this.normalizeText(this.textInput.value) !== this.normalizeText(this.objectText(active));
@@ -1578,17 +1580,30 @@
       this.updateSelectionPanel();
     }
 
-    async setActiveFont(fontKey) {
-      if (!root.DesignFonts.has(fontKey)) return;
+    setActiveFont(fontKey) {
+      if (!root.DesignFonts.has(fontKey)) return Promise.resolve();
       const active = this.canvas.getActiveObject();
-      if (!active) return;
+      if (!active) return Promise.resolve();
       const selected = this.selectedObjects(active);
       const textObjects = selected.filter((object) => object.editorKind === 'text');
-      if (!textObjects.length) return;
+      if (!textObjects.length) return Promise.resolve();
+      const revision = this.fontChangeRevision = (this.fontChangeRevision || 0) + 1;
+      const operation = this.applyFontToSelection(fontKey, selected, textObjects, revision);
+      this.pendingFontChange = operation;
+      const finished = () => {
+        if (this.pendingFontChange === operation) this.pendingFontChange = null;
+      };
+      operation.then(finished, finished);
+      return operation;
+    }
+
+    async applyFontToSelection(fontKey, selected, textObjects, revision) {
       const font = root.DesignFonts.get(fontKey);
-      if (document.fonts && font.file) {
-        await document.fonts.load(`16px "${font.family}"`);
-      }
+      await root.DesignFonts.loadFont(fontKey, document.fonts);
+      // A slow download may finish after another font choice, undo/reset or
+      // deleting/replacing a selected object. Never resurrect stale objects.
+      if (revision !== this.fontChangeRevision ||
+          selected.some(object => !this.canvas.getObjects().includes(object))) return;
 
       const replacements = new Map();
       const replacementItems = textObjects.map((object) => ({

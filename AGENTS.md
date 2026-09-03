@@ -101,8 +101,11 @@ it — this file is about how to work in it safely.
 - **Collaborator startup is one guarded path.** A fresh clone plus a securely
   supplied, runtime-scoped `.env` must start through `./run_local.sh`. That
   command owns deterministic dependency synchronization and the local
-  environment/asset preflight in `scripts/prepare-local.js`. Three.js, Fabric.js
-  and Gelasio are served from their pinned npm packages; the procedural mug
+  environment/asset preflight in `scripts/prepare-local.js`. Three.js and Fabric.js
+  are served from their pinned npm packages. Gelasio and the other print fonts
+  are complete, pinned TTF files tracked under `public/assets/design-fonts/`,
+  with their licenses and identical browser/server bytes. Do not restore the
+  incomplete Gelasio Latin-ext WOFF as a print font. The procedural mug
   renderer and product assets are tracked in `public/`. Do not restore a mere
   `node_modules`-directory check, add a CDN/manual asset-copy requirement or
   assume an untracked 3D model exists.
