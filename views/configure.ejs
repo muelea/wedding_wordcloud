@@ -935,12 +935,12 @@
     .design-toolbar-controls {
       min-width: 0;
       display: grid;
-      grid-template-columns: minmax(300px, 1.2fr) minmax(220px, .8fr) minmax(220px, .8fr);
+      grid-template-columns: minmax(300px, 1.2fr) minmax(220px, .8fr);
       gap: 10px;
       align-items: stretch;
     }
     .design-toolbar-controls.has-orientation {
-      grid-template-columns: minmax(280px, 1.15fr) repeat(3, minmax(170px, .72fr));
+      grid-template-columns: minmax(280px, 1.15fr) repeat(2, minmax(170px, .72fr));
     }
     .toolbar-menu {
       min-width: 0;
@@ -1225,19 +1225,9 @@
     .variant-option span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 
     .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .placement-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .orientation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .option { position: relative; cursor: pointer; }
     .option input { position: absolute; opacity: 0; pointer-events: none; }
-    .placement-action {
-      min-width: 0;
-      padding: 0;
-      border: 0;
-      background: none;
-      color: inherit;
-      font: inherit;
-      text-align: left;
-    }
     .orientation-grid .option input {
       inset: 0;
       z-index: 1;
@@ -1259,8 +1249,6 @@
       transition: border-color .2s, box-shadow .2s, transform .2s;
     }
     .option:hover .option-card { transform: translateY(-1px); border-color: rgba(156, 28, 76, .35); }
-    .placement-action:focus { outline: none; }
-    .placement-action:focus-visible .option-card { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
     .option input:focus-visible + .option-card { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
     .option input:checked + .option-card {
       border-color: var(--berry);
@@ -1573,9 +1561,9 @@
         gap: 16px;
       }
       .controls-sub { max-width: 520px; text-align: right; }
-      .design-toolbar-controls { grid-template-columns: minmax(300px, 1fr) minmax(210px, .7fr) minmax(210px, .7fr); }
+      .design-toolbar-controls { grid-template-columns: minmax(300px, 1fr) minmax(210px, .7fr); }
       .design-toolbar-controls.has-orientation {
-        grid-template-columns: minmax(280px, 1.1fr) repeat(3, minmax(170px, .72fr));
+        grid-template-columns: minmax(280px, 1.1fr) repeat(2, minmax(170px, .72fr));
       }
       .editor-properties { grid-template-columns: minmax(0, 1fr); }
       .editor-actions { justify-content: flex-end; }
@@ -1696,7 +1684,7 @@
       <section class="intro">
         <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
-        <p class="intro-copy" id="config-intro">Wählt Produkt, Farbwelt und Platzierung. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
+        <p class="intro-copy" id="config-intro">Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
       </section>
 
       <div class="config-studio">
@@ -1758,21 +1746,7 @@
               </dialog>
             </div>
 
-            <div class="toolbar-menu" id="placement-step">
-              <button class="toolbar-summary" type="button" data-panel-trigger="placement-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="placement-panel">
-                <span>
-                  <span class="toolbar-kicker">Platzierung</span>
-                  <strong id="placement-summary-name">Design anordnen</strong>
-                </span>
-                <span class="toolbar-summary-detail" id="placement-summary-detail">Wählt eine Anordnung für euer aktuelles Design.</span>
-              </button>
-              <dialog class="config-panel" id="placement-panel" aria-labelledby="placement-panel-title">
-                <div class="config-panel-head"><h2 id="placement-panel-title" tabindex="-1">Platzierung</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
-                <div class="config-panel-body">
-                <div class="option-grid placement-grid" id="placement-options"></div>
-                </div>
-              </dialog>
-            </div>
+
           </div>
         </section>
 
@@ -2079,12 +2053,9 @@
     const selectedOrientationDetail = document.getElementById('selected-orientation-detail');
     const selectedThemeName = document.getElementById('selected-theme-name');
     const selectedThemeSwatches = document.getElementById('selected-theme-swatches');
-    const placementSummaryName = document.getElementById('placement-summary-name');
-    const placementSummaryDetail = document.getElementById('placement-summary-detail');
     const changeProductButton = document.getElementById('change-product');
     const orientationStep = document.getElementById('orientation-step');
     const themeStep = document.getElementById('theme-step');
-    const placementStep = document.getElementById('placement-step');
     const productDialog = document.getElementById('product-dialog');
     const productDialogClose = document.getElementById('product-dialog-close');
     const productDialogDone = document.getElementById('product-dialog-done');
@@ -2093,7 +2064,6 @@
     const productOptions = document.getElementById('product-options');
     const variantPanel = document.getElementById('variant-panel');
     const variantOptions = document.getElementById('variant-options');
-    const placementOptions = document.getElementById('placement-options');
     const surfaceEditor = document.getElementById('surface-editor');
     const surfaceTabs = document.getElementById('surface-tabs');
     const surfaceCopy = document.getElementById('surface-copy');
@@ -2147,6 +2117,7 @@
     let suppressDirty = false;
     let orderActionPending = false;
     let currentDesignNeedsSave = true;
+    let currentDesignEdited = false;
     let workspaceReady = false;
     let designRevision = 0;
     let pendingConfiguration = null;
@@ -2200,6 +2171,14 @@
 
     // All app navigation goes through one decision, never an implicit save.
     async function confirmLeaving(options = {}) {
+      if (options.onlyIfEdited) {
+        try { await finalizeCurrentText(); }
+        catch {
+          setText(errorText, 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
+          return false;
+        }
+        if (!currentDesignEdited) return true;
+      }
       if (!hasUnsavedDesign() && !(options.shipping && !loadOrderItems().length)) return true;
       const choice = await askBeforeLeaving(options);
       if (choice === 'cancel') return false;
@@ -2304,6 +2283,7 @@
         await applySavedConfiguration(data);
         editingOrderItemId = loadOrderItems().some((item) => item.id === data.id) ? data.id : null;
         currentDesignNeedsSave = !editingOrderItemId;
+        currentDesignEdited = false;
         pendingConfiguration = null;
         renderOrderBox();
       } finally {
@@ -2473,8 +2453,6 @@
         setText(selectedThemeName, palette.label);
         renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
       }
-      setText(placementSummaryName, 'Design anordnen');
-      setText(placementSummaryDetail, 'Wählt eine Anordnung für euer aktuelles Design.');
     }
 
     function closeToolbarMenus() { workspace.closeChooser(); }
@@ -2612,22 +2590,17 @@
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
-      const initialLayoutKey = view.layouts.find((layout) => layout.key === 'fit-area')?.key ||
-        view.layouts[0].key;
-      const slots = view.layoutGeometry[initialLayoutKey];
+      const slots = view.layoutGeometry['fit-area'];
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
         const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
-        const placed = slot.optimize
-          ? WordCloudCore.layoutWordsInArea(words, slotWidth, slotHeight, measurementContext, colors)
-          : WordCloudCore.layoutWords(words, slotHeight, measurementContext, colors);
-        const xScale = slot.optimize ? 1 : slotWidth / slotHeight;
+        const placed = WordCloudCore.layoutWordsInArea(words, slotWidth, slotHeight, measurementContext, colors);
         placed.forEach((item, itemIndex) => {
           design.push({
-            id: `${initialLayoutKey}-${slotIndex + 1}-${itemIndex + 1}`,
+            id: `fit-area-${slotIndex + 1}-${itemIndex + 1}`,
             text: item.word,
-            x: Math.round((slot.x + item.x * xScale) * 10) / 10,
+            x: Math.round((slot.x + item.x) * 10) / 10,
             y: Math.round((slot.y + item.y) * 10) / 10,
             fontSize: Math.max(CloudLimits.MIN_PRINT_FONT_SIZE, Math.floor(item.fontPx * 10) / 10),
             angle: item.rotated ? -90 : 0,
@@ -2640,11 +2613,9 @@
           });
         });
       });
-      return slots.some(slot => slot.optimize)
-        ? DesignLayout.optimizeDesign(design, slots, measurementContext, {
-          fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
-        })
-        : design;
+      return DesignLayout.optimizeDesign(design, slots, measurementContext, {
+        fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
+      });
     }
 
     function cloneDesign(design) {
@@ -2721,7 +2692,6 @@
 
         buildProductOptions();
         buildOrientationOptions();
-        buildPlacementOptions();
         buildThemeOptions();
         renderCustomColorControls();
 
@@ -3069,6 +3039,7 @@
       if (suppressDirty) return;
       clearText(errorText);
       currentDesignNeedsSave = true;
+      currentDesignEdited = true;
       designRevision += 1;
       pendingConfiguration = null;
       if (workspaceReady) updateCartActions();
@@ -3248,31 +3219,20 @@
       pendingFamilyKey = null;
     }
 
-    function confirmProductDialog() {
+    async function confirmProductDialog() {
+      if (leavingPage || orderActionPending) return;
       const nextProduct = dialogSelectedProduct();
+      const another = startingAnotherProduct;
       productDialogCloseReason = 'confirm';
       resetProductDialogSelection();
-      if (startingAnotherProduct) {
-        startingAnotherProduct = false;
-        suppressDirty = true;
-        try {
-          selectProduct(nextProduct);
-          editingOrderItemId = null;
-          words = liveWords;
-          pendingConfiguration = null;
-          mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
-          resetSurfaceStates(mugEditor.getState());
-        } finally { suppressDirty = false; }
-        markDirty();
-        renderOrderBox();
-        renderAll();
-        history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
-      } else if (nextProduct?.key !== product?.key) {
-        selectProduct(nextProduct);
-      } else {
-        updateProductOptionSelection();
-      }
       closeProductDialog();
+      if (another) {
+        // The existing leave dialog already approved this new-design action.
+        await startProductDesign(nextProduct);
+      } else if (nextProduct?.key !== product?.key) {
+        await runNavigation(() => startProductDesign(nextProduct), { onlyIfEdited: true });
+      }
+      updateProductOptionSelection();
     }
 
     changeProductButton.addEventListener('click', () => {
@@ -3297,15 +3257,48 @@
 
     function selectedProductSlot() {
       const view = productView();
-      return view.layoutGeometry[view.layouts[0].key][0];
+      return view.layoutGeometry['fit-area'][0];
     }
 
-    function selectProduct(nextProduct) {
-      if (!nextProduct || nextProduct.key === product?.key) return;
+    async function startProductDesign(nextProduct, orientation) {
+      if (!nextProduct || orderActionPending || !workspaceReady || restorationFailed) return false;
+      orderActionPending = true;
+      setOrderActionsBusy(true);
+      try {
+        // Fetch and preload before replacing any edited surface. A failed
+        // refresh leaves the current design available to retry or save.
+        const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`,
+          { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error('load_failed');
+        const nextWords = (await response.json()).words;
+        if (!Array.isArray(nextWords) || !nextWords.length) throw new Error('no_words');
+        await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
+        await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
+        suppressDirty = true;
+        try {
+          words = liveWords = nextWords;
+          selectProduct(nextProduct, orientation);
+          editingOrderItemId = null;
+          mugEditor.flushPendingChange();
+        } finally { suppressDirty = false; }
+        markDirty();
+        currentDesignEdited = false;
+        renderOrderBox();
+        history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
+        return true;
+      } catch {
+        setText(errorText, 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.');
+        return false;
+      } finally {
+        orderActionPending = false;
+        setOrderActionsBusy(false);
+      }
+    }
+
+    function selectProduct(nextProduct, orientation) {
       product = nextProduct;
       selectedFamilyKey = product.familyKey;
-      selectedOrientation = product.defaultOrientation || 'default';
-      buildPlacementOptions();
+      selectedOrientation = orientation || product.defaultOrientation || 'default';
       buildOrientationOptions();
       if (mugEditor) {
         const defaultSlot = selectedProductSlot();
@@ -3318,6 +3311,7 @@
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
+        mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
         resetSurfaceStates(mugEditor.getState());
         mugEditor.setFeedback('Druckfläche für {{size}} angepasst', { size: t(view.size.label) });
       } else {
@@ -3328,7 +3322,6 @@
       updateProductOptionSelection();
       updateProductPresentation();
       destroyMug3D();
-      markDirty();
       renderAll();
       initMug3D();
     }
@@ -3439,66 +3432,13 @@
       updateProductOptionSelection();
     }
 
-    function applyPlacementToCurrentDesign(layoutKey) {
-      if (!mugEditor) return false;
-      storeActiveSurfaceState();
-      const view = productView();
-      const slots = view.layoutGeometry[layoutKey];
-      if (!slots) return false;
-      const measurementCanvas = document.createElement('canvas');
-      const measurementContext = measurementCanvas.getContext('2d');
-      const nextStates = new Map();
-      let changed = false;
-      for (const surface of productSurfaces()) {
-        const currentDesign = surfaceStates.get(surface.key)?.design || [];
-        const design = DesignLayout.applyLayoutAction(currentDesign, slots, measurementContext, {
-          fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
-        });
-        if (design.length > CloudLimits.MAX_DESIGN_ELEMENTS) {
-          mugEditor.setFeedback('Pro Druckfläche sind höchstens {{count}} Elemente möglich. Entfernt zuerst einige Elemente.',
-            { count: CloudLimits.MAX_DESIGN_ELEMENTS });
-          return false;
-        }
-        if (JSON.stringify(design) === JSON.stringify(currentDesign)) {
-          nextStates.set(surface.key, surfaceStates.get(surface.key));
-        } else {
-          changed = true;
-          nextStates.set(surface.key, cloneEditorState({ design }, false));
-        }
-      }
-      if (!changed) return false;
-      surfaceStates = nextStates;
-      mugEditor.setState(surfaceStates.get(activeSurface));
-      updateSurfaceControlSelection();
-      return true;
-    }
-
-    function activateOrientation(orientation) {
+    async function activateOrientation(orientation) {
       if (!orientation || orientation.key === selectedOrientation) return;
-      storeActiveSurfaceState();
-      selectedOrientation = orientation.key;
-      if (mugEditor) {
-        const view = productView();
-        const defaultSlot = selectedProductSlot();
-        mugEditor.resizePrintArea({
-          printWidth: view.printFile.width,
-          printHeight: view.printFile.height,
-          printFileDpi: view.printFile.dpi,
-          safeMargin: product.designSafeMargin,
-          defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
-          defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
-        });
-        resetSurfaceStates(mugEditor.getState());
-        mugEditor.setFeedback('Poster auf {{orientation}} umgestellt', {
-          orientation: t(orientation.label),
-        });
-      }
-      buildOrientationOptions();
-      renderSelectedProduct();
-      updateProductPresentation();
       closeToolbarMenus();
-      markDirty();
-      renderAll();
+      // A radio changes before its handler runs. Restore the actual choice
+      // while the shared confirmation dialog protects the current design.
+      buildOrientationOptions();
+      await runNavigation(() => startProductDesign(product, orientation.key), { onlyIfEdited: true });
     }
 
     function buildOrientationOptions() {
@@ -3533,34 +3473,6 @@
         card.append(name, description);
         label.append(input, card);
         orientationOptions.appendChild(label);
-      }
-      updateToolbarSummaries();
-    }
-
-    function activatePlacement(layout) {
-      if (!layout) return;
-      closeToolbarMenus();
-      if (!applyPlacementToCurrentDesign(layout.key)) return;
-      markDirty();
-      renderAll();
-    }
-
-    function buildPlacementOptions() {
-      placementOptions.replaceChildren();
-      for (const layout of product.layouts) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'option placement-action';
-        button.addEventListener('click', () => activatePlacement(layout));
-        const card = document.createElement('span');
-        card.className = 'option-card';
-        const name = document.createElement('strong');
-        setText(name, layout.label);
-        const description = document.createElement('small');
-        setText(description, layout.description);
-        card.append(name, description);
-        button.append(card);
-        placementOptions.appendChild(button);
       }
       updateToolbarSummaries();
     }
@@ -3771,6 +3683,7 @@
         } catch { /* Quantity drafts do not authorize checkout. */ }
         editingOrderItemId = data.id;
         currentDesignNeedsSave = revision !== designRevision;
+        currentDesignEdited = currentDesignNeedsSave;
         pendingConfiguration = null;
         history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(data.id)}`);
         renderOrderBox();
@@ -3801,19 +3714,10 @@
     saveDesignButton.addEventListener('click', () => {
       if (!leavingPage) void saveCurrentDesign(saveDesignButton);
     });
-    designAnotherButton.addEventListener('click', () => runNavigation(async () => {
-      // Refresh once at the explicit new-design boundary, never during resume.
-      try {
-        const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`,
-          { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-        if (!response.ok) throw new Error('load_failed');
-        liveWords = (await response.json()).words;
-        startingAnotherProduct = true;
-        openProductDialog();
-      } catch {
-        setText(errorText, 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.');
-      }
-    }));
+    designAnotherButton.addEventListener('click', () => runNavigation(() => {
+      startingAnotherProduct = true;
+      openProductDialog();
+    }, { onlyIfEdited: true }));
     continueOrderButton.addEventListener('click', () =>
       runNavigation(navigateToShipping, { shipping: true }));
 
@@ -3841,7 +3745,6 @@
       if (!product || !products.length) return;
       buildProductOptions();
       buildOrientationOptions();
-      buildPlacementOptions();
       buildThemeOptions();
       renderCustomColorControls();
       renderOrderBox();
@@ -3885,7 +3788,6 @@
           : product.themes[0].key;
         buildProductOptions();
         buildOrientationOptions();
-        buildPlacementOptions();
         buildThemeOptions();
         renderCustomColorControls();
 

@@ -46,7 +46,7 @@ function harness(extra = {}) {
     slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' },
     words: [['sonne', 1]], liveWords: [['sonne', 1], ['neu', 1]],
     selectedOrientation: 'default', selectedTheme: 'confetti',
-    currentDesignNeedsSave: true, editingOrderItemId: null, designRevision: 0, pendingConfiguration: null,
+    currentDesignNeedsSave: true, currentDesignEdited: false, editingOrderItemId: null, designRevision: 0, pendingConfiguration: null,
     workspaceReady: true, restorationFailed: false, orderActionPending: false,
     leavingPage: false, allowNavigation: false, suppressDirty: false,
     saveDesignButton: element(), continueOrderButton: element(), designAnotherButton: element(),
@@ -163,6 +163,104 @@ test('saved shipping return does not prompt or approve again', async () => {
   assert.equal(calls.dialogs.length, 0);
   assert.equal(calls.posts, 0);
   assert.equal(calls.navigations.length, 1);
+});
+
+function switchingHarness(extra = {}) {
+  const state = harness(extra);
+  const page = state.context;
+  page.startingAnotherProduct = false;
+  page.productDialogCloseReason = 'cancel';
+  page.dialogSelectedProduct = () => ({ key: 'pillow' });
+  page.resetProductDialogSelection = () => {};
+  page.closeProductDialog = () => {};
+  page.updateProductOptionSelection = () => {};
+  page.closeToolbarMenus = () => {};
+  page.buildOrientationOptions = () => {};
+  state.calls.switches = [];
+  page.startProductDesign = async (product, orientation) => state.calls.switches.push([product.key, orientation]);
+  vm.runInContext(['confirmProductDialog', 'activateOrientation', 'markDirty'].map(pageFunction).join('\n'), page);
+  return state;
+}
+
+test('an untouched automatic product switches directly, while selecting the same product is a no-op', async () => {
+  const { context: page, calls } = switchingHarness();
+  await page.confirmProductDialog();
+  assert.deepEqual(calls.switches, [['pillow', undefined]]);
+  assert.equal(calls.dialogs.length, 0);
+  assert.equal(calls.posts, 0, 'an automatic design is not silently added to the basket');
+  page.dialogSelectedProduct = () => page.product;
+  await page.confirmProductDialog();
+  assert.equal(calls.switches.length, 1);
+});
+
+test('edited product and orientation changes reuse save/discard/cancel, with failed saves retaining the design', async () => {
+  for (const action of ['product', 'orientation']) {
+    for (const choice of ['cancel', 'discard', 'save', 'failed-save']) {
+      const { context: page, calls, cart } = switchingHarness({ currentDesignEdited: true });
+      page.askBeforeLeaving = async options => { calls.dialogs.push(options); return choice === 'failed-save' ? 'save' : choice; };
+      if (choice === 'failed-save') page.fetch = async () => { throw new Error('offline'); };
+      if (action === 'product') await page.confirmProductDialog();
+      else await page.activateOrientation({ key: 'landscape' });
+      assert.equal(calls.dialogs.length, 1, action + '/' + choice);
+      assert.equal(calls.switches.length, ['save', 'discard'].includes(choice) ? 1 : 0);
+      assert.equal(cart.read().length, choice === 'save' ? 1 : 0);
+      if (choice === 'save') assert.equal(calls.bodies[0].productKey, 'mug', 'save the old product before switching');
+      assert.equal(page.leavingPage, false);
+      assert.equal(page.orderActionPending, false);
+    }
+  }
+});
+
+test('pending text and editor changes are finalized before deciding whether a switch needs confirmation', async () => {
+  const { context: page, calls } = switchingHarness();
+  page.finalizeCurrentText = async () => page.markDirty();
+  await page.confirmProductDialog();
+  assert.equal(calls.dialogs.length, 1);
+  assert.equal(calls.switches.length, 0);
+  page.finalizeCurrentText = async () => { throw new Error('font failed'); };
+  await page.confirmProductDialog();
+  assert.equal(calls.switches.length, 0);
+  assert.match(page.errorText.textContent, /nicht gespeichert/);
+});
+
+test('Design another product reuses its prior confirmation, including choosing the same product', async () => {
+  const { context: page, calls } = switchingHarness({ currentDesignEdited: true });
+  page.startingAnotherProduct = true;
+  page.dialogSelectedProduct = () => page.product;
+  await page.confirmProductDialog();
+  assert.equal(calls.dialogs.length, 0);
+  assert.deepEqual(calls.switches, [['mug', undefined]]);
+  assert.match(template, /designAnotherButton\.addEventListener[\s\S]*?onlyIfEdited: true/);
+});
+
+test('new product designs refresh the cloud and detach from a saved basket item only after loading succeeds', async () => {
+  for (const failure of [null, 'network', 'empty', 'font']) {
+    const { context: page, cart, calls } = switchingHarness({ editingOrderItemId: id('a'), currentDesignEdited: true });
+    cart.replace({ id: id('a'), productKey: 'mug' });
+    const previousWords = page.words;
+    page.fetch = async () => {
+      if (failure === 'network') throw new Error('offline');
+      return { ok: true, json: async () => ({ words: failure === 'empty' ? [] : [['neu', 2]] }) };
+    };
+    page.DesignFonts = { DEFAULT_FONT_KEY: 'classic' };
+    page.ensureDesignFonts = async () => { if (failure === 'font') throw new Error('font failed'); };
+    page.WolkenworteEmoji = { preloadTexts: async () => {} };
+    page.selectProduct = (product, orientation) => {
+      calls.switches.push([product.key, orientation, page.words]);
+      page.product = product;
+    };
+    vm.runInContext(pageFunction('startProductDesign'), page);
+    const result = await page.startProductDesign({ key: 'poster' }, 'landscape');
+    assert.equal(result, !failure);
+    assert.equal(calls.switches.length, failure ? 0 : 1);
+    assert.equal(page.editingOrderItemId, failure ? id('a') : null);
+    assert.equal(page.currentDesignEdited, Boolean(failure));
+    assert.deepEqual(cart.read().map(item => item.id), [id('a')], 'approved work stays in the cart');
+    if (failure) assert.equal(page.words, previousWords);
+    else assert.deepEqual(calls.switches[0], ['poster', 'landscape', [['neu', 2]]]);
+    assert.equal(page.orderActionPending, false);
+    assert.equal(page.suppressDirty, false);
+  }
 });
 
 test('nonempty-cart shipping can discard a new design without adding it', async () => {

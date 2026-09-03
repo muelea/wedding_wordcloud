@@ -27,7 +27,7 @@ frozen snapshot of the word cloud.
 5. After the event, the organizer opens a product configurator, chooses a white
    mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
    spiral notebook or decorative pillow from grouped product families, any
-   color palette and product-specific arrangement actions, and approves an
+   color palette, and approves an
    immutable Printful-sized file with a transparent background. Each approved
    design enters the tab-local basket only through “In den Warenkorb” or an
    explicit confirmation when leaving an unsaved editor. Editing a basket design
@@ -45,15 +45,18 @@ frozen snapshot of the word cloud.
    ?cart=1 opens the last basket design. Returning from shipping uses ?edit.
    Removing a position never automatically re-adds it. Starting another product
    fetches the current cloud and confirms product selection before replacing the
-   editor. Address/quantity drafts live only in sessionStorage for up to
+   editor. Changing product or orientation uses the same save/discard/cancel
+   dialog when there are edits; untouched automatic designs switch directly.
+   Each new product starts with the current words filling every print surface.
+   Address/quantity drafts live only in sessionStorage for up to
    24 hours, survive design round trips, and never restore a trusted price:
    the existing server-side quote and checkout checks remain authoritative.
    Local illustrated thumbnails make the catalog scannable. A locally served
    Three.js preview maps mug artwork onto a rotatable model; flat products use
    the same design in a proportional print preview. Posters can be designed in
-   portrait or landscape format; switching orientation preserves the current
-   design, swaps the immutable print-file dimensions and keeps the same Printful
-   variant and price basis. Products with two printable
+   portrait or landscape format; switching orientation creates a fresh filled
+   design after protecting edits, swaps the immutable print-file dimensions
+   and keeps the same Printful variant and price basis. Products with two printable
    faces expose separate front/back editors plus a copy-to-back shortcut and
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
@@ -66,10 +69,10 @@ frozen snapshot of the word cloud.
    shortcuts. Text elements can use the classic default or one of four curated,
    locally bundled print fonts and can be formatted as bold, italic, underlined
    or struck through. Formatting and font changes also work across a mixed
-   multi-selection and affect only its text elements. Arrangement actions always transform the
-   complete current canvas and can be applied repeatedly; they are commands, not a persisted
-   selection. The immutable canvas design is the only source for preview and Printful output. Words
-   can also be edited directly. Hard bounds keep
+   multi-selection and affect only its text elements. Automatic filling runs on
+   creation and product/orientation changes, never during manual editing. There
+   is no layout chooser. The immutable canvas design is the only source for
+   preview and Printful output. Words can also be edited directly. Hard bounds keep
    the entire design printable.
    Mug previews never substitute a CSS/2D mug: unavailable graphics show an
    explicit retry state. Page-history restoration recreates the viewer, and
@@ -630,7 +633,7 @@ suite cannot establish Linux print compatibility.
 `npm test` checks all five print fonts against their actual glyph tables and
 exercises 7,580 real Fabric designs/restorations across every product and
 orientation. The matrix includes long/wide/narrow words, supported locale
-letters, mixed emoji/text, rotation, resizing and every placement action.
+letters, mixed emoji/text, rotation, resizing and automatic area fitting.
 For a cross-OS check, capture on macOS and validate the **same** serialized
 designs inside the local Linux candidate (generated test data only):
 
@@ -656,11 +659,11 @@ The editing dock has a selection-independent footprint. At compact widths
 native modal sheets. Wide layouts keep the same controls in the toolbar.
 Controls are moved, never cloned; selection, history and immutable print data
 stay in the existing editor. Text-sheet dismissal explicitly commits its edit
-to history. Palette, orientation and arrangement use native top-layer popovers
+to history. Palette and orientation use native top-layer popovers
 on wide screens, and native dialogs on compact screens (also the fallback when
 Popover is unavailable). Choosers do not take space in the document layout.
 
-The live cloud, initial product cloud and “Fläche optimal nutzen” share one
+The live cloud and automatic product designs share one
 deterministic free-rectangle packer. It measures the actual selected fonts,
 retains every element and its styling, and scales artwork proportionally.
 A bounded set of orders and anchors is scored for coverage, corner balance,
@@ -704,9 +707,10 @@ never mounted in production. Node tests do not replace real-engine sign-off.
 
 For the reported area-layout regression, run
 `npm run test:configurator:browser -- --layout`, add `&probe=area` to the URL,
-and choose **Check repeated fit-area clicks**. This uses the reconstructed
-13-word example and checks exact design/history and dirty-state stability
-after initial loading, restoration and all five fonts in the real editor.
+and choose **Check automatic product layouts**. This uses the reconstructed
+13-word example and checks automatic product/orientation changes, the shared
+save dialog, cancellation, discard, and independently filled front/back surfaces
+in the real editor.
 `test/area-layout.test.js` also covers every product/orientation, mixed content,
 rounding edge cases and a 500-word capacity case with real font metrics.
 

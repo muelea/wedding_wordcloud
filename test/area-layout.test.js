@@ -164,22 +164,27 @@ test('fit-area preserves all fonts, edits, rotations, duplicates, emoji and imag
   }
 });
 
-test('no-op placement keeps the saved state and undo history untouched', () => {
-  const source = template.slice(template.indexOf('    function applyPlacementToCurrentDesign('),
-    template.indexOf('    function activateOrientation('));
-  const product = getProduct('white-glossy-mug-duo-11oz');
-  const design = automatic(product, SCREENSHOT_WORDS);
-  let writes = 0;
-  const result = vm.runInNewContext(source + '\napplyPlacementToCurrentDesign("fit-area")', {
-    mugEditor: { setState: () => { writes++; } }, storeActiveSurfaceState() {},
-    productView: () => product, productSurfaces: () => [{ key: 'default' }],
-    surfaceStates: new Map([['default', { design, history: ['untouched'], historyIndex: 0 }]]),
-    document: { createElement: () => createCanvas(1, 1) }, DesignLayout: Layout, DesignFonts: Fonts,
-    CloudLimits: require('../public/js/cloud-limits'),
-  });
-  assert.equal(result, false);
-  assert.equal(writes, 0);
-  assert.match(template, /if \(!applyPlacementToCurrentDesign\(layout.key\)\) return;\s*markDirty\(\)/);
+test('automatic front and back designs are filled, independent copies', () => {
+  for (const key of ['all-over-basic-pillow-18in', 'spiral-notebook-dotted']) {
+    const product = getProduct(key);
+    const design = automatic(product, REPORTED_WORDS);
+    const start = template.indexOf('    function cloneDesign(');
+    const end = template.indexOf('    function getAllSurfaceDesigns(', start);
+    const page = vm.createContext({ product, activeSurface: 'default', surfaceStates: new Map(),
+      buildSurfaceControls() {} });
+    vm.runInContext(template.slice(start, end), page);
+    page.resetSurfaceStates({ design, history: ['initial'], historyIndex: 0 });
+    for (const state of page.surfaceStates.values()) {
+      assert.deepEqual(JSON.parse(JSON.stringify(state.design)), design);
+      assertSafe(state.design, product, key);
+    }
+    const front = page.surfaceStates.get('front').design;
+    const back = page.surfaceStates.get('back').design;
+    front[0].text = 'edited front';
+    front.pop();
+    assert.equal(back.length, REPORTED_WORDS.length);
+    assert.notEqual(back[0].text, front[0].text, 'editing one side leaves the other intact');
+  }
 });
 
 test('a capacity-sized cloud remains complete, printable and repeatable', () => {

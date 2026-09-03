@@ -123,7 +123,7 @@ test('responsive choosers and inspector use native panels and one copy of each c
   }
   assert.doesNotMatch(source, /editor-font-select|id="editor-font"|fontSelect:/);
   for (const id of ['editor-smaller', 'editor-delete']) assert.equal(source.split(`id: '${id}'`).length - 1, 1, id);
-  for (const name of ['theme', 'orientation', 'placement']) {
+  for (const name of ['theme', 'orientation']) {
     assert.ok(source.includes(`<dialog class="config-panel" id="${name}-panel"`));
     assert.ok(source.includes(`data-panel-trigger="${name}-panel"`));
   }

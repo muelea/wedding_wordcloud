@@ -287,7 +287,7 @@
         tooltipRect.left >= 0 && tooltipRect.right <= innerWidth && tooltipRect.top >= 0 && tooltipRect.bottom <= innerHeight);
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
       check('Escape dismisses tooltip', toolbar.tooltip.hidden);
-      for (const name of ['theme', 'placement']) {
+      for (const name of ['theme']) {
         const trigger = document.querySelector(`[data-panel-trigger="${name}-panel"]`);
         trigger.scrollIntoView({ block: 'center' });
         await frames();

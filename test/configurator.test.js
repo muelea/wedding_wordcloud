@@ -808,7 +808,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="flat-product-composite"/);
   assert.match(configurePage, /id="flat-product-mockup"/);
   assert.match(configurePage, /class="preview-disclaimer"[^>]*>Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen\.<\/p>/);
-  assert.match(configurePage, /id="placement-options"/);
+  assert.doesNotMatch(configurePage, /id="placement-(?:options|step|panel)"/);
   assert.match(configurePage, /id="orientation-step" hidden/);
   assert.match(configurePage, /id="orientation-options"/);
   assert.match(configurePage, /function activateOrientation\(orientation\)/);
@@ -862,16 +862,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.doesNotMatch(configurePage, /Gestaltet eure persönliche Erinnerung/);
   assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
   assert.match(configurePage, /WolkenworteConfiguratorSession\.createCart\(slug\)/);
-  assert.match(configurePage, /<strong id="placement-summary-name"[^>]*>Design anordnen<\/strong>/);
-  assert.match(configurePage, /Wählt eine Anordnung für euer aktuelles Design\./);
-  assert.match(configurePage, /DesignLayout\.applyLayoutAction\(currentDesign, slots/);
-  assert.match(configurePage, /button\.className = 'option placement-action'/);
-  assert.match(configurePage, /button\.addEventListener\('click', \(\) => activatePlacement\(layout\)\)/);
-  assert.match(
-    configurePage,
-    /const initialLayoutKey = view\.layouts\.find\(\(layout\) => layout\.key === 'fit-area'\)\?\.key \|\|/,
-    'a new shared cloud must initially fill the printable product area'
-  );
+  assert.doesNotMatch(configurePage, /activatePlacement|applyPlacementToCurrentDesign|buildPlacementOptions/);
+  assert.match(configurePage, /const slots = view\.layoutGeometry\['fit-area'\]/,
+    'every automatic design uses the complete print area');
   assert.doesNotMatch(configurePage, /selectedPlacement/);
   assert.doesNotMatch(configurePage, /name = 'placement'/);
   assert.doesNotMatch(configurePage, /Fläche füllen/);
