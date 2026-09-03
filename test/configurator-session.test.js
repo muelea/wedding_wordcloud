@@ -56,7 +56,7 @@ function harness(extra = {}) {
     productSurfaces: () => [{ key: 'default', label: 'Druckfläche' }],
     mugEditor: { flushPendingChange() {}, hasPendingTextChange: () => false },
     setText: (element, message) => { element.textContent = message; }, clearText: element => { element.textContent = ''; },
-    t: message => message, renderOrderBox() {}, renderAll() {}, initEditor() {},
+    t: message => message, renderOrderBox() {}, renderAll() {}, initEditor() {}, refreshWorkspaceLayout() {},
     initMug3D: async () => {}, finalizeCurrentText: async () => {},
     loadOrderItems: () => cart.read(),
     addOrderItem: (data, { replaceId }) => cart.replace(data, replaceId),

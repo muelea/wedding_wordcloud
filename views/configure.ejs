@@ -620,7 +620,7 @@
     .editor-zoom-label { min-width: 44px; color: var(--muted); text-align: center; font-size: 10px; }
     .editor-scroll {
       width: 100%;
-      height: var(--workspace-stage-height);
+      height: var(--editor-stage-height, var(--workspace-stage-height));
       padding: 12px;
       overflow: auto;
       overscroll-behavior: contain;
@@ -1626,8 +1626,12 @@
       }
       .order-actions {
         display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        justify-content: stretch;
         gap: 8px;
       }
+      .order-actions .continue-button { grid-column: 1 / -1; }
+      .order-actions button { padding-inline: 10px; overflow-wrap: anywhere; }
       .design-toolbar { padding: 14px 0 16px; }
       .preview-head { align-items: center; }
       .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 16px -20px 0; padding: 6px 14px 18px; gap: 22px; }
@@ -2921,10 +2925,13 @@
     }
 
     function refreshWorkspaceLayout() {
-      if (!product) return;
+      // Font/emoji loading can schedule this while the workspace is hidden.
+      // Do not turn a temporary zero width into a persistent tiny print area.
+      if (!product || !editorScroll.clientWidth) return;
       const view = productView();
       const scrollStyles = getComputedStyle(editorScroll);
       const horizontalPadding = parseFloat(scrollStyles.paddingLeft) + parseFloat(scrollStyles.paddingRight);
+      const verticalPadding = parseFloat(scrollStyles.paddingTop) + parseFloat(scrollStyles.paddingBottom);
       const availableWidth = Math.max(1, editorScroll.clientWidth - horizontalPadding);
       const printAspect = view.printFile.width / view.printFile.height;
       const previewAspect = view.previewMockup
@@ -2941,6 +2948,12 @@
       ) + 24;
       const stageHeight = Math.round(Math.min(maximumHeight, Math.max(minimumHeight, desiredHeight)));
       workbench.style.setProperty('--workspace-stage-height', `${stageHeight}px`);
+      // Stacked cards have independent heights. A wide mug wrap needs only
+      // its aspect-ratio height and padding; the 3D preview still needs depth.
+      const editorHeight = window.innerWidth <= 940
+        ? Math.min(maximumHeight, availableWidth / printAspect + verticalPadding)
+        : stageHeight;
+      workbench.style.setProperty('--editor-stage-height', `${Math.ceil(editorHeight)}px`);
       mugEditor?.refreshViewport();
       refreshFlatProductPreviewFit();
       resizeMug3D();
@@ -3935,6 +3948,7 @@
         content.inert = false;
         setOrderActionsBusy(false);
         renderOrderBox();
+        refreshWorkspaceLayout();
         renderAll();
       }
     }

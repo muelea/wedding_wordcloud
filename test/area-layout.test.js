@@ -10,7 +10,7 @@ const Layout = require('../public/js/design-layout');
 const Fonts = require('../src/designFonts');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
-const { SCREENSHOT_WORDS, AREA_CASES } = require('./support/area-layout-cases');
+const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, AREA_CASES } = require('./support/area-layout-cases');
 
 const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
 const automaticSource = template.slice(template.indexOf('    function buildAutomaticDesign()'),
@@ -49,6 +49,44 @@ function assertSafe(design, product, label) {
       label + ': no overlapping element boxes');
   }));
 }
+
+test('the reported mug uses every corner and keeps its emoji separated', () => {
+  const product = getProduct('white-glossy-mug-duo-11oz');
+  const slot = product.layoutGeometry['fit-area'][0];
+  for (const words of [REPORTED_WORDS, EMOJI_WORDS]) {
+    const design = automatic(product, words);
+    assert.equal(design.length, words.length);
+    assertSafe(design, product, 'reported layout');
+    assert.deepEqual(apply(design, product), design, 'repeat clicks do not reshuffle the improved design');
+    const emoji = design.filter(item => Core.isEmojiOnly(item.text));
+    for (let i = 0; i < emoji.length; i++) {
+      for (let j = 0; j < i; j++) {
+        assert.ok(Math.hypot((emoji[i].x - emoji[j].x) / slot.width,
+          (emoji[i].y - emoji[j].y) / slot.height) > .25, 'emoji should not form a local cluster');
+      }
+    }
+    if (words !== REPORTED_WORDS) continue;
+    const boxes = design.map(bounds);
+    for (const x of [slot.x, slot.x + slot.width * .75]) {
+      for (const y of [slot.y, slot.y + slot.height * .75]) {
+        const covered = boxes.reduce((sum, box) => sum +
+          Math.max(0, Math.min(x + slot.width / 4, box.x2) - Math.max(x, box.x1)) *
+          Math.max(0, Math.min(y + slot.height / 4, box.y2) - Math.max(y, box.y1)), 0);
+        assert.ok(covered / (slot.width * slot.height / 16) > .45,
+          'each corner must participate; a good average cannot mask an empty corner');
+      }
+    }
+  }
+});
+
+test('layout scoring prefers four occupied corners to three equally dense corners', () => {
+  const uneven = [[0, 0], [0, 75], [75, 75]].map(([x, y]) =>
+    ({ x1: x, x2: x + 25, y1: y, y2: y + 25 }));
+  const balanced = [[0, 0], [75, 0], [0, 81.25], [75, 81.25]].map(([x, y]) =>
+    ({ x1: x, x2: x + 25, y1: y, y2: y + 18.75 }));
+  assert.equal(Core.cornerCoverage(uneven, 100, 100), Core.cornerCoverage(balanced, 100, 100));
+  assert.ok(Core.layoutQuality(balanced, 100, 100).score > Core.layoutQuality(uneven, 100, 100).score);
+});
 
 test('the actual start layout survives repeated fit-area clicks on every product and orientation', () => {
   for (const base of PRODUCTS) {

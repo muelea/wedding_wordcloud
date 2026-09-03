@@ -38,7 +38,9 @@ function connectSocket(baseUrl, slug) {
 
 function submitWord(socket, word) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`submission timed out: ${word}`)), 2000);
+    // The first submission can take nearly two seconds against remote
+    // Postgres. This checks print behavior, not submission latency.
+    const timer = setTimeout(() => reject(new Error(`submission timed out: ${word}`)), 5000);
     socket.once('word-accepted', (accepted) => {
       clearTimeout(timer);
       resolve(accepted);

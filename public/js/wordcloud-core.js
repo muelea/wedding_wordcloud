@@ -297,27 +297,49 @@
     const padding = minSide * Math.min(.007, .055 / Math.sqrt(sized.length));
     const overlaps = (a, b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
     const contains = (a, b) => a.x1 <= b.x1 && a.x2 >= b.x2 && a.y1 <= b.y1 && a.y2 >= b.y2;
+    const emojiCount = sized.filter(item => item.emoji).length;
+    const emojiSpacing = Math.min(.4, .9 / Math.sqrt(Math.max(1, emojiCount)));
+    const emojiAnchors = [[.2, .2], [.8, .8], [.8, .2], [.2, .8]];
+    const dominant = sized.length === 1 || sized[0].priority > sized[1].priority * 1.05;
 
-    function tryScale(scale) {
+    function tryScale(scale, order = sized, variant = 0) {
       let free = [{ x1: 0, y1: 0, x2: width, y2: height }];
       const placed = [];
-      for (const item of sized) {
+      const placedEmoji = [];
+      for (const item of order) {
         const w = item.width * scale + padding * 2;
         const h = item.height * scale + padding * 2;
         let best = null;
         let score = Infinity;
+        const anchor = placed.length % 4;
+        const emojiAnchor = emojiAnchors[placedEmoji.length % 4];
+        const scatterEmoji = placed.length && item.emoji && variant === 3;
         for (const space of free) {
           const dw = space.x2 - space.x1 - w;
           const dh = space.y2 - space.y1 - h;
           if (dw < 0 || dh < 0) continue;
           // Keep the dominant word central. Subsequent words choose the best
           // fitting free rectangle; ties favour the centre, not a fixed corner.
-          const x = clamp((width - w) / 2, space.x1, space.x2 - w);
-          const y = clamp((height - h) / 2, space.y1, space.y2 - h);
+          const targetX = scatterEmoji ? width * emojiAnchor[0] - w / 2
+            : (!placed.length && dominant) || !variant ? (width - w) / 2
+            : variant === 1 ? (space.x1 + space.x2 - w) / 2
+              : anchor % 2 ? space.x2 - w : space.x1;
+          const targetY = scatterEmoji ? height * emojiAnchor[1] - h / 2
+            : (!placed.length && dominant) || !variant ? (height - h) / 2
+            : variant === 1 ? (space.y1 + space.y2 - h) / 2
+              : anchor < 2 ? space.y1 : space.y2 - h;
+          const x = clamp(targetX, space.x1, space.x2 - w);
+          const y = clamp(targetY, space.y1, space.y2 - h);
           const distance = Math.abs((x + w / 2) / width - .5) +
             Math.abs((y + h / 2) / height - .5);
+          let separation = emojiSpacing;
+          if (item.emoji) {
+            for (const other of placedEmoji) separation = Math.min(separation,
+              Math.hypot((x + w / 2 - other.x) / width, (y + h / 2 - other.y) / height));
+          }
           const candidateScore = Math.min(dw / width, dh / height) +
-            Math.max(dw / width, dh / height) * .05 + distance * .001;
+            Math.max(dw / width, dh / height) * .05 + distance * .001 +
+            (1 - separation / emojiSpacing) * .12;
           if (candidateScore < score) {
             score = candidateScore;
             best = { x1: x, y1: y, x2: x + w, y2: y + h };
@@ -326,6 +348,7 @@
         if (!best) return null;
         placed.push({ ...item, x: (best.x1 + best.x2) / 2,
           y: (best.y1 + best.y2) / 2, scale });
+        if (item.emoji) placedEmoji.push(placed[placed.length - 1]);
         const next = [];
         for (const space of free) {
           if (!overlaps(space, best)) { next.push(space); continue; }
@@ -372,15 +395,46 @@
         low = scale;
       } else high = scale;
     }
-    return fitAreaBoxes(best || fallback, width, height).sort((a, b) => a.index - b.index);
+    let result = fitAreaBoxes(best || fallback, width, height);
+    const initialQuality = layoutQuality(result, width, height);
+    let quality = initialQuality.score;
+    const minimumScale = result[0].scale * .9;
+    // Reuse the successful scale search. At most four alternative orders/anchors,
+    // each with at most three fit attempts, bound the extra work even at 500
+    // words. A clearly dominant contribution stays central; equally weighted
+    // words can start at an edge when that fills the rectangle better.
+    const balanced = Math.min(...initialQuality.corners) >= .4 &&
+      initialQuality.worstRegion >= .45 && initialQuality.separation >= .8;
+    if (best && sized.length > 2 && !balanced) {
+      const tail = sized.slice(1);
+      const orders = [sized,
+        [sized[0], ...tail.slice().sort((a, b) => b.width * b.height - a.width * a.height || a.index - b.index)],
+        [sized[0], ...tail.slice().sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height) || a.index - b.index)]];
+      if (emojiCount > 1) orders.push([sized[0], ...tail.filter(item => item.emoji),
+        ...tail.filter(item => !item.emoji).sort((a, b) => b.width * b.height - a.width * a.height || a.index - b.index)]);
+      orders.forEach((order, index) => {
+        for (const ratio of [1, .94, .88]) {
+          const candidate = tryScale(low * ratio, order, index === 0 ? 1 : index === 3 ? 3 : 2);
+          if (!candidate) continue;
+          const fitted = fitAreaBoxes(candidate, width, height);
+          const nextQuality = layoutQuality(fitted, width, height).score;
+          if (fitted[0].scale >= minimumScale && nextQuality > quality + .001) {
+            result = fitted;
+            quality = nextQuality;
+          }
+          break;
+        }
+      });
+    }
+    return result.sort((a, b) => a.index - b.index);
   }
 
-  function areaBounds(items, horizontalScale = 1) {
+  function areaBounds(items, horizontalScale = 1, verticalScale = 1) {
     return items.reduce((bounds, item) => ({
       x1: Math.min(bounds.x1, item.x * horizontalScale - item.width * item.scale / 2),
       x2: Math.max(bounds.x2, item.x * horizontalScale + item.width * item.scale / 2),
-      y1: Math.min(bounds.y1, item.y - item.height * item.scale / 2),
-      y2: Math.max(bounds.y2, item.y + item.height * item.scale / 2),
+      y1: Math.min(bounds.y1, item.y * verticalScale - item.height * item.scale / 2),
+      y2: Math.max(bounds.y2, item.y * verticalScale + item.height * item.scale / 2),
     }), { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity });
   }
 
@@ -399,6 +453,51 @@
     return area / (width * height * .25);
   }
 
+  function layoutQuality(boxes, width, height) {
+    // A fixed 4x4 occupancy grid measures each corner and all nine overlapping
+    // quarter-area regions. A full opposite corner cannot conceal a bare one.
+    const cells = Array(16).fill(0);
+    let area = 0;
+    for (const box of boxes) {
+      area += (box.x2 - box.x1) * (box.y2 - box.y1);
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+          cells[row * 4 + col] += Math.max(0, Math.min((col + 1) * width / 4, box.x2) - Math.max(col * width / 4, box.x1)) *
+            Math.max(0, Math.min((row + 1) * height / 4, box.y2) - Math.max(row * height / 4, box.y1)) / (width * height / 16);
+        }
+      }
+    }
+    const regions = [];
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        regions.push((cells[row * 4 + col] + cells[row * 4 + col + 1] +
+          cells[(row + 1) * 4 + col] + cells[(row + 1) * 4 + col + 1]) / 4);
+      }
+    }
+    // Outer 25%-wide corner cells also catch smaller empty corner patches.
+    const corners = [cells[0], cells[3], cells[12], cells[15]];
+    const coverage = area / (width * height);
+    const variance = cells.reduce((sum, cell) => sum + (cell - coverage) ** 2, 0) / 16;
+    const emoji = boxes.filter(box => box.emoji);
+    let separation = 1;
+    if (emoji.length > 1) {
+      const target = Math.min(.4, .9 / Math.sqrt(emoji.length));
+      separation = emoji.reduce((sum, box, index) => {
+        let nearest = 1;
+        for (let other = 0; other < emoji.length; other++) {
+          if (other === index) continue;
+          nearest = Math.min(nearest, Math.hypot(
+            (box.x1 + box.x2 - emoji[other].x1 - emoji[other].x2) / (2 * width),
+            (box.y1 + box.y2 - emoji[other].y1 - emoji[other].y2) / (2 * height)));
+        }
+        return sum + Math.min(1, nearest / target);
+      }, 0) / emoji.length;
+    }
+    return { coverage, corners, worstRegion: Math.min(...regions), separation,
+      score: coverage + Math.min(...corners) * .35 + Math.min(...regions) * .35 -
+        Math.sqrt(variance) * .2 + separation * .12 };
+  }
+
   function fitAreaBoxes(items, width, height) {
     const inset = Math.min(width, height) * .012;
     const bounds = areaBounds(items);
@@ -409,7 +508,7 @@
       y: (item.y - (bounds.y1 + bounds.y2) / 2) * fitScale,
       scale: item.scale * fitScale,
     }));
-    // Widen centre spacing, never the artwork. Check the entire envelope: an
+    // Expand centre spacing on both axes, never the artwork. Check the envelope: an
     // interior word can be wider than the leftmost/rightmost centre's word.
     const span = Math.max(...fitted.map(item => item.x)) - Math.min(...fitted.map(item => item.x));
     let low = 1;
@@ -420,11 +519,22 @@
       if (expanded.x2 - expanded.x1 <= width - inset * 2) low = scale;
       else high = scale;
     }
-    const expanded = areaBounds(fitted, low);
+    const horizontalScale = low;
+    const verticalSpan = Math.max(...fitted.map(item => item.y)) - Math.min(...fitted.map(item => item.y));
+    low = 1;
+    high = verticalSpan > 0 ? Math.max(1, (height - inset * 2) / verticalSpan) : 1;
+    for (let attempt = 0; attempt < 18; attempt++) {
+      const scale = (low + high) / 2;
+      const expanded = areaBounds(fitted, horizontalScale, scale);
+      if (expanded.y2 - expanded.y1 <= height - inset * 2) low = scale;
+      else high = scale;
+    }
+    const expanded = areaBounds(fitted, horizontalScale, low);
     const centerX = (expanded.x1 + expanded.x2) / 2;
+    const centerY = (expanded.y1 + expanded.y2) / 2;
     return fitted.map(item => {
-      const x = width / 2 + item.x * low - centerX;
-      const y = height / 2 + item.y;
+      const x = width / 2 + item.x * horizontalScale - centerX;
+      const y = height / 2 + item.y * low - centerY;
       return { ...item, x, y,
         x1: x - item.width * item.scale / 2, x2: x + item.width * item.scale / 2,
         y1: y - item.height * item.scale / 2, y2: y + item.height * item.scale / 2 };
@@ -444,7 +554,7 @@
     const boxes = sized.map((item) => {
       const rotated = item.rotated;
       const textBox = measureTextBox(item.word, item.fontPx, measureCtx);
-      return { ...item, rotated, textBox, color: getColor(item.word), priority: item.fontPx,
+      return { ...item, rotated, textBox, emoji: isEmojiOnly(item.word), color: getColor(item.word), priority: item.fontPx,
         width: rotated ? textBox.height : textBox.width,
         height: rotated ? textBox.width : textBox.height };
     });
@@ -569,6 +679,7 @@
     finalizeWords,
     layoutBoxesInArea,
     cornerCoverage,
+    layoutQuality,
     buildSVG,
     escapeXML,
   };

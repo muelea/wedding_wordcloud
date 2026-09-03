@@ -40,6 +40,40 @@
       await frames();
       await Promise.all(document.getElementById('editor-canvas-shell').getAnimations()
         .map(animation => animation.finished.catch(() => {})));
+      const editorScroll = document.getElementById('editor-scroll');
+      const printShell = document.getElementById('editor-canvas-shell');
+      const baseFit = geometry();
+      const editorCard = document.querySelector('.editor-card').getBoundingClientRect();
+      const previewCard = document.querySelector('.preview-card').getBoundingClientRect();
+      if (innerWidth <= 940) {
+        const padding = editorScroll.clientHeight - printShell.getBoundingClientRect().height;
+        check('stacked editor hugs the print area', padding >= 23 && padding <= 26, { padding });
+        check('fresh mug initialization fills the available editor width',
+          printShell.getBoundingClientRect().width >= editorScroll.clientWidth - 26);
+      } else check('side-by-side cards retain equal heights', Math.abs(editorCard.height - previewCard.height) < 1);
+      document.getElementById('editor-zoom-in').click();
+      await frames();
+      await Promise.all(printShell.getAnimations().map(animation => animation.finished.catch(() => {})));
+      check('zoom enlarges the artwork inside a scrollable stage',
+        geometry().width > baseFit.width * 1.2 && editorScroll.scrollWidth > editorScroll.clientWidth);
+      document.getElementById('editor-zoom-out').click();
+      await frames();
+      await Promise.all(printShell.getAnimations().map(animation => animation.finished.catch(() => {})));
+      same('returning to fit restores the original geometry', baseFit);
+      const orderActions = document.querySelector('.order-actions').getBoundingClientRect();
+      const another = document.getElementById('design-another').getBoundingClientRect();
+      const save = document.getElementById('save-design').getBoundingClientRect();
+      const shipping = document.getElementById('continue-order').getBoundingClientRect();
+      if (innerWidth <= 620) {
+        check('mobile design actions share the first row', Math.abs(another.top - save.top) < 1 && another.right < save.left);
+        check('mobile shipping action spans the next full row', shipping.top >= Math.max(another.bottom, save.bottom) &&
+          Math.abs(shipping.width - orderActions.width) < 1 && Math.abs(shipping.left - orderActions.left) < 1);
+      }
+      check('order action labels fit with comfortable tap targets',
+        ['design-another', 'save-design', 'continue-order'].every(id => {
+          const button = document.getElementById(id);
+          return button.getBoundingClientRect().height >= 44 && button.scrollWidth <= button.clientWidth;
+        }));
       await WolkenworteEmoji.preloadTexts(['🎲']);
       const image = document.createElement('canvas');
       image.width = 100; image.height = 100;

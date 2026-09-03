@@ -198,7 +198,7 @@
     if (!items.length) return [];
     const boxes = items.map(item => {
       const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
-      return { ...dimensions, priority: item.type === 'image' || item.type === 'icon'
+      return { ...dimensions, emoji: WordCloudCore.isEmojiOnly(item.text), priority: item.type === 'image' || item.type === 'icon'
         ? Math.sqrt(dimensions.width * dimensions.height) : item.fontSize };
     });
     // The editor rounds to 0.1 print pixels. That must not make another click
@@ -206,6 +206,7 @@
     // Keep a safe existing arrangement unless repacking makes it meaningfully
     // larger. This also protects a manually composed, equally good design.
     const current = items.map((item, index) => ({
+      emoji: boxes[index].emoji,
       x1: item.x - boxes[index].width / 2, x2: item.x + boxes[index].width / 2,
       y1: item.y - boxes[index].height / 2, y2: item.y + boxes[index].height / 2,
     }));
@@ -220,17 +221,19 @@
     const inset = Math.min(slot.width, slot.height) * .012;
     const centred = Math.abs((bounds.x1 + bounds.x2) / 2 - slot.x - slot.width / 2) < .5 &&
       Math.abs((bounds.y1 + bounds.y2) / 2 - slot.y - slot.height / 2) < .5;
-    const fullSize = Math.min(
+    const fullSize = Math.max(
       (slot.width - inset * 2) / (bounds.x2 - bounds.x1),
       (slot.height - inset * 2) / (bounds.y2 - bounds.y1)
-    ) < 1.01;
-    const currentCoverage = WordCloudCore.cornerCoverage(current.map(box => ({
+    ) < 1.03;
+    const currentQuality = WordCloudCore.layoutQuality(current.map(box => ({
+      emoji: box.emoji,
       x1: box.x1 - slot.x, x2: box.x2 - slot.x,
       y1: box.y1 - slot.y, y2: box.y2 - slot.y,
     })), slot.width, slot.height);
     // A complete, centred rectangle with occupied corners already satisfies
     // fit-area. Avoid an expensive repack on every click or JSON round-trip.
-    if (safe && centred && fullSize && currentCoverage >= .45) {
+    if (safe && centred && fullSize && Math.min(...currentQuality.corners) >= .4 &&
+        currentQuality.worstRegion >= .45 && currentQuality.separation >= .8) {
       return items.map(item => ({ ...item }));
     }
     const packed = WordCloudCore.layoutBoxesInArea(boxes, slot.width, slot.height);
@@ -238,9 +241,9 @@
         packed.some((box, index) => box.scale < minimumScale(items[index]))) {
       return items.map(item => ({ ...item }));
     }
-    const packedCoverage = WordCloudCore.cornerCoverage(packed, slot.width, slot.height);
-    if (safe && centred && fullSize && packed[0].scale <= 1.01 &&
-        (packed[0].scale < .98 || currentCoverage >= packedCoverage - .025)) {
+    const packedQuality = WordCloudCore.layoutQuality(packed, slot.width, slot.height);
+    if (safe && centred && packed[0].scale <= 1.01 &&
+        currentQuality.score >= packedQuality.score - .025) {
       return items.map(item => ({ ...item }));
     }
     return items.map((item, index) => scaleItem(item, packed[index].scale,

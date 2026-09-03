@@ -187,8 +187,10 @@ Live clouds use the available rectangular container and reflow on resize or
 presentation-mode changes. A worker packs measured boxes while keeping one
 active request and one latest pending snapshot; removal/reset fences stale
 results. Print layouts use the same rectangular packing geometry, preserve all
-words and use the product's safe area. Already full, safe arrangements remain
-stable on repeated optimization. Fonts retain their proportions and weights.
+words and use the product's safe area. A bounded set of measured arrangements
+is scored for individual corners, empty regions and emoji separation, allowing
+at most a 10% size tradeoff for better balance. Already full, balanced, safe
+arrangements remain stable on repeated optimization. Fonts retain their proportions and weights.
 Type smaller than 8 pt shows a readability hint; below 6 pt the hint is stronger.
 These are provisional product guidance thresholds, calculated from actual print
 size and product DPI, to be calibrated with physical samples. The 1-pixel

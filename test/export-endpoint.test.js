@@ -26,7 +26,8 @@ function connectSocket(baseUrl, slug) {
 
 function submitWord(socket, word) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`timed out waiting for "${word}" to be accepted`)), 2000);
+    // Allow a cold remote Postgres connection before checking export behavior.
+    const timer = setTimeout(() => reject(new Error(`timed out waiting for "${word}" to be accepted`)), 5000);
     socket.once('word-accepted', (accepted) => { clearTimeout(timer); resolve(accepted); });
     socket.emit('submit-word', word);
   });
