@@ -754,7 +754,10 @@ rounding edge cases and a 500-word capacity case with real font metrics.
 npm test
 ```
 
-Runs `node --test test/*.test.js`. The suite covers multi-tenant
+Runs `node --test test/*.test.js` with `NODE_ENV=test`, so local settings for
+manual sandbox emails cannot enable real delivery in the automated suite.
+This setting applies only to the test process, including during deployment.
+The suite covers multi-tenant
 isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
 creation/slug/admin-PIN flow, expiring quotes, multi-product address quotes,
