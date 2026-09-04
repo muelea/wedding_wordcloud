@@ -386,7 +386,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `PRINTFUL_ALLOW_ORDER_WRITES` | shared safety setting | Independent gate required before creating any Printful draft. |
 | `PRINTFUL_CONFIRM_LIVE_ORDERS` | shared safety setting | Final gate before confirming/charging/submitting a Printful order. |
 | `SHOP_PRODUCT_MARKUP_PERCENT` | shared setting | Product-cost markup used in server-side retail quotes. |
-| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Percentage payment-cost reserve folded into product prices. |
+| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Estimated Stripe processing + Tax percentage, default 3.65; reserve uses a fixed internal 20% tax assumption. |
 | `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed payment-cost reserve in euro cents folded into product prices. |
 
 `DATABASE_APPLICATION_NAME` is set by `fly.toml`/test helpers for Postgres
@@ -437,14 +437,19 @@ customer total = customer product subtotal + shipping + customer tax
 ```
 
 The payment reserve is folded into the product subtotal, not displayed as a
-separate card/payment surcharge. By default it is grossed up from a
-conservative `3.15% + 0,25 €` estimate so the expected Stripe processing cost
-does not reduce the intended product-margin profit.
+separate card/payment surcharge. By default it budgets `3.65% + 0,25 €` per
+purchase for Stripe processing and Stripe Tax. Its own calculation always
+assumes 20% tax on the marked-up products, shipping and reserve, independently
+of Printful's tax fields. It iterates until the reserve covers the estimated
+fees or returns the last estimate after 20 iterations. Differences from actual
+tax and payment fees affect the shop's margin. This internal assumption never
+sets the customer tax line; the current test-only customer tax calculation
+above remains separate until Stripe Tax is integrated.
 
 Example with 10,98 € Printful product costs, 6,24 € shipping and 19% German
 VAT: the 50% rule produces a 16,47 € marked-up product subtotal, the internal
-payment reserve is 1,15 €, customer VAT is 4,53 € and the customer total is
-28,39 €.
+payment reserve is 1,31 € (budgeted with 20% tax), customer VAT is 4,56 € and
+the customer total is 28,58 €.
 
 Because `C` is the actual product cost for the requested quantity, Printful
 quantity discounts automatically lower the customer unit price; there are no

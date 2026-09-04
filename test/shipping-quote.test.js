@@ -25,7 +25,7 @@ async function saveConfiguration(baseUrl, slug, quantityOrOptions = 3) {
 
 test('shipping page uses the immutable configuration and returns a server-side Printful quote', async (t) => {
   process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
-  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.15';
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.65';
   process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '25';
   t.after(() => {
     delete process.env.SHOP_PRODUCT_MARKUP_PERCENT;
@@ -136,11 +136,11 @@ test('shipping page uses the immutable configuration and returns a server-side P
     configurationCount: 1,
     shipmentCount: 1,
     shippingDetails: undefined,
-    itemsCents: 1602,
-    paymentReserveCents: 102,
+    itemsCents: 1616,
+    paymentReserveCents: 116,
     shippingCents: 449,
-    taxCents: 390,
-    totalCents: 2441,
+    taxCents: 392,
+    totalCents: 2457,
     expiresAt: undefined,
   });
   assert.equal(captured.length, 1);
@@ -192,7 +192,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
 
 test('cart quote estimates mixed products for one address as one Printful shipment', async (t) => {
   process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
-  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.15';
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.65';
   process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '25';
   t.after(() => {
     delete process.env.SHOP_PRODUCT_MARKUP_PERCENT;
@@ -259,11 +259,11 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   assert.equal(quote.shipmentCount, 1);
   assert.equal(quote.configurationCount, 2);
   assert.equal(quote.productCount, 2);
-  assert.equal(quote.itemsCents, 3167);
-  assert.equal(quote.paymentReserveCents, 167);
+  assert.equal(quote.itemsCents, 3192);
+  assert.equal(quote.paymentReserveCents, 192);
   assert.equal(quote.shippingCents, 600);
-  assert.equal(quote.taxCents, 716);
-  assert.equal(quote.totalCents, 4483);
+  assert.equal(quote.taxCents, 720);
+  assert.equal(quote.totalCents, 4512);
   assert.equal(captured.length, 1, 'mixed items for one address must use one Printful estimate');
   assert.deepEqual(captured[0].items, [
     { configurationId: mug.id, variantId: 1320, quantity: 2 },

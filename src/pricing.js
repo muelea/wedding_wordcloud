@@ -1,5 +1,8 @@
 'use strict';
 
+// Internal fee budgeting only; never use this assumption as customer tax.
+const PAYMENT_RESERVE_ASSUMED_TAX_RATE = 0.20;
+
 function eurosToCents(value) {
   const number = Number(value || 0);
   return Number.isFinite(number) ? Math.round(number * 100) : 0;
@@ -11,8 +14,8 @@ function productMarkupPercent() {
 }
 
 function paymentReservePercent() {
-  const value = Number(process.env.SHOP_PAYMENT_RESERVE_PERCENT || 3.15);
-  return Number.isFinite(value) && value >= 0 && value <= 20 ? value : 3.15;
+  const value = Number(process.env.SHOP_PAYMENT_RESERVE_PERCENT || 3.65);
+  return Number.isFinite(value) && value >= 0 && value <= 20 ? value : 3.65;
 }
 
 function paymentReserveFixedCents() {
@@ -89,18 +92,18 @@ function shipmentTaxQuotes(preparedShipments, itemsCents) {
   });
 }
 
-function paymentReserveCents({ baseItemsCents, shippingCents, preparedShipments }) {
+function paymentReserveCents({ baseItemsCents, shippingCents }) {
   let reserveCents = 0;
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const shipmentQuotes = shipmentTaxQuotes(preparedShipments, baseItemsCents + reserveCents);
-    const taxCents = shipmentQuotes.reduce((sum, shipment) => sum + shipment.taxCents, 0);
-    const totalCents = baseItemsCents + reserveCents + shippingCents + taxCents;
+    const netCents = baseItemsCents + reserveCents + shippingCents;
+    const estimatedTaxCents = Math.round(netCents * PAYMENT_RESERVE_ASSUMED_TAX_RATE);
+    const totalCents = netCents + estimatedTaxCents;
     const estimatedFeeCents = estimatePaymentFeeCents(totalCents);
     if (estimatedFeeCents <= reserveCents) return reserveCents;
     reserveCents = estimatedFeeCents;
   }
-  // In a pathological rounding/tax edge case, do not fail checkout over the
-  // reserve. Use the last estimate; at worst the shop absorbs a few cents.
+  // If the iteration limit is reached, use the last estimate rather than
+  // failing checkout. Any remaining shortfall comes out of the shop's margin.
   return reserveCents;
 }
 
@@ -154,7 +157,7 @@ function buildCustomerQuoteForShipments(shipments) {
 
   const markup = productMarkupPercent() / 100;
   const baseItemsCents = Math.ceil(printfulItemsCents * (1 + markup));
-  const reserveCents = paymentReserveCents({ baseItemsCents, shippingCents, preparedShipments });
+  const reserveCents = paymentReserveCents({ baseItemsCents, shippingCents });
   const itemsCents = baseItemsCents + reserveCents;
   const shipmentQuotes = shipmentTaxQuotes(preparedShipments, itemsCents);
   const taxCents = shipmentQuotes.reduce((sum, shipment) => sum + shipment.taxCents, 0);
