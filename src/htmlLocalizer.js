@@ -5,7 +5,8 @@ const { getCatalog, translate } = require('./i18n');
 
 const TRANSLATABLE_ATTRIBUTES = Object.freeze(['aria-label', 'placeholder', 'title', 'alt', 'content']);
 const RAW_TEXT_ELEMENTS = new Set(['script', 'style']);
-const MESSAGE_SOURCES = new Set(Object.keys(getCatalog('en')));
+let sourceCatalog;
+let messageSources = new Set();
 
 function attribute(node, name) {
   return node.attrs?.find((candidate) => candidate.name === name);
@@ -33,7 +34,7 @@ function localizeAttributes(node, locale) {
     if (!target?.value) continue;
     const declaredSource = attribute(node, `data-i18n-${name}-source`)?.value;
     const source = declaredSource || normalizedSource(target.value);
-    if (!source || (!declaredSource && !MESSAGE_SOURCES.has(source))) continue;
+    if (!source || (!declaredSource && !messageSources.has(source))) continue;
     if (!declaredSource) setAttribute(node, `data-i18n-${name}-source`, source);
     const translated = translate(source, locale);
     if (translated !== target.value) target.value = translated;
@@ -68,7 +69,7 @@ function localizeTextNode(node, parent, locale) {
     ? attribute(parent, 'data-i18n-source')?.value
     : '';
   const translationSource = declaredSource || source;
-  if (!declaredSource && !MESSAGE_SOURCES.has(translationSource)) return;
+  if (!declaredSource && !messageSources.has(translationSource)) return;
   bindTextSource(node, parent, translationSource);
   const translated = translate(translationSource, locale);
   if (translated !== normalizedSource(node.value)) node.value = replaceTrimmed(node.value, translated);
@@ -91,6 +92,11 @@ function visit(node, parent, locale, ignored = false) {
 
 function localizeHtml(html, locale) {
   if (!html) return html;
+  const english = getCatalog('en');
+  if (sourceCatalog !== english) {
+    sourceCatalog = english;
+    messageSources = new Set(Object.keys(english));
+  }
   const document = parse(html);
   visit(document, null, locale);
   return serialize(document);

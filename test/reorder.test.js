@@ -24,8 +24,9 @@ test('single-address checkout and paid design reorders preserve commerce snapsho
     estimates++;
     return { currency: 'EUR', subtotal: 20, shipping: 5, vat: 4.75, tax: 0, total: 29.75 };
   };
-  stripe.createCheckoutSession = async () => {
+  stripe.createCheckoutSession = async ({ persistCustomer }) => {
     payments++;
+    await persistCustomer(`cus_reorder${payments}`);
     return { id: `cs_test_reordered_${payments}`, url: `https://checkout.test/reordered-${payments}` };
   };
   t.after(() => {
@@ -64,8 +65,18 @@ test('single-address checkout and paid design reorders preserve commerce snapsho
     assert.equal((await query('SELECT count(*)::int AS count FROM configurations')).rows[0].count, 3);
   });
 
+  const taxCents = Math.round(quote.totalCents * 0.19);
+  const paidTotal = quote.totalCents + taxCents;
   await db.recordSuccessfulPayment({ stripeEventId: 'evt_reorder_original', eventType: 'checkout.session.completed',
-    stripeSessionId: sessionId, paymentIntentId: 'pi_reorder_original', livemode: false });
+    stripeSessionId: sessionId, paymentIntentId: 'pi_reorder_original', livemode: false,
+    amountTotal: paidTotal, currency: 'eur', checkoutSession: {
+      id: sessionId, customer: 'cus_reorder1', payment_status: 'paid', currency: 'eur',
+      amount_subtotal: quote.itemsCents, amount_total: paidTotal,
+      automatic_tax: { enabled: true, status: 'complete' },
+      total_details: { amount_tax: taxCents, amount_discount: 0 },
+      shipping_cost: { amount_subtotal: quote.shippingCents,
+        amount_tax: 95, amount_total: quote.shippingCents + 95 },
+    } });
   const originalOrder = await db.getOrderBySessionId(sessionId);
   const originalItems = await db.getOrderItems(originalOrder.id);
   const originalShipments = await db.getOrderShipments(originalOrder.id);

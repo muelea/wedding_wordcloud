@@ -41,7 +41,7 @@ function harness(fetcher) {
     slug: 'shipping-test', guestId: 'a'.repeat(32), configurationIds: ['a'.repeat(16)],
     configurations: [], currentQuote: null, shippingRevision: 0, activeShippingRequest: null,
     submitButton: element(), checkoutButton: element(), form: element(), formError: element(),
-    checkoutError: element(), quoteResult: element(), quotePlaceholder: element(),
+    checkoutError: element(), quoteResult: element(),
     setText: (node, value) => { node.textContent = value; }, clearText: node => { node.textContent = ''; },
     setButtonLabel: (node, value) => { node.label = value; },
     customerErrorSource: (result, fallback) => result.message || fallback,
@@ -91,7 +91,7 @@ test('a network failure during pricing restores controls and does not blame vali
   const page = harness(async () => { throw new TypeError('network unavailable'); });
   await page.submit();
   assert.equal(page.scope.submitButton.disabled, false);
-  assert.match(page.scope.formError.textContent, /Gesamtpreis konnte gerade nicht berechnet/);
+  assert.match(page.scope.formError.textContent, /Preise und Lieferung konnten gerade nicht geprüft/);
   assert.equal(page.scope.currentQuote, null);
 });
 
@@ -111,7 +111,7 @@ test('a cancelled-checkout quote never replaces newer address or quantity edits 
     await page.scope.restoreSavedQuote(draft);
     assert.equal(page.calls.rendered, undefined, 'The newer form must remain untouched');
     assert.equal(page.scope.currentQuote, null);
-    assert.match(page.scope.formError.textContent, /neu berechnet/);
+    assert.match(page.scope.formError.textContent, /erneut/);
   }
   await page.scope.restoreSavedQuote(structuredClone(oldShipments));
   assert.equal(page.scope.currentQuote.id, 'old-price', 'An unchanged draft may resume its quote');
@@ -160,7 +160,7 @@ test('leaving aborts an old request and its late result cannot unlock or navigat
   await latest;
   assert.equal(page.scope.form.inert, false);
   assert.equal(page.scope.checkoutButton.disabled, false);
-  assert.equal(page.scope.checkoutButton.label, 'Neuen Gesamtpreis bestätigen');
+  assert.equal(page.scope.checkoutButton.label, 'Neue Preise bestätigen');
 });
 
 test('deadline covers response body stalls and permits a safe retry after a checkout timeout', async () => {
@@ -218,4 +218,71 @@ test('a failed location assignment also restores checkout controls', async () =>
   await page.checkout();
   assert.equal(page.scope.form.inert, false);
   assert.equal(page.scope.checkoutButton.disabled, false);
+});
+
+test('an explicit Printful failure invalidates the quote and prevents another checkout click', async () => {
+  for (const error of ['shipping_unavailable', 'selection_not_available', 'pricing_unavailable']) {
+    const page = harness(async () => response({ error, message: 'Lieferung konnte nicht bestätigt werden.' }, 422));
+    page.scope.currentQuote = { id: 'previously-valid' };
+    await page.checkout();
+    assert.equal(page.scope.currentQuote, null);
+    assert.equal(page.scope.checkoutButton.disabled, true);
+    assert.equal(page.scope.submitButton.disabled, false);
+    assert.match(page.scope.formError.textContent, /Lieferung konnte nicht bestätigt/);
+    await page.checkout();
+    assert.equal(page.calls.fetches, 1);
+    assert.deepEqual(page.calls.navigation, []);
+  }
+});
+
+test('a failed price refresh removes the previous quote and keeps checkout disabled', async () => {
+  const page = harness(async () => response({ error: 'shipping_unavailable', message: 'Keine Lieferung möglich.' }, 422));
+  page.scope.currentQuote = { id: 'old-price' };
+  await page.submit();
+  assert.equal(page.scope.currentQuote, null);
+  assert.equal(page.scope.quoteResult.hidden, true);
+  assert.equal(page.scope.checkoutButton.disabled, true);
+  assert.match(page.scope.formError.textContent, /Keine Lieferung möglich/);
+});
+
+function deliveryLines(delivery, { shipments = [{ customsFeesPossible: false, departureCountry: 'LV', items: [] }], locale = 'de' } = {}) {
+  const lines = [];
+  const translate = (text, params) => require('../src/i18n').translate(text, locale, params);
+  const scope = vm.createContext({
+    Intl, Date, configurations: [], t: translate,
+    WolkenworteI18n: { getLocale: () => locale, formatNumber: number => new Intl.NumberFormat(locale).format(number) },
+    setText: (node, text, params) => { node.textContent = translate(text, params); },
+    document: { getElementById: () => ({ replaceChildren() {}, appendChild: node => lines.push(node.textContent) }), createElement: () => ({}) },
+  });
+  vm.runInContext(pageFunction('renderDeliveryInformation'), scope);
+  scope.renderDeliveryInformation({ delivery, shipments });
+  return lines;
+}
+
+test('delivery shows days and a compact date range without repeating products or countries', () => {
+  const lines = deliveryLines({ minDays: 5, maxDays: 7, minDate: '2026-09-10', maxDate: '2026-09-12' });
+  assert.match(lines[0], /^Voraussichtliche Lieferung: 5–7 Tage \(10\.\s*–\s*12\. September 2026\)$/);
+  assert.equal(lines[1], 'Die Lieferzeit ist eine Schätzung und kann sich ändern.');
+  assert.equal(lines.length, 2);
+  assert.doesNotMatch(lines.join(' '), /Lettland|Versandland|Produkt/);
+});
+
+test('delivery handles single days, month and year boundaries, and missing API fields', () => {
+  assert.match(deliveryLines({ minDays: 1, maxDays: 1, minDate: '2026-09-10', maxDate: '2026-09-10' })[0], /1 Tag \(10\. September 2026\)/);
+  assert.match(deliveryLines({ minDays: 5, maxDays: 7 })[0], /5–7 Tage$/);
+  assert.match(deliveryLines({ minDate: '2026-09-30', maxDate: '2026-10-02' })[0], /September.*Oktober/);
+  assert.match(deliveryLines({ minDate: '2026-12-31', maxDate: '2027-01-02' })[0], /2026.*2027/);
+  assert.match(deliveryLines(null)[0], /Lieferzeit.*nicht verfügbar/);
+  assert.match(deliveryLines({ minDays: 5, maxDays: 7 }, { locale: 'en' })[0], /Estimated delivery: 5–7 days/);
+});
+
+test('customs warnings still identify affected products without disclosing departure countries', () => {
+  const lines = deliveryLines(null, { shipments: [
+    { customsFeesPossible: false, departureCountry: 'LV', items: [{ quantity: 1 }] },
+    { customsFeesPossible: true, departureCountry: 'US', items: [{ quantity: 2 }] },
+    { customsFeesPossible: null, departureCountry: null, items: [{ quantity: 3 }] },
+  ] });
+  assert.match(lines.join(' '), /2 × Produkt: Bei der Einfuhr/);
+  assert.match(lines.join(' '), /3 × Produkt: Mögliche Einfuhrgebühren/);
+  assert.doesNotMatch(lines.join(' '), /1 ×|Versandland|Lettland|Vereinigte/);
 });

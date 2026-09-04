@@ -9,6 +9,7 @@ const emailDelivery = require('../emailDelivery');
 const { asyncRoute } = require('../asyncRoute');
 const log = require('../structuredLog');
 const performanceProbe = require('../performanceProbe');
+const { paymentAmounts } = require('../checkoutTax');
 
 // Mounted before express.json() in server.js. Stripe signature verification
 // requires the exact raw bytes, so this route owns its raw body parser.
@@ -201,8 +202,7 @@ function makeWebhookRouter() {
       metadata.eventSlug === order.event_slug_snapshot &&
       metadata.checkoutMode === eventMode &&
       order.mode === eventMode;
-    const amountMatches = Number(session.amount_total) === Number(order.total_cents) &&
-      String(session.currency || '').toUpperCase() === order.currency;
+    const amountMatches = Boolean(paymentAmounts(order, session));
     if (!metadataMatches || !amountMatches || session.payment_status !== 'paid') {
       log.error('stripe_checkout_session_mismatch', {
         orderId: order.id,
@@ -224,6 +224,7 @@ function makeWebhookRouter() {
         currency: session.currency,
         paymentStatus: session.payment_status,
         buyerEmail: session.customer_details?.email,
+        checkoutSession: session,
       });
       if (result.order?.id) fulfillment.scheduleOrder(result.order.id);
       if (result.emailJob?.id && result.emailJob.status === 'pending') {

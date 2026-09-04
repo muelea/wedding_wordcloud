@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
+const { createRequire } = require('node:module');
 const ejs = require('ejs');
 const { startTestServer, createEvent } = require('./helpers');
 const I18n = require('../src/i18n');
@@ -348,6 +350,73 @@ test('server localization produces the selected language before browser scripts 
   assert.match(nested, />Start here <span aria-hidden="true">→<\/span><\/button>/);
 });
 
+test('catalog edits reach server copy, language-switch bindings and browser URLs without restarting', async () => {
+  const intro = 'Mit eurer Lieferadresse prüfen wir Produktpreise, Versandkosten und die voraussichtliche Lieferzeit.';
+  const check = 'Preise und Lieferung prüfen';
+  const update = 'Preise aktualisieren';
+  const catalogs = Object.fromEntries(CATALOG_LOCALES.map((locale) => [locale, {}]));
+  catalogs.en['Weiter zur Zahlung'] = 'Old payment label';
+  const readCatalog = (filename) => JSON.stringify(catalogs[path.basename(filename, '.json')]);
+  const assets = {
+    fingerprintPublicAsset: readCatalog,
+    publicAssetUrl: (filename) => `${filename}?v=${encodeURIComponent(readCatalog(filename))}`,
+  };
+  function isolatedModule(name, overrides) {
+    const filename = path.join(__dirname, '../src', `${name}.js`);
+    const realRequire = createRequire(filename);
+    const context = {
+      module: { exports: {} }, __dirname: path.dirname(filename), URL, process: { env: {} },
+      require: (dependency) => overrides[dependency] || realRequire(dependency),
+    };
+    vm.runInNewContext(fs.readFileSync(filename, 'utf8'), context, { filename });
+    return context.module.exports;
+  }
+  const i18n = isolatedModule('i18n', {
+    'node:fs': { readFileSync: readCatalog }, './publicAssets': assets,
+  });
+  const localizer = isolatedModule('htmlLocalizer', { './i18n': i18n });
+  const renderer = isolatedModule('pageRenderer', {
+    './i18n': i18n, './publicAssets': assets, './htmlLocalizer': localizer,
+    ejs: { renderFile: async (_filename, locals) => `<html lang="${locals.locale}">
+      <body><p>${intro}</p><button>${check} <span>→</span></button>
+      <p>${locals.t('Weiter zur Zahlung')}</p>
+      <script type="application/json">${JSON.stringify(locals.localeCatalogUrls)}</script></body></html>` },
+  });
+  async function render(locale) {
+    let html;
+    await renderer.renderPage({ query: { lang: locale }, headers: {}, originalUrl: '/shipping' }, {
+      cookie() {}, status() {}, set() {}, vary() {}, send(value) { html = value; },
+    }, 'shipping');
+    return html;
+  }
+  const before = await render('en');
+  const oldCatalog = i18n.getCatalog('en');
+  assert.equal(i18n.getCatalog('en'), oldCatalog, 'unchanged catalogs reuse the parsed object');
+  await render('fr'); // Also prime the merged English fallback cache.
+
+  Object.assign(catalogs.en, {
+    [intro]: 'We use your delivery address to check product prices, shipping costs and estimated delivery time.',
+    [check]: 'Check prices and delivery', [update]: 'Update prices',
+    'Weiter zur Zahlung': 'Continue to payment',
+  });
+  const after = await render('en');
+  assert.notEqual(i18n.getCatalog('en'), oldCatalog);
+  assert.match(before, /Old payment label/);
+  assert.match(after, /Continue to payment/);
+  assert.match(after, /data-i18n-source="Mit eurer Lieferadresse prüfen/);
+  assert.match(after, /We use your delivery address/);
+  assert.match(after, />Check prices and delivery <span>→<\/span>/);
+  assert.match(after, /data-i18n-text-sources=/);
+  assert.equal(i18n.translate(update, 'en'), 'Update prices');
+  assert.equal(i18n.translate(update, 'fr'), 'Update prices', 'merged fallback must refresh too');
+  const urls = (html) => JSON.parse(html.match(/<script type="application\/json">(.*?)<\/script>/s)[1]);
+  assert.notEqual(urls(before).en, urls(after).en, 'the browser must receive the new English catalog URL');
+  assert.equal(urls(after).en, assets.publicAssetUrl('/locales/en.json'));
+  const german = await render('de');
+  assert.match(german, /data-i18n-source="Mit eurer Lieferadresse prüfen/,
+    'new German text must retain bindings for a later language switch');
+});
+
 test('legal pages describe the hosted product and enforced retention', () => {
   const privacy = viewSource('datenschutz.ejs');
   const legalNotice = viewSource('impressum.ejs');
@@ -502,7 +571,8 @@ test('shipping rerenders derived UI from stable sources whenever the locale chan
   for (const locale of CATALOG_LOCALES) {
     const catalog = require(`../public/locales/${locale}.json`);
     for (const source of [
-      'Preis aktualisieren',
+      'Preise und Lieferung prüfen',
+      'Preise aktualisieren',
       'Weiter zur Zahlung',
       'Mehr zur Verarbeitung eurer Lieferdaten im',
       'Zahlung abgebrochen. Eure Angaben sind weiterhin gespeichert.',

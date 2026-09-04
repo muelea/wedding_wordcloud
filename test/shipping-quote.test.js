@@ -139,8 +139,8 @@ test('shipping page uses the immutable configuration and returns a server-side P
     itemsCents: 1616,
     paymentReserveCents: 116,
     shippingCents: 449,
-    taxCents: 392,
-    totalCents: 2457,
+    taxCents: 0,
+    totalCents: 2065,
     expiresAt: undefined,
   });
   assert.equal(captured.length, 1);
@@ -262,8 +262,8 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   assert.equal(quote.itemsCents, 3192);
   assert.equal(quote.paymentReserveCents, 192);
   assert.equal(quote.shippingCents, 600);
-  assert.equal(quote.taxCents, 720);
-  assert.equal(quote.totalCents, 4512);
+  assert.equal(quote.taxCents, 0);
+  assert.equal(quote.totalCents, 3792);
   assert.equal(captured.length, 1, 'mixed items for one address must use one Printful estimate');
   assert.deepEqual(captured[0].items, [
     { configurationId: mug.id, variantId: 1320, quantity: 2 },
@@ -295,13 +295,23 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   assert.equal(updated.quote.shippingDetails.shipments[0].customsFeesPossible, true);
   assert.equal(await require('../src/db').getOrderByQuoteId(quote.id), null, 'no payment created before review');
 
-  printful.getShippingRates = async () => { throw new printful.PrintfulApiError('PRINTFUL_UNAVAILABLE', 'Timeout', 502); };
-  const unavailable = await fetch(`${baseUrl}/api/events/${event.slug}/cart/checkout`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configurationIds: [mug.id, coaster.id], quoteId: quote.id }),
-  });
-  assert.equal(unavailable.status, 502, 'failed shipping recheck cannot reuse an old assessment to start payment');
-  assert.equal(await require('../src/db').getOrderByQuoteId(quote.id), null);
+  for (const [code, status, error] of [
+    ['PRINTFUL_UNAVAILABLE', 502, 'pricing_unavailable'],
+    ['PRINTFUL_SHIPPING_UNAVAILABLE', 422, 'shipping_unavailable'],
+    ['PRINTFUL_REQUEST_REJECTED', 422, 'selection_not_available'],
+    ['PRINTFUL_INVALID_RESPONSE', 502, 'pricing_unavailable'],
+  ]) {
+    printful.getShippingRates = async () => { throw new printful.PrintfulApiError(code, 'Provider details must stay private', status); };
+    const unavailable = await fetch(`${baseUrl}/api/events/${event.slug}/cart/checkout`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configurationIds: [mug.id, coaster.id], quoteId: quote.id }),
+    });
+    assert.equal(unavailable.status, status, 'failed shipping recheck cannot start payment');
+    const failure = await unavailable.json();
+    assert.equal(failure.error, error);
+    assert.doesNotMatch(failure.message, /Provider details/);
+    assert.equal(await require('../src/db').getOrderByQuoteId(quote.id), null);
+  }
 });
 
 test('a configuration can never be quoted through another event slug', async (t) => {

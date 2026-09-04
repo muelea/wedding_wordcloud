@@ -10,7 +10,7 @@ const stripeConfig = require('./stripeConfig');
  * Test and live credentials are separate. Live mode is rejected unless the
  * dedicated payment mode and live safety gate both select it. No static Stripe
  * Price is needed: every
- * Checkout Session gets the revalidated order total as integer cents.
+ * Checkout Session gets the revalidated net products and shipping in cents.
  */
 
 let stripeClient = null;
@@ -89,6 +89,7 @@ function freezeCheckoutRequest({
   quoteId,
   quantity,
   shipmentCount = 1,
+  shipments = null,
   baseUrl,
   locale = I18n.DEFAULT_LOCALE,
 }) {
@@ -98,7 +99,36 @@ function freezeCheckoutRequest({
   const ids = (Array.isArray(configurationIds) && configurationIds.length
     ? configurationIds
     : [configurationId]).filter(Boolean).map(String);
+  const taxInputs = {};
+  if (shipments) {
+    if (shipments.length !== 1) throw new Error('Stripe Tax checkout requires one delivery address');
+    const shipment = shipments[0];
+    const recipient = shipment.recipient;
+    if (!recipient?.name || !recipient.address1 || !recipient.city || !recipient.country_code) {
+      throw new Error('Stripe Tax checkout requires a validated delivery address');
+    }
+    taxInputs.taxMode = 'stripe';
+    taxInputs.shipping = {
+      name: recipient.name,
+      address: {
+        line1: recipient.address1, line2: recipient.address2 || '',
+        city: recipient.city, postal_code: recipient.zip || '',
+        state: recipient.state_code || '', country: recipient.country_code,
+      },
+    };
+    taxInputs.basket = (shipment.items || [{ configurationId: ids[0], quantity }]).map((item) => {
+      const index = ids.indexOf(String(item.configurationId));
+      if (index < 0 || !frozenProducts[index] || !Number.isSafeInteger(item.quantity) || item.quantity < 1) {
+        throw new Error('Stripe Tax checkout contains an invalid product');
+      }
+      return { configurationId: ids[index], quantity: item.quantity, product: frozenProducts[index] };
+    });
+    if (taxInputs.basket.reduce((sum, item) => sum + item.quantity, 0) !== Number(quantity)) {
+      throw new Error('Stripe Tax checkout quantity mismatch');
+    }
+  }
   return {
+    ...taxInputs,
     products: frozenProducts,
     slug: String(slug || ''),
     configurationIds: ids,
@@ -126,6 +156,11 @@ async function createCheckoutSession({
   shipmentCount = 1,
   baseUrl,
   locale = I18n.DEFAULT_LOCALE,
+  taxMode = null,
+  shipping = null,
+  basket = null,
+  customerId = null,
+  persistCustomer = null,
 }) {
   const client = getClient();
   if (!client) throw notConfiguredError();
@@ -193,6 +228,54 @@ async function createCheckoutSession({
   const startedAt = Date.now();
   let session;
   try {
+    let taxParameters = {};
+    if (taxMode === 'stripe') {
+      if (!shipping?.address?.country || !basket?.length ||
+          !Number.isSafeInteger(order.items_cents) || order.items_cents <= 0 ||
+          !Number.isSafeInteger(order.shipping_cents) || order.shipping_cents < 0 ||
+          totalCents !== order.items_cents + order.shipping_cents || order.tax_cents !== 0) {
+        throw new Error('Der gespeicherte Nettopreis oder die Lieferadresse ist ungültig.');
+      }
+      if (!customerId) {
+        if (typeof persistCustomer !== 'function') throw new Error('Customer persistence is required');
+        // One technical customer per purchase, with immutable shipping input.
+        // Persist before Session creation so even a fast webhook can validate it.
+        const customer = await client.customers.create({
+          name: shipping.name, shipping,
+          metadata: { orderId: String(order.id), quoteId: String(quoteId) },
+        }, { idempotencyKey: `wolkenworte-${checkoutMode}-quote-${quoteId}-customer` });
+        customerId = customer.id;
+        await persistCustomer(customerId);
+      }
+      const basketDescription = basket.map((item) =>
+        `${item.quantity} × ${I18n.translate(item.product.name, checkoutLocale)} · ${I18n.translate(item.product.size.label, checkoutLocale)}`
+      ).join('; ');
+      taxParameters = {
+        customer: customerId,
+        automatic_tax: { enabled: true },
+        adaptive_pricing: { enabled: false },
+        // Printful supplies an aggregate product estimate, not reliable per-item
+        // retail prices. Keep that exact net basket amount, describe each design,
+        // and charge shipping separately without invented unit-price allocation.
+        line_items: [{ quantity: 1, price_data: {
+          currency, unit_amount: order.items_cents, tax_behavior: 'exclusive',
+          product_data: {
+            name: basket.length === 1
+              ? `${basket[0].quantity} × ${I18n.translate(basket[0].product.name, checkoutLocale)}`
+              : I18n.translate('Wolkenworte Bestellung', checkoutLocale),
+            description: basketDescription.slice(0, 500),
+            tax_code: 'txcd_99999999',
+            metadata: { configurationIds: cartConfigurationIds.join(',') },
+          },
+        } }],
+        shipping_options: [{ shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: { amount: order.shipping_cents, currency },
+          display_name: I18n.translate('Versand', checkoutLocale),
+          tax_behavior: 'exclusive', tax_code: 'txcd_92010001',
+        } }],
+      };
+    }
     session = await client.checkout.sessions.create({
       mode: 'payment',
       locale: checkoutLocale,
@@ -214,6 +297,7 @@ async function createCheckoutSession({
           },
         },
       }],
+      ...taxParameters,
       metadata,
       payment_intent_data: { metadata },
       success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}` +

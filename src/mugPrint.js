@@ -50,6 +50,12 @@ function isPrintDesignWithinBounds(
 ) {
   if (!Array.isArray(design) || design.length === 0 ||
       !Number.isFinite(width) || !Number.isFinite(height)) return false;
+  const area = typeof safeMargin === 'number'
+    ? { x: safeMargin, y: safeMargin, width: width - safeMargin * 2, height: height - safeMargin * 2 }
+    : safeMargin;
+  if (!area || ![area.x, area.y, area.width, area.height].every(Number.isFinite) ||
+      area.x < 0 || area.y < 0 || area.width <= 0 || area.height <= 0 ||
+      area.x + area.width > width || area.y + area.height > height) return false;
   return design.every((item) => {
     if (item.type === 'icon' && (!MugIcons.has(item.icon) || !Number.isFinite(item.size))) return false;
     if (item.type === 'image' && (!inspectRasterDataUrl(item.src) ||
@@ -58,10 +64,10 @@ function isPrintDesignWithinBounds(
     const bounds = getDesignBounds(item);
     const halfWidth = bounds.width / 2;
     const halfHeight = bounds.height / 2;
-    return item.x - halfWidth >= safeMargin &&
-      item.x + halfWidth <= width - safeMargin &&
-      item.y - halfHeight >= safeMargin &&
-      item.y + halfHeight <= height - safeMargin;
+    return item.x - halfWidth >= area.x &&
+      item.x + halfWidth <= area.x + area.width &&
+      item.y - halfHeight >= area.y &&
+      item.y + halfHeight <= area.y + area.height;
   });
 }
 
@@ -125,6 +131,8 @@ function designElements(design) {
 function buildProductPrintSvg(product, design) {
   if (!product?.printFile) throw new Error('Cannot build a print for an invalid product');
   const { width, height } = product.printFile;
+  // Approved snapshots retain their original geometry as catalog safe areas
+  // evolve. New saves enforce the current per-surface areas in events.js.
   if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
     throw new Error('Cannot build a print with an invalid design');
   }

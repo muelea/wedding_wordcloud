@@ -293,5 +293,29 @@
       : arrangeDesign(design, targets, measureContext, options);
   }
 
-  return { applyLayoutAction, optimizeDesign };
+  // Restore an older draft into updated print guidelines without repacking it
+  // or moving its words independently. Already-safe designs stay byte-for-byte
+  // unchanged; approved server snapshots are never rewritten by this helper.
+  function fitDesignToSafeArea(design, area, measureContext, options = {}) {
+    if (!design.length) return { design, adjusted: false };
+    const boxes = design.map(item => {
+      const box = itemDimensions(item, 1, measureContext, options.fontFamily);
+      return { left: item.x - box.width / 2, right: item.x + box.width / 2,
+        top: item.y - box.height / 2, bottom: item.y + box.height / 2 };
+    });
+    const left = Math.min(...boxes.map(box => box.left));
+    const right = Math.max(...boxes.map(box => box.right));
+    const top = Math.min(...boxes.map(box => box.top));
+    const bottom = Math.max(...boxes.map(box => box.bottom));
+    if (left >= area.x && right <= area.x + area.width &&
+        top >= area.y && bottom <= area.y + area.height) return { design, adjusted: false };
+    const scale = Math.min(1, (area.width - 4) / (right - left), (area.height - 4) / (bottom - top));
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    return { adjusted: true, design: design.map(item => scaleItem(item, scale,
+      area.x + area.width / 2 + (item.x - centerX) * scale,
+      area.y + area.height / 2 + (item.y - centerY) * scale)) };
+  }
+
+  return { applyLayoutAction, optimizeDesign, fitDesignToSafeArea };
 });

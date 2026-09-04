@@ -3,7 +3,7 @@
 const I18n = require('./i18n');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const TEMPLATE_VERSION = 'transactional-2026-08-27-v1';
+const TEMPLATE_VERSION = 'transactional-2026-09-03-v2';
 const CONTRACT_VERSION = 'contract-2026-08-27-v1';
 const SELLER = Object.freeze({
   name: 'JUSA Engineering UG (haftungsbeschränkt)',
@@ -17,6 +17,7 @@ const SELLER = Object.freeze({
 
 const COPY = Object.freeze({
   de: {
+    testNotice: 'Dies ist eine Testbestellung. Es wurde kein echtes Geld abgebucht und kein Produktionsauftrag ausgelöst.',
     subjects: {
       order_confirmation: 'Wolkenworte – Bestellbestätigung {{number}}',
       shipment_confirmation: 'Wolkenworte – Deine Bestellung {{number}} wurde versendet',
@@ -45,6 +46,7 @@ const COPY = Object.freeze({
     trackingMissing: 'Der Versanddienst hat noch keinen öffentlichen Tracking-Link bereitgestellt.',
   },
   en: {
+    testNotice: 'This is a test order. No real payment was charged and no production order was placed.',
     subjects: {
       order_confirmation: 'Wolkenworte – Order confirmation {{number}}',
       shipment_confirmation: 'Wolkenworte – Your order {{number}} has shipped',
@@ -72,6 +74,7 @@ const COPY = Object.freeze({
     trackingMissing: 'The carrier has not yet provided a public tracking link.',
   },
   fr: {
+    testNotice: 'Ceci est une commande de test. Aucun paiement réel n’a été prélevé et aucune production n’a été lancée.',
     subjects: {
       order_confirmation: 'Wolkenworte – Confirmation de commande {{number}}',
       shipment_confirmation: 'Wolkenworte – Votre commande {{number}} a été expédiée',
@@ -99,6 +102,7 @@ const COPY = Object.freeze({
     trackingMissing: 'Le transporteur n’a pas encore fourni de lien de suivi public.',
   },
   it: {
+    testNotice: 'Questo è un ordine di prova. Non è stato addebitato alcun pagamento reale e non è stata avviata alcuna produzione.',
     subjects: {
       order_confirmation: 'Wolkenworte – Conferma d’ordine {{number}}',
       shipment_confirmation: 'Wolkenworte – Il tuo ordine {{number}} è stato spedito',
@@ -126,6 +130,7 @@ const COPY = Object.freeze({
     trackingMissing: 'Il corriere non ha ancora fornito un link pubblico per il tracciamento.',
   },
   es: {
+    testNotice: 'Este es un pedido de prueba. No se ha cobrado ningún pago real ni se ha iniciado la producción.',
     subjects: {
       order_confirmation: 'Wolkenworte – Confirmación del pedido {{number}}',
       shipment_confirmation: 'Wolkenworte – Tu pedido {{number}} ha sido enviado',
@@ -153,6 +158,7 @@ const COPY = Object.freeze({
     trackingMissing: 'El transportista todavía no ha proporcionado un enlace público de seguimiento.',
   },
   tr: {
+    testNotice: 'Bu bir test siparişidir. Gerçek bir ödeme alınmamış ve üretim siparişi oluşturulmamıştır.',
     subjects: {
       order_confirmation: 'Wolkenworte – {{number}} sipariş onayı',
       shipment_confirmation: 'Wolkenworte – {{number}} numaralı siparişin gönderildi',
@@ -351,6 +357,7 @@ function buildEmailSnapshot({
   const copy = COPY[normalizedLocale] || COPY.de;
   if (!copy.subjects[kind] || !copy.intros[kind]) throw new Error('unsupported transactional email kind');
   const number = orderNumber(order);
+  const isTestOrder = order?.mode === 'test' || order?.status === 'paid_test';
   const sections = buildSections({
     kind, order, orderItems, shipments, shipment, noticeAmountCents,
     locale: normalizedLocale, copy,
@@ -358,9 +365,9 @@ function buildEmailSnapshot({
   return {
     locale: normalizedLocale,
     templateVersion: TEMPLATE_VERSION,
-    subject: interpolate(copy.subjects[kind], { number }),
-    textBody: renderText(copy, copy.intros[kind], sections),
-    htmlBody: renderHtml(copy, copy.intros[kind], sections),
+    subject: (isTestOrder ? '[TEST] ' : '') + interpolate(copy.subjects[kind], { number }),
+    textBody: renderText(copy, isTestOrder ? `${copy.testNotice}\n\n${copy.intros[kind]}` : copy.intros[kind], sections),
+    htmlBody: renderHtml(copy, isTestOrder ? `${copy.testNotice} ${copy.intros[kind]}` : copy.intros[kind], sections),
   };
 }
 

@@ -60,7 +60,10 @@ function resolveMode(order, job, { providerSmoke = false } = {}) {
     }
     return 'live';
   }
-  if (order?.mode !== 'live' || order?.status === 'paid_test' || process.env.NODE_ENV === 'test') {
+  // Manual sandbox purchases may exercise real email independently of payment
+  // and fulfillment mode. Automated tests must never use the real provider.
+  if (process.env.NODE_ENV === 'test' || !['test', 'live'].includes(order?.mode) ||
+      !['paid_test', 'paid', 'fulfilled'].includes(order?.status)) {
     return 'mock';
   }
   const mode = configuredMode();

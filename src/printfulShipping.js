@@ -50,7 +50,7 @@ function normalizeShippingRate(rate, orderItems) {
 // provider wording and internal shipping rates don't change the displayed offer.
 function shippingTerms(shipping) {
   if (!shipping) return null;
-  return { delivery: shipping.delivery, shipments: shipping.shipments };
+  return { delivery: shipping.delivery, shipments: shipping.shipments.map(({ customsFeesPossible, items }) => ({ customsFeesPossible, items })) };
 }
 
 function shippingTermsDiffer(before, after) {

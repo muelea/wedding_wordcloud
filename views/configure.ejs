@@ -663,7 +663,7 @@
     .print-safe-guide {
       position: absolute;
       z-index: 4;
-      inset: var(--print-safe-y, 2.2857%) var(--print-safe-x, .8889%);
+      inset: var(--print-safe-top) var(--print-safe-right) var(--print-safe-bottom) var(--print-safe-left);
       border: 1px dashed transparent;
       border-radius: 6px;
       pointer-events: none;
@@ -2207,21 +2207,30 @@
       if (before !== JSON.stringify(mugEditor.getDesign())) markDirty();
     }
 
-    function productView(candidate = product, orientation = null) {
+    function productView(candidate = product, orientation = null, surfaceKey = activeSurface) {
       if (!candidate) return null;
       const options = Array.isArray(candidate.orientations) ? candidate.orientations : [];
-      if (!options.length) return { ...candidate, orientation: 'default' };
       const key = orientation || (candidate === product ? selectedOrientation : null) ||
-        candidate.defaultOrientation || candidate.orientation || options[0].key;
+        candidate.defaultOrientation || candidate.orientation || options[0]?.key;
       const selected = options.find((option) => option.key === key) ||
         options.find((option) => option.key === candidate.defaultOrientation) || options[0];
+      const view = selected ? { ...candidate, orientation: selected.key,
+        size: selected.size, printFile: selected.printFile,
+        designSafeAreas: selected.designSafeAreas, layoutGeometry: selected.layoutGeometry,
+        previewMockup: selected.previewMockup } :
+        { ...candidate, orientation: 'default' };
+      const areas = view.designSafeAreas || {};
+      const safeArea = areas[surfaceKey] || Object.values(areas)[0];
       return {
-        ...candidate,
-        orientation: selected.key,
-        size: selected.size,
-        printFile: selected.printFile,
-        layoutGeometry: selected.layoutGeometry,
-        previewMockup: selected.previewMockup,
+        ...view,
+        safeArea,
+        layoutGeometry: safeArea && Object.keys(areas).length > 1
+          ? { ...view.layoutGeometry, 'fit-area': [{ ...safeArea, optimize: true }] }
+          : view.layoutGeometry,
+        previewMockup: view.previewMockup ? {
+          ...view.previewMockup,
+          canvas: view.previewMockup.canvases?.[surfaceKey] || view.previewMockup.canvas,
+        } : null,
       };
     }
 
@@ -2280,10 +2289,10 @@
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'load_failed');
-        await applySavedConfiguration(data);
+        const adjusted = await applySavedConfiguration(data);
         editingOrderItemId = loadOrderItems().some((item) => item.id === data.id) ? data.id : null;
-        currentDesignNeedsSave = !editingOrderItemId;
-        currentDesignEdited = false;
+        currentDesignNeedsSave = !editingOrderItemId || Boolean(adjusted);
+        currentDesignEdited = Boolean(adjusted);
         pendingConfiguration = null;
         renderOrderBox();
       } finally {
@@ -2421,7 +2430,12 @@
 
     function setupCanvas(canvas) {
       const rect = canvas.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      // Supersample at the displayed mockup size for crisp text, including
+      // Retina screens. Match the editor's 1536px limit to bound redraw costs.
+      const ratio = Math.min(
+        2 * Math.max(window.devicePixelRatio || 1, 1),
+        1536 / Math.max(rect.width, rect.height, 1)
+      );
       const width = Math.max(1, Math.round(rect.width * ratio));
       const height = Math.max(1, Math.round(rect.height * ratio));
       if (canvas.width !== width || canvas.height !== height) {
@@ -2585,8 +2599,8 @@
       }
     }
 
-    function buildAutomaticDesign() {
-      const view = productView();
+    function buildAutomaticDesign(surfaceKey = activeSurface) {
+      const view = productView(product, null, surfaceKey);
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
@@ -2647,7 +2661,8 @@
       activeSurface = surfaces[0].key;
       surfaceStates = new Map(surfaces.map((surface, index) => [
         surface.key,
-        cloneEditorState(initialState, index === 0),
+        index === 0 ? cloneEditorState(initialState) :
+          cloneEditorState({ design: buildAutomaticDesign(surface.key) }, false),
       ]));
       buildSurfaceControls();
     }
@@ -2668,17 +2683,18 @@
           Array.isArray(rawDesigns[surface.key]) ? cloneDesign(rawDesigns[surface.key]) : [],
         ]));
       }
-      const automatic = buildAutomaticDesign();
-      return Object.fromEntries(surfaces.map((surface) => [surface.key, cloneDesign(automatic)]));
+      return Object.fromEntries(surfaces.map((surface) => [surface.key, buildAutomaticDesign(surface.key)]));
     }
 
     async function applySavedConfiguration(configurationData) {
       const nextProduct = products.find((candidate) => candidate.key === configurationData.productKey);
       if (!nextProduct) throw new Error('invalid_product');
 
+      let adjusted = false;
       suppressDirty = true;
       try {
         product = nextProduct;
+        activeSurface = productSurfaces()[0].key;
         selectedFamilyKey = product.familyKey;
         const savedOrientation = selectedOrientationOption(product, configurationData.orientation);
         selectedOrientation = savedOrientation?.key || product.defaultOrientation || 'default';
@@ -2702,6 +2718,7 @@
           printHeight: view.printFile.height,
           printFileDpi: view.printFile.dpi,
           safeMargin: product.designSafeMargin,
+          safeArea: view.safeArea,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
@@ -2712,6 +2729,13 @@
           .map((item) => item.fontFamily)));
         await WolkenworteConfiguratorSession.withTimeout(mugEditor.preloadImages(Object.values(loadedDesigns).flat()));
         const surfaces = productSurfaces();
+        for (const surface of surfaces) {
+          const fitted = DesignLayout.fitDesignToSafeArea(loadedDesigns[surface.key],
+            productView(product, null, surface.key).safeArea, mugEditor.measureContext,
+            { fontFamily: item => DesignFonts.cssFamily(item.fontFamily) });
+          loadedDesigns[surface.key] = fitted.design;
+          adjusted = adjusted || fitted.adjusted;
+        }
         activeSurface = surfaces[0].key;
         surfaceStates = new Map(surfaces.map((surface, index) => [
           surface.key,
@@ -2729,6 +2753,8 @@
         mugEditor.flushPendingChange();
         suppressDirty = false;
       }
+      if (adjusted) mugEditor.setFeedback('Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.');
+      return adjusted;
     }
 
     function updateSurfaceControlSelection() {
@@ -2749,6 +2775,7 @@
       const wasSuppressed = suppressDirty;
       suppressDirty = true;
       try {
+        mugEditor.setSafeArea(productView().safeArea);
         mugEditor.setState(surfaceStates.get(surfaceKey));
         mugEditor.flushPendingChange();
       } finally { suppressDirty = wasSuppressed; }
@@ -2809,6 +2836,12 @@
       const front = surfaceStates.get('front');
       if (!front) return;
       const copied = cloneEditorState(front, false);
+      const sourceArea = productView(product, null, 'front').safeArea;
+      const targetArea = productView(product, null, 'back').safeArea;
+      copied.design = copied.design.map(item => ({ ...item,
+        x: item.x + targetArea.x - sourceArea.x,
+        y: item.y + targetArea.y - sourceArea.y,
+      }));
       surfaceStates.set('back', copied);
       if (activeSurface === 'back') mugEditor.setState(copied);
       mugEditor.setFeedback('Vorderseite auf die Rückseite übernommen');
@@ -3297,6 +3330,7 @@
 
     function selectProduct(nextProduct, orientation) {
       product = nextProduct;
+      activeSurface = productSurfaces()[0].key;
       selectedFamilyKey = product.familyKey;
       selectedOrientation = orientation || product.defaultOrientation || 'default';
       buildOrientationOptions();
@@ -3308,6 +3342,7 @@
           printHeight: view.printFile.height,
           printFileDpi: view.printFile.dpi,
           safeMargin: product.designSafeMargin,
+          safeArea: view.safeArea,
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
@@ -3568,6 +3603,7 @@
         printHeight: view.printFile.height,
         printFileDpi: view.printFile.dpi,
         safeMargin: product.designSafeMargin,
+        safeArea: view.safeArea,
         defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         palette: getPalette(selectedTheme).colors,

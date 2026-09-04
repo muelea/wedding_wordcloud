@@ -50,3 +50,30 @@ test('lengthening an editor word stays inside the exact server print bounds', as
     await editor.canvas.dispose();
   }
 });
+
+test('notebook manual editing respects each side’s binding and trim boundaries', async () => {
+  const { getProduct } = require('../src/products');
+  const product = getProduct('spiral-notebook-dotted');
+  const editor = createEditor();
+  Object.assign(editor, { width: 1725, height: 2625 });
+  const styles = new Map();
+  editor.shell = { style: { setProperty: (key,value) => styles.set(key,value) } };
+  try {
+    for (const side of ['front','back']) {
+      const area = product.designSafeAreas[side];
+      editor.setSafeArea(area);
+      assert.equal(styles.get('--print-safe-left'), `${area.x/1725*100}%`);
+      assert.equal(styles.get('--print-safe-right'), `${(1725-area.x-area.width)/1725*100}%`);
+      for (const [x,y] of [[0,0],[1725,0],[0,2625],[1725,2625]]) {
+        for (const angle of [0,27,90]) {
+          editor.canvas.clear();
+          const object = editor.makeObject({ id: 'edge', type: 'text', text: 'Gemeinsam',
+            x,y,fontSize:450,angle,color:'#2455f5',fontFamily:'classic', fontStyle:'italic', underline:true });
+          editor.canvas.add(object);
+          editor.keepInside(object);
+          assert.ok(isPrintDesignWithinBounds(editor.getDesign(),1725,2625,area), `${side}/${x}/${y}/${angle}`);
+        }
+      }
+    }
+  } finally { await editor.canvas.dispose(); }
+});

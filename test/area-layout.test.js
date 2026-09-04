@@ -14,7 +14,7 @@ const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, GAP_WORDS, FIVE_WORDS, AR
 const { largestEmptyFraction, occupiedFraction, envelope } = require('./support/layout-space');
 
 const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
-const automaticSource = template.slice(template.indexOf('    function buildAutomaticDesign()'),
+const automaticSource = template.slice(template.indexOf('    function buildAutomaticDesign('),
   template.indexOf('    function cloneDesign('));
 const context = createCanvas(1, 1).getContext('2d');
 const apply = (design, product) => Layout.applyLayoutAction(design, product.layoutGeometry['fit-area'],
@@ -22,7 +22,7 @@ const apply = (design, product) => Layout.applyLayoutAction(design, product.layo
 
 function automatic(product, words) {
   return JSON.parse(JSON.stringify(vm.runInNewContext(automaticSource + '\nbuildAutomaticDesign()', {
-    productView: () => product, words, WordCloudCore: Core, DesignFonts: Fonts, DesignLayout: Layout,
+    product, activeSurface: product.printSurfaces[0].key, productView: () => product, words, WordCloudCore: Core, DesignFonts: Fonts, DesignLayout: Layout,
     document: { createElement: () => createCanvas(1, 1) }, selectedTheme: 'konfetti',
     getPalette: () => ({ colors: ['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8'] }),
     makePaletteAssigner: Core.makePaletteAssigner,
@@ -43,7 +43,7 @@ function bounds(item) {
 
 function assertSafe(design, product, label) {
   assert.ok(isPrintDesignWithinBounds(design, product.printFile.width,
-    product.printFile.height, product.designSafeMargin), label + ': printable');
+    product.printFile.height, product.designSafeAreas?.[product.printSurfaces?.[0]?.key] || product.designSafeMargin), label + ': printable');
   const boxes = design.map(bounds);
   boxes.forEach((box, index) => boxes.slice(0, index).forEach(other => {
     assert.ok(box.x1 >= other.x2 || box.x2 <= other.x1 || box.y1 >= other.y2 || box.y2 <= other.y1,
@@ -171,12 +171,16 @@ test('automatic front and back designs are filled, independent copies', () => {
     const start = template.indexOf('    function cloneDesign(');
     const end = template.indexOf('    function getAllSurfaceDesigns(', start);
     const page = vm.createContext({ product, activeSurface: 'default', surfaceStates: new Map(),
-      buildSurfaceControls() {} });
+      buildSurfaceControls() {},
+      buildAutomaticDesign: side => automatic({ ...product,
+        layoutGeometry: { ...product.layoutGeometry, 'fit-area': [{ ...product.designSafeAreas[side], optimize: true }] },
+      }, REPORTED_WORDS),
+    });
     vm.runInContext(template.slice(start, end), page);
     page.resetSurfaceStates({ design, history: ['initial'], historyIndex: 0 });
-    for (const state of page.surfaceStates.values()) {
-      assert.deepEqual(JSON.parse(JSON.stringify(state.design)), design);
-      assertSafe(state.design, product, key);
+    for (const [side, state] of page.surfaceStates) {
+      assert.deepEqual(state.design.map(item => item.text).sort(), design.map(item => item.text).sort());
+      assertSafe(state.design, { ...product, printSurfaces: [{ key: side }] }, key + '/' + side);
     }
     const front = page.surfaceStates.get('front').design;
     const back = page.surfaceStates.get('back').design;

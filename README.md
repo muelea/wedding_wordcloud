@@ -83,7 +83,10 @@ frozen snapshot of the word cloud.
    plus a link to its current tab's basket, without storing a PIN or introducing
    an account. The previous IndexedDB draft store is no longer read or written.
 6. The saved designs continue to a dedicated, mobile-first shipping-address
-   page. Each purchase has exactly one delivery address, with an independently
+   page. Products, address and the price result share one card. Products appear
+   only once beside their quantity controls; prices and delivery details appear
+   below the form only after a successful quote, with no initial placeholder.
+   Each purchase has exactly one delivery address, with an independently
    selectable quantity for every design. Countries and state/province choices
    come directly from Printful; the server sends one Printful estimate containing all
    positive-quantity items for that address, so Printful can apply its mixed
@@ -97,21 +100,46 @@ frozen snapshot of the word cloud.
    does not upload artwork. Future paid placements require matching print files
    in the cost estimate before enabling the product.
    Shipping details are persisted in the quote's existing shipment JSON and
-   displayed with the affected products, including a clear unknown state when
-   Printful omits a country, date or customs assessment. Delivery dates are
+   displayed as delivery days plus a compact date range when both are available.
+   Missing days fall back to dates (and vice versa); missing estimates are explicit.
+   Departure countries stay internal. Customs warnings identify the affected
+   products, including a clear unknown state for missing customs assessments. Delivery dates are
    estimates, and departure country is not a guaranteed production location.
    The shipping-rate amount remains provider metadata; the cost estimate stays
-   the basis of the existing price calculation. Customer tax/VAT is recalculated on the
-   customer-facing product subtotal plus shipping, using the destination rate
-   implied by Printful's estimate. The normalized address and exact cent
+   the basis of the existing price calculation. The address page uses
+   "Preise und Lieferung prüfen" and shows products, shipping and a tax-exclusive
+   subtotal, with a note that the final total is shown on the payment page before
+   purchase. The quote contains net amounts; its zero tax field means pending
+   calculation, not tax exemption. Printful tax stays supplier information only.
+   The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
 7. "Weiter zur Zahlung" re-estimates the same trusted design basket and
    delivery address immediately before creating a dynamic Stripe-hosted Checkout
    Session. A changed price or shipping assessment must be reviewed and confirmed
    again; failed shipping checks never silently reuse stale data to create a
-   payment. Customs flags currently inform the buyer and do not impose a new
-   country-blocking policy. Signed Stripe webhooks
+   payment. Empty shipping options, rejected product/address selections and
+   malformed prices return customer-safe errors. An explicit failed provider
+   recheck clears the displayed quote and requires a new estimate; ambiguous
+   payment timeouts retain their idempotency key for safe retries.
+   Customs flags currently inform the buyer and do not impose a new
+   country-blocking policy. New Checkout Sessions enable Stripe Tax with explicit
+   exclusive prices: the net product basket (including the fee reserve) is one
+   position describing all selected designs and quantities, with shipping as a
+   separate shipping rate. Printful returns aggregate product costs, so no
+   per-product retail prices are invented. The current catalog uses Stripe's
+   general tangible-goods category. A technical Stripe Customer per purchase
+   stores the validated shipping address; Checkout cannot change it. Customer
+   creation and Session creation use independent persisted idempotency inputs.
+   The signed paid Session must match the frozen net product/shipping amounts,
+   currency and Customer and contain a completed automatic-tax calculation.
+   Its final tax and gross total are stored atomically before the confirmation
+   email snapshot. Existing older Session requests retain their original gross
+   total and retry parameters. The Germany sandbox registration supports a first
+   domestic test; production registrations, product-specific foreign tax rules
+   and Printful's actual shipping origins still require the existing prelaunch
+   tax review. Hosted Checkout uses the configured head-office origin, not a
+   per-order Printful ship-from override. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted
    fulfillment snapshot. Test payments are then completed by the local `mock`
    worker without making any Printful order request; the confirmation page
@@ -368,7 +396,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `RESEND_FROM_EMAIL` | local operator/Fly runtime setting | Verified `Wolkenworte <bestellung@mail.wolkenworte.io>` sender. Replies explicitly go to the canonical seller contact `kontakt@jusa.io`. |
 | `RESEND_WEBHOOK_SECRET` | Fly runtime secret managed by setup | Verifies signed Resend delivery callbacks. The setup command stages it directly; it stays empty in local `.env`. |
 | `RESEND_SMOKE_RECIPIENTS` | local operator only | Restricts the provider smoke command to explicit maintainer or Resend test inboxes and is never staged to Fly. |
-| `EMAIL_DELIVERY_MODE` | shared setting | `mock` or `live`; test payments are mocked regardless, preventing sandbox purchases from emailing real recipients. |
+| `EMAIL_DELIVERY_MODE` | shared setting | `mock` simulates delivery; `live` sends through Resend for manual sandbox and live purchases. Automated tests (`NODE_ENV=test`) stay mocked. Sandbox emails are marked `[TEST]`. |
 | `ALLOW_TEST_DATA_RESET` | temporary operator/Fly setting | Second irreversible guard for the one-time hosted-test cleanup. |
 | `STRIPE_PAYMENT_MODE` | shared setting | Selects only the explicitly named `test` or `live` Stripe credential set. |
 | `STRIPE_TEST_SECRET_KEY` | local/operator/Fly secret | Sandbox server key for test Checkout and hosted-test provider tooling. |
@@ -457,8 +485,9 @@ separate, manually maintained discount tiers. The server repeats the Printful
 estimate immediately before Stripe Checkout, and a changed total must be
 confirmed again.
 
-This is intentionally a test calculation. The tax line is customer-facing now,
-but the business's VAT status, OSS obligations and Stripe Tax configuration
+This is intentionally a test calculation. The provisional tax is still part of
+test Checkout, but is no longer shown on the address page. The business's VAT
+status, OSS obligations and Stripe Tax configuration
 still need professional review before live payments are enabled.
 
 ## Project layout
@@ -961,9 +990,17 @@ not create mail. Every provider request sets Reply-To to the canonical seller
 contact `kontakt@jusa.io`. Email failure never rolls back payment or blocks
 Printful fulfillment.
 
-`EMAIL_DELIVERY_MODE=mock` is the safe default. Stripe test payments are always
-mocked even if another value is accidentally configured. Real provider
-activation can therefore wait until the sending domain is available:
+`EMAIL_DELIVERY_MODE=mock` is the default. Set `EMAIL_DELIVERY_MODE=live` to send
+real confirmations for manual Stripe sandbox purchases as well as live sales.
+Sandbox messages have a `[TEST]` subject prefix and a localized notice that no
+real payment or production was triggered. Automated tests (`NODE_ENV=test`)
+always simulate ordinary delivery, even with live email configuration. Payment
+and Printful modes remain independent. Enabling delivery does not resend jobs
+that already completed in mock mode; test it with a new purchase.
+
+The local development environment has real email enabled. The hosted test
+environment remains in mock mode until explicitly deployed and configured.
+Provider setup and verification:
 
 1. Add `mail.wolkenworte.io` in Resend with region `eu-west-1`, publish the exact
    SPF, DKIM and Return-Path/MX records supplied by Resend in Porkbun DNS, and
@@ -1039,12 +1076,11 @@ keys in Fly for activation by `npm run deploy:hosted`.
 - **Live Stripe payments** — `STRIPE_LIVE_SECRET_KEY` and live webhook events
   remain unreachable while `STRIPE_PAYMENT_MODE=test` and
   `STRIPE_LIVE_PAYMENTS_ENABLED=false`.
-- **Live transactional delivery** — email snapshots and mock outcomes are
-  durable, but `EMAIL_DELIVERY_MODE=mock` prevents ordinary jobs from contacting
-  Resend. Stripe test payments remain mocked in every mode. The sending domain,
-  signed webhook and controlled real-inbox/delivered/bounced/complained/
-  suppressed outcomes are verified; only the deliberate live-delivery cutover
-  remains gated.
+- **Hosted transactional delivery** — `EMAIL_DELIVERY_MODE=mock` still prevents
+  ordinary hosted jobs from contacting Resend. Local manual sandbox purchases
+  can send real confirmations with `EMAIL_DELIVERY_MODE=live`; automated tests
+  remain mocked. The sending domain, signed webhook and controlled provider
+  outcomes are verified; hosted delivery awaits its approved cutover.
 - **Real Printful fulfillment after test payments** — live countries and
   estimates are connected for the curated mug variants 1320, 4830 and 16586,
   coaster variant 15662, unframed poster variants 8948 and 8952, framed
@@ -1056,7 +1092,7 @@ keys in Fly for activation by `npm run deploy:hosted`.
   safety switches described above.
 - **Final retail VAT configuration** — the quote schema separates products,
   internal reserve, shipping and customer tax cents, and the current test
-  display recalculates customer tax from the destination rate implied by
+  Checkout still uses customer tax from the destination rate implied by
   Printful's estimate. Customer VAT/Stripe Tax must still be professionally
   reviewed before live mode is enabled.
 

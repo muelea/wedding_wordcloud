@@ -255,10 +255,10 @@ function sendPrintfulError(res, error) {
       message: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
     });
   }
-  if (error?.code === 'PRINTFUL_ADDRESS_REJECTED') {
+  if (error?.code === 'PRINTFUL_REQUEST_REJECTED') {
     return res.status(422).json({
-      error: 'address_not_accepted',
-      message: 'Für diese Lieferadresse konnten keine Versandkosten berechnet werden. Bitte prüft eure Angaben.',
+      error: 'selection_not_available',
+      message: 'Für diese Produktauswahl konnte keine Lieferung bestätigt werden. Bitte prüft eure Adresse oder passt die Auswahl an.',
     });
   }
   if (error?.code === 'PRINTFUL_AUTH_FAILED') {
@@ -324,7 +324,10 @@ async function attemptPersistedCheckout(order) {
   if (!claimed) return null;
   try {
     const request = parseStoredCheckoutRequest(claimed);
-    const session = await stripe.createCheckoutSession({ order: claimed, ...request });
+    const session = await stripe.createCheckoutSession({
+      order: claimed, ...request,
+      persistCustomer: (customerId) => db.attachStripeCustomer(claimed.id, customerId),
+    });
     await db.attachStripeSession(claimed.id, session);
     return session;
   } catch (error) {
@@ -590,11 +593,11 @@ function normalizeProductDesigns(
   const rawDesigns = rawBody.designs;
   if (!rawDesigns || typeof rawDesigns !== 'object' || Array.isArray(rawDesigns)) return null;
   const imageState = { sources: new Set(), totalBytes: 0 };
-  const normalizeOne = (rawDesign) => normalizeDesign(
+  const normalizeOne = (rawDesign, surfaceKey) => normalizeDesign(
     rawDesign,
     product.printFile.width,
     product.printFile.height,
-    product.designSafeMargin,
+    product.designSafeAreas[surfaceKey],
     locale,
     imageState
   );
@@ -603,7 +606,7 @@ function normalizeProductDesigns(
   if (Object.keys(rawDesigns).some((surfaceKey) => !allowedSurfaces.has(surfaceKey))) return null;
   const surfaces = {};
   for (const surface of product.printSurfaces) {
-    const design = normalizeOne(rawDesigns[surface.key]);
+    const design = normalizeOne(rawDesigns[surface.key], surface.key);
     if (!design) return null;
     surfaces[surface.key] = design;
   }
@@ -1382,6 +1385,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       )).filter(Boolean);
       const checkoutRequest = stripe.freezeCheckoutRequest({
         products,
+        shipments: pricedShipments,
         slug: event.slug,
         configurationIds: configurations.map((configuration) => configuration.id),
         quoteId: refreshedQuote.id,
@@ -1537,6 +1541,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
         const checkoutRequest = stripe.freezeCheckoutRequest({
           product,
+          shipments: refreshedShipments,
           slug: event.slug,
           configurationId: configuration.id,
           quoteId: refreshedQuote.id,

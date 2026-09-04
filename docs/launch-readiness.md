@@ -44,8 +44,10 @@ implementation history is intentionally not maintained as a step-by-step diary.
 
 - [ ] Decide the business's VAT status, EU/OSS obligations, invoicing and
   bookkeeping/export process with qualified professional input.
-- [ ] Review the customer-facing tax calculation and decide whether the current
-  destination-rate calculation is sufficient or must use Stripe Tax.
+- [ ] Validate the Stripe Tax setup for live sales, including registrations,
+  product tax codes and the actual Printful shipping origins. Sandbox Checkout
+  now separates net products and shipping and records Stripe's confirmed tax;
+  the hosted integration still uses the configured head-office origin.
 - [ ] Review product margins and the provisional markup/payment-reserve values.
 - [ ] Approve the versioned order-confirmation, contract-formation,
   personalization/withdrawal, refund and cancellation wording.
@@ -73,7 +75,9 @@ implementation history is intentionally not maintained as a step-by-step diary.
   `README.md`. Confirm Reply-To is `kontakt@jusa.io`.
 - [x] Keep the hosted test environment at `EMAIL_DELIVERY_MODE=mock` after the
   provider smokes.
-- [ ] Enable live delivery only as part of the approved production cutover.
+- [ ] Enable hosted live email delivery as part of the approved production
+  cutover. Local manual sandbox purchases use real email when
+  `EMAIL_DELIVERY_MODE=live`; automated tests remain mocked.
 
 ### Printful verification
 

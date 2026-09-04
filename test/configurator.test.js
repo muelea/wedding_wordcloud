@@ -622,13 +622,13 @@ test('configurator exposes every curated product with verified Printful geometry
     .map((candidate) => [candidate.key, candidate.previewMockup.canvas]));
   assert.deepEqual(mockupCanvases, {
     'cork-back-coaster': {
-      left: 17.5, top: 17.7, width: 65.3, height: 64.9, fit: 'cover', clipPath: 'none',
+      left: 457 / 30, top: 457 / 30, width: 2087 / 30, height: 2087 / 30, fit: 'cover', clipPath: 'none',
     },
     'matte-poster-30x40cm': {
       left: 25, top: 17.7, width: 49.2, height: 65.5, fit: 'cover', clipPath: 'none',
     },
     'matte-poster-50x70cm': {
-      left: 21.4, top: 10, width: 57.2, height: 80, fit: 'cover', clipPath: 'none',
+      left: 21.3, top: 9.9, width: 57.4, height: 80.2, fit: 'cover', clipPath: 'none',
     },
     'framed-matte-poster-black-30x40cm': {
       left: 24.1, top: 15.1, width: 51.9, height: 69.7, fit: 'cover', clipPath: 'none',
@@ -645,10 +645,10 @@ test('configurator exposes every curated product with verified Printful geometry
       clipPath: 'polygon(0 0, 100% 0, 96% 100%, 3% 100%)',
     },
     'throw-blanket-50x60in': {
-      left: 6.3, top: 13.7, width: 86.8, height: 71.9, fit: 'cover', clipPath: 'none',
+      left: 131 / 30, top: 353 / 30, width: 2714 / 30, height: 2282 / 30, fit: 'cover', clipPath: 'none',
     },
     'spiral-notebook-dotted': {
-      left: 19.9, top: 4.7, width: 57.6, height: 90.4, fit: 'cover', clipPath: 'none',
+      left: 543 / 30, top: 99 / 30, width: 1838 / 30, height: 2796 / 30, fit: 'cover', clipPath: 'none',
     },
     'all-over-basic-pillow-18in': {
       left: 17.1, top: 18.7, width: 64.8, height: 63.1, fit: 'cover', clipPath: 'none',
@@ -1422,4 +1422,27 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   });
   assert.equal(distortedImage.status, 400);
   assert.equal((await distortedImage.json()).error, 'invalid_design');
+});
+
+test('new saves reject unsafe artwork on every product, orientation and print side', async t => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl);
+  for (const base of PRODUCTS) {
+    for (const orientation of base.orientationOptions.length ? base.orientationOptions : [{key:'default'}]) {
+      const product = resolveProductOrientation(base,orientation.key);
+      for (const surface of product.printSurfaces) {
+        const payload = productDesignPayload(product.key,orientation.key);
+        const area = product.designSafeAreas[surface.key];
+        payload.designs[surface.key] = [{id:'unsafe',type:'icon',icon:'heart',size:48,
+          x:area.x+23,y:area.y+area.height/2,angle:0,color:'#0055ff'}];
+        const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({productKey:product.key,orientation:orientation.key,
+            quantity:1,theme:'pastel',words:[['liebe',1]],...payload}),
+        });
+        assert.equal(response.status,400,`${product.key}/${orientation.key}/${surface.key}`);
+      }
+    }
+  }
 });

@@ -95,7 +95,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
   });
   const event = await db.getEventBySlug(eventPublic.slug);
 
-  await t.test('payment atomically snapshots one confirmation job and test payments never call Resend', async () => {
+  await t.test('payment snapshots one confirmation and automated tests never call Resend', async () => {
     const prepared = await createPreparedOrder(db, event, 'atomic');
     const paid = await payPreparedOrder(db, prepared, 'atomic', {
       buyerEmail: '  BUYER@Example.Test  ',
@@ -105,6 +105,9 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.equal(paid.emailJob.status, 'pending');
     assert.equal(paid.emailJob.recipient_email, 'buyer@example.test');
     assert.match(paid.emailJob.subject, /WW-\d{8}/);
+    assert.match(paid.emailJob.subject, /^\[TEST\]/);
+    assert.match(paid.emailJob.text_body, /kein echtes Geld abgebucht/);
+    assert.match(paid.emailJob.html_body, /kein Produktionsauftrag ausgelöst/);
     assert.match(paid.emailJob.text_body, /2 × Wortwolken-Tasse/);
     assert.match(paid.emailJob.text_body, /Variante: 1320/);
     assert.match(paid.emailJob.text_body, new RegExp(prepared.configuration.id));
@@ -127,7 +130,68 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     const delivered = await emailDelivery.processJob(paid.emailJob.id);
     assert.equal(delivered.status, 'delivered');
     assert.match(delivered.provider_message_id, /^mock-/);
-    assert.equal(providerCalls, 0, 'a Stripe test payment must never contact Resend');
+    assert.equal(providerCalls, 0, 'an automated test must never contact Resend');
+  });
+
+  await t.test('manual sandbox purchases send one real-provider confirmation while fulfillment stays mocked', async () => {
+    const prepared = await createPreparedOrder(db, event, 'sandbox-real-email');
+    const paid = await payPreparedOrder(db, prepared, 'sandbox-real-email');
+    const calls = [];
+    resend.setAdapterForTests({ async send(payload, options) {
+      calls.push({ payload, options });
+      return { data: { id: 'resend-manual-sandbox-confirmation' } };
+    } });
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    process.env.EMAIL_DELIVERY_MODE = 'live';
+    try {
+      assert.equal(emailDelivery.resolveMode({ mode: 'test', status: 'checkout_pending' }, paid.emailJob), 'mock');
+      const sent = await emailDelivery.processJob(paid.emailJob.id);
+      assert.equal(sent.status, 'sent');
+      assert.equal(sent.provider_message_id, 'resend-manual-sandbox-confirmation');
+      assert.equal(calls.length, 1);
+      assert.deepEqual(calls[0].payload.to, ['buyer@example.test']);
+      assert.match(calls[0].payload.subject, /^\[TEST\]/);
+      assert.equal(calls[0].payload.replyTo, 'kontakt@jusa.io');
+      assert.equal(calls[0].options.idempotencyKey, paid.emailJob.dedupe_key);
+      await emailDelivery.processJob(paid.emailJob.id);
+      assert.equal(calls.length, 1, 'already accepted confirmations cannot send twice');
+      const fulfilled = await fulfillment.processOrder(prepared.order.id);
+      assert.equal(fulfilled.fulfillment_status, 'mocked');
+      assert.equal((await db.getOrderById(prepared.order.id)).status, 'paid_test');
+
+      process.env.EMAIL_DELIVERY_MODE = 'mock';
+      assert.equal(emailDelivery.resolveMode(paid.order, paid.emailJob), 'mock');
+      process.env.EMAIL_DELIVERY_MODE = 'live';
+      const previousKey = process.env.RESEND_API_KEY;
+      delete process.env.RESEND_API_KEY;
+      try {
+        assert.throws(() => emailDelivery.resolveMode(paid.order, paid.emailJob),
+          (error) => error.code === 'resend_not_configured');
+      } finally { process.env.RESEND_API_KEY = previousKey; }
+    } finally {
+      process.env.NODE_ENV = previousNodeEnv;
+      resend.resetAdapterForTests();
+    }
+  });
+
+  await t.test('sandbox notices are translated and genuine live orders retain ordinary subjects', () => {
+    const { buildEmailSnapshot } = require('../src/emailTemplates');
+    const notices = {
+      de: 'Testbestellung', en: 'test order', fr: 'commande de test',
+      it: 'ordine di prova', es: 'pedido de prueba', tr: 'test siparişidir',
+    };
+    for (const [locale, notice] of Object.entries(notices)) {
+      const order = { id: 42, mode: 'test', status: 'paid_test', currency: 'EUR' };
+      const snapshot = buildEmailSnapshot({ kind: 'order_confirmation', order, locale });
+      assert.match(snapshot.subject, /^\[TEST\]/);
+      assert.ok(snapshot.textBody.includes(notice));
+      assert.ok(snapshot.htmlBody.includes(notice));
+      const live = buildEmailSnapshot({ kind: 'order_confirmation', locale,
+        order: { ...order, mode: 'live', status: 'paid' } });
+      assert.doesNotMatch(live.subject, /\[TEST\]/);
+      assert.ok(!live.textBody.includes(notice));
+    }
   });
 
   await t.test('a missing verified buyer email blocks only email and never payment or fulfillment', async () => {

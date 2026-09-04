@@ -46,6 +46,7 @@
       this.height = options.printHeight;
       this.printFileDpi = Number(options.printFileDpi) || 300;
       this.printMargin = Number.isFinite(options.safeMargin) ? options.safeMargin : DEFAULT_PRINT_MARGIN;
+      this.safeArea = options.safeArea;
       this.editorScale = editorScaleFor(this.width, this.height);
       this.canvasWidth = this.width * this.editorScale;
       this.canvasHeight = this.height * this.editorScale;
@@ -1052,13 +1053,32 @@
       this.updateHistoryButtons();
     }
 
+    getSafeArea() {
+      return this.safeArea || {
+        x: this.printMargin, y: this.printMargin,
+        width: this.width - this.printMargin * 2,
+        height: this.height - this.printMargin * 2,
+      };
+    }
+
+    setSafeArea(area) {
+      this.safeArea = area;
+      const bounds = this.getSafeArea();
+      this.defaultX = bounds.x + bounds.width / 2;
+      this.defaultY = bounds.y + bounds.height / 2;
+      this.updatePrintAreaPresentation();
+    }
+
     updatePrintAreaPresentation() {
       if (!this.shell) return;
       for (const element of [this.shell, this.scroll]) {
         element?.style.setProperty('--print-aspect', `${this.width} / ${this.height}`);
       }
-      this.shell.style.setProperty('--print-safe-x', `${this.printMargin / this.width * 100}%`);
-      this.shell.style.setProperty('--print-safe-y', `${this.printMargin / this.height * 100}%`);
+      const area = this.getSafeArea();
+      this.shell.style.setProperty('--print-safe-left', `${area.x / this.width * 100}%`);
+      this.shell.style.setProperty('--print-safe-top', `${area.y / this.height * 100}%`);
+      this.shell.style.setProperty('--print-safe-right', `${(this.width - area.x - area.width) / this.width * 100}%`);
+      this.shell.style.setProperty('--print-safe-bottom', `${(this.height - area.y - area.height) / this.height * 100}%`);
     }
 
     refreshViewport() {
@@ -1076,7 +1096,7 @@
       this.canvas?.calcOffset();
     }
 
-    resizePrintArea({ printWidth, printHeight, printFileDpi, defaultX, defaultY, safeMargin }) {
+    resizePrintArea({ printWidth, printHeight, printFileDpi, defaultX, defaultY, safeMargin, safeArea }) {
       const nextWidth = Number(printWidth);
       const nextHeight = Number(printHeight);
       if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight) || nextWidth < 1 || nextHeight < 1) {
@@ -1085,17 +1105,16 @@
 
       const design = this.getDesign();
       const nextPrintMargin = Number.isFinite(safeMargin) ? safeMargin : DEFAULT_PRINT_MARGIN;
-      const oldUsableWidth = Math.max(1, this.width - this.printMargin * 2);
-      const oldUsableHeight = Math.max(1, this.height - this.printMargin * 2);
-      const nextUsableWidth = Math.max(1, nextWidth - nextPrintMargin * 2);
-      const nextUsableHeight = Math.max(1, nextHeight - nextPrintMargin * 2);
-      const xScale = nextUsableWidth / oldUsableWidth;
-      const yScale = nextUsableHeight / oldUsableHeight;
+      const oldArea = this.getSafeArea();
+      const nextArea = safeArea || { x: nextPrintMargin, y: nextPrintMargin,
+        width: nextWidth - nextPrintMargin * 2, height: nextHeight - nextPrintMargin * 2 };
+      const xScale = nextArea.width / Math.max(1, oldArea.width);
+      const yScale = nextArea.height / Math.max(1, oldArea.height);
       const sizeScale = Math.min(xScale, yScale);
       const scaledDesign = design.map((item) => ({
         ...item,
-        x: nextPrintMargin + (item.x - this.printMargin) * xScale,
-        y: nextPrintMargin + (item.y - this.printMargin) * yScale,
+        x: nextArea.x + (item.x - oldArea.x) * xScale,
+        y: nextArea.y + (item.y - oldArea.y) * yScale,
         ...(item.type === 'image'
           ? { width: item.width * sizeScale, height: item.height * sizeScale }
           : item.type === 'icon'
@@ -1107,6 +1126,7 @@
       this.height = nextHeight;
       this.printFileDpi = Number(printFileDpi) || this.printFileDpi;
       this.printMargin = nextPrintMargin;
+      this.safeArea = nextArea;
       this.editorScale = editorScaleFor(nextWidth, nextHeight);
       this.canvasWidth = nextWidth * this.editorScale;
       this.canvasHeight = nextHeight * this.editorScale;
@@ -1241,9 +1261,13 @@
       let bounds = this.getConstrainedBounds(object);
       // Two print pixels cover decimal serialization and cross-engine metric
       // rounding without relaxing the server's strict printable-area check.
-      const margin = this.margin + 2 * this.editorScale;
-      const availableWidth = this.canvasWidth - margin * 2;
-      const availableHeight = this.canvasHeight - margin * 2;
+      const area = this.getSafeArea();
+      const left = (area.x + 2) * this.editorScale;
+      const top = (area.y + 2) * this.editorScale;
+      const right = (area.x + area.width - 2) * this.editorScale;
+      const bottom = (area.y + area.height - 2) * this.editorScale;
+      const availableWidth = right - left;
+      const availableHeight = bottom - top;
       if (bounds.width > availableWidth || bounds.height > availableHeight) {
         const factor = Math.min(availableWidth / bounds.width, availableHeight / bounds.height);
         object.scaleX *= factor;
@@ -1255,13 +1279,13 @@
 
       let deltaX = 0;
       let deltaY = 0;
-      if (bounds.left < margin) deltaX = margin - bounds.left;
-      if (bounds.left + bounds.width > this.canvasWidth - margin) {
-        deltaX = this.canvasWidth - margin - bounds.left - bounds.width;
+      if (bounds.left < left) deltaX = left - bounds.left;
+      if (bounds.left + bounds.width > right) {
+        deltaX = right - bounds.left - bounds.width;
       }
-      if (bounds.top < margin) deltaY = margin - bounds.top;
-      if (bounds.top + bounds.height > this.canvasHeight - margin) {
-        deltaY = this.canvasHeight - margin - bounds.top - bounds.height;
+      if (bounds.top < top) deltaY = top - bounds.top;
+      if (bounds.top + bounds.height > bottom) {
+        deltaY = bottom - bounds.top - bounds.height;
       }
       if (deltaX || deltaY) {
         object.set({ left: object.left + deltaX, top: object.top + deltaY });
@@ -1436,8 +1460,7 @@
       const upload = await this.normalizedImageUpload(file);
       await this.loadImageSource(upload.dataUrl);
       if (!this.canAddElements()) return;
-      const availableWidth = this.width - this.printMargin * 2;
-      const availableHeight = this.height - this.printMargin * 2;
+      const { width: availableWidth, height: availableHeight } = this.getSafeArea();
       const maximumScale = Math.min(
         availableWidth / upload.width,
         availableHeight / upload.height

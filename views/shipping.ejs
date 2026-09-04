@@ -59,7 +59,6 @@
     .step.active { color: var(--ink); font-weight: 600; }
     .step.active .step-dot { background: var(--berry); color: #fff; }
     .step-line { width: clamp(14px, 4vw, 48px); height: 1px; flex: 0 1 auto; background: var(--line); }
-    .checkout-grid { display: grid; gap: 18px; }
     .card { background: rgba(255, 254, 253, .94); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
     .address-card { padding: clamp(22px, 5vw, 38px); }
     .card-title { margin: 0; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 25px; font-weight: 600; }
@@ -263,22 +262,14 @@
     .privacy-note { margin: -1px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
     .privacy-note a { color: var(--berry); text-underline-offset: 2px; }
     .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
-    .summary-card { padding: clamp(20px, 4vw, 28px); }
-    .design-summary-list { display: grid; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
-    .design-summary { display: flex; gap: 14px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
-    .design-summary-list .design-summary { padding-bottom: 0; border-bottom: 0; }
-    .design-preview { width: 92px; height: 72px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-    .design-preview img { width: 88%; height: 88%; object-fit: contain; }
-    .design-copy { min-width: 0; }
-    .design-copy strong { display: block; font-size: 15px; }
-    .design-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
-    .quote { padding-top: 20px; }
+    .form-error:empty, .checkout-error:empty, #shipping-draft-status:empty { display: none; }
+    .quote { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); scroll-margin-top: 100px; }
     .quote-row { display: flex; justify-content: space-between; gap: 18px; margin: 0 0 11px; color: var(--muted); font-size: 14px; }
     .quote-row strong { color: var(--ink); font-weight: 500; }
     .quote-total { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--line); }
     .quote-total span { font-size: 14px; font-weight: 500; }
     .quote-total strong { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 29px; font-weight: 600; white-space: nowrap; }
-    .quote-placeholder { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .quote-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
     .checkout-error { min-height: 18px; margin: 10px 2px 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .delivery-information { margin-top: 20px; padding: 16px; border-radius: 16px; background: var(--surface-soft); font-size: 13px; line-height: 1.55; color: var(--muted); }
     .delivery-information p { margin: 0 0 8px; overflow-wrap: anywhere; }
@@ -313,7 +304,6 @@
       .shipment-product .quantity-control { grid-column: 1 / -1; }
       .quantity-control { width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; }
       .quantity-control input { width: 100%; }
-      .design-preview { width: 78px; height: 64px; }
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -330,7 +320,7 @@
       <section class="intro">
         <p class="eyebrow">Fast geschafft</p>
         <h1 id="shipping-title">Wohin darf eure Erinnerung reisen?</h1>
-        <p class="intro-copy" id="shipping-intro">Mit der Lieferadresse berechnen wir den aktuellen Gesamtpreis inklusive Versand und Steuern.</p>
+        <p class="intro-copy" id="shipping-intro">Mit eurer Lieferadresse prüfen wir Produktpreise, Versandkosten und die voraussichtliche Lieferzeit.</p>
       </section>
 
       <div class="steps" aria-label="Bestellfortschritt">
@@ -341,35 +331,26 @@
         <div class="step"><span class="step-dot">3</span><span class="step-label">Bezahlen</span></div>
       </div>
 
-      <div class="checkout-grid">
-        <section class="card address-card" aria-labelledby="address-title">
-          <h2 class="card-title" id="address-title">Lieferadresse</h2>
-          <p class="card-copy">Wählt die Mengen und gebt eure Lieferadresse ein. Nach dem Kauf könnt ihr dieselben Designs erneut an eine andere Adresse bestellen.</p>
-          <form id="address-form" novalidate>
-            <div class="shipment-list" id="shipment-list"></div>
-            <button class="submit-button" id="submit-button" type="submit" disabled>Gesamtpreis berechnen <span aria-hidden="true">→</span></button>
-            <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten im <a href="/datenschutz">Datenschutz</a>.</p>
-            <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
-            <p id="shipping-draft-status" role="status" aria-live="polite"></p>
-          </form>
-        </section>
-
-        <section class="card summary-card" id="summary-card" aria-labelledby="summary-title">
-          <div class="design-summary-list" id="design-summary-list"></div>
-          <div class="quote" id="quote-placeholder">
-            <p class="quote-placeholder">Der Gesamtpreis erscheint hier, sobald ihr eure Lieferadresse eingegeben habt.</p>
-          </div>
-          <div class="quote" id="quote-result" hidden aria-live="polite">
-            <div class="quote-row"><span id="items-label" data-i18n-ignore>Produkte</span><strong id="items-price" data-i18n-ignore></strong></div>
-            <div class="quote-row"><span>Versand</span><strong id="shipping-price" data-i18n-ignore></strong></div>
-            <div class="quote-row"><span>Steuern und MwSt.</span><strong id="tax-price" data-i18n-ignore></strong></div>
-            <div class="quote-total"><span>Gesamtpreis</span><strong id="total-price" data-i18n-ignore></strong></div>
-            <div class="delivery-information" id="delivery-information" aria-live="polite" hidden></div>
-            <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Zahlung <span aria-hidden="true">→</span></button>
-            <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
-          </div>
-        </section>
-      </div>
+      <section class="card address-card" aria-labelledby="address-title">
+        <h2 class="card-title" id="address-title">Lieferadresse</h2>
+        <p class="card-copy">Wählt die Mengen und gebt eure Lieferadresse ein. Nach dem Kauf könnt ihr dieselben Designs erneut an eine andere Adresse bestellen.</p>
+        <form id="address-form" novalidate>
+          <div class="shipment-list" id="shipment-list"></div>
+          <button class="submit-button" id="submit-button" type="submit" disabled>Preise und Lieferung prüfen <span aria-hidden="true">→</span></button>
+          <p class="privacy-note">Mehr zur Verarbeitung eurer Lieferdaten im <a href="/datenschutz">Datenschutz</a>.</p>
+          <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
+          <p id="shipping-draft-status" role="status" aria-live="polite"></p>
+        </form>
+        <div class="quote" id="quote-result" hidden aria-live="polite">
+          <div class="quote-row"><span id="items-label" data-i18n-ignore>Produkte</span><strong id="items-price" data-i18n-ignore></strong></div>
+          <div class="quote-row"><span>Versand</span><strong id="shipping-price" data-i18n-ignore></strong></div>
+          <div class="quote-total"><span>Zwischensumme</span><strong id="subtotal-price" data-i18n-ignore></strong></div>
+          <p class="quote-note">Zuzüglich Steuern. Den endgültigen Gesamtpreis seht ihr vor dem Kauf auf der Zahlungsseite.</p>
+          <div class="delivery-information" id="delivery-information" aria-live="polite" hidden></div>
+          <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Zahlung <span aria-hidden="true">→</span></button>
+          <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
+        </div>
+      </section>
     </div>
     <div class="fatal" id="fatal-error" hidden></div>
   </main>
@@ -402,7 +383,6 @@
     const shipmentList = document.getElementById('shipment-list');
     const submitButton = document.getElementById('submit-button');
     const formError = document.getElementById('form-error');
-    const quotePlaceholder = document.getElementById('quote-placeholder');
     const quoteResult = document.getElementById('quote-result');
     const checkoutButton = document.getElementById('checkout-button');
     const checkoutError = document.getElementById('checkout-error');
@@ -422,13 +402,13 @@
       quote_shipping_changed: 'Die Lieferangaben haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.',
       single_address_required: 'Pro Bestellung ist eine Lieferadresse möglich. Bitte gebt eine einzelne Lieferadresse ein.',
       invalid_address: 'Bitte füllt alle benötigten Adressfelder vollständig aus.',
-      pricing_not_configured: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
-      address_not_accepted: 'Für diese Lieferadresse konnten keine Versandkosten berechnet werden. Bitte prüft eure Angaben.',
-      pricing_unavailable: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
-      pricing_currency_mismatch: 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.',
-      quote_not_found: 'Der Gesamtpreis muss neu berechnet werden.',
-      quote_expired: 'Der Gesamtpreis muss neu berechnet werden.',
-      quote_changed: 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.',
+      pricing_not_configured: 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.',
+      selection_not_available: 'Für diese Produktauswahl konnte keine Lieferung bestätigt werden. Bitte prüft eure Adresse oder passt die Auswahl an.',
+      pricing_unavailable: 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.',
+      pricing_currency_mismatch: 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.',
+      quote_not_found: 'Bitte prüft Preise und Lieferung erneut.',
+      quote_expired: 'Bitte prüft Preise und Lieferung erneut.',
+      quote_changed: 'Die Preise haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.',
       checkout_in_progress: 'Die Zahlungsseite wird bereits geöffnet. Bitte wartet einen Moment.',
       checkout_not_configured: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
       stripe_live_mode_blocked: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
@@ -456,7 +436,7 @@
       button.replaceChildren(label, document.createTextNode(' '), arrow);
     }
 
-    setButtonLabel(submitButton, 'Gesamtpreis berechnen');
+    setButtonLabel(submitButton, 'Preise und Lieferung prüfen');
     setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
 
     function getOrCreateGuestId() {
@@ -1235,13 +1215,9 @@
       shippingRevision += 1;
       currentQuote = null;
       quoteResult.hidden = true;
-      quotePlaceholder.hidden = false;
       clearText(checkoutError);
       checkoutButton.disabled = true;
       setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
-      if (configurations.length) {
-        renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
-      }
       saveShippingDraft();
     }
 
@@ -1276,52 +1252,6 @@
       return WolkenworteI18n.formatCurrency(cents, currency);
     }
 
-    function shipmentTotalsByConfiguration(shipments) {
-      const totals = new Map(configurations.map((itemConfiguration) => [itemConfiguration.id, 0]));
-      shipments.forEach((shipment) => {
-        if (Array.isArray(shipment.items)) {
-          shipment.items.forEach((item) => {
-            const configurationId = String(item.configurationId || item.configuration_id || '').trim();
-            totals.set(configurationId, (totals.get(configurationId) || 0) + Math.max(0, Number(item.quantity) || 0));
-          });
-        } else if (configuration && Number(shipment.quantity) > 0) {
-          totals.set(configuration.id, (totals.get(configuration.id) || 0) + Number(shipment.quantity));
-        }
-      });
-      return totals;
-    }
-
-    function renderSummaryProducts(totals = null) {
-      const list = document.getElementById('design-summary-list');
-      list.replaceChildren();
-      configurations.forEach((itemConfiguration, index) => {
-        const row = document.createElement('div');
-        row.className = 'design-summary';
-        const preview = document.createElement('div');
-        preview.className = 'design-preview';
-        const image = document.createElement('img');
-        image.src = itemConfiguration.printFileUrl;
-        image.alt = '';
-        preview.appendChild(image);
-
-        const copy = document.createElement('div');
-        copy.className = 'design-copy';
-        const title = document.createElement('strong');
-        if (index === 0) title.id = 'summary-title';
-        setText(title, itemConfiguration.product.displayName);
-        const quantity = Number(totals?.get(itemConfiguration.id) || 0);
-        const quantityText = totals
-          ? quantityLabel(quantity, itemConfiguration)
-          : t('Menge wählt ihr unten');
-        const size = document.createElement('span');
-        size.setAttribute('data-i18n-ignore', '');
-        size.textContent = `${quantityText} · ${configurationSizeText(itemConfiguration)}`;
-        copy.append(title, size);
-        row.append(preview, copy);
-        list.appendChild(row);
-      });
-    }
-
     function renderDeliveryInformation(details) {
       const container = document.getElementById('delivery-information');
       container.replaceChildren();
@@ -1333,17 +1263,25 @@
         container.appendChild(line);
       };
       const delivery = details?.delivery;
-      const date = (value) => new Intl.DateTimeFormat(WolkenworteI18n.getLocale(), {
+      const formatter = new Intl.DateTimeFormat(WolkenworteI18n.getLocale(), {
         day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
-      }).format(new Date(value + 'T12:00:00Z'));
+      });
+      let dateRange = '', days = '';
       if (delivery?.minDate && delivery?.maxDate) {
-        append(delivery.minDate === delivery.maxDate ? 'Voraussichtliche Lieferung: {{date}}'
-          : 'Voraussichtliche Lieferung: {{from}} – {{to}}', {
-          date: date(delivery.minDate), from: date(delivery.minDate), to: date(delivery.maxDate),
-        }, 'delivery-estimate');
-      } else if (Number.isInteger(delivery?.minDays) && Number.isInteger(delivery?.maxDays)) {
-        append('Geschätzte Lieferzeit: {{min}}–{{max}} Tage', {
-          min: delivery.minDays, max: delivery.maxDays,
+        const from = new Date(delivery.minDate + 'T12:00:00Z');
+        const to = new Date(delivery.maxDate + 'T12:00:00Z');
+        dateRange = delivery.minDate === delivery.maxDate ? formatter.format(from) : formatter.formatRange(from, to);
+      }
+      if (Number.isInteger(delivery?.minDays) && Number.isInteger(delivery?.maxDays)) {
+        const min = WolkenworteI18n.formatNumber(delivery.minDays);
+        const max = WolkenworteI18n.formatNumber(delivery.maxDays);
+        days = delivery.minDays === delivery.maxDays
+          ? t(delivery.minDays === 1 ? '{{count}} Tag' : '{{count}} Tage', { count: min })
+          : t('{{min}}–{{max}} Tage', { min, max });
+      }
+      if (days || dateRange) {
+        append('Voraussichtliche Lieferung: {{delivery}}', {
+          delivery: days && dateRange ? `${days} (${dateRange})` : days || dateRange,
         }, 'delivery-estimate');
       } else {
         append('Eine Lieferzeit ist für diese Auswahl derzeit nicht verfügbar.', {}, 'delivery-estimate');
@@ -1351,59 +1289,50 @@
       append('Die Lieferzeit ist eine Schätzung und kann sich ändern.');
       const shipments = details?.shipments || [];
       if (shipments.length > 1) append('Eure Produkte kommen voraussichtlich in {{count}} Sendungen.', { count: shipments.length });
-      const countriesFormat = new Intl.DisplayNames([WolkenworteI18n.getLocale()], { type: 'region' });
       for (const shipment of shipments) {
+        if (shipment.customsFeesPossible === false) continue;
         const products = shipment.items.map((item) => {
           const configuration = configurations.find((entry) => entry.product.key === item.productKey);
           return `${item.quantity} × ${configuration ? t(configuration.product.displayName) : t('Produkt')}`;
         }).join(', ');
-        append(shipment.departureCountry ? '{{products}} · Voraussichtliches Versandland: {{country}}'
-          : '{{products}} · Versandland derzeit nicht bekannt', {
-          products, country: shipment.departureCountry ? countriesFormat.of(shipment.departureCountry) : '',
-        });
         if (shipment.customsFeesPossible === true) {
-          append('Für diese Produkte können bei der Einfuhr zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.', {}, 'delivery-warning');
-        } else if (shipment.customsFeesPossible !== false) {
-          append('Mögliche Einfuhrgebühren konnten für diese Produkte noch nicht ermittelt werden.', {}, 'delivery-warning');
+          append('{{products}}: Bei der Einfuhr können zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.', { products }, 'delivery-warning');
+        } else {
+          append('{{products}}: Mögliche Einfuhrgebühren konnten noch nicht ermittelt werden.', { products }, 'delivery-warning');
         }
       }
-      if (!shipments.length) append('Versandland und mögliche Einfuhrgebühren sind derzeit nicht bekannt.', {}, 'delivery-warning');
+      if (!shipments.length) append('Mögliche Einfuhrgebühren sind derzeit nicht bekannt.', {}, 'delivery-warning');
     }
 
     function showQuote(quote, { scroll = true, resetAction = true } = {}) {
+      if (!quote?.id || typeof quote.currency !== 'string' ||
+          ![quote.itemsCents, quote.shippingCents, quote.itemsCents + quote.shippingCents]
+            .every((amount) => Number.isSafeInteger(amount) && amount >= 0)) {
+        throw customerError('Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.');
+      }
       currentQuote = quote;
-      const shipmentCount = Number(quote.shipmentCount || 1);
-      const deliveryLabel = t(shipmentCount === 1 ? '{{count}} Lieferadresse' : '{{count}} Lieferadressen', {
-        count: WolkenworteI18n.formatNumber(shipmentCount),
-      });
       const productLabel = totalProductLabel(Number(quote.quantity || 0));
-      document.getElementById('items-label').textContent =
-        `${productLabel} · ${deliveryLabel}`;
-      renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
+      document.getElementById('items-label').textContent = productLabel;
       document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
       document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
-      document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
-      document.getElementById('total-price').textContent = formatMoney(quote.totalCents, quote.currency);
+      document.getElementById('subtotal-price').textContent = formatMoney(quote.itemsCents + quote.shippingCents, quote.currency);
       renderDeliveryInformation(quote.shippingDetails);
-      quotePlaceholder.hidden = true;
       quoteResult.hidden = false;
       if (resetAction) clearText(checkoutError);
       if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = false;
       if (resetAction) setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
-      if (scroll) document.getElementById('summary-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (scroll) quoteResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function refreshLocalizedShipping() {
       if (!countries.length || !configurations.length || !shipmentList.children.length) return;
       const shipments = collectShipments({ validate: false }).shipments;
-      const submitSource = submitButton.dataset.labelSource || 'Gesamtpreis berechnen';
+      const submitSource = submitButton.dataset.labelSource || 'Preise und Lieferung prüfen';
       const checkoutSource = checkoutButton.dataset.labelSource || 'Weiter zur Zahlung';
       refreshCountryDisplayNames();
       renderShipments(shipments);
       if (currentQuote) {
         showQuote(currentQuote, { scroll: false, resetAction: false });
-      } else {
-        renderSummaryProducts(shipmentTotalsByConfiguration(shipments));
       }
       setButtonLabel(submitButton, submitSource);
       setButtonLabel(checkoutButton, checkoutSource);
@@ -1459,21 +1388,21 @@
       );
       if (!response.ok || saved.shipments?.length !== 1) {
         clearQuote();
-        setText(formError, customerErrorSource(saved, 'Der Gesamtpreis muss neu berechnet werden.'));
+        setText(formError, customerErrorSource(saved, 'Bitte prüft Preise und Lieferung erneut.'));
         return;
       }
       if (savedShipping?.length && shippingSnapshot(savedShipping) !== shippingSnapshot(saved.shipments)) {
         // The URL can still refer to an older, cancelled checkout after the
         // customer has edited the address/quantity. Keep the newer tab draft.
         clearQuote();
-        setText(formError, 'Der Gesamtpreis muss neu berechnet werden.');
+        setText(formError, 'Bitte prüft Preise und Lieferung erneut.');
         return;
       }
       renderShipments(Array.isArray(saved.shipments) && saved.shipments.length
         ? saved.shipments
         : [defaultShipment()]);
       showQuote(saved.quote);
-      setButtonLabel(submitButton, 'Preis aktualisieren');
+      setButtonLabel(submitButton, 'Preise aktualisieren');
       if (checkoutWasCancelled) {
         setText(checkoutError, 'Zahlung abgebrochen. Eure Angaben sind weiterhin gespeichert.');
       }
@@ -1522,11 +1451,10 @@
           savedShipping[0].items.push(...addedItems);
         }
         renderShipments(savedShipping?.length ? savedShipping : [defaultShipment()]);
-        renderSummaryProducts(shipmentTotalsByConfiguration(collectShipments({ validate: false }).shipments));
         try { await restoreSavedQuote(savedShipping); }
         catch {
           // An unavailable old price must not hide the editable address form.
-          setText(formError, 'Der Gesamtpreis muss neu berechnet werden.');
+          setText(formError, 'Bitte prüft Preise und Lieferung erneut.');
         }
         shippingDraftReady = true;
         saveShippingDraft();
@@ -1569,14 +1497,14 @@
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (!response.ok) {
           if (Array.isArray(result.fields)) markInvalidFields(result.fields);
-          throw customerError(customerErrorSource(result, 'Bitte füllt alle benötigten Adressfelder vollständig aus.'));
+          throw customerError(customerErrorSource(result, 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.'));
         }
         showQuote(result.quote);
-        setButtonLabel(submitButton, 'Preis aktualisieren');
+        setButtonLabel(submitButton, 'Preise aktualisieren');
       } catch (error) {
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         setText(formError,
-          error.customerSource || 'Der Gesamtpreis konnte gerade nicht berechnet werden. Bitte versucht es gleich noch einmal.');
+          error.customerSource || 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.');
         setButtonLabel(submitButton, 'Erneut versuchen');
       } finally {
         finishShippingRequest(request);
@@ -1612,17 +1540,18 @@
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (result.quote) showQuote(result.quote);
         if (!response.ok) {
-          if (result.error === 'quote_expired') {
+          if (['quote_expired', 'quote_not_found', 'invalid_address', 'shipping_unavailable',
+            'selection_not_available', 'pricing_unavailable', 'pricing_currency_mismatch', 'pricing_not_configured'].includes(result.error)) {
             clearQuote();
-            setButtonLabel(submitButton, 'Gesamtpreis neu berechnen');
-            setText(formError, customerErrorSource(result, 'Der Gesamtpreis muss neu berechnet werden.'));
+            setButtonLabel(submitButton, 'Preise und Lieferung erneut prüfen');
+            setText(formError, customerErrorSource(result, 'Bitte prüft Preise und Lieferung erneut.'));
             return;
           }
           if (result.error === 'quote_changed' || result.error === 'quote_shipping_changed') {
             setButtonLabel(checkoutButton, result.error === 'quote_shipping_changed'
-              ? 'Aktualisierte Lieferung bestätigen' : 'Neuen Gesamtpreis bestätigen');
+              ? 'Aktualisierte Lieferung bestätigen' : 'Neue Preise bestätigen');
             setText(checkoutError,
-              customerErrorSource(result, 'Der Gesamtpreis hat sich geändert. Bitte bestätigt den neuen Betrag.'));
+              customerErrorSource(result, 'Die Preise haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.'));
             return;
           }
           throw customerError(customerErrorSource(result,

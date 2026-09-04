@@ -26,7 +26,7 @@ test('catalog-wide pricing adds a 50% markup and payment reserve to Printful pro
   }, 2);
   assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
     currency: 'EUR', quantity: 2, itemsCents: 1614, paymentReserveCents: 114,
-    shippingCents: 400, taxCents: 403, totalCents: 2417, shipmentQuotes: undefined,
+    shippingCents: 400, taxCents: 0, totalCents: 2014, shipmentQuotes: undefined,
   });
 });
 
@@ -36,8 +36,8 @@ test('inexpensive products use the same markup rule', () => {
   }, 1);
   assert.equal(quote.itemsCents, 359);
   assert.equal(quote.paymentReserveCents, 59);
-  assert.equal(quote.taxCents, 152);
-  assert.equal(quote.totalCents, 911);
+  assert.equal(quote.taxCents, 0);
+  assert.equal(quote.totalCents, 759);
 });
 
 test('split shipments apply the markup to the combined product subtotal', () => {
@@ -51,24 +51,24 @@ test('split shipments apply the markup to the combined product subtotal', () => 
     itemsCents: 538,
     paymentReserveCents: 88,
     shippingCents: 900,
-    taxCents: 288,
-    totalCents: 1726,
+    taxCents: 0,
+    totalCents: 1438,
     shipmentQuotes: undefined,
   });
-  assert.deepEqual(quote.shipmentQuotes.map((shipment) => shipment.taxCents), [116, 172]);
+  assert.deepEqual(quote.shipmentQuotes.map((shipment) => shipment.taxCents), [0, 0]);
   const combined = buildCustomerQuote({ currency: 'EUR', shipping: 9, vat: 2.4, total: 14.4 }, 3);
   assert.equal(quote.paymentReserveCents, combined.paymentReserveCents, 'charge the fixed fee once per purchase');
 });
 
-test('legacy customer VAT remains separate from the fixed reserve tax assumption', () => {
+test('supplier VAT never becomes customer tax', () => {
   const quote = buildCustomerQuote({
     currency: 'EUR', shipping: 6.24, tax: 0, vat: 3.28, total: 20.50,
   }, 2);
   assert.equal(quote.itemsCents, 1778);
   assert.equal(quote.paymentReserveCents, 131);
   assert.equal(quote.shippingCents, 624);
-  assert.equal(quote.taxCents, 456);
-  assert.equal(quote.totalCents, 2858);
+  assert.equal(quote.taxCents, 0);
+  assert.equal(quote.totalCents, 2402);
 });
 
 test('a lower quantity-discounted Printful subtotal automatically lowers the customer unit price', () => {
@@ -90,7 +90,7 @@ test('reserve uses 20% internally whether Printful returns no tax, zero tax, VAT
     assert.equal(quote.itemsCents, 1618);
     assert.equal(quote.shippingCents, 500);
     assert.equal(quote.shipmentQuotes[0].supplierTaxCents, Math.round(supplierTax * 100));
-    if (!supplierTax) assert.equal(quote.taxCents, 0, 'the internal 20% must not become customer tax');
+    assert.equal(quote.taxCents, 0, 'the internal 20% must not become customer tax');
   }
 });
 

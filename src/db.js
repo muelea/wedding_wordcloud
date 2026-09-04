@@ -7,6 +7,7 @@ const { getProduct, resolveProductOrientation } = require('./products');
 const { buildEmailSnapshot } = require('./emailTemplates');
 const I18n = require('./i18n');
 const log = require('./structuredLog');
+const { usesStripeTax, paymentAmounts } = require('./checkoutTax');
 
 const REQUIRED_SCHEMA_VERSION = '3';
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
@@ -678,7 +679,7 @@ async function insertOrderShipmentsAndItems(client, orderId, quote, configuratio
       : Math.round(Number(printfulCosts.shipping || 0) * 100);
     const taxCents = Number.isSafeInteger(Number(customerCosts.taxCents))
       ? Number(customerCosts.taxCents)
-      : Math.round(Number(printfulCosts.tax || 0) * 100) + Math.round(Number(printfulCosts.vat || 0) * 100);
+      : 0;
     await client.query(`
       INSERT INTO checkout_order_shipments (
         order_id, shipment_index, quantity, items_json, recipient_json,
@@ -820,6 +821,20 @@ async function claimCheckoutAttempt(orderId) {
     RETURNING *
   `, [orderId]);
   return rowToBoundary(result.rows[0]);
+}
+
+async function attachStripeCustomer(orderId, customerId) {
+  if (!/^cus_[A-Za-z0-9]+$/.test(customerId)) throw new Error('invalid Stripe customer');
+  const result = await getPool().query(`
+    UPDATE orders
+    SET checkout_request_json = jsonb_set(checkout_request_json, '{customerId}', to_jsonb($2::text)),
+        updated_at = transaction_timestamp()
+    WHERE id = $1 AND status = 'creating_checkout' AND stripe_session_id IS NULL
+      AND checkout_request_json->>'taxMode' = 'stripe'
+      AND (checkout_request_json->>'customerId' IS NULL OR checkout_request_json->>'customerId' = $2)
+    RETURNING id
+  `, [orderId, customerId]);
+  if (!result.rowCount) throw new Error('Stripe customer could not be attached');
 }
 
 async function attachStripeSession(orderId, { id, url }) {
@@ -971,6 +986,7 @@ async function recordSuccessfulPayment({
   currency = null,
   paymentStatus = 'paid',
   buyerEmail = null,
+  checkoutSession = null,
 }) {
   return withTransaction(async (client) => {
     const insertedEvent = await client.query(`
@@ -1004,7 +1020,12 @@ async function recordSuccessfulPayment({
     if (!order) throw new Error('checkout order not found or not payable');
 
     const expectedMode = livemode ? 'live' : 'test';
-    const trustedAmount = amountTotal == null || Number(amountTotal) === order.total_cents;
+    const stripeTax = usesStripeTax(order);
+    const confirmedAmounts = stripeTax ? paymentAmounts(order, checkoutSession) : null;
+    const trustedAmount = stripeTax
+      ? Boolean(confirmedAmounts) && amountTotal === confirmedAmounts.totalCents &&
+        checkoutSession.id === stripeSessionId && checkoutSession.payment_status === 'paid'
+      : amountTotal == null || Number(amountTotal) === order.total_cents;
     const trustedCurrency = currency == null || String(currency).toUpperCase() === order.currency;
     if (order.mode !== expectedMode || !trustedAmount || !trustedCurrency || paymentStatus !== 'paid') {
       throw new Error('checkout payment does not match trusted order data');
@@ -1041,6 +1062,8 @@ async function recordSuccessfulPayment({
           fulfillment_updated_at = transaction_timestamp(),
           checkout_ambiguous = false,
           checkout_error = null,
+          tax_cents = $8,
+          total_cents = $9,
           updated_at = transaction_timestamp()
       WHERE id = $7
       RETURNING *
@@ -1052,7 +1075,15 @@ async function recordSuccessfulPayment({
       paymentState,
       fulfillmentMode,
       order.id,
+      confirmedAmounts?.taxCents ?? order.tax_cents,
+      confirmedAmounts?.totalCents ?? order.total_cents,
     ]);
+    if (stripeTax) {
+      // New checkouts have one address. Persist the final customer tax in the
+      // same transaction, before constructing the immutable confirmation email.
+      await client.query('UPDATE checkout_order_shipments SET tax_cents = $2 WHERE order_id = $1',
+        [order.id, confirmedAmounts.taxCents]);
+    }
     await client.query(
       'UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2',
       [order.id, stripeEventId]
@@ -2688,6 +2719,7 @@ module.exports = {
   createCheckoutOrder,
   claimCheckoutAttempt,
   attachStripeSession,
+  attachStripeCustomer,
   markCheckoutCreationFailed,
   retryCheckoutOrder,
   replaceExpiredCheckoutSession,

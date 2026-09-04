@@ -168,6 +168,7 @@ function makeProduct({
   defaultQuantity,
   unit,
   designSafeMargin,
+  designSafeAreas,
   fulfillmentPlacements,
   fulfillmentOptions,
   printTechnique = 'digital',
@@ -214,6 +215,14 @@ function makeProduct({
       !resolvedOrientationOptions.some((option) => option.key === resolvedDefaultOrientation)) {
     throw new TypeError(`Ungültige Standardausrichtung für ${key}.`);
   }
+  const safeAreas = Object.fromEntries(resolvedPrintSurfaces.map(({ key: surfaceKey }) => [
+    surfaceKey,
+    Object.freeze({ ...(designSafeAreas?.[surfaceKey] || designSafeAreas?.default || {
+      x: designSafeMargin, y: designSafeMargin,
+      width: printFile.width - designSafeMargin * 2,
+      height: printFile.height - designSafeMargin * 2,
+    }) }),
+  ]));
   return Object.freeze({
     key,
     familyKey,
@@ -239,6 +248,10 @@ function makeProduct({
             fit: previewMockup.canvas?.fit || 'contain',
             clipPath: previewMockup.canvas?.clipPath || 'none',
           }),
+          canvases: previewMockup.canvases
+            ? Object.freeze(Object.fromEntries(Object.entries(previewMockup.canvases)
+              .map(([key, canvas]) => [key, Object.freeze({ fit: 'cover', clipPath: 'none', ...canvas })])))
+            : null,
           assets: Object.freeze({ ...previewMockup.assets }),
         })
       : null,
@@ -248,6 +261,7 @@ function makeProduct({
     currency: 'EUR',
     unit: Object.freeze(unit),
     designSafeMargin,
+    designSafeAreas: Object.freeze(safeAreas),
     printful: Object.freeze({
       productId,
       variantId,
@@ -263,7 +277,12 @@ function makeProduct({
     size: Object.freeze(size),
     printFile: Object.freeze({ ...printFile, placement: printPlacement }),
     template: Object.freeze(template),
-    layoutGeometry: freezeLayoutGeometry(layoutGeometry),
+    layoutGeometry: freezeLayoutGeometry({
+      ...layoutGeometry,
+      'fit-area': designSafeAreas
+        ? [{ ...safeAreas[resolvedPrintSurfaces[0].key], optimize: true }]
+        : layoutGeometry['fit-area'],
+    }),
     themes: THEMES,
     layouts,
   });
@@ -328,6 +347,9 @@ function resolveProductOrientation(product, rawOrientation) {
       height: product.printFile.width,
     },
     layoutGeometry: transposeLayoutGeometry(product.layoutGeometry),
+    designSafeAreas: Object.fromEntries(Object.entries(product.designSafeAreas).map(([key, area]) => [
+      key, { x: area.y, y: area.x, width: area.height, height: area.width },
+    ])),
     previewMockup: product.previewMockup
       ? {
           ...product.previewMockup,
@@ -470,7 +492,7 @@ const COASTER = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1.3,
-    canvas: { left: 17.5, top: 17.7, width: 65.3, height: 64.9, fit: 'cover' },
+    canvas: { left: 457 / 30, top: 457 / 30, width: 2087 / 30, height: 2087 / 30, fit: 'cover' },
     assets: { default: '/assets/product-mockups/coaster-flat.png' },
   },
   productId: 611,
@@ -481,6 +503,8 @@ const COASTER = makeProduct({
   defaultQuantity: 1,
   unit: { singular: 'Untersetzer', plural: 'Untersetzer' },
   designSafeMargin: 60,
+  // An inscribed rectangle also keeps square text/image bounds out of the rounded corners.
+  designSafeAreas: { default: { x: 90, y: 90, width: 1001, height: 1001 } },
   size: {
     label: '95 × 95 mm',
     widthCm: 9.5,
@@ -526,6 +550,8 @@ function makePosterProduct({
     defaultQuantity: 1,
     unit: { singular: 'Poster', plural: 'Poster' },
     designSafeMargin: safeMargin,
+    // 1.25 cm per edge at 300 dpi, rounded inward past the guide stroke.
+    designSafeAreas: { default: { x: 154, y: 154, width: width - 308, height: height - 308 } },
     size: {
       label,
       detail: '189 g/m² · matt',
@@ -577,6 +603,8 @@ function makeFramedPosterProduct({
     defaultQuantity: 1,
     unit: { singular: 'Rahmenposter', plural: 'Rahmenposter' },
     designSafeMargin: safeMargin,
+    // 1.25 cm per edge at 300 dpi, rounded inward past the guide stroke.
+    designSafeAreas: { default: { x: 154, y: 154, width: width - 308, height: height - 308 } },
     size: {
       label,
       detail: '189 g/m² · schwarzer Holzrahmen',
@@ -640,7 +668,7 @@ const POSTER_50X70 = makePosterProduct({
     width: 1000,
     height: 1000,
     scale: 1.1,
-    canvas: { left: 21.4, top: 10, width: 57.2, height: 80, fit: 'cover' },
+    canvas: { left: 21.3, top: 9.9, width: 57.4, height: 80.2, fit: 'cover' },
     assets: { default: '/assets/product-mockups/matte-poster-50x70.png' },
   },
   template: {
@@ -737,6 +765,8 @@ const TOTE_BAG = makeProduct({
   defaultQuantity: 1,
   unit: { singular: 'Tragetasche', plural: 'Tragetaschen' },
   designSafeMargin: 100,
+  // File 6 is the simple one-face template; keep clear of the top seam and bottom fold.
+  designSafeAreas: { default: { x: 305, y: 490, width: 1935, height: 1640 } },
   size: {
     label: '39 × 39 cm',
     detail: '10 l · schwarze Träger',
@@ -771,7 +801,7 @@ const THROW_BLANKET_50X60 = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1.1,
-    canvas: { left: 6.3, top: 13.7, width: 86.8, height: 71.9, fit: 'cover' },
+    canvas: { left: 131 / 30, top: 353 / 30, width: 2714 / 30, height: 2282 / 30, fit: 'cover' },
     assets: { default: '/assets/product-mockups/throw-blanket-flat-horizontal.png' },
   },
   productId: 395,
@@ -782,6 +812,7 @@ const THROW_BLANKET_50X60 = makeProduct({
   defaultQuantity: 1,
   unit: { singular: 'Decke', plural: 'Decken' },
   designSafeMargin: 180,
+  designSafeAreas: { default: { x: 600, y: 600, width: 8250, height: 6750 } },
   size: {
     label: '127 × 153 cm',
     detail: 'weich · weiße Rückseite',
@@ -822,7 +853,11 @@ const SPIRAL_NOTEBOOK = makeProduct({
     width: 1000,
     height: 1000,
     scale: 1,
-    canvas: { left: 19.9, top: 4.7, width: 57.6, height: 90.4, fit: 'cover' },
+    canvas: { left: 543 / 30, top: 99 / 30, width: 1838 / 30, height: 2796 / 30, fit: 'cover' },
+    canvases: {
+      front: { left: 543 / 30, top: 99 / 30, width: 1838 / 30, height: 2796 / 30 },
+      back: { left: 542 / 30, top: 101 / 30, width: 1838 / 30, height: 2796 / 30 },
+    },
     assets: {
       front: '/assets/product-mockups/spiral-notebook-front.png',
       back: '/assets/product-mockups/spiral-notebook-back.png',
@@ -840,6 +875,10 @@ const SPIRAL_NOTEBOOK = makeProduct({
   defaultQuantity: 1,
   unit: { singular: 'Notizbuch', plural: 'Notizbücher' },
   designSafeMargin: 90,
+  designSafeAreas: {
+    front: { x: 201, y: 170, width: 1416, height: 2273 },
+    back: { x: 128, y: 170, width: 1416, height: 2273 },
+  },
   size: {
     label: '14,5 × 21 cm',
     detail: '140 punktierte Seiten · Soft-Touch',
@@ -900,6 +939,7 @@ const BASIC_PILLOW_18 = makeProduct({
   defaultQuantity: 1,
   unit: { singular: 'Kissen', plural: 'Kissen' },
   designSafeMargin: 120,
+  designSafeAreas: { default: { x: 150, y: 150, width: 2550, height: 2550 } },
   size: {
     label: '46 × 46 cm',
     detail: 'inklusive Füllung · weißer Reißverschluss',
@@ -966,6 +1006,7 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
     currency: resolvedProduct.currency,
     unit: resolvedProduct.unit,
     designSafeMargin: resolvedProduct.designSafeMargin,
+    designSafeAreas: resolvedProduct.designSafeAreas,
     printSurfaces: resolvedProduct.printSurfaces,
     size: resolvedProduct.size,
     printFile: resolvedProduct.printFile,
@@ -981,6 +1022,7 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
         size: oriented.size,
         printFile: oriented.printFile,
         layoutGeometry: oriented.layoutGeometry,
+        designSafeAreas: oriented.designSafeAreas,
         previewMockup: oriented.previewMockup,
       };
     }),

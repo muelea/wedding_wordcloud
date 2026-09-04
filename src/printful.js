@@ -103,10 +103,10 @@ async function printfulRequest(path, options = {}) {
       : `Printful-Anfrage fehlgeschlagen (${response.status}).`;
     const code = apiStatus === 401 || apiStatus === 403
       ? 'PRINTFUL_AUTH_FAILED'
-      : apiStatus >= 400 && apiStatus < 500
-        ? 'PRINTFUL_ADDRESS_REJECTED'
+      : apiStatus >= 400 && apiStatus < 500 && apiStatus !== 429
+        ? 'PRINTFUL_REQUEST_REJECTED'
         : 'PRINTFUL_UNAVAILABLE';
-    throw new PrintfulApiError(code, message, apiStatus >= 500 ? 502 : apiStatus);
+    throw new PrintfulApiError(code, message, apiStatus >= 500 || apiStatus === 429 ? 502 : apiStatus);
   }
 
   performanceProbe.recordExternalCall('printful', {
@@ -177,7 +177,14 @@ async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
       items: orderItems,
     }),
   });
-  if (!result?.costs || typeof result.costs.currency !== 'string') {
+  const costs = result?.costs;
+  const validAmount = (value) => (typeof value === 'number' || typeof value === 'string') &&
+    /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(String(value)) && Number.isSafeInteger(Math.round(Number(value) * 100));
+  if (!costs || typeof costs.currency !== 'string' ||
+      !validAmount(costs.total) || Number(costs.total) <= 0 || !validAmount(costs.shipping) ||
+      [costs.tax, costs.vat].some((value) => value != null && !validAmount(value)) ||
+      Math.round(Number(costs.total) * 100) <= Math.round(Number(costs.shipping) * 100) +
+        Math.round(Number(costs.tax || 0) * 100) + Math.round(Number(costs.vat || 0) * 100)) {
     throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keinen gültigen Preis geliefert.', 502);
   }
   return result.costs;
@@ -206,7 +213,7 @@ async function getShippingRates({ variantId, quantity, recipient, items }) {
   if (!Array.isArray(rates)) {
     throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine gültigen Versandinformationen geliefert.', 502);
   }
-  const rate = rates.find((entry) => entry.shipping === 'STANDARD');
+  const rate = rates.find((entry) => entry?.shipping === 'STANDARD');
   if (!rate) {
     throw new PrintfulApiError('PRINTFUL_SHIPPING_UNAVAILABLE', 'Standardversand ist für diese Auswahl nicht verfügbar.', 422);
   }

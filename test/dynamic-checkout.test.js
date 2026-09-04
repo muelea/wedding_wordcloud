@@ -76,7 +76,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
 
   const quote = await calculateQuote(baseUrl, event.slug, configuration.id);
   assert.equal(quote.paymentReserveCents, 123);
-  assert.equal(quote.totalCents, 2641);
+  assert.equal(quote.totalCents, 2219);
 
   const checkoutUrl = `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/checkout`;
   const first = await fetch(checkoutUrl, {
@@ -190,7 +190,7 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   assert.equal(changedBody.error, 'quote_changed');
   assert.equal(changedBody.quote.id, quote.id);
   assert.equal(changedBody.quote.paymentReserveCents, 130);
-  assert.equal(changedBody.quote.totalCents, 2831);
+  assert.equal(changedBody.quote.totalCents, 2379);
   assert.equal(checkoutCalls, 0);
 
   const confirmed = await fetch(checkoutUrl, {

@@ -1,0 +1,382 @@
+{
+  "verifiedAt": "2026-09-03",
+  "sources": [
+    "https://api.printful.com/mockup-generator/printfiles/{productId}",
+    "https://api.printful.com/v2/catalog-products/{productId}/mockup-templates"
+  ],
+  "products": [
+    {
+      "productKey": "white-glossy-mug-duo-11oz",
+      "productId": 19,
+      "variant": {
+        "variant_id": 1320,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "white-glossy-mug-15oz",
+      "productId": 19,
+      "variant": {
+        "variant_id": 4830,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "white-glossy-mug-20oz",
+      "productId": 19,
+      "variant": {
+        "variant_id": 16586,
+        "placements": {
+          "default": 426
+        }
+      },
+      "printfile": {
+        "printfile_id": 426,
+        "width": 3071,
+        "height": 1205,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "cork-back-coaster",
+      "productId": 611,
+      "variant": {
+        "variant_id": 15662,
+        "placements": {
+          "default": 358
+        }
+      },
+      "printfile": {
+        "printfile_id": 358,
+        "width": 1181,
+        "height": 1181,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            15662
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/cork_back_coaster/medium/flat/05_coaster_flat_base_white.png?v=1685084559",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 358,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2087,
+          "print_area_height": 2087,
+          "print_area_top": 457,
+          "print_area_left": 457,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/coaster-flat.png",
+          "sha256": "c02c2e2c4bd4a7937610a9bf1fbc56d2d7c771491d0051beff276acf87770a73"
+        }
+      ]
+    },
+    {
+      "productKey": "matte-poster-30x40cm",
+      "productId": 268,
+      "variant": {
+        "variant_id": 8948,
+        "placements": {
+          "default": 153
+        }
+      },
+      "printfile": {
+        "printfile_id": 153,
+        "width": 4724,
+        "height": 3544,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            8948
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/flat/30x40CM/30x40_vertical/01-30x40-ver-cover.png?v=1747134274",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 152,
+          "template_width": 1000,
+          "template_height": 1000,
+          "print_area_width": 492,
+          "print_area_height": 655,
+          "print_area_top": 177,
+          "print_area_left": 250,
+          "template_positioning": "overlay",
+          "orientation": "vertical",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/matte-poster-30x40.png",
+          "sha256": "b0de16449805783c6186468260eddae94817017edacd3ed6279df3ba2b7d317d"
+        }
+      ]
+    },
+    {
+      "productKey": "matte-poster-50x70cm",
+      "productId": 268,
+      "variant": {
+        "variant_id": 8952,
+        "placements": {
+          "default": 113
+        }
+      },
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            8952
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/flat/50x70CM/50x70_vertical/01-50x70-ver-cover.png?v=1747134274",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 112,
+          "template_width": 1000,
+          "template_height": 1000,
+          "print_area_width": 574,
+          "print_area_height": 802,
+          "print_area_top": 99,
+          "print_area_left": 213,
+          "template_positioning": "overlay",
+          "orientation": "vertical",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/matte-poster-50x70.png",
+          "sha256": "d36539f78a4c30bad575800693da1cba9edbb96e58c3c26dca4a458f1766fca7"
+        }
+      ]
+    },
+    {
+      "productKey": "framed-matte-poster-black-30x40cm",
+      "productId": 304,
+      "variant": {
+        "variant_id": 9357,
+        "placements": {
+          "default": 15
+        }
+      },
+      "printfile": {
+        "printfile_id": 15,
+        "width": 4800,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "framed-matte-poster-black-50x70cm",
+      "productId": 304,
+      "variant": {
+        "variant_id": 9358,
+        "placements": {
+          "default": 113
+        }
+      },
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-tote-black-handles",
+      "productId": 84,
+      "variant": {
+        "variant_id": 4533,
+        "placements": {
+          "default": 6
+        }
+      },
+      "printfile": {
+        "printfile_id": 6,
+        "width": 2550,
+        "height": 2475,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "throw-blanket-50x60in",
+      "productId": 395,
+      "variant": {
+        "variant_id": 10986,
+        "placements": {
+          "default": 208
+        }
+      },
+      "printfile": {
+        "printfile_id": 208,
+        "width": 9450,
+        "height": 7950,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            10986
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/blanket/medium/flat/horizontal/05_blanket_flat_front_base_whitebg.png?v=1774009120",
+          "background_url": "https://files.cdn.printful.com/m/blanket/medium/flat/horizontal/01_blanket_flat_front_white.png?v=1774009120",
+          "background_color": null,
+          "printfile_id": 208,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2714,
+          "print_area_height": 2282,
+          "print_area_top": 353,
+          "print_area_left": 131,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/throw-blanket-flat-horizontal.png",
+          "sha256": "fefc34b8394fcde6684a0194609378baa26827512a848d5965815675e5aa4b77"
+        }
+      ]
+    },
+    {
+      "productKey": "all-over-basic-pillow-18in",
+      "productId": 83,
+      "variant": {
+        "variant_id": 4532,
+        "placements": {
+          "front": 32,
+          "back": 32
+        }
+      },
+      "printfile": {
+        "printfile_id": 32,
+        "width": 2850,
+        "height": 2850,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "spiral-notebook-dotted",
+      "productId": 474,
+      "variant": {
+        "variant_id": 12141,
+        "placements": {
+          "front": 242,
+          "back": 242
+        }
+      },
+      "printfile": {
+        "printfile_id": 242,
+        "width": 1725,
+        "height": 2625,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            12141
+          ],
+          "placement": "front",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/spiral_notebook/medium/flat/front/05_Notebook_mockup_flat_front_base_whitebg.png?v=1765776340",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 242,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1838,
+          "print_area_height": 2796,
+          "print_area_top": 99,
+          "print_area_left": 543,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/spiral-notebook-front.png",
+          "sha256": "83fb394d20ae85b70ca606945a0f47185610f0db2fe5db7ac972b96ace1c6903"
+        },
+        {
+          "catalog_variant_ids": [
+            12141
+          ],
+          "placement": "back",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/spiral_notebook/medium/flat/back/05_Notebook_mockup_flat_back_base_whitebg.png?v=1765776340",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 242,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1838,
+          "print_area_height": 2796,
+          "print_area_top": 101,
+          "print_area_left": 542,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/spiral-notebook-back.png",
+          "sha256": "4c8d95fe7c579d2ec8f5d50950626a92a2aa75853c1868f42e3dff308bf2bf89"
+        }
+      ]
+    }
+  ]
+}

@@ -411,9 +411,12 @@
         [sized[0], ...tail.slice().sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height) || a.index - b.index)]];
       if (emojiCount > 1) orders.push([sized[0], ...tail.filter(item => item.emoji),
         ...tail.filter(item => !item.emoji).sort((a, b) => b.width * b.height - a.width * a.height || a.index - b.index)]);
+      // Without emoji, use the fourth bounded attempt to centre area-sorted
+      // boxes in free rectangles. Narrower safe areas can defeat corner anchors.
+      else orders.push(orders[1]);
       orders.forEach((order, index) => {
         for (const ratio of [1, .94, .88]) {
-          const candidate = tryScale(low * ratio, order, index === 0 ? 1 : index === 3 ? 3 : 2);
+          const candidate = tryScale(low * ratio, order, index === 0 ? 1 : index === 3 ? (emojiCount > 1 ? 3 : 1) : 2);
           if (!candidate) continue;
           const fitted = fitAreaBoxes(candidate, width, height);
           const candidateQuality = layoutQuality(fitted, width, height);

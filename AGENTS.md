@@ -82,7 +82,9 @@ it — this file is about how to work in it safely.
   successful Stripe event stores payment, fulfillment work and one immutable
   confirmation job in the same transaction. Never call Resend inside the
   Stripe webhook, copy email into shipment recipients, or let email failure
-  roll back payment/block fulfillment. Test payments always use email `mock`.
+  roll back payment/block fulfillment. `EMAIL_DELIVERY_MODE` independently
+  controls real email for manual sandbox and live purchases. Automated tests
+  (`NODE_ENV=test`) always use email `mock`; real sandbox emails are marked TEST.
   Routine workers never claim `provider_smoke` jobs; only the explicit,
   allowlisted operator smoke may claim an exact smoke job id.
   Live retries reuse the permanent job dedupe key only inside the 23-hour

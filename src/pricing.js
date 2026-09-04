@@ -32,17 +32,6 @@ function printfulItemCostCents(costs) {
   return eurosToCents(costs.total) - shippingCents - printfulSupplierTaxCents(costs);
 }
 
-function inferCustomerTaxRate(printfulTaxCents, printfulTaxableCents) {
-  if (printfulTaxCents <= 0) return 0;
-  if (printfulTaxableCents <= 0) throw new Error('invalid Printful tax base');
-  return Math.round((printfulTaxCents / printfulTaxableCents) * 1000) / 1000;
-}
-
-function customerTaxCents({ printfulItemsCents, customerItemsCents, shippingCents, supplierTaxCents }) {
-  const rate = inferCustomerTaxRate(supplierTaxCents, printfulItemsCents + shippingCents);
-  return Math.round((customerItemsCents + shippingCents) * rate);
-}
-
 function estimatePaymentFeeCents(totalCents) {
   const percent = paymentReservePercent() / 100;
   return Math.ceil(totalCents * percent + paymentReserveFixedCents());
@@ -70,23 +59,17 @@ function allocateCents(totalCents, weights) {
   return allocations.map((entry) => entry.cents);
 }
 
-function shipmentTaxQuotes(preparedShipments, itemsCents) {
+function shipmentNetQuotes(preparedShipments, itemsCents) {
   const allocatedItemsCents = allocateCents(
     itemsCents,
     preparedShipments.map((shipment) => shipment.printfulItemsCents)
   );
   return preparedShipments.map((shipment, index) => {
     const shipmentItemsCents = allocatedItemsCents[index];
-    const shipmentTaxCents = customerTaxCents({
-      printfulItemsCents: shipment.printfulItemsCents,
-      customerItemsCents: shipmentItemsCents,
-      shippingCents: shipment.shippingCents,
-      supplierTaxCents: shipment.supplierTaxCents,
-    });
     return {
       itemsCents: shipmentItemsCents,
       shippingCents: shipment.shippingCents,
-      taxCents: shipmentTaxCents,
+      taxCents: 0,
       supplierTaxCents: shipment.supplierTaxCents,
     };
   });
@@ -112,10 +95,9 @@ function paymentReserveCents({ baseItemsCents, shippingCents }) {
  * catalog-wide retail rule. The actual, quantity-discounted Printful product
  * cost is the basis, so future curated products need no individual pricing.
  *
- * Customer tax/VAT is recalculated on the customer-facing taxable amount
- * (marked-up product subtotal + shipping), using the destination rate implied
- * by Printful's product+shipping estimate. Before live payments, this should
- * be replaced or verified with the shop's finalized VAT/Stripe Tax treatment.
+ * This is a net quote. Zero tax here means not yet calculated, not tax exempt.
+ * Only Stripe's confirmed Checkout calculates customer tax. Supplier tax stays
+ * in the procurement snapshot and never determines the customer's tax rate.
  */
 function buildCustomerQuote(costs, quantity) {
   return buildCustomerQuoteForShipments([{ quantity, costs }]);
@@ -159,8 +141,8 @@ function buildCustomerQuoteForShipments(shipments) {
   const baseItemsCents = Math.ceil(printfulItemsCents * (1 + markup));
   const reserveCents = paymentReserveCents({ baseItemsCents, shippingCents });
   const itemsCents = baseItemsCents + reserveCents;
-  const shipmentQuotes = shipmentTaxQuotes(preparedShipments, itemsCents);
-  const taxCents = shipmentQuotes.reduce((sum, shipment) => sum + shipment.taxCents, 0);
+  const shipmentQuotes = shipmentNetQuotes(preparedShipments, itemsCents);
+  const taxCents = 0;
   const totalCents = itemsCents + shippingCents + taxCents;
 
   if ([printfulItemsCents, baseItemsCents, reserveCents, itemsCents, shippingCents, taxCents, totalCents].some((value) => value < 0)) {
@@ -185,7 +167,6 @@ module.exports = {
   paymentReservePercent,
   paymentReserveFixedCents,
   estimatePaymentFeeCents,
-  customerTaxCents,
   buildCustomerQuote,
   buildCustomerQuoteForShipments,
 };

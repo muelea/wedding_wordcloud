@@ -32,11 +32,6 @@ const LANGUAGE_FLAGS = Object.freeze({
   es: '🇪🇸',
   tr: '🇹🇷',
 });
-const LOCALE_CATALOG_URLS = Object.freeze(Object.fromEntries(
-  SUPPORTED_LOCALES
-    .filter((locale) => locale !== DEFAULT_LOCALE)
-    .map((locale) => [locale, publicAssetUrl(`/locales/${locale}.json`)])
-));
 
 function parseCookies(header) {
   const cookies = {};
@@ -104,6 +99,9 @@ function rememberExplicitLocale(req, res, locale) {
 async function renderPage(req, res, view, options = {}) {
   const resolved = resolvePageLocale(req, options.eventLocale);
   if (resolved.source === 'query') rememberExplicitLocale(req, res, resolved.locale);
+  const localeCatalogUrls = Object.fromEntries(SUPPORTED_LOCALES
+    .filter((locale) => locale !== DEFAULT_LOCALE)
+    .map((locale) => [locale, publicAssetUrl(`/locales/${locale}.json`)]));
   const locals = {
     locale: resolved.locale,
     localeSource: resolved.source,
@@ -118,10 +116,10 @@ async function renderPage(req, res, view, options = {}) {
     asset: publicAssetUrl,
     siteFontAssets: SITE_FONT_ASSETS,
     siteFontPreloads,
-    localeCatalogUrls: LOCALE_CATALOG_URLS,
+    localeCatalogUrls,
     localeCatalogUrl: resolved.locale === DEFAULT_LOCALE
       ? ''
-      : LOCALE_CATALOG_URLS[resolved.locale],
+      : localeCatalogUrls[resolved.locale],
     t: (source, params) => translate(source, resolved.locale, params),
   };
   const renderedHtml = await ejs.renderFile(path.join(VIEW_ROOT, `${view}.ejs`), locals);

@@ -73,10 +73,37 @@ test('a changed customs assessment or delivery estimate needs reconfirmation, a 
     ? Object.fromEntries(Object.entries(value).reverse()) : value);
   assert.equal(shippingTermsDiffer(wrap(fromDatabase), wrap(shipping)), false, 'JSONB object key order has no semantic meaning');
   assert.equal(shippingTermsDiffer([{}], wrap(shipping)), true);
+  const newOrigin = structuredClone(shipping);
+  newOrigin.shipments[0].departureCountry = 'ES';
+  assert.equal(shippingTermsDiffer(wrap(shipping), wrap(newOrigin)), false, 'hidden origin alone does not change the displayed offer');
   const changed = structuredClone(shipping);
   changed.shipments[0].customsFeesPossible = true;
   assert.equal(shippingTermsDiffer(wrap(shipping), wrap(changed)), true);
   changed.shipments = shipping.shipments;
   changed.delivery.maxDate = '2030-01-19';
   assert.equal(shippingTermsDiffer(wrap(shipping), wrap(changed)), true);
+});
+
+test('Printful rejections, outages and malformed costs cannot produce a usable estimate', async (t) => {
+  const oldFetch = global.fetch, oldKey = process.env.PRINTFUL_API_KEY;
+  process.env.PRINTFUL_API_KEY = 'test_only';
+  t.after(() => { global.fetch = oldFetch; if (oldKey === undefined) delete process.env.PRINTFUL_API_KEY; else process.env.PRINTFUL_API_KEY = oldKey; });
+  const printful = require('../src/printful');
+  const request = { variantId: 1320, quantity: 1, recipient: { country_code: 'DE' } };
+  for (const [status, code] of [[400, 'PRINTFUL_REQUEST_REJECTED'], [422, 'PRINTFUL_REQUEST_REJECTED'],
+    [429, 'PRINTFUL_UNAVAILABLE'], [503, 'PRINTFUL_UNAVAILABLE']]) {
+    global.fetch = async () => ({ ok: false, status, json: async () => ({ error: { message: 'Product unavailable' } }) });
+    await assert.rejects(printful.estimateOrderCosts(request), { code });
+    await assert.rejects(printful.getShippingRates(request), { code });
+  }
+  global.fetch = async () => { throw new DOMException('Timeout', 'TimeoutError'); };
+  await assert.rejects(printful.getShippingRates(request), { code: 'PRINTFUL_UNAVAILABLE' });
+  const valid = { currency: 'EUR', shipping: '5.00', total: '15.00', tax: '0.00', vat: '0.00' };
+  for (const invalid of [{ ...valid, total: null }, { ...valid, total: 'not-a-price' }, { ...valid, shipping: null },
+    { ...valid, total: '0.00' }, { ...valid, vat: 'broken' }, { ...valid, total: '5.00' }]) {
+    global.fetch = async () => ({ ok: true, status: 200, json: async () => ({ result: { costs: invalid } }) });
+    await assert.rejects(printful.estimateOrderCosts(request), { code: 'PRINTFUL_INVALID_RESPONSE' });
+  }
+  global.fetch = async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('bad JSON'); } });
+  await assert.rejects(printful.getShippingRates(request), { code: 'PRINTFUL_UNAVAILABLE' });
 });

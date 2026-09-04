@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const vm = require('node:vm');
 
 const ROOT = path.join(__dirname, '..');
 const landing = fs.readFileSync(path.join(ROOT, 'views', 'landing.ejs'), 'utf8');
@@ -70,6 +71,42 @@ test('live word cloud uses a font-ready HiDPI backing canvas', () => {
   assert.match(display, /canvas\.style\.width = `\$\{width\}px`/);
   assert.match(display, /ctx\.setTransform\(canvas\.width \/ width, 0, 0, canvas\.height \/ height, 0, 0\)/);
   assert.match(display, /document\.fonts\?\.load/);
+});
+
+test('flat previews supersample screen pixels without unbounded canvas allocations', () => {
+  const source = configure.match(/    function setupCanvas\(canvas\) \{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(source);
+  const window = { devicePixelRatio: 1 };
+  const setupCanvas = vm.runInNewContext(`${source}; setupCanvas`, { window });
+  const context = {};
+  let rect = { width: 300, height: 450 };
+  let dimensions = { width: 0, height: 0 };
+  let allocations = 0;
+  const canvas = {
+    getBoundingClientRect: () => rect,
+    getContext: () => context,
+    get width() { return dimensions.width; },
+    set width(value) { dimensions.width = value; allocations++; },
+    get height() { return dimensions.height; },
+    set height(value) { dimensions.height = value; allocations++; },
+  };
+  for (const [dpr, width, height] of [[1, 600, 900], [2, 1024, 1536], [3, 1024, 1536]]) {
+    window.devicePixelRatio = dpr;
+    assert.equal(setupCanvas(canvas), context);
+    assert.deepEqual(dimensions, { width, height });
+    const before = allocations;
+    setupCanvas(canvas);
+    assert.equal(allocations, before, 'ordinary redraws reuse the existing bitmap');
+  }
+  rect = { width: 450, height: 300 };
+  setupCanvas(canvas);
+  assert.deepEqual(dimensions, { width: 1536, height: 1024 }, 'landscape keeps the same density and proportions');
+  rect = { width: 4000, height: 4000 };
+  setupCanvas(canvas);
+  assert.deepEqual(dimensions, { width: 1536, height: 1536 }, 'large viewports stay bounded');
+  rect = { width: 0, height: 0 };
+  setupCanvas(canvas);
+  assert.deepEqual(dimensions, { width: 1, height: 1 }, 'hidden previews remain valid canvases');
 });
 
 test('word cloud header keeps the keepsake action compact at mobile widths', () => {

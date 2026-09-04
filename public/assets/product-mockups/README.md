@@ -21,3 +21,10 @@ Retrieved from Printful's Catalog API on 2026-08-25:
 
 Do not replace these with generic product photography: the preview must keep
 matching the Printful variant that will actually be ordered.
+
+The full-file mappings for coaster, matte posters, blanket and both notebook
+sides were rechecked against Printful's positional API on 2026-09-03. Their
+local images match the API assets byte for byte. See
+[`docs/print-geometry.md`](../../../docs/print-geometry.md) for safe-area sources,
+verified dimensions, and the limits of photograph-based previews for the tote,
+framed posters and pillow.

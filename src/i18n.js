@@ -1,6 +1,8 @@
 'use strict';
 
 const path = require('path');
+const fs = require('node:fs');
+const { fingerprintPublicAsset } = require('./publicAssets');
 
 const DEFAULT_LOCALE = 'de';
 const SUPPORTED_LOCALES = Object.freeze(['de', 'en', 'fr', 'it', 'es', 'tr']);
@@ -19,14 +21,21 @@ function isSupportedLocale(value) {
 function getCatalog(locale) {
   const normalized = normalizeLocale(locale);
   if (normalized === DEFAULT_LOCALE) return {};
-  if (!catalogs.has(normalized)) {
+  const englishVersion = fingerprintPublicAsset('/locales/en.json');
+  const version = normalized === 'en'
+    ? englishVersion
+    : `${englishVersion}:${fingerprintPublicAsset(`/locales/${normalized}.json`)}`;
+  if (catalogs.get(normalized)?.version !== version) {
     const englishFile = path.join(__dirname, '..', 'public', 'locales', 'en.json');
     const localeFile = path.join(__dirname, '..', 'public', 'locales', `${normalized}.json`);
-    catalogs.set(normalized, normalized === 'en'
-      ? require(englishFile)
-      : { ...require(englishFile), ...require(localeFile) });
+    // JSON require() would retain old translations after a development edit.
+    const english = JSON.parse(fs.readFileSync(englishFile, 'utf8'));
+    const messages = normalized === 'en'
+      ? english
+      : { ...english, ...JSON.parse(fs.readFileSync(localeFile, 'utf8')) };
+    catalogs.set(normalized, { version, messages });
   }
-  return catalogs.get(normalized);
+  return catalogs.get(normalized).messages;
 }
 
 function translate(source, locale, params = {}) {
