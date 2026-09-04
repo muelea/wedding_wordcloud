@@ -27,6 +27,7 @@ const log = require('./structuredLog');
 const { createWordUpdateBroadcaster } = require('./wordBroadcasts');
 const { createSocketEventCache } = require('./socketEventCache');
 const { createSocketOwnershipLoader } = require('./socketOwnershipLoader');
+const { isEventSlug } = require('./slug');
 
 const GUEST_ID_RE = /^[a-f0-9]{32}$/;
 const RECEIPT_RE = /^[A-Za-z0-9_-]{24}$/;
@@ -43,8 +44,8 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
   io.on('connection', (socket) => {
     const slug = socket.handshake.query && socket.handshake.query.slug;
 
-    if (!slug || typeof slug !== 'string') {
-      socket.emit('fatal-error', 'missing event slug');
+    if (!isEventSlug(slug)) {
+      socket.emit('fatal-error', 'unknown event');
       socket.disconnect(true);
       return;
     }

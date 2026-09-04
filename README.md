@@ -12,7 +12,12 @@ frozen snapshot of the word cloud.
 1. A visitor selects “Hier starten”, gives the word cloud a recognizable name
    and chooses a mandatory 4–6 digit organizer PIN. Submitting the dialog to
    `/start` creates the event atomically and redirects to its sole public URL,
-   `/e/<slug>`.
+   `/e/<slug>`. The server generates each slug from 16 cryptographically random
+   bytes encoded as 22 case-sensitive base64url characters (`A–Z`, `a–z`, `0–9`,
+   `_`, `-`), with no fixed prefix or title-derived text. Both `/start` and
+   `POST /api/events` generate the entire ID; callers cannot choose it. Postgres
+   reserves IDs permanently and creation retries collisions. Share links and
+   QR codes preserve the exact ID, including its case.
 2. The event page works on phones and on a big screen; there is no separate
    setup, guest or display route. The organizer PIN authorizes renaming the
    cloud, removing any submitted word, resetting the cloud and replacing the
@@ -513,7 +518,7 @@ src/
   rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
   asyncRoute.js            rejected-promise boundary for Express routes
   siteFonts.js             shared interface-font manifest + page preload selection
-  slug.js                  German-aware slugify + unique random-suffix generation
+  slug.js                  128-bit random, URL-safe event IDs
   words.js                 Word normalization (trim/case-fold/emoji-strip)
   baseUrl.js               LAN-IP / PUBLIC_URL resolution
   socket.js                Socket.io connection handling — room isolation lives here

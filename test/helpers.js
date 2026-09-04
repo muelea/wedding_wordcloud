@@ -153,7 +153,6 @@ async function createEvent(baseUrl, overrides = {}) {
     },
     body: JSON.stringify({
       title,
-      slug: overrides.slug,
       pin: overrides.pin || '1234',
       locale: overrides.locale,
     }),

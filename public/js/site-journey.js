@@ -6,7 +6,7 @@
   'use strict';
   const KEY = 'wolkenworte-recent-event';
   const TTL = 7 * 24 * 60 * 60 * 1000;
-  const validSlug = (slug) => typeof slug === 'string' && /^[a-z0-9][a-z0-9-]{0,149}$/.test(slug);
+  const validSlug = (slug) => typeof slug === 'string' && /^[A-Za-z0-9_-]{21}[AEIMQUYcgkosw048]$/.test(slug);
   function read(storage, now = Date.now()) {
     try {
       const saved = JSON.parse(storage.getItem(KEY));

@@ -1,6 +1,7 @@
 'use strict';
 
 const QRCode = require('qrcode');
+const { isEventSlug } = require('./slug');
 
 const QR_OPTIONS = Object.freeze({
   width: 220,
@@ -10,7 +11,7 @@ const QR_OPTIONS = Object.freeze({
 
 function buildEventUrl(baseUrl, slug) {
   const normalizedSlug = String(slug || '').trim();
-  if (!normalizedSlug) throw new TypeError('event slug is required');
+  if (!isEventSlug(normalizedSlug)) throw new TypeError('valid event slug is required');
 
   const base = new URL(String(baseUrl || ''));
   if (base.protocol !== 'http:' && base.protocol !== 'https:') {

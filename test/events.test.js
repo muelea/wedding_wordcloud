@@ -2,22 +2,119 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { startTestServer, createEvent } = require('./helpers');
+const { once } = require('node:events');
+const { io: ioClient } = require('socket.io-client');
+const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
-// Matches "<prefix>-<5-char suffix from the unambiguous alphabet>".
-const SUFFIX_RE = /^(.+)-([23456789abcdefghjkmnpqrstuvwxyz]{5})$/;
+const EVENT_ID_RE = /^[A-Za-z0-9_-]{21}[AEIMQUYcgkosw048]$/;
+
+test('random IDs preserve case and URL-safe symbols across the event journey', async (t) => {
+  const ids = ['-_AbCdEf0123456789xyZQ', '_-aBcDeF0123456789XYzQ'];
+  const pendingIds = [...ids];
+  t.mock.method(require('../src/slug'), 'generateEventSlug', () => pendingIds.shift());
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+
+  const event = await createEvent(baseUrl);
+  assert.equal(event.slug, ids[0]);
+  const started = await fetch(`${baseUrl}/start`, {
+    method: 'POST', redirect: 'manual',
+    body: new URLSearchParams({ cloudName: '🎉', organizerPin: '5678', organizerPinConfirmation: '5678' }),
+  });
+  assert.equal(started.status, 303);
+  assert.equal(started.headers.get('location'), `/e/${ids[1]}`);
+
+  for (const slug of ids) {
+    const api = `${baseUrl}/api/events/${slug}`;
+    const page = await fetch(`${baseUrl}/e/${slug}`);
+    assert.equal(page.status, 200);
+    const shareUrl = /data-event-url="([^"]+)"/.exec(await page.text())?.[1];
+    assert.ok(shareUrl);
+    assert.equal(new URL(shareUrl).pathname, `/e/${slug}`);
+    const qr = await fetch(`${api}/qr`).then((response) => response.json());
+    assert.equal(qr.url, shareUrl);
+    assert.match(qr.dataUrl, /^data:image\/png;base64,/);
+    assert.equal((await fetch(`${baseUrl}/e/${slug.toLowerCase()}`)).status, 404);
+    assert.equal((await fetch(`${baseUrl}/api/events/${slug.toLowerCase()}`)).status, 404);
+
+    const socket = ioClient(baseUrl, {
+      query: { slug }, transports: ['websocket'], forceNew: true, autoConnect: false,
+    });
+    t.after(() => socket.close());
+    const initial = once(socket, 'word-update', { signal: AbortSignal.timeout(5000) });
+    socket.connect();
+    assert.deepEqual(await initial, [[]]);
+    const update = once(socket, 'word-update', { signal: AbortSignal.timeout(5000) });
+    socket.emit('submit-word', 'Freude');
+    assert.deepEqual(await update, [[['freude', 1]]]);
+    socket.close();
+
+    const configurator = await fetch(`${api}/configurator`).then((response) => response.json());
+    assert.equal(configurator.event.slug, slug);
+    assert.deepEqual(configurator.words, [['freude', 1]]);
+    const saved = await fetch(`${api}/configurations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: 'pastel', ...productDesignPayload() }),
+    });
+    assert.equal(saved.status, 201);
+    const configuration = await saved.json();
+    assert.equal((await fetch(`${api}/configurations/${configuration.id}/edit`)).status, 200);
+    const otherSlug = ids.find((id) => id !== slug);
+    assert.equal((await fetch(`${baseUrl}/api/events/${otherSlug}/configurations/${configuration.id}/edit`)).status, 404);
+    for (const path of ['configure', 'shipping', 'order-confirmation']) {
+      assert.equal((await fetch(`${baseUrl}/e/${slug}/${path}`)).status, 200);
+    }
+  }
+});
+
+test('both creation endpoints retry permanent ID collisions and stop after 20 attempts', async (t) => {
+  const reserved = 'A'.repeat(22);
+  const generator = t.mock.method(require('../src/slug'), 'generateEventSlug', () => reserved);
+  const { baseUrl, query, close } = await startTestServer();
+  t.after(close);
+  // A reservation without an event represents an ID retained after cleanup.
+  await query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, now())', [reserved]);
+  const requests = [
+    ['/api/events', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Test', pin: '1234' }),
+    }, 'AAECAwQFBgcICQoLDA0ODw', 201],
+    ['/start', {
+      method: 'POST', redirect: 'manual',
+      body: new URLSearchParams({ cloudName: 'Test', organizerPin: '1234', organizerPinConfirmation: '1234' }),
+    }, '-_AbCdEf0123456789xyZQ', 303],
+  ];
+  for (const [path, options, fresh, status] of requests) {
+    const candidates = [reserved, fresh];
+    generator.mock.mockImplementation(() => candidates.shift());
+    const response = await fetch(`${baseUrl}${path}`, options);
+    assert.equal(response.status, status);
+    if (status === 201) assert.equal((await response.json()).slug, fresh);
+    else assert.equal(response.headers.get('location'), `/e/${fresh}`);
+    assert.equal(candidates.length, 0, 'the reserved ID must cause a retry');
+
+    generator.mock.mockImplementation(() => reserved);
+    const previousCalls = generator.mock.callCount();
+    const failed = await fetch(`${baseUrl}${path}`, options);
+    assert.equal(failed.status, 500);
+    assert.equal(generator.mock.callCount() - previousCalls, 20);
+    if (path === '/api/events') assert.deepEqual(await failed.json(), { error: 'event_id_generation_failed' });
+    else assert.match(await failed.text(), /Die Wortwolke konnte nicht erstellt werden/);
+  }
+  assert.equal((await query('SELECT count(*)::integer AS count FROM events')).rows[0].count, 2);
+  assert.equal((await query('SELECT count(*)::integer AS count FROM reserved_event_slugs')).rows[0].count, 3);
+  await assert.rejects(
+    query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, now())', ['wortwolke-9ygku']),
+    (error) => error?.code === '23514'
+  );
+});
 
 test('event creation uses one canonical event URL', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const event = await createEvent(baseUrl, { title: 'Anna & Ben', slug: 'anna-und-ben', pin: '4242' });
-  // The final slug is the requested prefix PLUS a random suffix, not the
-  // literal typed text -- this is the core of the privacy/collision fix.
-  assert.notEqual(event.slug, 'anna-und-ben');
-  const match = SUFFIX_RE.exec(event.slug);
-  assert.ok(match, `expected "${event.slug}" to match "<prefix>-<suffix>"`);
-  assert.equal(match[1], 'anna-und-ben');
+  const event = await createEvent(baseUrl, { title: 'Anna & Ben', pin: '4242' });
+  assert.match(event.slug, EVENT_ID_RE);
   assert.equal(event.eventUrl, `/e/${event.slug}`);
   assert.equal('adminToken' in event, false);
 
@@ -36,7 +133,7 @@ test('event creation uses one canonical event URL', async (t) => {
   });
   assert.equal(startResponse.status, 303);
   const startLocation = startResponse.headers.get('location') || '';
-  const startLocationMatch = /^\/e\/(wortwolke-[23456789abcdefghjkmnpqrstuvwxyz]{5})$/.exec(startLocation);
+  const startLocationMatch = /^\/e\/([A-Za-z0-9_-]{22})$/.exec(startLocation);
   assert.ok(startLocationMatch, `unexpected display location: ${startLocation}`);
   const startedSlug = startLocationMatch[1];
   assert.doesNotMatch(startResponse.headers.get('set-cookie') || '', /ww-draft-/);
@@ -114,7 +211,7 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.equal((await fetch(`${baseUrl}/wedding`)).status, 404);
   assert.equal((await fetch(`${baseUrl}/api/slug-availability?slug=anna-und-ben`)).status, 404);
 
-  // Public event info is fetchable by the real (suffixed) slug.
+  // Public event info is fetchable by the exact random ID.
   const info = await fetch(`${baseUrl}/api/events/${event.slug}`).then((r) => r.json());
   assert.equal(info.title, 'Anna & Ben');
   assert.equal(info.hasOrganizerPin, true);
@@ -133,36 +230,22 @@ test('event creation uses one canonical event URL', async (t) => {
   const updatedInfo = await fetch(`${baseUrl}/api/events/${event.slug}`).then((r) => r.json());
   assert.equal(updatedInfo.title, 'Sommerfest Berlin');
 
-  // The bare prefix (without suffix) was never actually created, so it
-  // 404s just like any other unknown slug.
-  const missingPrefix = await fetch(`${baseUrl}/api/events/anna-und-ben`);
-  assert.equal(missingPrefix.status, 404);
-
   // Unknown slug -> 404.
   const missing = await fetch(`${baseUrl}/api/events/nope-nope-nope`);
   assert.equal(missing.status, 404);
 });
 
-test('identical titles produce distinct, independently working slugs (privacy/collision fix)', async (t) => {
+test('identical titles produce distinct, independently working random IDs', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  // Two unrelated events that happen to share a title -- previously
-  // the second creation would 409 and force a manual retry; now each just
-  // gets its own random suffix automatically.
   const first = await createEvent(baseUrl, { title: 'Johanna & Peter', pin: '1111' });
   const second = await createEvent(baseUrl, { title: 'Johanna & Peter', pin: '2222' });
 
   assert.notEqual(first.slug, second.slug, 'two events with identical titles must get different slugs');
 
-  const firstMatch = SUFFIX_RE.exec(first.slug);
-  const secondMatch = SUFFIX_RE.exec(second.slug);
-  assert.ok(firstMatch && secondMatch);
-  // Same human-readable prefix (both derived from "Johanna & Peter")...
-  assert.equal(firstMatch[1], 'johanna-und-peter');
-  assert.equal(secondMatch[1], 'johanna-und-peter');
-  // ...but different random suffixes.
-  assert.notEqual(firstMatch[2], secondMatch[2]);
+  assert.match(first.slug, EVENT_ID_RE);
+  assert.match(second.slug, EVENT_ID_RE);
 
   // Both slugs are independently real, working events -- not just distinct
   // strings, but two separate rows an event page can actually load.
@@ -171,9 +254,7 @@ test('identical titles produce distinct, independently working slugs (privacy/co
   assert.equal(firstInfo.title, 'Johanna & Peter');
   assert.equal(secondInfo.title, 'Johanna & Peter');
 
-  // The bare shared prefix without any suffix was never created as its own
-  // event -- confirms neither creation silently collapsed onto a
-  // guessable, suffix-less slug.
+  // The event title cannot be used to discover its URL.
   const bareRes = await fetch(`${baseUrl}/api/events/johanna-und-peter`);
   assert.equal(bareRes.status, 404);
 });
@@ -211,19 +292,22 @@ test('event creation validates required fields', async (t) => {
   assert.match(await mismatchedStartPin.text(), /Die beiden PINs stimmen nicht überein/);
 });
 
-test('slug is auto-derived from the title when not supplied, umlauts transliterated', async (t) => {
+test('event IDs are independent of Unicode titles and caller-supplied IDs', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
 
-  const res = await fetch(`${baseUrl}/api/events`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'Jö & Björn Müller', pin: '9999' }),
-  });
-  const body = await res.json();
-  assert.equal(res.status, 201);
-  const match = SUFFIX_RE.exec(body.slug);
-  assert.ok(match, `expected "${body.slug}" to match "<prefix>-<suffix>"`);
-  assert.equal(match[1], 'joe-und-bjoern-mueller');
+  for (const title of ['Jö & Björn Müller', '東京', '🎉']) {
+    const res = await fetch(`${baseUrl}/api/events`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, pin: '9999', slug: 'A'.repeat(22) }),
+    });
+    const body = await res.json();
+    assert.equal(res.status, 201);
+    assert.match(body.slug, EVENT_ID_RE);
+    assert.notEqual(body.slug, 'A'.repeat(22), 'clients cannot choose a guessable ID');
+    const info = await fetch(`${baseUrl}/api/events/${body.slug}`).then((response) => response.json());
+    assert.equal(info.title, title);
+  }
 });
 
 test('organizer PIN protects settings, rotation and reset without issuing a reusable token', async (t) => {

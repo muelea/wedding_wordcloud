@@ -9,10 +9,11 @@ const {
 } = require('../src/eventQr');
 
 test('event QR rendering uses one encoded canonical HTTP URL', async () => {
-  const url = buildEventUrl('https://wolkenworte.io/ignored/path', 'wortwolke-g2t3q');
-  assert.equal(url, 'https://wolkenworte.io/e/wortwolke-g2t3q');
-  assert.throws(() => buildEventUrl('file:///tmp/wolkenworte', 'event'), /HTTP or HTTPS/);
+  const url = buildEventUrl('https://wolkenworte.io/ignored/path', '-_AbCdEf0123456789xyZQ');
+  assert.equal(url, 'https://wolkenworte.io/e/-_AbCdEf0123456789xyZQ');
+  assert.throws(() => buildEventUrl('file:///tmp/wolkenworte', '-_AbCdEf0123456789xyZQ'), /HTTP or HTTPS/);
   assert.throws(() => buildEventUrl('https://wolkenworte.io', ''), /slug is required/);
+  assert.throws(() => buildEventUrl('https://wolkenworte.io', 'wortwolke-9ygku'), /slug is required/);
 
   const [svg, dataUrl] = await Promise.all([
     renderEventQrSvg(url),

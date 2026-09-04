@@ -2,7 +2,7 @@
 
 const express = require('express');
 const db = require('../db');
-const { slugify, makeUniqueSlug } = require('../slug');
+const { isEventSlug } = require('../slug');
 const { getBaseUrl } = require('../baseUrl');
 const { buildEventUrl, renderEventQrDataUrl } = require('../eventQr');
 const { sourceHashForRequest } = require('../clientIdentity');
@@ -738,6 +738,10 @@ async function estimateCartShipments({ body, countries, configurations }) {
 
 function makeRouter({ io, port, wordBroadcasts = null }) {
   const router = express.Router();
+  router.param('slug', (req, res, next, slug) => {
+    if (!isEventSlug(slug)) return res.status(404).json({ error: 'event not found' });
+    return next();
+  });
 
   function requestIdentities(req) {
     const sourceHash = sourceHashForRequest(req);
@@ -806,7 +810,6 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       return res.status(400).json({ error: 'invalid_locale' });
     }
     const locale = I18n.normalizeLocale(req.body?.locale);
-    let { slug } = req.body || {};
 
     if (!title) {
       return res.status(400).json({ error: 'invalid_title' });
@@ -818,33 +821,14 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       return res.status(400).json({ error: 'invalid_pin' });
     }
 
-    slug = slugify(slug || title);
-    if (!slug) return res.status(400).json({ error: 'invalid_slug' });
-
-    // Always append a random suffix -- no more 409/manual-retry dance for
-    // the common "same title as an earlier event" case, and it closes the
-    // privacy gap where a guessable slug lets a stranger view an event's
-    // (unauthenticated-read) live guest submissions. See src/slug.js for
-    // the full reasoning. Retries with a fresh suffix on the astronomically
-    // unlikely case of a real collision rather than assuming one can't
-    // happen.
-    let event = null;
-    for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
-      const finalSlug = makeUniqueSlug(slug, () => false);
-      try {
-        // The unique index is the final arbiter. A race retries with a fresh
-        // suffix instead of relying on a stale availability pre-check.
-        event = await db.createEvent({
-          slug: finalSlug,
-          title,
-          pin,
-          locale,
-        });
-      } catch (error) {
-        if (error?.code !== '23505') throw error;
-      }
+    // The database owns the entire random ID and reserves it atomically.
+    let event;
+    try {
+      event = await db.createEvent({ title, pin, locale });
+    } catch (creationError) {
+      if (creationError?.code !== 'event_id_generation_failed') throw creationError;
+      return res.status(500).json({ error: 'event_id_generation_failed' });
     }
-    if (!event) return res.status(500).json({ error: 'slug_generation_failed' });
 
     res.status(201).json({
       slug: event.slug,

@@ -8,12 +8,13 @@ const { renderPage } = require('../src/pageRenderer');
 const { DEFAULT_PRODUCT, getPublicProduct, getPublicProducts, getPublicProductFamilies } = require('../src/products');
 const { ASSET_BASE } = require('../public/js/emoji-catalog');
 const { makeEmojiArtworkRouter } = require('../src/routes/emojiArtwork');
+const FIXTURE_SLUG = '-_AbCdEf0123456789xyZQ';
 
 function createFixture({ words = [['test', 1]] } = {}) {
   const app = express();
   const root = path.join(__dirname, '..');
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-  app.get('/e/responsive-test/configure', (req, res, next) => {
+  app.get(`/e/${FIXTURE_SLUG}/configure`, (req, res, next) => {
     if (req.query.probe === '1' || req.query.probe === 'area') {
       const send = res.send.bind(res);
       const probe = req.query.probe === 'area' ? 'area-layout' : 'responsive';
@@ -22,11 +23,11 @@ function createFixture({ words = [['test', 1]] } = {}) {
     renderPage(req, res, 'configure', {
       eventLocale: 'en',
       header: { variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
-        backHref: '/e/responsive-test', backLabel: 'Zurück zur Wortwolke' },
+        backHref: `/e/${FIXTURE_SLUG}`, backLabel: 'Zurück zur Wortwolke' },
     }).catch(next);
   });
-  app.get('/api/events/responsive-test/configurator', (req, res) => res.json({
-    event: { slug: 'responsive-test', title: 'Responsive test', locale: 'en' },
+  app.get(`/api/events/${FIXTURE_SLUG}/configurator`, (req, res) => res.json({
+    event: { slug: FIXTURE_SLUG, title: 'Responsive test', locale: 'en' },
     words,
     product: getPublicProduct(DEFAULT_PRODUCT),
     products: getPublicProducts(),
@@ -47,7 +48,7 @@ if (require.main === module) {
   const options = process.argv.includes('--layout')
     ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS } : {};
   const server = createFixture(options).listen(0, '127.0.0.1', () => {
-    console.log(`Configurator: http://127.0.0.1:${server.address().port}/e/responsive-test/configure?lang=en`);
+    console.log(`Configurator: http://127.0.0.1:${server.address().port}/e/${FIXTURE_SLUG}/configure?lang=en`);
     console.log('Add &probe=1 for repeatable browser geometry/interaction checks. No product records are written.');
     console.log(`Fixture PID: ${process.pid}`);
   });

@@ -9,7 +9,7 @@ const path = require('path');
 const compression = require('compression');
 
 const db = require('./src/db');
-const { makeUniqueSlug } = require('./src/slug');
+const { isEventSlug } = require('./src/slug');
 const { sourceHashForRequest } = require('./src/clientIdentity');
 const rateLimits = require('./src/rateLimits');
 const { attachSocketHandlers } = require('./src/socket');
@@ -170,6 +170,14 @@ app.get('/', asyncRoute(async (req, res) => {
   return renderPage(req, res, 'landing', landingPageOptions());
 }));
 
+app.param('slug', (req, res, next, slug) => {
+  if (!isEventSlug(slug)) {
+    renderPage(req, res, '404', { status: 404 }).catch(next);
+    return;
+  }
+  next();
+});
+
 app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncRoute(async (req, res) => {
   const submittedName = typeof req.body?.cloudName === 'string' ? req.body.cloudName : '';
   const pin = typeof req.body?.organizerPin === 'string' ? req.body.organizerPin.trim() : '';
@@ -212,17 +220,11 @@ app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncR
   }
 
   const locale = resolvePageLocale(req).locale;
-  let event = null;
-  for (let attempt = 0; attempt < 20 && !event; attempt += 1) {
-    try {
-      event = await db.createEvent({
-        slug: makeUniqueSlug('wortwolke', () => false), title, pin, locale,
-      });
-    } catch (error) {
-      if (error?.code !== '23505') throw error;
-    }
-  }
-  if (!event) {
+  let event;
+  try {
+    event = await db.createEvent({ title, pin, locale });
+  } catch (creationError) {
+    if (creationError?.code !== 'event_id_generation_failed') throw creationError;
     return renderPage(req, res, 'landing', {
       ...landingPageOptions({
         startDialog: {

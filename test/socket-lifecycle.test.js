@@ -13,7 +13,7 @@ const rateLimits = require('../src/rateLimits');
 const { sourceHashForSocket } = require('../src/clientIdentity');
 
 process.env.NODE_ENV = 'test';
-const EVENT = { id: '1', slug: 'initialization', locale: 'de',
+const EVENT = { id: '1', slug: '-_AbCdEf0123456789xyZQ', locale: 'de',
   expires_at: new Date(Date.now() + 60_000).toISOString() };
 const OWNER = 'a'.repeat(32);
 const RECEIPT = 'r'.repeat(24);

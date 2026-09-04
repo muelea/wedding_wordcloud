@@ -8,11 +8,13 @@ const { buildEmailSnapshot } = require('./emailTemplates');
 const I18n = require('./i18n');
 const log = require('./structuredLog');
 const { usesStripeTax, paymentAmounts } = require('./checkoutTax');
+const { generateEventSlug } = require('./slug');
 
 const REQUIRED_SCHEMA_VERSION = '3';
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
 const MAX_ACTIVE_UNPAID_CONFIGURATIONS = 2000;
+const EVENT_SLUG_ATTEMPTS = 20;
 const JSON_COLUMNS = new Set([
   'words_json',
   'design_json',
@@ -170,21 +172,31 @@ async function verifyPin(pin, hash, salt) {
 }
 
 // ── Events ──────────────────────────────────────────────────────────────
-async function createEvent({ slug, title, pin, locale = 'de' }) {
+async function createEvent({ title, pin, locale = 'de' }) {
   const { hash, salt } = await hashPin(pin);
-  return withTransaction(async (client) => {
-    await client.query(`
-      INSERT INTO reserved_event_slugs (slug, original_created_at)
-      VALUES ($1, transaction_timestamp())
-    `, [slug]);
-    const result = await client.query(`
-      INSERT INTO events (
-        slug, title, organizer_pin_hash, organizer_pin_salt, locale, created_at, expires_at
-      ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
-      RETURNING *
-    `, [slug, title, hash, salt, locale]);
-    return rowToBoundary(result.rows[0]);
-  });
+  for (let attempt = 0; attempt < EVENT_SLUG_ATTEMPTS; attempt += 1) {
+    const slug = generateEventSlug();
+    try {
+      return await withTransaction(async (client) => {
+        await client.query(`
+          INSERT INTO reserved_event_slugs (slug, original_created_at)
+          VALUES ($1, transaction_timestamp())
+        `, [slug]);
+        const result = await client.query(`
+          INSERT INTO events (
+            slug, title, organizer_pin_hash, organizer_pin_salt, locale, created_at, expires_at
+          ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
+          RETURNING *
+        `, [slug, title, hash, salt, locale]);
+        return rowToBoundary(result.rows[0]);
+      });
+    } catch (error) {
+      if (error?.code !== '23505') throw error;
+    }
+  }
+  const error = new Error('could not reserve a unique event ID');
+  error.code = 'event_id_generation_failed';
+  throw error;
 }
 
 async function updateEventTitle({ eventId, title }) {

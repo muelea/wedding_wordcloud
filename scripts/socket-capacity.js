@@ -13,6 +13,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const execFileAsync = promisify(execFile);
 const { connectionOptions } = require('../src/dbConfig');
 const { getProduct, resolveProductOrientation } = require('../src/products');
+const { generateEventSlug } = require('../src/slug');
 
 const DEFAULTS = Object.freeze({
   baseUrl: 'https://wolkenworte.fly.dev',
@@ -139,9 +140,7 @@ function makePool() {
 async function seedFixtures(pool, options, runId) {
   const salt = crypto.randomBytes(16).toString('hex');
   const pinHash = await hashPin(PIN, salt);
-  const slugs = Array.from({ length: options.rooms }, (_, index) =>
-    `capacity-${runId}-r${String(index).padStart(3, '0')}`
-  );
+  const slugs = Array.from({ length: options.rooms }, () => generateEventSlug());
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

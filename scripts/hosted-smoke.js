@@ -148,7 +148,6 @@ async function runSmoke(fixture) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       title: fixture.title,
-      slug: 'hosted-smoke',
       pin: adminPin,
       locale: 'de',
     }),

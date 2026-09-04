@@ -50,7 +50,7 @@ function renderView(filename, header = {}, locale = 'de') {
     localeSource: 'default',
     header,
     pageData: {
-      eventUrl: 'https://example.test/e/wortwolke-test',
+      eventUrl: 'https://example.test/e/-_AbCdEf0123456789xyZQ',
       qrSvg: '<svg viewBox="0 0 1 1"><path d="M0 0h1v1H0z" /></svg>',
       cloudTitle: 'Lea & Max',
       paletteOptions: [],
@@ -585,8 +585,8 @@ test('shipping rerenders derived UI from stable sources whenever the locale chan
 test('language URLs preserve page state and server locale resolution honors explicit preference', () => {
   const browserI18n = require('../public/js/i18n.js');
   assert.equal(
-    browserI18n.languageUrl('https://example.test/e/wortwolke-x7k2q?source=qr#cloud', 'fr'),
-    'https://example.test/e/wortwolke-x7k2q?source=qr&lang=fr#cloud'
+    browserI18n.languageUrl('https://example.test/e/-_AbCdEf0123456789xyZQ?source=qr#cloud', 'fr'),
+    'https://example.test/e/-_AbCdEf0123456789xyZQ?source=qr&lang=fr#cloud'
   );
   assert.deepEqual(PageRenderer.resolvePageLocale({
     query: { lang: 'tr-TR' },

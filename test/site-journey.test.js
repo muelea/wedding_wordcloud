@@ -21,11 +21,11 @@ function storage() { const values = new Map(); return {
 }; }
 test('the last opened event survives Home without conflating a new cloud or storing a PIN', () => {
   const local = storage();
-  Journey.remember('first-cloud', 'Erste Wolke', true, local, 100);
-  Journey.remember('first-cloud', 'Neuer Titel', undefined, local, 200);
+  Journey.remember('-_AbCdEf0123456789xyZQ', 'Erste Wolke', true, local, 100);
+  Journey.remember('-_AbCdEf0123456789xyZQ', 'Neuer Titel', undefined, local, 200);
   assert.equal(Journey.read(local, 200).hasDesign, true);
-  Journey.remember('second-cloud', 'Zweite Wolke', undefined, local, 300);
-  assert.equal(Journey.read(local, 300).slug, 'second-cloud');
+  Journey.remember('_-aBcDeF0123456789XYzQ', 'Zweite Wolke', undefined, local, 300);
+  assert.equal(Journey.read(local, 300).slug, '_-aBcDeF0123456789XYzQ');
   assert.equal(Journey.read(local, 300).hasDesign, false);
   assert.deepEqual(Object.keys(Journey.read(local, 300)).sort(), ['expiresAt', 'hasDesign', 'slug', 'title']);
   assert.equal(Journey.read(local, 300 + Journey.TTL), null);
@@ -35,13 +35,24 @@ test('the last opened event survives Home without conflating a new cloud or stor
 test('blocked browser storage never prevents the word cloud or configurator from loading', () => {
   const scope = { get localStorage() { throw new Error('blocked'); } };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/site-journey'), 'utf8'), scope);
-  assert.doesNotThrow(() => scope.WolkenworteJourney.remember('cloud', 'Cloud', true));
+  assert.doesNotThrow(() => scope.WolkenworteJourney.remember('-_AbCdEf0123456789xyZQ', 'Cloud', true));
   assert.equal(scope.WolkenworteJourney.recent(), null);
+});
+
+test('remembered event IDs require exactly 22 URL-safe characters', () => {
+  for (const slug of ['a'.repeat(21), 'a'.repeat(23), '/'.repeat(22), ' '.repeat(22)]) {
+    const local = storage();
+    Journey.remember(slug, 'Invalid', false, local, 100);
+    assert.equal(Journey.read(local, 100), null);
+    local.setItem('wolkenworte-recent-event', JSON.stringify({ slug, expiresAt: 200 }));
+    assert.equal(Journey.read(local, 100), null);
+    assert.equal(local.getItem('wolkenworte-recent-event'), null);
+  }
 });
 
 test('Home shows the cart link only for this tab and never points it at a fresh design', async () => {
   const local = storage(), session = storage();
-  Journey.remember('cloud', 'Cloud', true, local);
+  Journey.remember('-_AbCdEf0123456789xyZQ', 'Cloud', true, local);
   const cloudLink = { getAttribute() { return this.href; } }, designLink = {}, title = {};
   const card = { querySelector(selector) { return selector === '[data-resume-cloud]' ? cloudLink
     : selector === '[data-resume-design]' ? designLink : title; } };
@@ -50,10 +61,10 @@ test('Home shows the cart link only for this tab and never points it at a fresh 
   const mount = () => scope.WolkenworteJourney.mountHome({ getElementById: () => card }, async () => ({ status: 200 }));
   await mount();
   assert.equal(designLink.hidden, true);
-  session.setItem('wolkenworte-order:cloud', JSON.stringify([{ id: 'a'.repeat(16) }]));
+  session.setItem('wolkenworte-order:-_AbCdEf0123456789xyZQ', JSON.stringify([{ id: 'a'.repeat(16) }]));
   await mount();
   assert.equal(designLink.hidden, false);
-  assert.equal(designLink.href, '/e/cloud/configure?cart=1');
-  assert.equal(cloudLink.href, '/e/cloud');
+  assert.equal(designLink.href, '/e/-_AbCdEf0123456789xyZQ/configure?cart=1');
+  assert.equal(cloudLink.href, '/e/-_AbCdEf0123456789xyZQ');
   assert.equal(title.textContent, 'Cloud');
 });
