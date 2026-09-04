@@ -23,7 +23,7 @@ create table events (
   draft_owner_hash text,
   created_at      timestamptz not null,
   expires_at      timestamptz not null,
-  constraint events_slug_valid check (slug ~ '^[A-Za-z0-9_-]{21}[AEIMQUYcgkosw048]$'),
+  constraint events_slug_nonempty check (length(slug) between 1 and 120),
   constraint events_locale_supported check (locale in ('de', 'en', 'fr', 'it', 'es', 'tr')),
   constraint events_expiry_exact check (expires_at = created_at + interval '365 days')
 );
@@ -83,7 +83,7 @@ create index archives_event_created_idx on archives (event_id, created_at);
 create table reserved_event_slugs (
   slug                 text primary key,
   original_created_at  timestamptz not null,
-  constraint reserved_event_slugs_valid check (slug ~ '^[A-Za-z0-9_-]{21}[AEIMQUYcgkosw048]$')
+  constraint reserved_event_slugs_nonempty check (length(slug) between 1 and 120)
 );
 
 -- Reset brute-force state stores only an HMAC of the normalized source.

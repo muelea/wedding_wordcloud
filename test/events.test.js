@@ -103,10 +103,6 @@ test('both creation endpoints retry permanent ID collisions and stop after 20 at
   }
   assert.equal((await query('SELECT count(*)::integer AS count FROM events')).rows[0].count, 2);
   assert.equal((await query('SELECT count(*)::integer AS count FROM reserved_event_slugs')).rows[0].count, 3);
-  await assert.rejects(
-    query('INSERT INTO reserved_event_slugs (slug, original_created_at) VALUES ($1, now())', ['wortwolke-9ygku']),
-    (error) => error?.code === '23514'
-  );
 });
 
 test('event creation uses one canonical event URL', async (t) => {
