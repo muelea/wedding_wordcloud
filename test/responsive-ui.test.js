@@ -141,7 +141,10 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.equal((configure.match(/id="wrap-canvas"/g) || []).length, 1,
     'the compact purchase surface must reuse the only editor canvas');
   assert.match(configure, /@media \(max-width: 620px\)[\s\S]*?\.config-studio\[data-mobile-editor-expanded="false"\] \.design-toolbar,[\s\S]*?\.editor-card \{[\s\S]*?display: none;/);
-  assert.match(configure, /\.config-studio\[data-mobile-editor-expanded="false"\] \.checkout-panel \{[\s\S]*?position: fixed;[\s\S]*?bottom: max\(8px, var\(--ww-safe-bottom\)\);/);
+  assert.match(configure, /\.config-studio\[data-mobile-editor-expanded="false"\] \.checkout-panel \{[\s\S]*?position: fixed;[\s\S]*?bottom: max\(8px, var\(--ww-safe-bottom\)\);[\s\S]*?padding: 0;[\s\S]*?border: 0;[\s\S]*?background: transparent;[\s\S]*?box-shadow: none;/);
+  assert.match(configure, /\.mobile-editor-caret \{[\s\S]*?width: 7px;[\s\S]*?border-right: 1\.5px solid currentColor;[\s\S]*?transform: rotate\(45deg\);/);
+  assert.doesNotMatch(configure, /class="mobile-editor-caret"[^>]*>[^<]+<\/span>/,
+    'mobile disclosure buttons use the aligned CSS chevron, not a font glyph');
   assert.match(configure, /function setMobileEditorExpanded\(expanded, \{ scroll = true \} = \{\}\)/);
   assert.match(configure, /setText\(continueOrderLabel, mobilePurchase && currentDesignNeedsSave/);
   assert.match(configure, /!await saveCurrentDesign\(continueOrderButton\)/,

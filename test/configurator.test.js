@@ -79,6 +79,33 @@ test('duplicating a selection respects the design limit atomically and preserves
   assert.equal(feedback[0].params.count, 1200);
 });
 
+test('neutral clicks outside the print canvas clear selection without swallowing editor controls', () => {
+  const editor = Object.create(MugPrintEditor.prototype);
+  const canvasTarget = {};
+  const neutralTarget = {
+    closest: selector => selector === 'body' ? {} : null,
+  };
+  const buttonTarget = {
+    closest: selector => selector === 'body' || selector.includes('button') ? {} : null,
+  };
+  editor.shell = { contains: target => target === canvasTarget };
+  assert.equal(editor.shouldDismissSelection(canvasTarget), false);
+  assert.equal(editor.shouldDismissSelection(buttonTarget), false);
+  assert.equal(editor.shouldDismissSelection(neutralTarget), true);
+
+  const calls = [];
+  let active = {};
+  editor.canvas = {
+    getActiveObject: () => active,
+    discardActiveObject: () => { calls.push('discard'); active = null; },
+    requestRenderAll: () => calls.push('render'),
+  };
+  editor.updateSelectionPanel = () => calls.push('sync');
+  assert.equal(editor.clearSelection(), true);
+  assert.deepEqual(calls, ['discard', 'render', 'sync']);
+  assert.equal(editor.clearSelection(), false);
+});
+
 test('double-clicking emoji text focuses the dedicated editor field', () => {
   const calls = [];
   const editor = Object.create(MugPrintEditor.prototype);
