@@ -172,7 +172,58 @@ async function verifyPin(pin, hash, salt) {
 }
 
 // ── Events ──────────────────────────────────────────────────────────────
-async function createEvent({ title, pin, locale = 'de' }) {
+function prepareSeedWords(words) {
+  if (!Array.isArray(words) || !words.length || words.length > MAX_EVENT_UNIQUE_WORDS) {
+    const error = new Error('seed words must contain between 1 and 500 entries');
+    error.code = 'invalid_seed_words';
+    throw error;
+  }
+  const seen = new Set();
+  let contributionCount = 0;
+  const prepared = words.map((entry) => {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string' || !entry[0]) {
+      const error = new Error('seed words must be [word, count] pairs');
+      error.code = 'invalid_seed_words';
+      throw error;
+    }
+    const [word, count] = entry;
+    if (seen.has(word) || !Number.isSafeInteger(count) || count < 1) {
+      const error = new Error('seed words must be unique and have positive integer counts');
+      error.code = 'invalid_seed_words';
+      throw error;
+    }
+    seen.add(word);
+    contributionCount += count;
+    if (contributionCount > MAX_EVENT_CONTRIBUTIONS) {
+      const error = new Error('seed contribution limit exceeded');
+      error.code = 'event_contribution_limit';
+      throw error;
+    }
+    return [word, count];
+  });
+
+  const receiptIds = [];
+  const contributionWords = [];
+  const ownerIds = [];
+  const usedReceipts = new Set();
+  for (const [word, count] of prepared) {
+    for (let index = 0; index < count; index += 1) {
+      let receiptId;
+      do receiptId = crypto.randomBytes(18).toString('base64url');
+      while (usedReceipts.has(receiptId));
+      usedReceipts.add(receiptId);
+      receiptIds.push(receiptId);
+      contributionWords.push(word);
+      // Seeded votes belong to synthetic guests, never to the browser that
+      // later opens the event. A separate random owner keeps the normal
+      // per-browser contribution ceiling meaningful for subsequent demos.
+      ownerIds.push(crypto.randomBytes(16).toString('hex'));
+    }
+  }
+  return { words: prepared, receiptIds, contributionWords, ownerIds };
+}
+
+async function createEventRecord({ title, pin, locale, seed = null }) {
   const { hash, salt } = await hashPin(pin);
   for (let attempt = 0; attempt < EVENT_SLUG_ATTEMPTS; attempt += 1) {
     const slug = generateEventSlug();
@@ -188,7 +239,20 @@ async function createEvent({ title, pin, locale = 'de' }) {
           ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
           RETURNING *
         `, [slug, title, hash, salt, locale]);
-        return rowToBoundary(result.rows[0]);
+        const event = result.rows[0];
+        if (seed) {
+          await client.query(`
+            INSERT INTO words (event_id, word, count, updated_at)
+            SELECT $1, input.word, input.count, transaction_timestamp()
+            FROM unnest($2::text[], $3::integer[]) AS input(word, count)
+          `, [event.id, seed.words.map(([word]) => word), seed.words.map(([, count]) => count)]);
+          await client.query(`
+            INSERT INTO word_contributions (receipt_id, event_id, word, owner_id)
+            SELECT input.receipt_id, $1, input.word, input.owner_id
+            FROM unnest($2::text[], $3::text[], $4::text[]) AS input(receipt_id, word, owner_id)
+          `, [event.id, seed.receiptIds, seed.contributionWords, seed.ownerIds]);
+        }
+        return rowToBoundary(event);
       });
     } catch (error) {
       if (error?.code !== '23505') throw error;
@@ -197,6 +261,19 @@ async function createEvent({ title, pin, locale = 'de' }) {
   const error = new Error('could not reserve a unique event ID');
   error.code = 'event_id_generation_failed';
   throw error;
+}
+
+async function createEvent({ title, pin, locale = 'de' }) {
+  return createEventRecord({ title, pin, locale });
+}
+
+// Local marketing fixtures use the real event schema, including one private
+// contribution row for every aggregate vote. The caller owns local-only
+// authorization and input normalization; this boundary makes the event plus
+// all seed data atomic so a failed import cannot leave a partial cloud.
+async function createSeededEvent({ title, pin, locale = 'de', words }) {
+  const seed = prepareSeedWords(words);
+  return createEventRecord({ title, pin, locale, seed });
 }
 
 async function updateEventTitle({ eventId, title }) {
@@ -2699,6 +2776,7 @@ module.exports = {
   hashPin,
   verifyPin,
   createEvent,
+  createSeededEvent,
   updateEventTitle,
   replaceOrganizerPin,
   getEventBySlug,

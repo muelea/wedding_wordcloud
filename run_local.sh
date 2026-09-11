@@ -5,6 +5,38 @@ set -euo pipefail
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
+usage() {
+  echo "Verwendung: ./run_local.sh [--seed-cloud DATEI.json]"
+}
+
+SEED_CLOUD_FILE=""
+while (( $# > 0 )); do
+  case "$1" in
+    --seed-cloud)
+      if (( $# < 2 )) || [[ "$2" == -* ]]; then
+        echo "Fehler: --seed-cloud benötigt eine JSON-Datei."
+        usage
+        exit 1
+      fi
+      if [[ -n "$SEED_CLOUD_FILE" ]]; then
+        echo "Fehler: --seed-cloud darf nur einmal angegeben werden."
+        exit 1
+      fi
+      SEED_CLOUD_FILE="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Fehler: Unbekannte Option: $1"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
 if ! command -v node >/dev/null 2>&1; then
   echo "Fehler: Node.js ist nicht installiert. Bitte installiert Node.js 22 oder neuer."
   exit 1
@@ -33,5 +65,9 @@ if [[ ! -f .env ]]; then
 fi
 
 node scripts/prepare-local.js
+
+if [[ -n "$SEED_CLOUD_FILE" ]]; then
+  node scripts/seed-local-cloud.js "$SEED_CLOUD_FILE"
+fi
 
 exec npm start

@@ -23,6 +23,7 @@ function validateRuntimeConfig() {
     String(process.env.RESEND_WEBHOOK_SECRET || '').trim()
   );
   for (const name of [
+    'ALLOW_REMOTE_MARKETING_SEEDS',
     'ALLOW_TEST_DATA_RESET',
     'MAINTENANCE_MODE',
     'STRIPE_LIVE_PAYMENTS_ENABLED',
@@ -43,6 +44,9 @@ function validateRuntimeConfig() {
   } catch { /* The precise APP_ENVIRONMENT error is already included above. */ }
 
   if (production) {
+    if (flag('ALLOW_REMOTE_MARKETING_SEEDS') === 'true') {
+      errors.push('ALLOW_REMOTE_MARKETING_SEEDS darf im Webprozess nicht aktiviert sein.');
+    }
     if (process.env.MIGRATION_DATABASE_URL) {
       errors.push('MIGRATION_DATABASE_URL darf im Webprozess nicht vorhanden sein.');
     }

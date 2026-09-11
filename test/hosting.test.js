@@ -168,6 +168,8 @@ test('container, Fly config and local deployment command enforce the hosting bou
   assert.match(envExample, /`STRIPE_TEST_HOSTED_WEBHOOK_SECRET`/);
   assert.doesNotMatch(envExample, /^STRIPE_TEST_HOSTED_WEBHOOK_SECRET=/m);
   assert.match(envExample, /^DATABASE_CA_CERT_PATH=certs\/supabase-prod-ca-2021\.crt$/m);
+  assert.match(envExample, /^ALLOW_REMOTE_MARKETING_SEEDS=false$/m);
+  assert.doesNotMatch(fly, /ALLOW_REMOTE_MARKETING_SEEDS/);
   assert.doesNotMatch(envExample, /^DATABASE_CA_CERT=/m);
   assert.doesNotMatch(secretScript, /DATABASE_CA_CERT/);
   assert.doesNotMatch(envExample, /^STRIPE_(?:SECRET_KEY|WEBHOOK_SECRET|ALLOW_LIVE_PAYMENTS)=/m);
@@ -225,9 +227,13 @@ test('a fresh collaborator checkout has one deterministic local startup path', (
   assert.equal(fs.readFileSync(path.join(ROOT, '.nvmrc'), 'utf8').trim(), '22');
   assert.equal(packageJson.engines.node, '>=22');
   assert.equal(packageJson.scripts['local:prepare'], 'node scripts/prepare-local.js');
+  assert.equal(packageJson.scripts['local:seed-cloud'], 'node scripts/seed-local-cloud.js');
   assert.match(runLocal, /node scripts\/prepare-local\.js/);
+  assert.match(runLocal, /--seed-cloud/);
+  assert.match(runLocal, /node scripts\/seed-local-cloud\.js/);
   assert.doesNotMatch(runLocal, /\[\[ ! -d node_modules \]\]/);
   assert.doesNotMatch(runLocal, /npm install/);
+  assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8'), /seed-local-cloud|marketing\/clouds/);
   assert.match(readme, /fresh clone plus a securely supplied|Clone the repository[\s\S]*\.\/run_local\.sh/i);
   assert.match(readme, /there is no untracked 3D\s+model/i);
   assert.match(agents, /Collaborator startup is one guarded path/);
