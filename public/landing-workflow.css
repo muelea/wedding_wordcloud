@@ -875,6 +875,16 @@
     font-size: .76rem;
     line-height: 1.45;
   }
+
+  html.workflow-scroll-ready .workflow-step-copy:not([data-active='true']) .workflow-step-text > span {
+    display: none;
+  }
+}
+
+@media (min-width: 1051px) and (max-width: 1279px) {
+  html.workflow-scroll-ready .workflow-step-copy:not([data-active='true']) .workflow-step-text > span {
+    display: none;
+  }
 }
 
 @media (min-width: 1051px) and (max-width: 1190px) {

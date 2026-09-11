@@ -160,6 +160,8 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landingWorkflowStyles, /min-height: calc\(var\(--workflow-sticky-height\) \+ 200vh\)/);
   assert.match(landingWorkflowStyles, /html\.workflow-scroll-ready \.workflow-sticky \{[\s\S]*?position: sticky;/);
   assert.match(landingWorkflowStyles, /grid-template-columns: minmax\(340px, \.76fr\) minmax\(0, 1\.42fr\)/);
+  assert.match(landingWorkflowStyles, /@media \(min-width: 1051px\) and \(max-height: 820px\) \{[\s\S]*?\.workflow-step-copy:not\(\[data-active='true'\]\) \.workflow-step-text > span \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /@media \(min-width: 1051px\) and \(max-width: 1279px\) \{[\s\S]*?\.workflow-step-copy:not\(\[data-active='true'\]\) \.workflow-step-text > span \{[\s\S]*?display: none;/);
   assert.match(landingWorkflowStyles, /@media \(max-width: 1050px\)[\s\S]*?html\.workflow-scroll-ready \.workflow-stage \{[\s\S]*?display: none;/);
   assert.match(landingWorkflowStyles, /\.workflow-step > \.workflow-panel \{[\s\S]*?margin: 4px auto 34px;/);
   assert.match(landingWorkflowStyles, /@media \(prefers-reduced-motion: reduce\)/);
