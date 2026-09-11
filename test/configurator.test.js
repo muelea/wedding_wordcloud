@@ -873,12 +873,15 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.doesNotMatch(configurePage, /id="editor-font"|editor-font-select|fontSelect:/);
   assert.match(configurePage, /id="editor-font-toggle"[^>]*aria-haspopup="listbox"/);
   assert.match(configurePage, /id="editor-font-menu"[^>]*role="listbox"/);
+  assert.match(configurePage, /id="editor-font-size"[^>]*type="number"[^>]*inputmode="decimal"[^>]*min="1"[^>]*step="0\.1"[^>]*list="editor-font-size-options"/);
   for (const id of ['editor-bold', 'editor-italic', 'editor-underline', 'editor-linethrough']) {
     assert.match(configurePage, new RegExp(`id="${id}"[^>]*aria-pressed="false"`));
   }
   assert.match(configurePage, /\.editor-font-toggle \{[\s\S]*?font-size: 11px;/);
   assert.match(configurePage, /setFontPickerInline: inline => mugEditor\?\.setFontPickerInline\(inline\)/);
   assert.match(configurePage, /fontButton: document\.getElementById\('editor-font-toggle'\)/);
+  assert.match(configurePage, /fontSizeInput: document\.getElementById\('editor-font-size'\)/);
+  assert.match(configurePage, /mugEditor\.commitFontSizeInput\(\)/);
   assert.match(configurePage, /DesignFonts\.cssFamily\(item\.fontFamily\)/);
   assert.match(configurePage, /async function ensureDesignFonts\(fontKeys\)/);
   assert.match(configurePage, /await WolkenworteConfiguratorSession\.withTimeout\(ensureDesignFonts\(\[DesignFonts\.DEFAULT_FONT_KEY\]\)\)/);
@@ -971,6 +974,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /updateImageQualityBadge\(object\)/);
   assert.match(mugEditorSource, /root\.fabric\.util\.qrDecompose\(object\.calcTransformMatrix\(\)\)/);
   assert.match(mugEditorSource, /setActiveFont\(fontKey\)/);
+  assert.match(mugEditorSource, /setActiveFontSize\(value\)/);
+  assert.match(mugEditorSource, /pointSize \* this\.printFileDpi \/ 72/);
   assert.match(mugEditorSource, /name\.style\.fontFamily = font\.cssFamily/);
   assert.match(mugEditorSource, /syncFontPicker\(fontKey, placeholder, disabled\)/);
   assert.match(mugEditorSource, /fontFamily: root\.DesignFonts\.normalizeKey\(object\.editorFontKey\)/);

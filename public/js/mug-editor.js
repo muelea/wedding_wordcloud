@@ -75,6 +75,7 @@
       this.fontButton = options.fontButton;
       this.fontCurrent = options.fontCurrent;
       this.fontMenu = options.fontMenu;
+      this.fontSizeInput = options.fontSizeInput;
       this.styleButtons = {
         fontWeight: options.boldButton,
         fontStyle: options.italicButton,
@@ -722,6 +723,20 @@
         this.openFontPicker(event.key === 'ArrowUp' ? -1 : 1);
       });
       this.fontMenu.addEventListener('keydown', (event) => this.onFontPickerKeyDown(event));
+      this.fontSizeInput?.addEventListener('focus', () => this.fontSizeInput.select());
+      this.fontSizeInput?.addEventListener('change', () => this.commitFontSizeInput());
+      this.fontSizeInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.commitFontSizeInput();
+          this.fontSizeInput.select();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          this.syncFontSizeInput(this.selectedObjects().filter((object) => object.editorKind === 'text'));
+          this.fontSizeInput.blur();
+        }
+      });
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
@@ -1338,7 +1353,7 @@
     }
 
     hasPendingTextChange() {
-      if (this.pendingFontChange) return true;
+      if (this.pendingFontChange || this.hasPendingFontSizeChange()) return true;
       const active = this.canvas.getActiveObject();
       return active?.editorKind === 'text' && Boolean(this.textInput.value.trim()) &&
         this.normalizeText(this.textInput.value) !== this.normalizeText(this.objectText(active));
@@ -1710,6 +1725,119 @@
       return object.editorLinethrough === true;
     }
 
+    pointSizeValue(value = this.fontSizeInput?.value) {
+      const valueAsNumber = Number(this.fontSizeInput?.valueAsNumber);
+      if (value === this.fontSizeInput?.value && Number.isFinite(valueAsNumber)) return valueAsNumber;
+      return Number(String(value ?? '').trim().replace(',', '.'));
+    }
+
+    objectPointSize(object) {
+      const item = this.serializeObject(object);
+      return item.fontSize * 72 / this.printFileDpi;
+    }
+
+    displayPointSize(value) {
+      return String(Math.round(value * 10) / 10);
+    }
+
+    syncFontSizeInput(textObjects) {
+      if (!this.fontSizeInput) return;
+      const objects = Array.isArray(textObjects) ? textObjects : [];
+      this.fontSizeInput.disabled = objects.length === 0;
+      if (!objects.length) {
+        this.fontSizeInput.value = '';
+        return;
+      }
+      const sizes = objects.map((object) => this.displayPointSize(this.objectPointSize(object)));
+      this.fontSizeInput.value = sizes.every((size) => size === sizes[0]) ? sizes[0] : '';
+    }
+
+    hasPendingFontSizeChange() {
+      if (!this.fontSizeInput || this.fontSizeInput.disabled || !String(this.fontSizeInput.value).trim()) {
+        return false;
+      }
+      const pointSize = this.pointSizeValue();
+      if (!Number.isFinite(pointSize) || pointSize < 1) return false;
+      const textObjects = this.selectedObjects().filter((object) => object.editorKind === 'text');
+      return textObjects.some((object) => (
+        this.displayPointSize(this.objectPointSize(object)) !== this.displayPointSize(pointSize)
+      ));
+    }
+
+    textItemFitsPrintArea(item) {
+      const measured = root.WordCloudCore.measureTextBox(
+        item.text,
+        item.fontSize,
+        this.measureContext,
+        root.DesignFonts.cssFamily(item.fontFamily),
+        item
+      );
+      const box = root.WordCloudCore.styledTextBox(measured, item);
+      const radians = (Number(item.angle) || 0) * Math.PI / 180;
+      const cosine = Math.abs(Math.cos(radians));
+      const sine = Math.abs(Math.sin(radians));
+      const width = box.width * cosine + box.height * sine;
+      const height = box.width * sine + box.height * cosine;
+      const area = this.getSafeArea();
+      return width <= area.width - 4 && height <= area.height - 4;
+    }
+
+    setActiveFontSize(value) {
+      const pointSize = this.pointSizeValue(value);
+      const active = this.canvas.getActiveObject();
+      if (!active || !Number.isFinite(pointSize) || pointSize < 1) {
+        this.setFeedback('Bitte gebt eine gültige Schriftgröße ein.');
+        this.syncFontSizeInput(this.selectedObjects(active)
+          .filter((object) => object.editorKind === 'text'));
+        return false;
+      }
+      const selected = this.selectedObjects(active);
+      const textObjects = selected.filter((object) => object.editorKind === 'text');
+      if (!textObjects.length) return false;
+      const printSize = round(pointSize * this.printFileDpi / 72);
+      const entries = textObjects.map((object) => ({
+        object,
+        index: this.canvas.getObjects().indexOf(object),
+        item: { ...this.serializeObject(object), fontSize: printSize },
+      }));
+      if (entries.some((entry) => !this.textItemFitsPrintArea(entry.item))) {
+        this.setFeedback('Diese Schriftgröße passt nicht auf die aktuelle Druckfläche.');
+        this.syncFontSizeInput(textObjects);
+        return false;
+      }
+      const changed = entries.filter((entry) => (
+        round(this.serializeObject(entry.object).fontSize) !== printSize
+      ));
+      if (!changed.length) {
+        this.syncFontSizeInput(textObjects);
+        return false;
+      }
+      const replacements = new Map();
+      this.canvas.discardActiveObject();
+      for (const entry of changed) {
+        this.canvas.remove(entry.object);
+        const replacement = this.makeObject(entry.item);
+        this.canvas.insertAt(entry.index, replacement);
+        this.keepInside(replacement);
+        replacements.set(entry.object, replacement);
+      }
+      this.setActiveObjects(selected.map((object) => replacements.get(object) || object));
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      const messageSize = root.WolkenworteI18n?.formatNumber
+        ? root.WolkenworteI18n.formatNumber(pointSize, { maximumFractionDigits: 1 })
+        : this.displayPointSize(pointSize);
+      this.setFeedback('Schriftgröße auf {{size}} pt gesetzt', { size: messageSize });
+      return true;
+    }
+
+    commitFontSizeInput() {
+      if (!this.fontSizeInput || !String(this.fontSizeInput.value).trim()) return false;
+      return this.setActiveFontSize(this.fontSizeInput.value);
+    }
+
     toggleActiveTextStyle(property) {
       if (!Object.prototype.hasOwnProperty.call(this.styleButtons, property)) return;
       const active = this.canvas.getActiveObject();
@@ -1832,6 +1960,7 @@
       this.updateImageQualityBadge(isImage ? active : null);
       this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
       this.colorInput.disabled = !hasSelection || !canColor;
+      this.syncFontSizeInput(selectedTexts);
       this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
       Object.entries(this.styleButtons).filter(([, button]) => button).forEach(([property, button]) => {
         button.disabled = styleableTexts.length === 0;

@@ -60,6 +60,13 @@ test('every toolbar action renders its intended local mark and a translated acce
       }
       assert.equal(attr(action, 'title'), undefined, 'one custom tooltip, no competing native title');
     }
+    const actionIcon = id => {
+      const action = actions.find(node => attr(node, 'id') === id);
+      return attr(nodes(action, node => node.tagName === 'use')[0], 'href');
+    };
+    assert.equal(actionIcon('editor-smaller'), '#editor-icon-minus');
+    assert.equal(actionIcon('editor-larger'), '#editor-icon-plus');
+    assert.equal(actionIcon('editor-fit-area'), '#editor-icon-expand');
     assert.equal(nodes(page, node => attr(node, 'data-editor-tool') !== undefined).length, 4);
     const labels = nodes(page, node => attr(node, 'data-editor-tool-label') !== undefined);
     assert.equal(labels.length, 4);

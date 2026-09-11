@@ -29,8 +29,9 @@ async function createEditor(t) {
   const editor = Object.create(root.MugPrintEditor.prototype);
   Object.assign(editor, {
     width: 2700, height: 1050, canvasWidth: 1350, canvasHeight: 525,
-    editorScale: .5, printMargin: 24, margin: 12, idCounter: 0,
+    editorScale: .5, printFileDpi: 300, printMargin: 24, margin: 12, idCounter: 0,
     textInput: { value: '' }, textChangeRevision: 0, history: [], historyIndex: -1,
+    fontSizeInput: { value: '', valueAsNumber: NaN, disabled: true, select() {}, blur() {} },
     imageElements: new Map(), imageRefsBySource: new Map(), imageSourcesByRef: new Map(),
     measureContext: createCanvas(1, 1).getContext('2d'),
     styleButtons: { fontWeight: {}, fontStyle: {}, underline: {}, linethrough: {} },
@@ -88,6 +89,60 @@ test('mixed selections style words only and leave standalone emoji unformatted',
     underline: emoji.underline, linethrough: emoji.linethrough }, {
     fontWeight: 400, fontStyle: 'normal', underline: false, linethrough: false,
   });
+});
+
+test('exact point sizing updates selected text and emoji, leaves motifs unchanged and undoes once', async t => {
+  const editor = await createEditor(t);
+  const feedback = [];
+  editor.setFeedback = (message, params) => feedback.push([message, params]);
+  editor.setDesign([
+    { id: 'word', text: 'Liebe', x: 650, y: 525, fontSize: 120, angle: 0,
+      color: '#2455f5', fontFamily: 'classic' },
+    { id: 'emoji', text: '❤️', x: 1350, y: 525, fontSize: 160, angle: 0,
+      color: '#d90368', fontFamily: 'lora' },
+    { id: 'motif', type: 'icon', icon: 'heart', x: 2050, y: 525, size: 140,
+      angle: 0, color: '#168f83' },
+  ], { resetHistory: true });
+  editor.selectAll();
+
+  const selectedText = editor.selectedObjects().filter(object => object.editorKind === 'text');
+  editor.syncFontSizeInput(selectedText);
+  assert.equal(editor.fontSizeInput.disabled, false);
+  assert.equal(editor.fontSizeInput.value, '', 'mixed sizes use the dash placeholder');
+
+  const historyLength = editor.history.length;
+  assert.equal(editor.setActiveFontSize(11), true);
+  const [word, emoji, motif] = editor.getDesign();
+  assert.equal(word.fontSize, 45.8);
+  assert.equal(emoji.fontSize, 45.8);
+  assert.equal(motif.size, 140);
+  assert.equal(editor.history.length, historyLength + 1, 'one action creates one undo step');
+  assert.equal(editor.selectedObjects().length, 3, 'the mixed selection remains active');
+  assert.equal(feedback.at(-1)[0], 'Schriftgröße auf {{size}} pt gesetzt');
+  assert.equal(feedback.at(-1)[1].size, '11');
+
+  editor.syncFontSizeInput(editor.selectedObjects().filter(object => object.editorKind === 'text'));
+  assert.equal(editor.fontSizeInput.value, '11');
+  editor.undo();
+  assert.deepEqual(editor.getDesign().map(item => item.type === 'icon' ? item.size : item.fontSize),
+    [120, 160, 140]);
+});
+
+test('exact point sizing rejects a value that cannot fit without changing the design', async t => {
+  const editor = await createEditor(t);
+  const feedback = [];
+  editor.setFeedback = message => feedback.push(message);
+  editor.setDesign([{ id: 'word', text: 'Wolkenworte', x: 1350, y: 525,
+    fontSize: 120, angle: 0, color: '#2455f5', fontFamily: 'classic' }],
+  { resetHistory: true });
+  editor.canvas.setActiveObject(editor.canvas.getObjects()[0]);
+  const before = JSON.stringify(editor.getDesign());
+  const historyLength = editor.history.length;
+
+  assert.equal(editor.setActiveFontSize(1000), false);
+  assert.equal(JSON.stringify(editor.getDesign()), before);
+  assert.equal(editor.history.length, historyLength);
+  assert.equal(feedback.at(-1), 'Diese Schriftgröße passt nicht auf die aktuelle Druckfläche.');
 });
 
 test('all five fonts render bold styled text identically through the print contract', async () => {

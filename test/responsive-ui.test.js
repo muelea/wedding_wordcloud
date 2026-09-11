@@ -230,6 +230,7 @@ test('mobile forms prevent iOS input zoom and expose full-size controls', () => 
   assert.match(display, /\.draft-settings input \{[^}]*font: 16px/);
   assert.match(display, /\.dialog-close \{ width: 44px; height: 44px/);
   assert.match(configure, /\.editor-text-input,[\s\S]*?\.editor-font-toggle \{ height: var\(--ww-touch-target\); font-size: 16px; \}/);
+  assert.match(configure, /\.editor-font-size-input \{ height: var\(--ww-touch-target\); font-size: 16px; \}/);
   assert.match(configure, /\.custom-color-remove \{ width: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
   assert.match(shipping, /\.search-input \{[^}]*height: 44px;[^}]*font-size: 16px/);
   assert.match(shipping, /\.search-option \{[^}]*min-height: 44px/);

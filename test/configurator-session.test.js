@@ -487,6 +487,7 @@ test('final text is awaited before capture and unchanged text does not dirty a r
   const context = vm.createContext({ WolkenworteConfiguratorSession: Session, suppressDirty: false, markDirty() { dirty += 1; },
     mugEditor: {
       flushPendingChange() {}, getDesign: () => design,
+      commitFontSizeInput() {},
       async commitTextInput() { await new Promise((resolve) => setTimeout(resolve, 1)); },
     },
   });
