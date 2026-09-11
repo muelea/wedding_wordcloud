@@ -149,6 +149,9 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.match(configure, /setText\(continueOrderLabel, mobilePurchase && currentDesignNeedsSave/);
   assert.match(configure, /!await saveCurrentDesign\(continueOrderButton\)/,
     'the explicit compact CTA approves the current design before navigation');
+  assert.match(workspaceStyles,
+    /grid-template-areas: 'create create selection layout reset' 'view view view history history'/,
+    'Select all and Fill the area stay adjacent in the compact editor toolbar');
 });
 
 test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {

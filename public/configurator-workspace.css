@@ -191,17 +191,18 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 
 @media (max-width: 620px) {
   .editor-toolbar { display: grid; grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px; gap: 10px 6px;
-    grid-template-areas: 'create create selection history history' 'view view view . reset'; }
+    grid-template-areas: 'create create selection layout reset' 'view view view history history'; }
   .editor-toolbar .surface-editor { grid-area: surface; }
   .editor-tools-primary { grid-area: create; }
   .editor-tools-selection { grid-area: selection; }
+  .editor-tools-layout { grid-area: layout; }
   .editor-tools-history { grid-area: history; }
   .editor-tools-view { grid-area: view; justify-self: start; margin-left: 0; }
   .editor-tools-reset { grid-area: reset; justify-self: end; }
   .editor-zoom-label { min-width: 36px; }
   .editor-tools-separated { border-left: 0; padding-left: 0; }
   .editor-toolbar:has(.surface-editor:not([hidden])) {
-    grid-template-areas: 'surface surface surface surface surface' 'create create selection history history' 'view view view . reset'; }
+    grid-template-areas: 'surface surface surface surface surface' 'create create selection layout reset' 'view view view history history'; }
   .editor-reset-actions { flex-direction: column; }
 }
 

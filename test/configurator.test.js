@@ -886,6 +886,10 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
   assert.match(configurePage, /id="editor-duplicate"[^>]*aria-label="Duplizieren"[^>]*data-editor-tooltip/);
   assert.match(configurePage, /id="editor-select-all"[^>]*aria-label="Alles auswählen"[^>]*data-editor-tooltip/);
+  assert.match(configurePage, /class="editor-tools editor-tools-separated editor-tools-layout"[^>]*aria-label="Anordnung"[^>]*>[\s\S]*?id="editor-fit-area"[^>]*aria-label="Fläche optimal nutzen"[^>]*data-editor-tooltip[\s\S]*?disabled/);
+  assert.match(configurePage, /fitAreaButton\.addEventListener\('click',[\s\S]*?fitCurrentDesignToArea\(\)/);
+  assert.match(configurePage, /async function fitCurrentDesignToArea\(\)[\s\S]*?layoutGeometry\['fit-area'\][\s\S]*?DesignLayout\.applyLayoutAction\([\s\S]*?currentDesign,[\s\S]*?DesignFonts\.cssFamily\(item\.fontFamily\)/);
+  assert.match(configurePage, /mugEditor\.setDesign\(optimizedDesign, \{ record: true \}\)[\s\S]*?mugEditor\.clearSelection\(\)/);
   assert.doesNotMatch(configurePage, /Gestaltet eure persönliche Erinnerung/);
   assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
   assert.match(configurePage, /WolkenworteConfiguratorSession\.createCart\(slug\)/);

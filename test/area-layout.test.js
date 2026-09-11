@@ -33,7 +33,13 @@ function automatic(product, words) {
 function bounds(item) {
   const box = item.type === 'image' ? { width: item.width, height: item.height }
     : item.type === 'icon' ? { width: item.size, height: item.size }
-    : Core.measureTextBox(item.text, item.fontSize, context, Fonts.cssFamily(item.fontFamily));
+    : Core.styledTextBox(Core.measureTextBox(
+      item.text,
+      item.fontSize,
+      context,
+      Fonts.cssFamily(item.fontFamily),
+      item
+    ), item);
   const angle = (item.angle || 0) * Math.PI / 180;
   const width = box.width * Math.abs(Math.cos(angle)) + box.height * Math.abs(Math.sin(angle));
   const height = box.height * Math.abs(Math.cos(angle)) + box.width * Math.abs(Math.sin(angle));

@@ -1947,6 +1947,9 @@
                 <div class="editor-tools editor-tools-separated editor-tools-selection" role="group" aria-label="Auswahl">
                   <%- include('partials/editor-action', { action: { id: 'editor-select-all', icon: 'scan', label: 'Alles auswählen' } }) %>
                 </div>
+                <div class="editor-tools editor-tools-separated editor-tools-layout" role="group" aria-label="Anordnung">
+                  <%- include('partials/editor-action', { action: { id: 'editor-fit-area', icon: 'expand', label: 'Fläche optimal nutzen', disabled: true } }) %>
+                </div>
                 <div class="editor-tools editor-tools-separated editor-tools-history" role="group" aria-label="Verlauf">
                   <%- include('partials/editor-action', { action: { id: 'editor-undo', icon: 'undo-2', label: 'Rückgängig', disabled: true } }) %>
                   <%- include('partials/editor-action', { action: { id: 'editor-redo', icon: 'redo-2', label: 'Wiederholen', disabled: true } }) %>
@@ -2271,6 +2274,7 @@
     const surfaceEditor = document.getElementById('surface-editor');
     const surfaceTabs = document.getElementById('surface-tabs');
     const surfaceCopy = document.getElementById('surface-copy');
+    const fitAreaButton = document.getElementById('editor-fit-area');
     const customPalettePanel = document.getElementById('custom-palette-panel');
     const customColorList = document.getElementById('custom-color-list');
     const customColorAdd = document.getElementById('custom-color-add');
@@ -2321,6 +2325,7 @@
     let editingOrderItemId = null;
     let suppressDirty = false;
     let orderActionPending = false;
+    let fitAreaPending = false;
     let currentDesignNeedsSave = true;
     let currentDesignEdited = false;
     let mobileEditorExpanded = false;
@@ -2394,6 +2399,8 @@
     mobileEditorToggle.addEventListener('click', () => {
       setMobileEditorExpanded(!mobileEditorExpanded);
     });
+
+    fitAreaButton.addEventListener('click', () => { void fitCurrentDesignToArea(); });
     mobileEditorCollapse.addEventListener('click', () => setMobileEditorExpanded(false));
     mobileCartSummary.addEventListener('click', () => {
       setMobileEditorExpanded(true, { scroll: false });
@@ -2902,6 +2909,43 @@
       return DesignLayout.optimizeDesign(design, slots, measurementContext, {
         fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
       });
+    }
+
+    function syncFitAreaButton() {
+      fitAreaButton.disabled = fitAreaPending || !mugEditor || mugEditor.getDesign().length === 0;
+    }
+
+    async function fitCurrentDesignToArea() {
+      if (!mugEditor || fitAreaPending || orderActionPending) return false;
+      fitAreaPending = true;
+      syncFitAreaButton();
+      try {
+        await finalizeCurrentText();
+        const currentDesign = mugEditor.getDesign();
+        if (!currentDesign.length) return false;
+        await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts(currentDesign
+          .filter((item) => item.type !== 'icon' && item.type !== 'image')
+          .map((item) => item.fontFamily)));
+        const slots = productView().layoutGeometry['fit-area'];
+        const optimizedDesign = DesignLayout.applyLayoutAction(
+          currentDesign,
+          slots,
+          mugEditor.measureContext,
+          { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
+        );
+        if (JSON.stringify(optimizedDesign) !== JSON.stringify(currentDesign)) {
+          mugEditor.setDesign(optimizedDesign, { record: true });
+        }
+        mugEditor.clearSelection();
+        mugEditor.setFeedback('Fläche optimal genutzt');
+        return true;
+      } catch {
+        mugEditor.setFeedback('Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.');
+        return false;
+      } finally {
+        fitAreaPending = false;
+        syncFitAreaButton();
+      }
     }
 
     function cloneDesign(design) {
@@ -3890,6 +3934,7 @@
         onSelectionChange: (capabilities) => workspace.updateSelection(capabilities),
         openTextEditor: () => workspace.openTextEditor(),
         onChange: () => {
+          syncFitAreaButton();
           markDirty();
           renderAll();
         },

@@ -33,7 +33,7 @@ test('every toolbar action renders its intended local mark and a translated acce
     const page = await rendered(locale);
     const symbols = new Set(nodes(page, node => node.tagName === 'symbol').map(node => attr(node, 'id')));
     const actions = nodes(page, node => attr(node, 'data-editor-tooltip') !== undefined);
-    assert.equal(actions.length, 21);
+    assert.equal(actions.length, 22);
     for (const action of actions) {
       assert.equal(action.tagName, 'button');
       assert.equal(attr(action, 'type'), 'button');
