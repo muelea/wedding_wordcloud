@@ -33,6 +33,28 @@
     };
     try {
       if (typeof mugEditor === 'undefined' || !mugEditor) throw new Error('Wait for the configurator to load.');
+      if (innerWidth <= 620) {
+        const studio = document.getElementById('config-studio');
+        const toggle = document.getElementById('mobile-editor-toggle');
+        const continueButton = document.getElementById('continue-order');
+        check('phone starts in preview-first mode', studio.dataset.mobileEditorExpanded === 'false' &&
+          toggle.getAttribute('aria-expanded') === 'false' &&
+          !document.getElementById('design-toolbar').getClientRects().length &&
+          !document.getElementById('workspace-tools').getClientRects().length &&
+          !document.getElementById('editor-card').getClientRects().length);
+        const purchaseRect = continueButton.getBoundingClientRect();
+        check('phone purchase action is immediately visible', purchaseRect.top >= 0 &&
+          purchaseRect.bottom <= innerHeight && purchaseRect.height >= 44);
+        check('phone purchase action explicitly saves the design',
+          document.getElementById('continue-order-label').textContent.includes('cart'));
+        toggle.click();
+        await frames();
+        check('phone editor expands in place', studio.dataset.mobileEditorExpanded === 'true' &&
+          toggle.getAttribute('aria-expanded') === 'true' &&
+          document.getElementById('design-toolbar').getClientRects().length &&
+          document.getElementById('workspace-tools').getClientRects().length &&
+          document.getElementById('editor-card').getClientRects().length);
+      }
       workspace.close();
       await document.fonts.ready;
       // Resizing intentionally animates the canvas fit. Start selection checks

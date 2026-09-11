@@ -131,6 +131,23 @@ test('the personal display palette is handed off to the configurator', () => {
   assert.match(configure, /option\.key === preferredPalette && option\.key !== 'custom'/);
 });
 
+test('the phone configurator starts with one preview-first purchase path', () => {
+  assert.match(configure, /id="config-studio" data-mobile-editor-expanded="false"/);
+  assert.match(configure, /id="mobile-editor-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="design-toolbar workspace-tools editor-card"/);
+  assert.match(configure, /id="mobile-editor-collapse"[^>]*aria-expanded="true"[^>]*aria-controls="design-toolbar workspace-tools editor-card"/);
+  assert.match(configure, /id="mobile-selected-product-name"/);
+  assert.match(configure, /id="mobile-selected-theme-swatches"/);
+  assert.match(configure, /id="continue-order-label"/);
+  assert.equal((configure.match(/id="wrap-canvas"/g) || []).length, 1,
+    'the compact purchase surface must reuse the only editor canvas');
+  assert.match(configure, /@media \(max-width: 620px\)[\s\S]*?\.config-studio\[data-mobile-editor-expanded="false"\] \.design-toolbar,[\s\S]*?\.editor-card \{[\s\S]*?display: none;/);
+  assert.match(configure, /\.config-studio\[data-mobile-editor-expanded="false"\] \.checkout-panel \{[\s\S]*?position: fixed;[\s\S]*?bottom: max\(8px, var\(--ww-safe-bottom\)\);/);
+  assert.match(configure, /function setMobileEditorExpanded\(expanded, \{ scroll = true \} = \{\}\)/);
+  assert.match(configure, /setText\(continueOrderLabel, mobilePurchase && currentDesignNeedsSave/);
+  assert.match(configure, /!await saveCurrentDesign\(continueOrderButton\)/,
+    'the explicit compact CTA approves the current design before navigation');
+});
+
 test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {
   assert.match(landing, /html \{ max-width: 100%;[\s\S]*?overflow-x: clip; \}/);
   assert.match(landing, /asset\('\/landing-workflow\.css'\)/);

@@ -37,9 +37,14 @@ frozen snapshot of the word cloud.
    design enters the tab-local basket only through “In den Warenkorb” or an
    explicit confirmation when leaving an unsaved editor. Editing a basket design
    uses “Änderungen übernehmen” and replaces that position without duplicating it.
+   Phones open on a preview-first purchase surface: the finished product, its
+   compact product/palette summary and the explicit “In den Warenkorb & zur
+   Lieferadresse” action stay ahead of the collapsed editor. “Design anpassen”
+   reveals the existing editor without creating a second draft or editor state.
    One shared leave dialog offers save-and-continue, discard-and-continue, or
-   stay. Unchanged basket designs need no dialog. Shipping with an empty basket
-   asks to add the current design and continue; declining keeps the editor open.
+   stay. Unchanged basket designs need no dialog. Outside the collapsed phone
+   purchase surface, shipping with an empty basket asks to add the current design
+   and continue; declining keeps the editor open.
    Failed saves never navigate. Unapproved editor work is not autosaved or
    restored. Browser back/reload/close uses the browser's own limited unsaved-work
    warning; an app-specific dialog cannot be guaranteed for those actions.
@@ -632,8 +637,9 @@ node scripts/build-emoji-search-index.js \
 ### Cart and navigation acceptance
 
 In real Safari and Chromium, test the complete journey with an isolated event:
-fresh cloud → configurator → empty-cart shipping confirmation (cancel, then
-accept) → shipping → back to design, followed by native browser Back/Forward.
+fresh cloud → phone preview-first purchase → shipping, plus expanded editor →
+empty-cart shipping confirmation (cancel, then accept) → shipping → back to
+design, followed by native browser Back/Forward.
 The editor must remain interactive with a 3D mug; addresses and quantities must
 survive. Save an edit and verify it replaces one basket position. Test the logo
 and cloud links with save/discard/cancel, then add a cloud word: a fresh design

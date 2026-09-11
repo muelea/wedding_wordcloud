@@ -225,6 +225,10 @@
       justify-content: space-between;
       gap: 20px;
     }
+    .mobile-preview-summary,
+    .mobile-editor-toggle,
+    .mobile-editor-collapse,
+    .mobile-cart-summary { display: none; }
     .preview-head h2,
     .editor-title,
     .design-toolbar h2 {
@@ -1602,6 +1606,17 @@
         margin-right: max(14px, var(--ww-safe-right));
         padding: 38px 0 max(50px, calc(34px + var(--ww-safe-bottom)));
       }
+      .config-studio[data-mobile-editor-expanded="false"] {
+        gap: 16px;
+      }
+      .config-studio[data-mobile-editor-expanded="false"] .design-toolbar,
+      .config-studio[data-mobile-editor-expanded="false"] .workspace-tools,
+      .config-studio[data-mobile-editor-expanded="false"] .editor-card {
+        display: none;
+      }
+      .config-studio[data-mobile-editor-expanded="false"] .workbench {
+        --workspace-stage-height: clamp(245px, 70vw, 310px);
+      }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
       .workspace-tools { padding: 12px; border-radius: 16px; }
@@ -1620,10 +1635,157 @@
       }
       .order-actions .continue-button { grid-column: 1 / -1; }
       .order-actions button { padding-inline: 10px; overflow-wrap: anywhere; }
+      .config-studio[data-mobile-editor-expanded="false"] .checkout-panel {
+        position: fixed;
+        z-index: 40;
+        right: max(14px, var(--ww-safe-right));
+        bottom: max(8px, var(--ww-safe-bottom));
+        left: max(14px, var(--ww-safe-left));
+        width: auto;
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 8px;
+        gap: 7px;
+        border: 1px solid rgba(123, 70, 82, .14);
+        border-radius: 17px;
+        background: rgba(255, 253, 250, .94);
+        box-shadow: 0 14px 34px rgba(64, 15, 38, .17);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+      }
+      .config-studio[data-mobile-editor-expanded="false"] .order-box,
+      .config-studio[data-mobile-editor-expanded="false"] #design-another,
+      .config-studio[data-mobile-editor-expanded="false"] #save-design {
+        display: none;
+      }
+      .config-studio[data-mobile-editor-expanded="false"] .order-actions {
+        display: block;
+      }
+      .config-studio[data-mobile-editor-expanded="false"] .continue-button {
+        width: 100%;
+        min-height: 52px;
+        padding: 12px 16px;
+        font-size: 14px;
+        line-height: 1.3;
+      }
+      .config-studio[data-mobile-editor-expanded="false"] .error-text:not(:empty) {
+        padding: 2px 8px 4px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .config-content[data-mobile-editor-expanded="false"] {
+        padding-bottom: calc(78px + var(--ww-safe-bottom));
+      }
       .design-toolbar { padding: 14px 0 16px; }
-      .preview-head { align-items: center; }
-      .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 16px -20px 0; padding: 6px 14px 18px; gap: 22px; }
-      .mug-viewer { height: min(270px, calc(var(--workspace-stage-height) - 44px)); }
+      .design-toolbar-copy {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+      .mobile-editor-collapse,
+      .mobile-editor-toggle {
+        min-height: var(--ww-touch-target);
+        padding: 9px 12px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid rgba(156, 28, 76, .2);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--berry);
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .mobile-editor-toggle { display: inline-flex; }
+      .mobile-editor-collapse { display: inline-flex; }
+      .mobile-editor-toggle:focus-visible,
+      .mobile-editor-collapse:focus-visible,
+      .mobile-cart-summary:focus-visible {
+        outline: 3px solid rgba(156, 28, 76, .2);
+        outline-offset: 2px;
+      }
+      .mobile-editor-caret {
+        display: inline-block;
+        font-size: 15px;
+        line-height: 1;
+        transition: transform .2s;
+      }
+      .mobile-editor-toggle[aria-expanded="true"] .mobile-editor-caret,
+      .mobile-editor-collapse[aria-expanded="true"] .mobile-editor-caret {
+        transform: rotate(180deg);
+      }
+      .preview-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px 12px;
+      }
+      .mobile-preview-summary {
+        min-width: 0;
+        grid-column: 1 / -1;
+        padding: 11px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 9px 14px;
+        border: 1px solid rgba(123, 70, 82, .11);
+        border-radius: 14px;
+        background: rgba(248, 240, 229, .55);
+      }
+      .mobile-preview-product { min-width: 0; }
+      .mobile-preview-product strong,
+      .mobile-preview-product span { display: block; }
+      .mobile-preview-product strong {
+        overflow: hidden;
+        font-size: 14px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .mobile-preview-product span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .mobile-preview-palette {
+        min-width: 86px;
+        display: grid;
+        justify-items: end;
+        gap: 5px;
+      }
+      .mobile-preview-palette-name {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1;
+      }
+      .mobile-preview-theme-swatches {
+        width: 86px;
+        height: 10px;
+        margin: 0;
+      }
+      .mobile-cart-summary {
+        min-height: var(--ww-touch-target);
+        grid-column: 1 / -1;
+        padding: 9px 12px;
+        align-items: center;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        border: 1px solid rgba(156, 28, 76, .14);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .76);
+        color: var(--ink);
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        text-align: left;
+      }
+      .mobile-cart-summary:not([hidden]) { display: grid; }
+      .mobile-cart-summary strong { color: var(--berry); font-size: 12px; }
+      .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 10px -20px 0; padding: 4px 14px 14px; gap: 22px; }
+      .mug-viewer { height: min(250px, calc(var(--workspace-stage-height) - 42px)); }
       .mug-name { margin-top: 0; font-size: 11px; }
       .preview-disclaimer { max-width: 300px; margin-top: 7px; font-size: 10.5px; }
       .surface-editor { align-items: center; flex-direction: row; }
@@ -1667,6 +1829,10 @@
       .option-grid { grid-template-columns: 1fr; }
       .option-card { min-height: 76px; }
     }
+
+    @media (max-width: 620px) and (prefers-reduced-motion: reduce) {
+      .mobile-editor-caret { transition: none; }
+    }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
@@ -1680,17 +1846,20 @@
   <main class="page">
     <div class="loading" id="loading">Eure Wortwolke wird vorbereitet&hellip;</div>
 
-    <div class="config-content" id="config-content" hidden>
+    <div class="config-content" id="config-content" data-mobile-editor-expanded="false" hidden>
       <section class="intro">
         <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
         <p class="intro-copy" id="config-intro">Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
       </section>
 
-      <div class="config-studio">
-        <section class="design-toolbar" aria-labelledby="controls-title">
+      <div class="config-studio" id="config-studio" data-mobile-editor-expanded="false">
+        <section class="design-toolbar" id="design-toolbar" aria-labelledby="controls-title">
           <div class="design-toolbar-copy">
             <h2 id="controls-title">Euer Design</h2>
+            <button class="mobile-editor-collapse" id="mobile-editor-collapse" type="button" aria-expanded="true" aria-controls="design-toolbar workspace-tools editor-card">
+              <span id="mobile-editor-collapse-label">Nur Vorschau anzeigen</span><span class="mobile-editor-caret" aria-hidden="true">⌄</span>
+            </button>
           </div>
 
           <div class="design-toolbar-controls">
@@ -1750,7 +1919,7 @@
           </div>
         </section>
 
-        <section class="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
+        <section class="workspace-tools" id="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
               <%- include('partials/editor-symbols') %>
               <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
                   <div class="surface-editor" id="surface-editor" hidden>
@@ -1847,7 +2016,7 @@
         </section>
 
         <div class="workbench">
-          <section class="editor-card" aria-labelledby="editor-title">
+          <section class="editor-card" id="editor-card" aria-labelledby="editor-title">
             <h2 class="editor-title" id="editor-title">Druckfläche bearbeiten</h2>
             <div class="wrap-preview">
               <div class="editor-scroll is-fit" id="editor-scroll">
@@ -1868,6 +2037,22 @@
           <section class="preview-card" aria-labelledby="preview-title">
             <div class="preview-head">
               <h2 id="preview-title">Eure Vorschau</h2>
+              <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="design-toolbar workspace-tools editor-card">
+                <span id="mobile-editor-toggle-label">Design anpassen</span><span class="mobile-editor-caret" aria-hidden="true">⌄</span>
+              </button>
+              <div class="mobile-preview-summary">
+                <span class="mobile-preview-product">
+                  <strong id="mobile-selected-product-name">Weiße Tasse</strong>
+                  <span id="mobile-selected-product-detail">11 oz · 325 ml</span>
+                </span>
+                <span class="mobile-preview-palette" id="mobile-preview-palette">
+                  <span class="mobile-preview-palette-name" id="mobile-selected-theme-name">Konfetti</span>
+                  <span class="swatches mobile-preview-theme-swatches" id="mobile-selected-theme-swatches" aria-hidden="true"></span>
+                </span>
+              </div>
+              <button class="mobile-cart-summary" id="mobile-cart-summary" type="button" hidden>
+                <span id="mobile-cart-label">Euer Warenkorb</span><strong id="mobile-cart-count"></strong><span aria-hidden="true">→</span>
+              </button>
             </div>
 
             <div class="mug-stage" id="product-stage" aria-label="Vorschau des gestalteten Produkts">
@@ -1904,7 +2089,7 @@
           <div class="order-actions">
             <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
             <button class="primary-button" id="save-design" type="button">In den Warenkorb</button>
-            <button class="primary-button continue-button" id="continue-order" type="button">Zur Lieferadresse <span aria-hidden="true">→</span></button>
+            <button class="primary-button continue-button" id="continue-order" type="button"><span id="continue-order-label">Zur Lieferadresse</span> <span aria-hidden="true">→</span></button>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
           <button class="secondary-button" id="retry-configurator" type="button" hidden>Konfigurator erneut laden</button>
@@ -1993,6 +2178,7 @@
     const slug = location.pathname.split('/').filter(Boolean)[1];
     const paletteStorageKey = `wordcloud-palette:${slug}`;
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
+    const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
     const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
       de: <%- JSON.stringify(asset('/emoji-search/48.2/de.json')) %>,
       en: <%- JSON.stringify(asset('/emoji-search/48.2/en.json')) %>,
@@ -2040,6 +2226,21 @@
     const retryConfigurator = document.getElementById('retry-configurator');
     const productStage = document.getElementById('product-stage');
     const workbench = document.querySelector('.workbench');
+    const configStudio = document.getElementById('config-studio');
+    const designToolbar = document.getElementById('design-toolbar');
+    const previewCard = document.querySelector('.preview-card');
+    const mobileEditorToggle = document.getElementById('mobile-editor-toggle');
+    const mobileEditorToggleLabel = document.getElementById('mobile-editor-toggle-label');
+    const mobileEditorCollapse = document.getElementById('mobile-editor-collapse');
+    const mobileEditorCollapseLabel = document.getElementById('mobile-editor-collapse-label');
+    const mobileSelectedProductName = document.getElementById('mobile-selected-product-name');
+    const mobileSelectedProductDetail = document.getElementById('mobile-selected-product-detail');
+    const mobileSelectedThemeName = document.getElementById('mobile-selected-theme-name');
+    const mobileSelectedThemeSwatches = document.getElementById('mobile-selected-theme-swatches');
+    const mobilePreviewPalette = document.getElementById('mobile-preview-palette');
+    const mobileCartSummary = document.getElementById('mobile-cart-summary');
+    const mobileCartLabel = document.getElementById('mobile-cart-label');
+    const mobileCartCount = document.getElementById('mobile-cart-count');
     const editorScroll = document.getElementById('editor-scroll');
     const flatPreview = document.getElementById('flat-product-preview');
     const flatCanvas = document.getElementById('flat-preview');
@@ -2076,6 +2277,7 @@
     const checkoutPanel = document.getElementById('checkout-panel');
     const designAnotherButton = document.getElementById('design-another');
     const continueOrderButton = document.getElementById('continue-order');
+    const continueOrderLabel = document.getElementById('continue-order-label');
     const saveDesignButton = document.getElementById('save-design');
     const leaveDialog = document.getElementById('leave-design-dialog');
     const leaveTitle = document.getElementById('leave-design-title');
@@ -2118,6 +2320,7 @@
     let orderActionPending = false;
     let currentDesignNeedsSave = true;
     let currentDesignEdited = false;
+    let mobileEditorExpanded = false;
     let workspaceReady = false;
     let designRevision = 0;
     let pendingConfiguration = null;
@@ -2140,9 +2343,67 @@
     function updateCartActions() {
       saveDesignButton.disabled = orderActionPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
       setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
+      const mobilePurchase = mobileEditorMedia.matches && !mobileEditorExpanded;
+      setText(continueOrderLabel, mobilePurchase && currentDesignNeedsSave
+        ? (editingOrderItemId
+          ? 'Änderungen übernehmen & zur Lieferadresse'
+          : 'In den Warenkorb & zur Lieferadresse')
+        : 'Zur Lieferadresse');
       continueOrderButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
     }
+
+    function setMobileEditorExpanded(expanded, { scroll = true } = {}) {
+      mobileEditorExpanded = Boolean(expanded);
+      configStudio.dataset.mobileEditorExpanded = String(mobileEditorExpanded);
+      content.dataset.mobileEditorExpanded = String(mobileEditorExpanded);
+      mobileEditorToggle.setAttribute('aria-expanded', String(mobileEditorExpanded));
+      mobileEditorCollapse.setAttribute('aria-expanded', String(mobileEditorExpanded));
+      setText(mobileEditorToggleLabel, mobileEditorExpanded
+        ? 'Nur Vorschau anzeigen' : 'Design anpassen');
+      setText(mobileEditorCollapseLabel, 'Nur Vorschau anzeigen');
+      updateCartActions();
+
+      if (!mobileEditorMedia.matches) return;
+      if (!mobileEditorExpanded) {
+        workspace.close(false);
+        configuratorEmojiPicker?.close();
+        mugEditor?.closeIconPicker();
+        mugEditor?.closeFontPicker();
+        workbench.style.removeProperty('--workspace-stage-height');
+        workbench.style.removeProperty('--editor-stage-height');
+      }
+
+      requestAnimationFrame(() => {
+        refreshWorkspaceLayout();
+        renderAll();
+        if (!scroll) return;
+        const target = mobileEditorExpanded ? designToolbar : previewCard;
+        const focusTarget = mobileEditorExpanded ? mobileEditorCollapse : mobileEditorToggle;
+        focusTarget.focus({ preventScroll: true });
+        target.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'start',
+        });
+      });
+    }
+
+    mobileEditorToggle.addEventListener('click', () => {
+      setMobileEditorExpanded(!mobileEditorExpanded);
+    });
+    mobileEditorCollapse.addEventListener('click', () => setMobileEditorExpanded(false));
+    mobileCartSummary.addEventListener('click', () => {
+      setMobileEditorExpanded(true, { scroll: false });
+      requestAnimationFrame(() => orderBox.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'center',
+      }));
+    });
+    mobileEditorMedia.addEventListener('change', () => {
+      updateCartActions();
+      requestAnimationFrame(refreshWorkspaceLayout);
+    });
+    setMobileEditorExpanded(false, { scroll: false });
 
     function hasUnsavedDesign() {
       return workspaceReady && !restorationFailed &&
@@ -2348,10 +2609,13 @@
       const items = loadOrderItems();
       const hasItems = items.length > 0;
       orderBox.hidden = !hasItems;
+      mobileCartSummary.hidden = !hasItems;
       orderList.replaceChildren();
-      setText(orderCount, items.length === 1 ? '{{count}} Design' : '{{count}} Designs', {
-        count: items.length,
-      });
+      const countSource = items.length === 1 ? '{{count}} Design' : '{{count}} Designs';
+      const countParams = { count: items.length };
+      setText(orderCount, countSource, countParams);
+      setText(mobileCartLabel, 'Euer Warenkorb');
+      setText(mobileCartCount, countSource, countParams);
       items.forEach((item) => {
         const itemProduct = products.find((candidate) => candidate.key === item.productKey);
         const orientation = selectedOrientationOption(itemProduct, item.orientation);
@@ -2465,7 +2729,12 @@
       const palette = selectedThemeOption();
       if (palette) {
         setText(selectedThemeName, palette.label);
+        setText(mobileSelectedThemeName, palette.label);
         renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
+        renderPaletteStrip(mobileSelectedThemeSwatches, getPalette(palette.key).colors);
+        setTranslatedAttribute(mobilePreviewPalette, 'aria-label', 'Farbwelt: {{name}}', {
+          name: t(palette.label),
+        });
       }
     }
 
@@ -2930,7 +3199,12 @@
     function refreshWorkspaceLayout() {
       // Font/emoji loading can schedule this while the workspace is hidden.
       // Do not turn a temporary zero width into a persistent tiny print area.
-      if (!product || !editorScroll.clientWidth) return;
+      if (!product) return;
+      if (!editorScroll.clientWidth) {
+        refreshFlatProductPreviewFit();
+        resizeMug3D();
+        return;
+      }
       const view = productView();
       const scrollStyles = getComputedStyle(editorScroll);
       const horizontalPadding = parseFloat(scrollStyles.paddingLeft) + parseFloat(scrollStyles.paddingRight);
@@ -3227,7 +3501,10 @@
       selectedProductThumb.src = product.thumbnail;
       selectedProductThumb.alt = '';
       setText(selectedProductName, product.displayName);
-      selectedProductDetail.textContent = selectedProductSummary(product);
+      setText(mobileSelectedProductName, product.displayName);
+      const detail = selectedProductSummary(product);
+      selectedProductDetail.textContent = detail;
+      mobileSelectedProductDetail.textContent = detail;
       updateToolbarSummaries();
     }
 
@@ -3754,8 +4031,23 @@
       startingAnotherProduct = true;
       openProductDialog();
     }, { onlyIfEdited: true }));
-    continueOrderButton.addEventListener('click', () =>
-      runNavigation(navigateToShipping, { shipping: true }));
+    continueOrderButton.addEventListener('click', () => {
+      if (!(mobileEditorMedia.matches && !mobileEditorExpanded)) {
+        void runNavigation(navigateToShipping, { shipping: true });
+        return;
+      }
+      if (leavingPage || orderActionPending) return;
+      void (async () => {
+        leavingPage = true;
+        try {
+          if ((hasUnsavedDesign() || !loadOrderItems().length) &&
+              !await saveCurrentDesign(continueOrderButton)) return;
+          navigateToShipping();
+        } finally {
+          leavingPage = false;
+        }
+      })();
+    });
 
     window.addEventListener('pagehide', destroyMug3D);
     window.addEventListener('beforeunload', (event) => {
@@ -3785,6 +4077,7 @@
       renderCustomColorControls();
       renderOrderBox();
       updateProductPresentation();
+      setMobileEditorExpanded(mobileEditorExpanded, { scroll: false });
     }
 
     window.addEventListener('wolkenworte:localechange', refreshLocalizedConfigurator);
@@ -3876,7 +4169,8 @@
         // No edit parameter always means the current live cloud, never a draft.
         workspaceReady = true;
         if (query.has('cart')) {
-          orderBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (mobileEditorMedia.matches) setMobileEditorExpanded(true, { scroll: false });
+          requestAnimationFrame(() => orderBox.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         }
       } catch (error) {
         showRestorationError(error);
