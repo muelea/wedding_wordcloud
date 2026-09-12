@@ -335,6 +335,19 @@ local server, pass a versioned JSON seed to the same startup command:
 ./run_local.sh --seed-cloud marketing/clouds/classic-wedding.json
 ```
 
+Ready-to-use German marketing clouds mirror all six examples in the landing
+page's Inspiration section:
+
+- `classic-wedding.json` — Hochzeit
+- `besties-roadtrip.json` — Mit deinen Besties
+- `farewell-party.json` — Abschiedsfeier
+- `graduation.json` — Zum Abschluss
+- `get-well.json` — Gute Besserung
+- `just-because-gift.json` — Einfach als Geschenk
+
+They use event-appropriate participation levels rather than giving every
+occasion the wedding's 100-guest distribution.
+
 The command prints the new event URL and organizer PIN, then starts the normal
 application. Every invocation creates a new event; it never replaces or resets
 an existing one. To create another cloud while the server is already running,

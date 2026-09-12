@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "event": {
+    "title": "Roadtrip 2026 – Die Besties",
+    "locale": "de",
+    "pin": "2468"
+  },
+  "words": [
+    { "word": "Freundschaft", "count": 13 },
+    { "word": "Abenteuer", "count": 12 },
+    { "word": "Lachen", "count": 11 },
+    { "word": "Freiheit", "count": 10 },
+    { "word": "Roadtrip", "count": 9 },
+    { "word": "Unvergesslich", "count": 8 },
+    { "word": "Zusammen", "count": 8 },
+    { "word": "Insider", "count": 7 },
+    { "word": "Sonnenuntergänge", "count": 7 },
+    { "word": "Lieblingsmenschen", "count": 6 },
+    { "word": "Playlist", "count": 6 },
+    { "word": "Navi-Chaos", "count": 5 },
+    { "word": "Meer", "count": 5 },
+    { "word": "Spontan", "count": 5 },
+    { "word": "Tanzen", "count": 4 },
+    { "word": "Falsche Abfahrt", "count": 4 },
+    { "word": "Tankstellenkaffee", "count": 4 },
+    { "word": "Mitternacht am See", "count": 4 },
+    { "word": "Fenster runter", "count": 3 },
+    { "word": "Campingplatz", "count": 3 },
+    { "word": "Pommespause", "count": 3 },
+    { "word": "Sternenhimmel", "count": 3 },
+    { "word": "Laut mitsingen", "count": 3 },
+    { "word": "Kein Empfang", "count": 2 },
+    { "word": "Morgenkaffee", "count": 2 },
+    { "word": "Polaroids", "count": 2 },
+    { "word": "Bis zum nächsten Trip", "count": 2 },
+    { "word": "❤️", "count": 7 },
+    { "word": "😂", "count": 6 },
+    { "word": "🚐", "count": 4 },
+    { "word": "🌅", "count": 3 },
+    { "word": "✨", "count": 3 }
+  ]
+}

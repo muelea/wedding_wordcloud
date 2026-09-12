@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const seedTool = require('../scripts/seed-local-cloud');
 const { startTestServer } = require('./helpers');
@@ -18,6 +20,35 @@ function fixture(overrides = {}) {
     ...overrides,
   };
 }
+
+test('every bundled marketing cloud is valid and has meaningful weighting', () => {
+  const cloudDirectory = path.join(__dirname, '..', 'marketing', 'clouds');
+  const filenames = fs.readdirSync(cloudDirectory)
+    .filter((filename) => filename.endsWith('.json'))
+    .sort();
+
+  assert.deepEqual(filenames, [
+    'besties-roadtrip.json',
+    'classic-wedding.json',
+    'farewell-party.json',
+    'get-well.json',
+    'graduation.json',
+    'just-because-gift.json',
+  ]);
+  for (const filename of filenames) {
+    const document = seedTool.parseSeedJson(
+      fs.readFileSync(path.join(cloudDirectory, filename), 'utf8'),
+      filename
+    );
+    const normalized = seedTool.normalizeSeedDocument(document);
+    assert.ok(normalized.words.length >= 30, `${filename} should contain at least 30 words`);
+    assert.ok(normalized.contributionCount >= 100, `${filename} should model at least 100 contributions`);
+    assert.ok(
+      Math.max(...normalized.words.map(([, count]) => count)) >= 13,
+      `${filename} should have a visibly leading word`
+    );
+  }
+});
 
 test('local cloud seed parser normalizes and merges weighted words', () => {
   const normalized = seedTool.normalizeSeedDocument(fixture({

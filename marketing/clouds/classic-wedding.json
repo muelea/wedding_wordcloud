@@ -1,12 +1,12 @@
 {
   "version": 1,
   "event": {
-    "title": "Sophie & Lukas",
+    "title": "Lea & Julian",
     "locale": "de",
     "pin": "2468"
   },
   "words": [
-    { "word": "Liebe", "count": 22 },
+    { "word": "Liebe", "count": 23 },
     { "word": "Glück", "count": 16 },
     { "word": "Familie", "count": 14 },
     { "word": "Vertrauen", "count": 13 },

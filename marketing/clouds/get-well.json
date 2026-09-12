@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "event": {
+    "title": "Für Mia – Gute Besserung",
+    "locale": "de",
+    "pin": "2468"
+  },
+  "words": [
+    { "word": "Kraft", "count": 15 },
+    { "word": "Gute Besserung", "count": 14 },
+    { "word": "Liebe", "count": 13 },
+    { "word": "Gesundheit", "count": 11 },
+    { "word": "Zuversicht", "count": 10 },
+    { "word": "Wir denken an dich", "count": 9 },
+    { "word": "Du schaffst das", "count": 8 },
+    { "word": "Geduld", "count": 7 },
+    { "word": "Hoffnung", "count": 7 },
+    { "word": "Rückenwind", "count": 6 },
+    { "word": "Sonnenschein", "count": 6 },
+    { "word": "Mut", "count": 5 },
+    { "word": "Wärme", "count": 5 },
+    { "word": "Geborgenheit", "count": 5 },
+    { "word": "Ganz viel Ruhe", "count": 4 },
+    { "word": "Ein Tag nach dem anderen", "count": 4 },
+    { "word": "Bald wieder zusammen", "count": 4 },
+    { "word": "Lieblingstee", "count": 3 },
+    { "word": "Sofa und Serien", "count": 3 },
+    { "word": "Frische Luft", "count": 3 },
+    { "word": "Kleine Schritte", "count": 3 },
+    { "word": "Zeit zum Erholen", "count": 3 },
+    { "word": "Eine feste Umarmung", "count": 2 },
+    { "word": "Wir warten auf dich", "count": 2 },
+    { "word": "Lieblingsessen", "count": 2 },
+    { "word": "Bis ganz bald", "count": 2 },
+    { "word": "❤️", "count": 9 },
+    { "word": "🍀", "count": 7 },
+    { "word": "☀️", "count": 5 },
+    { "word": "✨", "count": 4 }
+  ]
+}
