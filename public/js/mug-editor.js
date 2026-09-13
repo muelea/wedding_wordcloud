@@ -1923,14 +1923,33 @@
       this.updateSelectionPanel();
     }
 
+    availableSwatchColors() {
+      const colors = [];
+      const seen = new Set();
+      const addColor = (color) => {
+        const normalized = String(color || '').trim().toLowerCase();
+        if (!/^#[0-9a-f]{6}$/.test(normalized) || seen.has(normalized)) return;
+        seen.add(normalized);
+        colors.push(normalized);
+      };
+
+      (Array.isArray(this.palette) ? this.palette : []).forEach(addColor);
+      this.canvas.getObjects().forEach((object) => addColor(this.getObjectColor(object)));
+      return colors;
+    }
+
     renderSwatches() {
+      const colors = this.availableSwatchColors();
+      const signature = colors.join('|');
+      if (this.swatchSignature === signature) return;
+      this.swatchSignature = signature;
       this.swatches.replaceChildren();
       const hasSelection = Boolean(this.canvas.getActiveObject());
-      for (const color of this.palette) {
+      for (const color of colors) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'editor-swatch';
-        button.dataset.color = color.toLowerCase();
+        button.dataset.color = color;
         button.style.backgroundColor = color;
         const colorLabel = translate('Farbe {{color}}', { color });
         button.title = colorLabel;
@@ -1942,6 +1961,7 @@
     }
 
     updateSelectionPanel() {
+      this.renderSwatches();
       const active = this.canvas.getActiveObject();
       const hasSelection = Boolean(active);
       const selected = this.selectedObjects(active);

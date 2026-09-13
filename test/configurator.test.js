@@ -141,6 +141,25 @@ test('manual colors stay locked until an explicit palette change', () => {
   assert.notEqual(objects[0].color, objects[1].color);
 });
 
+test('editor swatches include every unique color used by printable canvas elements', () => {
+  const editor = Object.create(MugPrintEditor.prototype);
+  editor.palette = ['#2455F5', '#ed2446'];
+  editor.canvas = {
+    getObjects: () => [
+      { editorKind: 'text', fill: '#2455f5' },
+      { editorKind: 'text', fill: '#123456' },
+      { editorKind: 'icon', editorDrawing: { stroke: '#ABCDEF' } },
+      { editorKind: 'text', fill: '#123456' },
+      { editorKind: 'image' },
+    ],
+  };
+
+  assert.deepEqual(
+    [...editor.availableSwatchColors()],
+    ['#2455f5', '#ed2446', '#123456', '#abcdef']
+  );
+});
+
 test('double-clicking emoji text focuses the dedicated editor field', () => {
   const calls = [];
   const editor = Object.create(MugPrintEditor.prototype);
