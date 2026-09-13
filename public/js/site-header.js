@@ -41,6 +41,12 @@
     menu.querySelectorAll('a[href^="#"]').forEach(function (link) {
       link.addEventListener('click', closeMenu);
     });
+    document.addEventListener('pointerdown', function (event) {
+      if (header.classList.contains('landing-menu-open') &&
+          !menu.contains(event.target) && !toggle.contains(event.target)) {
+        closeMenu();
+      }
+    });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') closeMenu();
     });

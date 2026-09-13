@@ -90,7 +90,6 @@
     #site-header .landing-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; margin-left: auto; white-space: nowrap; }
     #site-header .landing-header-actions .button { white-space: nowrap; }
     #site-header .landing-header-actions .landing-start-button { height: 38px; padding: 0 17px; }
-    #site-header .landing-menu-start { display: none; }
     /* The overlay is the source of truth. A stale document class can never
        keep the links hidden after the teaser has been dismissed. */
     #intro-overlay:not(.fade-out) ~ #site-header:not(.landing-menu-open) .landing-section-links { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -402,7 +401,6 @@
       #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
       #site-header .landing-section-links { display: none; }
       #site-header.landing-menu-open .landing-section-links { position: absolute; top: calc(100% + 8px); right: max(20px, var(--ww-safe-right)); display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 200px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,250,.98); box-shadow: 0 14px 32px rgba(64,15,38,.13); }
-      #site-header.landing-menu-open .landing-section-links .landing-menu-start { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 5px; padding: 10px 13px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; font: 600 .82rem 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; cursor: pointer; }
       #site-header.landing-menu-open .landing-section-link { padding: 11px 13px; color: var(--ink); }
       #site-header.landing-menu-open .landing-section-link::after { display: none; }
       #site-header.landing-menu-open .landing-section-links .landing-menu-language { display: block; margin: 5px; }

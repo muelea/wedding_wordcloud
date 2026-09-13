@@ -187,7 +187,9 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landing, /#mug-canvas \{ width: min\(360px, 100%\); height: auto/);
   assert.match(landing, /#site-header:not\(\.landing-menu-open\) \.landing-section-links/);
   assert.doesNotMatch(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-menu-toggle/);
-  assert.match(siteHeader, /class="landing-menu-start"[^>]*data-open-start-dialog/);
+  assert.doesNotMatch(siteHeader, /landing-menu-start/,
+    'the persistent header CTA must not be duplicated inside the compact menu');
+  assert.doesNotMatch(landing, /landing-menu-start/);
   assert.match(siteHeader, /for \(const link of navLinks\)/);
   assert.match(siteHeader, /data-i18n-source="<%= link\.label %>"/);
   assert.doesNotMatch(siteHeader, /href="#testimonials">Stimmen</);

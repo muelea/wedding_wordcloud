@@ -25,7 +25,6 @@
 
     <% if (variant === 'landing') { %>
       <nav id="landing-section-links" class="landing-section-links" aria-label="Seitennavigation">
-        <button class="landing-menu-start" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
         <% for (const link of navLinks) { %>
           <a class="landing-section-link" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
         <% } %>
