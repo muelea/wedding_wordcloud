@@ -30,6 +30,7 @@
 }
 
 .ww-nav {
+  position: relative !important;
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: none !important;
@@ -91,6 +92,13 @@
 }
 
 .ww-back-link:hover { color: var(--berry, var(--primary2, #9c1c4c)); }
+
+.ww-back-link-desktop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
 
 .ww-menu-trigger {
   appearance: none;

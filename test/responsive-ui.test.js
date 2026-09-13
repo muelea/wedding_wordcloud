@@ -138,6 +138,11 @@ test('the configurator always keeps language in its menu and moves back navigati
   assert.match(siteHeaderStyles, /@media \(max-width: 780px\)[\s\S]*?\.ww-back-link-desktop \{ display: none !important; \}[\s\S]*?\.ww-mobile-header-menu-back \{[\s\S]*?display: flex;/);
 });
 
+test('wide back-header navigation is centered against the viewport, not unequal side content', () => {
+  assert.match(siteHeaderStyles, /\.ww-nav \{[\s\S]*?position: relative !important;/);
+  assert.match(siteHeaderStyles, /\.ww-back-link-desktop \{[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?left: 50%;[\s\S]*?transform: translate\(-50%, -50%\);/);
+});
+
 test('shipping keeps both return links synchronized behind the same responsive header menu', () => {
   assert.match(shipping, /const mobileBackLink = document\.getElementById\('mobile-back-link'\)/);
   assert.match(shipping, /const backLinks = \[backLink, mobileBackLink\]\.filter\(Boolean\)/);
