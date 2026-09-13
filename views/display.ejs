@@ -1023,8 +1023,9 @@
     canvas.height = Math.max(1, Math.round(height * pixelRatio));
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    for (const item of placed) {
-      WordCloudCore.drawPlacedWord(ctx, { ...item, color: getWordColor(item.word) }, {
+    const colored = WordCloudCore.spreadPaletteColors(placed, getWordColor.palette);
+    for (const item of colored) {
+      WordCloudCore.drawPlacedWord(ctx, item, {
         emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
       });
     }

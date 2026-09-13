@@ -197,6 +197,7 @@
       text.editorFontStyle = style.fontStyle;
       text.editorUnderline = style.underline;
       text.editorLinethrough = style.linethrough;
+      text.editorColorLocked = item.colorLocked === true;
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
@@ -296,6 +297,7 @@
       group.editorFontStyle = style.fontStyle;
       group.editorUnderline = style.underline;
       group.editorLinethrough = style.linethrough;
+      group.editorColorLocked = item.colorLocked === true;
       group.editorFontSize = fontSize;
       group.editorText = item.text;
       group.editorColor = item.color;
@@ -433,6 +435,7 @@
       icon.editorIconLabel = definition.label;
       icon.editorDrawing = drawing;
       icon.editorId = item.id || this.nextId('motiv');
+      icon.editorColorLocked = item.colorLocked === true;
       this.setIconSize(icon, Math.max(MIN_PRINT_ICON_SIZE, item.size || 160));
       icon.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       icon.setCoords();
@@ -1644,6 +1647,7 @@
         };
       }
       common.color = this.getObjectColor(object);
+      if (object.editorColorLocked === true) common.colorLocked = true;
       if (object.editorKind === 'icon') {
         return {
           ...common,
@@ -1694,7 +1698,10 @@
     setActiveColor(color) {
       const active = this.canvas.getActiveObject();
       if (!active || !/^#[0-9a-f]{6}$/i.test(color)) return;
-      this.selectedObjects(active).forEach((object) => this.applyObjectColor(object, color));
+      this.selectedObjects(active).forEach((object) => {
+        this.applyObjectColor(object, color);
+        if (object.editorKind !== 'image') object.editorColorLocked = true;
+      });
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
@@ -1910,11 +1917,17 @@
 
     applyPalette(colors) {
       this.palette = colors;
-      let colorIndex = 0;
-      this.canvas.getObjects().forEach((object) => {
+      const unlocked = this.getDesign().map(({ colorLocked, ...item }) => ({ ...item }));
+      const colored = root.DesignLayout.spreadDesignColors(
+        unlocked,
+        colors,
+        this.measureContext,
+        { fontFamily: (item) => root.DesignFonts.cssFamily(item.fontFamily) }
+      );
+      this.canvas.getObjects().forEach((object, index) => {
         if (object.editorKind === 'image') return;
-        this.applyObjectColor(object, colors[colorIndex % colors.length]);
-        colorIndex += 1;
+        this.applyObjectColor(object, colored[index].color);
+        object.editorColorLocked = false;
       });
       this.canvas.requestRenderAll();
       this.renderSwatches();

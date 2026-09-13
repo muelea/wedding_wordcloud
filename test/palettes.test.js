@@ -147,7 +147,7 @@ test('new palettes appear on both pages and freeze their exact colors in saved p
     const design = WORDS.map((text, index) => ({
       id: `color-${index}`, text, color: colors[index], fontFamily: 'classic',
       x: 500 + (index % 3) * 800, y: 300 + Math.floor(index / 3) * 400,
-      fontSize: 60, angle: 0,
+      fontSize: 60, angle: 0, ...(index === 0 ? { colorLocked: true } : {}),
     }));
     const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
       method: 'POST',
@@ -160,6 +160,8 @@ test('new palettes appear on both pages and freeze their exact colors in saved p
     const restored = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${saved.id}/edit`).then(res => res.json());
     assert.equal(restored.theme, theme);
     assert.deepEqual(restored.designs.default.map(word => word.color), colors);
+    assert.equal(restored.designs.default[0].colorLocked, true);
+    assert.ok(restored.designs.default.slice(1).every(word => word.colorLocked == null));
     const print = await fetch(baseUrl + saved.printFileUrl);
     assert.equal(print.status, 200);
     const svg = await print.text();

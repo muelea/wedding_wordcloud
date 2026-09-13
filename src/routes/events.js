@@ -547,11 +547,12 @@ function normalizeDesign(
 
     const color = String(rawItem.color || '').toLowerCase();
     if (!/^#[0-9a-f]{6}$/.test(color)) return null;
+    const colorMetadata = rawItem.colorLocked === true ? { colorLocked: true } : {};
     if (type === 'icon') {
       const icon = String(rawItem.icon || '');
       const size = Number(rawItem.size);
       if (!MugIcons.has(icon) || !Number.isFinite(size) || size < 48 || size > height) return null;
-      normalized.push({ ...common, color, icon, size: Math.round(size * 10) / 10 });
+      normalized.push({ ...common, color, ...colorMetadata, icon, size: Math.round(size * 10) / 10 });
       continue;
     }
 
@@ -572,6 +573,7 @@ function normalizeDesign(
     normalized.push({
       ...common,
       color,
+      ...colorMetadata,
       text,
       fontSize: Math.round(fontSize * 10) / 10,
       fontFamily: DesignFonts.normalizeKey(rawFontFamily),

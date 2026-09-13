@@ -2948,9 +2948,15 @@
           });
         });
       });
-      return DesignLayout.optimizeDesign(design, slots, measurementContext, {
+      const optimized = DesignLayout.optimizeDesign(design, slots, measurementContext, {
         fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
       });
+      return DesignLayout.spreadDesignColors(
+        optimized,
+        getPalette(selectedTheme).colors,
+        measurementContext,
+        { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
+      );
     }
 
     function syncFitAreaButton() {
@@ -2969,9 +2975,15 @@
           .filter((item) => item.type !== 'icon' && item.type !== 'image')
           .map((item) => item.fontFamily)));
         const slots = productView().layoutGeometry['fit-area'];
-        const optimizedDesign = DesignLayout.applyLayoutAction(
+        const arrangedDesign = DesignLayout.applyLayoutAction(
           currentDesign,
           slots,
+          mugEditor.measureContext,
+          { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
+        );
+        const optimizedDesign = DesignLayout.spreadDesignColors(
+          arrangedDesign,
+          getPalette(selectedTheme).colors,
           mugEditor.measureContext,
           { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
         );
@@ -3178,13 +3190,13 @@
       for (const surface of productSurfaces()) {
         if (surface.key === activeSurface) continue;
         const state = surfaceStates.get(surface.key);
-        let colorIndex = 0;
-        const design = (state?.design || []).map((item) => {
-          if (item.type === 'image') return { ...item };
-          const colored = { ...item, color: colors[colorIndex % colors.length] };
-          colorIndex += 1;
-          return colored;
-        });
+        const unlocked = (state?.design || []).map(({ colorLocked, ...item }) => ({ ...item }));
+        const design = DesignLayout.spreadDesignColors(
+          unlocked,
+          colors,
+          mugEditor.measureContext,
+          { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
+        );
         surfaceStates.set(surface.key, cloneEditorState({ design }, false));
       }
     }

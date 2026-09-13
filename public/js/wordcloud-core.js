@@ -209,16 +209,222 @@
   function makePaletteAssigner(colors) {
     const palette = Array.isArray(colors) && colors.length ? colors : THEMES.pastel.colors;
     const assigned = new Map();
-    return function getWordColor(word) {
+    function getWordColor(word) {
       if (!assigned.has(word)) {
         assigned.set(word, palette[assigned.size % palette.length]);
       }
       return assigned.get(word);
-    };
+    }
+    // Keep the palette available to the shared post-layout color pass without
+    // coupling the geometry engine to a particular product/theme catalog.
+    getWordColor.palette = [...palette];
+    return getWordColor;
   }
 
   function makeColorAssigner(theme) {
     return makePaletteAssigner((THEMES[theme] || THEMES.pastel).colors);
+  }
+
+  function colorKey(color) {
+    return typeof color === 'string' ? color.trim().toLowerCase() : '';
+  }
+
+  function spatialColorNodes(items) {
+    return items.map((item, index) => {
+      if (!item || item.colorable === false || item.emoji === true) return null;
+      const x1 = Number(item.x1);
+      const x2 = Number(item.x2);
+      const y1 = Number(item.y1);
+      const y2 = Number(item.y2);
+      if (![x1, x2, y1, y2].every(Number.isFinite) || x2 <= x1 || y2 <= y1) return null;
+      return {
+        index,
+        x1,
+        x2,
+        y1,
+        y2,
+        width: x2 - x1,
+        height: y2 - y1,
+        prominence: Math.sqrt((x2 - x1) * (y2 - y1)),
+        preferred: colorKey(item.color),
+        fixed: item.colorLocked === true && Boolean(colorKey(item.color)),
+      };
+    }).filter(Boolean);
+  }
+
+  function spatialColorDistance(first, second) {
+    const dx = Math.max(0, first.x1 - second.x2, second.x1 - first.x2);
+    const dy = Math.max(0, first.y1 - second.y2, second.y1 - first.y2);
+    const localScale = Math.max(1,
+      (Math.min(first.width, first.height) + Math.min(second.width, second.height)) / 2);
+    return Math.hypot(dx, dy) / localScale;
+  }
+
+  // Recolor a finished layout instead of weakening its packing. A bounded
+  // nearest-neighbour graph represents what people perceive as "next to";
+  // deterministic graph coloring then avoids equal colors wherever the
+  // available palette permits it. Explicit editor colors can be locked.
+  function spreadPaletteColors(items, colors) {
+    if (!Array.isArray(items)) return [];
+    const result = items.map((item) => ({ ...item }));
+    const palette = [];
+    const paletteKeys = [];
+    for (const color of Array.isArray(colors) ? colors : []) {
+      const key = colorKey(color);
+      if (!key || paletteKeys.includes(key)) continue;
+      palette.push(color);
+      paletteKeys.push(key);
+    }
+    if (!palette.length) return result;
+
+    const nodes = spatialColorNodes(result);
+    if (!nodes.length) return result;
+    if (palette.length === 1) {
+      nodes.forEach((node) => {
+        if (!node.fixed) result[node.index].color = palette[0];
+      });
+      return result;
+    }
+
+    const adjacency = nodes.map(() => new Map());
+    const neighbourCount = Math.min(8, nodes.length - 1);
+    nodes.forEach((node, nodeIndex) => {
+      const nearest = nodes.map((other, otherIndex) => ({
+        otherIndex,
+        distance: otherIndex === nodeIndex ? Infinity : spatialColorDistance(node, other),
+      })).sort((a, b) => a.distance - b.distance || a.otherIndex - b.otherIndex)
+        .slice(0, neighbourCount);
+      for (const { otherIndex, distance } of nearest) {
+        const weight = 1 / (.2 + distance);
+        adjacency[nodeIndex].set(otherIndex,
+          Math.max(adjacency[nodeIndex].get(otherIndex) || 0, weight));
+        adjacency[otherIndex].set(nodeIndex,
+          Math.max(adjacency[otherIndex].get(nodeIndex) || 0, weight));
+      }
+    });
+
+    const assigned = new Array(nodes.length).fill('');
+    const paletteCounts = new Array(palette.length).fill(0);
+    const remaining = new Set();
+    nodes.forEach((node, nodeIndex) => {
+      if (node.fixed) {
+        assigned[nodeIndex] = node.preferred;
+        const paletteIndex = paletteKeys.indexOf(node.preferred);
+        if (paletteIndex >= 0) paletteCounts[paletteIndex] += 1;
+      } else {
+        remaining.add(nodeIndex);
+      }
+    });
+
+    function conflictCost(nodeIndex, candidate) {
+      let cost = 0;
+      for (const [otherIndex, weight] of adjacency[nodeIndex]) {
+        if (assigned[otherIndex] === candidate) cost += weight;
+      }
+      return cost;
+    }
+
+    while (remaining.size) {
+      let selected = -1;
+      let selectedSaturation = -1;
+      let selectedDegree = -1;
+      let selectedProminence = -1;
+      for (const nodeIndex of remaining) {
+        const neighbourColors = new Set();
+        let degree = 0;
+        for (const [otherIndex, weight] of adjacency[nodeIndex]) {
+          if (assigned[otherIndex]) neighbourColors.add(assigned[otherIndex]);
+          degree += weight;
+        }
+        const node = nodes[nodeIndex];
+        if (neighbourColors.size > selectedSaturation ||
+            (neighbourColors.size === selectedSaturation && degree > selectedDegree) ||
+            (neighbourColors.size === selectedSaturation && degree === selectedDegree &&
+              node.prominence > selectedProminence) ||
+            (neighbourColors.size === selectedSaturation && degree === selectedDegree &&
+              node.prominence === selectedProminence && node.index < nodes[selected]?.index)) {
+          selected = nodeIndex;
+          selectedSaturation = neighbourColors.size;
+          selectedDegree = degree;
+          selectedProminence = node.prominence;
+        }
+      }
+
+      const preferredIndex = paletteKeys.indexOf(nodes[selected].preferred);
+      let chosen = 0;
+      let chosenConflict = Infinity;
+      let chosenPreference = Infinity;
+      let chosenCount = Infinity;
+      for (let paletteIndex = 0; paletteIndex < palette.length; paletteIndex += 1) {
+        const conflict = conflictCost(selected, paletteKeys[paletteIndex]);
+        const preference = paletteIndex === preferredIndex ? 0 : 1;
+        const count = paletteCounts[paletteIndex];
+        if (conflict < chosenConflict - 1e-9 ||
+            (Math.abs(conflict - chosenConflict) <= 1e-9 && count < chosenCount) ||
+            (Math.abs(conflict - chosenConflict) <= 1e-9 && count === chosenCount && preference < chosenPreference)) {
+          chosen = paletteIndex;
+          chosenConflict = conflict;
+          chosenPreference = preference;
+          chosenCount = count;
+        }
+      }
+      assigned[selected] = paletteKeys[chosen];
+      paletteCounts[chosen] += 1;
+      remaining.delete(selected);
+    }
+
+    // A few strictly improving passes resolve avoidable conflicts introduced
+    // by the greedy order without risking oscillation or unbounded work.
+    for (let pass = 0; pass < 3; pass += 1) {
+      let improved = false;
+      nodes.forEach((node, nodeIndex) => {
+        if (node.fixed) return;
+        const currentIndex = paletteKeys.indexOf(assigned[nodeIndex]);
+        let bestIndex = currentIndex;
+        let bestCost = conflictCost(nodeIndex, assigned[nodeIndex]);
+        for (let paletteIndex = 0; paletteIndex < palette.length; paletteIndex += 1) {
+          const cost = conflictCost(nodeIndex, paletteKeys[paletteIndex]);
+          if (cost < bestCost - 1e-9) {
+            bestIndex = paletteIndex;
+            bestCost = cost;
+          }
+        }
+        if (bestIndex === currentIndex) return;
+        paletteCounts[currentIndex] -= 1;
+        paletteCounts[bestIndex] += 1;
+        assigned[nodeIndex] = paletteKeys[bestIndex];
+        improved = true;
+      });
+      if (!improved) break;
+    }
+
+    // Preserve the palette's even distribution whenever a no-worse color is
+    // available. The bound also covers custom palettes with fixed colors.
+    for (let pass = 0; pass < nodes.length; pass += 1) {
+      let balanced = false;
+      nodes.forEach((node, nodeIndex) => {
+        if (node.fixed) return;
+        const currentIndex = paletteKeys.indexOf(assigned[nodeIndex]);
+        const currentCost = conflictCost(nodeIndex, assigned[nodeIndex]);
+        for (let paletteIndex = 0; paletteIndex < palette.length; paletteIndex += 1) {
+          if (paletteCounts[currentIndex] <= paletteCounts[paletteIndex] + 1 ||
+              conflictCost(nodeIndex, paletteKeys[paletteIndex]) > currentCost + 1e-9) continue;
+          paletteCounts[currentIndex] -= 1;
+          paletteCounts[paletteIndex] += 1;
+          assigned[nodeIndex] = paletteKeys[paletteIndex];
+          balanced = true;
+          break;
+        }
+      });
+      if (!balanced) break;
+    }
+
+    nodes.forEach((node, nodeIndex) => {
+      if (node.fixed) return;
+      const paletteIndex = paletteKeys.indexOf(assigned[nodeIndex]);
+      result[node.index].color = palette[paletteIndex];
+    });
+    return result;
   }
 
   // Scale font sizes to the available area per word so a crowded cloud
@@ -628,7 +834,11 @@
 
   function layoutWordsInArea(words, width, height, measureCtx, colorFn) {
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return [];
-    return finalizeWords(layoutBoxesInArea(measureWords(words, measureCtx, colorFn), width, height));
+    const assignColor = colorFn || makeColorAssigner('pastel');
+    const placed = finalizeWords(layoutBoxesInArea(
+      measureWords(words, measureCtx, assignColor), width, height
+    ));
+    return spreadPaletteColors(placed, assignColor.palette);
   }
 
   function escapeXML(s) {
@@ -720,6 +930,7 @@
     THEMES,
     makePaletteAssigner,
     makeColorAssigner,
+    spreadPaletteColors,
     getFontSizeRange,
     sizeForCount,
     isEmojiOnly,

@@ -286,6 +286,28 @@
     return design.map((item, index) => optimizedByIndex.get(index) || { ...item });
   }
 
+  function spreadDesignColors(design, colors, measureContext, options = {}) {
+    if (!Array.isArray(design)) return [];
+    const fontFamily = options.fontFamily || 'Georgia, "Times New Roman", serif';
+    const boxes = design.map((item) => {
+      const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
+      return {
+        ...item,
+        colorable: item.type !== 'image' &&
+          (item.type === 'icon' || !WordCloudCore.isEmojiOnly(item.text)),
+        x1: item.x - dimensions.width / 2,
+        x2: item.x + dimensions.width / 2,
+        y1: item.y - dimensions.height / 2,
+        y2: item.y + dimensions.height / 2,
+      };
+    });
+    return WordCloudCore.spreadPaletteColors(boxes, colors).map((item, index) => {
+      const colored = { ...design[index] };
+      if (item.color != null && design[index].type !== 'image') colored.color = item.color;
+      return colored;
+    });
+  }
+
   function applyLayoutAction(design, slots, measureContext, options = {}) {
     const targets = normalizedSlots(slots);
     return targets.some((slot) => slot.optimize)
@@ -317,5 +339,5 @@
       area.y + area.height / 2 + (item.y - centerY) * scale)) };
   }
 
-  return { applyLayoutAction, optimizeDesign, fitDesignToSafeArea };
+  return { applyLayoutAction, optimizeDesign, spreadDesignColors, fitDesignToSafeArea };
 });

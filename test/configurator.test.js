@@ -106,6 +106,41 @@ test('neutral clicks outside the print canvas clear selection without swallowing
   assert.equal(editor.clearSelection(), false);
 });
 
+test('manual colors stay locked until an explicit palette change', () => {
+  mugEditorBrowserRoot.DesignLayout = DesignLayout;
+  mugEditorBrowserRoot.DesignFonts = DesignFonts;
+  const editor = Object.create(MugPrintEditor.prototype);
+  const selected = { editorKind: 'text', editorColorLocked: false };
+  const objects = [selected, { editorKind: 'text', editorColorLocked: true }];
+  const colors = [];
+  editor.canvas = {
+    getActiveObject: () => selected,
+    getObjects: () => objects,
+    requestRenderAll() {},
+  };
+  editor.selectedObjects = () => [selected];
+  editor.applyObjectColor = (object, color) => {
+    object.color = color;
+    colors.push(color);
+  };
+  editor.recordHistory = editor.emitChange = editor.updateSelectionPanel = editor.renderSwatches = () => {};
+
+  editor.setActiveColor('#123456');
+  assert.equal(selected.editorColorLocked, true);
+  assert.deepEqual(colors, ['#123456']);
+
+  editor.measureContext = { font: '', measureText: text => ({ width: String(text).length * 10 }) };
+  editor.getDesign = () => [
+    { id: 'a', text: 'alpha', x: 40, y: 40, fontSize: 20, angle: 0,
+      color: '#123456', colorLocked: true, fontFamily: 'classic' },
+    { id: 'b', text: 'beta', x: 90, y: 40, fontSize: 20, angle: 0,
+      color: '#123456', colorLocked: true, fontFamily: 'classic' },
+  ];
+  editor.applyPalette(['#2455f5', '#ed2446']);
+  assert.ok(objects.every(object => object.editorColorLocked === false));
+  assert.notEqual(objects[0].color, objects[1].color);
+});
+
 test('double-clicking emoji text focuses the dedicated editor field', () => {
   const calls = [];
   const editor = Object.create(MugPrintEditor.prototype);
