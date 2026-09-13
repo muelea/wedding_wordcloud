@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { Resend } = require('resend');
 const performanceProbe = require('./performanceProbe');
 const { SELLER } = require('./emailTemplates');
@@ -7,6 +9,11 @@ const { SELLER } = require('./emailTemplates');
 let client = null;
 let clientKey = null;
 let testAdapter = null;
+const EMAIL_MARK_CONTENT = fs.readFileSync(
+  path.join(__dirname, '..', 'public', 'assets', 'email', 'wolkenworte-mark-v1.png'),
+  'base64'
+);
+const EMAIL_MARK_CONTENT_ID = 'wolkenworte-mark-v1';
 
 class ResendDeliveryError extends Error {
   constructor(code, { ambiguous = false, retryable = false, statusCode = null } = {}) {
@@ -69,6 +76,12 @@ async function sendEmail(job, { timeoutMs = 10_000 } = {}) {
     subject: job.subject,
     html: job.html_body,
     text: job.text_body,
+    attachments: [{
+      content: EMAIL_MARK_CONTENT,
+      filename: 'wolkenworte-mark-v1.png',
+      contentType: 'image/png',
+      contentId: EMAIL_MARK_CONTENT_ID,
+    }],
     tags: [
       { name: 'email_job_id', value: String(job.id) },
       { name: 'kind', value: String(job.kind) },

@@ -141,6 +141,31 @@ test('manual colors stay locked until an explicit palette change', () => {
   assert.notEqual(objects[0].color, objects[1].color);
 });
 
+test('nudge controls move a selected element in print coordinates and respect the boundary pass', () => {
+  const editor = Object.create(MugPrintEditor.prototype);
+  const calls = [];
+  const active = {
+    left: 20,
+    top: 30,
+    set(values) { Object.assign(this, values); },
+    setCoords() { calls.push('coords'); },
+  };
+  editor.editorScale = .5;
+  editor.canvas = {
+    getActiveObject: () => active,
+    requestRenderAll() { calls.push('render'); },
+  };
+  editor.keepInside = () => calls.push('bounds');
+  editor.recordHistory = () => calls.push('history');
+  editor.emitChange = () => calls.push('change');
+  editor.updateSelectionPanel = () => calls.push('selection');
+
+  assert.equal(editor.nudgeActive(8, -8), true);
+  assert.equal(active.left, 24);
+  assert.equal(active.top, 26);
+  assert.deepEqual(calls, ['coords', 'bounds', 'coords', 'render', 'history', 'change', 'selection']);
+});
+
 test('editor swatches include every unique color used by printable canvas elements', () => {
   const editor = Object.create(MugPrintEditor.prototype);
   editor.palette = ['#2455F5', '#ed2446'];
@@ -944,6 +969,14 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /await WolkenworteConfiguratorSession\.withTimeout\(ensureDesignFonts\(\[DesignFonts\.DEFAULT_FONT_KEY\]\)\)/);
   assert.match(configurePage, /WordCloudCore\.TEXT_BASELINE_OFFSET/);
   assert.match(configurePage, /id="editor-bring-front"[^>]*aria-label="Ganz nach vorn"/);
+  for (const [id, direction] of [
+    ['editor-move-up', 'oben'],
+    ['editor-move-down', 'unten'],
+    ['editor-move-left', 'links'],
+    ['editor-move-right', 'rechts'],
+  ]) {
+    assert.match(configurePage, new RegExp(`id="${id}"[^>]*aria-label="Auswahl nach ${direction} verschieben"[^>]*disabled`));
+  }
   assert.match(configurePage, /id="editor-duplicate"[^>]*aria-label="Duplizieren"[^>]*data-editor-tooltip/);
   assert.match(configurePage, /id="editor-select-all"[^>]*aria-label="Alles auswählen"[^>]*data-editor-tooltip/);
   assert.match(configurePage, /class="editor-tools editor-tools-separated editor-tools-layout"[^>]*aria-label="Anordnung"[^>]*>[\s\S]*?id="editor-fit-area"[^>]*aria-label="Fläche optimal nutzen"[^>]*data-editor-tooltip[\s\S]*?disabled/);
@@ -1022,6 +1055,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(mugEditorSource, /selectionKey: \['shiftKey', 'ctrlKey', 'metaKey'\]/);
   assert.match(mugEditorSource, /new root\.fabric\.ActiveSelection\(selectable/);
   assert.match(mugEditorSource, /command && event\.key\.toLowerCase\(\) === 'a'/);
+  assert.match(mugEditorSource, /ArrowUp: \[0, -1\][\s\S]*?ArrowDown: \[0, 1\][\s\S]*?ArrowLeft: \[-1, 0\][\s\S]*?ArrowRight: \[1, 0\]/);
+  assert.match(mugEditorSource, /event\.shiftKey \? NUDGE_LARGE_STEP : NUDGE_STEP/);
   assert.match(mugEditorSource, /async addImageFile\(file\)/);
   assert.match(mugEditorSource, /async addEmoji\(value\)/);
   assert.match(mugEditorSource, /this\.nextId\('emoji'\)/);

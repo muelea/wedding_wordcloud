@@ -138,6 +138,27 @@
       mugEditor.setDesign([word], { resetHistory: true });
       mugEditor.selectAll();
       await frames();
+      const beforeButtonNudge = mugEditor.getDesign()[0];
+      document.getElementById('editor-move-right').click();
+      const afterButtonNudge = mugEditor.getDesign()[0];
+      check('direction button nudges the selection precisely',
+        Math.abs(afterButtonNudge.x - beforeButtonNudge.x - 8) < .1 &&
+        Math.abs(afterButtonNudge.y - beforeButtonNudge.y) < .1);
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'ArrowDown', shiftKey: true, bubbles: true, cancelable: true,
+      }));
+      const afterKeyboardNudge = mugEditor.getDesign()[0];
+      check('Shift plus an arrow key applies the larger nudge',
+        Math.abs(afterKeyboardNudge.x - afterButtonNudge.x) < .1 &&
+        Math.abs(afterKeyboardNudge.y - afterButtonNudge.y - 40) < .1);
+      const textInput = document.getElementById('editor-text');
+      textInput.focus({ preventScroll: true });
+      textInput.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'ArrowLeft', bubbles: true, cancelable: true,
+      }));
+      check('arrow keys keep their normal behavior inside editor fields',
+        JSON.stringify(mugEditor.getDesign()[0]) === JSON.stringify(afterKeyboardNudge));
+      textInput.blur();
       if (workspace.media.matches) {
         const inspector = document.getElementById('editor-compact-inspector');
         const sections = [...inspector.querySelectorAll('[data-editor-section]')];
@@ -274,6 +295,38 @@
         const previous = primaryActions[index - 1].getBoundingClientRect(), current = button.getBoundingClientRect();
         return current.top >= previous.bottom || (Math.abs(current.top - previous.top) < 1 && current.left >= previous.right);
       }));
+      const selectionActions = actions.filter(button => button.closest('.editor-actions'));
+      const selectionActionBox = document.querySelector('.editor-actions').getBoundingClientRect();
+      check('selection action buttons stay inside their responsive row', selectionActions.every(button => {
+        const rect = button.getBoundingClientRect();
+        return rect.left >= selectionActionBox.left - 1 && rect.right <= selectionActionBox.right + 1 &&
+          rect.top >= selectionActionBox.top - 1 && rect.bottom <= selectionActionBox.bottom + 1;
+      }));
+      check('selection action buttons never overlap', selectionActions.every((button, index) =>
+        selectionActions.slice(index + 1).every(other => {
+          const a = button.getBoundingClientRect(), b = other.getBoundingClientRect();
+          return a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+        })));
+      const actionRows = [];
+      for (const button of selectionActions) {
+        const rect = button.getBoundingClientRect();
+        let row = actionRows.find(item => Math.abs(item.top - rect.top) < 1);
+        if (!row) {
+          row = { top: rect.top, left: rect.left };
+          actionRows.push(row);
+        } else row.left = Math.min(row.left, rect.left);
+      }
+      check('every selection action row is left-aligned', actionRows.every(row =>
+        Math.abs(row.left - selectionActionBox.left) <= 7));
+      const nudgeButtons = ['editor-move-up', 'editor-move-down', 'editor-move-left', 'editor-move-right']
+        .map(id => document.getElementById(id).getBoundingClientRect());
+      check('direction buttons always stay together', nudgeButtons.every(rect =>
+        Math.abs(rect.top - nudgeButtons[0].top) < 1));
+      if (innerWidth <= 940) {
+        const smallerRect = document.getElementById('editor-smaller').getBoundingClientRect();
+        check('compact direction controls lead their own left-aligned row',
+          nudgeButtons[0].bottom <= smallerRect.top && Math.abs(nudgeButtons[0].left - selectionActionBox.left) < 1);
+      }
       const addWord = document.getElementById('editor-add');
       toolbar.show(addWord);
       const tooltipRect = toolbar.tooltip.getBoundingClientRect();
@@ -307,7 +360,9 @@
         check(`${name}: focus returns to trigger`, document.activeElement === trigger);
       }
       check('no horizontal page overflow', document.documentElement.scrollWidth <= innerWidth);
-      const controls = ['editor-text', 'editor-font-toggle', 'editor-font-menu', 'editor-color', 'editor-smaller', 'editor-delete', 'editor-selection'];
+      const controls = ['editor-text', 'editor-font-toggle', 'editor-font-menu', 'editor-color',
+        'editor-move-up', 'editor-move-down', 'editor-move-left', 'editor-move-right',
+        'editor-smaller', 'editor-delete', 'editor-selection'];
       check('editor controls remain unique after repeated reparenting',
         controls.every(id => document.querySelectorAll(`[id="${id}"]`).length === 1));
     } catch (error) {

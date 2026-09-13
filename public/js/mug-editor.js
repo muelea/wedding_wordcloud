@@ -13,6 +13,8 @@
   const MAX_UPLOAD_PIXELS = 40_000_000;
   const MAX_UPLOAD_DIMENSION = 2700;
   const MAX_HISTORY = 60;
+  const NUDGE_STEP = 8;
+  const NUDGE_LARGE_STEP = 40;
   const SELECTION_PRESERVING_TARGETS = [
     'button', 'a', 'input', 'textarea', 'select', 'option', 'label', 'summary', 'details',
     'dialog', '[popover]', '[contenteditable="true"]', '[role="button"]', '[role="link"]',
@@ -93,6 +95,10 @@
       this.iconMenu = options.iconMenu;
       this.iconGrid = options.iconGrid;
       this.selectionActions = [
+        options.moveUpButton,
+        options.moveDownButton,
+        options.moveLeftButton,
+        options.moveRightButton,
         options.smallerButton,
         options.largerButton,
         options.rotateLeftButton,
@@ -686,6 +692,10 @@
       options.selectAllButton.addEventListener('click', () => this.selectAll());
       options.zoomOutButton.addEventListener('click', () => this.setZoom(this.zoom - .25));
       options.zoomInButton.addEventListener('click', () => this.setZoom(this.zoom + .25));
+      options.moveUpButton.addEventListener('click', () => this.nudgeActive(0, -NUDGE_STEP));
+      options.moveDownButton.addEventListener('click', () => this.nudgeActive(0, NUDGE_STEP));
+      options.moveLeftButton.addEventListener('click', () => this.nudgeActive(-NUDGE_STEP, 0));
+      options.moveRightButton.addEventListener('click', () => this.nudgeActive(NUDGE_STEP, 0));
       options.smallerButton.addEventListener('click', () => this.resizeActive(.9));
       options.largerButton.addEventListener('click', () => this.resizeActive(1.1));
       options.rotateLeftButton.addEventListener('click', () => this.rotateActive(-15));
@@ -768,6 +778,21 @@
         if (!editingField && command && event.key.toLowerCase() === 'v' && this.pasteClipboard()) {
           event.preventDefault();
           return;
+        }
+        const nudgeDirections = {
+          ArrowUp: [0, -1],
+          ArrowDown: [0, 1],
+          ArrowLeft: [-1, 0],
+          ArrowRight: [1, 0],
+        };
+        const nudgeDirection = nudgeDirections[event.key];
+        const editingCanvasText = Boolean(this.canvas.getActiveObject()?.isEditing);
+        if (!editingField && !editingCanvasText && !command && !event.altKey && nudgeDirection) {
+          const step = event.shiftKey ? NUDGE_LARGE_STEP : NUDGE_STEP;
+          if (this.nudgeActive(nudgeDirection[0] * step, nudgeDirection[1] * step)) {
+            event.preventDefault();
+            return;
+          }
         }
         if (!editingField && (event.key === 'Delete' || event.key === 'Backspace')) {
           this.deleteActive();
@@ -1669,6 +1694,27 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
+    }
+
+    nudgeActive(deltaX, deltaY) {
+      const active = this.canvas.getActiveObject();
+      if (!active || active.isEditing || !Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return false;
+      const beforeLeft = active.left;
+      const beforeTop = active.top;
+      active.set({
+        left: active.left + deltaX * this.editorScale,
+        top: active.top + deltaY * this.editorScale,
+      });
+      active.setCoords();
+      this.keepInside(active);
+      active.setCoords();
+      this.canvas.requestRenderAll();
+      if (active.left !== beforeLeft || active.top !== beforeTop) {
+        this.recordHistory();
+        this.emitChange();
+        this.updateSelectionPanel();
+      }
+      return true;
     }
 
     rotateActive(delta) {

@@ -107,6 +107,8 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   assert.equal(params.shipping_options[0].shipping_rate_data.fixed_amount.amount, 449);
   assert.equal(params.shipping_options[0].shipping_rate_data.tax_behavior, 'exclusive');
   assert.equal(params.shipping_options[0].shipping_rate_data.display_name, 'Shipping');
+  assert.match(params.custom_text.submit.message, /personalised goods/i);
+  assert.match(params.custom_text.submit.message, /312g\(2\)\(1\)/i);
   assert.equal(options.idempotencyKey, order.stripe_idempotency_key);
   assert.equal(params.payment_intent_data.metadata.orderId, '42');
 });

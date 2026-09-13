@@ -4,6 +4,8 @@ const I18n = require('./i18n');
 const performanceProbe = require('./performanceProbe');
 const stripeConfig = require('./stripeConfig');
 
+const PERSONALIZED_GOODS_NOTICE = 'Die Produkte werden nach euren individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Eure gesetzlichen Rechte bei Mängeln bleiben unberührt.';
+
 /**
  * Stripe-hosted Checkout for trusted, server-side EUR quotes.
  *
@@ -300,6 +302,9 @@ async function createCheckoutSession({
       ...taxParameters,
       metadata,
       payment_intent_data: { metadata },
+      custom_text: {
+        submit: { message: I18n.translate(PERSONALIZED_GOODS_NOTICE, checkoutLocale) },
+      },
       success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}` +
         `&lang=${encodeURIComponent(checkoutLocale)}`,
       cancel_url: cancelUrl,

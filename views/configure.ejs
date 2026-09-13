@@ -752,12 +752,14 @@
     }
     .editor-selection-head { display: none; }
     .editor-properties {
-      display: grid;
-      grid-template-columns: minmax(320px, 1fr) auto;
+      display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 14px;
     }
     .editor-selection-row {
+      flex: 1 1 760px;
+      min-width: min(100%, 760px);
       display: grid;
       grid-template-columns: minmax(150px, 1fr) minmax(360px, .95fr) minmax(197px, 1fr);
       align-items: center;
@@ -962,7 +964,14 @@
     .editor-color-input::-webkit-color-swatch { border: 0; opacity: 0; }
     .editor-color-input::-moz-color-swatch { border: 0; opacity: 0; }
     .editor-color-input:disabled { cursor: not-allowed; opacity: .38; }
-    .editor-actions { margin-top: 0; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+    .editor-actions {
+      flex: 0 0 auto;
+      margin-top: 0;
+      display: flex;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
     .editor-delete { color: #9b2b42; }
     .editor-status {
       position: absolute;
@@ -1618,8 +1627,6 @@
       .design-toolbar-controls.has-orientation {
         grid-template-columns: minmax(280px, 1.1fr) repeat(2, minmax(170px, .72fr));
       }
-      .editor-properties { grid-template-columns: minmax(0, 1fr); }
-      .editor-actions { justify-content: flex-end; }
     }
 
     @media (max-width: 940px) {
@@ -2101,6 +2108,12 @@
                 </div>
                 <div class="editor-actions" data-editor-section="transform" role="group" aria-label="Anpassen">
                   <span class="editor-field-label-text editor-actions-label">Anpassen</span>
+                  <div class="editor-nudge-controls" role="group" aria-label="Auswahl verschieben">
+                    <%- include('partials/editor-action', { action: { id: 'editor-move-up', icon: 'arrow-up', label: 'Auswahl nach oben verschieben', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-move-down', icon: 'arrow-down', label: 'Auswahl nach unten verschieben', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-move-left', icon: 'arrow-left', label: 'Auswahl nach links verschieben', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-move-right', icon: 'arrow-right', label: 'Auswahl nach rechts verschieben', disabled: true } }) %>
+                  </div>
                   <%- include('partials/editor-action', { action: { id: 'editor-smaller', icon: 'minus', label: 'Element verkleinern', disabled: true } }) %>
                   <%- include('partials/editor-action', { action: { id: 'editor-larger', icon: 'plus', label: 'Element vergrößern', disabled: true } }) %>
                   <%- include('partials/editor-action', { action: { id: 'editor-rotate-left', icon: 'rotate-ccw-square', label: 'Nach links drehen', disabled: true } }) %>
@@ -4018,6 +4031,10 @@
         redoButton: document.getElementById('editor-redo'),
         zoomOutButton: document.getElementById('editor-zoom-out'),
         zoomInButton: document.getElementById('editor-zoom-in'),
+        moveUpButton: document.getElementById('editor-move-up'),
+        moveDownButton: document.getElementById('editor-move-down'),
+        moveLeftButton: document.getElementById('editor-move-left'),
+        moveRightButton: document.getElementById('editor-move-right'),
         smallerButton: document.getElementById('editor-smaller'),
         largerButton: document.getElementById('editor-larger'),
         rotateLeftButton: document.getElementById('editor-rotate-left'),

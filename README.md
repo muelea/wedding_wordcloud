@@ -225,9 +225,9 @@ dotted and dotless I.
   implemented. Verified Stripe buyer contact, immutable multilingual order
   confirmations, leased Resend jobs, shipment/refund/cancellation notices and
   signed replay-safe Resend delivery webhooks are also implemented. Customer
-  VAT/Stripe Tax treatment, legal review of the versioned contractual copy,
-  enabling Resend live delivery and the first explicitly approved controlled
-  Printful draft remain pending before live sales.
+  VAT/Stripe Tax treatment, legal review of the versioned contractual copy
+  and the first explicitly approved controlled Printful draft remain pending
+  before live sales.
 
 ## Guest ownership and lifecycle
 

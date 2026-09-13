@@ -33,7 +33,7 @@ test('every toolbar action renders its intended local mark and a translated acce
     const page = await rendered(locale);
     const symbols = new Set(nodes(page, node => node.tagName === 'symbol').map(node => attr(node, 'id')));
     const actions = nodes(page, node => attr(node, 'data-editor-tooltip') !== undefined);
-    assert.equal(actions.length, 22);
+    assert.equal(actions.length, 26);
     for (const action of actions) {
       assert.equal(action.tagName, 'button');
       assert.equal(attr(action, 'type'), 'button');
@@ -66,6 +66,10 @@ test('every toolbar action renders its intended local mark and a translated acce
     };
     assert.equal(actionIcon('editor-smaller'), '#editor-icon-minus');
     assert.equal(actionIcon('editor-larger'), '#editor-icon-plus');
+    assert.equal(actionIcon('editor-move-up'), '#editor-icon-arrow-up');
+    assert.equal(actionIcon('editor-move-down'), '#editor-icon-arrow-down');
+    assert.equal(actionIcon('editor-move-left'), '#editor-icon-arrow-left');
+    assert.equal(actionIcon('editor-move-right'), '#editor-icon-arrow-right');
     assert.equal(actionIcon('editor-fit-area'), '#editor-icon-expand');
     assert.equal(nodes(page, node => attr(node, 'data-editor-tool') !== undefined).length, 0);
     assert.equal(nodes(page, node => attr(node, 'id') === 'editor-tool-panel').length, 0);

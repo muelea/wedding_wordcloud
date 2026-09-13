@@ -88,6 +88,13 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
   border-radius: 12px;
 }
 .editor-icon-button:focus-visible { outline: 3px solid rgba(156, 28, 76, .45); outline-offset: 2px; }
+.editor-nudge-controls {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding-right: 6px;
+  border-right: 1px solid var(--line);
+}
 .editor-actions .editor-delete { margin-left: 6px; }
 .editor-tooltip {
   position: fixed;
@@ -238,9 +245,11 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
   #editor-compact-inspector .editor-color-input { width: 38px; height: 38px; flex-basis: 38px; }
   #editor-compact-inspector .editor-actions {
     width: min(100%, 350px);
+    min-width: 0;
     margin: 0;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
+    justify-self: start;
     gap: clamp(2px, .7vw, 6px);
   }
   #editor-compact-inspector .editor-actions .editor-button.editor-icon-button {
@@ -250,6 +259,15 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
     height: 44px;
     min-height: 44px;
     padding: 9px;
+  }
+  #editor-compact-inspector .editor-nudge-controls {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, 44px);
+    justify-content: start;
+    gap: 6px;
+    padding: 0;
+    border: 0;
   }
   #editor-compact-inspector .editor-actions .editor-icon { width: 18px; height: 18px; }
   #editor-compact-inspector .editor-actions .editor-delete { margin-left: 0; }

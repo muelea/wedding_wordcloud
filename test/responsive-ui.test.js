@@ -297,12 +297,15 @@ test('compact configurator uses a dense two-column inspector at every compact wi
   assert.match(configure, /\.editor-swatches \{ min-width: 163px;[\s\S]*?flex-wrap: wrap;/);
   assert.match(configure, /\.editor-swatch \{[\s\S]*?flex: 0 0 23px;/);
   assert.match(configure, /\.editor-color-input \{[\s\S]*?flex: 0 0 28px;/);
-  assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-properties \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  assert.match(configure, /\.editor-properties \{[^}]*display: flex;[^}]*flex-wrap: wrap;/);
+  assert.match(configure, /\.editor-selection-row \{[^}]*flex: 1 1 760px;[^}]*min-width: min\(100%, 760px\)/);
+  assert.match(configure, /\.editor-actions \{[^}]*flex: 0 0 auto;[^}]*justify-content: flex-start;[^}]*flex-wrap: wrap;/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-selection-row \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-properties \{[\s\S]*?width: min\(100%, 620px\);[\s\S]*?margin: 0 auto;/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-format-controls \{[\s\S]*?width: min\(100%, 350px\);[\s\S]*?grid-template-columns: minmax\(88px, 96px\) minmax\(0, 1fr\)/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-swatches \{[\s\S]*?grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
-  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 1fr\)\);[\s\S]*?justify-self: start;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-nudge-controls \{[\s\S]*?grid-column: 1 \/ -1;[\s\S]*?grid-template-columns: repeat\(4, 44px\);[\s\S]*?justify-content: start;/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-style-button > \* \{[^}]*transform: translateY\(2px\)/);
   assert.match(workspaceStyles, /\.editor-selection-head \{[\s\S]*?clip: rect\(0 0 0 0\)/);
   assert.match(workspaceStyles, /\.workbench \.editor-card \{ position: relative; z-index: 2; \}/);

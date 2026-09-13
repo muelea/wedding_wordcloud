@@ -64,6 +64,62 @@ function signedResendHeaders(secret, svixId, body) {
   };
 }
 
+test('premium transactional snapshots stay customer-facing, responsive and complete', () => {
+  const parse5 = require('parse5');
+  const { buildEmailSnapshot, TEMPLATE_VERSION } = require('../src/emailTemplates');
+  const order = {
+    id: 15, mode: 'live', status: 'paid', currency: 'EUR', buyer_email: 'buyer@example.test',
+    event_title_snapshot: 'Lea & Julian', paid_at: '2026-09-13T20:45:00Z',
+    items_cents: 927, shipping_cents: 469, tax_cents: 265, total_cents: 1661,
+    refunded_cents: 400,
+    shipping_json: JSON.stringify([{ printfulShipping: {
+      delivery: { minDate: '2030-01-14', maxDate: '2030-01-17', minDays: 4, maxDays: 7 },
+      shipments: [{ customsFeesPossible: true }],
+    } }]),
+  };
+  const orderItems = [{
+    id: 9, shipment_index: 0, quantity: 1, product_key: 'white-glossy-mug-duo-11oz',
+    printful_variant_id: 1320, configuration_id: 'design-customer-reference',
+    configuration_snapshot_json: JSON.stringify({
+      productKey: 'white-glossy-mug-duo-11oz', configurationId: 'design-customer-reference',
+    }),
+  }];
+  const shipment = {
+    id: 4, shipment_index: 0, recipient_json: JSON.stringify({
+      name: 'Lea Beispiel', address1: 'Testweg 6', zip: '74080', city: 'Heilbronn', country_code: 'DE',
+    }),
+    carrier: 'DHL', tracking_number: 'TRACK-6001', tracking_url: 'https://tracking.example.test/TRACK-6001',
+  };
+
+  for (const locale of ['de', 'en', 'fr', 'it', 'es', 'tr']) {
+    for (const kind of ['order_confirmation', 'shipment_confirmation', 'refund_confirmation', 'cancellation_confirmation']) {
+      const parseErrors = [];
+      const snapshot = buildEmailSnapshot({
+        kind, order, orderItems, shipments: [shipment], shipment,
+        noticeAmountCents: 400, locale,
+      });
+      parse5.parse(snapshot.htmlBody, { onParseError: (error) => parseErrors.push(error) });
+      assert.equal(snapshot.templateVersion, TEMPLATE_VERSION);
+      assert.deepEqual(parseErrors, [], `${locale}/${kind} emits valid HTML`);
+      assert.match(snapshot.htmlBody, /cid:wolkenworte-mark-v1/);
+      assert.match(snapshot.htmlBody, /@media screen and \(max-width:680px\)/);
+      assert.match(snapshot.htmlBody, /role="presentation"/);
+      assert.match(snapshot.textBody, /design-customer-reference/);
+      assert.doesNotMatch(snapshot.textBody, /1320/);
+      assert.doesNotMatch(snapshot.textBody, /contract-2026/);
+    }
+  }
+
+  const englishOrder = buildEmailSnapshot({
+    kind: 'order_confirmation', order, orderItems, shipments: [shipment], locale: 'en',
+  });
+  assert.match(englishOrder.textBody, /Lea & Julian/);
+  assert.match(englishOrder.textBody, /Jan 14\s*–\s*17, 2030/);
+  assert.match(englishOrder.textBody, /customs or import fees/i);
+  assert.match(englishOrder.textBody, /Registered office: Heilbronn/);
+  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-13-v2"/);
+});
+
 test('buyer contact, durable email jobs and provider reconciliation', async (t) => {
   const previous = {};
   for (const name of [
@@ -109,12 +165,16 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.match(paid.emailJob.text_body, /kein echtes Geld abgebucht/);
     assert.match(paid.emailJob.html_body, /kein Produktionsauftrag ausgelöst/);
     assert.match(paid.emailJob.text_body, /2 × Wortwolken-Tasse/);
-    assert.match(paid.emailJob.text_body, /Variante: 1320/);
+    assert.doesNotMatch(paid.emailJob.text_body, /Variante: 1320/);
     assert.match(paid.emailJob.text_body, new RegExp(prepared.configuration.id));
     assert.match(paid.emailJob.text_body, /Testweg 6/);
     assert.match(paid.emailJob.text_body, /29,75\s*€/);
     assert.match(paid.emailJob.text_body, /JUSA Engineering UG/);
+    assert.match(paid.emailJob.text_body, /Sitz: Heilbronn/);
     assert.match(paid.emailJob.text_body, /§ 312g/);
+    assert.match(paid.emailJob.html_body, /cid:wolkenworte-mark-v1/);
+    assert.match(paid.emailJob.html_body, /Bestellung bestätigt/);
+    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-13-v2"/);
 
     const duplicate = await payPreparedOrder(db, prepared, 'atomic', {
       buyerEmail: 'buyer@example.test',
@@ -153,6 +213,10 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
       assert.deepEqual(calls[0].payload.to, ['buyer@example.test']);
       assert.match(calls[0].payload.subject, /^\[TEST\]/);
       assert.equal(calls[0].payload.replyTo, 'kontakt@jusa.io');
+      assert.equal(calls[0].payload.attachments.length, 1);
+      assert.equal(calls[0].payload.attachments[0].contentId, 'wolkenworte-mark-v1');
+      assert.equal(calls[0].payload.attachments[0].contentType, 'image/png');
+      assert.ok(calls[0].payload.attachments[0].content.length > 1000);
       assert.equal(calls[0].options.idempotencyKey, paid.emailJob.dedupe_key);
       await emailDelivery.processJob(paid.emailJob.id);
       assert.equal(calls.length, 1, 'already accepted confirmations cannot send twice');
