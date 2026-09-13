@@ -200,7 +200,9 @@ dotted and dotless I.
   hosted test environment, not the live-sales launch.
 - Stripe Checkout and the registered Fly webhook destination run in Stripe's
   sandbox. A real hosted test Checkout has been verified through signed Stripe
-  delivery, durable `paid_test` storage, mock email and mock fulfillment.
+  delivery, durable `paid_test` storage and mock fulfillment. Hosted sandbox
+  purchases send their transactional confirmations through Resend, clearly
+  marked as test messages.
   Printful is already used for countries and live cost estimates when
   configured, but a Stripe test payment can only create a local `mocked`
   fulfillment record.
@@ -511,8 +513,10 @@ Developers normally should not add either one to `.env`.
 Postgres, Supabase Storage and durable email jobs are active now. The Resend
 sending domain, restricted runtime key and signed webhook are configured and
 their delivered, bounced, complained and suppressed outcomes have been verified.
-The hosted environment remains in `mock` mode, so ordinary jobs and hosted
-Stripe test payments cannot contact the live Resend API.
+The hosted environment uses `EMAIL_DELIVERY_MODE=live`, so new hosted and local
+Stripe sandbox purchases that reach the shared hosted webhook send real Resend
+messages with a `[TEST]` subject and test-order notice. Automated tests remain
+provider-mocked.
 
 **Never commit `.env`** — it is gitignored and may contain both local runtime
 credentials and privileged operator credentials. Hosted runtime secrets must
@@ -926,9 +930,9 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   their explicit Fly hostname instead of depending on the public alias.
 - Hosted credentials (Stripe, Printful and the HMAC/maintenance secrets) belong in Fly
   secrets or the eventual host's equivalent. Resend API/webhook credentials are
-  handled the same way. Keep every live-payment, live-email and Printful
-  order-write switch disabled in staging except during an explicitly approved
-  provider smoke.
+  handled the same way. Keep every live-payment and Printful order-write switch
+  disabled in staging. Hosted live email is intentionally enabled for real
+  transactional-message testing while Stripe remains in sandbox mode.
 - The Debian/glibc image installs only the runtime libraries needed by
   `node-canvas`, runs as the non-root `node` user under `tini -s`, and bundles
   and registers Gelasio as `Wolkenworte Classic`. Local and AMD64 container
@@ -1049,7 +1053,7 @@ npm run stripe:verify-hosted-payment -- --session cs_test_...
 
 This is the external end-to-end acceptance check. It requires one enabled exact
 Stripe destination, a paid sandbox Session whose delivery is complete, the
-matching durable `paid_test` order, mock fulfillment, mock transactional email
+matching durable `paid_test` order, mock fulfillment, delivered Resend confirmation
 and a successful public confirmation response. Unit tests still use signed
 fixtures and deliberately do not pretend to exercise Stripe's network.
 
@@ -1090,9 +1094,9 @@ always simulate ordinary delivery, even with live email configuration. Payment
 and Printful modes remain independent. Enabling delivery does not resend jobs
 that already completed in mock mode; test it with a new purchase.
 
-The local development environment has real email enabled. The hosted test
-environment remains in mock mode until explicitly deployed and configured.
-Provider setup and verification:
+The local development and hosted test environments have real email enabled for
+manual Stripe sandbox purchases. Stripe remains in test mode and Printful
+fulfillment remains mocked. Provider setup and verification:
 
 1. Add `mail.wolkenworte.io` in Resend with region `eu-west-1`, publish the exact
    SPF, DKIM and Return-Path/MX records supplied by Resend in Porkbun DNS, and
@@ -1100,14 +1104,14 @@ Provider setup and verification:
 2. Create a long-lived Sending-access key restricted to that domain and a
    separate temporary Full-access setup key. Put them in the ignored local
    `.env` as `RESEND_API_KEY` and `RESEND_MANAGEMENT_API_KEY`; use the committed
-   `RESEND_FROM_EMAIL` value and keep `EMAIL_DELIVERY_MODE=mock`.
+   `RESEND_FROM_EMAIL` value and keep `EMAIL_DELIVERY_MODE=mock` during setup.
 3. Run `npm run resend:configure-webhook -- --confirm-replace-webhook`. It
    registers the fixed `https://wolkenworte.io/webhook/resend` endpoint for
    sent/delivered/bounced/failed/complained/suppressed events and stages only the
    runtime sending key, From identity and returned signing secret in Fly. Revoke
    the temporary Full-access key and clear `RESEND_MANAGEMENT_API_KEY` immediately.
 4. Run `npm run deploy:hosted` to activate the staged secrets while Fly remains
-   in email `mock` mode. Put only a
+   in email `mock` mode during initial provider verification. Put only a
    maintainer inbox or Resend's `delivered@resend.dev`, `bounced@resend.dev`,
    `complained@resend.dev` and `suppressed@resend.dev` addresses in the local
    `RESEND_SMOKE_RECIPIENTS`. For each controlled smoke, override only the local
@@ -1121,9 +1125,11 @@ Provider setup and verification:
    The synthetic message uses the production template, Reply-To, client,
    idempotency key, tag and signed webhook reconciliation path. It cannot be
    invoked through HTTP and refuses to run while Stripe live payments are enabled.
-5. Fly remains at `EMAIL_DELIVERY_MODE=mock` after testing. Do not enable live
-   sales until the contractual copy, VAT/invoicing treatment and all provider
-   smokes have been approved.
+5. After the provider smokes and explicit approval, set the hosted environment
+   to `EMAIL_DELIVERY_MODE=live` and deploy. This enables real `[TEST]` email for
+   new sandbox purchases without enabling Stripe live payments or any Printful
+   order write. Do not enable live sales until the contractual copy and
+   VAT/invoicing treatment have been approved.
 
 ## Fulfillment safety modes
 
@@ -1168,11 +1174,6 @@ keys in Fly for activation by `npm run deploy:hosted`.
 - **Live Stripe payments** — `STRIPE_LIVE_SECRET_KEY` and live webhook events
   remain unreachable while `STRIPE_PAYMENT_MODE=test` and
   `STRIPE_LIVE_PAYMENTS_ENABLED=false`.
-- **Hosted transactional delivery** — `EMAIL_DELIVERY_MODE=mock` still prevents
-  ordinary hosted jobs from contacting Resend. Local manual sandbox purchases
-  can send real confirmations with `EMAIL_DELIVERY_MODE=live`; automated tests
-  remain mocked. The sending domain, signed webhook and controlled provider
-  outcomes are verified; hosted delivery awaits its approved cutover.
 - **Real Printful fulfillment after test payments** — live countries and
   estimates are connected for the curated mug variants 1320, 4830 and 16586,
   coaster variant 15662, unframed poster variants 8948 and 8952, framed

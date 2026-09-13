@@ -118,7 +118,7 @@ test('webhook configuration stages the returned secret and replaces only the hos
   assert.equal(result.replaced, 1);
 });
 
-test('hosted payment acceptance requires paid Stripe, webhook, mock work and confirmation state', () => {
+test('hosted payment acceptance requires paid Stripe, webhook, mock fulfillment and real email delivery', () => {
   const session = verify.validateStripeSession({
     id: 'cs_test_fixture',
     livemode: false,
@@ -140,13 +140,17 @@ test('hosted payment acceptance requires paid Stripe, webhook, mock work and con
       mode: 'test', totalCents: 1649,
     },
     emailJobs: [{
-      kind: 'order_confirmation', status: 'delivered', provider_message_id: 'mock-1',
+      kind: 'order_confirmation', status: 'delivered', provider_message_id: 'resend-message-1',
     }],
     stripeEvent: { pending_webhooks: 0 },
   };
   assert.equal(verify.acceptedState(state), true);
   assert.equal(verify.acceptedState({ ...state, stripeEvent: { pending_webhooks: 1 } }), false);
   assert.equal(verify.acceptedState({ ...state, order: { ...state.order, fulfillment_status: 'submitted' } }), false);
+  assert.equal(verify.acceptedState({
+    ...state,
+    emailJobs: [{ kind: 'order_confirmation', status: 'delivered', provider_message_id: 'mock-1' }],
+  }), false);
   assert.equal(verify.validateSessionId('cs_test_fixture'), 'cs_test_fixture');
   assert.throws(() => verify.validateSessionId('cs_live_fixture'), /cs_test_/);
 });

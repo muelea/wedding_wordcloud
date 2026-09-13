@@ -1,6 +1,6 @@
 # Wolkenworte launch-readiness checklist
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-13
 
 The hosted-architecture refactor is complete. Wolkenworte now runs locally and
 on the Fly hosted test environment from the same application code, ordered
@@ -24,8 +24,8 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] Private Storage holds frozen paid print artifacts; application records
   contain opaque identifiers rather than public object URLs.
 - [x] Stripe sandbox Checkout has been verified end to end through the public
-  Fly webhook, durable `paid_test` state, mock email, mock fulfillment and the
-  public confirmation page.
+  Fly webhook, durable `paid_test` state, durable email queue, mock fulfillment
+  and the public confirmation page.
 - [x] Payment, fulfillment and transactional-email work is transactional,
   idempotent, lease-owned and restart-safe.
 - [x] Event expiration, bounded authenticated maintenance, one-use reset PINs,
@@ -73,11 +73,11 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] Configure local-only `RESEND_SMOKE_RECIPIENTS` and run the guarded real
   inbox, delivered, bounced, complained and suppressed provider smokes from
   `README.md`. Confirm Reply-To is `kontakt@jusa.io`.
-- [x] Keep the hosted test environment at `EMAIL_DELIVERY_MODE=mock` after the
-  provider smokes.
-- [ ] Enable hosted live email delivery as part of the approved production
-  cutover. Local manual sandbox purchases use real email when
-  `EMAIL_DELIVERY_MODE=live`; automated tests remain mocked.
+- [x] Approve and enable `EMAIL_DELIVERY_MODE=live` in the hosted test
+  environment for real `[TEST]` confirmations while Stripe stays in sandbox
+  mode and Printful fulfillment stays mocked. Automated tests remain mocked.
+- [ ] Complete one new hosted sandbox purchase and verify that its confirmation
+  reaches the intended inbox and receives a signed Resend delivery callback.
 
 ### Printful verification
 
@@ -117,7 +117,8 @@ are signed off. Deployment, destructive cleanup, credential rotation and live
 provider activation each require explicit maintainer approval at action time.
 
 1. Run `npm run deploy:hosted` for the tested candidate while Stripe remains in
-   test mode, email remains in mock mode and Printful writes remain disabled.
+   test mode, transactional test email remains enabled and Printful writes
+   remain disabled.
 2. Set `MAINTENANCE_MODE=true` on Fly and verify public traffic receives the
    maintenance response while health endpoints remain available.
 3. Set `ALLOW_TEST_DATA_RESET=true` only in the local operator environment and
@@ -136,9 +137,9 @@ provider activation each require explicit maintainer approval at action time.
    least one Machine to remain running.
 9. Run production health and read-only smoke checks that create no real charge,
    email or Printful order.
-10. Enable live email, payment and fulfillment gates in the reviewed order,
-    perform the explicitly approved minimal live acceptance transaction, then
-    remove maintenance mode.
+10. Reconfirm live email, enable payment and fulfillment gates in the reviewed
+    order, perform the explicitly approved minimal live acceptance transaction,
+    then remove maintenance mode.
 
 Stripe sandbox history does not need to be deleted. Stripe test and live data
 are separate. The pre-live cleanup command must never be used after customer

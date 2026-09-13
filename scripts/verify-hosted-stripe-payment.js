@@ -56,7 +56,8 @@ function acceptedState({ session, order, confirmation, emailJobs, stripeEvent })
     confirmation.mode === 'test' &&
     confirmation.totalCents === session.amount_total &&
     confirmationJob?.status === 'delivered' &&
-    String(confirmationJob.provider_message_id || '').startsWith('mock-') &&
+    Boolean(confirmationJob.provider_message_id) &&
+    !String(confirmationJob.provider_message_id).startsWith('mock-') &&
     stripeEvent?.pending_webhooks === 0
   );
 }
@@ -110,7 +111,7 @@ async function run({ argv = process.argv, env = process.env, output = console.lo
     stripeDelivery: 'complete',
     wolkenworteOrder: order.status,
     fulfillment: order.fulfillment_status,
-    transactionalEmail: 'mocked',
+    transactionalEmail: 'delivered',
     confirmationApi: responseStatus,
   };
   output(JSON.stringify(result, null, 2));

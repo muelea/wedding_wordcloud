@@ -12,7 +12,7 @@ const EXPECTED_ENV = Object.freeze({
   NODE_ENV: 'production',
   APP_ENVIRONMENT: 'hosted-test',
   PUBLIC_URL,
-  EMAIL_DELIVERY_MODE: 'mock',
+  EMAIL_DELIVERY_MODE: 'live',
   MAINTENANCE_MODE: 'false',
   ALLOW_TEST_DATA_RESET: 'false',
   STRIPE_PAYMENT_MODE: 'test',
@@ -27,6 +27,9 @@ const REQUIRED_FLY_SECRETS = Object.freeze([
   'SUPABASE_SECRET_KEY',
   'RATE_LIMIT_HMAC_SECRET',
   'MAINTENANCE_SECRET',
+  'RESEND_API_KEY',
+  'RESEND_FROM_EMAIL',
+  'RESEND_WEBHOOK_SECRET',
 ]);
 const FORBIDDEN_FLY_SECRETS = new Set([
   ...Object.keys(EXPECTED_ENV),

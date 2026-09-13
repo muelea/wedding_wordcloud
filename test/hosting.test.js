@@ -264,8 +264,8 @@ test('a fresh collaborator checkout has one deterministic local startup path', (
 test('local deployment guard rejects unsafe config, credentials and Git state', () => {
   const fly = fs.readFileSync(path.join(ROOT, 'fly.toml'), 'utf8');
   assert.throws(
-    () => validateHostedConfig(fly.replace('EMAIL_DELIVERY_MODE = "mock"', 'EMAIL_DELIVERY_MODE = "live"')),
-    /EMAIL_DELIVERY_MODE="mock"/
+    () => validateHostedConfig(fly.replace('EMAIL_DELIVERY_MODE = "live"', 'EMAIL_DELIVERY_MODE = "mock"')),
+    /EMAIL_DELIVERY_MODE="live"/
   );
   assert.throws(
     () => validateHostedConfig(`${fly}\nMIGRATION_DATABASE_URL = "forbidden"\n`),
@@ -297,6 +297,9 @@ test('local deployment guard rejects unsafe config, credentials and Git state', 
     'SUPABASE_SECRET_KEY',
     'RATE_LIMIT_HMAC_SECRET',
     'MAINTENANCE_SECRET',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
+    'RESEND_WEBHOOK_SECRET',
   ].map((Name) => ({ Name, Digest: 'not-a-secret-value' }));
   validateFlySecretBoundary(JSON.stringify(requiredFlySecrets));
   assert.throws(
