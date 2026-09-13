@@ -259,3 +259,16 @@ test('compact configurator widths keep color controls horizontal and separate fr
   assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-properties \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(workspaceStyles, /\.editor-tool-panel \.editor-actions \{[^}]*display: flex;[^}]*flex-wrap: wrap;/);
 });
+
+test('compact configurator widths keep product and palette beside each other', () => {
+  assert.match(configure,
+    /@media \(max-width: 940px\)[\s\S]*?\.design-toolbar-controls,[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(configure,
+    /\.design-toolbar-controls > \.toolbar-product \{ grid-column: 1; grid-row: 1; \}[\s\S]*?\.design-toolbar-controls > #theme-step \{ grid-column: 2; grid-row: 1; \}/);
+  assert.match(configure,
+    /\.design-toolbar-controls > #orientation-step \{ grid-column: 1 \/ -1; grid-row: 2; \}/);
+  assert.match(configure,
+    /@media \(max-width: 620px\)[\s\S]*?\.selected-product \{[\s\S]*?min-height: 112px;[\s\S]*?grid-template-columns: 40px minmax\(0, 1fr\);/);
+  assert.match(configure,
+    /#theme-step \.toolbar-summary \{[\s\S]*?min-height: 112px;[\s\S]*?height: 100%;/);
+});

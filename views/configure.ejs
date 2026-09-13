@@ -1619,8 +1619,13 @@
     @media (max-width: 940px) {
       .design-toolbar-copy { display: block; }
       .controls-sub { max-width: none; text-align: left; }
-      .design-toolbar-controls { grid-template-columns: 1fr; }
-      .design-toolbar-controls.has-orientation { grid-template-columns: 1fr; }
+      .design-toolbar-controls,
+      .design-toolbar-controls.has-orientation {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .design-toolbar-controls > .toolbar-product { grid-column: 1; grid-row: 1; }
+      .design-toolbar-controls > #theme-step { grid-column: 2; grid-row: 1; }
+      .design-toolbar-controls > #orientation-step { grid-column: 1 / -1; grid-row: 2; }
       .workbench {
         --workspace-stage-height: clamp(400px, 66vh, 560px);
         grid-template-columns: 1fr;
@@ -1856,9 +1861,39 @@
       .editor-font-controls { align-items: stretch; flex-wrap: wrap; }
       .editor-font-picker { flex-basis: 100%; }
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
-      .selected-product { grid-template-columns: 52px minmax(0, 1fr); }
-      .selected-product-thumb { width: 52px; height: 52px; }
-      .product-change { grid-column: 1 / -1; width: 100%; }
+      .design-toolbar-controls { gap: 8px; }
+      .selected-product {
+        min-height: 112px;
+        padding: 10px;
+        grid-template-columns: 40px minmax(0, 1fr);
+        grid-template-rows: 40px var(--ww-touch-target);
+        gap: 8px;
+      }
+      .selected-product-thumb { width: 40px; height: 40px; padding: 3px; border-radius: 11px; }
+      .selected-product-copy strong { font-size: 13px; }
+      .selected-product-copy span {
+        margin-top: 2px;
+        overflow: hidden;
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .product-change {
+        grid-column: 1 / -1;
+        width: 100%;
+        padding-inline: 7px;
+        font-size: 10.5px;
+      }
+      #theme-step .toolbar-summary {
+        min-height: 112px;
+        height: 100%;
+        padding: 10px;
+        grid-template-columns: minmax(0, 1fr) 14px;
+        gap: 7px;
+      }
+      #theme-step .toolbar-kicker { font-size: 9px; }
+      #theme-step .toolbar-summary strong { margin-top: 3px; font-size: 13px; }
+      #theme-step .toolbar-theme-swatches { height: 10px; }
       .product-change,
       .surface-tab,
       .surface-copy,
