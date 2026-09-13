@@ -67,6 +67,31 @@ test('compact text editing focuses the directly visible field', () => {
   assert.equal(workspace.openTextEditor(), false);
 });
 
+test('the general toolbar and selection inspector share the responsive editor card', () => {
+  const moves = [];
+  const toolbar = {};
+  const selection = {};
+  const workspace = Object.create(WolkenworteWorkspace.prototype);
+  workspace.media = { matches: true };
+  workspace.toolbar = toolbar;
+  workspace.selection = selection;
+  workspace.compactToolbarHost = { append: node => moves.push(['compact-toolbar', node]) };
+  workspace.compactHost = { append: node => moves.push(['compact-inspector', node]) };
+  workspace.desktopToolbarHost = { insertBefore: (node, anchor) => moves.push(['desktop-toolbar', node, anchor]) };
+  workspace.desktopHost = { append: node => moves.push(['desktop-inspector', node]) };
+
+  workspace.mountInspector();
+  workspace.media.matches = false;
+  workspace.mountInspector();
+
+  assert.deepEqual(moves, [
+    ['compact-toolbar', toolbar],
+    ['compact-inspector', selection],
+    ['desktop-toolbar', toolbar, workspace.desktopHost],
+    ['desktop-inspector', selection],
+  ]);
+});
+
 test('choosers use a native modal fallback when Popover is unavailable', () => {
   const workspace = Object.create(WolkenworteWorkspace.prototype);
   const trigger = { dataset: { panelTrigger: 'theme-panel' } };
@@ -124,6 +149,7 @@ test('responsive inspector exposes one direct copy of every editor control', () 
   }
   assert.doesNotMatch(source, /data-editor-tool=|id="editor-tool-panel"/);
   assert.match(source, /id="editor-compact-inspector"/);
+  assert.match(source, /id="editor-compact-toolbar"/);
   assert.match(source, /class="editor-properties" id="editor-properties"/);
   assert.match(source, /class="editor-format-controls"/);
   assert.match(source, /data-editor-section="transform" role="group" aria-label="Anpassen"/);

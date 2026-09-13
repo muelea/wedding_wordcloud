@@ -167,8 +167,8 @@ test('the personal display palette is handed off to the configurator', () => {
 
 test('the phone configurator starts with one preview-first purchase path', () => {
   assert.match(configure, /id="config-studio" data-mobile-editor-expanded="false"/);
-  assert.match(configure, /id="mobile-editor-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="design-toolbar workspace-tools editor-card"/);
-  assert.match(configure, /id="mobile-editor-collapse"[^>]*aria-expanded="true"[^>]*aria-controls="design-toolbar workspace-tools editor-card"/);
+  assert.match(configure, /id="mobile-editor-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="design-toolbar editor-card"/);
+  assert.match(configure, /id="mobile-editor-collapse"[^>]*aria-expanded="true"[^>]*aria-controls="design-toolbar editor-card"/);
   assert.match(configure, /id="mobile-selected-product-name"/);
   assert.match(configure, /id="mobile-selected-theme-swatches"/);
   assert.match(configure, /id="continue-order-label"/);
@@ -186,6 +186,9 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.match(workspaceStyles,
     /grid-template-areas: 'create create selection layout reset' 'view view view history history'/,
     'Select all and Fill the area stay adjacent in the compact editor toolbar');
+  assert.match(configure, /<h2 class="editor-title"[^>]*>[\s\S]*?<div id="editor-compact-toolbar"><\/div>[\s\S]*?<div class="wrap-preview">/);
+  assert.match(workspaceStyles, /@media \(max-width: 940px\) \{[\s\S]*?\.workspace-tools \{ display: none; \}[\s\S]*?#editor-compact-toolbar \{[\s\S]*?display: block;/);
+  assert.match(workspaceStyles, /#editor-compact-toolbar \{[\s\S]*?border-bottom: 1px solid var\(--line\)/);
 });
 
 test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {
@@ -289,6 +292,8 @@ test('mobile legal copy and configurator controls reflow instead of widening the
 
 test('compact configurator uses a dense two-column inspector at every compact width', () => {
   assert.match(configure, /\.editor-field-label-color \{ min-width: 197px;/);
+  assert.match(configure, /\.editor-font-controls \{[\s\S]*?grid-template-columns: minmax\(125px, 1fr\) auto;/);
+  assert.match(configure, /\.editor-selection-row \{[\s\S]*?minmax\(360px, \.95fr\)/);
   assert.match(configure, /\.editor-swatches \{ min-width: 163px;[\s\S]*?flex-wrap: wrap;/);
   assert.match(configure, /\.editor-swatch \{[\s\S]*?flex: 0 0 23px;/);
   assert.match(configure, /\.editor-color-input \{[\s\S]*?flex: 0 0 28px;/);
@@ -300,6 +305,7 @@ test('compact configurator uses a dense two-column inspector at every compact wi
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-style-button > \* \{[^}]*transform: translateY\(2px\)/);
   assert.match(workspaceStyles, /\.editor-selection-head \{[\s\S]*?clip: rect\(0 0 0 0\)/);
+  assert.match(workspaceStyles, /\.workbench \.editor-card \{ position: relative; z-index: 2; \}/);
 });
 
 test('compact configurator widths keep product and palette beside each other', () => {

@@ -52,7 +52,9 @@
         check('phone editor expands in place', studio.dataset.mobileEditorExpanded === 'true' &&
           toggle.getAttribute('aria-expanded') === 'true' &&
           document.getElementById('design-toolbar').getClientRects().length &&
-          document.getElementById('workspace-tools').getClientRects().length &&
+          !document.getElementById('workspace-tools').getClientRects().length &&
+          document.getElementById('editor-compact-toolbar').getClientRects().length &&
+          document.querySelector('#editor-card > #editor-compact-toolbar > .editor-toolbar') &&
           document.getElementById('editor-card').getClientRects().length);
       }
       workspace.close();

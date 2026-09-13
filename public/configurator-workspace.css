@@ -57,6 +57,7 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 .config-panel-foot { flex: 0 0 auto; padding: 12px 18px; border-top: 1px solid var(--line); }
 .config-panel-foot .editor-button { width: 100%; min-height: 44px; }
 #editor-compact-inspector { display: none; }
+#editor-compact-toolbar { display: none; }
 
 /* One local, stroke-based SVG family; button hit areas never shrink with icons. */
 .editor-symbols { position: absolute; width: 0; height: 0; overflow: hidden; }
@@ -112,6 +113,16 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 .editor-reset-actions .editor-reset-confirm { border-color: var(--berry); background: var(--berry); color: #fff; }
 
 @media (max-width: 940px) {
+  /* The compact inspector lives inside the editor card. Keep its open menus
+     above the preview card that follows it in the stacked workbench. */
+  .workbench .editor-card { position: relative; z-index: 2; }
+  .workspace-tools { display: none; }
+  #editor-compact-toolbar {
+    display: block;
+    margin: 0 0 14px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--line);
+  }
   .config-panel {
     inset: auto 0 var(--ww-keyboard-inset, 0px);
     width: min(100%, 620px);

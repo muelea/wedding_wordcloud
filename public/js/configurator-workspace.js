@@ -24,6 +24,9 @@
       this.selection = document.getElementById('editor-selection');
       this.desktopHost = document.getElementById('editor-desktop-inspector');
       this.compactHost = document.getElementById('editor-compact-inspector');
+      this.toolbar = document.querySelector('.editor-toolbar');
+      this.desktopToolbarHost = document.getElementById('workspace-tools');
+      this.compactToolbarHost = document.getElementById('editor-compact-toolbar');
       this.resetPanel = document.getElementById('editor-reset-panel');
       this.resetButton = document.getElementById('editor-reset');
       document.getElementById('editor-reset-confirm').addEventListener('click', () => this.confirmReset());
@@ -60,11 +63,16 @@
       }
       this.media.addEventListener('change', () => {
         const trigger = this.active?.trigger;
-        const selectionFocused = this.selection.contains(this.document.activeElement);
+        const activeElement = this.document.activeElement;
+        const selectionFocused = this.selection.contains(activeElement);
+        const toolbarFocused = this.toolbar.contains(activeElement);
         this.close(false);
         this.mountInspector();
         if (trigger || selectionFocused) (!trigger || trigger.disabled || !trigger.getClientRects().length
           ? this.selection : trigger).focus({ preventScroll: true });
+        else if (toolbarFocused && !activeElement.disabled && activeElement.getClientRects().length) {
+          activeElement.focus({ preventScroll: true });
+        }
       });
       const reposition = () => this.positionChooser();
       root.addEventListener('resize', reposition, { passive: true });
@@ -74,7 +82,13 @@
     }
 
     mountInspector() {
-      (this.media.matches ? this.compactHost : this.desktopHost).append(this.selection);
+      if (this.media.matches) {
+        this.compactToolbarHost.append(this.toolbar);
+        this.compactHost.append(this.selection);
+      } else {
+        this.desktopToolbarHost.insertBefore(this.toolbar, this.desktopHost);
+        this.desktopHost.append(this.selection);
+      }
     }
 
     isBackdrop(event, panel) {
