@@ -274,6 +274,8 @@
       cursor: grab;
       touch-action: pan-y pinch-zoom;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
     .mug-viewer.dragging { cursor: grabbing; }
     .mug-viewer:focus-visible { outline: 3px solid rgba(156, 28, 76, .2); outline-offset: 3px; border-radius: 24px; }
@@ -284,6 +286,19 @@
       position: relative;
       z-index: 1;
     }
+    .mug-interaction-region {
+      position: absolute;
+      z-index: 2;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .mug-viewer.dragging .mug-interaction-region { cursor: grabbing; }
+    .mug-viewer:not(.is-ready) .mug-interaction-region,
+    .mug-viewer.is-flat .mug-interaction-region { pointer-events: none; }
     .mug-preview-state {
       position: absolute;
       inset: 0;
@@ -2104,7 +2119,7 @@
 
             <div class="mug-stage" id="product-stage" aria-label="Vorschau des gestalteten Produkts">
               <div class="mug-wrap">
-                <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Zum Drehen horizontal ziehen oder die Pfeiltasten verwenden.">
+                <div class="mug-viewer" id="mug-3d" tabindex="0" aria-label="Interaktive 3D-Tasse. Direkt auf der Tasse ziehen, um sie in alle Richtungen zu drehen; neben der Tasse wischen, um zu scrollen. Alternativ die Pfeiltasten verwenden.">
                   <div class="mug-preview-state" id="mug-preview-state">
                     <p id="mug-preview-message" role="status">3D-Vorschau wird geladen…</p>
                     <button type="button" class="secondary-button" id="retry-mug-preview" hidden>3D-Vorschau erneut laden</button>
@@ -2116,7 +2131,7 @@
                     </span>
                   </div>
                 </div>
-                <span class="mug-name" id="mug-viewer-hint">↔ Seitlich ziehen zum Drehen</span>
+                <span class="mug-name" id="mug-viewer-hint">↔↕ Tasse ziehen zum Drehen · Daneben scrollen</span>
                 <p class="preview-disclaimer">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen.</p>
               </div>
             </div>
@@ -3516,7 +3531,7 @@
       requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;
       mugViewer.setAttribute('aria-label', isMug
-        ? t('Interaktive 3D-Tasse. Zum Drehen horizontal ziehen oder die Pfeiltasten verwenden.')
+        ? t('Interaktive 3D-Tasse. Direkt auf der Tasse ziehen, um sie in alle Richtungen zu drehen; neben der Tasse wischen, um zu scrollen. Alternativ die Pfeiltasten verwenden.')
         : t('Vorschau: {{product}}, {{size}}', {
           product: t(product.displayName),
           size: t(view.size.label),
@@ -3525,7 +3540,7 @@
         ? ` · ${t(productSurfaces().find((surface) => surface.key === activeSurface)?.label || '')}`
         : '';
       document.getElementById('mug-viewer-hint').textContent = isMug
-        ? t('↔ Seitlich ziehen zum Drehen · {{height}} cm × Ø {{diameter}} cm', {
+        ? t('↔↕ Tasse ziehen zum Drehen · Daneben scrollen · {{height}} cm × Ø {{diameter}} cm', {
           height: localizedNumber(product.size.heightCm),
           diameter: localizedNumber(product.size.diameterCm),
         })

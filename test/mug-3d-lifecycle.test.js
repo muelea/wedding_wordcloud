@@ -7,7 +7,7 @@ const Three = require('three');
 
 function fixture() {
   const renderers = [];
-  const element = () => ({ listeners: new Map(), removed: false, captures: new Set(), classes: new Set(),
+  const element = () => ({ listeners: new Map(), removed: false, captures: new Set(), classes: new Set(), attributes: new Map(), style: {},
     classList: {
       add(value) { this.owner.classes.add(value); },
       remove(value) { this.owner.classes.delete(value); },
@@ -16,6 +16,7 @@ function fixture() {
     },
     addEventListener(name, callback) { this.listeners.set(name, callback); },
     removeEventListener(name) { this.listeners.delete(name); },
+    setAttribute(name, value) { this.attributes.set(name, value); },
     setPointerCapture(id) { this.captures.add(id); },
     hasPointerCapture(id) { return this.captures.has(id); },
     releasePointerCapture(id) { this.captures.delete(id); },
@@ -34,6 +35,7 @@ function fixture() {
   const host = element();
   host.classList.owner = host;
   host.prepend = canvas => { host.canvas = canvas; };
+  host.append = child => { host.appended = child; };
   const root = { devicePixelRatio: 1, cancelAnimationFrame() {}, requestAnimationFrame: () => 1 };
   const document = { createElement() {
     const created = element();
@@ -64,7 +66,9 @@ test('the real mug viewer reports context loss/restoration and releases the cont
   assert.equal(renderer.disposed, true);
   assert.equal(renderer.released, true);
   assert.equal(viewer.canvas.removed, true);
+  assert.equal(viewer.interactionRegion.removed, true);
   assert.equal(viewer.canvas.listeners.size, 0);
+  assert.equal(viewer.interactionRegion.listeners.size, 0);
   assert.equal(host.listeners.size, 0);
 });
 
@@ -76,7 +80,7 @@ test('failed initial texture rendering releases the partial viewer instead of le
   assert.equal(host.canvas.removed, true);
 });
 
-test('touch gestures scroll vertically and rotate horizontally only when they start on the mug', () => {
+test('touches on the mug exclusively rotate in both axes while transparent space remains scrollable', () => {
   const { root, host, THREE } = fixture();
   const viewer = root.Mug3DViewer.create({ host, THREE });
   const pointerDown = host.listeners.get('pointerdown');
@@ -94,33 +98,49 @@ test('touch gestures scroll vertically and rotate horizontally only when they st
   pointerDown(verticalStart);
   const verticalMove = touch(1, 202, 182);
   pointerMove(verticalMove);
-  assert.equal(verticalStart.prevented, false);
-  assert.equal(verticalMove.prevented, false);
-  assert.equal(viewer.group.rotation.x, initialX);
-  assert.equal(viewer.group.rotation.y, initialY);
-  assert.equal(host.classList.contains('dragging'), false);
+  assert.equal(verticalStart.prevented, true, 'the page gesture is stopped as soon as the mug is touched');
+  assert.equal(verticalMove.prevented, true);
+  assert.ok(viewer.group.rotation.x > initialX, 'vertical touch movement tilts the mug');
+  assert.ok(viewer.group.rotation.y > initialY, 'diagonal touch movement still turns the mug');
+  assert.equal(host.classList.contains('dragging'), true);
+  pointerUp(touch(1, 202, 182));
 
+  const afterVerticalX = viewer.group.rotation.x;
+  const afterVerticalY = viewer.group.rotation.y;
   const horizontalStart = touch(2, 200, 150);
   pointerDown(horizontalStart);
   const horizontalMove = touch(2, 232, 152);
   pointerMove(horizontalMove);
-  assert.equal(horizontalStart.prevented, false);
+  assert.equal(horizontalStart.prevented, true);
   assert.equal(horizontalMove.prevented, true);
-  assert.equal(viewer.group.rotation.x, initialX, 'touch rotation stays horizontal');
-  assert.ok(viewer.group.rotation.y > initialY);
+  assert.ok(viewer.group.rotation.x > afterVerticalX);
+  assert.ok(viewer.group.rotation.y > afterVerticalY);
   assert.equal(host.classList.contains('dragging'), true);
   pointerUp(touch(2, 232, 152));
   assert.equal(host.classList.contains('dragging'), false);
 
   const afterMugDrag = viewer.group.rotation.y;
-  pointerDown(touch(3, 8, 150));
-  pointerMove(touch(3, 60, 151));
+  const outsideStart = touch(3, 8, 150);
+  pointerDown(outsideStart);
+  const outsideMove = touch(3, 60, 151);
+  pointerMove(outsideMove);
+  assert.equal(outsideStart.prevented, false);
+  assert.equal(outsideMove.prevented, false);
   assert.equal(viewer.group.rotation.y, afterMugDrag, 'transparent viewer space stays inert');
 
   const mouseStart = { ...touch(4, 8, 150), pointerType: 'mouse', button: 0 };
   pointerDown(mouseStart);
   pointerMove({ ...touch(4, 8, 175), pointerType: 'mouse', button: 0 });
   assert.equal(mouseStart.prevented, true);
-  assert.ok(viewer.group.rotation.x > initialX, 'desktop keeps vertical mouse rotation');
+  assert.ok(viewer.group.rotation.x > afterVerticalX, 'desktop keeps vertical mouse rotation');
+
+  assert.equal(host.appended, viewer.interactionRegion);
+  assert.equal(viewer.interactionRegion.classList.contains('mug-interaction-region'), true);
+  assert.ok(parseFloat(viewer.interactionRegion.style.width) > 0);
+  for (const eventName of ['contextmenu', 'dragstart', 'selectstart']) {
+    const nativeEvent = touch(5, 200, 150);
+    viewer.interactionRegion.listeners.get(eventName)(nativeEvent);
+    assert.equal(nativeEvent.prevented, true, `${eventName} is suppressed on the mug interaction region`);
+  }
   viewer.destroy();
 });

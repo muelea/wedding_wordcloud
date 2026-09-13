@@ -38,6 +38,12 @@
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     if (!options.canvas) host.prepend(canvas);
 
+    const ownsInteractionRegion = !options.interactionRegion;
+    const interactionRegion = options.interactionRegion || document.createElement('span');
+    interactionRegion.classList.add('mug-interaction-region');
+    interactionRegion.setAttribute('aria-hidden', 'true');
+    if (ownsInteractionRegion) host.append(interactionRegion);
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(31, 1, .1, 100);
     camera.position.set(0, 2.35, 27);
@@ -209,9 +215,6 @@
 
     let textureDrawer = options.drawTexture || null;
     let activePointer = null;
-    let pointerMode = null;
-    let pointerStartX = 0;
-    let pointerStartY = 0;
     let lastX = 0;
     let lastY = 0;
     let autoFrame = null;
@@ -220,13 +223,54 @@
     const interactionElement = options.interactionElement || host;
     const raycaster = new THREE.Raycaster();
     const rayPointer = new THREE.Vector2();
+    const worldBounds = new THREE.Box3();
+    const projectedCorner = new THREE.Vector3();
     const maxVerticalRotation = Math.PI / 6;
-    const touchDirectionThreshold = 8;
     let destroyed = false;
     const reportStatus = (status) => options.onStatus?.(status);
 
+    function updateInteractionRegion() {
+      const canvasRect = canvas.getBoundingClientRect();
+      const hostRect = host.getBoundingClientRect();
+      if (!canvasRect.width || !canvasRect.height || !hostRect.width || !hostRect.height) return;
+
+      camera.updateMatrixWorld();
+      scene.updateMatrixWorld(true);
+      worldBounds.setFromObject(group);
+      let minX = 1;
+      let maxX = -1;
+      let minY = 1;
+      let maxY = -1;
+      for (const x of [worldBounds.min.x, worldBounds.max.x]) {
+        for (const y of [worldBounds.min.y, worldBounds.max.y]) {
+          for (const z of [worldBounds.min.z, worldBounds.max.z]) {
+            projectedCorner.set(x, y, z).project(camera);
+            minX = Math.min(minX, projectedCorner.x);
+            maxX = Math.max(maxX, projectedCorner.x);
+            minY = Math.min(minY, projectedCorner.y);
+            maxY = Math.max(maxY, projectedCorner.y);
+          }
+        }
+      }
+
+      const padding = Math.min(12, canvasRect.width * .025);
+      const canvasOffsetX = canvasRect.left - hostRect.left;
+      const canvasOffsetY = canvasRect.top - hostRect.top;
+      const left = canvasOffsetX + ((minX + 1) / 2) * canvasRect.width - padding;
+      const right = canvasOffsetX + ((maxX + 1) / 2) * canvasRect.width + padding;
+      const top = canvasOffsetY + ((1 - maxY) / 2) * canvasRect.height - padding;
+      const bottom = canvasOffsetY + ((1 - minY) / 2) * canvasRect.height + padding;
+      const boundedLeft = Math.max(0, left);
+      const boundedTop = Math.max(0, top);
+      interactionRegion.style.left = `${boundedLeft}px`;
+      interactionRegion.style.top = `${boundedTop}px`;
+      interactionRegion.style.width = `${Math.max(0, Math.min(hostRect.width, right) - boundedLeft)}px`;
+      interactionRegion.style.height = `${Math.max(0, Math.min(hostRect.height, bottom) - boundedTop)}px`;
+    }
+
     function render() {
       if (destroyed || renderer.getContext().isContextLost()) return;
+      updateInteractionRegion();
       renderer.render(scene, camera);
     }
 
@@ -310,7 +354,6 @@
 
     function resetPointer(event) {
       activePointer = null;
-      pointerMode = null;
       interactionElement.classList.remove('dragging');
       if (interactionElement.hasPointerCapture?.(event.pointerId)) {
         interactionElement.releasePointerCapture(event.pointerId);
@@ -323,46 +366,26 @@
       if (isTouch && !pointerHitsMug(event)) return;
       if (!isTouch && event.button != null && event.button !== 0) return;
       activePointer = event.pointerId;
-      pointerMode = isTouch ? 'pending-touch' : 'direct';
-      pointerStartX = event.clientX;
-      pointerStartY = event.clientY;
       lastX = event.clientX;
       lastY = event.clientY;
-      if (!isTouch) {
-        stopAutoRotate();
-        capturePointer(event);
-        interactionElement.classList.add('dragging');
-        event.preventDefault();
-      }
+      stopAutoRotate();
+      capturePointer(event);
+      interactionElement.classList.add('dragging');
+      event.preventDefault();
     };
     const handlePointerMove = (event) => {
       if (event.pointerId !== activePointer) return;
-      if (pointerMode === 'pending-touch') {
-        const totalX = event.clientX - pointerStartX;
-        const totalY = event.clientY - pointerStartY;
-        if (Math.max(Math.abs(totalX), Math.abs(totalY)) < touchDirectionThreshold) return;
-        if (Math.abs(totalY) >= Math.abs(totalX)) {
-          resetPointer(event);
-          return;
-        }
-        pointerMode = 'horizontal-touch';
-        stopAutoRotate();
-        capturePointer(event);
-        interactionElement.classList.add('dragging');
-      }
       const deltaX = event.clientX - lastX;
       const deltaY = event.clientY - lastY;
       lastX = event.clientX;
       lastY = event.clientY;
       group.rotation.y += deltaX * .012;
-      if (pointerMode === 'direct') {
-        group.rotation.x = Math.max(
-          -maxVerticalRotation,
-          Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
-        );
-      }
+      group.rotation.x = Math.max(
+        -maxVerticalRotation,
+        Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
+      );
       render();
-      if (pointerMode === 'horizontal-touch') event.preventDefault();
+      event.preventDefault();
     };
     const finishPointer = (event) => {
       if (event.pointerId !== activePointer) return;
@@ -385,6 +408,10 @@
     interactionElement.addEventListener('pointerup', finishPointer);
     interactionElement.addEventListener('pointercancel', finishPointer);
     interactionElement.addEventListener('keydown', handleKeydown);
+    const preventNativeInteraction = (event) => event.preventDefault();
+    interactionRegion.addEventListener('contextmenu', preventNativeInteraction);
+    interactionRegion.addEventListener('dragstart', preventNativeInteraction);
+    interactionRegion.addEventListener('selectstart', preventNativeInteraction);
 
     const onContextLost = (event) => {
       event.preventDefault();
@@ -410,6 +437,9 @@
       interactionElement.removeEventListener('pointerup', finishPointer);
       interactionElement.removeEventListener('pointercancel', finishPointer);
       interactionElement.removeEventListener('keydown', handleKeydown);
+      interactionRegion.removeEventListener('contextmenu', preventNativeInteraction);
+      interactionRegion.removeEventListener('dragstart', preventNativeInteraction);
+      interactionRegion.removeEventListener('selectstart', preventNativeInteraction);
       interactionElement.classList.remove('dragging');
       group.traverse((object) => {
         object.geometry?.dispose?.();
@@ -419,6 +449,7 @@
       texture.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
+      if (ownsInteractionRegion) interactionRegion.remove();
       if (ownsCanvas) canvas.remove();
     }
 
@@ -436,6 +467,7 @@
       camera,
       group,
       canvas,
+      interactionRegion,
       textureCanvas,
       texture,
       render,

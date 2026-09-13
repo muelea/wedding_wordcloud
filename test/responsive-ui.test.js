@@ -227,6 +227,8 @@ test('mobile foundation contains horizontal gestures and respects safe areas', (
   assert.match(i18nStyles, /@media \(max-width: 620px\)[\s\S]*?\.ww-language-trigger \{ width: 112px/);
   assert.doesNotMatch(mobileStyles, /\.ww-language-inline \.ww-language-trigger|\.ww-language-current-name\s*\{\s*display:\s*none/);
   assert.match(configure, /\.mug-viewer \{[\s\S]*?touch-action: pan-y pinch-zoom;/);
+  assert.match(configure, /\.mug-viewer \{[\s\S]*?-webkit-user-select: none;[\s\S]*?-webkit-touch-callout: none;/);
+  assert.match(configure, /\.mug-interaction-region \{[\s\S]*?touch-action: none;[\s\S]*?-webkit-touch-callout: none;/);
   assert.match(configure, /\.mug-viewer\.is-flat \{[\s\S]*?touch-action: auto;/);
 });
 
