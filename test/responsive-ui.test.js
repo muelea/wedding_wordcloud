@@ -226,6 +226,8 @@ test('mobile foundation contains horizontal gestures and respects safe areas', (
   assert.match(mobileStyles, /dialog\.ww-mobile-dialog[\s\S]*?--ww-visual-viewport-height/);
   assert.match(i18nStyles, /@media \(max-width: 620px\)[\s\S]*?\.ww-language-trigger \{ width: 112px/);
   assert.doesNotMatch(mobileStyles, /\.ww-language-inline \.ww-language-trigger|\.ww-language-current-name\s*\{\s*display:\s*none/);
+  assert.match(configure, /\.mug-viewer \{[\s\S]*?touch-action: pan-y pinch-zoom;/);
+  assert.match(configure, /\.mug-viewer\.is-flat \{[\s\S]*?touch-action: auto;/);
 });
 
 test('mobile forms prevent iOS input zoom and expose full-size controls', () => {

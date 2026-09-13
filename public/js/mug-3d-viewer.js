@@ -209,13 +209,19 @@
 
     let textureDrawer = options.drawTexture || null;
     let activePointer = null;
+    let pointerMode = null;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
     let lastX = 0;
     let lastY = 0;
     let autoFrame = null;
     let autoStart = null;
     const autoStartRotation = group.rotation.y;
     const interactionElement = options.interactionElement || host;
+    const raycaster = new THREE.Raycaster();
+    const rayPointer = new THREE.Vector2();
     const maxVerticalRotation = Math.PI / 6;
+    const touchDirectionThreshold = 8;
     let destroyed = false;
     const reportStatus = (status) => options.onStatus?.(status);
 
@@ -284,35 +290,83 @@
       autoFrame = root.requestAnimationFrame(animateAutoRotate);
     }
 
+    function pointerHitsMug(event) {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+      rayPointer.set(
+        ((event.clientX - (rect.left || 0)) / rect.width) * 2 - 1,
+        -((event.clientY - (rect.top || 0)) / rect.height) * 2 + 1
+      );
+      camera.updateMatrixWorld();
+      scene.updateMatrixWorld(true);
+      raycaster.setFromCamera(rayPointer, camera);
+      return raycaster.intersectObject(group, true).length > 0;
+    }
+
+    function capturePointer(event) {
+      if (!interactionElement.setPointerCapture) return;
+      interactionElement.setPointerCapture(event.pointerId);
+    }
+
+    function resetPointer(event) {
+      activePointer = null;
+      pointerMode = null;
+      interactionElement.classList.remove('dragging');
+      if (interactionElement.hasPointerCapture?.(event.pointerId)) {
+        interactionElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
     const handlePointerDown = (event) => {
-      stopAutoRotate();
+      if (activePointer !== null || event.isPrimary === false) return;
+      const isTouch = event.pointerType === 'touch';
+      if (isTouch && !pointerHitsMug(event)) return;
+      if (!isTouch && event.button != null && event.button !== 0) return;
       activePointer = event.pointerId;
+      pointerMode = isTouch ? 'pending-touch' : 'direct';
+      pointerStartX = event.clientX;
+      pointerStartY = event.clientY;
       lastX = event.clientX;
       lastY = event.clientY;
-      interactionElement.setPointerCapture(event.pointerId);
-      interactionElement.classList.add('dragging');
-      event.preventDefault();
+      if (!isTouch) {
+        stopAutoRotate();
+        capturePointer(event);
+        interactionElement.classList.add('dragging');
+        event.preventDefault();
+      }
     };
     const handlePointerMove = (event) => {
       if (event.pointerId !== activePointer) return;
+      if (pointerMode === 'pending-touch') {
+        const totalX = event.clientX - pointerStartX;
+        const totalY = event.clientY - pointerStartY;
+        if (Math.max(Math.abs(totalX), Math.abs(totalY)) < touchDirectionThreshold) return;
+        if (Math.abs(totalY) >= Math.abs(totalX)) {
+          resetPointer(event);
+          return;
+        }
+        pointerMode = 'horizontal-touch';
+        stopAutoRotate();
+        capturePointer(event);
+        interactionElement.classList.add('dragging');
+      }
       const deltaX = event.clientX - lastX;
       const deltaY = event.clientY - lastY;
       lastX = event.clientX;
       lastY = event.clientY;
       group.rotation.y += deltaX * .012;
-      group.rotation.x = Math.max(
-        -maxVerticalRotation,
-        Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
-      );
+      if (pointerMode === 'direct') {
+        group.rotation.x = Math.max(
+          -maxVerticalRotation,
+          Math.min(maxVerticalRotation, group.rotation.x + deltaY * .0065)
+        );
+      }
       render();
+      if (pointerMode === 'horizontal-touch') event.preventDefault();
     };
     const finishPointer = (event) => {
       if (event.pointerId !== activePointer) return;
-      activePointer = null;
-      interactionElement.classList.remove('dragging');
-      if (interactionElement.hasPointerCapture(event.pointerId)) {
-        interactionElement.releasePointerCapture(event.pointerId);
-      }
+      resetPointer(event);
     };
     const handleKeydown = (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;

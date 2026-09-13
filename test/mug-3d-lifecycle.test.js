@@ -7,12 +7,20 @@ const Three = require('three');
 
 function fixture() {
   const renderers = [];
-  const element = () => ({ listeners: new Map(), removed: false,
-    classList: { add() {}, remove() {} },
+  const element = () => ({ listeners: new Map(), removed: false, captures: new Set(), classes: new Set(),
+    classList: {
+      add(value) { this.owner.classes.add(value); },
+      remove(value) { this.owner.classes.delete(value); },
+      contains(value) { return this.owner.classes.has(value); },
+      owner: null,
+    },
     addEventListener(name, callback) { this.listeners.set(name, callback); },
     removeEventListener(name) { this.listeners.delete(name); },
+    setPointerCapture(id) { this.captures.add(id); },
+    hasPointerCapture(id) { return this.captures.has(id); },
+    releasePointerCapture(id) { this.captures.delete(id); },
     remove() { this.removed = true; },
-    getBoundingClientRect: () => ({ width: 400, height: 300 }),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 300 }),
     getContext: () => ({ fillRect() {}, clearRect() {} }),
   });
   class Renderer {
@@ -24,10 +32,16 @@ function fixture() {
     forceContextLoss() { this.released = true; }
   }
   const host = element();
+  host.classList.owner = host;
   host.prepend = canvas => { host.canvas = canvas; };
-  const root = { cancelAnimationFrame() {}, requestAnimationFrame: () => 1 };
+  const root = { devicePixelRatio: 1, cancelAnimationFrame() {}, requestAnimationFrame: () => 1 };
+  const document = { createElement() {
+    const created = element();
+    created.classList.owner = created;
+    return created;
+  } };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-3d-viewer'), 'utf8'), {
-    window: root, document: { createElement: element },
+    window: root, document,
   });
   return { root, host, renderers, THREE: { ...Three, WebGLRenderer: Renderer } };
 }
@@ -60,4 +74,53 @@ test('failed initial texture rendering releases the partial viewer instead of le
   assert.equal(renderers[0].disposed, true);
   assert.equal(renderers[0].released, true);
   assert.equal(host.canvas.removed, true);
+});
+
+test('touch gestures scroll vertically and rotate horizontally only when they start on the mug', () => {
+  const { root, host, THREE } = fixture();
+  const viewer = root.Mug3DViewer.create({ host, THREE });
+  const pointerDown = host.listeners.get('pointerdown');
+  const pointerMove = host.listeners.get('pointermove');
+  const pointerUp = host.listeners.get('pointerup');
+  const touch = (pointerId, clientX, clientY) => ({
+    pointerId, clientX, clientY, pointerType: 'touch', isPrimary: true,
+    prevented: false,
+    preventDefault() { this.prevented = true; },
+  });
+
+  const initialX = viewer.group.rotation.x;
+  const initialY = viewer.group.rotation.y;
+  const verticalStart = touch(1, 200, 150);
+  pointerDown(verticalStart);
+  const verticalMove = touch(1, 202, 182);
+  pointerMove(verticalMove);
+  assert.equal(verticalStart.prevented, false);
+  assert.equal(verticalMove.prevented, false);
+  assert.equal(viewer.group.rotation.x, initialX);
+  assert.equal(viewer.group.rotation.y, initialY);
+  assert.equal(host.classList.contains('dragging'), false);
+
+  const horizontalStart = touch(2, 200, 150);
+  pointerDown(horizontalStart);
+  const horizontalMove = touch(2, 232, 152);
+  pointerMove(horizontalMove);
+  assert.equal(horizontalStart.prevented, false);
+  assert.equal(horizontalMove.prevented, true);
+  assert.equal(viewer.group.rotation.x, initialX, 'touch rotation stays horizontal');
+  assert.ok(viewer.group.rotation.y > initialY);
+  assert.equal(host.classList.contains('dragging'), true);
+  pointerUp(touch(2, 232, 152));
+  assert.equal(host.classList.contains('dragging'), false);
+
+  const afterMugDrag = viewer.group.rotation.y;
+  pointerDown(touch(3, 8, 150));
+  pointerMove(touch(3, 60, 151));
+  assert.equal(viewer.group.rotation.y, afterMugDrag, 'transparent viewer space stays inert');
+
+  const mouseStart = { ...touch(4, 8, 150), pointerType: 'mouse', button: 0 };
+  pointerDown(mouseStart);
+  pointerMove({ ...touch(4, 8, 175), pointerType: 'mouse', button: 0 });
+  assert.equal(mouseStart.prevented, true);
+  assert.ok(viewer.group.rotation.x > initialX, 'desktop keeps vertical mouse rotation');
+  viewer.destroy();
 });
