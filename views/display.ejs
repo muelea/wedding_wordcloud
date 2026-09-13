@@ -1093,6 +1093,58 @@
     if (currentWords.length) scheduleRender(currentWords);
   }
 
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function requestPresentationFullscreen() {
+    const element = document.documentElement;
+    try {
+      if (typeof element.requestFullscreen === 'function') {
+        return Promise.resolve(element.requestFullscreen({ navigationUI: 'hide' }))
+          .then(() => true, () => false);
+      }
+      if (typeof element.webkitRequestFullscreen === 'function') {
+        return Promise.resolve(element.webkitRequestFullscreen())
+          .then(() => true, () => false);
+      }
+    } catch (_) {
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(false);
+  }
+
+  function exitPresentationFullscreen() {
+    if (!fullscreenElement()) return Promise.resolve(false);
+    try {
+      if (typeof document.exitFullscreen === 'function') {
+        return Promise.resolve(document.exitFullscreen()).then(() => true, () => false);
+      }
+      if (typeof document.webkitExitFullscreen === 'function') {
+        return Promise.resolve(document.webkitExitFullscreen()).then(() => true, () => false);
+      }
+    } catch (_) {
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(false);
+  }
+
+  async function togglePresentationMode() {
+    const active = document.body.classList.contains('presentation-mode');
+    setPresentationMode(!active);
+    if (active) {
+      await exitPresentationFullscreen();
+    } else {
+      await requestPresentationFullscreen();
+    }
+  }
+
+  function syncPresentationModeWithFullscreen() {
+    if (!fullscreenElement() && document.body.classList.contains('presentation-mode')) {
+      setPresentationMode(false);
+    }
+  }
+
   displayPageMenu.addEventListener('toggle', () => {
     setI18nAttribute(
       displayMenuTrigger,
@@ -1112,12 +1164,13 @@
       closeDisplayMenu({ focus: true });
     } else if (document.body.classList.contains('presentation-mode')) {
       setPresentationMode(false);
+      void exitPresentationFullscreen();
       displayMenuTrigger.focus();
     }
   });
-  presentationModeButton.addEventListener('click', () => {
-    setPresentationMode(!document.body.classList.contains('presentation-mode'));
-  });
+  presentationModeButton.addEventListener('click', togglePresentationMode);
+  document.addEventListener('fullscreenchange', syncPresentationModeWithFullscreen);
+  document.addEventListener('webkitfullscreenchange', syncPresentationModeWithFullscreen);
 
   // ── Config & QR ──────────────────────────────────────────────────────────
   fetch(`/api/events/${encodeURIComponent(slug)}`).then(r => r.json()).then(async ({ title, locale, hasOrganizerPin }) => {
