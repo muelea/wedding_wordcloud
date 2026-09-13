@@ -789,6 +789,7 @@
     .editor-field-label-font { min-width: 0; position: relative; }
     .editor-font-controls { display: flex; align-items: center; gap: 7px; }
     .editor-font-picker { flex: 1 1 auto; }
+    .editor-format-controls { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; }
     .editor-font-size-field { flex: 0 0 78px; min-width: 0; }
     .editor-font-size-control { position: relative; display: block; }
     .editor-font-size-input {
@@ -2050,14 +2051,6 @@
                   <strong class="editor-selection-status" id="editor-selection-status" aria-live="polite" aria-atomic="true">Element auswählen</strong>
                   <span class="editor-selection-hint" id="editor-selection-hint">Element anklicken oder Auswahlrahmen ziehen · ⌘/Strg-Klick wählt mehrere</span>
                 </div>
-                <div class="editor-dock" aria-label="Werkzeuge für das ausgewählte Element">
-                  <% for (const [tool, icon, label] of [['text', 'type', 'Text'], ['font', 'case-sensitive', 'Schrift'], ['color', 'palette', 'Farbe'], ['transform', 'sliders-horizontal', 'Anpassen']]) { %>
-                  <button type="button" class="editor-button" data-editor-tool="<%= tool %>" aria-haspopup="dialog" aria-controls="editor-tool-panel" disabled>
-                    <svg class="editor-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><use href="#editor-icon-<%= icon %>"></use></svg>
-                    <span data-editor-tool-label><%= label %></span>
-                  </button>
-                  <% } %>
-                </div>
                 <div class="editor-properties" id="editor-properties">
                 <div class="editor-selection-row">
                   <label class="editor-field-label" data-editor-section="text"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
@@ -2073,32 +2066,36 @@
                         </button>
                         <div class="editor-font-menu" id="editor-font-menu" role="listbox" aria-label="Schriftart" hidden></div>
                       </div>
-                      <label class="editor-font-size-field">
-                        <span class="editor-field-label-text">Schriftgröße</span>
-                        <span class="editor-font-size-control">
-                          <input class="editor-font-size-input" id="editor-font-size" type="number" inputmode="decimal" min="1" step="0.1" list="editor-font-size-options" autocomplete="off" aria-label="Schriftgröße in pt" placeholder="—" disabled />
-                          <span class="editor-font-size-unit" aria-hidden="true">pt</span>
-                        </span>
-                        <datalist id="editor-font-size-options">
-                          <% for (const size of [8, 9, 10, 11, 12, 14, 16, 18, 24, 36, 48, 72]) { %><option value="<%= size %>"></option><% } %>
-                        </datalist>
-                      </label>
-                      <div class="editor-style-group" role="group" aria-label="Text formatieren">
-                        <button class="editor-style-button" id="editor-bold" type="button" aria-label="Fett" aria-pressed="false" data-editor-tooltip disabled><strong aria-hidden="true">B</strong></button>
-                        <button class="editor-style-button editor-style-italic" id="editor-italic" type="button" aria-label="Kursiv" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">I</span></button>
-                        <button class="editor-style-button editor-style-underline" id="editor-underline" type="button" aria-label="Unterstrichen" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">U</span></button>
-                        <button class="editor-style-button editor-style-linethrough" id="editor-linethrough" type="button" aria-label="Durchgestrichen" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">S</span></button>
+                      <div class="editor-format-controls">
+                        <label class="editor-font-size-field">
+                          <span class="editor-field-label-text">Schriftgröße</span>
+                          <span class="editor-font-size-control">
+                            <input class="editor-font-size-input" id="editor-font-size" type="number" inputmode="decimal" min="1" step="0.1" list="editor-font-size-options" autocomplete="off" aria-label="Schriftgröße in pt" placeholder="—" disabled />
+                            <span class="editor-font-size-unit" aria-hidden="true">pt</span>
+                          </span>
+                          <datalist id="editor-font-size-options">
+                            <% for (const size of [8, 9, 10, 11, 12, 14, 16, 18, 24, 36, 48, 72]) { %><option value="<%= size %>"></option><% } %>
+                          </datalist>
+                        </label>
+                        <div class="editor-style-group" role="group" aria-label="Text formatieren">
+                          <button class="editor-style-button" id="editor-bold" type="button" aria-label="Fett" aria-pressed="false" data-editor-tooltip disabled><strong aria-hidden="true">B</strong></button>
+                          <button class="editor-style-button editor-style-italic" id="editor-italic" type="button" aria-label="Kursiv" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">I</span></button>
+                          <button class="editor-style-button editor-style-underline" id="editor-underline" type="button" aria-label="Unterstrichen" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">U</span></button>
+                          <button class="editor-style-button editor-style-linethrough" id="editor-linethrough" type="button" aria-label="Durchgestrichen" aria-pressed="false" data-editor-tooltip disabled><span aria-hidden="true">S</span></button>
+                        </div>
                       </div>
                     </div>
                   </div>
                   <div class="editor-field-label editor-field-label-color" data-editor-section="color" role="group" aria-label="Farbe auswählen">
+                    <span class="editor-field-label-text">Farbe</span>
                     <div class="editor-colors">
                       <div class="editor-swatches" id="editor-swatches"></div>
                       <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
                     </div>
                   </div>
                 </div>
-                <div class="editor-actions" data-editor-section="transform">
+                <div class="editor-actions" data-editor-section="transform" role="group" aria-label="Anpassen">
+                  <span class="editor-field-label-text editor-actions-label">Anpassen</span>
                   <%- include('partials/editor-action', { action: { id: 'editor-smaller', icon: 'minus', label: 'Element verkleinern', disabled: true } }) %>
                   <%- include('partials/editor-action', { action: { id: 'editor-larger', icon: 'plus', label: 'Element vergrößern', disabled: true } }) %>
                   <%- include('partials/editor-action', { action: { id: 'editor-rotate-left', icon: 'rotate-ccw-square', label: 'Nach links drehen', disabled: true } }) %>
@@ -2203,12 +2200,6 @@
       <button class="secondary-button" id="leave-design-discard" type="button">Änderungen verwerfen und weiter</button>
       <button class="primary-button" id="leave-design-save" type="button">In den Warenkorb und weiter</button>
     </div>
-  </dialog>
-
-  <dialog class="config-panel editor-tool-panel" id="editor-tool-panel" aria-labelledby="editor-tool-title">
-    <div class="config-panel-head"><h2 id="editor-tool-title" tabindex="-1">Anpassen</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
-    <div class="config-panel-body" id="editor-tool-body"></div>
-    <div class="config-panel-foot"><button type="button" class="editor-button" data-panel-close>Fertig</button></div>
   </dialog>
 
   <dialog class="config-panel editor-reset-panel" id="editor-reset-panel" aria-labelledby="editor-reset-title" aria-describedby="editor-reset-description">
@@ -2384,10 +2375,7 @@
     const leaveDiscardButton = document.getElementById('leave-design-discard');
     const leaveCancelButton = document.getElementById('leave-design-cancel');
     const cart = WolkenworteConfiguratorSession.createCart(slug);
-    const workspace = new WolkenworteWorkspace(document, {
-      commitText: () => mugEditor?.commitTextInput(),
-      setFontPickerInline: inline => mugEditor?.setFontPickerInline(inline),
-    });
+    const workspace = new WolkenworteWorkspace(document);
     const toolbar = new WolkenworteToolbar(document);
 
     let words = [];

@@ -71,7 +71,6 @@
       this.textInput = options.textInput;
       this.textLabel = options.textLabel;
       this.selectedFontKey = '';
-      this.fontPickerInline = false;
       this.fontButton = options.fontButton;
       this.fontCurrent = options.fontCurrent;
       this.fontMenu = options.fontMenu;
@@ -979,19 +978,7 @@
       this.focusFontOption(index);
     }
 
-    setFontPickerInline(inline) {
-      // The workspace reparents this same list into its compact sheet. Only
-      // presentation changes: font previews, state and handlers stay shared.
-      this.fontPickerInline = inline;
-      this.fontButton.hidden = inline;
-      this.fontMenu.hidden = !inline;
-      this.fontButton.setAttribute('aria-expanded', String(inline));
-    }
-
     closeFontPicker(restoreFocus = false) {
-      // An inline list remains available for comparing several fonts. Its
-      // containing dialog owns dismissal, focus restoration and Escape.
-      if (this.fontPickerInline) return;
       this.fontMenu.hidden = true;
       this.fontButton.setAttribute('aria-expanded', 'false');
       if (restoreFocus) this.fontButton.focus({ preventScroll: true });
@@ -1016,7 +1003,7 @@
       } else if (event.key === 'Home' || event.key === 'End') {
         event.preventDefault();
         this.focusFontOption(event.key === 'Home' ? 0 : this.fontOptionButtons.length - 1);
-      } else if (event.key === 'Escape' && !this.fontPickerInline) {
+      } else if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
         this.closeFontPicker(true);
@@ -1025,9 +1012,9 @@
         if (!activeOption) return;
         event.preventDefault();
         activeOption.click();
-      } else if (event.key === 'Tab' && !this.fontPickerInline) {
+      } else if (event.key === 'Tab') {
         // Resume the document's tab order from the trigger before hiding the
-        // focused option; inline lists use the dialog's normal tab order.
+        // focused option.
         this.closeFontPicker(true);
       }
     }

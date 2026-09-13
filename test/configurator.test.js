@@ -195,7 +195,7 @@ test('double-clicking plain text keeps direct canvas editing', () => {
   ]);
 });
 
-test('ending a text sheet commits normalization and an undoable history entry', async () => {
+test('ending direct text-field editing commits normalization and an undoable history entry', async () => {
   const editor = Object.create(MugPrintEditor.prototype);
   const active = { editorKind: 'text' };
   const calls = [];
@@ -215,11 +215,11 @@ test('compact text editing does not leave Fabric inline editing active', () => {
   const calls = [];
   editor.canvas = { setActiveObject() {}, requestRenderAll() {} };
   editor.updateSelectionPanel = () => calls.push('sync');
-  editor.openTextEditor = () => { calls.push('sheet'); return true; };
+  editor.openTextEditor = () => { calls.push('field'); return true; };
   const object = { editorKind: 'text', isEditing: true, enterEditing() {},
     exitEditing: () => calls.push('exit-inline') };
   assert.equal(editor.beginTextEditing(object), true);
-  assert.deepEqual(calls, ['sync', 'sheet', 'exit-inline']);
+  assert.deepEqual(calls, ['sync', 'field', 'exit-inline']);
 });
 
 test('the configurator adds a picked emoji as a standalone editable design object', async () => {
@@ -915,7 +915,8 @@ test('configurator exposes every curated product with verified Printful geometry
     assert.match(configurePage, new RegExp(`id="${id}"[^>]*aria-pressed="false"`));
   }
   assert.match(configurePage, /\.editor-font-toggle \{[\s\S]*?font-size: 11px;/);
-  assert.match(configurePage, /setFontPickerInline: inline => mugEditor\?\.setFontPickerInline\(inline\)/);
+  assert.match(configurePage, /new WolkenworteWorkspace\(document\)/);
+  assert.doesNotMatch(configurePage, /setFontPickerInline: inline =>/);
   assert.match(configurePage, /fontButton: document\.getElementById\('editor-font-toggle'\)/);
   assert.match(configurePage, /fontSizeInput: document\.getElementById\('editor-font-size'\)/);
   assert.match(configurePage, /mugEditor\.commitFontSizeInput\(\)/);

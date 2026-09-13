@@ -124,7 +124,12 @@
         }
         mugEditor.selectAll();
         await frames();
-        const flags = Object.fromEntries(workspace.toolButtons.map(button => [button.dataset.editorTool, !button.disabled]));
+        const flags = {
+          text: !document.getElementById('editor-text').disabled,
+          font: !document.getElementById('editor-font-toggle').disabled,
+          color: !document.getElementById('editor-color').disabled,
+          transform: !document.getElementById('editor-smaller').disabled,
+        };
         check(`${name}: correct tools`, flags.transform &&
           flags.text === ['word', 'emoji'].includes(name) && flags.font === (name !== 'image') && flags.color === (name !== 'image'), flags);
       }
@@ -132,43 +137,12 @@
       mugEditor.selectAll();
       await frames();
       if (workspace.media.matches) {
-        for (const tool of ['text', 'font', 'color', 'transform']) {
-          const button = workspace.toolButtons.find(item => item.dataset.editorTool === tool);
-          button.focus({ preventScroll: true });
-          const baseline = geometry();
-          const scrollBefore = scrollY;
-          button.click();
-          await frames();
-          same(`${tool}: opening preserves geometry`, baseline);
-          check(`${tool}: native modal and focus`, workspace.toolPanel.matches(':modal') && workspace.toolPanel.contains(document.activeElement));
-          check(`${tool}: opening preserves page scroll`, Math.abs(scrollBefore - scrollY) < 1, { scrollBefore, after: scrollY });
-          const section = document.querySelector(`[data-editor-section="${tool}"]`);
-          check(`${tool}: one control set is inside sheet`, section.parentNode === workspace.toolBody);
-          if (tool === 'text') {
-            const input = section.querySelector('input');
-            input.value = 'edited 🎲';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            await frames();
-          }
-          workspace.toolPanel.querySelector('[data-panel-close]').click();
-          await frames();
-          same(`${tool}: closing preserves geometry`, baseline);
-          check(`${tool}: focus returns`, document.activeElement === button);
-          check(`${tool}: closing preserves page scroll`, Math.abs(scrollBefore - scrollY) < 1);
-          if (tool === 'text') check('closing text editor commits undo history', !document.getElementById('editor-undo').disabled);
-        }
-        // A modal editor must not let canvas shortcuts act on the design.
-        workspace.openTool('transform', workspace.toolButtons[3]);
-        const count = mugEditor.getDesign().length;
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
-        check('sheet shields canvas keyboard shortcuts', mugEditor.getDesign().length === count);
-        document.getElementById('editor-duplicate').click();
-        await frames();
-        check('duplicate keeps the adjustment sheet open', workspace.toolPanel.open);
-        document.getElementById('editor-delete').click();
-        await frames();
-        check('deleting selection closes the adjustment sheet', !workspace.toolPanel.open);
-        mugEditor.setDesign([word], { resetHistory: true });
+        const inspector = document.getElementById('editor-compact-inspector');
+        const sections = [...inspector.querySelectorAll('[data-editor-section]')];
+        check('compact inspector shows every editor group directly',
+          inspector.getClientRects().length && sections.length === 4 &&
+          sections.every(section => section.getClientRects().length));
+        check('compact inspector has no secondary editor dialog', !document.getElementById('editor-tool-panel'));
       }
       // Both presentations must operate on the exact same custom options.
       mugEditor.setDesign([word], { resetHistory: true });
@@ -177,8 +151,7 @@
       const fontMenu = document.getElementById('editor-font-menu');
       const fontToggle = document.getElementById('editor-font-toggle');
       const fontOptions = [...fontMenu.querySelectorAll('[role="option"]')];
-      const fontTrigger = workspace.media.matches
-        ? workspace.toolButtons.find(button => button.dataset.editorTool === 'font') : fontToggle;
+      const fontTrigger = fontToggle;
       const styleButtons = ['bold', 'italic', 'underline', 'linethrough']
         .map(name => document.getElementById(`editor-${name}`));
       for (const button of styleButtons) button.click();
@@ -212,12 +185,9 @@
           mugEditor.getDesign()[0].fontWeight === 700 && mugEditor.getDesign()[0].fontStyle === 'italic' &&
           mugEditor.getDesign()[0].underline && mugEditor.getDesign()[0].linethrough &&
           option.getAttribute('aria-selected') === 'true' && fontMenu.querySelectorAll('[aria-selected="true"]').length === 1);
-        check(`${font.key}: sheet remains open, dropdown closes`, workspace.media.matches
-          ? workspace.toolPanel.open && !fontMenu.hidden && document.activeElement === option
-          : fontMenu.hidden && document.activeElement === fontToggle);
+        check(`${font.key}: dropdown closes and focus returns`, fontMenu.hidden && document.activeElement === fontToggle);
         same(`${font.key}: font selection preserves workspace geometry`, fontGeometry);
       }
-      workspace.close();
       mugEditor.undo();
       mugEditor.selectAll();
       check('font Undo restores the previous design font and picker state', mugEditor.getDesign()[0].fontFamily === 'caveat' &&
@@ -246,11 +216,11 @@
         !plainEmoji.underline && !plainEmoji.linethrough);
       check('picker options are never cloned or regenerated by presentation changes',
         fontOptions.every((option, index) => fontMenu.children[index] === option));
-      workspace.close();
       mugEditor.canvas.discardActiveObject();
       await frames();
-      check('font controls disable without a text selection', fontToggle.disabled &&
-        workspace.toolButtons.find(button => button.dataset.editorTool === 'font').disabled);
+      check('direct controls disable without a selection', fontToggle.disabled &&
+        document.getElementById('editor-text').disabled && document.getElementById('editor-color').disabled &&
+        document.getElementById('editor-smaller').disabled);
 
       // Confirmation must not mutate the active side until explicitly accepted.
       mugEditor.setDesign([word, { ...word, id: 'reset-emoji', text: '🎲', x: 1800 },

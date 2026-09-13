@@ -31,7 +31,6 @@ function createPicker(locale = 'de') {
   editor.fontButton = document.createElement('button');
   editor.fontCurrent = document.createElement('span');
   editor.fontMenu = document.createElement('div');
-  editor.fontPickerInline = false;
   editor.closeIconPicker = () => {};
   editor.setFeedback = text => { editor.feedback = text; };
   const changes = [];
@@ -63,7 +62,7 @@ test('one custom option set comes from the shared catalog, in all six languages'
   }
 });
 
-test('dropdown and inline sheet reuse options and the same change handler', () => {
+test('dropdown reuses its options and change handler', () => {
   const { editor, document, changes } = createPicker();
   const options = editor.fontOptionButtons;
   editor.syncFontPicker('classic', '', false);
@@ -71,19 +70,11 @@ test('dropdown and inline sheet reuse options and the same change handler', () =
   options[1].click();
   assert.equal(editor.fontMenu.hidden, true);
   assert.equal(document.activeElement, editor.fontButton);
-  editor.setFontPickerInline(true);
-  options[2].focus();
+  editor.openFontPicker();
   options[2].click();
-  assert.equal(editor.fontMenu.hidden, false);
-  assert.equal(editor.fontButton.hidden, true);
-  assert.equal(document.activeElement, options[2]);
-  assert.deepEqual(changes, ['lora', 'montserrat']);
-  editor.closeFontPicker(true); // outside clicks cannot collapse an inline list
-  assert.equal(editor.fontMenu.hidden, false);
-  editor.setFontPickerInline(false);
   assert.equal(editor.fontMenu.hidden, true);
-  assert.equal(editor.fontButton.hidden, false);
-  assert.equal(editor.fontButton.getAttribute('aria-expanded'), 'false');
+  assert.equal(document.activeElement, editor.fontButton);
+  assert.deepEqual(changes, ['lora', 'montserrat']);
   assert.equal(editor.fontOptionButtons, options);
   assert.equal(editor.selectedFontKey, 'montserrat');
 });
@@ -107,14 +98,14 @@ test('listbox has one tab stop and separates keyboard focus from selected font',
   key(editor, 'Home');
   key(editor, 'Enter');
   assert.deepEqual(changes, ['classic']);
-  editor.setFontPickerInline(true);
+  editor.openFontPicker();
   editor.focusFontOption(3);
   key(editor, ' ');
   assert.deepEqual(changes, ['classic', 'caveat']);
-  assert.equal(editor.fontMenu.hidden, false);
+  assert.equal(editor.fontMenu.hidden, true);
 });
 
-test('Escape and Tab defer to the modal in inline mode, dismiss only the dropdown otherwise', () => {
+test('Escape and Tab dismiss the dropdown and restore its trigger', () => {
   const { editor, document } = createPicker();
   editor.syncFontPicker('classic', '', false);
   editor.openFontPicker();
@@ -125,15 +116,6 @@ test('Escape and Tab defer to the modal in inline mode, dismiss only the dropdow
   assert.equal(key(editor, 'Tab').prevented, false);
   assert.equal(editor.fontMenu.hidden, true);
   assert.equal(document.activeElement, editor.fontButton);
-  editor.setFontPickerInline(true);
-  editor.focusFontOption(0);
-  for (const value of ['Escape', 'Tab']) {
-    const event = key(editor, value);
-    assert.equal(event.prevented, false);
-    assert.equal(event.stopped, false);
-    assert.equal(editor.fontMenu.hidden, false);
-    assert.equal(document.activeElement, editor.fontOptionButtons[0]);
-  }
 });
 
 test('mixed selection, disabled state and programmatic updates stay authoritative', () => {
@@ -157,11 +139,11 @@ test('mixed selection, disabled state and programmatic updates stay authoritativ
 test('failed font changes show feedback without changing the selected font', async () => {
   const { editor } = createPicker();
   editor.syncFontPicker('classic', '', false);
-  editor.setFontPickerInline(true);
+  editor.openFontPicker();
   editor.setActiveFont = async () => { throw new Error('load failed'); };
   editor.fontOptionButtons[1].click();
   await Promise.resolve();
   assert.equal(editor.feedback, 'Schrift konnte nicht geladen werden');
   assert.equal(editor.selectedFontKey, 'classic');
-  assert.equal(editor.fontMenu.hidden, false);
+  assert.equal(editor.fontMenu.hidden, true);
 });

@@ -282,17 +282,24 @@ test('mobile legal copy and configurator controls reflow instead of widening the
   assert.match(legalStyles, /h1 \{[\s\S]*?overflow-wrap: anywhere;[\s\S]*?hyphens: auto;/);
   assert.match(legalStyles, /\.legal-section a \{[\s\S]*?overflow-wrap: anywhere/);
   assert.doesNotMatch(configure, /\.editor-selection:not\(\.is-active\)/);
-  assert.match(workspaceStyles, /\.editor-dock \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-properties \{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.doesNotMatch(configure, /data-editor-tool=|id="editor-tool-panel"/);
   assert.match(configure, /\.page \{[\s\S]*?margin-left: max\(14px, var\(--ww-safe-left\)\);[\s\S]*?margin-right: max\(14px, var\(--ww-safe-right\)\)/);
 });
 
-test('compact configurator widths keep color controls horizontal and separate from actions', () => {
+test('compact configurator uses a dense two-column inspector at every compact width', () => {
   assert.match(configure, /\.editor-field-label-color \{ min-width: 197px;/);
   assert.match(configure, /\.editor-swatches \{ min-width: 163px;[\s\S]*?flex-wrap: wrap;/);
   assert.match(configure, /\.editor-swatch \{[\s\S]*?flex: 0 0 23px;/);
   assert.match(configure, /\.editor-color-input \{[\s\S]*?flex: 0 0 28px;/);
   assert.match(configure, /@media \(max-width: 1180px\)[\s\S]*?\.editor-properties \{ grid-template-columns: minmax\(0, 1fr\); \}/);
-  assert.match(workspaceStyles, /\.editor-tool-panel \.editor-actions \{[^}]*display: flex;[^}]*flex-wrap: wrap;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-selection-row \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-properties \{[\s\S]*?width: min\(100%, 620px\);[\s\S]*?margin: 0 auto;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-format-controls \{[\s\S]*?width: min\(100%, 350px\);[\s\S]*?grid-template-columns: minmax\(88px, 96px\) minmax\(0, 1fr\)/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-swatches \{[\s\S]*?grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-style-button > \* \{[^}]*transform: translateY\(2px\)/);
+  assert.match(workspaceStyles, /\.editor-selection-head \{[\s\S]*?clip: rect\(0 0 0 0\)/);
 });
 
 test('compact configurator widths keep product and palette beside each other', () => {

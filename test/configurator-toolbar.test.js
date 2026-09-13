@@ -67,10 +67,8 @@ test('every toolbar action renders its intended local mark and a translated acce
     assert.equal(actionIcon('editor-smaller'), '#editor-icon-minus');
     assert.equal(actionIcon('editor-larger'), '#editor-icon-plus');
     assert.equal(actionIcon('editor-fit-area'), '#editor-icon-expand');
-    assert.equal(nodes(page, node => attr(node, 'data-editor-tool') !== undefined).length, 4);
-    const labels = nodes(page, node => attr(node, 'data-editor-tool-label') !== undefined);
-    assert.equal(labels.length, 4);
-    assert.ok(labels.every(node => node.childNodes.some(child => child.value?.trim())));
+    assert.equal(nodes(page, node => attr(node, 'data-editor-tool') !== undefined).length, 0);
+    assert.equal(nodes(page, node => attr(node, 'id') === 'editor-tool-panel').length, 0);
     const reset = nodes(page, node => attr(node, 'id') === 'editor-reset-panel')[0];
     assert.equal(reset.tagName, 'dialog');
     assert.equal(attr(reset, 'aria-describedby'), 'editor-reset-description');
