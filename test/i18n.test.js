@@ -457,7 +457,7 @@ test('shared site header is transparent at rest and becomes glassy only after sc
   assert.match(runtime, /classList\.toggle\('scrolled', scrolled\)/);
 });
 
-test('shared header pins the brand left and language switcher right at every viewport size', () => {
+test('shared header pins the brand left and its final action right at every viewport size', () => {
   const styles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
   const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n.js'), 'utf8');
   const headerPartial = fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-header.ejs'), 'utf8');
@@ -468,8 +468,9 @@ test('shared header pins the brand left and language switcher right at every vie
   assert.doesNotMatch(styles, /\.ww-nav::after/,
     'the final language control is server-rendered, so an empty placeholder must not return');
   assert.match(styles, /\.ww-site-header \.ww-language-inline\s*\{[^}]*margin-left:\s*auto/s);
-  assert.match(styles, /@media \(max-width:\s*620px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
-  assert.equal((headerPartial.match(/include\('language-picker'/g) || []).length, 3);
+  assert.match(styles, /\.ww-back-header-actions\s*\{[^}]*margin-left:\s*auto/s);
+  assert.match(styles, /@media \(max-width:\s*780px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
+  assert.equal((headerPartial.match(/include\('language-picker'/g) || []).length, 5);
   assert.doesNotMatch(headerPartial, /<details class="ww-language-picker/);
   assert.match(pickerPartial, /<details class="ww-language-picker/);
   assert.match(pickerPartial, /<summary[\s\S]*?data-language-trigger/);
@@ -549,7 +550,7 @@ test('language switcher visuals have one owner and cannot inherit page-specific 
   const languageStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
   const headerStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
 
-  assert.equal((header.match(/include\('language-picker'/g) || []).length, 3);
+  assert.equal((header.match(/include\('language-picker'/g) || []).length, 5);
   assert.equal((picker.match(/<details class="ww-language-picker/g) || []).length, 1);
   assert.match(landing, /\.landing-section-link::after/);
   assert.doesNotMatch(landing, /\.landing-section-links a(?::|\s|\{)/);

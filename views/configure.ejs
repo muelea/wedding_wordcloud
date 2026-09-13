@@ -2429,7 +2429,10 @@
 
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
-    backLink.href = `/e/${encodeURIComponent(slug)}`;
+    const mobileBackLink = document.getElementById('mobile-back-link');
+    [backLink, mobileBackLink].forEach((link) => {
+      if (link) link.href = `/e/${encodeURIComponent(slug)}`;
+    });
 
     function loadOrderItems() {
       try { return cart.read(); }
@@ -4173,7 +4176,8 @@
       });
     }
 
-    [brandLink, backLink].forEach((link) => link.addEventListener('click', saveBeforeLeaving));
+    [brandLink, backLink, mobileBackLink].filter(Boolean)
+      .forEach((link) => link.addEventListener('click', saveBeforeLeaving));
     document.querySelectorAll('a[href="/datenschutz"], a[href="/impressum"]').forEach((link) => {
       link.addEventListener('click', saveBeforeLeaving);
     });

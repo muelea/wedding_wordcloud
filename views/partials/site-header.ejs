@@ -8,6 +8,8 @@
   const backHref = config.backHref || '/';
   const backLabel = config.backLabel || 'Zurück zur Startseite';
   const backAria = config.backAria || backLabel;
+  const mobileMenu = config.mobileMenu === true;
+  const mobileBackId = config.mobileBackId || '';
   const paletteOptions = Array.isArray(config.paletteOptions) ? config.paletteOptions : [];
   const navLinks = config.navLinks || [
     { href: '#so-gehts', label: "So geht's" },
@@ -32,12 +34,12 @@
       </nav>
       <div class="landing-header-actions">
         <button class="button primary landing-start-button" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
-        <button class="landing-menu-toggle" type="button" aria-label="<%= t('Seitennavigation öffnen') %>" data-i18n-aria-label-source="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
-          <span class="landing-menu-toggle-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        <button class="landing-menu-toggle ww-menu-trigger" type="button" aria-label="<%= t('Seitennavigation öffnen') %>" data-i18n-aria-label-source="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
+          <%- include('hamburger-icon') %>
         </button>
       </div>
     <% } else if (variant === 'back') { %>
-      <a class="back-link ww-back-link"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
+      <a class="back-link ww-back-link<%= mobileMenu ? ' ww-back-link-desktop' : '' %>"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
     <% } %>
 
     <% if (variant === 'display') { %>
@@ -56,8 +58,8 @@
         <span class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"><%= t('Andenken') %></span>
       </button>
       <details class="ww-display-menu" id="display-page-menu">
-      <summary id="display-menu-trigger" class="ww-display-menu-trigger" aria-label="Menü öffnen">
-        <span class="ww-display-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+      <summary id="display-menu-trigger" class="ww-display-menu-trigger ww-menu-trigger" aria-label="Menü öffnen">
+        <%- include('hamburger-icon') %>
       </summary>
       <div class="ww-display-menu-panel">
         <section class="ww-display-menu-language-row" aria-labelledby="display-menu-language-label">
@@ -118,6 +120,27 @@
           </button>
         </div>
       </div>
+      </details>
+    </div>
+    <% } else if (variant === 'back' && mobileMenu) { %>
+    <div class="ww-back-header-actions">
+      <div class="ww-back-header-desktop-language">
+        <%- include('language-picker', { languagePickerClass: 'ww-language-inline' }) %>
+      </div>
+      <details class="ww-mobile-header-menu" data-ww-mobile-header-menu>
+        <summary class="ww-menu-trigger" data-ww-mobile-header-menu-trigger aria-label="<%= t('Menü öffnen') %>" data-i18n-aria-label-source="Menü öffnen">
+          <%- include('hamburger-icon') %>
+        </summary>
+        <div class="ww-mobile-header-menu-panel">
+          <a class="ww-mobile-header-menu-back"<% if (mobileBackId) { %> id="<%= mobileBackId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>">
+            <span aria-hidden="true">←</span>
+            <span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span>
+          </a>
+          <section class="ww-mobile-header-menu-language-row" aria-label="<%= t('Sprache') %>">
+            <span class="ww-mobile-header-menu-label" data-i18n-source="Sprache"><%= t('Sprache') %></span>
+            <%- include('language-picker', { languagePickerClass: 'ww-mobile-header-menu-language' }) %>
+          </section>
+        </div>
       </details>
     </div>
     <% } else if (variant !== 'landing') { %>

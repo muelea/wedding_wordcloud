@@ -12,6 +12,8 @@ const display = fs.readFileSync(path.join(ROOT, 'views', 'display.ejs'), 'utf8')
 const configure = fs.readFileSync(path.join(ROOT, 'views', 'configure.ejs'), 'utf8');
 const shipping = fs.readFileSync(path.join(ROOT, 'views', 'shipping.ejs'), 'utf8');
 const siteHeader = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'site-header.ejs'), 'utf8');
+const hamburgerIcon = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'hamburger-icon.ejs'), 'utf8');
+const siteHeaderStyles = fs.readFileSync(path.join(ROOT, 'public', 'site-header.css'), 'utf8');
 const legalStyles = fs.readFileSync(path.join(ROOT, 'public', 'legal.css'), 'utf8');
 const i18nStyles = fs.readFileSync(path.join(ROOT, 'public', 'i18n.css'), 'utf8');
 const mobileStyles = fs.readFileSync(path.join(ROOT, 'public', 'mobile-foundation.css'), 'utf8');
@@ -116,6 +118,26 @@ test('word cloud header keeps the keepsake action compact at mobile widths', () 
   assert.match(display, /@media \(max-width: 360px\)[\s\S]*?\.ww-keepsake-cta \{ width: 44px; padding: 0; \}[\s\S]*?\.ww-keepsake-cta-label-compact \{ display: none; \}/);
 });
 
+test('every header menu uses the one shared premium hamburger component', () => {
+  assert.equal((siteHeader.match(/include\('hamburger-icon'\)/g) || []).length, 3);
+  assert.equal((hamburgerIcon.match(/<i><\/i>/g) || []).length, 3);
+  assert.doesNotMatch(siteHeader, /(?:landing-menu-toggle-icon|ww-display-menu-icon)/);
+  assert.doesNotMatch(landing, /landing-menu-toggle-icon/);
+  assert.doesNotMatch(display, /ww-display-menu-icon/);
+  assert.match(siteHeaderStyles, /\.ww-menu-trigger \{[\s\S]*?width: 44px;[\s\S]*?border-radius: 50%;/);
+  assert.match(siteHeaderStyles, /\.ww-hamburger-icon i \{[\s\S]*?width: 18px;[\s\S]*?height: 1px;/);
+});
+
+test('the configurator always keeps language in its menu and moves back navigation there when compact', () => {
+  assert.match(siteHeader, /variant === 'back' && mobileMenu/);
+  assert.match(siteHeader, /class="ww-mobile-header-menu-back"[\s\S]*?mobileBackId/);
+  assert.match(siteHeader, /languagePickerClass: 'ww-mobile-header-menu-language'/);
+  assert.match(siteHeaderStyles, /\.ww-back-header-desktop-language \{ display: none !important; \}/);
+  assert.match(siteHeaderStyles, /\.ww-mobile-header-menu \{[\s\S]*?display: block;/);
+  assert.match(siteHeaderStyles, /\.ww-mobile-header-menu-back \{[\s\S]*?display: none;/);
+  assert.match(siteHeaderStyles, /@media \(max-width: 780px\)[\s\S]*?\.ww-back-link-desktop \{ display: none !important; \}[\s\S]*?\.ww-mobile-header-menu-back \{[\s\S]*?display: flex;/);
+});
+
 test('the personal display palette is handed off to the configurator', () => {
   assert.match(siteHeader, /id="display-palette-picker"/);
   assert.match(siteHeader, /class="ww-palette-menu" role="radiogroup"/);
@@ -194,7 +216,8 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(siteHeader, /data-i18n-source="<%= link\.label %>"/);
   assert.doesNotMatch(siteHeader, /href="#testimonials">Stimmen</);
   assert.match(landing, /@media \(max-width: 360px\)[\s\S]*?\.landing-start-button \{ display: none; \}/);
-  assert.match(landing, /\.landing-menu-toggle,[\s\S]*?\.landing-start-button \{ min-height: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
+  assert.match(landing, /\.landing-menu-toggle \{ display: grid; margin-left: 0; \}/);
+  assert.match(landing, /\.landing-start-button \{ min-height: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
 });
 
 test('mobile naming dialog is visual-viewport aware and does not force the keyboard open', () => {

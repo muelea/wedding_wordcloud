@@ -865,6 +865,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(landingPage, /x: configuration\.x,[\s\S]*?y: configuration\.y,[\s\S]*?angle: configuration\.angle/);
   assert.ok(configurePage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(configurePage, /id="product-options"/);
+  assert.match(configurePage, /id="mobile-back-link"/);
+  assert.match(configurePage, /class="ww-mobile-header-menu" data-ww-mobile-header-menu/);
   assert.match(configurePage, /id="variant-options"/);
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /class="flat-product-composite"/);
@@ -961,7 +963,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /if \(await confirmLeaving\(options\)\) await action\(\)/);
   assert.match(configurePage, /await loadOrderItem\(configurationId\)/);
   assert.match(configurePage, /function saveBeforeLeaving\(event\)/);
-  assert.match(configurePage, /\[brandLink, backLink\]\.forEach\(\(link\) => link\.addEventListener\('click', saveBeforeLeaving\)\)/);
+  assert.match(configurePage, /\[brandLink, backLink, mobileBackLink\]\.filter\(Boolean\)[\s\S]*?saveBeforeLeaving/);
   assert.match(configurePage, /location\.assign\(destination\)/);
   assert.doesNotMatch(configurePage, /location\.assign\(event\.currentTarget\.href\)/);
   assert.match(configurePage, /Euer Warenkorb/);

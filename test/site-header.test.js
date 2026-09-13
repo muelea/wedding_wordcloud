@@ -79,6 +79,60 @@ function mountHeader() {
   };
 }
 
+function mountMobileHeaderMenu() {
+  const documentEvents = listeners();
+  const menuEvents = listeners();
+  const linkEvents = listeners();
+  const attributes = new Map();
+  const header = { classList: classList() };
+  const insideTarget = {};
+  const nestedLanguagePicker = { open: false };
+  const trigger = {
+    focused: false,
+    focus() { this.focused = true; },
+    setAttribute(name, value) { attributes.set(name, value); },
+  };
+  const link = { addEventListener: linkEvents.add };
+  const menu = {
+    open: false,
+    addEventListener: menuEvents.add,
+    contains: (target) => target === insideTarget,
+    querySelector(selector) {
+      if (selector === '[data-ww-mobile-header-menu-trigger]') return trigger;
+      if (selector === '[data-language-picker][open]') {
+        return nestedLanguagePicker.open ? nestedLanguagePicker : null;
+      }
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-language-picker]') return [nestedLanguagePicker];
+      if (selector === 'a') return [link];
+      return [];
+    },
+  };
+  const document = {
+    addEventListener: documentEvents.add,
+    querySelectorAll(selector) {
+      if (selector === '.ww-site-header') return [header];
+      if (selector === '.landing-menu-toggle') return [];
+      if (selector === '[data-ww-mobile-header-menu]') return [menu];
+      return [];
+    },
+  };
+  const window = { addEventListener() {}, scrollY: 0 };
+  vm.runInNewContext(runtime, { document, window });
+  return {
+    attributes,
+    documentEvents,
+    insideTarget,
+    linkEvents,
+    menu,
+    menuEvents,
+    nestedLanguagePicker,
+    trigger,
+  };
+}
+
 test('landing menu closes on an outside pointer while preserving inside interactions', () => {
   const page = mountHeader();
   const isOpen = () => page.header.classList.contains('landing-menu-open');
@@ -111,4 +165,34 @@ test('landing menu still closes through section links and Escape', () => {
   page.documentEvents.dispatch('keydown', { key: 'Escape' });
   assert.equal(isOpen(), false);
   assert.equal(page.attributes.get('aria-expanded'), 'false');
+});
+
+test('compact header menu updates its label and closes through links and outside interactions', () => {
+  const page = mountMobileHeaderMenu();
+  page.menu.open = true;
+  page.menuEvents.dispatch('toggle');
+  assert.equal(page.attributes.get('aria-label'), 'Menü schließen');
+
+  page.documentEvents.dispatch('pointerdown', { target: page.insideTarget });
+  assert.equal(page.menu.open, true);
+  page.documentEvents.dispatch('pointerdown', { target: {} });
+  assert.equal(page.menu.open, false);
+
+  page.menu.open = true;
+  page.linkEvents.dispatch('click');
+  assert.equal(page.menu.open, false);
+  assert.equal(page.nestedLanguagePicker.open, false);
+});
+
+test('compact header menu lets an open language picker consume Escape first', () => {
+  const page = mountMobileHeaderMenu();
+  page.menu.open = true;
+  page.nestedLanguagePicker.open = true;
+  page.documentEvents.dispatch('keydown', { key: 'Escape' });
+  assert.equal(page.menu.open, true);
+
+  page.nestedLanguagePicker.open = false;
+  page.documentEvents.dispatch('keydown', { key: 'Escape' });
+  assert.equal(page.menu.open, false);
+  assert.equal(page.trigger.focused, true);
 });
