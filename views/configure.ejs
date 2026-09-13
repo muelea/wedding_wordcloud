@@ -932,7 +932,15 @@
     }
     .editor-field-label-color { min-width: 197px; align-self: center; }
     .editor-colors { display: flex; align-items: center; gap: 6px; margin-top: 0; }
-    .editor-swatches { min-width: 163px; display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .editor-swatches {
+      min-width: 196px;
+      max-width: 100%;
+      display: flex;
+      flex: 0 1 auto;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+    }
     .editor-swatch {
       flex: 0 0 23px;
       width: 23px;
@@ -2101,8 +2109,9 @@
                   <div class="editor-field-label editor-field-label-color" data-editor-section="color" role="group" aria-label="Farbe auswählen">
                     <span class="editor-field-label-text">Farbe</span>
                     <div class="editor-colors">
-                      <div class="editor-swatches" id="editor-swatches"></div>
-                      <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
+                      <div class="editor-swatches" id="editor-swatches">
+                        <input class="editor-color-input" id="editor-color" type="color" aria-label="Eigene Farbe wählen" disabled />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -166,6 +166,10 @@
           inspector.getClientRects().length && sections.length === 4 &&
           sections.every(section => section.getClientRects().length));
         check('compact inspector has no secondary editor dialog', !document.getElementById('editor-tool-panel'));
+        const propertiesRect = document.getElementById('editor-properties').getBoundingClientRect();
+        const titleRect = document.getElementById('editor-title').getBoundingClientRect();
+        check('compact specific tools share the editor card left edge',
+          Math.abs(propertiesRect.left - titleRect.left) < 1);
       }
       // Both presentations must operate on the exact same custom options.
       mugEditor.setDesign([word], { resetHistory: true });
@@ -322,6 +326,20 @@
         .map(id => document.getElementById(id).getBoundingClientRect());
       check('direction buttons always stay together', nudgeButtons.every(rect =>
         Math.abs(rect.top - nudgeButtons[0].top) < 1));
+      const swatchRects = [...document.querySelectorAll('#editor-swatches .editor-swatch')]
+        .map(swatch => swatch.getBoundingClientRect());
+      const colorPickerRect = document.getElementById('editor-color').getBoundingClientRect();
+      const lastSwatchRect = swatchRects[swatchRects.length - 1];
+      const swatchesRect = document.getElementById('editor-swatches').getBoundingClientRect();
+      const pickerFollowsOnRow = lastSwatchRect &&
+        Math.abs((colorPickerRect.top + colorPickerRect.bottom) / 2 -
+          (lastSwatchRect.top + lastSwatchRect.bottom) / 2) < 1 &&
+        colorPickerRect.left >= lastSwatchRect.right && colorPickerRect.left - lastSwatchRect.right <= 9;
+      const pickerStartsNextRow = lastSwatchRect && colorPickerRect.top >= lastSwatchRect.bottom &&
+        Math.abs(colorPickerRect.left - swatchesRect.left) < 1;
+      check('custom colour picker follows the final palette swatch',
+        document.getElementById('editor-swatches').lastElementChild === document.getElementById('editor-color') &&
+        (pickerFollowsOnRow || pickerStartsNextRow));
       if (innerWidth <= 940) {
         const smallerRect = document.getElementById('editor-smaller').getBoundingClientRect();
         check('compact direction controls lead their own left-aligned row',

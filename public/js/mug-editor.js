@@ -2004,6 +2004,7 @@
         button.addEventListener('click', () => this.setActiveColor(color));
         this.swatches.appendChild(button);
       }
+      this.swatches.appendChild(this.colorInput);
     }
 
     updateSelectionPanel() {
