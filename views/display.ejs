@@ -130,6 +130,66 @@
     }
     #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
     #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; cursor: pointer; }
+    .display-own-words-shortcut {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      align-self: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      transition: background .18s ease, color .18s ease, opacity .18s ease, transform .18s ease;
+    }
+    .display-own-words-shortcut svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .display-own-words-shortcut:hover, .display-own-words-shortcut:focus-visible { background: color-mix(in srgb, var(--primary) 9%, transparent); }
+    .display-own-words-shortcut:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; }
+    .display-own-words-shortcut:active:not(:disabled) { transform: scale(.95); }
+    .display-own-words-shortcut:disabled { color: var(--muted); cursor: not-allowed; opacity: .34; }
+    .cloud-word-actions {
+      position: fixed;
+      z-index: 10020;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 52px;
+      max-width: calc(100vw - 16px);
+      padding: 5px;
+      border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bg) 97%, transparent);
+      color: var(--text);
+      box-shadow: 0 14px 38px rgba(64,15,38,.18);
+      backdrop-filter: blur(18px) saturate(1.25);
+      -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    }
+    .cloud-word-actions[hidden] { display: none !important; }
+    .cloud-word-action-label { min-width: 0; max-width: min(230px, 42vw); overflow: hidden; padding: 0 10px 0 12px; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .cloud-word-action {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--primary) 9%, transparent);
+      color: var(--primary);
+      cursor: pointer;
+      transition: background .16s ease, color .16s ease, transform .16s ease, opacity .16s ease;
+    }
+    .cloud-word-action svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .cloud-word-action:hover, .cloud-word-action:focus-visible { background: var(--primary); color: #fff; }
+    .cloud-word-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 2px; }
+    .cloud-word-action:active { transform: scale(.94); }
+    .cloud-word-action:disabled { cursor: wait; opacity: .45; }
+    .cloud-word-action-remove { background: transparent; color: var(--muted); }
+    #cloud-canvas.is-word-hover { cursor: pointer; }
     .display-emoji-trigger { display: none; }
     .display-emoji-trigger {
       place-items: center;
@@ -577,6 +637,7 @@
       #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 68px); }
       .display-word-entry { min-height: 48px; bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); }
       #display-word-input { padding: 0 10px; }
+      .display-own-words-shortcut { width: 38px; height: 38px; flex-basis: 38px; }
       #display-word-submit { padding: 0 13px; }
       body.presentation-mode #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px)); }
       .footer {
@@ -605,6 +666,8 @@
     }
     @media (prefers-reduced-motion: reduce) {
       .display-emoji-trigger,
+      .display-own-words-shortcut,
+      .cloud-word-action,
       .ww-palette-trigger,
       .ww-palette-option,
       .ww-palette-chevron { transition: none; }
@@ -626,6 +689,16 @@
   </div>
 </div>
 
+<div class="cloud-word-actions" id="cloud-word-actions" role="group" aria-labelledby="cloud-word-action-label" hidden>
+  <span class="cloud-word-action-label" id="cloud-word-action-label" data-i18n-ignore></span>
+  <button class="cloud-word-action" id="cloud-word-support" type="button" aria-label="Dieses Wort unterstützen" data-i18n-aria-label-source="Dieses Wort unterstützen">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10.5v10h-4v-10h4Z"/><path d="M7.5 19.5h9.1a2 2 0 0 0 1.9-1.4l1.8-5.8a2 2 0 0 0-1.9-2.6h-4.1l.7-3.2a2.5 2.5 0 0 0-2.4-3h-.4l-4.7 7v9Z"/></svg>
+  </button>
+  <button class="cloud-word-action cloud-word-action-remove" id="cloud-word-remove" type="button" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>
+  </button>
+</div>
+
 <form class="display-word-entry" id="display-word-entry">
   <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
   <button
@@ -644,6 +717,17 @@
       <circle class="display-emoji-eye" cx="19" cy="14.6" r="1.75" />
       <path d="M10.5 20.6c.9 3.7 7.5 4.8 9.2 0M24.5 3v9M20 7.4h9" />
     </svg>
+  </button>
+  <button
+    class="display-own-words-shortcut"
+    id="display-own-words-shortcut"
+    type="button"
+    aria-label="Deine Wörter"
+    aria-haspopup="dialog"
+    aria-controls="display-own-words-dialog"
+    disabled
+  >
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>
   </button>
   <button id="display-word-submit" type="submit">Hinzufügen</button>
 </form>
@@ -792,6 +876,7 @@
 <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
 <script src="<%= asset('/js/cloud-limits.js') %>"></script>
 <script src="<%= asset('/js/live-cloud-layout.js') %>"></script>
+<script src="<%= asset('/js/cloud-word-actions.js') %>"></script>
 <script src="<%= asset('/js/own-word-groups.js') %>"></script>
 <script>
   // Slug comes from the canonical event URL: /e/<slug>
@@ -816,11 +901,16 @@
   const displayPageMenu = document.getElementById('display-page-menu');
   const displayMenuTrigger = document.getElementById('display-menu-trigger');
   const displayOwnWordsButton = document.getElementById('display-own-words-button');
+  const displayOwnWordsShortcut = document.getElementById('display-own-words-shortcut');
   const displayOwnWordsCount = document.getElementById('display-own-words-count');
   const displayOwnWordsDialog = document.getElementById('display-own-words-dialog');
   const displayOwnWordsList = document.getElementById('display-own-words-list');
   const displayOwnWordsEmpty = document.getElementById('display-own-words-empty');
   const displayOwnWordsError = document.getElementById('display-own-words-error');
+  const cloudWordActions = document.getElementById('cloud-word-actions');
+  const cloudWordActionLabel = document.getElementById('cloud-word-action-label');
+  const cloudWordSupport = document.getElementById('cloud-word-support');
+  const cloudWordRemove = document.getElementById('cloud-word-remove');
   const presentationModeButton = document.getElementById('presentation-mode-button');
   const palettePicker = document.getElementById('display-palette-picker');
   const paletteTrigger = document.getElementById('display-palette-trigger');
@@ -853,6 +943,9 @@
   let scheduledWords = currentWords;
   let liveLayout = null;
   let desiredCloudSize = null;
+  let interactiveCloudWords = [];
+  let interactiveCloudSize = null;
+  let activeCloudWord = '';
   let wordSubmissionAnnouncementTimer = null;
   const MAX_CANVAS_PIXEL_RATIO = 3;
   const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
@@ -1010,6 +1103,9 @@
         emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
       });
     }
+    interactiveCloudWords = colored;
+    interactiveCloudSize = size;
+    if (activeCloudWord) closeCloudWordActions();
     setI18nAttribute(canvas, 'aria-label', 'Wortwolke mit {{count}} verschiedenen Wörtern', { count: placed.length });
     canvas.classList.add('visible');
   }
@@ -1260,13 +1356,21 @@
     timeout: 7000,
   });
   let pendingWordSubmission = '';
+  let pendingWordSubmissionOrigin = '';
+
+  function submitDisplayWord(word, origin = 'input') {
+    const value = String(word || '').trim();
+    if (!value) return false;
+    pendingWordSubmission = value;
+    pendingWordSubmissionOrigin = origin;
+    socket.emit('submit-word', value);
+    return true;
+  }
+
   displayWordEntry.addEventListener('submit', (event) => {
     event.preventDefault();
     const word = displayWordInput.value.trim();
-    if (!word) return;
-    pendingWordSubmission = word;
-    socket.emit('submit-word', word);
-    displayWordInput.value = '';
+    if (submitDisplayWord(word)) displayWordInput.value = '';
   });
 
   function groupedOwnContributions() {
@@ -1276,25 +1380,100 @@
     );
   }
 
-  function removeOwnContribution(receipt, removeButton) {
+  function removeOwnContribution(receipt, removeButton, onComplete) {
     clearText(displayOwnWordsError);
     removeButton.disabled = true;
     socket.emit('remove-word', { receipt }, (result) => {
       if (result?.ok || result?.error === 'not_found') {
         ownContributions.delete(receipt);
         renderOwnContributions();
+        onComplete?.(true);
       } else {
         removeButton.disabled = false;
         setText(displayOwnWordsError, 'Das Wort konnte nicht entfernt werden. Bitte versucht es erneut.');
+        onComplete?.(false);
       }
     });
+  }
+
+  function latestOwnReceipt(word) {
+    let latest = '';
+    for (const [receipt, ownWord] of ownContributions) {
+      if (ownWord === word) latest = receipt;
+    }
+    return latest;
+  }
+
+  function closeCloudWordActions() {
+    activeCloudWord = '';
+    cloudWordActions.hidden = true;
+    cloudWordSupport.disabled = false;
+    cloudWordRemove.disabled = false;
+    cloudWordRemove.hidden = true;
+    canvas.classList.remove('is-word-hover');
+  }
+
+  function syncCloudWordRemoval() {
+    if (!activeCloudWord || cloudWordActions.hidden) return;
+    const receipt = latestOwnReceipt(activeCloudWord);
+    cloudWordRemove.hidden = !receipt;
+    if (receipt) setI18nAttribute(cloudWordRemove, 'aria-label', 'Eine Eingabe von „{{word}}“ entfernen', { word: activeCloudWord });
+  }
+
+  function positionCloudWordActions(clientX, clientY) {
+    const margin = 8;
+    const gap = 10;
+    const bounds = cloudWordActions.getBoundingClientRect();
+    const left = Math.min(window.innerWidth - bounds.width - margin,
+      Math.max(margin, clientX - bounds.width / 2));
+    const above = clientY - bounds.height - gap;
+    const top = above >= margin ? above
+      : Math.min(window.innerHeight - bounds.height - margin, clientY + gap);
+    cloudWordActions.style.left = `${Math.round(left)}px`;
+    cloudWordActions.style.top = `${Math.round(top)}px`;
+  }
+
+  function openCloudWordActions(word, clientX, clientY) {
+    activeCloudWord = word;
+    cloudWordActionLabel.replaceChildren();
+    WolkenworteEmoji.renderInline(cloudWordActionLabel, word);
+    cloudWordActions.hidden = false;
+    cloudWordSupport.disabled = false;
+    syncCloudWordRemoval();
+    positionCloudWordActions(clientX, clientY);
+    cloudWordSupport.focus({ preventScroll: true });
+  }
+
+  function cloudWordAtEvent(event) {
+    if (event.target !== canvas || !interactiveCloudWords.length || !interactiveCloudSize) return null;
+    const bounds = canvas.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return null;
+    const point = {
+      x: (event.clientX - bounds.left) * interactiveCloudSize.width / bounds.width,
+      y: (event.clientY - bounds.top) * interactiveCloudSize.height / bounds.height,
+    };
+    const padding = 7 * Math.max(interactiveCloudSize.width / bounds.width,
+      interactiveCloudSize.height / bounds.height);
+    return WolkenworteCloudWordActions.hitTestPlacedWord(interactiveCloudWords, point, padding);
+  }
+
+  function handleCloudInteraction(event) {
+    const item = cloudWordAtEvent(event);
+    if (item) {
+      openCloudWordActions(item.word, event.clientX, event.clientY);
+      return;
+    }
+    closeCloudWordActions();
+    openOwnWordsDialog();
   }
 
   function renderOwnContributions() {
     const total = ownContributions.size;
     displayOwnWordsButton.hidden = total === 0;
+    displayOwnWordsShortcut.disabled = total === 0;
     displayOwnWordsCount.textContent = WolkenworteI18n.formatNumber(total);
     setI18nAttribute(displayOwnWordsButton, 'aria-label', 'Deine Wörter verwalten ({{count}})', { count: total });
+    setI18nAttribute(displayOwnWordsShortcut, 'aria-label', 'Deine Wörter verwalten ({{count}})', { count: total });
     displayOwnWordsList.replaceChildren();
     const groups = groupedOwnContributions();
     displayOwnWordsEmpty.hidden = groups.length > 0;
@@ -1310,6 +1489,7 @@
       remove.addEventListener('click', () => removeOwnContribution(receipts[receipts.length - 1], remove));
       copy.append(label, count); item.append(copy, remove); displayOwnWordsList.appendChild(item);
     }
+    syncCloudWordRemoval();
   }
 
   function hydrateOwnContributions(contributions) {
@@ -1336,6 +1516,7 @@
 
   function openOwnWordsDialog() {
     if (!ownContributions.size || displayOwnWordsDialog.open) return false;
+    closeCloudWordActions();
     closeDisplayMenu();
     clearText(displayOwnWordsError);
     renderOwnContributions();
@@ -1344,7 +1525,33 @@
   }
 
   displayOwnWordsButton.addEventListener('click', openOwnWordsDialog);
-  container.addEventListener('click', openOwnWordsDialog);
+  displayOwnWordsShortcut.addEventListener('click', openOwnWordsDialog);
+  container.addEventListener('click', handleCloudInteraction);
+  canvas.addEventListener('pointermove', (event) => {
+    canvas.classList.toggle('is-word-hover', Boolean(cloudWordAtEvent(event)));
+  });
+  canvas.addEventListener('pointerleave', () => canvas.classList.remove('is-word-hover'));
+  cloudWordSupport.addEventListener('click', () => {
+    if (!activeCloudWord || cloudWordSupport.disabled) return;
+    cloudWordSupport.disabled = true;
+    submitDisplayWord(activeCloudWord, 'cloud');
+  });
+  cloudWordRemove.addEventListener('click', () => {
+    const receipt = latestOwnReceipt(activeCloudWord);
+    if (!receipt) return;
+    removeOwnContribution(receipt, cloudWordRemove, (removed) => {
+      if (removed) closeCloudWordActions();
+      else showToast(t('Das Wort konnte nicht entfernt werden. Bitte versucht es erneut.'));
+    });
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!cloudWordActions.hidden && !cloudWordActions.contains(event.target) && event.target !== canvas) {
+      closeCloudWordActions();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !cloudWordActions.hidden) closeCloudWordActions();
+  });
   window.addEventListener('wolkenworte:localechange', () => {
     syncPalettePicker(PALETTES[document.documentElement.dataset.palette] || PALETTES[defaultPaletteKey]);
     renderOwnContributions();
@@ -1352,13 +1559,19 @@
   });
   socket.on('own-word-update', hydrateOwnContributions);
   socket.on('word-accepted', (word, receipt) => {
+    const wasCloudAction = pendingWordSubmissionOrigin === 'cloud';
     pendingWordSubmission = '';
+    pendingWordSubmissionOrigin = '';
     addOwnContribution(word, receipt);
     announceWordAccepted();
+    if (wasCloudAction) closeCloudWordActions();
   });
   socket.on('word-error', ({ error } = {}) => {
-    if (pendingWordSubmission && !displayWordInput.value) displayWordInput.value = pendingWordSubmission;
+    const wasCloudAction = pendingWordSubmissionOrigin === 'cloud';
+    if (!wasCloudAction && pendingWordSubmission && !displayWordInput.value) displayWordInput.value = pendingWordSubmission;
     pendingWordSubmission = '';
+    pendingWordSubmissionOrigin = '';
+    if (wasCloudAction) cloudWordSupport.disabled = false;
     const limit = {
       guest_contribution_limit: ['Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.', CloudLimits.MAX_OWNER_CONTRIBUTIONS],
       unique_word_limit: ['Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.', CloudLimits.MAX_EVENT_UNIQUE_WORDS],
@@ -1522,6 +1735,9 @@
       renderTimer = null;
       scheduledWords = [];
       liveLayout?.clear();
+      interactiveCloudWords = [];
+      interactiveCloudSize = null;
+      closeCloudWordActions();
       emptyState.classList.remove('hidden');
       canvas.classList.remove('visible');
       return;

@@ -89,6 +89,7 @@ const REQUIRED_MESSAGES = [
   'Emoji-Katalog wird geladen…',
   'Emoji-Katalog konnte nicht geladen werden.',
   'Deine Wörter',
+  'Dieses Wort unterstützen',
   'Organisatorbereich',
   'Wortwolke verwalten',
   'Organisatorbereich schließen',
