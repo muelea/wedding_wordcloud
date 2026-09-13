@@ -138,6 +138,13 @@ test('the configurator always keeps language in its menu and moves back navigati
   assert.match(siteHeaderStyles, /@media \(max-width: 780px\)[\s\S]*?\.ww-back-link-desktop \{ display: none !important; \}[\s\S]*?\.ww-mobile-header-menu-back \{[\s\S]*?display: flex;/);
 });
 
+test('shipping keeps both return links synchronized behind the same responsive header menu', () => {
+  assert.match(shipping, /const mobileBackLink = document\.getElementById\('mobile-back-link'\)/);
+  assert.match(shipping, /const backLinks = \[backLink, mobileBackLink\]\.filter\(Boolean\)/);
+  assert.match(shipping, /function setBackHref\(href\)[\s\S]*?backLinks\.forEach/);
+  assert.match(shipping, /backLinks\.forEach\(\(link\) => \{ link\.addEventListener\('click', saveShippingDraft\); \}\)/);
+});
+
 test('the personal display palette is handed off to the configurator', () => {
   assert.match(siteHeader, /id="display-palette-picker"/);
   assert.match(siteHeader, /class="ww-palette-menu" role="radiogroup"/);

@@ -463,9 +463,14 @@
     refreshCountryDisplayNames();
 
     const backLink = document.getElementById('back-link');
+    const mobileBackLink = document.getElementById('mobile-back-link');
+    const backLinks = [backLink, mobileBackLink].filter(Boolean);
     const editingConfigurationId = configurationIds.includes(query.get('edit')) ? query.get('edit') : configurationIds[0];
-    backLink.href = `/e/${encodeURIComponent(slug)}/configure${editingConfigurationId ? `?edit=${encodeURIComponent(editingConfigurationId)}` : ''}`;
-    backLink.addEventListener('click', saveShippingDraft);
+    function setBackHref(href) {
+      backLinks.forEach((link) => { link.href = href; });
+    }
+    setBackHref(`/e/${encodeURIComponent(slug)}/configure${editingConfigurationId ? `?edit=${encodeURIComponent(editingConfigurationId)}` : ''}`);
+    backLinks.forEach((link) => { link.addEventListener('click', saveShippingDraft); });
 
     function saveShippingDraft() {
       if (!shippingDraftReady) return;
@@ -499,7 +504,7 @@
       WolkenworteActions.setBusy(checkoutButton, false);
       if (shippingReturnIsStale(true)) {
         currentQuote = null;
-        backLink.href = `/e/${encodeURIComponent(slug)}/configure`;
+        setBackHref(`/e/${encodeURIComponent(slug)}/configure`);
         showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zum Design zurück.');
       }
     });
@@ -1410,7 +1415,7 @@
 
     async function loadPage() {
       if (shippingReturnIsStale(true)) {
-        backLink.href = `/e/${encodeURIComponent(slug)}/configure`;
+        setBackHref(`/e/${encodeURIComponent(slug)}/configure`);
         showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zum Design zurück.');
         return;
       }

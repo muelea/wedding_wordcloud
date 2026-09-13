@@ -295,6 +295,7 @@ app.get('/e/:slug/shipping', asyncRoute(async (req, res) => {
     header: {
       variant: 'back', headerClass: 'topbar', backId: 'back-link', backHref: '#',
       backLabel: 'Zurück zum Design', backAria: 'Zurück zum Design',
+      mobileMenu: true, mobileBackId: 'mobile-back-link',
     },
   });
 }));

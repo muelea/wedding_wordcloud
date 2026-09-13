@@ -40,7 +40,10 @@ test('shipping page uses the immutable configuration and returns a server-side P
 
   const shippingPage = await fetch(`${baseUrl}/e/${event.slug}/shipping?configuration=${configuration.id}`);
   assert.equal(shippingPage.status, 200);
-  assert.match(await shippingPage.text(), /Wohin darf eure Erinnerung reisen\?/);
+  const shippingPageHtml = await shippingPage.text();
+  assert.match(shippingPageHtml, /Wohin darf eure Erinnerung reisen\?/);
+  assert.match(shippingPageHtml, /id="mobile-back-link"/);
+  assert.match(shippingPageHtml, /class="ww-mobile-header-menu" data-ww-mobile-header-menu/);
 
   const printful = require('../src/printful');
   require('./support/printful-fixtures').mockShippingRates(t, printful);
