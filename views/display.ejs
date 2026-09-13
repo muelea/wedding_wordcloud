@@ -1299,12 +1299,17 @@
     }, 50);
   }
 
-  displayOwnWordsButton.addEventListener('click', () => {
+  function openOwnWordsDialog() {
+    if (!ownContributions.size || displayOwnWordsDialog.open) return false;
     closeDisplayMenu();
     clearText(displayOwnWordsError);
     renderOwnContributions();
     displayOwnWordsDialog.showModal();
-  });
+    return true;
+  }
+
+  displayOwnWordsButton.addEventListener('click', openOwnWordsDialog);
+  container.addEventListener('click', openOwnWordsDialog);
   window.addEventListener('wolkenworte:localechange', () => {
     syncPalettePicker(PALETTES[document.documentElement.dataset.palette] || PALETTES[defaultPaletteKey]);
     renderOwnContributions();
