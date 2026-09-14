@@ -67,6 +67,7 @@ function harness(extra = {}) {
     leavingPage: false, allowNavigation: false, suppressDirty: false,
     draftSaveTimer: null, draftSavePromise: null, draftSavedRevision: -1, draftStorageFailed: false,
     saveDesignButton: element(), continueOrderButton: element(), designAnotherButton: element(),
+    headerCart: { hidden: true }, headerCartCount: element(),
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true },
     content: { inert: false }, orderBox: { scrollIntoView() {} },
     cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
@@ -95,7 +96,7 @@ function harness(extra = {}) {
   vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'draftSnapshot',
     'hasUnpersistedDraft', 'persistCurrentDraft', 'runNavigation', 'saveBeforeLeaving',
     'openOrderItem', 'removeOrderItem', 'navigateToShipping',
-    'showRestorationError', 'initializeWorkspace'].map(pageFunction).join('\n'), context);
+    'showRestorationError', 'initializeWorkspace', 'updateHeaderCart'].map(pageFunction).join('\n'), context);
   return { context, cart, local, drafts, calls };
 }
 
@@ -114,6 +115,18 @@ test('cart storage is event-isolated, normalized, expiring and contains only app
   now += Session.CART_TTL_MS + 1;
   assert.deepEqual(cart.read(), []);
   assert.match(fs.readFileSync(require.resolve('../public/js/configurator-session'), 'utf8'), /indexedDB|createDraftStore/);
+});
+
+test('the header cart appears only for saved designs and keeps an exact numeric badge', () => {
+  const { context: page } = harness();
+  page.updateHeaderCart([]);
+  assert.equal(page.headerCart.hidden, true);
+  assert.equal(page.headerCartCount.textContent, '');
+  page.updateHeaderCart([{ id: id('a') }, { id: id('b') }]);
+  assert.equal(page.headerCart.hidden, false);
+  assert.equal(page.headerCartCount.textContent, '2');
+  page.updateHeaderCart([]);
+  assert.equal(page.headerCart.hidden, true, 'removing the last item hides the entry point immediately');
 });
 
 test('the former tab cart migrates once into the device-local cart', () => {

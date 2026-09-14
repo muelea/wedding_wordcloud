@@ -138,6 +138,18 @@ test('the configurator always keeps language in its menu and moves back navigati
   assert.match(siteHeaderStyles, /@media \(max-width: 780px\)[\s\S]*?\.ww-back-link-desktop \{ display: none !important; \}[\s\S]*?\.ww-mobile-header-menu-back \{[\s\S]*?display: flex;/);
 });
 
+test('the configurator uses one conditional header cart at every viewport size', () => {
+  assert.match(siteHeader, /if \(cartButton\)[\s\S]*?class="ww-header-cart ww-menu-trigger"/);
+  assert.match(siteHeader, /class="ww-header-cart-icon"[\s\S]*?class="ww-header-cart-badge"/);
+  assert.match(siteHeaderStyles, /\.ww-back-header-actions \{[\s\S]*?gap: 8px;/);
+  assert.match(siteHeaderStyles, /\.ww-header-cart\[hidden\] \{ display: none !important; \}/);
+  assert.match(siteHeaderStyles, /\.ww-header-cart-badge \{[\s\S]*?position: absolute;[\s\S]*?border-radius: 999px;/);
+  assert.doesNotMatch(configure, /mobile-cart-summary|mobileCartSummary/);
+  assert.match(configure, /function updateHeaderCart\(items\)[\s\S]*?headerCart\.hidden = count === 0;[\s\S]*?String\(count\)/);
+  assert.match(configure, /function renderOrderBox\(\)[\s\S]*?updateHeaderCart\(items\)/);
+  assert.match(configure, /headerCart\?\.addEventListener\('click'[\s\S]*?orderBox\.scrollIntoView/);
+});
+
 test('wide back-header navigation is centered against the viewport, not unequal side content', () => {
   assert.match(siteHeaderStyles, /\.ww-nav \{[\s\S]*?position: relative !important;/);
   assert.match(siteHeaderStyles, /\.ww-back-link-desktop \{[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?left: 50%;[\s\S]*?transform: translate\(-50%, -50%\);/);
@@ -230,6 +242,14 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landingWorkflowStyles, /filter: brightness\(var\(--workflow-panel-brightness\)\) grayscale\(var\(--workflow-panel-grayscale\)\)/);
   assert.match(landingWorkflowRuntime, /steps\[index\]\.appendChild\(panel\)/);
   assert.match(landingWorkflowRuntime, /panel\.setAttribute\('aria-hidden', desktopLayout\.matches \? String\(!isActive\) : 'false'\)/);
+  assert.match(landing, /\.print-grid \{[^}]*grid-template-areas: 'visual copy';/);
+  assert.match(landing, /\.print-copy \{ grid-area: copy;/);
+  assert.match(landing, /\.cup-stage \{ grid-area: visual;/);
+  assert.match(landing, /<div class="print-grid">\s*<div class="print-copy">\s*<p class="eyebrow">[^<]+<\/p>\s*<h2 id="keepsakes-title">/);
+  assert.match(landing, /@media \(max-width: 760px\)[\s\S]*?\.print-grid \{ grid-template-areas: 'copy' 'visual'; text-align: center; \}/);
+  assert.doesNotMatch(landing, /\.cup-stage \{[^}]*order: -1;/);
+  assert.match(landing, /<section class="quote" id="testimonials">[\s\S]*?<\/section>\s*<\/main>/);
+  assert.doesNotMatch(landing, /class="cta"|\.cta-box|Bereit für euren Moment\?|Lasst eure Worte/);
   assert.match(landing, /#mug-canvas \{ width: min\(360px, 100%\); height: auto/);
   assert.match(landing, /#site-header:not\(\.landing-menu-open\) \.landing-section-links/);
   assert.doesNotMatch(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-menu-toggle/);
@@ -312,10 +332,13 @@ test('compact configurator uses a dense two-column inspector at every compact wi
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-selection-row \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-properties \{[\s\S]*?width: 100%;[\s\S]*?margin: 0;/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-format-controls \{[\s\S]*?width: min\(100%, 350px\);[\s\S]*?grid-template-columns: minmax\(88px, 96px\) minmax\(0, 1fr\)/);
-  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-swatches \{[\s\S]*?width: min\(100%, 350px\);[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-colors \{[\s\S]*?width: 100%;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-swatches \{[\s\S]*?width: 100%;[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;/);
   assert.match(configure, /id="editor-swatches"[\s\S]*?id="editor-color"[\s\S]*?<\/div>/);
-  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 1fr\)\);[\s\S]*?justify-self: start;/);
-  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-nudge-controls \{[\s\S]*?grid-column: 1 \/ -1;[\s\S]*?grid-template-columns: repeat\(4, 44px\);[\s\S]*?justify-content: start;/);
+  assert.match(configure, /class="editor-nudge-controls"[\s\S]*?class="editor-transform-controls"/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?width: 100%;[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;[\s\S]*?justify-content: flex-start;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-nudge-controls \{[\s\S]*?flex: 0 0 auto;[\s\S]*?grid-template-columns: repeat\(4, 44px\);[\s\S]*?justify-content: start;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-transform-controls \{[\s\S]*?flex: 0 1 344px;[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 44px\)\);[\s\S]*?justify-content: start;/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-style-button > \* \{[^}]*transform: translateY\(2px\)/);
   assert.match(workspaceStyles, /\.editor-selection-head \{[\s\S]*?clip: rect\(0 0 0 0\)/);
   assert.match(workspaceStyles, /\.workbench \.editor-card \{ position: relative; z-index: 2; \}/);

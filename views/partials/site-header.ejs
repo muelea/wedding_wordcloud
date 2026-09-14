@@ -10,6 +10,9 @@
   const backAria = config.backAria || backLabel;
   const mobileMenu = config.mobileMenu === true;
   const mobileBackId = config.mobileBackId || '';
+  const cartButton = config.cartButton === true;
+  const cartButtonId = config.cartButtonId || 'header-cart';
+  const cartBadgeId = config.cartBadgeId || 'header-cart-count';
   const paletteOptions = Array.isArray(config.paletteOptions) ? config.paletteOptions : [];
   const navLinks = config.navLinks || [
     { href: '#so-gehts', label: "So geht's" },
@@ -124,6 +127,24 @@
     </div>
     <% } else if (variant === 'back' && mobileMenu) { %>
     <div class="ww-back-header-actions">
+      <% if (cartButton) { %>
+      <button
+        class="ww-header-cart ww-menu-trigger"
+        id="<%= cartButtonId %>"
+        type="button"
+        aria-label="<%= t('Warenkorb öffnen') %>"
+        data-i18n-aria-label-source="Warenkorb öffnen"
+        aria-controls="order-box"
+        hidden
+      >
+        <svg class="ww-header-cart-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3.5 4.5h2l1.7 9.1a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.4l1.5-5.6H6.4" />
+          <circle cx="9.4" cy="19" r="1.25" />
+          <circle cx="17.2" cy="19" r="1.25" />
+        </svg>
+        <span class="ww-header-cart-badge" id="<%= cartBadgeId %>" aria-hidden="true"></span>
+      </button>
+      <% } %>
       <div class="ww-back-header-desktop-language">
         <%- include('language-picker', { languagePickerClass: 'ww-language-inline' }) %>
       </div>

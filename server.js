@@ -282,7 +282,7 @@ app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
     header: {
       variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
       backHref: '#', backLabel: 'Zurück zur Wortwolke', backAria: 'Zurück zur Wortwolke',
-      mobileMenu: true, mobileBackId: 'mobile-back-link',
+      mobileMenu: true, mobileBackId: 'mobile-back-link', cartButton: true,
     },
   });
 }));

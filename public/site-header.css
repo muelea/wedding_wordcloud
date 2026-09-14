@@ -174,7 +174,44 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
 .ww-back-header-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
   margin-left: auto;
+}
+
+.ww-header-cart {
+  position: relative;
+}
+
+.ww-header-cart[hidden] { display: none !important; }
+
+.ww-header-cart-icon {
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ww-header-cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--bg, var(--paper, #fffdfa));
+  border-radius: 999px;
+  background: var(--primary, var(--berry, #9c1c4c));
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .ww-back-header-desktop-language { display: none !important; }

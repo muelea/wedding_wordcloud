@@ -59,7 +59,7 @@ test('Create word cloud is the sole native submit action in every localized star
       assert.ok(label.includes(translate('Wortwolke erstellen', locale)));
 
       const openers = nodes.filter((node) => attribute(node, 'data-open-start-dialog') !== undefined);
-      assert.equal(openers.length, 4, 'includes the persistent header action and all three page CTAs');
+      assert.equal(openers.length, 3, 'includes the persistent header action and both remaining page CTAs');
       for (const opener of openers) {
         assert.equal(attribute(opener, 'type'), 'button');
         assert.equal(formOwnerId(opener), undefined);

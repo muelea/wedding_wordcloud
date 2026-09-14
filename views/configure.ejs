@@ -227,8 +227,7 @@
     }
     .mobile-preview-summary,
     .mobile-editor-toggle,
-    .mobile-editor-collapse,
-    .mobile-cart-summary { display: none; }
+    .mobile-editor-collapse { display: none; }
     .preview-head h2,
     .editor-title,
     .design-toolbar h2 {
@@ -1790,8 +1789,7 @@
       .mobile-editor-toggle { display: inline-flex; }
       .mobile-editor-collapse { display: inline-flex; }
       .mobile-editor-toggle:focus-visible,
-      .mobile-editor-collapse:focus-visible,
-      .mobile-cart-summary:focus-visible {
+      .mobile-editor-collapse:focus-visible {
         outline: 3px solid rgba(156, 28, 76, .2);
         outline-offset: 2px;
       }
@@ -1860,24 +1858,6 @@
         height: 10px;
         margin: 0;
       }
-      .mobile-cart-summary {
-        min-height: var(--ww-touch-target);
-        grid-column: 1 / -1;
-        padding: 9px 12px;
-        align-items: center;
-        grid-template-columns: minmax(0, 1fr) auto auto;
-        gap: 8px;
-        border: 1px solid rgba(156, 28, 76, .14);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, .76);
-        color: var(--ink);
-        cursor: pointer;
-        font: inherit;
-        font-size: 12px;
-        text-align: left;
-      }
-      .mobile-cart-summary:not([hidden]) { display: grid; }
-      .mobile-cart-summary strong { color: var(--berry); font-size: 12px; }
       .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 10px -20px 0; padding: 4px 14px 14px; gap: 22px; }
       .mug-viewer { height: min(250px, calc(var(--workspace-stage-height) - 42px)); }
       .mug-name { margin-top: 0; font-size: 11px; }
@@ -2151,13 +2131,15 @@
                     <%- include('partials/editor-action', { action: { id: 'editor-move-left', icon: 'arrow-left', label: 'Auswahl nach links verschieben', disabled: true } }) %>
                     <%- include('partials/editor-action', { action: { id: 'editor-move-right', icon: 'arrow-right', label: 'Auswahl nach rechts verschieben', disabled: true } }) %>
                   </div>
-                  <%- include('partials/editor-action', { action: { id: 'editor-smaller', icon: 'minus', label: 'Element verkleinern', disabled: true } }) %>
-                  <%- include('partials/editor-action', { action: { id: 'editor-larger', icon: 'plus', label: 'Element vergrößern', disabled: true } }) %>
-                  <%- include('partials/editor-action', { action: { id: 'editor-rotate-left', icon: 'rotate-ccw-square', label: 'Nach links drehen', disabled: true } }) %>
-                  <%- include('partials/editor-action', { action: { id: 'editor-rotate-right', icon: 'rotate-cw-square', label: 'Nach rechts drehen', disabled: true } }) %>
-                  <%- include('partials/editor-action', { action: { id: 'editor-duplicate', icon: 'copy', label: 'Duplizieren', disabled: true } }) %>
-                  <%- include('partials/editor-action', { action: { id: 'editor-bring-front', icon: 'bring-to-front', label: 'Ganz nach vorn', disabled: true } }) %>
-                  <%- include('partials/editor-action', { action: { id: 'editor-delete', icon: 'trash-2', label: 'Löschen', disabled: true, danger: true } }) %>
+                  <div class="editor-transform-controls">
+                    <%- include('partials/editor-action', { action: { id: 'editor-smaller', icon: 'minus', label: 'Element verkleinern', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-larger', icon: 'plus', label: 'Element vergrößern', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-rotate-left', icon: 'rotate-ccw-square', label: 'Nach links drehen', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-rotate-right', icon: 'rotate-cw-square', label: 'Nach rechts drehen', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-duplicate', icon: 'copy', label: 'Duplizieren', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-bring-front', icon: 'bring-to-front', label: 'Ganz nach vorn', disabled: true } }) %>
+                    <%- include('partials/editor-action', { action: { id: 'editor-delete', icon: 'trash-2', label: 'Löschen', disabled: true, danger: true } }) %>
+                  </div>
                 </div>
                 </div>
               </div>
@@ -2200,9 +2182,6 @@
                   <span class="swatches mobile-preview-theme-swatches" id="mobile-selected-theme-swatches" aria-hidden="true"></span>
                 </span>
               </div>
-              <button class="mobile-cart-summary" id="mobile-cart-summary" type="button" hidden>
-                <span id="mobile-cart-label">Euer Warenkorb</span><strong id="mobile-cart-count"></strong><span aria-hidden="true">→</span>
-              </button>
             </div>
 
             <div class="mug-stage" id="product-stage" aria-label="Vorschau des gestalteten Produkts">
@@ -2381,9 +2360,8 @@
     const mobileSelectedThemeName = document.getElementById('mobile-selected-theme-name');
     const mobileSelectedThemeSwatches = document.getElementById('mobile-selected-theme-swatches');
     const mobilePreviewPalette = document.getElementById('mobile-preview-palette');
-    const mobileCartSummary = document.getElementById('mobile-cart-summary');
-    const mobileCartLabel = document.getElementById('mobile-cart-label');
-    const mobileCartCount = document.getElementById('mobile-cart-count');
+    const headerCart = document.getElementById('header-cart');
+    const headerCartCount = document.getElementById('header-cart-count');
     const editorScroll = document.getElementById('editor-scroll');
     const flatPreview = document.getElementById('flat-product-preview');
     const flatCanvas = document.getElementById('flat-preview');
@@ -2544,7 +2522,7 @@
 
     fitAreaButton.addEventListener('click', () => { void fitCurrentDesignToArea(); });
     mobileEditorCollapse.addEventListener('click', () => setMobileEditorExpanded(false));
-    mobileCartSummary.addEventListener('click', () => {
+    headerCart?.addEventListener('click', () => {
       setMobileEditorExpanded(true, { scroll: false });
       requestAnimationFrame(() => orderBox.scrollIntoView({
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
@@ -2807,17 +2785,22 @@
       return fallback;
     }
 
+    function updateHeaderCart(items) {
+      if (!headerCart || !headerCartCount) return;
+      const count = Array.isArray(items) ? items.length : 0;
+      headerCart.hidden = count === 0;
+      headerCartCount.textContent = count ? String(count) : '';
+    }
+
     function renderOrderBox() {
       const items = loadOrderItems();
       const hasItems = items.length > 0;
       orderBox.hidden = !hasItems;
-      mobileCartSummary.hidden = !hasItems;
+      updateHeaderCart(items);
       orderList.replaceChildren();
       const countSource = items.length === 1 ? '{{count}} Design' : '{{count}} Designs';
       const countParams = { count: items.length };
       setText(orderCount, countSource, countParams);
-      setText(mobileCartLabel, 'Euer Warenkorb');
-      setText(mobileCartCount, countSource, countParams);
       items.forEach((item) => {
         const itemProduct = products.find((candidate) => candidate.key === item.productKey);
         const orientation = selectedOrientationOption(itemProduct, item.orientation);

@@ -326,6 +326,15 @@
         .map(id => document.getElementById(id).getBoundingClientRect());
       check('direction buttons always stay together', nudgeButtons.every(rect =>
         Math.abs(rect.top - nudgeButtons[0].top) < 1));
+      const transformBox = document.querySelector('.editor-transform-controls').getBoundingClientRect();
+      const actionGap = parseFloat(getComputedStyle(document.querySelector('.editor-actions')).columnGap) || 0;
+      const groupsFitTogether = nudgeButtons[0].left +
+        document.querySelector('.editor-nudge-controls').getBoundingClientRect().width + actionGap +
+        transformBox.width <= selectionActionBox.right + 1;
+      check('selection action groups share a row whenever both fit',
+        groupsFitTogether
+          ? Math.abs(nudgeButtons[0].top - transformBox.top) < 1
+          : transformBox.top >= nudgeButtons[0].bottom);
       const swatchRects = [...document.querySelectorAll('#editor-swatches .editor-swatch')]
         .map(swatch => swatch.getBoundingClientRect());
       const colorPickerRect = document.getElementById('editor-color').getBoundingClientRect();
@@ -341,9 +350,13 @@
         document.getElementById('editor-swatches').lastElementChild === document.getElementById('editor-color') &&
         (pickerFollowsOnRow || pickerStartsNextRow));
       if (innerWidth <= 940) {
+        const colorSectionRect = document.querySelector('.editor-field-label-color').getBoundingClientRect();
+        check('compact colour row uses all available inspector width',
+          Math.abs(swatchesRect.left - colorSectionRect.left) < 1 &&
+          Math.abs(swatchesRect.right - colorSectionRect.right) < 1);
         const smallerRect = document.getElementById('editor-smaller').getBoundingClientRect();
-        check('compact direction controls lead their own left-aligned row',
-          nudgeButtons[0].bottom <= smallerRect.top && Math.abs(nudgeButtons[0].left - selectionActionBox.left) < 1);
+        check('compact direction controls lead the responsive left-aligned flow',
+          nudgeButtons[0].top <= smallerRect.top && Math.abs(nudgeButtons[0].left - selectionActionBox.left) < 1);
       }
       const addWord = document.getElementById('editor-add');
       toolbar.show(addWord);

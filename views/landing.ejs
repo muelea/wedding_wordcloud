@@ -22,7 +22,6 @@
       --sage: #faf5ec;
       --sage-deep: #9c1c4c;
       --coral: #d1607e;
-      --cream: #f7eee0;
       --champagne: #c1922f;
       --gold-line: rgba(193,146,47,.45);
       --line: rgba(64,15,38,.1);
@@ -313,17 +312,18 @@
     .inspiration-card--photo p { color: rgba(255, 255, 255, .9); line-height: 1.55; text-shadow: 0 2px 14px rgba(20, 5, 10, .62); }
 
     /* ── Print / mug-duo ── */
-    .print-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 84px; position: relative; }
+    .print-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); grid-template-areas: 'visual copy'; align-items: center; gap: clamp(56px, 7vw, 112px); position: relative; }
+    .print-copy { grid-area: copy; width: min(100%, 470px); justify-self: end; }
     .print-copy h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; margin: 14px 0 18px; }
-    .print-copy p { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
-    .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; font-style: italic; font-weight: 500; letter-spacing: .03em; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
+    .print-copy > p:not(.eyebrow):not(.print-note) { max-width: 450px; color: var(--muted); font-size: .98rem; line-height: 1.75; font-weight: 300; }
+    .print-copy .print-note { margin-top: 26px; color: var(--sage-deep); font-size: .82rem; font-style: italic; font-weight: 500; letter-spacing: .03em; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
 
     .quote { text-align: center; position: relative; }
     .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Shadows Into Light', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, cursive; font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-style: normal; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
     .quote cite { color: var(--sage-deep); font-family: 'Shadows Into Light', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, cursive; font-size: 1.25rem; font-style: normal; letter-spacing: .01em; }
     /* The shared procedural mug renderer uses the locally served Three.js
        browser build; the homepage and configurator render the same geometry. */
-    .cup-stage { min-height: 400px; display: grid; place-items: center; position: relative; gap: 4px; }
+    .cup-stage { grid-area: visual; min-height: 430px; display: grid; place-items: center; position: relative; gap: 4px; }
     #mug-canvas { width: min(480px, 100%); height: auto; aspect-ratio: 48 / 43; touch-action: none; cursor: grab; }
     #mug-canvas.dragging { cursor: grabbing; }
     #mug-canvas:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 8px; }
@@ -343,18 +343,6 @@
     .trust-heart, .hero-inline-heart { transition: transform .35s ease; }
     .trust:hover .trust-heart, .hero-inline-heart:hover { transform: scale(1.2) rotate(4deg); animation-play-state: paused; }
 
-    /* ── Quote ── */
-
-    /* ── Bottom CTA ── */
-    .cta-box { background: var(--cream); color: var(--ink); text-align: center; padding: 64px 25px; position: relative; overflow: hidden; border-block: 1px solid var(--gold-line); }
-    .cta-box .heart-icon.deco { position: absolute; width: 40px; height: auto; color: var(--gold-line); opacity: .55; }
-    .cta-box .deco.tl { left: 5%; top: 14%; transform: rotate(-8deg); }
-    .cta-box .deco.br { right: 5%; bottom: 12%; transform: rotate(10deg); }
-    .cta h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; margin: 10px 0 15px; letter-spacing: -.025em; }
-    .cta p { color: var(--muted); font-size: .95rem; margin-bottom: 26px; font-weight: 300; }
-    .cta .eyebrow { justify-content: center; }
-    .cta .eyebrow::before { display: none; }
-
     footer { border-top: 1px solid var(--line); padding: 34px 0 40px; color: var(--muted); font-size: .76rem; }
     .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
     .footer-links { display: flex; gap: 22px; }
@@ -366,7 +354,7 @@
        reduced motion (see the script at the end of the page). */
     html.js-reveal-ready .section-top,
     html.js-reveal-ready .inspiration-card, html.js-reveal-ready .print-copy,
-    html.js-reveal-ready .cup-stage, html.js-reveal-ready .cta-box {
+    html.js-reveal-ready .cup-stage {
       opacity: 0; transform: translateY(18px);
       transition: opacity .7s ease, transform .7s ease;
     }
@@ -400,7 +388,7 @@
       #site-header.landing-menu-open .landing-section-links .landing-menu-language .ww-language-trigger { width: 100%; }
       #site-header .landing-header-actions { margin-left: 12px; }
     }
-    @media (max-width: 760px) { .cta-box .deco, .heart-accent { display: none; } }
+    @media (max-width: 760px) { .heart-accent { display: none; } }
     @media (max-width: 760px) {
       .shell { width: min(100% - 32px, 560px); }
       .nav { height: 76px; }
@@ -418,9 +406,11 @@
       .cloud { margin-bottom: 6px; }
       section { padding: 72px 0; }
       .inspiration-grid { grid-template-columns: 1fr; gap: 18px; }
-      .print-grid { text-align: center; }
+      .print-grid { grid-template-areas: 'copy' 'visual'; text-align: center; }
+      .print-copy { width: 100%; justify-self: center; }
+      .print-copy .eyebrow { justify-content: center; }
       .print-copy p { margin-left: auto; margin-right: auto; }
-      .cup-stage { min-height: 340px; order: -1; }
+      .cup-stage { min-height: 340px; }
       #mug-canvas { width: min(360px, 100%); height: auto; aspect-ratio: 9 / 8; }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
@@ -520,15 +510,12 @@
       </div>
     </section>
 
-    <section class="print" id="erinnerungsstuecke">
+    <section class="print" id="erinnerungsstuecke" aria-labelledby="keepsakes-title">
       <div class="shell">
-        <div class="section-top">
-          <div class="flourish"><i></i></div>
-          <p class="eyebrow center">Eine Erinnerung zum Anfassen</p>
-          <h2>Aus eurer Wolke wird ein Lieblingsstück.</h2>
-        </div>
         <div class="print-grid">
           <div class="print-copy">
+            <p class="eyebrow">Eine Erinnerung zum Anfassen</p>
+            <h2 id="keepsakes-title">Aus eurer Wolke wird ein Lieblingsstück.</h2>
             <p>Nach dem großen Moment kann eure ganz persönliche Wortwolke auf einem Erinnerungsstück weiterleben – als Tasse für den nächsten gemeinsamen Kaffee, als Poster oder als Geschenk für eure Liebsten.</p>
             <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
           </div>
@@ -765,18 +752,6 @@
       </div>
     </section>
 
-    <section class="cta">
-      <div class="shell">
-        <div class="cta-box">
-          <svg class="heart-icon deco tl" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-          <svg class="heart-icon deco br" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-          <p class="eyebrow">Bereit für euren Moment?</p>
-          <h2>Lasst eure Worte<br>Wellen schlagen.</h2>
-          <p>Probiert die Live-Wortwolke jetzt aus – kostenlos und ohne Anmeldung.</p>
-          <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
-        </div>
-      </div>
-    </section>
   </main>
 
   <dialog
@@ -967,7 +942,7 @@
       if ('IntersectionObserver' in window && !reduceMotion) {
         document.documentElement.classList.add('js-reveal-ready');
         var targets = document.querySelectorAll(
-          '.section-top, .inspiration-card, .print-copy, .cup-stage, .quote blockquote, .quote cite, .cta-box'
+          '.section-top, .inspiration-card, .print-copy, .cup-stage, .quote blockquote, .quote cite'
         );
         var io = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {

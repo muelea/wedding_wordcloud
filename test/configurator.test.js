@@ -911,6 +911,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="mobile-back-link"/);
   assert.match(configurePage, /class="ww-mobile-header-menu" data-ww-mobile-header-menu/);
+  assert.match(configurePage, /class="ww-header-cart ww-menu-trigger"[\s\S]*?id="header-cart"[\s\S]*?hidden/);
+  assert.match(configurePage, /id="header-cart-count"/);
+  assert.doesNotMatch(configurePage, /mobile-cart-summary/);
   assert.match(configurePage, /id="variant-options"/);
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /class="flat-product-composite"/);
@@ -1184,6 +1187,10 @@ test('a sparse automatic design saves and freezes the exact preview geometry', a
 test('200, 201 and 500 word snapshots save, reopen and freeze complete multi-product designs', async (t) => {
   const app = await startTestServer();
   t.after(app.close);
+  // This test deliberately blocks its own event loop while laying out 500-word
+  // surfaces. Under parallel suite load that can exceed Node's five-second
+  // keep-alive window and race Undici reusing the just-expired local socket.
+  app.server.keepAliveTimeout = 60_000;
   const event = await createEvent(app.baseUrl, { title: 'Große vollständige Wolke' });
   const other = await createEvent(app.baseUrl, { title: 'Andere Wolke' });
   const endpoint = `${app.baseUrl}/api/events/${event.slug}/configurations`;
