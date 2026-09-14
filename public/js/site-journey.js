@@ -42,8 +42,11 @@
     designLink.href = `${cloudLink.getAttribute('href')}/configure?cart=1`;
     let hasCart = false;
     try {
-      const items = JSON.parse(sessionStorage.getItem(`wolkenworte-order:${saved.slug}`));
-      hasCart = Array.isArray(items) && items.some((item) => /^[A-Za-z0-9_-]{16}$/.test(item?.id));
+      const cartKey = `wolkenworte-order:${saved.slug}`;
+      const expiresAt = Number(localStorage.getItem(`${cartKey}:expires`));
+      const items = JSON.parse(localStorage.getItem(cartKey));
+      hasCart = (!(expiresAt > 0) || expiresAt > Date.now()) && Array.isArray(items) &&
+        items.some((item) => /^[A-Za-z0-9_-]{16}$/.test(item?.id));
     } catch {}
     designLink.hidden = !hasCart;
     card.querySelector('[data-resume-title]').textContent = saved.title;

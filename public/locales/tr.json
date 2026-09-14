@@ -849,5 +849,10 @@
   "{{products}}: Bei der Einfuhr können zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.": "{{products}}: İthalatta ek gümrük vergileri, vergiler veya ücretler uygulanabilir. Tutar henüz bilinmiyor.",
   "{{products}}: Mögliche Einfuhrgebühren konnten noch nicht ermittelt werden.": "{{products}}: Olası ithalat ücretleri henüz belirlenemedi.",
   "Mögliche Einfuhrgebühren sind derzeit nicht bekannt.": "Olası ithalat ücretleri şu anda bilinmiyor.",
-  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Taslağınız güncel baskı kenar boşluklarına uyarlandı. Lütfen kontrol edip yeniden kaydedin."
+  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Taslağınız güncel baskı kenar boşluklarına uyarlandı. Lütfen kontrol edip yeniden kaydedin.",
+  "Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.": "Kelime bulutu değişti. Kaydedilmiş taslağınız değişmeden kalır.",
+  "Design mit aktuellen Wörtern neu erstellen": "Tasarımı güncel kelimelerle yeniden oluştur",
+  "Entwurf konnte nicht gespeichert werden": "Taslak kaydedilemedi",
+  "Hier bleiben": "Burada kal",
+  "Trotzdem verlassen": "Yine de ayrıl"
 }

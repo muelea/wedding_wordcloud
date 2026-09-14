@@ -849,5 +849,10 @@
   "{{products}}: Bei der Einfuhr können zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.": "{{products}}: Additional customs duties, taxes or fees may apply on import. The amount is not yet known.",
   "{{products}}: Mögliche Einfuhrgebühren konnten noch nicht ermittelt werden.": "{{products}}: Possible import charges could not yet be determined.",
   "Mögliche Einfuhrgebühren sind derzeit nicht bekannt.": "Possible import charges are currently unknown.",
-  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Your draft was adjusted to the current print margins. Please review and save it again."
+  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Your draft was adjusted to the current print margins. Please review and save it again.",
+  "Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.": "The word cloud has changed. Your saved draft remains unchanged.",
+  "Design mit aktuellen Wörtern neu erstellen": "Rebuild design with current words",
+  "Entwurf konnte nicht gespeichert werden": "Draft could not be saved",
+  "Hier bleiben": "Stay here",
+  "Trotzdem verlassen": "Leave anyway"
 }

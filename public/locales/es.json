@@ -849,5 +849,10 @@
   "{{products}}: Bei der Einfuhr können zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.": "{{products}}: La importación puede generar aranceles, impuestos o tasas adicionales. El importe aún no se conoce.",
   "{{products}}: Mögliche Einfuhrgebühren konnten noch nicht ermittelt werden.": "{{products}}: Aún no se han podido determinar los posibles gastos de importación.",
   "Mögliche Einfuhrgebühren sind derzeit nicht bekannt.": "Actualmente se desconocen los posibles gastos de importación.",
-  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Tu borrador se ha ajustado a los márgenes de impresión actuales. Revísalo y vuelve a guardarlo."
+  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Tu borrador se ha ajustado a los márgenes de impresión actuales. Revísalo y vuelve a guardarlo.",
+  "Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.": "La nube de palabras ha cambiado. Tu borrador guardado permanece sin cambios.",
+  "Design mit aktuellen Wörtern neu erstellen": "Recrear el diseño con las palabras actuales",
+  "Entwurf konnte nicht gespeichert werden": "No se ha podido guardar el borrador",
+  "Hier bleiben": "Permanecer aquí",
+  "Trotzdem verlassen": "Salir de todos modos"
 }

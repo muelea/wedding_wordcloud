@@ -701,6 +701,29 @@
     }
     .print-readability[data-level="low"] { background: #fff0eb; color: #923c27; }
     .print-readability[hidden] { display: none; }
+    .cloud-update-notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 0 0 18px;
+      padding: 12px 16px;
+      border: 1px solid rgba(194, 145, 43, .28);
+      border-radius: 14px;
+      background: rgba(255, 248, 229, .7);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .cloud-update-notice[hidden] { display: none; }
+    .cloud-update-notice button {
+      flex: 0 0 auto;
+      border: 0;
+      background: transparent;
+      color: var(--berry);
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
     .editor-image-quality {
       position: absolute;
       z-index: 6;
@@ -1574,9 +1597,8 @@
     }
 
     .order-actions button[hidden] { display: none; }
-    #leave-design-discard[hidden] { display: none; }
-    #leave-design-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
-    #leave-design-dialog .config-panel-foot button { min-width: 0; flex: 1 1 160px; }
+    #draft-loss-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
+    #draft-loss-dialog .config-panel-foot button { min-width: 0; flex: 1 1 160px; }
     .secondary-button {
       width: auto;
       min-width: 210px;
@@ -1933,6 +1955,7 @@
       .product-options, .variant-options { grid-template-columns: 1fr; }
       .option-grid { grid-template-columns: 1fr; }
       .option-card { min-height: 76px; }
+      .cloud-update-notice { align-items: flex-start; flex-direction: column; }
     }
 
     @media (max-width: 620px) and (prefers-reduced-motion: reduce) {
@@ -1957,6 +1980,11 @@
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
         <p class="intro-copy" id="config-intro">Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
       </section>
+
+      <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
+        <span>Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.</span>
+        <button id="apply-live-words" type="button">Design mit aktuellen Wörtern neu erstellen</button>
+      </div>
 
       <div class="config-studio" id="config-studio" data-mobile-editor-expanded="false">
         <section class="design-toolbar" id="design-toolbar" aria-labelledby="controls-title">
@@ -2220,13 +2248,12 @@
     </div>
   </main>
 
-  <dialog class="config-panel" id="leave-design-dialog" aria-labelledby="leave-design-title" aria-describedby="leave-design-description">
-    <div class="config-panel-head"><h2 id="leave-design-title" tabindex="-1">Design übernehmen?</h2></div>
-    <div class="config-panel-body"><p id="leave-design-description"></p></div>
+  <dialog class="config-panel" id="draft-loss-dialog" aria-labelledby="draft-loss-title" aria-describedby="draft-loss-description">
+    <div class="config-panel-head"><h2 id="draft-loss-title" tabindex="-1">Entwurf konnte nicht gespeichert werden</h2></div>
+    <div class="config-panel-body"><p id="draft-loss-description">Der Entwurf konnte nicht gesichert werden. Trotzdem verlassen und ungesicherte Änderungen verwerfen?</p></div>
     <div class="config-panel-foot">
-      <button class="secondary-button" id="leave-design-cancel" type="button">Weiter gestalten</button>
-      <button class="secondary-button" id="leave-design-discard" type="button">Änderungen verwerfen und weiter</button>
-      <button class="primary-button" id="leave-design-save" type="button">In den Warenkorb und weiter</button>
+      <button class="secondary-button" id="draft-loss-stay" type="button">Hier bleiben</button>
+      <button class="primary-button" id="draft-loss-leave" type="button">Trotzdem verlassen</button>
     </div>
   </dialog>
 
@@ -2396,13 +2423,14 @@
     const continueOrderButton = document.getElementById('continue-order');
     const continueOrderLabel = document.getElementById('continue-order-label');
     const saveDesignButton = document.getElementById('save-design');
-    const leaveDialog = document.getElementById('leave-design-dialog');
-    const leaveTitle = document.getElementById('leave-design-title');
-    const leaveDescription = document.getElementById('leave-design-description');
-    const leaveSaveButton = document.getElementById('leave-design-save');
-    const leaveDiscardButton = document.getElementById('leave-design-discard');
-    const leaveCancelButton = document.getElementById('leave-design-cancel');
+    const cloudUpdateNotice = document.getElementById('cloud-update-notice');
+    const applyLiveWordsButton = document.getElementById('apply-live-words');
+    const draftLossDialog = document.getElementById('draft-loss-dialog');
+    const draftLossTitle = document.getElementById('draft-loss-title');
+    const draftLossStay = document.getElementById('draft-loss-stay');
+    const draftLossLeave = document.getElementById('draft-loss-leave');
     const cart = WolkenworteConfiguratorSession.createCart(slug);
+    const draftStore = WolkenworteConfiguratorSession.createDraftStore(slug);
     const workspace = new WolkenworteWorkspace(document);
     const toolbar = new WolkenworteToolbar(document);
 
@@ -2442,6 +2470,10 @@
     let leavingPage = false;
     let allowNavigation = false;
     let startingAnotherProduct = false;
+    let draftSaveTimer = null;
+    let draftSavePromise = null;
+    let draftSavedRevision = -1;
+    let draftStorageFailed = false;
 
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
@@ -2461,14 +2493,14 @@
     function updateCartActions() {
       saveDesignButton.disabled = orderActionPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
       setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
-      const mobilePurchase = mobileEditorMedia.matches && !mobileEditorExpanded;
-      setText(continueOrderLabel, mobilePurchase && currentDesignNeedsSave
+      setText(continueOrderLabel, currentDesignNeedsSave
         ? (editingOrderItemId
           ? 'Änderungen übernehmen & zur Lieferadresse'
           : 'In den Warenkorb & zur Lieferadresse')
         : 'Zur Lieferadresse');
       continueOrderButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
+      designAnotherButton.hidden = !loadOrderItems().length;
     }
 
     function setMobileEditorExpanded(expanded, { scroll = true } = {}) {
@@ -2530,48 +2562,85 @@
         (currentDesignNeedsSave || Boolean(mugEditor?.hasPendingTextChange()));
     }
 
-    function askBeforeLeaving({ shipping = false } = {}) {
-      const emptyCart = shipping && !loadOrderItems().length;
-      setText(leaveDescription, emptyCart
-        ? 'Euer Warenkorb ist noch leer. Möchtet ihr mit dem aktuellen Design fortfahren? Wir übernehmen es in den Warenkorb und öffnen die Lieferadresse.'
-        : 'Möchtet ihr das aktuelle Design in den Warenkorb übernehmen? Ohne Übernahme gehen eure ungesicherten Änderungen verloren.');
-      setText(leaveSaveButton, editingOrderItemId
-        ? 'Änderungen übernehmen und weiter' : 'In den Warenkorb und weiter');
-      leaveDiscardButton.hidden = emptyCart;
-      leaveDialog.returnValue = 'cancel';
+    function draftSnapshot() {
+      return {
+        productKey: product.key,
+        orientation: selectedOrientation,
+        theme: selectedTheme,
+        customColors,
+        words,
+        designs: getAllSurfaceDesigns(),
+        editingOrderItemId,
+        currentDesignEdited,
+        designRevision,
+      };
+    }
+
+    function hasUnpersistedDraft() {
+      return workspaceReady && !restorationFailed &&
+        (draftStorageFailed || draftSavedRevision < designRevision || Boolean(mugEditor?.hasPendingTextChange()));
+    }
+
+    function scheduleDraftSave(delay = 700) {
+      clearTimeout(draftSaveTimer);
+      if (!workspaceReady || restorationFailed) return;
+      draftSaveTimer = setTimeout(() => { void persistCurrentDraft({ finalize: false }); }, delay);
+    }
+
+    async function persistCurrentDraft({ finalize = true } = {}) {
+      if (!workspaceReady || restorationFailed || !product || !mugEditor) return true;
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = null;
+      if (draftSavePromise) await draftSavePromise;
+      const save = async () => {
+        try {
+          if (finalize) await finalizeCurrentText();
+          else mugEditor.flushPendingChange();
+          const snapshot = draftSnapshot();
+          await draftStore.save(snapshot);
+          draftSavedRevision = snapshot.designRevision;
+          draftStorageFailed = false;
+          return true;
+        } catch (error) {
+          console.warn('Configurator draft save failed.', error);
+          draftStorageFailed = true;
+          setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
+          return false;
+        }
+      };
+      draftSavePromise = save();
+      try { return await draftSavePromise; }
+      finally { draftSavePromise = null; }
+    }
+
+    async function loadLocalDraft(criteria = null) {
+      try {
+        return criteria ? await draftStore.loadFor(criteria) : await draftStore.loadActive();
+      } catch (error) {
+        console.warn('Configurator draft load failed.', error);
+        draftStorageFailed = true;
+        setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
+        return null;
+      }
+    }
+
+    function askToLeaveWithoutDraft() {
+      draftLossDialog.returnValue = 'stay';
       return new Promise((resolve) => {
-        leaveDialog.addEventListener('close', () => resolve(leaveDialog.returnValue), { once: true });
-        leaveDialog.showModal();
-        leaveTitle.focus({ preventScroll: true });
+        draftLossDialog.addEventListener('close', () => resolve(draftLossDialog.returnValue), { once: true });
+        draftLossDialog.showModal();
+        draftLossTitle.focus({ preventScroll: true });
       });
     }
 
-    leaveSaveButton.addEventListener('click', () => leaveDialog.close('save'));
-    leaveDiscardButton.addEventListener('click', () => leaveDialog.close('discard'));
-    leaveCancelButton.addEventListener('click', () => leaveDialog.close('cancel'));
+    draftLossStay.addEventListener('click', () => draftLossDialog.close('stay'));
+    draftLossLeave.addEventListener('click', () => draftLossDialog.close('leave'));
 
-    // All app navigation goes through one decision, never an implicit save.
-    async function confirmLeaving(options = {}) {
-      if (options.onlyIfEdited) {
-        try { await finalizeCurrentText(); }
-        catch {
-          setText(errorText, 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
-          return false;
-        }
-        if (!currentDesignEdited) return true;
-      }
-      if (!hasUnsavedDesign() && !(options.shipping && !loadOrderItems().length)) return true;
-      const choice = await askBeforeLeaving(options);
-      if (choice === 'cancel') return false;
-      if (choice === 'save') return saveCurrentDesign(saveDesignButton);
-      return choice === 'discard';
-    }
-
-    async function runNavigation(action, options = {}) {
+    async function runNavigation(action) {
       if (leavingPage || orderActionPending) return;
       leavingPage = true;
       try {
-        if (await confirmLeaving(options)) await action();
+        if (await persistCurrentDraft()) await action();
       } finally { leavingPage = false; }
     }
 
@@ -2665,6 +2734,12 @@
       setOrderActionsBusy(true);
       clearText(errorText);
       try {
+        const localDraft = await loadLocalDraft({ editingOrderItemId: configurationId,
+          productKey: '_cart_', orientation: 'default' });
+        if (localDraft) {
+          await applyLocalDraft(localDraft);
+          return;
+        }
         const response = await fetch(
           `/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}/edit`,
           { cache: 'no-store', signal: AbortSignal.timeout(10000) }
@@ -2676,6 +2751,7 @@
         currentDesignNeedsSave = !editingOrderItemId || Boolean(adjusted);
         currentDesignEdited = Boolean(adjusted);
         pendingConfiguration = null;
+        cloudUpdateNotice.hidden = true;
         renderOrderBox();
       } finally {
         orderActionPending = false;
@@ -2791,7 +2867,12 @@
         if (editingOrderItemId === configurationId) {
           editingOrderItemId = null;
           currentDesignNeedsSave = true;
+          currentDesignEdited = true;
+          designRevision += 1;
           pendingConfiguration = null;
+          void draftStore.removeFor({ editingOrderItemId: configurationId,
+            productKey: product.key, orientation: selectedOrientation }).catch(() => {});
+          scheduleDraftSave(0);
           history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
         }
         renderOrderBox();
@@ -3196,6 +3277,27 @@
       return adjusted;
     }
 
+    function wordsMatch(left, right) {
+      return JSON.stringify(Array.isArray(left) ? left : []) === JSON.stringify(Array.isArray(right) ? right : []);
+    }
+
+    async function applyLocalDraft(draft) {
+      const adjusted = await applySavedConfiguration(draft);
+      editingOrderItemId = draft.editingOrderItemId &&
+        loadOrderItems().some((item) => item.id === draft.editingOrderItemId)
+        ? draft.editingOrderItemId
+        : null;
+      currentDesignNeedsSave = true;
+      currentDesignEdited = draft.currentDesignEdited !== false || adjusted;
+      designRevision = Math.max(0, Number(draft.designRevision) || 0);
+      draftSavedRevision = designRevision;
+      draftStorageFailed = false;
+      pendingConfiguration = null;
+      cloudUpdateNotice.hidden = wordsMatch(draft.words, liveWords);
+      renderOrderBox();
+      if (adjusted) scheduleDraftSave(0);
+    }
+
     function updateSurfaceControlSelection() {
       surfaceTabs.querySelectorAll('.surface-tab').forEach((tab) => {
         const selected = tab.dataset.surfaceKey === activeSurface;
@@ -3519,7 +3621,10 @@
       currentDesignEdited = true;
       designRevision += 1;
       pendingConfiguration = null;
-      if (workspaceReady) updateCartActions();
+      if (workspaceReady) {
+        updateCartActions();
+        scheduleDraftSave();
+      }
     }
 
     function currentProductMockupAsset() {
@@ -3707,10 +3812,11 @@
       resetProductDialogSelection();
       closeProductDialog();
       if (another) {
-        // The existing leave dialog already approved this new-design action.
-        await startProductDesign(nextProduct);
+        await runNavigation(() => startProductDesign(nextProduct));
       } else if (nextProduct?.key !== product?.key) {
-        await runNavigation(() => startProductDesign(nextProduct), { onlyIfEdited: true });
+        await runNavigation(() => startProductDesign(nextProduct, undefined, {
+          preserveEditingItem: Boolean(editingOrderItemId),
+        }));
       }
       updateProductOptionSelection();
     }
@@ -3740,7 +3846,7 @@
       return view.layoutGeometry['fit-area'][0];
     }
 
-    async function startProductDesign(nextProduct, orientation) {
+    async function startProductDesign(nextProduct, orientation, options = {}) {
       if (!nextProduct || orderActionPending || !workspaceReady || restorationFailed) return false;
       orderActionPending = true;
       setOrderActionsBusy(true);
@@ -3754,15 +3860,29 @@
         if (!Array.isArray(nextWords) || !nextWords.length) throw new Error('no_words');
         await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
         await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
-        suppressDirty = true;
-        try {
-          words = liveWords = nextWords;
-          selectProduct(nextProduct, orientation);
-          editingOrderItemId = null;
-          mugEditor.flushPendingChange();
-        } finally { suppressDirty = false; }
-        markDirty();
-        currentDesignEdited = false;
+        const nextOrientation = orientation || nextProduct.defaultOrientation || 'default';
+        const localDraft = options.useSavedDraft === false || options.preserveEditingItem ? null : await loadLocalDraft({
+          productKey: nextProduct.key, orientation: nextOrientation,
+        });
+        const previousEditingId = editingOrderItemId;
+        liveWords = nextWords;
+        if (localDraft) {
+          await applyLocalDraft(localDraft);
+        } else {
+          suppressDirty = true;
+          try {
+            words = nextWords;
+            selectProduct(nextProduct, orientation);
+            editingOrderItemId = options.preserveEditingItem ? previousEditingId : null;
+            mugEditor.flushPendingChange();
+          } finally { suppressDirty = false; }
+          markDirty();
+          currentDesignEdited = Boolean(options.preserveEditingItem);
+          cloudUpdateNotice.hidden = true;
+        }
+        if (!localDraft) {
+          draftSavedRevision = -1;
+        }
         renderOrderBox();
         history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
         return true;
@@ -3918,9 +4038,11 @@
       if (!orientation || orientation.key === selectedOrientation) return;
       closeToolbarMenus();
       // A radio changes before its handler runs. Restore the actual choice
-      // while the shared confirmation dialog protects the current design.
+      // until the new draft is ready to replace the current surface.
       buildOrientationOptions();
-      await runNavigation(() => startProductDesign(product, orientation.key), { onlyIfEdited: true });
+      await runNavigation(() => startProductDesign(product, orientation.key, {
+        preserveEditingItem: Boolean(editingOrderItemId),
+      }));
     }
 
     function buildOrientationOptions() {
@@ -4120,7 +4242,7 @@
 
     async function approveCurrentDesign() {
       if (!currentDesignNeedsSave) return true;
-      // Check tab storage before creating a server snapshot.
+      // Check browser cart storage before creating a server snapshot.
       try { cart.write(cart.read()); }
       catch {
         setText(errorText, 'Der Warenkorb konnte in diesem Browser nicht gesichert werden. Bitte erlaubt das Speichern von Websitedaten.');
@@ -4174,6 +4296,18 @@
         currentDesignNeedsSave = revision !== designRevision;
         currentDesignEdited = currentDesignNeedsSave;
         pendingConfiguration = null;
+        if (!currentDesignNeedsSave) {
+          try {
+            await draftStore.removeFor(previousId
+              ? { editingOrderItemId: previousId, productKey: product.key, orientation: selectedOrientation }
+              : { productKey: product.key, orientation: selectedOrientation });
+          }
+          catch { /* The immutable cart snapshot remains authoritative. */ }
+          draftSavedRevision = designRevision;
+          draftStorageFailed = false;
+        } else {
+          scheduleDraftSave(0);
+        }
         history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(data.id)}`);
         renderOrderBox();
         return !currentDesignNeedsSave;
@@ -4190,10 +4324,16 @@
       if (!mugEditor || !product) return;
       const destination = event.currentTarget.href;
       event.preventDefault();
-      return runNavigation(() => {
-        allowNavigation = true;
-        location.assign(destination);
-      });
+      if (leavingPage || orderActionPending) return;
+      leavingPage = true;
+      return (async () => {
+        try {
+          const saved = await persistCurrentDraft();
+          if (!saved && await askToLeaveWithoutDraft() !== 'leave') return;
+          allowNavigation = true;
+          location.assign(destination);
+        } finally { leavingPage = false; }
+      })();
     }
 
     [brandLink, backLink, mobileBackLink].filter(Boolean)
@@ -4204,15 +4344,11 @@
     saveDesignButton.addEventListener('click', () => {
       if (!leavingPage) void saveCurrentDesign(saveDesignButton);
     });
-    designAnotherButton.addEventListener('click', () => runNavigation(() => {
+    designAnotherButton.addEventListener('click', () => {
       startingAnotherProduct = true;
       openProductDialog();
-    }, { onlyIfEdited: true }));
+    });
     continueOrderButton.addEventListener('click', () => {
-      if (!(mobileEditorMedia.matches && !mobileEditorExpanded)) {
-        void runNavigation(navigateToShipping, { shipping: true });
-        return;
-      }
       if (leavingPage || orderActionPending) return;
       void (async () => {
         leavingPage = true;
@@ -4226,11 +4362,17 @@
       })();
     });
 
+    applyLiveWordsButton.addEventListener('click', () => runNavigation(() =>
+      startProductDesign(product, selectedOrientation, { useSavedDraft: false, preserveEditingItem: true })));
+
     window.addEventListener('pagehide', destroyMug3D);
     window.addEventListener('beforeunload', (event) => {
-      if (!hasUnsavedDesign() || allowNavigation) return;
+      if (!hasUnpersistedDraft() || allowNavigation) return;
       event.preventDefault();
       event.returnValue = '';
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') void persistCurrentDraft({ finalize: false });
     });
     window.addEventListener('pageshow', (event) => {
       if (!event.persisted) return;
@@ -4238,9 +4380,8 @@
       leavingPage = false;
       orderActionPending = false;
       content.inert = false;
-      if (leaveDialog.open) leaveDialog.close('cancel');
-      // A history entry reloads its exact approved snapshot; a fresh entry
-      // reloads current cloud words. Never resurrect a discarded in-memory draft.
+      if (draftLossDialog.open) draftLossDialog.close('stay');
+      // Reload so the page can restore the latest local draft or immutable cart snapshot.
       if (workspaceReady) { allowNavigation = true; location.reload(); return; }
       setOrderActionsBusy(false);
       void initMug3D();
@@ -4342,9 +4483,12 @@
             await loadOrderItem(id);
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(id)}`);
           }
+        } else {
+          const localDraft = await loadLocalDraft();
+          if (localDraft) await applyLocalDraft(localDraft);
         }
-        // No edit parameter always means the current live cloud, never a draft.
         workspaceReady = true;
+        if (!requestedEdit && !query.has('cart') && draftSavedRevision < 0) scheduleDraftSave(0);
         if (query.has('cart')) {
           if (mobileEditorMedia.matches) setMobileEditorExpanded(true, { scroll: false });
           requestAnimationFrame(() => orderBox.scrollIntoView({ behavior: 'smooth', block: 'center' }));

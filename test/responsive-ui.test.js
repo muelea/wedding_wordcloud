@@ -180,7 +180,7 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.doesNotMatch(configure, /class="mobile-editor-caret"[^>]*>[^<]+<\/span>/,
     'mobile disclosure buttons use the aligned CSS chevron, not a font glyph');
   assert.match(configure, /function setMobileEditorExpanded\(expanded, \{ scroll = true \} = \{\}\)/);
-  assert.match(configure, /setText\(continueOrderLabel, mobilePurchase && currentDesignNeedsSave/);
+  assert.match(configure, /setText\(continueOrderLabel, currentDesignNeedsSave/);
   assert.match(configure, /!await saveCurrentDesign\(continueOrderButton\)/,
     'the explicit compact CTA approves the current design before navigation');
   assert.match(workspaceStyles,
@@ -189,6 +189,15 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.match(configure, /<h2 class="editor-title"[^>]*>[\s\S]*?<div id="editor-compact-toolbar"><\/div>[\s\S]*?<div class="wrap-preview">/);
   assert.match(workspaceStyles, /@media \(max-width: 940px\) \{[\s\S]*?\.workspace-tools \{ display: none; \}[\s\S]*?#editor-compact-toolbar \{[\s\S]*?display: block;/);
   assert.match(workspaceStyles, /#editor-compact-toolbar \{[\s\S]*?border-bottom: 1px solid var\(--line\)/);
+});
+
+test('shipping is the compact cart review with edit, remove and quantity controls', () => {
+  assert.match(shipping, /setText\(productsTitle, 'Euer Warenkorb'\)/);
+  assert.match(shipping, /edit\.href = configureHref\(itemConfiguration\.id\)/);
+  assert.match(shipping, /setText\(edit, 'Design anpassen'\)/);
+  assert.match(shipping, /setText\(remove, 'Entfernen'\)/);
+  assert.match(shipping, /removeConfigurationFromCart\(itemConfiguration\.id\)/);
+  assert.match(shipping, /row\.append\(image, copy, actions, control\)/);
 });
 
 test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {

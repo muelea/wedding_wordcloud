@@ -34,29 +34,28 @@ frozen snapshot of the word cloud.
    spiral notebook or decorative pillow from grouped product families, any
    color palette, and approves an
    immutable Printful-sized file with a transparent background. Each approved
-   design enters the tab-local basket only through “In den Warenkorb” or an
-   explicit confirmation when leaving an unsaved editor. Editing a basket design
+   design enters the browser-local basket only through “In den Warenkorb”. Editing a basket design
    uses “Änderungen übernehmen” and replaces that position without duplicating it.
    Phones open on a preview-first purchase surface: the finished product, its
    compact product/palette summary and the explicit “In den Warenkorb & zur
    Lieferadresse” action stay ahead of the collapsed editor. “Design anpassen”
    reveals the existing editor without creating a second draft or editor state.
-   One shared leave dialog offers save-and-continue, discard-and-continue, or
-   stay. Unchanged basket designs need no dialog. Outside the collapsed phone
-   purchase surface, shipping with an empty basket asks to add the current design
-   and continue; declining keeps the editor open.
-   Failed saves never navigate. Unapproved editor work is not autosaved or
-   restored. Browser back/reload/close uses the browser's own limited unsaved-work
-   warning; an app-specific dialog cannot be guaranteed for those actions.
-   Basket references live in event-scoped sessionStorage, while approved print
-   snapshots continue using the existing server configuration IDs. No new draft
-   service or account is involved. A plain configurator URL always starts from
-   current cloud words; ?edit=<id> opens precisely that server snapshot, and
+   The primary continuation label states whether it will add, update, or simply
+   continue with the cart; failed cart saves never navigate. Ordinary product,
+   orientation and page navigation has no save/discard dialog. Working designs
+   are debounced into event-scoped IndexedDB drafts for seven days and restore on
+   the same browser without creating server configurations. Only a failed local
+   draft write can produce a leave-without-saving warning.
+   Basket references live in event-scoped localStorage for seven days, while
+   approved print snapshots continue using the existing immutable server
+   configuration IDs. No draft service or account is involved. A plain
+   configurator URL restores the active local draft when available;
+   ?edit=<id> opens that cart item's local working copy or its exact server snapshot, and
    ?cart=1 opens the last basket design. Returning from shipping uses ?edit.
    Removing a position never automatically re-adds it. Starting another product
    fetches the current cloud and confirms product selection before replacing the
-   editor. Changing product or orientation uses the same save/discard/cancel
-   dialog when there are edits; untouched automatic designs switch directly.
+   editor. Changing product or orientation first stores the working draft and
+   then restores a matching local draft or starts from the current cloud.
    Each new product starts with the current words filling every print surface.
    Address/quantity drafts live only in sessionStorage for up to
    24 hours, survive design round trips, and never restore a trusted price:
@@ -720,14 +719,15 @@ node scripts/build-emoji-search-index.js \
 
 In real Safari and Chromium, test the complete journey with an isolated event:
 fresh cloud → phone preview-first purchase → shipping, plus expanded editor →
-empty-cart shipping confirmation (cancel, then accept) → shipping → back to
+autosaved draft → back to the cloud → restored design → shipping → back to
 design, followed by native browser Back/Forward.
 The editor must remain interactive with a 3D mug; addresses and quantities must
 survive. Save an edit and verify it replaces one basket position. Test the logo
-and cloud links with save/discard/cancel, then add a cloud word: a fresh design
-must include it, while an explicitly reopened basket design stays unchanged.
-The homepage basket link must reopen the tab's saved basket. Check dialog layout
-at a narrow viewport, storage/network failures, and no unexpected order writes.
+and cloud links without a navigation dialog, then add a cloud word: a restored
+draft must offer the nonmodal current-word refresh while an explicitly reopened
+basket design stays unchanged. The homepage basket link must reopen the saved
+basket after closing and reopening a tab. Check storage/network failures and no
+unexpected order writes.
 The VM regression tests cover these state transitions but do not replace this
 real-browser acceptance check.
 
@@ -835,8 +835,8 @@ never mounted in production. Node tests do not replace real-engine sign-off.
 For the reported area-layout regression, run
 `npm run test:configurator:browser -- --layout`, add `&probe=area` to the URL,
 and choose **Check automatic product layouts**. This uses the reconstructed
-13-word example and checks automatic product/orientation changes, the shared
-save dialog, cancellation, discard, and independently filled front/back surfaces
+13-word example and checks automatic product/orientation changes, draft
+restoration, and independently filled front/back surfaces
 in the real editor.
 `test/area-layout.test.js` also covers every product/orientation, mixed content,
 rounding edge cases and a 500-word capacity case with real font metrics.

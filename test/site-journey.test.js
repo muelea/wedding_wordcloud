@@ -50,7 +50,7 @@ test('remembered event IDs require exactly 22 URL-safe characters', () => {
   }
 });
 
-test('Home shows the cart link only for this tab and never points it at a fresh design', async () => {
+test('Home shows the unexpired device-local cart and never points it at a fresh design', async () => {
   const local = storage(), session = storage();
   Journey.remember('-_AbCdEf0123456789xyZQ', 'Cloud', true, local);
   const cloudLink = { getAttribute() { return this.href; } }, designLink = {}, title = {};
@@ -61,7 +61,8 @@ test('Home shows the cart link only for this tab and never points it at a fresh 
   const mount = () => scope.WolkenworteJourney.mountHome({ getElementById: () => card }, async () => ({ status: 200 }));
   await mount();
   assert.equal(designLink.hidden, true);
-  session.setItem('wolkenworte-order:-_AbCdEf0123456789xyZQ', JSON.stringify([{ id: 'a'.repeat(16) }]));
+  local.setItem('wolkenworte-order:-_AbCdEf0123456789xyZQ', JSON.stringify([{ id: 'a'.repeat(16) }]));
+  local.setItem('wolkenworte-order:-_AbCdEf0123456789xyZQ:expires', String(Date.now() + 10000));
   await mount();
   assert.equal(designLink.hidden, false);
   assert.equal(designLink.href, '/e/-_AbCdEf0123456789xyZQ/configure?cart=1');

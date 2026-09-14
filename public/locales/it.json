@@ -849,5 +849,10 @@
   "{{products}}: Bei der Einfuhr können zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.": "{{products}}: All’importazione potrebbero essere applicati dazi, imposte o costi aggiuntivi. L’importo non è ancora noto.",
   "{{products}}: Mögliche Einfuhrgebühren konnten noch nicht ermittelt werden.": "{{products}}: Non è stato ancora possibile determinare gli eventuali costi di importazione.",
   "Mögliche Einfuhrgebühren sind derzeit nicht bekannt.": "Gli eventuali costi di importazione non sono attualmente noti.",
-  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "La bozza è stata adattata ai margini di stampa attuali. Controllala e salvala di nuovo."
+  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "La bozza è stata adattata ai margini di stampa attuali. Controllala e salvala di nuovo.",
+  "Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.": "La nuvola di parole è cambiata. La bozza salvata rimane invariata.",
+  "Design mit aktuellen Wörtern neu erstellen": "Ricrea il design con le parole attuali",
+  "Entwurf konnte nicht gespeichert werden": "Impossibile salvare la bozza",
+  "Hier bleiben": "Resta qui",
+  "Trotzdem verlassen": "Esci comunque"
 }

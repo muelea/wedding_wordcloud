@@ -13,7 +13,7 @@ function storage() {
 }
 const template = fs.readFileSync(path.join(__dirname, '../views/configure.ejs'), 'utf8');
 
-test('checkout actions keep only errors visible and use quiet idle and hover states', () => {
+test('checkout actions are contextual, quiet and free of routine save/discard dialogs', () => {
   assert.doesNotMatch(template, /cart-action-hint|save-status|Nur ausdrücklich übernommene Designs|Design im Warenkorb gespeichert/);
   assert.match(template, /\.primary-button:disabled\s*\{[^}]*cursor:\s*default/);
   assert.match(template, /\.primary-button\.ww-is-busy:disabled\s*\{[^}]*cursor:\s*wait/);
@@ -24,8 +24,12 @@ test('checkout actions keep only errors visible and use quiet idle and hover sta
   const secondaryFocus = template.match(/\.secondary-button:focus-visible\s*\{([^}]*)\}/)?.[1] || '';
   assert.match(secondaryFocus, /background:/);
   assert.doesNotMatch(secondaryFocus, /border|outline|box-shadow/);
-  assert.doesNotMatch(template, /id="leave-design-cancel"[^>]*autofocus/);
-  assert.match(template, /leaveDialog\.showModal\(\);\s*leaveTitle\.focus/);
+  assert.doesNotMatch(template, /leave-design-dialog|askBeforeLeaving|confirmLeaving/);
+  assert.match(template, /id="draft-loss-dialog"/);
+  assert.match(template, /draftLossDialog\.showModal\(\);\s*draftLossTitle\.focus/);
+  assert.match(template, /'Änderungen übernehmen & zur Lieferadresse'/);
+  assert.match(template, /'In den Warenkorb & zur Lieferadresse'/);
+  assert.match(template, /id="cloud-update-notice"/);
 });
 
 function pageFunction(name) {
@@ -34,34 +38,50 @@ function pageFunction(name) {
   return template.slice(start, template.indexOf('\n    }', start) + '\n    }'.length);
 }
 const id = character => character.repeat(16);
+function draftBackend() {
+  const records = new Map();
+  return {
+    records,
+    get: async key => records.get(key),
+    put: async record => records.set(record.key, JSON.parse(JSON.stringify(record))),
+    delete: async key => records.delete(key),
+  };
+}
 function harness(extra = {}) {
   const local = storage();
   const cart = Session.createCart('event-a', local);
-  const calls = { posts: 0, bodies: [], navigations: [], dialogs: [], opened: [], busy: [], replaced: [] };
+  const drafts = draftBackend();
+  const draftStore = Session.createDraftStore('event-a', { backend: drafts });
+  const calls = { posts: 0, bodies: [], navigations: [], warnings: [], opened: [], busy: [], replaced: [] };
   const element = () => ({ textContent: '', disabled: false, hidden: false });
   const context = vm.createContext({
-    AbortSignal, URLSearchParams, setTimeout, clearTimeout, console: { warn() {} },
-    WolkenworteConfiguratorSession: Session, sessionStorage: local, cart,
+    AbortSignal, URLSearchParams, setTimeout, clearTimeout, requestAnimationFrame: callback => callback(),
+    console: { warn() {} },
+    WolkenworteConfiguratorSession: Session, sessionStorage: local, cart, draftStore,
     CloudLimits: require('../public/js/cloud-limits'),
     slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' },
     words: [['sonne', 1]], liveWords: [['sonne', 1], ['neu', 1]],
-    selectedOrientation: 'default', selectedTheme: 'confetti',
+    selectedOrientation: 'default', selectedTheme: 'confetti', customColors: ['#ff7100'],
     currentDesignNeedsSave: true, currentDesignEdited: false, editingOrderItemId: null, designRevision: 0, pendingConfiguration: null,
     workspaceReady: true, restorationFailed: false, orderActionPending: false,
     leavingPage: false, allowNavigation: false, suppressDirty: false,
+    draftSaveTimer: null, draftSavePromise: null, draftSavedRevision: -1, draftStorageFailed: false,
     saveDesignButton: element(), continueOrderButton: element(), designAnotherButton: element(),
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true },
     content: { inert: false }, orderBox: { scrollIntoView() {} },
+    cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
+    mobileEditorMedia: { matches: false }, setMobileEditorExpanded() {},
     getAllSurfaceDesigns: () => ({ default: [{ text: 'sonne' }] }),
     productSurfaces: () => [{ key: 'default', label: 'Druckfläche' }],
     mugEditor: { flushPendingChange() {}, hasPendingTextChange: () => false },
     setText: (element, message) => { element.textContent = message; }, clearText: element => { element.textContent = ''; },
     t: message => message, renderOrderBox() {}, renderAll() {}, initEditor() {}, refreshWorkspaceLayout() {},
     initMug3D: async () => {}, finalizeCurrentText: async () => {},
+    scheduleDraftSave() {}, loadLocalDraft: async () => null, applyLocalDraft: async () => {},
+    askToLeaveWithoutDraft: async () => { calls.warnings.push('draft-loss'); return 'stay'; },
     loadOrderItems: () => cart.read(),
     addOrderItem: (data, { replaceId }) => cart.replace(data, replaceId),
     setOrderActionsBusy: value => calls.busy.push(value), updateCartActions() {},
-    askBeforeLeaving: async options => { calls.dialogs.push(options); return 'cancel'; },
     loadOrderItem: async target => calls.opened.push(target),
     history: { replaceState: (_, __, url) => calls.replaced.push(url) },
     location: { search: '', assign: url => calls.navigations.push(url) },
@@ -72,25 +92,66 @@ function harness(extra = {}) {
     },
     ...extra,
   });
-  vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'confirmLeaving',
-    'runNavigation', 'saveBeforeLeaving', 'openOrderItem', 'removeOrderItem', 'navigateToShipping',
+  vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'draftSnapshot',
+    'hasUnpersistedDraft', 'persistCurrentDraft', 'runNavigation', 'saveBeforeLeaving',
+    'openOrderItem', 'removeOrderItem', 'navigateToShipping',
     'showRestorationError', 'initializeWorkspace'].map(pageFunction).join('\n'), context);
-  return { context, cart, local, calls };
+  return { context, cart, local, drafts, calls };
 }
 
-test('cart storage is tab-scoped, event-isolated, normalized and never contains canvas drafts', () => {
-  const firstTab = storage(), secondTab = storage();
-  const cart = Session.createCart('one', firstTab);
+test('cart storage is event-isolated, normalized, expiring and contains only approved references', () => {
+  const browser = storage();
+  let now = 1000;
+  const cart = Session.createCart('one', browser, () => now);
   cart.replace({ id: id('a'), productKey: 'mug', designs: ['not stored'] });
   assert.equal(cart.read().length, 1);
   assert.equal(cart.read()[0].designs, undefined);
-  assert.equal(Session.createCart('one', firstTab).read().length, 1);
-  assert.deepEqual(Session.createCart('two', firstTab).read(), []);
-  assert.deepEqual(Session.createCart('one', secondTab).read(), []);
+  assert.equal(Session.createCart('one', browser, () => now).read().length, 1);
+  assert.deepEqual(Session.createCart('two', browser).read(), []);
   cart.replace({ id: id('b') }, id('a'));
   cart.replace({ id: id('b') });
   assert.deepEqual(cart.read().map(item => item.id), [id('b')]);
-  assert.doesNotMatch(fs.readFileSync(require.resolve('../public/js/configurator-session'), 'utf8'), /indexedDB|createDraftStore/);
+  now += Session.CART_TTL_MS + 1;
+  assert.deepEqual(cart.read(), []);
+  assert.match(fs.readFileSync(require.resolve('../public/js/configurator-session'), 'utf8'), /indexedDB|createDraftStore/);
+});
+
+test('the former tab cart migrates once into the device-local cart', () => {
+  const local = storage(), session = storage();
+  session.setItem('wolkenworte-order:migration', JSON.stringify([{ id: id('a'), productKey: 'mug' }]));
+  const previousLocal = global.localStorage;
+  const previousSession = global.sessionStorage;
+  global.localStorage = local;
+  global.sessionStorage = session;
+  try {
+    assert.deepEqual(Session.createCart('migration').read().map(item => item.id), [id('a')]);
+    assert.equal(session.getItem('wolkenworte-order:migration'), null);
+    assert.ok(Number(local.getItem('wolkenworte-order:migration:expires')) > Date.now());
+  } finally {
+    if (previousLocal === undefined) delete global.localStorage;
+    else global.localStorage = previousLocal;
+    if (previousSession === undefined) delete global.sessionStorage;
+    else global.sessionStorage = previousSession;
+  }
+});
+
+test('local drafts restore by active design or product and expire without entering the cart', async () => {
+  const backend = draftBackend();
+  let now = 1000;
+  const store = Session.createDraftStore('event-a', { backend, now: () => now });
+  await store.save({ productKey: 'mug', orientation: 'default', theme: 'confetti',
+    words: [['Liebe', 2]], designs: { default: [{ text: 'Liebe' }] }, designRevision: 4 });
+  assert.equal((await store.loadActive()).designRevision, 4);
+  assert.equal((await store.loadFor({ productKey: 'mug' })).words[0][0], 'Liebe');
+  assert.deepEqual(Session.createCart('event-a', storage()).read(), []);
+  await store.save({ productKey: 'poster', orientation: 'landscape', theme: 'confetti',
+    words: [['Neu', 1]], designs: { default: [{ text: 'Neu' }] } });
+  await store.clearActive();
+  assert.equal(await store.loadActive(), null);
+  assert.equal((await store.loadFor({ productKey: 'mug' })).designRevision, 4,
+    'clearing the current draft does not erase unrelated product drafts');
+  now += Session.DRAFT_TTL_MS + 1;
+  assert.equal(await store.loadFor({ productKey: 'mug' }), null);
 });
 
 test('full carts reject an addition but allow replacing a position', () => {
@@ -126,41 +187,37 @@ test('explicit approval sends every whole-word style in the immutable surface sn
   assert.deepEqual(JSON.parse(JSON.stringify(calls.bodies[0].designs.default)), styled);
 });
 
-test('empty-cart shipping requires confirmation and never leaves on cancel', async () => {
+test('an empty cart never navigates, while the explicit continuation action adds then continues', async () => {
   const { context: page, calls, cart } = harness();
-  await page.runNavigation(page.navigateToShipping, { shipping: true });
-  assert.equal(calls.dialogs.length, 1);
+  await page.runNavigation(page.navigateToShipping);
   assert.equal(calls.posts, 0);
   assert.equal(calls.navigations.length, 0);
-  page.askBeforeLeaving = async () => 'save';
-  await page.runNavigation(page.navigateToShipping, { shipping: true });
+  assert.match(page.errorText.textContent, /zuerst ein Design/);
+  assert.equal(await page.saveCurrentDesign(page.continueOrderButton), true);
+  page.navigateToShipping();
   assert.equal(cart.read().length, 1);
   assert.equal(calls.posts, 1);
   assert.match(calls.navigations[0], /shipping\?configuration=1111111111111111&edit=1111111111111111/);
+  assert.match(template, /if \(\(hasUnsavedDesign\(\) \|\| !loadOrderItems\(\)\.length\) &&\s*!await saveCurrentDesign\(continueOrderButton\)\) return/);
 });
 
-test('empty-cart dialog offers current-design confirmation and no impossible discard-and-ship', async () => {
+test('only failed local persistence opens the focused leave-without-draft warning', async () => {
   const { context: page } = harness();
   let close;
-  page.leaveDescription = {};
-  page.leaveSaveButton = {};
-  page.leaveDiscardButton = {};
-  page.leaveTitle = { focus: () => { page.focusedLeaveElement = 'title'; } };
-  page.leaveDialog = { addEventListener: (_, listener) => { close = listener; }, showModal() {} };
-  vm.runInContext(pageFunction('askBeforeLeaving'), page);
-  const choice = page.askBeforeLeaving({ shipping: true });
+  page.draftLossTitle = { focus: () => { page.focusedLeaveElement = 'title'; } };
+  page.draftLossDialog = { returnValue: '', addEventListener: (_, listener) => { close = listener; }, showModal() {} };
+  vm.runInContext(pageFunction('askToLeaveWithoutDraft'), page);
+  const choice = page.askToLeaveWithoutDraft();
   assert.equal(page.focusedLeaveElement, 'title');
-  assert.equal(page.leaveDiscardButton.hidden, true);
-  assert.match(page.leaveDescription.textContent, /Warenkorb ist noch leer/);
-  page.leaveDialog.returnValue = 'cancel'; close();
-  assert.equal(await choice, 'cancel');
+  page.draftLossDialog.returnValue = 'stay'; close();
+  assert.equal(await choice, 'stay');
 });
 
 test('saved shipping return does not prompt or approve again', async () => {
   const { context: page, cart, calls } = harness({ currentDesignNeedsSave: false, editingOrderItemId: id('a') });
   cart.replace({ id: id('a') });
-  await page.runNavigation(page.navigateToShipping, { shipping: true });
-  assert.equal(calls.dialogs.length, 0);
+  await page.runNavigation(page.navigateToShipping);
+  assert.equal(calls.warnings.length, 0);
   assert.equal(calls.posts, 0);
   assert.equal(calls.navigations.length, 1);
 });
@@ -177,7 +234,8 @@ function switchingHarness(extra = {}) {
   page.closeToolbarMenus = () => {};
   page.buildOrientationOptions = () => {};
   state.calls.switches = [];
-  page.startProductDesign = async (product, orientation) => state.calls.switches.push([product.key, orientation]);
+  page.startProductDesign = async (product, orientation, options) =>
+    state.calls.switches.push([product.key, orientation, options]);
   vm.runInContext(['confirmProductDialog', 'activateOrientation', 'markDirty'].map(pageFunction).join('\n'), page);
   return state;
 }
@@ -185,52 +243,51 @@ function switchingHarness(extra = {}) {
 test('an untouched automatic product switches directly, while selecting the same product is a no-op', async () => {
   const { context: page, calls } = switchingHarness();
   await page.confirmProductDialog();
-  assert.deepEqual(calls.switches, [['pillow', undefined]]);
-  assert.equal(calls.dialogs.length, 0);
+  assert.equal(calls.switches[0][0], 'pillow');
+  assert.equal(calls.switches[0][1], undefined);
+  assert.equal(calls.switches[0][2].preserveEditingItem, false);
+  assert.equal(calls.warnings.length, 0);
   assert.equal(calls.posts, 0, 'an automatic design is not silently added to the basket');
   page.dialogSelectedProduct = () => page.product;
   await page.confirmProductDialog();
   assert.equal(calls.switches.length, 1);
 });
 
-test('edited product and orientation changes reuse save/discard/cancel, with failed saves retaining the design', async () => {
+test('edited product and orientation changes autosave locally and switch without cart writes or routine dialogs', async () => {
   for (const action of ['product', 'orientation']) {
-    for (const choice of ['cancel', 'discard', 'save', 'failed-save']) {
-      const { context: page, calls, cart } = switchingHarness({ currentDesignEdited: true });
-      page.askBeforeLeaving = async options => { calls.dialogs.push(options); return choice === 'failed-save' ? 'save' : choice; };
-      if (choice === 'failed-save') page.fetch = async () => { throw new Error('offline'); };
-      if (action === 'product') await page.confirmProductDialog();
-      else await page.activateOrientation({ key: 'landscape' });
-      assert.equal(calls.dialogs.length, 1, action + '/' + choice);
-      assert.equal(calls.switches.length, ['save', 'discard'].includes(choice) ? 1 : 0);
-      assert.equal(cart.read().length, choice === 'save' ? 1 : 0);
-      if (choice === 'save') assert.equal(calls.bodies[0].productKey, 'mug', 'save the old product before switching');
-      assert.equal(page.leavingPage, false);
-      assert.equal(page.orderActionPending, false);
-    }
+    const { context: page, calls, cart, drafts } = switchingHarness({ currentDesignEdited: true });
+    if (action === 'product') await page.confirmProductDialog();
+    else await page.activateOrientation({ key: 'landscape' });
+    assert.equal(calls.warnings.length, 0, action);
+    assert.equal(calls.switches.length, 1, action);
+    assert.equal(cart.read().length, 0);
+    assert.equal(calls.posts, 0, 'draft autosave never creates a server configuration');
+    assert.ok([...drafts.records.values()].some(record => record.type === 'draft'));
+    assert.equal(page.leavingPage, false);
   }
 });
 
-test('pending text and editor changes are finalized before deciding whether a switch needs confirmation', async () => {
+test('pending text is finalized into the local draft before switching, and failed persistence retains the design', async () => {
   const { context: page, calls } = switchingHarness();
   page.finalizeCurrentText = async () => page.markDirty();
   await page.confirmProductDialog();
-  assert.equal(calls.dialogs.length, 1);
-  assert.equal(calls.switches.length, 0);
+  assert.equal(calls.switches.length, 1);
   page.finalizeCurrentText = async () => { throw new Error('font failed'); };
+  page.dialogSelectedProduct = () => ({ key: 'poster' });
   await page.confirmProductDialog();
-  assert.equal(calls.switches.length, 0);
-  assert.match(page.errorText.textContent, /nicht gespeichert/);
+  assert.equal(calls.switches.length, 1);
+  assert.match(page.errorText.textContent, /Entwurf konnte/);
 });
 
-test('Design another product reuses its prior confirmation, including choosing the same product', async () => {
+test('Design another product starts a separate design even when choosing the same product', async () => {
   const { context: page, calls } = switchingHarness({ currentDesignEdited: true });
   page.startingAnotherProduct = true;
   page.dialogSelectedProduct = () => page.product;
   await page.confirmProductDialog();
-  assert.equal(calls.dialogs.length, 0);
-  assert.deepEqual(calls.switches, [['mug', undefined]]);
-  assert.match(template, /designAnotherButton\.addEventListener[\s\S]*?onlyIfEdited: true/);
+  assert.equal(calls.warnings.length, 0);
+  assert.deepEqual(calls.switches, [['mug', undefined, undefined]]);
+  assert.match(template, /designAnotherButton\.addEventListener\('click',[\s\S]*?openProductDialog\(\)/);
+  assert.doesNotMatch(template, /designAnotherButton\.addEventListener[\s\S]{0,200}runNavigation/);
 });
 
 test('new product designs refresh the cloud and detach from a saved basket item only after loading succeeds', async () => {
@@ -263,26 +320,38 @@ test('new product designs refresh the cloud and detach from a saved basket item 
   }
 });
 
-test('nonempty-cart shipping can discard a new design without adding it', async () => {
-  const { context: page, cart, calls } = harness({ askBeforeLeaving: async () => 'discard' });
+test('a new draft stays outside a nonempty cart when navigating to shipping', async () => {
+  const { context: page, cart, calls, drafts } = harness();
   cart.replace({ id: id('a') });
-  await page.runNavigation(page.navigateToShipping, { shipping: true });
+  await page.runNavigation(page.navigateToShipping);
   assert.equal(calls.posts, 0);
   assert.deepEqual(cart.read().map(item => item.id), [id('a')]);
   assert.match(calls.navigations[0], /configuration=aaaaaaaaaaaaaaaa/);
+  assert.ok([...drafts.records.values()].some(record => record.type === 'draft'));
 });
 
-test('Home and word-cloud links share save/discard/cancel and capture href before awaiting', async () => {
+test('Home and word-cloud links autosave locally, capture href and navigate without a routine dialog', async () => {
   for (const destination of ['/', '/e/event-a']) {
-    for (const choice of ['save', 'discard', 'cancel']) {
-      const { context: page, calls } = harness({ askBeforeLeaving: async () => choice });
-      const event = { button: 0, currentTarget: { href: destination }, preventDefault() {} };
-      const done = page.saveBeforeLeaving(event);
-      event.currentTarget = null;
-      await done;
-      assert.equal(calls.posts, choice === 'save' ? 1 : 0);
-      assert.deepEqual(calls.navigations, choice === 'cancel' ? [] : [destination]);
-    }
+    const { context: page, calls, drafts } = harness();
+    const event = { button: 0, currentTarget: { href: destination }, preventDefault() {} };
+    const done = page.saveBeforeLeaving(event);
+    event.currentTarget = null;
+    await done;
+    assert.equal(calls.posts, 0);
+    assert.deepEqual(calls.navigations, [destination]);
+    assert.equal(calls.warnings.length, 0);
+    assert.ok([...drafts.records.values()].some(record => record.type === 'draft'));
+  }
+});
+
+test('a failed draft write is the only leave warning and the user remains in control', async () => {
+  for (const choice of ['stay', 'leave']) {
+    const failingDraftStore = { save: async () => { throw new Error('blocked'); } };
+    const { context: page, calls } = harness({ draftStore: failingDraftStore,
+      askToLeaveWithoutDraft: async () => { calls.warnings.push('draft-loss'); return choice; } });
+    await page.saveBeforeLeaving({ button: 0, currentTarget: { href: '/e/event-a' }, preventDefault() {} });
+    assert.deepEqual(calls.navigations, choice === 'leave' ? ['/e/event-a'] : []);
+    assert.deepEqual(calls.warnings, ['draft-loss']);
   }
 });
 
@@ -292,7 +361,7 @@ test('modified and new-tab links are never intercepted', async () => {
     { button: 0, currentTarget: { href: '/datenschutz', target: '_blank' } }]) {
     await page.saveBeforeLeaving({ preventDefault() { throw new Error('intercepted'); }, ...event });
   }
-  assert.equal(calls.dialogs.length, 0);
+  assert.equal(calls.warnings.length, 0);
 });
 
 test('a pending save blocks repeated clicks and navigation until it succeeds', async () => {
@@ -308,11 +377,11 @@ test('a pending save blocks repeated clicks and navigation until it succeeds', a
   assert.equal(page.orderActionPending, false);
 });
 
-test('save failure keeps the editor and does not navigate or add an item', async () => {
+test('server approval failure keeps the editor and does not navigate or add an item', async () => {
   const { context: page, cart, calls } = harness({
-    askBeforeLeaving: async () => 'save', fetch: async () => { throw new Error('offline'); },
+    fetch: async () => { throw new Error('offline'); },
   });
-  await page.runNavigation(page.navigateToShipping, { shipping: true });
+  assert.equal(await page.saveCurrentDesign(page.continueOrderButton), false);
   assert.deepEqual(cart.read(), []);
   assert.equal(calls.navigations.length, 0);
   assert.equal(page.currentDesignNeedsSave, true);
@@ -321,13 +390,13 @@ test('save failure keeps the editor and does not navigate or add an item', async
   assert.match(page.errorText.textContent, /nicht gespeichert/);
 });
 
-test('storage failure is detected before a POST and an acknowledged snapshot is reused on storage retry', async () => {
+test('cart storage failure is detected before a POST and an acknowledged snapshot is reused on storage retry', async () => {
   const { context: page, local, calls } = harness();
-  const write = local.setItem;
-  local.setItem = () => { throw new Error('blocked'); };
+  const read = local.getItem;
+  local.getItem = () => { throw new Error('blocked'); };
   assert.equal(await page.saveCurrentDesign(page.saveDesignButton), false);
   assert.equal(calls.posts, 0);
-  local.setItem = write;
+  local.getItem = read;
   const add = page.addOrderItem;
   page.addOrderItem = () => { throw new Error('quota after response'); };
   assert.equal(await page.saveCurrentDesign(page.saveDesignButton), false);
@@ -348,29 +417,42 @@ test('removing an active position cannot silently re-add it on navigation', asyn
   assert.deepEqual(cart.read(), []);
 });
 
-test('fresh entry never opens old cart words; explicit edit and cart entry open only saved designs', async () => {
+test('fresh entry restores the active local draft while explicit edit and cart entry open saved designs', async () => {
   for (const search of ['', '?edit=aaaaaaaaaaaaaaaa', '?cart=1']) {
+    let restoredDraft = false;
     const { context: page, cart, calls } = harness({ workspaceReady: false,
-      location: { search }, words: [['sonne', 1], ['neu', 1]] });
+      location: { search }, words: [['sonne', 1], ['neu', 1]],
+      loadLocalDraft: async () => ({ productKey: 'mug' }),
+      applyLocalDraft: async () => { restoredDraft = true; },
+    });
     cart.replace({ id: id('a') });
     await page.initializeWorkspace();
     assert.deepEqual(calls.opened, search ? [id('a')] : []);
+    assert.equal(restoredDraft, search === '');
     assert.equal(page.words.length, 2);
     assert.equal(page.workspaceReady, true);
     assert.equal(page.content.inert, false);
   }
-  assert.doesNotMatch(template, /draftStore|persistCurrentDraft|savedActive|currentDraftKey/);
+  assert.match(template, /const localDraft = await loadLocalDraft\(\)/);
 });
 
-test('loading a saved design uses its server snapshot without reading old browser drafts', async () => {
+test('loading a saved design uses a matching local working copy before its immutable server snapshot', async () => {
   const { context: page, cart, calls } = harness();
   cart.replace({ id: id('a') });
   let restored;
+  let local = true;
+  page.loadLocalDraft = async () => local ? ({ editingOrderItemId: id('a'), productKey: 'mug' }) : null;
+  page.applyLocalDraft = async data => { restored = data; };
   page.fetch = async url => { assert.match(url, /aaaaaaaaaaaaaaaa\/edit$/); return {
     ok: true, json: async () => ({ id: id('a'), words: [['alt', 1]], designs: { default: [] } }),
   }; };
   page.applySavedConfiguration = async data => { restored = data; };
   vm.runInContext(pageFunction('loadOrderItem'), page);
+  await page.loadOrderItem(id('a'));
+  assert.equal(restored.editingOrderItemId, id('a'));
+  assert.equal(calls.posts, 0);
+  local = false;
+  restored = null;
   await page.loadOrderItem(id('a'));
   assert.deepEqual(restored.words, [['alt', 1]]);
   assert.equal(page.currentDesignNeedsSave, false);
@@ -401,7 +483,7 @@ test('page-history return reloads authoritative state without a second leave war
   const context = vm.createContext({
     window: { addEventListener: (_, fn) => { callback = fn; } },
     allowNavigation: false, leavingPage: true, orderActionPending: true, workspaceReady: true,
-    content: { inert: true }, leaveDialog: { open: false }, location: { reload: () => reloads++ },
+    content: { inert: true }, draftLossDialog: { open: false }, location: { reload: () => reloads++ },
   });
   vm.runInContext(source, context);
   callback({ persisted: true });
@@ -426,7 +508,7 @@ test('shipping drafts retain addresses and quantities across replacement, never 
   assert.equal(Session.createShippingDraft('other', session).restore([id('c')]), null);
 });
 
-test('payment cleanup removes only confirmed purchased IDs in this event and tab', () => {
+test('payment cleanup removes only confirmed purchased IDs and expires the device-local receipt fence', () => {
   const session = storage(), cart = Session.createCart('a', session);
   cart.write([{ id: id('a') }, { id: id('b') }]);
   Session.createCart('other', session).write([{ id: id('a') }]);
@@ -436,6 +518,7 @@ test('payment cleanup removes only confirmed purchased IDs in this event and tab
   assert.deepEqual(cart.read().map(item => item.id), [id('b')]);
   assert.equal(Session.createCart('other', session).read().length, 1);
   assert.deepEqual(Session.purchasedIds('a', session), [id('a')]);
+  assert.ok(Number(session.getItem('wolkenworte-purchased:a:expires')) > Date.now());
 });
 
 test('legacy address splits are discarded instead of silently moving products to the first address', () => {

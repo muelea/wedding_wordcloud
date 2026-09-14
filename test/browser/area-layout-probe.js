@@ -39,39 +39,39 @@
       check('layout chooser is removed', !document.getElementById('placement-step'));
       for (const key of ['spiral-notebook-dotted', 'white-glossy-mug-duo-11oz']) {
         await pick(key); await frame();
-        check(key + ': untouched product switches without a dialog', product.key === key && !leaveDialog.open);
+        check(key + ': product switches without a routine dialog', product.key === key && !draftLossDialog.open);
         filled(key);
       }
       edit();
       const before = JSON.stringify(getAllSurfaceDesigns());
-      let pending = pick('all-over-basic-pillow-18in'); await frame();
-      check('edited product uses the existing Save this design dialog', leaveDialog.open);
-      leaveCancelButton.click(); await pending;
-      check('cancel keeps the product and exact edited design', product.key === 'white-glossy-mug-duo-11oz' &&
-        JSON.stringify(getAllSurfaceDesigns()) === before);
-      pending = pick('all-over-basic-pillow-18in'); await frame();
-      leaveDiscardButton.click(); await pending; await frame();
-      filled('pillow after discard');
+      await pick('all-over-basic-pillow-18in'); await frame();
+      check('edited product autosaves and switches without a routine dialog',
+        product.key === 'all-over-basic-pillow-18in' && !draftLossDialog.open);
+      filled('new pillow');
+      await pick('white-glossy-mug-duo-11oz'); await frame();
+      check('returning to the mug restores its exact local draft', JSON.stringify(getAllSurfaceDesigns()) === before);
+      await pick('all-over-basic-pillow-18in'); await frame();
       const front = JSON.stringify(getAllSurfaceDesigns().front);
       selectSurface('back'); edit();
       check('editing the back leaves the front unchanged', JSON.stringify(getAllSurfaceDesigns().front) === front);
-      pending = pick('matte-poster-30x40cm'); await frame();
-      check('edits on the back are protected when changing product', leaveDialog.open);
-      leaveDiscardButton.click(); await pending; await frame();
+      const pillowDraft = JSON.stringify(getAllSurfaceDesigns());
+      await pick('matte-poster-30x40cm'); await frame();
+      check('edits on the back autosave when changing product', product.key === 'matte-poster-30x40cm');
       const landscape = product.orientations.find(option => option.key === 'landscape');
       await activateOrientation(landscape); await frame();
-      check('untouched orientation switches directly', selectedOrientation === 'landscape' && !leaveDialog.open);
+      check('orientation switches directly', selectedOrientation === 'landscape' && !draftLossDialog.open);
       filled('landscape poster');
       edit();
+      const landscapeDraft = JSON.stringify(getAllSurfaceDesigns());
       const portrait = product.orientations.find(option => option.key === 'portrait');
-      pending = activateOrientation(portrait); await frame();
-      check('edited orientation uses the same dialog', leaveDialog.open);
-      leaveCancelButton.click(); await pending;
-      check('cancel keeps the orientation', selectedOrientation === 'landscape');
-      pending = activateOrientation(portrait); await frame();
-      leaveDiscardButton.click(); await pending; await frame();
-      check('discard switches orientation', selectedOrientation === 'portrait');
+      await activateOrientation(portrait); await frame();
+      check('edited orientation autosaves and switches directly', selectedOrientation === 'portrait' && !draftLossDialog.open);
       filled('portrait poster');
+      await activateOrientation(landscape); await frame();
+      check('returning to an orientation restores its exact local draft',
+        JSON.stringify(getAllSurfaceDesigns()) === landscapeDraft);
+      await pick('all-over-basic-pillow-18in'); await frame();
+      check('multi-surface local drafts restore exactly', JSON.stringify(getAllSurfaceDesigns()) === pillowDraft);
     } catch (error) { results.push({ name: 'Probe failed', pass: false, message: error.message }); }
     finally {
       report.textContent = JSON.stringify({ passed: results.every(result => result.pass), results }, null, 2);

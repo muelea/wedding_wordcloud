@@ -849,5 +849,10 @@
   "{{products}}: Bei der Einfuhr können zusätzliche Zölle, Steuern oder Gebühren anfallen. Die Höhe ist noch nicht bekannt.": "{{products}} : Des droits de douane, taxes ou frais supplémentaires peuvent être dus à l’importation. Leur montant n’est pas encore connu.",
   "{{products}}: Mögliche Einfuhrgebühren konnten noch nicht ermittelt werden.": "{{products}} : Les éventuels frais d’importation n’ont pas encore pu être déterminés.",
   "Mögliche Einfuhrgebühren sind derzeit nicht bekannt.": "Les éventuels frais d’importation sont actuellement inconnus.",
-  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Votre brouillon a été adapté aux marges d’impression actuelles. Veuillez le vérifier et l’enregistrer à nouveau."
+  "Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.": "Votre brouillon a été adapté aux marges d’impression actuelles. Veuillez le vérifier et l’enregistrer à nouveau.",
+  "Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.": "Le nuage de mots a changé. Votre brouillon enregistré reste inchangé.",
+  "Design mit aktuellen Wörtern neu erstellen": "Recréer le design avec les mots actuels",
+  "Entwurf konnte nicht gespeichert werden": "Le brouillon n’a pas pu être enregistré",
+  "Hier bleiben": "Rester ici",
+  "Trotzdem verlassen": "Quitter quand même"
 }

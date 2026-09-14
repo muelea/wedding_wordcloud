@@ -64,6 +64,33 @@ function harness(fetcher) {
   return { scope, calls, submit: () => handlers.submit({ preventDefault() {} }), checkout: () => handlers.click() };
 }
 
+test('shipping cart review removes only the chosen item and keeps last-item removal recoverable', () => {
+  for (const initial of [
+    [{ id: 'a'.repeat(16) }, { id: 'b'.repeat(16) }],
+    [{ id: 'a'.repeat(16) }],
+  ]) {
+    let items = structuredClone(initial);
+    const removedFromDraft = [];
+    const navigation = [];
+    const scope = vm.createContext({
+      slug: 'shipping-test',
+      cart: { read: () => items, write: next => { items = next; } },
+      shippingDraft: { removeConfigurations: ids => removedFromDraft.push(...ids) },
+      saveShippingDraft() {},
+      location: { assign: url => navigation.push(url) },
+      setText() {}, formError: {},
+    });
+    vm.runInContext(['configureHref', 'shippingHref', 'removeConfigurationFromCart']
+      .map(pageFunction).join('\n'), scope);
+    scope.removeConfigurationFromCart('a'.repeat(16));
+    assert.deepEqual(Array.from(items, item => item.id), initial.length === 2 ? ['b'.repeat(16)] : []);
+    assert.deepEqual(removedFromDraft, ['a'.repeat(16)]);
+    assert.match(navigation[0], initial.length === 2
+      ? /shipping\?configuration=bbbbbbbbbbbbbbbb&edit=bbbbbbbbbbbbbbbb$/
+      : /configure\?edit=aaaaaaaaaaaaaaaa$/);
+  }
+});
+
 test('editing an address while pricing is pending cannot display the old address quote', async () => {
   const pending = deferred();
   const page = harness(() => pending.promise);

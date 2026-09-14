@@ -1013,7 +1013,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /class="primary-button continue-button" id="continue-order" type="button"[^>]*>/);
   assert.match(configurePage, /async function saveCurrentDesign\(activeButton\)/);
   assert.match(configurePage, /if \(!currentDesignNeedsSave\) return true/);
-  assert.match(configurePage, /if \(await confirmLeaving\(options\)\) await action\(\)/);
+  assert.match(configurePage, /if \(await persistCurrentDraft\(\)\) await action\(\)/);
+  assert.doesNotMatch(configurePage, /askBeforeLeaving|confirmLeaving|leave-design-dialog/);
+  assert.match(configurePage, /WolkenworteConfiguratorSession\.createDraftStore\(slug\)/);
   assert.match(configurePage, /await loadOrderItem\(configurationId\)/);
   assert.match(configurePage, /function saveBeforeLeaving\(event\)/);
   assert.match(configurePage, /\[brandLink, backLink, mobileBackLink\]\.filter\(Boolean\)[\s\S]*?saveBeforeLeaving/);
@@ -1023,7 +1025,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /href="\/datenschutz" target="_blank" rel="noopener"/);
   assert.match(configurePage, /href="\/impressum" target="_blank" rel="noopener"/);
   assert.match(configurePage, /id="save-design"/);
-  assert.match(configurePage, /runNavigation\(navigateToShipping, \{ shipping: true \}\)/);
+  assert.match(configurePage, /!await saveCurrentDesign\(continueOrderButton\)\) return;[\s\S]*?navigateToShipping\(\)/);
   assert.match(configurePage, /const missingSurface = productSurfaces\(\)\.find/);
   assert.match(configurePage, /function createOrderItemThumbnail\(item, itemProduct\)/);
   assert.match(configurePage, /if \(fallbackUrl\) fallback\.src = fallbackUrl/);

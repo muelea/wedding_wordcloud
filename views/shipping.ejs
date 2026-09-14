@@ -91,7 +91,7 @@
     }
     .shipment-product {
       display: grid;
-      grid-template-columns: 48px minmax(0, 1fr) auto;
+      grid-template-columns: 48px minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 12px;
       padding: 10px;
@@ -110,6 +110,23 @@
     .shipment-product-copy { min-width: 0; }
     .shipment-product-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
     .shipment-product-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .shipment-product-actions { display: flex; align-items: center; gap: 4px; }
+    .shipment-product-action {
+      min-height: 34px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--berry);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 650;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .shipment-product-action:hover { background: rgba(156, 28, 76, .07); }
+    .shipment-product-action:focus-visible { outline: 2px solid rgba(156, 28, 76, .28); outline-offset: 1px; }
+    .shipment-product-remove { color: var(--danger); }
     .quantity-control {
       flex: 0 0 auto;
       display: grid;
@@ -301,7 +318,8 @@
       .steps .step.active .step-label { display: inline; }
       .field-row { grid-template-columns: 1fr; }
       .shipment-card { padding: 15px; }
-      .shipment-product { grid-template-columns: 44px minmax(0, 1fr); }
+      .shipment-product { grid-template-columns: 44px minmax(0, 1fr) auto; }
+      .shipment-product-actions { grid-column: 3; grid-row: 1; flex-direction: column; align-items: stretch; }
       .shipment-product .quantity-control { grid-column: 1 / -1; }
       .quantity-control { width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; }
       .quantity-control input { width: 100%; }
@@ -398,6 +416,7 @@
     let shippingDraftReady = false;
     let shippingDraft = null;
     let shippingDraftUnstored = false;
+    const cart = WolkenworteConfiguratorSession.createCart(slug);
     try { shippingDraft = WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage); } catch {}
     const customerErrorSources = Object.freeze({
       shipping_unavailable: 'Für diese Produktauswahl ist an eure Adresse kein Standardversand verfügbar.',
@@ -482,6 +501,32 @@
       else clearText(status);
     }
 
+    function configureHref(configurationId) {
+      return `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(configurationId)}`;
+    }
+
+    function shippingHref(ids, editId = ids[0]) {
+      const selection = ids.length === 1
+        ? `configuration=${encodeURIComponent(ids[0])}`
+        : `configurations=${encodeURIComponent(ids.join(','))}`;
+      return `/e/${encodeURIComponent(slug)}/shipping?${selection}&edit=${encodeURIComponent(editId)}`;
+    }
+
+    function removeConfigurationFromCart(configurationId) {
+      saveShippingDraft();
+      try {
+        const remaining = cart.read().filter((item) => item.id !== configurationId);
+        cart.write(remaining);
+        shippingDraft?.removeConfigurations([configurationId]);
+        const remainingIds = remaining.map((item) => item.id);
+        location.assign(remainingIds.length
+          ? shippingHref(remainingIds, remainingIds[0])
+          : configureHref(configurationId));
+      } catch {
+        setText(formError, 'Der Warenkorb konnte nicht aktualisiert werden. Bitte versucht es erneut.');
+      }
+    }
+
     window.addEventListener('beforeunload', (event) => {
       if (!shippingDraftUnstored) return;
       event.preventDefault();
@@ -490,10 +535,9 @@
 
     function shippingReturnIsStale(checkCart = false) {
       try {
-        if (configurationIds.some((id) => WolkenworteConfiguratorSession.purchasedIds(slug, sessionStorage).includes(id))) return true;
-        const cart = sessionStorage.getItem(`wolkenworte-order:${slug}`);
-        if (checkCart && cart !== null) {
-          const ids = WolkenworteConfiguratorSession.normalizeCart(JSON.parse(cart)).map((item) => item.id);
+        if (configurationIds.some((id) => WolkenworteConfiguratorSession.purchasedIds(slug).includes(id))) return true;
+        if (checkCart) {
+          const ids = cart.read().map((item) => item.id);
           return ids.length !== configurationIds.length || configurationIds.some((id) => !ids.includes(id));
         }
       } catch {}
@@ -991,6 +1035,22 @@
       quantityCopy.setAttribute('data-i18n-ignore', '');
       copy.append(title, size, quantityCopy);
 
+      const actions = document.createElement('div');
+      actions.className = 'shipment-product-actions';
+      const edit = document.createElement('a');
+      edit.className = 'shipment-product-action';
+      edit.href = configureHref(itemConfiguration.id);
+      setText(edit, 'Design anpassen');
+      setTranslatedAttribute(edit, 'aria-label', '{{item}} öffnen und bearbeiten', { item: productName });
+      edit.addEventListener('click', saveShippingDraft);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'shipment-product-action shipment-product-remove';
+      setText(remove, 'Entfernen');
+      setTranslatedAttribute(remove, 'aria-label', '{{item}} aus dem Warenkorb entfernen', { item: productName });
+      remove.addEventListener('click', () => removeConfigurationFromCart(itemConfiguration.id));
+      actions.append(edit, remove);
+
       const control = document.createElement('div');
       control.className = 'quantity-control';
       setTranslatedAttribute(control, 'aria-label', '{{product}} für Lieferung {{count}}', {
@@ -1040,7 +1100,7 @@
       });
 
       control.append(minus, input, plus);
-      row.append(image, copy, control);
+      row.append(image, copy, actions, control);
       updateQuantityButtons(row);
       return row;
     }
@@ -1061,7 +1121,7 @@
       productsBlock.className = 'shipment-products';
       const productsTitle = document.createElement('strong');
       productsTitle.className = 'shipment-products-title';
-      setText(productsTitle, 'Produkte an diese Adresse');
+      setText(productsTitle, 'Euer Warenkorb');
       productsBlock.append(productsTitle);
       configurations.forEach((itemConfiguration) => {
         productsBlock.appendChild(createShipmentProductRow(itemConfiguration, shipment, index));
