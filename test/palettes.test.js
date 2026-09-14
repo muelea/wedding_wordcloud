@@ -11,7 +11,7 @@ const { startTestServer, createEvent } = require('./helpers');
 
 const PALETTE_KEYS = ['konfetti', 'dopamin-pop', 'pastel', 'sage-gold', 'ocean', 'custom'];
 const APPROVED_COLORS = {
-  konfetti: ['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8'],
+  konfetti: ['#f77500', '#ed2446', '#2455f5', '#18a84b', '#efbf00', '#e600b8'],
   'dopamin-pop': ['#ff6a00', '#f500a6', '#00bfc4', '#ffd400', '#7b2cff', '#7ccc00'],
 };
 const WORDS = ['liebe', 'lachen', 'glück', 'sonne', 'tanzen', 'immer'];

@@ -15,7 +15,7 @@ const THEMES = Object.freeze([
     key: 'konfetti',
     label: 'Konfetti',
     description: 'Bunte Kontraste mit Kobaltblau, Sonnengelb und Fuchsia',
-    colors: Object.freeze(['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8']),
+    colors: Object.freeze(['#f77500', '#ed2446', '#2455f5', '#18a84b', '#efbf00', '#e600b8']),
     background: Object.freeze(['#fffdfa', '#fff7ef', 'rgba(239,191,0,.10)', 'rgba(230,0,184,.05)']),
   }),
   Object.freeze({

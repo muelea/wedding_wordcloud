@@ -1556,6 +1556,9 @@
 
   displayOwnWordsButton.addEventListener('click', openOwnWordsDialog);
   displayOwnWordsShortcut.addEventListener('click', openOwnWordsDialog);
+  displayOwnWordsDialog.addEventListener('click', (event) => {
+    if (event.target === displayOwnWordsDialog) displayOwnWordsDialog.close();
+  });
   container.addEventListener('click', handleCloudInteraction);
   canvas.addEventListener('pointermove', (event) => {
     canvas.classList.toggle('is-word-hover', Boolean(cloudWordAtEvent(event)));

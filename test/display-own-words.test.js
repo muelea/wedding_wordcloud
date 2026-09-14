@@ -65,6 +65,11 @@ test('empty cloud space is inert while both management actions share the dialog-
   assert.equal((template.match(/id="display-own-words-dialog"/g) || []).length, 1);
 });
 
+test('the own-words dialog closes only when its backdrop is clicked', () => {
+  assert.match(template,
+    /displayOwnWordsDialog\.addEventListener\('click', \(event\) => \{\s*if \(event\.target === displayOwnWordsDialog\) displayOwnWordsDialog\.close\(\);\s*\}\)/);
+});
+
 test('word hit testing uses the scaled painted box and only then its larger touch target', () => {
   const painted = { word: 'painted', x: 50, y: 50, width: 40, height: 10, scale: 2 };
   const nearby = { word: 'nearby', x: 98, y: 50, width: 8, height: 8, scale: 1 };
