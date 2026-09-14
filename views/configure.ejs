@@ -1596,8 +1596,10 @@
     }
 
     .order-actions button[hidden] { display: none; }
-    #draft-loss-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
-    #draft-loss-dialog .config-panel-foot button { min-width: 0; flex: 1 1 160px; }
+    #draft-loss-dialog .config-panel-foot,
+    #shipping-choice-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
+    #draft-loss-dialog .config-panel-foot button,
+    #shipping-choice-dialog .config-panel-foot button { min-width: 0; flex: 1 1 190px; }
     .secondary-button {
       width: auto;
       min-width: 210px;
@@ -2218,7 +2220,7 @@
           <div class="order-actions">
             <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
             <button class="primary-button" id="save-design" type="button">In den Warenkorb</button>
-            <button class="primary-button continue-button" id="continue-order" type="button"><span id="continue-order-label">Zur Lieferadresse</span> <span aria-hidden="true">→</span></button>
+            <button class="primary-button continue-button" id="continue-order" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="shipping-choice-dialog"><span id="continue-order-label">Zur Lieferadresse</span> <span aria-hidden="true">→</span></button>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
           <button class="secondary-button" id="retry-configurator" type="button" hidden>Konfigurator erneut laden</button>
@@ -2233,6 +2235,20 @@
     <div class="config-panel-foot">
       <button class="secondary-button" id="draft-loss-stay" type="button">Hier bleiben</button>
       <button class="primary-button" id="draft-loss-leave" type="button">Trotzdem verlassen</button>
+    </div>
+  </dialog>
+
+  <dialog class="config-panel" id="shipping-choice-dialog" aria-labelledby="shipping-choice-title" aria-describedby="shipping-choice-description">
+    <div class="config-panel-head">
+      <h2 id="shipping-choice-title" tabindex="-1">Aktuelles Design mitnehmen?</h2>
+      <button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button>
+    </div>
+    <div class="config-panel-body">
+      <p id="shipping-choice-description">Dieses Design ist noch nicht im Warenkorb. Möchtet ihr es hinzufügen oder nur mit eurem aktuellen Warenkorb fortfahren?</p>
+    </div>
+    <div class="config-panel-foot">
+      <button class="secondary-button" id="shipping-choice-current-cart" type="button">Mit aktuellem Warenkorb weiter</button>
+      <button class="primary-button" id="shipping-choice-save" type="button">In den Warenkorb und weiter</button>
     </div>
   </dialog>
 
@@ -2407,6 +2423,11 @@
     const draftLossTitle = document.getElementById('draft-loss-title');
     const draftLossStay = document.getElementById('draft-loss-stay');
     const draftLossLeave = document.getElementById('draft-loss-leave');
+    const shippingChoiceDialog = document.getElementById('shipping-choice-dialog');
+    const shippingChoiceTitle = document.getElementById('shipping-choice-title');
+    const shippingChoiceDescription = document.getElementById('shipping-choice-description');
+    const shippingChoiceCurrentCart = document.getElementById('shipping-choice-current-cart');
+    const shippingChoiceSave = document.getElementById('shipping-choice-save');
     const cart = WolkenworteConfiguratorSession.createCart(slug);
     const draftStore = WolkenworteConfiguratorSession.createDraftStore(slug);
     const workspace = new WolkenworteWorkspace(document);
@@ -2469,16 +2490,19 @@
     }
 
     function updateCartActions() {
+      const items = loadOrderItems();
       saveDesignButton.disabled = orderActionPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
       setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
-      setText(continueOrderLabel, currentDesignNeedsSave
+      setText(continueOrderLabel, items.length
+        ? 'Zur Lieferadresse'
+        : currentDesignNeedsSave
         ? (editingOrderItemId
           ? 'Änderungen übernehmen & zur Lieferadresse'
           : 'In den Warenkorb & zur Lieferadresse')
         : 'Zur Lieferadresse');
       continueOrderButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
-      designAnotherButton.hidden = !loadOrderItems().length;
+      designAnotherButton.hidden = !items.length;
     }
 
     function setMobileEditorExpanded(expanded, { scroll = true } = {}) {
@@ -2538,6 +2562,14 @@
     function hasUnsavedDesign() {
       return workspaceReady && !restorationFailed &&
         (currentDesignNeedsSave || Boolean(mugEditor?.hasPendingTextChange()));
+    }
+
+    function shippingAction(items = loadOrderItems()) {
+      if (!items.length) return 'add';
+      const currentDesignIsInCart = Boolean(editingOrderItemId) &&
+        items.some((item) => item.id === editingOrderItemId);
+      if (currentDesignIsInCart && !hasUnsavedDesign()) return 'continue';
+      return currentDesignIsInCart ? 'choose-update' : 'choose-add';
     }
 
     function draftSnapshot() {
@@ -2618,6 +2650,25 @@
 
     draftLossStay.addEventListener('click', () => draftLossDialog.close('stay'));
     draftLossLeave.addEventListener('click', () => draftLossDialog.close('leave'));
+
+    function askShippingChoice(action) {
+      const isUpdate = action === 'choose-update';
+      setText(shippingChoiceTitle, 'Aktuelles Design mitnehmen?');
+      setText(shippingChoiceDescription, isUpdate
+        ? 'Dieses Design enthält Änderungen, die noch nicht im Warenkorb gespeichert sind. Möchtet ihr sie übernehmen oder mit der gespeicherten Version fortfahren?'
+        : 'Dieses Design ist noch nicht im Warenkorb. Möchtet ihr es hinzufügen oder nur mit eurem aktuellen Warenkorb fortfahren?');
+      setText(shippingChoiceSave, isUpdate
+        ? 'Änderungen übernehmen und weiter' : 'In den Warenkorb und weiter');
+      shippingChoiceDialog.returnValue = 'cancel';
+      return new Promise((resolve) => {
+        shippingChoiceDialog.addEventListener('close', () => resolve(shippingChoiceDialog.returnValue), { once: true });
+        workspace.close(false);
+        workspace.show(shippingChoiceDialog, continueOrderButton);
+      });
+    }
+
+    shippingChoiceCurrentCart.addEventListener('click', () => shippingChoiceDialog.close('cart'));
+    shippingChoiceSave.addEventListener('click', () => shippingChoiceDialog.close('save'));
 
     async function runNavigation(action) {
       if (leavingPage || orderActionPending) return;
@@ -4336,18 +4387,33 @@
       startingAnotherProduct = true;
       openProductDialog();
     });
-    continueOrderButton.addEventListener('click', () => {
+    async function continueToShipping() {
       if (leavingPage || orderActionPending) return;
-      void (async () => {
-        leavingPage = true;
-        try {
-          if ((hasUnsavedDesign() || !loadOrderItems().length) &&
-              !await saveCurrentDesign(continueOrderButton)) return;
-          navigateToShipping();
-        } finally {
-          leavingPage = false;
+      leavingPage = true;
+      try {
+        const action = shippingAction();
+        if (action === 'add') {
+          if (!await saveCurrentDesign(continueOrderButton)) return;
+        } else if (action !== 'continue') {
+          const choice = await askShippingChoice(action);
+          if (choice === 'cancel') return;
+          if (choice === 'save') {
+            if (!await saveCurrentDesign(continueOrderButton)) return;
+          } else if (choice === 'cart') {
+            const saved = await persistCurrentDraft();
+            if (!saved && await askToLeaveWithoutDraft() !== 'leave') return;
+          } else {
+            return;
+          }
         }
-      })();
+        navigateToShipping();
+      } finally {
+        leavingPage = false;
+      }
+    }
+
+    continueOrderButton.addEventListener('click', () => {
+      void continueToShipping();
     });
 
     applyLiveWordsButton.addEventListener('click', () => runNavigation(() =>

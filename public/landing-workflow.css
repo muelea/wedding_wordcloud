@@ -15,7 +15,7 @@
 }
 
 .workflow-intro {
-  max-width: 620px;
+  max-width: var(--landing-copy-width, 470px);
   margin-bottom: 42px;
 }
 
@@ -754,9 +754,9 @@
     top: var(--workflow-sticky-top);
     display: grid;
     height: var(--workflow-sticky-height);
-    grid-template-columns: minmax(340px, .76fr) minmax(0, 1.42fr);
+    grid-template-columns: var(--landing-split-columns, repeat(2, minmax(0, 1fr)));
     grid-template-rows: auto minmax(0, 1fr);
-    column-gap: clamp(42px, 5vw, 76px);
+    column-gap: var(--landing-split-gap, clamp(56px, 5vw, 72px));
     align-items: start;
   }
 
@@ -888,11 +888,6 @@
 }
 
 @media (min-width: 1051px) and (max-width: 1190px) {
-  html.workflow-scroll-ready .workflow-sticky {
-    grid-template-columns: minmax(315px, .72fr) minmax(0, 1.28fr);
-    column-gap: 34px;
-  }
-
   .workflow-step-copy {
     grid-template-columns: 48px minmax(0, 1fr);
     padding-left: 12px;

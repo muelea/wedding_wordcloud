@@ -13,7 +13,7 @@ function storage() {
 }
 const template = fs.readFileSync(path.join(__dirname, '../views/configure.ejs'), 'utf8');
 
-test('checkout actions are contextual, quiet and free of routine save/discard dialogs', () => {
+test('checkout actions are contextual and only ask when current work would be omitted', () => {
   assert.doesNotMatch(template, /cart-action-hint|save-status|Nur ausdrücklich übernommene Designs|Design im Warenkorb gespeichert/);
   assert.match(template, /\.primary-button:disabled\s*\{[^}]*cursor:\s*default/);
   assert.match(template, /\.primary-button\.ww-is-busy:disabled\s*\{[^}]*cursor:\s*wait/);
@@ -27,6 +27,9 @@ test('checkout actions are contextual, quiet and free of routine save/discard di
   assert.doesNotMatch(template, /leave-design-dialog|askBeforeLeaving|confirmLeaving/);
   assert.match(template, /id="draft-loss-dialog"/);
   assert.match(template, /draftLossDialog\.showModal\(\);\s*draftLossTitle\.focus/);
+  assert.match(template, /id="shipping-choice-dialog"/);
+  assert.match(template, /Dieses Design ist noch nicht im Warenkorb/);
+  assert.match(template, /Mit aktuellem Warenkorb weiter/);
   assert.match(template, /'Änderungen übernehmen & zur Lieferadresse'/);
   assert.match(template, /'In den Warenkorb & zur Lieferadresse'/);
   assert.match(template, /id="cloud-update-notice"/);
@@ -52,8 +55,20 @@ function harness(extra = {}) {
   const cart = Session.createCart('event-a', local);
   const drafts = draftBackend();
   const draftStore = Session.createDraftStore('event-a', { backend: drafts });
-  const calls = { posts: 0, bodies: [], navigations: [], warnings: [], opened: [], busy: [], replaced: [] };
+  const calls = { posts: 0, bodies: [], navigations: [], warnings: [], opened: [], busy: [], replaced: [], panels: [] };
   const element = () => ({ textContent: '', disabled: false, hidden: false });
+  let shippingChoiceCloseListener = null;
+  const shippingChoiceDialog = {
+    returnValue: 'cancel',
+    addEventListener: (name, listener) => {
+      if (name === 'close') shippingChoiceCloseListener = listener;
+    },
+    close(value) {
+      this.returnValue = value;
+      shippingChoiceCloseListener?.();
+      shippingChoiceCloseListener = null;
+    },
+  };
   const context = vm.createContext({
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, requestAnimationFrame: callback => callback(),
     console: { warn() {} },
@@ -66,11 +81,14 @@ function harness(extra = {}) {
     workspaceReady: true, restorationFailed: false, orderActionPending: false,
     leavingPage: false, allowNavigation: false, suppressDirty: false,
     draftSaveTimer: null, draftSavePromise: null, draftSavedRevision: -1, draftStorageFailed: false,
-    saveDesignButton: element(), continueOrderButton: element(), designAnotherButton: element(),
+    saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
     headerCart: { hidden: true }, headerCartCount: element(),
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true },
     content: { inert: false }, orderBox: { scrollIntoView() {} },
     cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
+    shippingChoiceDialog, shippingChoiceTitle: element(),
+    shippingChoiceDescription: element(), shippingChoiceSave: element(),
+    workspace: { close() {}, show: (panel) => calls.panels.push(panel) },
     mobileEditorMedia: { matches: false }, setMobileEditorExpanded() {},
     getAllSurfaceDesigns: () => ({ default: [{ text: 'sonne' }] }),
     productSurfaces: () => [{ key: 'default', label: 'Druckfläche' }],
@@ -93,7 +111,8 @@ function harness(extra = {}) {
     },
     ...extra,
   });
-  vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'draftSnapshot',
+  vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
+    'draftSnapshot', 'updateCartActions', 'continueToShipping',
     'hasUnpersistedDraft', 'persistCurrentDraft', 'runNavigation', 'saveBeforeLeaving',
     'openOrderItem', 'removeOrderItem', 'navigateToShipping',
     'showRestorationError', 'initializeWorkspace', 'updateHeaderCart'].map(pageFunction).join('\n'), context);
@@ -260,12 +279,80 @@ test('an empty cart never navigates, while the explicit continuation action adds
   assert.equal(calls.posts, 0);
   assert.equal(calls.navigations.length, 0);
   assert.match(page.errorText.textContent, /zuerst ein Design/);
-  assert.equal(await page.saveCurrentDesign(page.continueOrderButton), true);
-  page.navigateToShipping();
+  await page.continueToShipping();
   assert.equal(cart.read().length, 1);
   assert.equal(calls.posts, 1);
   assert.match(calls.navigations[0], /shipping\?configuration=1111111111111111&edit=1111111111111111/);
-  assert.match(template, /if \(\(hasUnsavedDesign\(\) \|\| !loadOrderItems\(\)\.length\) &&\s*!await saveCurrentDesign\(continueOrderButton\)\) return/);
+  assert.match(template, /if \(action === 'add'\) \{\s*if \(!await saveCurrentDesign\(continueOrderButton\)\) return/);
+});
+
+test('shipping action reflects whether the cart can continue without omitting current work', () => {
+  const { context: page, cart } = harness();
+  assert.equal(page.shippingAction(), 'add');
+  page.updateCartActions();
+  assert.equal(page.continueOrderLabel.textContent, 'In den Warenkorb & zur Lieferadresse');
+
+  cart.replace({ id: id('a') });
+  assert.equal(page.shippingAction(), 'choose-add');
+  page.updateCartActions();
+  assert.equal(page.continueOrderLabel.textContent, 'Zur Lieferadresse');
+
+  page.editingOrderItemId = id('a');
+  page.currentDesignNeedsSave = false;
+  assert.equal(page.shippingAction(), 'continue');
+  page.currentDesignNeedsSave = true;
+  assert.equal(page.shippingAction(), 'choose-update');
+});
+
+test('the shipping choice explains add and update cases and resolves the explicit selection', async () => {
+  for (const action of ['choose-add', 'choose-update']) {
+    const { context: page, calls } = harness();
+    const choice = page.askShippingChoice(action);
+    assert.equal(calls.panels.length, 1);
+    assert.match(page.shippingChoiceDescription.textContent, action === 'choose-update'
+      ? /Änderungen.*gespeicherten Version/ : /noch nicht im Warenkorb/);
+    assert.equal(page.shippingChoiceSave.textContent, action === 'choose-update'
+      ? 'Änderungen übernehmen und weiter' : 'In den Warenkorb und weiter');
+    page.shippingChoiceDialog.close('cart');
+    assert.equal(await choice, 'cart');
+  }
+});
+
+test('a new draft can be added or left outside an existing cart when continuing', async () => {
+  for (const choice of ['save', 'cart']) {
+    const { context: page, cart, calls, drafts } = harness();
+    cart.replace({ id: id('a') });
+    page.askShippingChoice = async action => {
+      assert.equal(action, 'choose-add');
+      return choice;
+    };
+    await page.continueToShipping();
+    assert.equal(calls.posts, choice === 'save' ? 1 : 0);
+    assert.deepEqual(cart.read().map(item => item.id), choice === 'save'
+      ? [id('a'), id('1')] : [id('a')]);
+    assert.equal(calls.navigations.length, 1);
+    if (choice === 'cart') {
+      assert.ok([...drafts.records.values()].some(record => record.type === 'draft'));
+    }
+  }
+});
+
+test('unchanged cart work continues directly, while edited work can retain or replace its saved version', async () => {
+  for (const choice of ['direct', 'cart', 'save']) {
+    const edited = choice !== 'direct';
+    const { context: page, cart, calls } = harness({
+      editingOrderItemId: id('a'), currentDesignNeedsSave: edited,
+    });
+    cart.replace({ id: id('a') });
+    page.askShippingChoice = async action => {
+      assert.equal(action, 'choose-update');
+      return choice;
+    };
+    await page.continueToShipping();
+    assert.equal(calls.posts, choice === 'save' ? 1 : 0);
+    assert.deepEqual(cart.read().map(item => item.id), choice === 'save' ? [id('1')] : [id('a')]);
+    assert.equal(calls.navigations.length, 1);
+  }
 });
 
 test('only failed local persistence opens the focused leave-without-draft warning', async () => {

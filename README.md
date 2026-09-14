@@ -40,8 +40,11 @@ frozen snapshot of the word cloud.
    compact product/palette summary and the explicit “In den Warenkorb & zur
    Lieferadresse” action stay ahead of the collapsed editor. “Design anpassen”
    reveals the existing editor without creating a second draft or editor state.
-   The primary continuation label states whether it will add, update, or simply
-   continue with the cart; failed cart saves never navigate. Ordinary product,
+   With an empty basket the primary continuation action adds the current design
+   before opening shipping. With an existing basket it simply reads “Zur
+   Lieferadresse”; if the current draft or edits would otherwise be omitted, one
+   focused choice offers either adding/saving them or continuing with the existing
+   basket. Failed cart saves never navigate. Ordinary product,
    orientation and page navigation has no save/discard dialog. Working designs
    are debounced into event-scoped IndexedDB drafts for seven days and restore on
    the same browser without creating server configurations. Only a failed local

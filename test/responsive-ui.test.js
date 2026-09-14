@@ -192,9 +192,10 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.doesNotMatch(configure, /class="mobile-editor-caret"[^>]*>[^<]+<\/span>/,
     'mobile disclosure buttons use the aligned CSS chevron, not a font glyph');
   assert.match(configure, /function setMobileEditorExpanded\(expanded, \{ scroll = true \} = \{\}\)/);
-  assert.match(configure, /setText\(continueOrderLabel, currentDesignNeedsSave/);
+  assert.match(configure, /setText\(continueOrderLabel, items\.length\s*\? 'Zur Lieferadresse'/);
   assert.match(configure, /!await saveCurrentDesign\(continueOrderButton\)/,
     'the explicit compact CTA approves the current design before navigation');
+  assert.match(configure, /id="shipping-choice-dialog"[\s\S]*?id="shipping-choice-current-cart"[\s\S]*?id="shipping-choice-save"/);
   assert.match(workspaceStyles,
     /grid-template-areas: 'create create selection layout reset' 'view view view history history'/,
     'Select all and Fill the area stay adjacent in the compact editor toolbar');
@@ -223,7 +224,11 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landing, /id="workflow-panel-0"[^>]*aria-labelledby="workflow-step-0"[^>]*aria-hidden="false"/);
   assert.match(landingWorkflowStyles, /min-height: calc\(var\(--workflow-sticky-height\) \+ 200vh\)/);
   assert.match(landingWorkflowStyles, /html\.workflow-scroll-ready \.workflow-sticky \{[\s\S]*?position: sticky;/);
-  assert.match(landingWorkflowStyles, /grid-template-columns: minmax\(340px, \.76fr\) minmax\(0, 1\.42fr\)/);
+  assert.match(landing, /--landing-split-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(landing, /--landing-split-gap: clamp\(56px, 5vw, 72px\);/);
+  assert.match(landing, /\.hero-grid, \.print-grid \{[^}]*grid-template-columns: var\(--landing-split-columns\);[^}]*gap: var\(--landing-split-gap\);/);
+  assert.match(landingWorkflowStyles, /grid-template-columns: var\(--landing-split-columns,[^;]+\);[\s\S]*?column-gap: var\(--landing-split-gap,/);
+  assert.doesNotMatch(landingWorkflowStyles, /grid-template-columns: minmax\(315px, \.72fr\)/);
   assert.match(landingWorkflowStyles, /@media \(min-width: 1051px\) and \(max-height: 820px\) \{[\s\S]*?\.workflow-step-copy:not\(\[data-active='true'\]\) \.workflow-step-text > span \{[\s\S]*?display: none;/);
   assert.match(landingWorkflowStyles, /@media \(min-width: 1051px\) and \(max-width: 1279px\) \{[\s\S]*?\.workflow-step-copy:not\(\[data-active='true'\]\) \.workflow-step-text > span \{[\s\S]*?display: none;/);
   assert.match(landingWorkflowStyles, /@media \(max-width: 1050px\)[\s\S]*?html\.workflow-scroll-ready \.workflow-stage \{[\s\S]*?display: none;/);
@@ -243,7 +248,7 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landingWorkflowRuntime, /steps\[index\]\.appendChild\(panel\)/);
   assert.match(landingWorkflowRuntime, /panel\.setAttribute\('aria-hidden', desktopLayout\.matches \? String\(!isActive\) : 'false'\)/);
   assert.match(landing, /\.print-grid \{[^}]*grid-template-areas: 'visual copy';/);
-  assert.match(landing, /\.print-copy \{ grid-area: copy;/);
+  assert.match(landing, /\.print-copy \{ grid-area: copy;[^}]*justify-self: start;/);
   assert.match(landing, /\.cup-stage \{ grid-area: visual;/);
   assert.match(landing, /<div class="print-grid">\s*<div class="print-copy">\s*<p class="eyebrow">[^<]+<\/p>\s*<h2 id="keepsakes-title">/);
   assert.match(landing, /@media \(max-width: 760px\)[\s\S]*?\.print-grid \{ grid-template-areas: 'copy' 'visual'; text-align: center; \}/);
