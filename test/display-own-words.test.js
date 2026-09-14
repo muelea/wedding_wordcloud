@@ -15,7 +15,7 @@ function pageFunction(name) {
   return template.slice(start, template.indexOf('\n  }', start) + '\n  }'.length);
 }
 
-test('clicking the cloud opens existing own words and remains inert before a contribution', () => {
+test('the management dialog opens existing own words and remains inert before a contribution', () => {
   const calls = [];
   const context = vm.createContext({
     ownContributions: new Map(),
@@ -38,12 +38,30 @@ test('clicking the cloud opens existing own words and remains inert before a con
   assert.equal(calls.length, 5);
 });
 
-test('empty cloud space and both management actions share one dialog-opening path', () => {
+test('the word action count includes only contributions owned by this browser', () => {
+  const context = vm.createContext({
+    ownContributions: new Map([
+      ['receipt-love-1', 'love'],
+      ['receipt-joy', 'joy'],
+      ['receipt-love-2', 'love'],
+    ]),
+  });
+  vm.runInContext(`${pageFunction('ownContributionCount')}; result = ownContributionCount`, context);
+
+  assert.equal(context.result('love'), 2);
+  assert.equal(context.result('joy'), 1);
+  assert.equal(context.result('someone-elses-word'), 0);
+});
+
+test('empty cloud space is inert while both management actions share the dialog-opening path', () => {
   assert.match(template, /displayOwnWordsButton\.addEventListener\('click', openOwnWordsDialog\)/);
   assert.match(template, /displayOwnWordsShortcut\.addEventListener\('click', openOwnWordsDialog\)/);
   assert.match(template, /container\.addEventListener\('click', handleCloudInteraction\)/);
-  assert.match(template, /if \(item\)[\s\S]*?openCloudWordActions\(item\.word,[\s\S]*?openOwnWordsDialog\(\)/);
+  assert.match(template, /function handleCloudInteraction\(event\)[\s\S]*?if \(item\)[\s\S]*?openCloudWordActions\(item\.word,[\s\S]*?closeCloudWordActions\(\);\n  }/);
+  assert.doesNotMatch(pageFunction('handleCloudInteraction'), /openOwnWordsDialog/);
   assert.match(template, /displayOwnWordsShortcut\.disabled = total === 0/);
+  assert.match(template, /<\/form>\s*<button\s+class="display-own-words-shortcut"/,
+    'the management shortcut must be a separate circle beside the entry form');
   assert.equal((template.match(/id="display-own-words-dialog"/g) || []).length, 1);
 });
 
@@ -63,6 +81,12 @@ test('the selected word exposes support and receipt-bound removal actions', () =
   assert.match(template, /cloudWordSupport\.addEventListener\('click',[\s\S]*?submitDisplayWord\(activeCloudWord, 'cloud'\)/);
   assert.match(template, /const receipt = latestOwnReceipt\(activeCloudWord\)[\s\S]*?removeOwnContribution\(receipt, cloudWordRemove/);
   assert.match(template, /cloudWordRemove\.hidden = !receipt/);
+  assert.match(template, /\.cloud-word-action\[hidden\]\s*\{\s*display:\s*none\s*!important/,
+    'a non-owned word must not leave a hoverable removal control');
+  assert.match(template, /const countPrefix = count > 0 \? `\$\{WolkenworteI18n\.formatNumber\(count\)\} × ` : ''/,
+    'the action pill must omit a zero count and show only this browser\'s positive contribution count');
+  assert.match(template, /setAttribute\('aria-label', `\$\{countPrefix\}\$\{activeCloudWord\}`\)/,
+    'the accessible label must match the visible conditional count');
   assert.doesNotMatch(template, /socket\.emit\('remove-word',\s*\{\s*word/,
     'word actions must never bypass the browser-owned removal receipt');
 });

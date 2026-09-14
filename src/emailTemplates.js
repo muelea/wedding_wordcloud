@@ -3,7 +3,7 @@
 const I18n = require('./i18n');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const TEMPLATE_VERSION = 'transactional-2026-09-13-v3';
+const TEMPLATE_VERSION = 'transactional-2026-09-13-v4';
 const CONTRACT_VERSION = 'contract-2026-09-13-v2';
 const SELLER = Object.freeze({
   name: 'JUSA Engineering UG (haftungsbeschränkt)',
@@ -507,7 +507,6 @@ function sellerLines(locale, premium) {
     `${premium.registerCourt}: ${SELLER.registerCourt}`,
     `${premium.registrationNumber}: ${SELLER.registrationNumber}`,
     `${premium.vatId}: ${SELLER.vatId}`,
-    `${SELLER.email} · ${SELLER.phone}`,
   ];
 }
 
@@ -568,6 +567,7 @@ function buildEmailModel({ kind, order, orderItems, shipments, shipment, noticeA
     contract: kind === 'order_confirmation' ? [copy.contract, copy.personalization] : [],
     next: premium.next[kind],
     seller: sellerLines(locale, premium),
+    sellerContact: `${SELLER.email} · ${SELLER.phone}`,
   };
 }
 
@@ -609,7 +609,7 @@ function renderText(copy, premium, model, { isTestOrder }) {
   }
   lines.push('', premium.nextHeading, isTestOrder ? premium.testNext : model.next);
   if (model.contract.length) lines.push('', premium.legalHeading, ...model.contract);
-  lines.push('', copy.labels.seller, ...model.seller, '', premium.supportHeading,
+  lines.push('', copy.labels.seller, ...model.seller, model.sellerContact, '', premium.supportHeading,
     interpolate(copy.support, { email: SELLER.email }));
   return lines.join('\n').trim() + '\n';
 }

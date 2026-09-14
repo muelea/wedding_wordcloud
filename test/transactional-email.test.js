@@ -107,6 +107,8 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
       assert.match(snapshot.textBody, /design-customer-reference/);
       assert.doesNotMatch(snapshot.textBody, /1320/);
       assert.doesNotMatch(snapshot.textBody, /contract-2026/);
+      assert.equal(snapshot.htmlBody.match(/\+49 1523 7286173/g)?.length, 1);
+      assert.equal(snapshot.textBody.match(/\+49 1523 7286173/g)?.length, 1);
     }
   }
 

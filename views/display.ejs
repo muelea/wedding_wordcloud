@@ -113,16 +113,23 @@
       justify-content: center;
     }
 
-    .display-word-entry {
+    .display-word-entry-row {
       position: fixed;
       z-index: 12;
       bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 16px);
       left: 50%;
       display: flex;
-      width: min(560px, calc(100% - 32px));
-      min-height: 52px;
-      padding: 5px;
+      align-items: center;
+      gap: 9px;
+      width: min(621px, calc(100% - 32px));
       transform: translateX(-50%);
+    }
+    .display-word-entry {
+      display: flex;
+      min-width: 0;
+      min-height: 52px;
+      flex: 1 1 auto;
+      padding: 5px;
       border: 1px solid var(--border);
       border-radius: 999px;
       background: color-mix(in srgb, var(--bg) 94%, transparent);
@@ -133,20 +140,20 @@
     .display-own-words-shortcut {
       display: grid;
       place-items: center;
-      width: 40px;
-      height: 40px;
-      flex: 0 0 40px;
-      align-self: center;
+      width: 52px;
+      height: 52px;
+      flex: 0 0 52px;
       padding: 0;
-      border: 0;
+      border: 1px solid var(--border);
       border-radius: 50%;
-      background: transparent;
+      background: color-mix(in srgb, var(--bg) 94%, transparent);
       color: var(--primary);
+      box-shadow: 0 10px 28px rgba(64,15,38,.1);
       cursor: pointer;
-      transition: background .18s ease, color .18s ease, opacity .18s ease, transform .18s ease;
+      transition: background .18s ease, border-color .18s ease, color .18s ease, opacity .18s ease, transform .18s ease;
     }
     .display-own-words-shortcut svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .display-own-words-shortcut:hover, .display-own-words-shortcut:focus-visible { background: color-mix(in srgb, var(--primary) 9%, transparent); }
+    .display-own-words-shortcut:not(:disabled):hover, .display-own-words-shortcut:not(:disabled):focus-visible { border-color: color-mix(in srgb, var(--primary) 38%, var(--border)); background: color-mix(in srgb, var(--primary) 9%, var(--bg)); }
     .display-own-words-shortcut:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; }
     .display-own-words-shortcut:active:not(:disabled) { transform: scale(.95); }
     .display-own-words-shortcut:disabled { color: var(--muted); cursor: not-allowed; opacity: .34; }
@@ -183,6 +190,7 @@
       cursor: pointer;
       transition: background .16s ease, color .16s ease, transform .16s ease, opacity .16s ease;
     }
+    .cloud-word-action[hidden] { display: none !important; }
     .cloud-word-action svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .cloud-word-action:hover, .cloud-word-action:focus-visible { background: var(--primary); color: #fff; }
     .cloud-word-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 2px; }
@@ -333,6 +341,7 @@
     .own-word-remove:disabled { cursor: wait; opacity: .45; }
     .own-words-empty, .own-words-error { color: var(--muted); font-size: 13px; }
     .own-words-error { color: var(--primary); }
+    body.presentation-mode .display-word-entry-row,
     body.presentation-mode .display-word-entry,
     body.presentation-mode .footer-actions,
     body.presentation-mode #memory-cta { display: none !important; }
@@ -635,9 +644,10 @@
       .ww-keepsake-cta-label-full { display: none; }
       .ww-keepsake-cta-label-compact { display: inline; }
       #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 68px); }
-      .display-word-entry { min-height: 48px; bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); }
+      .display-word-entry-row { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); gap: 8px; }
+      .display-word-entry { min-height: 48px; }
       #display-word-input { padding: 0 10px; }
-      .display-own-words-shortcut { width: 38px; height: 38px; flex-basis: 38px; }
+      .display-own-words-shortcut { width: 48px; height: 48px; flex-basis: 48px; }
       #display-word-submit { padding: 0 13px; }
       body.presentation-mode #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px)); }
       .footer {
@@ -699,25 +709,28 @@
   </button>
 </div>
 
-<form class="display-word-entry" id="display-word-entry">
-  <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
-  <button
-    class="display-emoji-trigger"
-    id="display-emoji-trigger"
-    type="button"
-    aria-label="Emoji hinzufügen"
-    data-i18n-aria-label-source="Emoji hinzufügen"
-    aria-haspopup="dialog"
-    aria-controls="display-emoji-picker"
-    aria-expanded="false"
-  >
-    <svg viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M15.1 3.7a13.25 13.25 0 1 0 13.1 11.6" />
-      <circle class="display-emoji-eye" cx="10.7" cy="14.6" r="1.75" />
-      <circle class="display-emoji-eye" cx="19" cy="14.6" r="1.75" />
-      <path d="M10.5 20.6c.9 3.7 7.5 4.8 9.2 0M24.5 3v9M20 7.4h9" />
-    </svg>
-  </button>
+<div class="display-word-entry-row">
+  <form class="display-word-entry" id="display-word-entry">
+    <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
+    <button
+      class="display-emoji-trigger"
+      id="display-emoji-trigger"
+      type="button"
+      aria-label="Emoji hinzufügen"
+      data-i18n-aria-label-source="Emoji hinzufügen"
+      aria-haspopup="dialog"
+      aria-controls="display-emoji-picker"
+      aria-expanded="false"
+    >
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M15.1 3.7a13.25 13.25 0 1 0 13.1 11.6" />
+        <circle class="display-emoji-eye" cx="10.7" cy="14.6" r="1.75" />
+        <circle class="display-emoji-eye" cx="19" cy="14.6" r="1.75" />
+        <path d="M10.5 20.6c.9 3.7 7.5 4.8 9.2 0M24.5 3v9M20 7.4h9" />
+      </svg>
+    </button>
+    <button id="display-word-submit" type="submit">Hinzufügen</button>
+  </form>
   <button
     class="display-own-words-shortcut"
     id="display-own-words-shortcut"
@@ -729,8 +742,7 @@
   >
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>
   </button>
-  <button id="display-word-submit" type="submit">Hinzufügen</button>
-</form>
+</div>
 <p class="word-submission-status" id="word-submission-status" role="status" aria-live="polite" aria-atomic="true"></p>
 
 <footer class="footer">
@@ -1404,6 +1416,26 @@
     return latest;
   }
 
+  function ownContributionCount(word) {
+    let count = 0;
+    for (const ownWord of ownContributions.values()) {
+      if (ownWord === word) count += 1;
+    }
+    return count;
+  }
+
+  function renderCloudWordActionLabel() {
+    const count = ownContributionCount(activeCloudWord);
+    const countPrefix = count > 0 ? `${WolkenworteI18n.formatNumber(count)} × ` : '';
+    const word = document.createElement('span');
+    WolkenworteEmoji.renderInline(word, activeCloudWord);
+    cloudWordActionLabel.replaceChildren(
+      document.createTextNode(countPrefix),
+      word
+    );
+    cloudWordActionLabel.setAttribute('aria-label', `${countPrefix}${activeCloudWord}`);
+  }
+
   function closeCloudWordActions() {
     activeCloudWord = '';
     cloudWordActions.hidden = true;
@@ -1416,6 +1448,7 @@
   function syncCloudWordRemoval() {
     if (!activeCloudWord || cloudWordActions.hidden) return;
     const receipt = latestOwnReceipt(activeCloudWord);
+    renderCloudWordActionLabel();
     cloudWordRemove.hidden = !receipt;
     if (receipt) setI18nAttribute(cloudWordRemove, 'aria-label', 'Eine Eingabe von „{{word}}“ entfernen', { word: activeCloudWord });
   }
@@ -1435,8 +1468,6 @@
 
   function openCloudWordActions(word, clientX, clientY) {
     activeCloudWord = word;
-    cloudWordActionLabel.replaceChildren();
-    WolkenworteEmoji.renderInline(cloudWordActionLabel, word);
     cloudWordActions.hidden = false;
     cloudWordSupport.disabled = false;
     syncCloudWordRemoval();
@@ -1464,7 +1495,6 @@
       return;
     }
     closeCloudWordActions();
-    openOwnWordsDialog();
   }
 
   function renderOwnContributions() {
