@@ -166,7 +166,14 @@
             open.result.createObjectStore(DRAFT_STORE, { keyPath: 'key' });
           }
         };
-        open.onsuccess = () => resolve(open.result);
+        open.onsuccess = () => {
+          const database = open.result;
+          database.onversionchange = () => {
+            database.close();
+            databasePromise = null;
+          };
+          resolve(database);
+        };
         open.onerror = () => reject(open.error || new Error('draft_storage_failed'));
         open.onblocked = () => reject(new Error('draft_storage_blocked'));
       }).catch((error) => {
@@ -174,6 +181,15 @@
         throw error;
       });
       return databasePromise;
+    }
+
+    function close() {
+      const pending = databasePromise;
+      databasePromise = null;
+      if (!pending) return;
+      // Safari can retain a page in its back/forward cache. Explicitly close
+      // the connection so a newly loaded configurator never waits behind it.
+      void pending.then((database) => database?.close()).catch(() => {});
     }
 
     async function get(key) {
@@ -256,7 +272,7 @@
       await removeKeys(keys);
     }
 
-    return { save, loadActive, loadFor, clearActive, removeFor };
+    return { save, loadActive, loadFor, clearActive, removeFor, close };
   }
 
   function createShippingDraft(slug, storage, now = Date.now) {

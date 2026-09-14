@@ -2614,14 +2614,19 @@
     }
 
     async function loadLocalDraft(criteria = null) {
-      try {
-        return criteria ? await draftStore.loadFor(criteria) : await draftStore.loadActive();
-      } catch (error) {
-        console.warn('Configurator draft load failed.', error);
-        draftStorageFailed = true;
-        setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
-        return null;
+      const read = () => criteria ? draftStore.loadFor(criteria) : draftStore.loadActive();
+      let lastError = null;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          return await WolkenworteConfiguratorSession.withTimeout(read(), 2500);
+        } catch (error) {
+          lastError = error;
+          draftStore.close();
+        }
       }
+      console.warn('Configurator draft load failed.', lastError);
+      draftStorageFailed = true;
+      throw lastError || new Error('draft_storage_failed');
     }
 
     function askToLeaveWithoutDraft() {
@@ -4365,14 +4370,18 @@
     applyLiveWordsButton.addEventListener('click', () => runNavigation(() =>
       startProductDesign(product, selectedOrientation, { useSavedDraft: false, preserveEditingItem: true })));
 
-    window.addEventListener('pagehide', destroyMug3D);
+    window.addEventListener('pagehide', () => {
+      destroyMug3D();
+      draftStore.close();
+    });
     window.addEventListener('beforeunload', (event) => {
       if (!hasUnpersistedDraft() || allowNavigation) return;
       event.preventDefault();
       event.returnValue = '';
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') void persistCurrentDraft({ finalize: false });
+      if (document.visibilityState !== 'hidden') return;
+      void persistCurrentDraft({ finalize: false }).finally(() => draftStore.close());
     });
     window.addEventListener('pageshow', (event) => {
       if (!event.persisted) return;

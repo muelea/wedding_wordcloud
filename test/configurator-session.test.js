@@ -152,6 +152,60 @@ test('local drafts restore by active design or product and expire without enteri
     'clearing the current draft does not erase unrelated product drafts');
   now += Session.DRAFT_TTL_MS + 1;
   assert.equal(await store.loadFor({ productKey: 'mug' }), null);
+  assert.equal(typeof store.close, 'function');
+});
+
+test('Safari-stalled draft reads are retried and can never leave restoration pending forever', async () => {
+  let reads = 0;
+  let closes = 0;
+  const context = vm.createContext({
+    draftStore: {
+      loadActive: () => { reads += 1; return new Promise(() => {}); },
+      loadFor: () => { reads += 1; return new Promise(() => {}); },
+      close: () => { closes += 1; },
+    },
+    WolkenworteConfiguratorSession: {
+      withTimeout: async () => { throw new Error('operation_timeout'); },
+    },
+    console: { warn() {} },
+    draftStorageFailed: false,
+  });
+  vm.runInContext(pageFunction('loadLocalDraft'), context);
+  await assert.rejects(context.loadLocalDraft(), /operation_timeout/);
+  assert.equal(reads, 2);
+  assert.equal(closes, 2);
+  assert.equal(context.draftStorageFailed, true);
+});
+
+test('a resized local draft restores after the word-cloud round trip and unlocks the workspace', async () => {
+  const backend = draftBackend();
+  const draftStore = Session.createDraftStore('event-a', { backend });
+  await draftStore.save({
+    productKey: 'mug', orientation: 'default', theme: 'confetti',
+    words: [['tanzen', 1]],
+    designs: { default: [{ id: 'tanzen', text: 'tanzen', fontSize: 406 }] },
+    currentDesignEdited: true, designRevision: 1,
+  });
+  let restored = null;
+  const { context: page } = harness({
+    draftStore,
+    workspaceReady: false,
+    location: { search: '' },
+    applyLocalDraft: async draft => { restored = draft; },
+  });
+  vm.runInContext(pageFunction('loadLocalDraft'), page);
+  await page.initializeWorkspace();
+  assert.equal(restored.designs.default[0].fontSize, 406);
+  assert.equal(page.workspaceReady, true);
+  assert.equal(page.restorationFailed, false);
+  assert.equal(page.content.inert, false);
+});
+
+test('draft connections close whenever Safari suspends or replaces a configurator page', () => {
+  const sessionSource = fs.readFileSync(require.resolve('../public/js/configurator-session'), 'utf8');
+  assert.match(sessionSource, /database\.onversionchange\s*=\s*\(\)\s*=>\s*\{[\s\S]*?database\.close\(\)/);
+  assert.match(template, /window\.addEventListener\('pagehide',[\s\S]*?draftStore\.close\(\)/);
+  assert.match(template, /visibilitychange[\s\S]*?persistCurrentDraft\([\s\S]*?\.finally\(\(\)\s*=>\s*draftStore\.close\(\)\)/);
 });
 
 test('full carts reject an addition but allow replacing a position', () => {

@@ -14,6 +14,9 @@ function createFixture({ words = [['test', 1]] } = {}) {
   const app = express();
   const root = path.join(__dirname, '..');
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  app.get(`/e/${FIXTURE_SLUG}`, (req, res) => res.type('html').send(`<!doctype html>
+    <html lang="en"><head><meta charset="utf-8"><title>Responsive test word cloud</title></head>
+    <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en">Keepsake</a></body></html>`));
   app.get(`/e/${FIXTURE_SLUG}/configure`, (req, res, next) => {
     if (req.query.probe === '1' || req.query.probe === 'area') {
       const send = res.send.bind(res);
