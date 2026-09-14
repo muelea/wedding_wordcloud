@@ -1701,8 +1701,11 @@
 
     .loading {
       min-height: 58vh;
-      display: grid;
-      place-items: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
       color: var(--muted);
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
       font-style: italic;
@@ -2037,7 +2040,10 @@
   <%- include('partials/site-header') %>
 
   <main class="page">
-    <div class="loading" id="loading">Eure Wortwolke wird vorbereitet&hellip;</div>
+    <div class="loading" id="loading">
+      <span id="loading-message">Eure Wortwolke wird vorbereitet&hellip;</span>
+      <button class="secondary-button" id="retry-configurator-loading" type="button" hidden>Konfigurator erneut laden</button>
+    </div>
 
     <div class="config-content" id="config-content" data-mobile-editor-expanded="false" hidden>
       <section class="intro">
@@ -2400,6 +2406,10 @@
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
     const paletteStorageKey = `wordcloud-palette:${slug}`;
+    // The content fingerprint is also the revision of untouched automatic
+    // drafts. A new layout engine regenerates those drafts on the next visit,
+    // while explicit customer edits and immutable cart designs stay intact.
+    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}`) %>;
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
     const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
     const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
@@ -2440,6 +2450,8 @@
       return created;
     }
     const loading = document.getElementById('loading');
+    const loadingMessage = document.getElementById('loading-message');
+    const retryConfiguratorLoading = document.getElementById('retry-configurator-loading');
     const content = document.getElementById('config-content');
     const errorText = document.getElementById('error-text');
     const mugViewer = document.getElementById('mug-3d');
@@ -2665,6 +2677,7 @@
         customColors,
         words,
         designs: getAllSurfaceDesigns(),
+        layoutVersion: AUTOMATIC_LAYOUT_VERSION,
         editingOrderItemId,
         currentDesignEdited,
         designRevision,
@@ -2713,7 +2726,27 @@
       let lastError = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
-          return await WolkenworteConfiguratorSession.withTimeout(read(), 2500);
+          const draft = await WolkenworteConfiguratorSession.withTimeout(read(), 2500);
+          if (!draft || draft.currentDesignEdited !== false ||
+              draft.layoutVersion === AUTOMATIC_LAYOUT_VERSION) return draft;
+          // This is an untouched automatic layout from an older runtime. It is
+          // safe to replace with the current algorithm; edited work is never
+          // discarded, and cart snapshots are loaded from the server instead.
+          try {
+            if (criteria) {
+              await draftStore.removeFor({
+                productKey: draft.productKey,
+                orientation: draft.orientation,
+                editingOrderItemId: draft.editingOrderItemId,
+              });
+            } else {
+              await draftStore.clearActive();
+            }
+          } catch (error) {
+            console.warn('Outdated automatic draft could not be removed.', error);
+            draftStore.close();
+          }
+          return null;
         } catch (error) {
           lastError = error;
           draftStore.close();
@@ -2721,7 +2754,11 @@
       }
       console.warn('Configurator draft load failed.', lastError);
       draftStorageFailed = true;
-      throw lastError || new Error('draft_storage_failed');
+      // Draft restoration is optional. Safari can briefly block IndexedDB
+      // while replacing a page; that must not prevent a fresh design from
+      // opening. A later save retries the storage path and retains the normal
+      // leave-without-saving protection if storage remains unavailable.
+      return null;
     }
 
     function askToLeaveWithoutDraft() {
@@ -3848,6 +3885,10 @@
     }
 
     retryMugPreview.addEventListener('click', () => { destroyMug3D(); void initMug3D(); });
+    retryConfiguratorLoading.addEventListener('click', () => {
+      allowNavigation = true;
+      location.reload();
+    });
     retryConfigurator.addEventListener('click', () => {
       allowNavigation = true;
       location.reload();
@@ -4543,12 +4584,27 @@
 
     window.addEventListener('wolkenworte:localechange', refreshLocalizedConfigurator);
 
-    fetch(`/api/events/${encodeURIComponent(slug)}/configurator`, { signal: AbortSignal.timeout(15000) })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'load_failed');
-        return data;
-      })
+    async function retryStartupTask(task, attempts = 2) {
+      let lastError;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        try { return await task(); }
+        catch (error) {
+          lastError = error;
+          if (error?.message === 'no_words' || attempt === attempts - 1) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+      throw lastError;
+    }
+
+    retryStartupTask(async () => {
+      const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`, {
+        cache: 'no-store', signal: AbortSignal.timeout(15000),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'load_failed');
+      return data;
+    }, 2)
       .then(async (data) => {
         await WolkenworteI18n.useEventLocale(data.event.locale);
         WolkenworteJourney.remember(slug, data.event.title, true);
@@ -4586,8 +4642,10 @@
         });
         updateProductPresentation();
 
-        await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
-        await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(words.map(([word]) => word)));
+        await retryStartupTask(() =>
+          WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY])), 2);
+        await retryStartupTask(() =>
+          WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(words.map(([word]) => word))), 2);
         loading.hidden = true;
         content.hidden = false;
         await initializeWorkspace();
@@ -4595,7 +4653,8 @@
       .catch((error) => {
         content.inert = false;
         loading.hidden = false;
-        setText(loading, error.message === 'no_words'
+        retryConfiguratorLoading.hidden = false;
+        setText(loadingMessage, error.message === 'no_words'
           ? 'Für diese Wortwolke wurden noch keine Wörter gesammelt.'
           : 'Der Konfigurator konnte nicht geladen werden.');
       });

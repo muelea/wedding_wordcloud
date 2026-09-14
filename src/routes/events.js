@@ -927,6 +927,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
   // ── Product configurator ────────────────────────────────────────────────
   router.get('/events/:slug/configurator', asyncRoute(async (req, res) => {
+    // Words are live event data and this payload seeds a new editable design.
+    res.set('Cache-Control', 'no-store');
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     const words = await db.getWords(event.id);

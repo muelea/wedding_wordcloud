@@ -589,6 +589,7 @@ test('configurator exposes every curated product with verified Printful geometry
 
   const empty = await fetch(`${baseUrl}/api/events/${event.slug}/configurator`);
   assert.equal(empty.status, 409, 'an empty cloud cannot be configured');
+  assert.equal(empty.headers.get('cache-control'), 'no-store');
 
   const socket = await connectSocket(baseUrl, event.slug);
   t.after(() => socket.close());
@@ -596,6 +597,7 @@ test('configurator exposes every curated product with verified Printful geometry
 
   const res = await fetch(`${baseUrl}/api/events/${event.slug}/configurator`);
   assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
   const data = await res.json();
   assert.equal(data.product.key, 'white-glossy-mug-duo-11oz');
   assert.deepEqual(data.product.printFile, { width: 2700, height: 1050, dpi: 300, placement: 'default' });
@@ -899,9 +901,13 @@ test('configurator exposes every curated product with verified Printful geometry
     }
   }
 
+  const [landingResponse, configureResponse] = await Promise.all([
+    fetch(`${baseUrl}/`),
+    fetch(`${baseUrl}/e/${event.slug}/configure`),
+  ]);
+  assert.equal(configureResponse.headers.get('cache-control'), 'no-store');
   const [landingPage, configurePage] = await Promise.all([
-    fetch(`${baseUrl}/`).then((response) => response.text()),
-    fetch(`${baseUrl}/e/${event.slug}/configure`).then((response) => response.text()),
+    landingResponse.text(), configureResponse.text(),
   ]);
   assert.ok(landingPage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(landingPage, /x: 200, y: 450, angle: -90/);

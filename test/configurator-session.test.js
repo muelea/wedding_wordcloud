@@ -75,6 +75,7 @@ function harness(extra = {}) {
     WolkenworteConfiguratorSession: Session, sessionStorage: local, cart, draftStore,
     CloudLimits: require('../public/js/cloud-limits'),
     slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' },
+    AUTOMATIC_LAYOUT_VERSION: '/js/wordcloud-core.js?v=current|/js/design-layout.js?v=current',
     words: [['sonne', 1]], liveWords: [['sonne', 1], ['neu', 1]],
     selectedOrientation: 'default', selectedTheme: 'confetti', customColors: ['#ff7100'],
     currentDesignNeedsSave: true, currentDesignEdited: false, editingOrderItemId: null, designRevision: 0, pendingConfiguration: null,
@@ -172,8 +173,10 @@ test('local drafts restore by active design or product and expire without enteri
   let now = 1000;
   const store = Session.createDraftStore('event-a', { backend, now: () => now });
   await store.save({ productKey: 'mug', orientation: 'default', theme: 'confetti',
-    words: [['Liebe', 2]], designs: { default: [{ text: 'Liebe' }] }, designRevision: 4 });
+    words: [['Liebe', 2]], designs: { default: [{ text: 'Liebe' }] },
+    layoutVersion: '/js/wordcloud-core.js?v=current', designRevision: 4 });
   assert.equal((await store.loadActive()).designRevision, 4);
+  assert.equal((await store.loadActive()).layoutVersion, '/js/wordcloud-core.js?v=current');
   assert.equal((await store.loadFor({ productKey: 'mug' })).words[0][0], 'Liebe');
   assert.deepEqual(Session.createCart('event-a', storage()).read(), []);
   await store.save({ productKey: 'poster', orientation: 'landscape', theme: 'confetti',
@@ -201,12 +204,52 @@ test('Safari-stalled draft reads are retried and can never leave restoration pen
     },
     console: { warn() {} },
     draftStorageFailed: false,
+    AUTOMATIC_LAYOUT_VERSION: '/js/wordcloud-core.js?v=current|/js/design-layout.js?v=current',
   });
   vm.runInContext(pageFunction('loadLocalDraft'), context);
-  await assert.rejects(context.loadLocalDraft(), /operation_timeout/);
+  assert.equal(await context.loadLocalDraft(), null);
   assert.equal(reads, 2);
   assert.equal(closes, 2);
   assert.equal(context.draftStorageFailed, true);
+});
+
+test('transient startup work retries once but permanent empty clouds do not', async () => {
+  const context = vm.createContext({ setTimeout, Promise });
+  vm.runInContext(pageFunction('retryStartupTask'), context);
+  let attempts = 0;
+  assert.equal(await context.retryStartupTask(async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error('temporary');
+    return 'ready';
+  }), 'ready');
+  assert.equal(attempts, 2);
+
+  attempts = 0;
+  await assert.rejects(context.retryStartupTask(async () => {
+    attempts += 1;
+    throw new Error('no_words');
+  }), /no_words/);
+  assert.equal(attempts, 1);
+  assert.match(template, /fetch\(`\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/configurator`, \{\s*cache: 'no-store'/);
+  assert.match(template, /id="loading-message"[\s\S]*?id="retry-configurator-loading"/);
+});
+
+test('a layout release replaces only untouched automatic drafts', async () => {
+  for (const edited of [false, true]) {
+    const backend = draftBackend();
+    const draftStore = Session.createDraftStore('event-a', { backend });
+    await draftStore.save({
+      productKey: 'mug', orientation: 'default', theme: 'confetti',
+      words: [['Liebe', 1]], designs: { default: [{ text: 'Liebe' }] },
+      layoutVersion: '/js/wordcloud-core.js?v=previous',
+      currentDesignEdited: edited,
+    });
+    const { context: page } = harness({ draftStore });
+    vm.runInContext(pageFunction('loadLocalDraft'), page);
+    const restored = await page.loadLocalDraft();
+    assert.equal(Boolean(restored), edited);
+    assert.equal(Boolean(await draftStore.loadActive()), edited);
+  }
 });
 
 test('a resized local draft restores after the word-cloud round trip and unlocks the workspace', async () => {

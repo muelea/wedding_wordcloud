@@ -279,6 +279,9 @@ app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
   if (!event) return renderPage(req, res, '404', { status: 404 });
   return renderPage(req, res, 'configure', {
     eventLocale: event.locale,
+    // A configurator document selects a content-addressed layout runtime.
+    // Do not let Safari restore an older document/runtime pair after a release.
+    cacheControl: 'no-store',
     header: {
       variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
       backHref: '#', backLabel: 'Zurück zur Wortwolke', backAria: 'Zurück zur Wortwolke',

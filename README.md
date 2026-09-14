@@ -47,8 +47,10 @@ frozen snapshot of the word cloud.
    basket. Failed cart saves never navigate. Ordinary product,
    orientation and page navigation has no save/discard dialog. Working designs
    are debounced into event-scoped IndexedDB drafts for seven days and restore on
-   the same browser without creating server configurations. Only a failed local
-   draft write can produce a leave-without-saving warning.
+   the same browser without creating server configurations. Untouched automatic
+   drafts are regenerated after a layout-engine release, while manually edited
+   drafts and immutable cart designs retain their exact composition. Only a
+   failed local draft write can produce a leave-without-saving warning.
    Basket references live in event-scoped localStorage for seven days, while
    approved print snapshots continue using the existing immutable server
    configuration IDs. No draft service or account is involved. A plain
