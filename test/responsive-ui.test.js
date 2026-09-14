@@ -262,7 +262,7 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.doesNotMatch(landing, /\.cup-stage \{[^}]*order: -1;/);
   assert.match(landing, /<section class="quote" id="testimonials">[\s\S]*?<\/section>\s*<\/main>/);
   assert.doesNotMatch(landing, /class="cta"|\.cta-box|Bereit für euren Moment\?|Lasst eure Worte/);
-  assert.match(landing, /#mug-canvas \{ width: min\(360px, 100%\); height: auto/);
+  assert.match(landing, /\.homepage-mug-viewer \{ width: min\(360px, 100%\); aspect-ratio: 9 \/ 8;/);
   assert.match(landing, /#site-header:not\(\.landing-menu-open\) \.landing-section-links/);
   assert.doesNotMatch(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-menu-toggle/);
   assert.doesNotMatch(siteHeader, /landing-menu-start/,
@@ -309,6 +309,10 @@ test('mobile foundation contains horizontal gestures and respects safe areas', (
   assert.match(configure, /\.mug-viewer \{[\s\S]*?-webkit-user-select: none;[\s\S]*?-webkit-touch-callout: none;/);
   assert.match(configure, /\.mug-interaction-region \{[\s\S]*?touch-action: none;[\s\S]*?-webkit-touch-callout: none;/);
   assert.match(configure, /\.mug-viewer\.is-flat \{[\s\S]*?touch-action: auto;/);
+  assert.match(landing, /\.homepage-mug-viewer \{[\s\S]*?touch-action: pan-y pinch-zoom;[\s\S]*?-webkit-touch-callout: none;/);
+  assert.match(landing, /\.homepage-mug-viewer \.mug-interaction-region \{[\s\S]*?touch-action: none;[\s\S]*?-webkit-touch-callout: none;/);
+  assert.doesNotMatch(landing, /#mug-canvas \{[^}]*touch-action: none;/);
+  assert.match(landing, /host: mugHost,\s*canvas: canvas,\s*interactionElement: mugHost,/);
 });
 
 test('mobile forms prevent iOS input zoom and expose full-size controls', () => {

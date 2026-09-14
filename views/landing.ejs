@@ -329,8 +329,29 @@
     /* The shared procedural mug renderer uses the locally served Three.js
        browser build; the homepage and configurator render the same geometry. */
     .cup-stage { grid-area: visual; min-height: 430px; display: grid; place-items: center; position: relative; gap: 4px; }
-    #mug-canvas { width: min(480px, 100%); height: auto; aspect-ratio: 48 / 43; touch-action: none; cursor: grab; }
-    #mug-canvas.dragging { cursor: grabbing; }
+    .homepage-mug-viewer {
+      width: min(480px, 100%);
+      aspect-ratio: 48 / 43;
+      position: relative;
+      cursor: grab;
+      touch-action: pan-y pinch-zoom;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #mug-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
+    .homepage-mug-viewer .mug-interaction-region {
+      position: absolute;
+      z-index: 2;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .homepage-mug-viewer.dragging,
+    .homepage-mug-viewer.dragging .mug-interaction-region { cursor: grabbing; }
     #mug-canvas:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 8px; }
     .cup-caption { color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
     .cup-caption .icon-rotate { width: 13px; height: 13px; opacity: .7; }
@@ -416,7 +437,7 @@
       .print-copy .eyebrow { justify-content: center; }
       .print-copy p { margin-left: auto; margin-right: auto; }
       .cup-stage { min-height: 340px; }
-      #mug-canvas { width: min(360px, 100%); height: auto; aspect-ratio: 9 / 8; }
+      .homepage-mug-viewer { width: min(360px, 100%); aspect-ratio: 9 / 8; }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
@@ -525,7 +546,9 @@
             <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
           </div>
           <div class="cup-stage">
-            <canvas id="mug-canvas" tabindex="0" role="img" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse. Zum Drehen ziehen oder Pfeiltasten verwenden."></canvas>
+            <div class="homepage-mug-viewer" id="homepage-mug-viewer">
+              <canvas id="mug-canvas" tabindex="0" role="img" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse. Zum Drehen ziehen oder Pfeiltasten verwenden."></canvas>
+            </div>
             <span class="cup-caption"><svg class="icon-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20"/><path d="M20 5v6h-6"/></svg>Zum Drehen ziehen</span>
           </div>
         </div>
@@ -970,7 +993,8 @@
     // renderer. Only the artwork supplied to its print texture differs.
     (function () {
       var canvas = document.getElementById('mug-canvas');
-      if (!canvas || !window.WebGLRenderingContext) return;
+      var mugHost = document.getElementById('homepage-mug-viewer');
+      if (!canvas || !mugHost || !window.WebGLRenderingContext) return;
 
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -1042,9 +1066,9 @@
 
       function createHomepageMug() { return Mug3DViewer.create({
         THREE: window.THREE,
-        host: canvas,
+        host: mugHost,
         canvas: canvas,
-        interactionElement: canvas,
+        interactionElement: mugHost,
         product: Mug3DViewer.DEFAULT_PRODUCT,
         drawTexture: buildDrawTexture(),
         autoRotate: !reduceMotion,
