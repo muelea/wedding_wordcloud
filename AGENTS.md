@@ -4,11 +4,41 @@ This file is for AI coding agents (Claude Code, Codex, Cursor, etc.) working
 in this repo. Read `README.md` first for what the project is and how to run
 it — this file is about how to work in it safely.
 
-## Before you're done with any change
+## Verification policy
 
-- Run `npm test` (`node --test`). All tests must pass. Database-backed
-  tests use isolated migrated Postgres schemas plus ephemeral ports and clean
-  them up afterward, so they are safe to run repeatedly.
+Use the smallest meaningful check that covers the changed behavior during
+active iteration. Do not run the full `npm test` suite automatically after
+every change. Start with fast, focused feedback and broaden only when the
+scope, a failure or an unresolved concern justifies it.
+
+- For documentation, comments, and reversible copy-only changes such as a
+  label or heading, inspect the diff and run `git diff --check`. Do not add or
+  run tests that merely repeat the exact changed text unless the text is part
+  of a contract, localization key or other behavior.
+- For localized markup or CSS changes, run the closest static/responsive test
+  file, when one exists. If the change is visual, inspect only the affected
+  viewport or state. Do not run the browser matrix, database-backed tests or
+  the full suite for a low-risk visual adjustment.
+- For localized behavior changes, run the exact unit or integration test files
+  that exercise that behavior. Add a focused regression test when fixing a
+  behavioral bug that was not already covered.
+- If a focused check fails unexpectedly, the change crosses subsystem
+  boundaries, or the impact cannot be determined confidently, expand to the
+  neighboring test files and then to the full suite if uncertainty remains.
+- Run the complete `npm test` (`NODE_ENV=test node --test test/*.test.js`) only
+  when the user explicitly requests it; before an explicitly requested
+  release, deployment or merge-ready handoff; after broad or cross-cutting
+  changes; after dependency, runtime configuration or database-schema changes;
+  or when focused verification leaves meaningful uncertainty. Do not repeat a
+  previously passing full suite after subsequent copy-only, documentation-only
+  or isolated styling changes.
+- `npm run deploy:hosted` retains the complete suite as a mandatory fail-fast
+  release gate. Database-backed tests use isolated migrated Postgres schemas
+  plus ephemeral ports and clean them up afterward.
+
+The following high-risk mappings remain mandatory whenever the described
+behavior changes, even during focused iteration:
+
 - If you touched `src/socket.js`, `test/isolation.test.js` passing is not
   optional — it's the test that proves one couple's event never leaks words
   or theme changes into another couple's display. See "Hard invariants"
@@ -20,10 +50,12 @@ it — this file is about how to work in it safely.
 - If you touched guest contribution ownership in `src/socket.js` or
   `src/db.js`, both `test/isolation.test.js` and `test/words.test.js` must
   pass; they cover cross-event isolation and receipt-bound removal.
-- If you touched product designs in `src/routes/events.js`, `src/mugPrint.js`,
-  `views/configure.ejs` or `public/js/mug-editor.js`,
-  `test/configurator.test.js` must pass; it covers trusted canvas validation,
-  configuration isolation and immutable print output.
+- If you changed product-design persistence, trusted canvas validation,
+  configuration isolation or immutable print output in `src/routes/events.js`,
+  `src/mugPrint.js`, `views/configure.ejs` or `public/js/mug-editor.js`,
+  `test/configurator.test.js` must pass. Copy-only and styling-only edits to
+  `views/configure.ejs` do not activate this database-backed test; use the
+  relevant responsive/workspace test instead.
 - If you touched `public/js/wordcloud-core.js` (the layout/export engine),
   `test/svg-export.test.js` and `test/export-font-metrics.test.js` must
   still pass — they check no dropped/duplicated/overlapping words and real

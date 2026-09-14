@@ -846,6 +846,24 @@ rounding edge cases and a 500-word capacity case with real font metrics.
 
 ### Automated suite
 
+During active development, run the smallest test file or set of files that
+covers the behavior being changed. For example:
+
+```bash
+NODE_ENV=test node --test test/responsive-ui.test.js
+NODE_ENV=test node --test test/configurator-toolbar.test.js test/configurator-workspace.test.js
+NODE_ENV=test node --test test/configurator-session.test.js test/configurator.test.js
+```
+
+Copy-only and documentation-only changes normally need direct diff inspection
+and `git diff --check`, not the full suite. Localized visual changes should use
+the relevant responsive test and an affected viewport check when useful.
+Broaden verification when a focused check fails, the change crosses subsystem
+boundaries or its impact is uncertain. The high-risk file and behavior mappings
+for coding agents are defined in `AGENTS.md`.
+
+Run the complete suite for broad changes and release-ready checkpoints:
+
 ```bash
 npm test
 ```
