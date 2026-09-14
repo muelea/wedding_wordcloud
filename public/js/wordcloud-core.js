@@ -489,9 +489,13 @@
     return layoutWordsInArea(words, side, side, measureCtx, colorFn);
   }
 
-  // Deterministic free-rectangle packing. Every candidate is inside the actual
-  // rectangular print/display area, including its corners. Text, icons and
-  // images use measured, rotated boxes and one common size multiplier.
+  // Deterministic, shape-aware packing. Items receive distributed ideal
+  // positions and search outwards from those positions on a bounded grid.
+  // This avoids the two characteristic failures of the old free-rectangle
+  // packer: a few early splits could strand a large empty region, and runs of
+  // equally-sized emoji were funnelled through four repeating anchors. Exact
+  // rectangle collision checks remain authoritative; the grid is only a
+  // bounded source of candidate positions.
   function layoutBoxesInArea(boxes, width, height) {
     if (!Array.isArray(boxes) || !boxes.length || !Number.isFinite(width) ||
         !Number.isFinite(height) || width <= 0 || height <= 0) return [];
@@ -501,81 +505,121 @@
       .sort((a, b) => b.priority - a.priority || a.index - b.index);
     const minSide = Math.min(width, height);
     const padding = minSide * Math.min(.007, .055 / Math.sqrt(sized.length));
-    const overlaps = (a, b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
-    const contains = (a, b) => a.x1 <= b.x1 && a.x2 >= b.x2 && a.y1 <= b.y1 && a.y2 >= b.y2;
     const emojiCount = sized.filter(item => item.emoji).length;
-    const emojiSpacing = Math.min(.4, .9 / Math.sqrt(Math.max(1, emojiCount)));
-    const emojiAnchors = [[.2, .2], [.8, .8], [.8, .2], [.2, .8]];
     const dominant = sized.length === 1 || sized[0].priority > sized[1].priority * 1.05;
 
-    function tryScale(scale, order = sized, variant = 0) {
-      let free = [{ x1: 0, y1: 0, x2: width, y2: height }];
-      const placed = [];
-      const placedEmoji = [];
-      for (const item of order) {
-        const w = item.width * scale + padding * 2;
-        const h = item.height * scale + padding * 2;
-        let best = null;
-        let score = Infinity;
-        const anchor = placed.length % 4;
-        const emojiAnchor = emojiAnchors[placedEmoji.length % 4];
-        const scatterEmoji = placed.length && item.emoji && variant === 3;
-        for (const space of free) {
-          const dw = space.x2 - space.x1 - w;
-          const dh = space.y2 - space.y1 - h;
-          if (dw < 0 || dh < 0) continue;
-          // Keep the dominant word central. Subsequent words choose the best
-          // fitting free rectangle; ties favour the centre, not a fixed corner.
-          const targetX = scatterEmoji ? width * emojiAnchor[0] - w / 2
-            : (!placed.length && dominant) || !variant ? (width - w) / 2
-            : variant === 1 ? (space.x1 + space.x2 - w) / 2
-              : space.x1;
-          const targetY = scatterEmoji ? height * emojiAnchor[1] - h / 2
-            : (!placed.length && dominant) || !variant ? (height - h) / 2
-            : variant === 1 ? (space.y1 + space.y2 - h) / 2
-              : sized.length <= 10 || anchor < 2 ? space.y1 : space.y2 - h;
-          const x = clamp(targetX, space.x1, space.x2 - w);
-          const y = clamp(targetY, space.y1, space.y2 - h);
-          const distance = Math.abs((x + w / 2) / width - .5) +
-            Math.abs((y + h / 2) / height - .5);
-          let separation = emojiSpacing;
-          if (item.emoji) {
-            for (const other of placedEmoji) separation = Math.min(separation,
-              Math.hypot((x + w / 2 - other.x) / width, (y + h / 2 - other.y) / height));
-          }
-          const candidateScore = Math.min(dw / width, dh / height) +
-            Math.max(dw / width, dh / height) * .05 + distance * .001 +
-            (1 - separation / emojiSpacing) * .3;
-          if (candidateScore < score) {
-            score = candidateScore;
-            best = { x1: x, y1: y, x2: x + w, y2: y + h };
-          }
-        }
-        if (!best) return null;
-        placed.push({ ...item, x: (best.x1 + best.x2) / 2,
-          y: (best.y1 + best.y2) / 2, scale });
-        if (item.emoji) placedEmoji.push(placed[placed.length - 1]);
-        const next = [];
-        for (const space of free) {
-          if (!overlaps(space, best)) { next.push(space); continue; }
-          if (best.x1 > space.x1) next.push({ ...space, x2: best.x1 });
-          if (best.x2 < space.x2) next.push({ ...space, x1: best.x2 });
-          if (best.y1 > space.y1) next.push({ ...space, y2: best.y1 });
-          if (best.y2 < space.y2) next.push({ ...space, y1: best.y2 });
-        }
-        // Split rectangles may overlap, but never intersect a placed item.
-        // Remove contained duplicates to keep the search bounded in practice.
-        free = next.filter((space, index) => !next.some((other, otherIndex) =>
-          otherIndex !== index && contains(other, space) &&
-          (!contains(space, other) || otherIndex < index)));
-      }
-      return placed;
-    }
+    // MaxRects-style free-rectangle packing remains one member of the
+    // portfolio. It is particularly strong for very small sets and for
+    // irregular mixes of long and short labels. The distributed placer below
+    // wins when it improves the measured result; keeping both avoids making a
+    // single heuristic responsible for every cloud shape.
+    function freeRectangleCandidates() {
+      const overlaps = (a, b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+      const contains = (a, b) => a.x1 <= b.x1 && a.x2 >= b.x2 && a.y1 <= b.y1 && a.y2 >= b.y2;
+      const emojiSpacing = Math.min(.4, .9 / Math.sqrt(Math.max(1, emojiCount)));
+      const emojiAnchors = [[.2, .2], [.8, .8], [.8, .2], [.2, .8]];
 
-    let low = 0;
-    let high = Math.min(...sized.map(item => Math.min(
-      (width - padding * 2) / item.width, (height - padding * 2) / item.height
-    )));
+      function tryLegacyScale(scale, order = sized, variant = 0) {
+        let free = [{ x1: 0, y1: 0, x2: width, y2: height }];
+        const placed = [];
+        const placedEmoji = [];
+        for (const item of order) {
+          const w = item.width * scale + padding * 2;
+          const h = item.height * scale + padding * 2;
+          let best = null;
+          let score = Infinity;
+          const anchor = placed.length % 4;
+          const emojiAnchor = emojiAnchors[placedEmoji.length % 4];
+          const scatterEmoji = placed.length && item.emoji && variant === 3;
+          for (const space of free) {
+            const dw = space.x2 - space.x1 - w;
+            const dh = space.y2 - space.y1 - h;
+            if (dw < 0 || dh < 0) continue;
+            const targetX = scatterEmoji ? width * emojiAnchor[0] - w / 2
+              : (!placed.length && dominant) || !variant ? (width - w) / 2
+              : variant === 1 ? (space.x1 + space.x2 - w) / 2 : space.x1;
+            const targetY = scatterEmoji ? height * emojiAnchor[1] - h / 2
+              : (!placed.length && dominant) || !variant ? (height - h) / 2
+              : variant === 1 ? (space.y1 + space.y2 - h) / 2
+                : sized.length <= 10 || anchor < 2 ? space.y1 : space.y2 - h;
+            const x = clamp(targetX, space.x1, space.x2 - w);
+            const y = clamp(targetY, space.y1, space.y2 - h);
+            const distance = Math.abs((x + w / 2) / width - .5) +
+              Math.abs((y + h / 2) / height - .5);
+            let separation = emojiSpacing;
+            if (item.emoji) {
+              for (const other of placedEmoji) separation = Math.min(separation,
+                Math.hypot((x + w / 2 - other.x) / width,
+                  (y + h / 2 - other.y) / height));
+            }
+            const candidateScore = Math.min(dw / width, dh / height) +
+              Math.max(dw / width, dh / height) * .05 + distance * .001 +
+              (1 - separation / emojiSpacing) * .3;
+            if (candidateScore < score) {
+              score = candidateScore;
+              best = { x1: x, y1: y, x2: x + w, y2: y + h };
+            }
+          }
+          if (!best) return null;
+          placed.push({ ...item, x: (best.x1 + best.x2) / 2,
+            y: (best.y1 + best.y2) / 2, scale });
+          if (item.emoji) placedEmoji.push(placed[placed.length - 1]);
+          const next = [];
+          for (const space of free) {
+            if (!overlaps(space, best)) { next.push(space); continue; }
+            if (best.x1 > space.x1) next.push({ ...space, x2: best.x1 });
+            if (best.x2 < space.x2) next.push({ ...space, x1: best.x2 });
+            if (best.y1 > space.y1) next.push({ ...space, y2: best.y1 });
+            if (best.y2 < space.y2) next.push({ ...space, y1: best.y2 });
+          }
+          free = next.filter((space, index) => !next.some((other, otherIndex) =>
+            otherIndex !== index && contains(other, space) &&
+            (!contains(space, other) || otherIndex < index)));
+        }
+        return placed;
+      }
+
+      let low = 0;
+      let high = Math.min(...sized.map(item => Math.min(
+        (width - padding * 2) / item.width, (height - padding * 2) / item.height
+      )));
+      let best = null;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const scale = (low + high) / 2;
+        const candidate = tryLegacyScale(scale);
+        if (candidate) {
+          best = candidate;
+          low = scale;
+        } else high = scale;
+      }
+      if (!best) return [];
+      const result = spreadAreaBoxes(best, width, height);
+      const results = [result];
+      const minimumScale = result[0].scale * .9;
+      const initialQuality = layoutQuality(result, width, height);
+      if (sized.length > 2 && !isLayoutBalanced(initialQuality, sized.length)) {
+        const tail = sized.slice(1);
+        const orders = [sized,
+          [sized[0], ...tail.slice().sort((a, b) =>
+            b.width * b.height - a.width * a.height || a.index - b.index)],
+          [sized[0], ...tail.slice().sort((a, b) =>
+            Math.max(b.width, b.height) - Math.max(a.width, a.height) || a.index - b.index)]];
+        if (emojiCount > 1) orders.push([sized[0], ...tail.filter(item => item.emoji),
+          ...tail.filter(item => !item.emoji).sort((a, b) =>
+            b.width * b.height - a.width * a.height || a.index - b.index)]);
+        else orders.push(orders[1]);
+        orders.forEach((order, index) => {
+          for (const ratio of [1, .94, .88]) {
+            const candidate = tryLegacyScale(low * ratio, order,
+              index === 0 ? 1 : index === 3 ? (emojiCount > 1 ? 3 : 1) : 2);
+            if (!candidate) continue;
+            const fitted = spreadAreaBoxes(candidate, width, height);
+            if (fitted[0].scale >= minimumScale) results.push(fitted);
+          }
+        });
+      }
+      return results;
+    }
     // A complete grid is the deterministic fallback, including extreme word
     // lengths/aspect ratios. Partial layouts are never returned.
     const maxWidth = Math.max(...sized.map(item => item.width));
@@ -592,50 +636,352 @@
     const fallback = sized.map((item, index) => ({ ...item, scale: gridScale,
       x: (index % columns + .5) * width / columns,
       y: (Math.floor(index / columns) + .5) * height / rows }));
-    let best = null;
-    for (let attempt = 0; attempt < 12; attempt++) {
-      const scale = (low + high) / 2;
-      const candidate = tryScale(scale);
-      if (candidate) {
-        best = candidate;
-        low = scale;
-      } else high = scale;
+
+    function radicalInverse(value, base) {
+      let result = 0;
+      let factor = 1 / base;
+      while (value > 0) {
+        result += (value % base) * factor;
+        value = Math.floor(value / base);
+        factor /= base;
+      }
+      return result;
     }
-    let result = fitAreaBoxes(best || fallback, width, height);
-    const initialQuality = layoutQuality(result, width, height);
-    let quality = initialQuality.score;
-    const minimumScale = result[0].scale * .9;
-    // Reuse the successful scale search. At most four alternative orders/anchors,
-    // each with at most three fit attempts, bound the extra work even at 500
-    // words. A clearly dominant contribution stays central; equally weighted
-    // words can start at an edge when that fills the rectangle better.
-    const balanced = isLayoutBalanced(initialQuality, sized.length);
-    if (best && sized.length > 2 && !balanced) {
-      const tail = sized.slice(1);
-      const orders = [sized,
-        [sized[0], ...tail.slice().sort((a, b) => b.width * b.height - a.width * a.height || a.index - b.index)],
-        [sized[0], ...tail.slice().sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height) || a.index - b.index)]];
-      if (emojiCount > 1) orders.push([sized[0], ...tail.filter(item => item.emoji),
-        ...tail.filter(item => !item.emoji).sort((a, b) => b.width * b.height - a.width * a.height || a.index - b.index)]);
-      // Without emoji, use the fourth bounded attempt to centre area-sorted
-      // boxes in free rectangles. Narrower safe areas can defeat corner anchors.
-      else orders.push(orders[1]);
-      orders.forEach((order, index) => {
-        for (const ratio of [1, .94, .88]) {
-          const candidate = tryScale(low * ratio, order, index === 0 ? 1 : index === 3 ? (emojiCount > 1 ? 3 : 1) : 2);
-          if (!candidate) continue;
-          const fitted = fitAreaBoxes(candidate, width, height);
-          const candidateQuality = layoutQuality(fitted, width, height);
-          const nextQuality = candidateQuality.score;
-          if (fitted[0].scale >= minimumScale && nextQuality > quality + .001) {
-            result = fitted;
-            quality = nextQuality;
-          }
-          // A fitting arrangement may still contain a hole. Try the remaining
-          // bounded scales unless this arrangement already meets the target.
-          if (isLayoutBalanced(candidateQuality, sized.length)) break;
+
+    const emojiAnchorCache = new Map();
+    function blueNoiseEmojiAnchors(count, variant) {
+      const key = `${count}:${variant}`;
+      if (emojiAnchorCache.has(key)) return emojiAnchorCache.get(key);
+      const side = clamp(Math.ceil(Math.sqrt(count) * 4), 12, 48);
+      const points = [];
+      for (let row = 0; row < side; row++) {
+        for (let column = 0; column < side; column++) {
+          points.push([
+            .06 + .88 * column / Math.max(1, side - 1),
+            .06 + .88 * row / Math.max(1, side - 1),
+          ]);
         }
-      });
+      }
+      const seed = [
+        .06 + .88 * radicalInverse(variant + 1, 2),
+        .06 + .88 * radicalInverse(variant + 1, 3),
+      ];
+      const anchors = [];
+      const used = new Uint8Array(points.length);
+      const nearestSquared = new Float64Array(points.length);
+      nearestSquared.fill(Infinity);
+      let bestIndex = 0;
+      let seedDistance = Infinity;
+      for (let index = 0; index < points.length; index++) {
+        const distance = (points[index][0] - seed[0]) ** 2 +
+          (points[index][1] - seed[1]) ** 2;
+        if (distance < seedDistance) {
+          seedDistance = distance;
+          bestIndex = index;
+        }
+      }
+      while (anchors.length < count) {
+        used[bestIndex] = 1;
+        const selected = points[bestIndex];
+        anchors.push(selected);
+        bestIndex = -1;
+        let bestDistance = -1;
+        for (let index = 0; index < points.length; index++) {
+          if (used[index]) continue;
+          const distance = (points[index][0] - selected[0]) ** 2 +
+            (points[index][1] - selected[1]) ** 2;
+          nearestSquared[index] = Math.min(nearestSquared[index], distance);
+          if (nearestSquared[index] > bestDistance + 1e-12) {
+            bestDistance = nearestSquared[index];
+            bestIndex = index;
+          }
+        }
+      }
+      emojiAnchorCache.set(key, anchors);
+      return anchors;
+    }
+
+    function distributedAnchor(index, count, variant, emoji) {
+      if (emoji) {
+        // Deterministic farthest-point sampling approximates blue noise: each
+        // new emoji claims the largest remaining gap. Unlike a Halton sequence,
+        // it also controls the nearest pairs that people perceive as a cluster.
+        return blueNoiseEmojiAnchors(count, variant)[index];
+      }
+      if (index === 0) return [.5, .5];
+      if (variant >= 4 && count > 10) {
+        // Half of the bounded variants use an all-area sequence for text too.
+        // It gives the candidate selector a deliberately different topology
+        // whose tail reaches rectangular corners instead of orbiting them.
+        const offsetX = ((variant - 4) * .2360679775) % 1;
+        const offsetY = ((variant - 4) * .4142135624) % 1;
+        return [
+          .04 + .92 * ((radicalInverse(index + 1, 2) + offsetX) % 1),
+          .04 + .92 * ((radicalInverse(index + 1, 3) + offsetY) % 1),
+        ];
+      }
+      // Map a golden-angle sunflower to a square boundary. Unlike an ellipse,
+      // this fills rectangular corners as the rank approaches the long tail.
+      const progress = Math.sqrt((index + .35) / Math.max(1, count));
+      const extent = count <= 10 && emojiCount === 0 ? .3 : .46;
+      const direction = variant % 2 ? -1 : 1;
+      const theta = direction * index * 2.399963229728653 + variant * .67;
+      const cosine = Math.cos(theta);
+      const sine = Math.sin(theta);
+      const edge = Math.max(Math.abs(cosine), Math.abs(sine), 1e-6);
+      return [
+        .5 + extent * progress * cosine / edge,
+        .5 + extent * progress * sine / edge,
+      ];
+    }
+
+    function orderedItems(variant) {
+      if (emojiCount > 1 && variant % 4 === 3) {
+        const first = sized[0];
+        const tail = sized.slice(1);
+        return [first, ...tail.filter(item => item.emoji), ...tail.filter(item => !item.emoji)
+          .sort((a, b) => b.width * b.height - a.width * a.height || a.index - b.index)];
+      }
+      if (variant % 3 === 1) {
+        return sized.slice().sort((a, b) => b.priority - a.priority ||
+          b.width * b.height - a.width * a.height || a.index - b.index);
+      }
+      if (variant % 3 === 2) {
+        return sized.slice().sort((a, b) => b.priority - a.priority ||
+          Math.max(b.width, b.height) - Math.max(a.width, a.height) || a.index - b.index);
+      }
+      return sized;
+    }
+
+    const targetPoints = clamp(Math.ceil(sized.length * 32), 4096, 18000);
+    const candidateColumns = Math.max(24, Math.round(Math.sqrt(targetPoints * width / height)));
+    const candidateRows = Math.max(24, Math.round(targetPoints / candidateColumns));
+    const searchRadius = Math.max(candidateColumns, candidateRows);
+    const bucketRows = clamp(Math.ceil(Math.sqrt(sized.length) * 2.5), 24, 64);
+    const bucketColumns = clamp(Math.round(bucketRows * width / height), 24, 128);
+
+    function tryScale(scale, variant) {
+      const order = orderedItems(variant);
+      const placed = [];
+      const buckets = Array.from({ length: bucketRows * bucketColumns }, () => []);
+      const seen = new Int32Array(order.length);
+      let seenRevision = 0;
+      let emojiIndex = 0;
+      let textIndex = 0;
+
+      function collides(rect) {
+        const left = clamp(Math.floor(rect.x1 / width * bucketColumns), 0, bucketColumns - 1);
+        const right = clamp(Math.floor((rect.x2 - 1e-7) / width * bucketColumns), 0, bucketColumns - 1);
+        const top = clamp(Math.floor(rect.y1 / height * bucketRows), 0, bucketRows - 1);
+        const bottom = clamp(Math.floor((rect.y2 - 1e-7) / height * bucketRows), 0, bucketRows - 1);
+        seenRevision += 1;
+        for (let row = top; row <= bottom; row++) {
+          for (let col = left; col <= right; col++) {
+            for (const placedIndex of buckets[row * bucketColumns + col]) {
+              if (seen[placedIndex] === seenRevision) continue;
+              seen[placedIndex] = seenRevision;
+              const other = placed[placedIndex];
+              if (rect.x1 < other.collisionX2 && rect.x2 > other.collisionX1 &&
+                  rect.y1 < other.collisionY2 && rect.y2 > other.collisionY1) return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function insert(rect, placedIndex) {
+        const left = clamp(Math.floor(rect.x1 / width * bucketColumns), 0, bucketColumns - 1);
+        const right = clamp(Math.floor((rect.x2 - 1e-7) / width * bucketColumns), 0, bucketColumns - 1);
+        const top = clamp(Math.floor(rect.y1 / height * bucketRows), 0, bucketRows - 1);
+        const bottom = clamp(Math.floor((rect.y2 - 1e-7) / height * bucketRows), 0, bucketRows - 1);
+        for (let row = top; row <= bottom; row++) {
+          for (let col = left; col <= right; col++) buckets[row * bucketColumns + col].push(placedIndex);
+        }
+      }
+
+      for (let orderIndex = 0; orderIndex < order.length; orderIndex++) {
+        const item = order[orderIndex];
+        const collisionWidth = item.width * scale + padding * 2;
+        const collisionHeight = item.height * scale + padding * 2;
+        if (collisionWidth > width || collisionHeight > height) return null;
+        const isDominant = orderIndex === 0 && dominant;
+        const anchor = isDominant ? [.5, .5] : distributedAnchor(
+          item.emoji ? emojiIndex++ : textIndex++,
+          item.emoji ? emojiCount : sized.length - emojiCount,
+          variant,
+          item.emoji
+        );
+        const anchorColumn = Math.round(anchor[0] * (candidateColumns - 1));
+        const anchorRow = Math.round(anchor[1] * (candidateRows - 1));
+        let best = null;
+
+        function consider(column, row) {
+          if (column < 0 || column >= candidateColumns || row < 0 || row >= candidateRows) return false;
+          const x = collisionWidth / 2 + column / Math.max(1, candidateColumns - 1) *
+            (width - collisionWidth);
+          const y = collisionHeight / 2 + row / Math.max(1, candidateRows - 1) *
+            (height - collisionHeight);
+          const rect = { x1: x - collisionWidth / 2, x2: x + collisionWidth / 2,
+            y1: y - collisionHeight / 2, y2: y + collisionHeight / 2 };
+          if (collides(rect)) return false;
+          best = { x, y, rect };
+          return true;
+        }
+
+        if (!consider(anchorColumn, anchorRow)) {
+          outer: for (let radius = 1; radius <= searchRadius; radius++) {
+            const reverse = (variant + orderIndex + radius) % 2;
+            for (let step = -radius; step <= radius; step++) {
+              const along = reverse ? -step : step;
+              if (consider(anchorColumn + along, anchorRow - radius) ||
+                  consider(anchorColumn - along, anchorRow + radius) ||
+                  consider(anchorColumn - radius, anchorRow - along) ||
+                  consider(anchorColumn + radius, anchorRow + along)) break outer;
+            }
+          }
+        }
+        if (!best) return null;
+        const next = { ...item, x: best.x, y: best.y, scale,
+          collisionX1: best.rect.x1, collisionX2: best.rect.x2,
+          collisionY1: best.rect.y1, collisionY2: best.rect.y2 };
+        placed.push(next);
+        insert(best.rect, placed.length - 1);
+      }
+      return placed.map(({ collisionX1, collisionX2, collisionY1, collisionY2, ...item }) => item);
+    }
+
+    function redistributeEmoji(layout) {
+      if (emojiCount <= 1) return layout;
+      const fixed = layout.filter(item => !item.emoji);
+      const lockedEmoji = dominant && sized[0].emoji
+        ? layout.filter(item => item.index === sized[0].index) : [];
+      const emoji = layout.filter(item => item.emoji && !lockedEmoji.includes(item)).sort((a, b) =>
+        b.width * b.height * b.scale * b.scale - a.width * a.height * a.scale * a.scale ||
+        a.index - b.index);
+      const anchors = blueNoiseEmojiAnchors(emoji.length + lockedEmoji.length, 17);
+      const placedEmoji = lockedEmoji.slice();
+      const gap = padding * .6;
+
+      for (let emojiIndex = 0; emojiIndex < emoji.length; emojiIndex++) {
+        const item = emoji[emojiIndex];
+        const itemWidth = item.width * item.scale;
+        const itemHeight = item.height * item.scale;
+        const target = anchors[emojiIndex + lockedEmoji.length];
+        let best = null;
+        let bestScore = -Infinity;
+        for (let row = 0; row < candidateRows; row++) {
+          const y = itemHeight / 2 + row / Math.max(1, candidateRows - 1) *
+            (height - itemHeight);
+          for (let column = 0; column < candidateColumns; column++) {
+            const x = itemWidth / 2 + column / Math.max(1, candidateColumns - 1) *
+              (width - itemWidth);
+            const rect = { x1: Math.max(0, x - itemWidth / 2),
+              x2: Math.min(width, x + itemWidth / 2),
+              y1: Math.max(0, y - itemHeight / 2),
+              y2: Math.min(height, y + itemHeight / 2) };
+            const intersects = other => rect.x1 - gap < other.x2 && rect.x2 + gap > other.x1 &&
+              rect.y1 - gap < other.y2 && rect.y2 + gap > other.y1;
+            const collision = fixed.some(intersects) || placedEmoji.some(intersects);
+            if (collision) continue;
+            let nearest = 1;
+            for (const other of placedEmoji) {
+              nearest = Math.min(nearest, Math.hypot(
+                (x - other.x) / width, (y - other.y) / height));
+            }
+            const targetDistance = Math.hypot(x / width - target[0], y / height - target[1]);
+            const score = nearest - targetDistance * .18;
+            if (score > bestScore + 1e-12) {
+              bestScore = score;
+              best = { ...item, x, y, ...rect };
+            }
+          }
+        }
+        if (!best) return layout;
+        placedEmoji.push(best);
+      }
+      return fixed.concat(placedEmoji).sort((a, b) => a.index - b.index);
+    }
+
+    const dimensionLimit = Math.min(...sized.map(item => Math.min(
+      (width - padding * 2) / item.width,
+      (height - padding * 2) / item.height
+    )));
+    const totalArea = sized.reduce((sum, item) => sum +
+      (item.width + padding * 2) * (item.height + padding * 2), 0);
+    const areaLimit = Math.sqrt(width * height * .82 / Math.max(1, totalArea));
+    const highLimit = Math.min(dimensionLimit, areaLimit * 1.35);
+    const variantCount = sized.length <= 80 ? 8
+      : sized.length <= 200 ? 5 : emojiCount > 1 ? 4 : 3;
+    const candidates = [];
+
+    // Free-rectangle splitting grows sharply on capacity-sized clouds. The
+    // spatial-grid family is both faster and more reliable there.
+    if (sized.length <= 120) {
+      candidates.push(...freeRectangleCandidates());
+    }
+
+    for (let variant = 0; variant < variantCount; variant++) {
+      let low = 0;
+      let high = highLimit;
+      let best = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const scale = (low + high) / 2;
+        const candidate = tryScale(scale, variant);
+        if (candidate) {
+          best = candidate;
+          low = scale;
+        } else high = scale;
+      }
+      if (best) candidates.push(fitAreaBoxes(best, width, height));
+    }
+
+    if (!candidates.length) candidates.push(fitAreaBoxes(fallback, width, height));
+    const largestScale = Math.max(...candidates.map(candidate => candidate[0].scale));
+    const scoredCandidates = candidates.map(candidate =>
+      ({ candidate, quality: layoutQuality(candidate, width, height) }));
+    let eligible = scoredCandidates.filter(entry => entry.candidate[0].scale >= largestScale * .9);
+    const smallestEmptyRegion = Math.min(...eligible.map(entry => entry.quality.emptyRegion));
+    if (sized.length > 10 || emojiCount <= 1) {
+      const filled = eligible.filter(entry => entry.quality.emptyRegion <=
+        smallestEmptyRegion + (sized.length <= 10 ? .012 : .008));
+      if (filled.length) eligible = filled;
+    }
+    // Emoji distribution is a constraint, not a cosmetic tie-breaker. If at
+    // least one similarly-sized candidate keeps the lower tail of nearest-
+    // neighbour distances healthy, a denser but visibly clustered candidate
+    // is not allowed to win on occupied area alone.
+    if (emojiCount > 1 && eligible.some(entry => entry.quality.separation >= .8)) {
+      eligible = eligible.filter(entry => entry.quality.separation >= .8);
+    }
+    let result = eligible[0].candidate;
+    let quality = eligible[0].quality.score;
+    for (const entry of eligible.slice(1)) {
+      if (entry.quality.score > quality + 1e-9) {
+        result = entry.candidate;
+        quality = entry.quality.score;
+      }
+    }
+    if (emojiCount > 1 && emojiCount <= 80) {
+      const before = layoutQuality(result, width, height);
+      const redistributed = redistributeEmoji(result);
+      const after = layoutQuality(redistributed, width, height);
+      const emptyAllowance = sized.length <= 10 ? .06 : .015;
+      if (after.separation > before.separation + .025 &&
+          after.emptyRegion <= before.emptyRegion + emptyAllowance) result = redistributed;
+      const redistributedQuality = layoutQuality(result, width, height);
+      if (redistributedQuality.separation < .8) {
+        // If full-size local repair cannot resolve the cluster, admit a second
+        // tier of blue-noise candidates. The 18% cap is deliberately bounded:
+        // relative contribution sizes remain exact, while the lower global
+        // scale buys both continuous fill and visibly even emoji placement.
+        const distributed = scoredCandidates.filter(entry =>
+          entry.candidate[0].scale >= largestScale * .82 &&
+          entry.quality.separation >= .8 &&
+          entry.quality.emptyRegion <= redistributedQuality.emptyRegion +
+            (sized.length <= 10 ? .06 : .02))
+          .sort((a, b) => b.quality.score - a.quality.score);
+        if (distributed.length) result = distributed[0].candidate;
+      }
     }
     return result.sort((a, b) => a.index - b.index);
   }
@@ -743,7 +1089,7 @@
     let separation = 1;
     if (emoji.length > 1) {
       const target = Math.min(.4, .9 / Math.sqrt(emoji.length));
-      separation = emoji.reduce((sum, box, index) => {
+      const nearest = emoji.map((box, index) => {
         let nearest = 1;
         for (let other = 0; other < emoji.length; other++) {
           if (other === index) continue;
@@ -751,16 +1097,19 @@
             (box.x1 + box.x2 - emoji[other].x1 - emoji[other].x2) / (2 * width),
             (box.y1 + box.y2 - emoji[other].y1 - emoji[other].y2) / (2 * height)));
         }
-        return sum + Math.min(1, nearest / target);
-      }, 0) / emoji.length;
+        return Math.min(1, nearest / target);
+      }).sort((a, b) => a - b);
+      const lowerTail = nearest[Math.floor((nearest.length - 1) * .2)];
+      const mean = nearest.reduce((sum, distance) => sum + distance, 0) / nearest.length;
+      separation = lowerTail * .7 + mean * .3;
     }
     const emptyRegion = largestEmptyRegion(boxes, width, height);
     return { coverage, corners, worstRegion: Math.min(...regions), separation, emptyRegion,
       score: coverage + Math.min(...corners) * (sparse ? .05 : .2) + Math.min(...regions) * .35 -
-        Math.sqrt(variance) * .2 + separation * .12 - emptyRegion * 4 };
+        Math.sqrt(variance) * .2 + separation * .45 - emptyRegion * 4 };
   }
 
-  function fitAreaBoxes(items, width, height) {
+  function spreadAreaBoxes(items, width, height) {
     const inset = Math.min(width, height) * .012;
     const bounds = areaBounds(items);
     const fitScale = Math.min((width - inset * 2) / (bounds.x2 - bounds.x1),
@@ -770,11 +1119,9 @@
       y: (item.y - (bounds.y1 + bounds.y2) / 2) * fitScale,
       scale: item.scale * fitScale,
     }));
-    // Expand centre spacing on both axes, never the artwork. Check the envelope: an
-    // interior word can be wider than the leftmost/rightmost centre's word.
-    // Sparse clouds keep their natural spacing and balanced outer margins.
     const spread = items.length > 10;
-    const span = spread ? Math.max(...fitted.map(item => item.x)) - Math.min(...fitted.map(item => item.x)) : 0;
+    const span = spread ? Math.max(...fitted.map(item => item.x)) -
+      Math.min(...fitted.map(item => item.x)) : 0;
     let low = 1;
     let high = span > 0 ? Math.max(1, (width - inset * 2) / span) : 1;
     for (let attempt = 0; attempt < 18; attempt++) {
@@ -784,7 +1131,8 @@
       else high = scale;
     }
     const horizontalScale = low;
-    const verticalSpan = spread ? Math.max(...fitted.map(item => item.y)) - Math.min(...fitted.map(item => item.y)) : 0;
+    const verticalSpan = spread ? Math.max(...fitted.map(item => item.y)) -
+      Math.min(...fitted.map(item => item.y)) : 0;
     low = 1;
     high = verticalSpan > 0 ? Math.max(1, (height - inset * 2) / verticalSpan) : 1;
     for (let attempt = 0; attempt < 18; attempt++) {
@@ -799,6 +1147,55 @@
     return fitted.map(item => {
       const x = width / 2 + item.x * horizontalScale - centerX;
       const y = height / 2 + item.y * low - centerY;
+      return { ...item, x, y,
+        x1: x - item.width * item.scale / 2, x2: x + item.width * item.scale / 2,
+        y1: y - item.height * item.scale / 2, y2: y + item.height * item.scale / 2 };
+    });
+  }
+
+  function fitAreaBoxes(items, width, height) {
+    const inset = Math.min(width, height) * .012;
+    const bounds = areaBounds(items);
+    const fitScale = Math.min((width - inset * 2) / (bounds.x2 - bounds.x1),
+      (height - inset * 2) / (bounds.y2 - bounds.y1));
+    const fitted = items.map(item => ({ ...item,
+      x: (item.x - (bounds.x1 + bounds.x2) / 2) * fitScale,
+      y: (item.y - (bounds.y1 + bounds.y2) / 2) * fitScale,
+      scale: item.scale * fitScale,
+    }));
+    // A small, capped centre-spacing adjustment lets rectangular print areas
+    // reach their edge contract without changing artwork or relative font
+    // sizes. The former unbounded expansion could tear open the interior; 4%
+    // is enough to absorb grid quantisation while distributed anchors remain
+    // responsible for the actual shape.
+    let horizontalScale = 1;
+    let verticalScale = 1;
+    if (items.length > 10) {
+      let low = 1;
+      let high = 1.04;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const scale = (low + high) / 2;
+        const trial = areaBounds(fitted, scale);
+        if (trial.x2 - trial.x1 <= width * .984) low = scale;
+        else high = scale;
+      }
+      horizontalScale = low;
+      low = 1;
+      high = 1.04;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const scale = (low + high) / 2;
+        const trial = areaBounds(fitted, horizontalScale, scale);
+        if (trial.y2 - trial.y1 <= height * .956) low = scale;
+        else high = scale;
+      }
+      verticalScale = low;
+    }
+    const expanded = areaBounds(fitted, horizontalScale, verticalScale);
+    const centerX = (expanded.x1 + expanded.x2) / 2;
+    const centerY = (expanded.y1 + expanded.y2) / 2;
+    return fitted.map(item => {
+      const x = width / 2 + item.x * horizontalScale - centerX;
+      const y = height / 2 + item.y * verticalScale - centerY;
       return { ...item, x, y,
         x1: x - item.width * item.scale / 2, x2: x + item.width * item.scale / 2,
         y1: y - item.height * item.scale / 2, y2: y + item.height * item.scale / 2 };

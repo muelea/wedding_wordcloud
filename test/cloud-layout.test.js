@@ -2,12 +2,14 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { createCanvas } = require('canvas');
 require('../src/designFonts');
 const Core = require('../public/js/wordcloud-core');
 const Live = require('../public/js/live-cloud-layout');
 const Quality = require('../public/js/text-print-quality');
-const { GAP_WORDS, FIVE_WORDS } = require('./support/area-layout-cases');
+const { GAP_WORDS, FIVE_WORDS, SCREENSHOT_EMOJI_WORDS } = require('./support/area-layout-cases');
 const { largestEmptyFraction, occupiedFraction, envelope } = require('./support/layout-space');
 
 function safe(placed, words, width, height) {
@@ -58,6 +60,44 @@ test('dense rectangular live clouds keep every word at portrait, phone and proje
       safe(placed, words, width, height);
       assert.ok(Core.cornerCoverage(placed, width, height) > .25, 'the corners participate in packing');
     }
+  }
+});
+
+test('the reported emoji-heavy cloud fills the area without a local emoji pile-up', () => {
+  const context = createCanvas(1, 1).getContext('2d');
+  for (const [width, height] of [[1460, 984], [390, 620], [2628, 978], [1200, 1200]]) {
+    const label = `${width}x${height}`;
+    const placed = Core.layoutWordsInArea(SCREENSHOT_EMOJI_WORDS, width, height, context);
+    safe(placed, SCREENSHOT_EMOJI_WORDS, width, height);
+    assert.ok(largestEmptyFraction(placed, { x1: 0, y1: 0, x2: width, y2: height }) < .045,
+      label + ': no large empty rectangle');
+    assert.ok(Core.layoutQuality(placed, width, height).separation >= .8,
+      label + ': lower-tail emoji separation');
+    const cells = new Map();
+    for (const item of placed.filter(item => item.emoji)) {
+      const column = Math.min(3, Math.floor(item.x / width * 4));
+      const row = Math.min(3, Math.floor(item.y / height * 4));
+      cells.set(row * 4 + column, (cells.get(row * 4 + column) || 0) + 1);
+    }
+    assert.ok(cells.size >= 14, label + ': emoji reach the whole area');
+    assert.ok(Math.max(...cells.values()) <= 3, label + ': no grid-cell pile-up');
+  }
+});
+
+test('the bundled real-world clouds have no large uninterrupted hole', () => {
+  const context = createCanvas(1, 1).getContext('2d');
+  const width = 1460;
+  const height = 984;
+  const cloudDirectory = path.join(__dirname, '..', 'marketing', 'clouds');
+  for (const filename of fs.readdirSync(cloudDirectory).filter(name => name.endsWith('.json')).sort()) {
+    const data = JSON.parse(fs.readFileSync(path.join(cloudDirectory, filename), 'utf8'));
+    const words = data.words.map(item => [item.word, item.count]);
+    const placed = Core.layoutWordsInArea(words, width, height, context);
+    safe(placed, words, width, height);
+    assert.ok(largestEmptyFraction(placed, { x1: 0, y1: 0, x2: width, y2: height }) < .05,
+      filename + ': no large empty rectangle');
+    assert.ok(Core.layoutQuality(placed, width, height).separation >= .8,
+      filename + ': emoji remain distributed');
   }
 });
 

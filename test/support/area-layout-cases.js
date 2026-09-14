@@ -14,6 +14,17 @@ const REPORTED_WORDS = [['dg', 3], ['rtrt', 3], ['😊', 2], ['20', 2], ['efefe'
     'rfrg', 'rgrg', 'rtr', 'sdfdsf', 'se', 'sfsfs', 'yr'].map(word => [word, 1])];
 const EMOJI_WORDS = ['liebe', 'glück', 'familie', 'zusammen', '😊', '🌷', '🎉', '💖']
   .map(word => [word, 1]);
+// Reconstructed from the September 14 live/print report: approximately equal
+// numbers of text and emoji exposed the old four-anchor emoji pile-up.
+const SCREENSHOT_EMOJI_WORDS = [
+  'road trip', 'lombard st', 'fremont st', 'usa 2026', 'buffalo', 'pier 39',
+  'san francisco', 'los angeles', 'taco bell', 'redwoods', 'valley of fire',
+  'meta', 'black jack', 'palo alto', 'las vegas', 'haight st', 'hollywood',
+  'henry cowell state park', 'summer vibes', 'eichhörnchen', 'santa cruz',
+  'family', "fisherman's wharf", 'half moon bay', 'strip', 'waymo', 'alcatraz',
+  '🦭', '❤️', '🌅', '🥵', '🌴', '🚗', '💐', '🌉', '🦆', '🦩', '🌮', '🍸',
+  '🧑‍🌾', '🔥', '🎢', '🎂', '🥶', '🎰', '🐿️', '🏖️', '🌊', '🎈', '🥂', '🇺🇸', '☀️',
+].map(word => [word, 1]);
 // test6 and test7 exposed internal gaps despite well-filled outer corners.
 const GAP_WORDS = [['h', 4], ['sfsf', 4], ['00', 3], ['d', 3], ['dgdg', 3], ['efef', 3],
   ...['1', '2', '3', '4', 'e', 'f', 'k', 's'].map(word => [word, 2]),
@@ -35,4 +46,5 @@ const AREA_CASES = [
   ]),
 ];
 
-module.exports = { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, GAP_WORDS, FIVE_WORDS, AREA_CASES };
+module.exports = { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, SCREENSHOT_EMOJI_WORDS,
+  GAP_WORDS, FIVE_WORDS, AREA_CASES };

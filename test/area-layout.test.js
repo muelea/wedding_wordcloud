@@ -10,7 +10,8 @@ const Layout = require('../public/js/design-layout');
 const Fonts = require('../src/designFonts');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
-const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, GAP_WORDS, FIVE_WORDS, AREA_CASES } = require('./support/area-layout-cases');
+const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, SCREENSHOT_EMOJI_WORDS,
+  GAP_WORDS, FIVE_WORDS, AREA_CASES } = require('./support/area-layout-cases');
 const { largestEmptyFraction, occupiedFraction, envelope } = require('./support/layout-space');
 
 const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
@@ -122,6 +123,28 @@ test('the reported gaps stay closed in automatic print designs and repeated fill
         label + ': saved/reloaded designs remain stable');
     }
   }
+});
+
+test('the reported emoji-heavy mug print stays filled and distributes emoji across the surface', () => {
+  const product = getProduct('white-glossy-mug-duo-11oz');
+  const slot = product.layoutGeometry['fit-area'][0];
+  const design = automatic(product, SCREENSHOT_EMOJI_WORDS);
+  assertSafe(design, product, 'emoji-heavy mug');
+  const boxes = design.map(item => ({ ...bounds(item), emoji: Core.isEmojiOnly(item.text) }));
+  const area = { x1: slot.x, y1: slot.y, x2: slot.x + slot.width, y2: slot.y + slot.height };
+  assert.ok(largestEmptyFraction(boxes, area) < .045, 'mug has no large empty rectangle');
+  const local = boxes.map(box => ({ ...box, x1: box.x1 - slot.x, x2: box.x2 - slot.x,
+    y1: box.y1 - slot.y, y2: box.y2 - slot.y }));
+  assert.ok(Core.layoutQuality(local, slot.width, slot.height).separation >= .8,
+    'mug lower-tail emoji separation');
+  const cells = new Map();
+  for (const item of boxes.filter(item => item.emoji)) {
+    const column = Math.min(3, Math.floor(((item.x1 + item.x2) / 2 - slot.x) / slot.width * 4));
+    const row = Math.min(3, Math.floor(((item.y1 + item.y2) / 2 - slot.y) / slot.height * 4));
+    cells.set(row * 4 + column, (cells.get(row * 4 + column) || 0) + 1);
+  }
+  assert.ok(cells.size >= 14, 'emoji reach the whole print area');
+  assert.ok(Math.max(...cells.values()) <= 3, 'no print-area emoji pile-up');
 });
 
 test('the actual start layout survives repeated fit-area clicks on every product and orientation', () => {
