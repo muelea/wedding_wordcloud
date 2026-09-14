@@ -244,6 +244,9 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
   }
   #editor-compact-inspector .editor-color-input { width: 38px; height: 38px; flex-basis: 38px; }
   #editor-compact-inspector .editor-actions {
+    --editor-compact-action-size: 44px;
+    --editor-compact-action-gap: 6px;
+    --editor-compact-transform-width: 344px;
     width: 100%;
     min-width: 0;
     margin: 0;
@@ -251,34 +254,34 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
+    gap: var(--editor-compact-action-gap);
   }
   #editor-compact-inspector .editor-actions .editor-button.editor-icon-button {
-    width: 100%;
-    max-width: 44px;
-    min-width: 0;
-    height: 44px;
-    min-height: 44px;
+    flex: 0 0 var(--editor-compact-action-size);
+    width: var(--editor-compact-action-size);
+    max-width: var(--editor-compact-action-size);
+    min-width: var(--editor-compact-action-size);
+    height: var(--editor-compact-action-size);
+    min-height: var(--editor-compact-action-size);
     padding: 9px;
   }
   #editor-compact-inspector .editor-nudge-controls {
     flex: 0 0 auto;
     display: grid;
-    grid-template-columns: repeat(4, 44px);
+    grid-template-columns: repeat(4, var(--editor-compact-action-size));
     justify-content: start;
-    gap: 6px;
+    gap: var(--editor-compact-action-gap);
     padding: 0;
     border: 0;
   }
   #editor-compact-inspector .editor-transform-controls {
-    flex: 0 1 344px;
-    width: 344px;
+    flex: 0 0 var(--editor-compact-transform-width);
+    width: var(--editor-compact-transform-width);
     min-width: 0;
-    max-width: 344px;
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 44px));
-    justify-content: start;
-    gap: clamp(2px, .7vw, 6px);
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--editor-compact-action-gap);
   }
   #editor-compact-inspector .editor-actions .editor-icon { width: 18px; height: 18px; }
   #editor-compact-inspector .editor-actions .editor-delete { margin-left: 0; }

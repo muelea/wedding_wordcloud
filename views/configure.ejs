@@ -173,6 +173,20 @@
       gap: 24px;
     }
 
+    .workspace-shell {
+      min-width: 0;
+    }
+
+    .workspace-section-title {
+      width: 1px;
+      height: 1px;
+      position: absolute;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
     .workspace-tools {
       position: relative;
       z-index: 20;
@@ -212,6 +226,66 @@
 
     .editor-card {
       overflow: visible;
+    }
+
+    @media (min-width: 941px) {
+      .workspace-shell {
+        padding: 30px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+          "workspace-toolbar workspace-toolbar"
+          "workspace-canvas workspace-preview"
+          "workspace-inspector workspace-inspector";
+        column-gap: 24px;
+        align-items: stretch;
+        overflow: visible;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(255, 254, 252, .88);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+      .workspace-tools,
+      .workbench,
+      .editor-card {
+        display: contents;
+      }
+      .workspace-tools > .editor-toolbar {
+        grid-area: workspace-toolbar;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .workspace-shell .wrap-preview {
+        grid-area: workspace-canvas;
+        min-width: 0;
+        padding: 18px 24px 0 0;
+      }
+      .preview-card {
+        grid-area: workspace-preview;
+        min-width: 0;
+        padding: 18px 0 0 24px;
+        overflow: hidden;
+        border: 0;
+        border-left: 1px solid var(--line);
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+      }
+      #editor-desktop-inspector {
+        grid-area: workspace-inspector;
+        min-width: 0;
+        padding-top: 14px;
+        position: relative;
+        z-index: 20;
+        border-top: 1px solid var(--line);
+      }
+      #editor-desktop-inspector .editor-selection {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+      }
     }
 
     .checkout-panel {
@@ -1817,6 +1891,15 @@
         align-items: center;
         gap: 10px 12px;
       }
+      #preview-title.workspace-section-title {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+        white-space: normal;
+      }
       .mobile-preview-summary {
         min-width: 0;
         grid-column: 1 / -1;
@@ -2035,6 +2118,7 @@
         </section>
 
         <%- include('partials/editor-symbols') %>
+        <div class="workspace-shell">
         <section class="workspace-tools" id="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
               <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
                   <div class="surface-editor" id="surface-editor" hidden>
@@ -2150,7 +2234,7 @@
 
         <div class="workbench">
           <section class="editor-card" id="editor-card" aria-labelledby="editor-title">
-            <h2 class="editor-title" id="editor-title">Druckfläche bearbeiten</h2>
+            <h2 class="editor-title workspace-section-title" id="editor-title">Druckfläche bearbeiten</h2>
             <div id="editor-compact-toolbar"></div>
             <div class="wrap-preview">
               <div class="editor-scroll is-fit" id="editor-scroll">
@@ -2170,7 +2254,7 @@
 
           <section class="preview-card" aria-labelledby="preview-title">
             <div class="preview-head">
-              <h2 id="preview-title">Eure Vorschau</h2>
+              <h2 class="workspace-section-title" id="preview-title">Euer Design</h2>
               <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="design-toolbar editor-card">
                 <span id="mobile-editor-toggle-label">Design anpassen</span><span class="mobile-editor-caret" aria-hidden="true"></span>
               </button>
@@ -2205,6 +2289,7 @@
               </div>
             </div>
           </section>
+        </div>
         </div>
 
         <p class="print-readability" id="print-readability" role="status" aria-live="polite" hidden></p>

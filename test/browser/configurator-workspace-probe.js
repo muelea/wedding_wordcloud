@@ -42,6 +42,12 @@
           !document.getElementById('design-toolbar').getClientRects().length &&
           !document.getElementById('workspace-tools').getClientRects().length &&
           !document.getElementById('editor-card').getClientRects().length);
+        const previewTitle = document.getElementById('preview-title');
+        check('phone preview surface keeps its design heading beside the editor toggle',
+          previewTitle.getClientRects().length &&
+          previewTitle.textContent.trim().toLowerCase().includes('design') &&
+          Math.abs(previewTitle.getBoundingClientRect().top - toggle.getBoundingClientRect().top) < 8 &&
+          previewTitle.getBoundingClientRect().right <= toggle.getBoundingClientRect().left);
         const purchaseRect = continueButton.getBoundingClientRect();
         check('phone purchase action is immediately visible', purchaseRect.top >= 0 &&
           purchaseRect.bottom <= innerHeight && purchaseRect.height >= 44);
@@ -67,14 +73,28 @@
       const editorScroll = document.getElementById('editor-scroll');
       const printShell = document.getElementById('editor-canvas-shell');
       const baseFit = geometry();
-      const editorCard = document.querySelector('.editor-card').getBoundingClientRect();
       const previewCard = document.querySelector('.preview-card').getBoundingClientRect();
       if (innerWidth <= 940) {
+        const editorCard = document.querySelector('.editor-card').getBoundingClientRect();
         const padding = editorScroll.clientHeight - printShell.getBoundingClientRect().height;
         check('stacked editor hugs the print area', padding >= 23 && padding <= 26, { padding });
         check('fresh mug initialization fills the available editor width',
           printShell.getBoundingClientRect().width >= editorScroll.clientWidth - 26);
-      } else check('side-by-side cards retain equal heights', Math.abs(editorCard.height - previewCard.height) < 1);
+        check('stacked editor and preview remain separate cards',
+          previewCard.top >= editorCard.bottom && getComputedStyle(editorCard).borderTopWidth !== '0px');
+      } else {
+        const shell = document.querySelector('.workspace-shell').getBoundingClientRect();
+        const toolbar = document.querySelector('.editor-toolbar').getBoundingClientRect();
+        const canvasPane = document.querySelector('.wrap-preview').getBoundingClientRect();
+        const inspector = document.getElementById('editor-desktop-inspector').getBoundingClientRect();
+        check('desktop workspace is one ordered card',
+          toolbar.top >= shell.top && canvasPane.top >= toolbar.bottom &&
+          inspector.top >= Math.max(canvasPane.bottom, previewCard.bottom),
+        { shell, toolbar, canvasPane, previewCard, inspector });
+        check('desktop canvas and preview share a divided row',
+          canvasPane.right < previewCard.left && Math.abs(canvasPane.top - previewCard.top) < 1 &&
+          getComputedStyle(document.querySelector('.preview-card')).borderLeftWidth !== '0px');
+      }
       document.getElementById('editor-zoom-in').click();
       await frames();
       await Promise.all(printShell.getAnimations().map(animation => animation.finished.catch(() => {})));
@@ -326,6 +346,11 @@
         .map(id => document.getElementById(id).getBoundingClientRect());
       check('direction buttons always stay together', nudgeButtons.every(rect =>
         Math.abs(rect.top - nudgeButtons[0].top) < 1));
+      const transformButtons = ['editor-smaller', 'editor-larger', 'editor-rotate-left', 'editor-rotate-right',
+        'editor-duplicate', 'editor-bring-front', 'editor-delete']
+        .map(id => document.getElementById(id).getBoundingClientRect());
+      check('compact selection buttons share one exact size', [...nudgeButtons, ...transformButtons].every(rect =>
+        Math.abs(rect.width - nudgeButtons[0].width) < 1 && Math.abs(rect.height - nudgeButtons[0].height) < 1));
       const transformBox = document.querySelector('.editor-transform-controls').getBoundingClientRect();
       const actionGap = parseFloat(getComputedStyle(document.querySelector('.editor-actions')).columnGap) || 0;
       const groupsFitTogether = nudgeButtons[0].left +

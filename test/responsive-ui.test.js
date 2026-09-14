@@ -199,7 +199,14 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.match(workspaceStyles,
     /grid-template-areas: 'create create selection layout reset' 'view view view history history'/,
     'Select all and Fill the area stay adjacent in the compact editor toolbar');
-  assert.match(configure, /<h2 class="editor-title"[^>]*>[\s\S]*?<div id="editor-compact-toolbar"><\/div>[\s\S]*?<div class="wrap-preview">/);
+  assert.match(configure, /<h2 class="editor-title workspace-section-title"[^>]*>[\s\S]*?<div id="editor-compact-toolbar"><\/div>[\s\S]*?<div class="wrap-preview">/);
+  assert.match(configure, /class="workspace-shell"[\s\S]*?class="workspace-tools"[\s\S]*?class="workbench"/);
+  assert.match(configure, /class="editor-title workspace-section-title" id="editor-title"/);
+  assert.match(configure, /class="workspace-section-title" id="preview-title">Euer Design<\/h2>/);
+  assert.match(configure, /\.workspace-section-title \{[\s\S]*?clip-path: inset\(50%\)/);
+  assert.match(configure, /@media \(max-width: 620px\) \{[\s\S]*?#preview-title\.workspace-section-title \{[\s\S]*?position: static;[\s\S]*?clip-path: none;/);
+  assert.match(configure, /@media \(min-width: 941px\) \{[\s\S]*?\.workspace-shell \{[\s\S]*?grid-template-areas:[\s\S]*?"workspace-toolbar workspace-toolbar"[\s\S]*?"workspace-canvas workspace-preview"[\s\S]*?"workspace-inspector workspace-inspector"/);
+  assert.match(configure, /@media \(min-width: 941px\) \{[\s\S]*?\.preview-card \{[\s\S]*?border-left: 1px solid var\(--line\)/);
   assert.match(workspaceStyles, /@media \(max-width: 940px\) \{[\s\S]*?\.workspace-tools \{ display: none; \}[\s\S]*?#editor-compact-toolbar \{[\s\S]*?display: block;/);
   assert.match(workspaceStyles, /#editor-compact-toolbar \{[\s\S]*?border-bottom: 1px solid var\(--line\)/);
 });
@@ -342,8 +349,10 @@ test('compact configurator uses a dense two-column inspector at every compact wi
   assert.match(configure, /id="editor-swatches"[\s\S]*?id="editor-color"[\s\S]*?<\/div>/);
   assert.match(configure, /class="editor-nudge-controls"[\s\S]*?class="editor-transform-controls"/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?width: 100%;[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;[\s\S]*?justify-content: flex-start;/);
-  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-nudge-controls \{[\s\S]*?flex: 0 0 auto;[\s\S]*?grid-template-columns: repeat\(4, 44px\);[\s\S]*?justify-content: start;/);
-  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-transform-controls \{[\s\S]*?flex: 0 1 344px;[\s\S]*?grid-template-columns: repeat\(7, minmax\(0, 44px\)\);[\s\S]*?justify-content: start;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \{[\s\S]*?--editor-compact-action-size: 44px;[\s\S]*?--editor-compact-action-gap: 6px;/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-actions \.editor-button\.editor-icon-button \{[\s\S]*?flex: 0 0 var\(--editor-compact-action-size\);[\s\S]*?min-width: var\(--editor-compact-action-size\);/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-nudge-controls \{[\s\S]*?flex: 0 0 auto;[\s\S]*?grid-template-columns: repeat\(4, var\(--editor-compact-action-size\)\);[\s\S]*?gap: var\(--editor-compact-action-gap\);/);
+  assert.match(workspaceStyles, /#editor-compact-inspector \.editor-transform-controls \{[\s\S]*?flex: 0 0 var\(--editor-compact-transform-width\);[\s\S]*?max-width: 100%;[\s\S]*?display: flex;[\s\S]*?flex-wrap: wrap;[\s\S]*?gap: var\(--editor-compact-action-gap\);/);
   assert.match(workspaceStyles, /#editor-compact-inspector \.editor-style-button > \* \{[^}]*transform: translateY\(2px\)/);
   assert.match(workspaceStyles, /\.editor-selection-head \{[\s\S]*?clip: rect\(0 0 0 0\)/);
   assert.match(workspaceStyles, /\.workbench \.editor-card \{ position: relative; z-index: 2; \}/);
