@@ -29,6 +29,11 @@ test('every bundled marketing cloud is valid and has meaningful weighting', () =
 
   assert.deepEqual(filenames, [
     'besties-roadtrip.json',
+    'classic-wedding-en.json',
+    'classic-wedding-es.json',
+    'classic-wedding-fr.json',
+    'classic-wedding-it.json',
+    'classic-wedding-tr.json',
     'classic-wedding.json',
     'farewell-party.json',
     'get-well.json',
@@ -48,6 +53,25 @@ test('every bundled marketing cloud is valid and has meaningful weighting', () =
       `${filename} should have a visibly leading word`
     );
   }
+
+  const weddingLocales = new Map([
+    ['classic-wedding.json', 'de'],
+    ['classic-wedding-en.json', 'en'],
+    ['classic-wedding-es.json', 'es'],
+    ['classic-wedding-fr.json', 'fr'],
+    ['classic-wedding-it.json', 'it'],
+    ['classic-wedding-tr.json', 'tr'],
+  ]);
+  const weddingWeights = Array.from(weddingLocales.keys(), (filename) => {
+    const document = seedTool.parseSeedJson(
+      fs.readFileSync(path.join(cloudDirectory, filename), 'utf8'),
+      filename
+    );
+    assert.equal(document.event.locale, weddingLocales.get(filename));
+    return document.words.map(({ count }) => count);
+  });
+  const [germanWeights, ...translatedWeights] = weddingWeights;
+  for (const weights of translatedWeights) assert.deepEqual(weights, germanWeights);
 });
 
 test('local cloud seed parser normalizes and merges weighted words', () => {

@@ -12,6 +12,8 @@
     var panels = Array.prototype.slice.call(workflow.querySelectorAll('[data-workflow-panel]'));
     var stage = workflow.querySelector('[data-workflow-stage]');
     var sticky = workflow.querySelector('[data-workflow-sticky]');
+    var localeScreenshots = Array.prototype.slice.call(workflow.querySelectorAll('[data-workflow-locale-screenshot]'));
+    var localeScreenshotGroups = Array.prototype.slice.call(workflow.querySelectorAll('[data-workflow-locale-screenshot-group]'));
     var desktopLayout = window.matchMedia('(min-width: 1051px)');
     var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     var scrubDurationMs = 240;
@@ -74,6 +76,8 @@
         trigger.style.setProperty('--workflow-step-y', ((1 - reveal) * 28).toFixed(2) + 'px');
       });
 
+      var transitionBaseIndex = reducedMotion.matches ? activeIndex : Math.floor(progress);
+
       panels.forEach(function (panel, index) {
         var reveal = reducedMotion.matches
           ? Number(index <= activeIndex)
@@ -82,7 +86,7 @@
             : clamp(progress - index + 1);
         var depth = Math.max(0, (reducedMotion.matches ? activeIndex : progress) - index);
         var visibleDepth = Math.min(depth, 1);
-        var opacity = clamp(reveal * 1.65) * clamp(3.15 - depth);
+        var opacity = index < transitionBaseIndex ? 0 : clamp(reveal * 1.65);
 
         panel.style.setProperty('--workflow-panel-opacity', opacity.toFixed(3));
         panel.style.setProperty('--workflow-panel-y', ((1 - reveal) * 104).toFixed(2) + '%');
@@ -141,6 +145,23 @@
       if (!animationFrame) animationFrame = window.requestAnimationFrame(renderScrollProgress);
     }
 
+    function updateLocaleScreenshots(locale) {
+      var language = String(locale || '').toLowerCase().split('-')[0];
+      localeScreenshots.forEach(function (screenshot) {
+        var nextSource = screenshot.getAttribute('data-workflow-src-' + language);
+        if (nextSource && screenshot.getAttribute('src') !== nextSource) {
+          screenshot.setAttribute('src', nextSource);
+        }
+      });
+      localeScreenshotGroups.forEach(function (group) {
+        var nextSource = group.getAttribute('data-workflow-src-' + language);
+        if (!nextSource) return;
+        group.querySelectorAll('img').forEach(function (screenshot) {
+          if (screenshot.getAttribute('src') !== nextSource) screenshot.setAttribute('src', nextSource);
+        });
+      });
+    }
+
     function clearAnimatedStyles() {
       triggers.forEach(function (trigger) {
         trigger.style.removeProperty('--workflow-step-opacity');
@@ -194,7 +215,10 @@
     window.addEventListener('scroll', requestScrollUpdate, { passive: true });
     window.addEventListener('resize', requestScrollUpdate, { passive: true });
     window.addEventListener('pageshow', requestScrollUpdate);
-    window.addEventListener('wolkenworte:localechange', requestScrollUpdate);
+    window.addEventListener('wolkenworte:localechange', function (event) {
+      updateLocaleScreenshots(event.detail && event.detail.locale);
+      requestScrollUpdate();
+    });
     desktopLayout.addEventListener('change', syncLayout);
     reducedMotion.addEventListener('change', requestScrollUpdate);
     syncLayout();

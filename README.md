@@ -351,6 +351,15 @@ page's Inspiration section:
 - `get-well.json` — Gute Besserung
 - `just-because-gift.json` — Einfach als Geschenk
 
+The classic wedding cloud is also available in every supported language. Each
+localized file keeps the German seed's contribution weights:
+
+- `classic-wedding-en.json` — English
+- `classic-wedding-es.json` — Spanish
+- `classic-wedding-fr.json` — French
+- `classic-wedding-it.json` — Italian
+- `classic-wedding-tr.json` — Turkish
+
 They use event-appropriate participation levels rather than giving every
 occasion the wedding's 100-guest distribution.
 

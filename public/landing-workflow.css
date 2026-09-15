@@ -193,7 +193,63 @@
   user-select: none;
 }
 
-/* Step 01: a faithful, enlarged version of the real creation dialog. */
+/* Screenshot-backed steps use the authentic product capture for the active language. */
+.workflow-locale-screenshot {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.workflow-panel--capture {
+  border: 0;
+  background: transparent;
+}
+
+.workflow-panel--capture::before {
+  display: none;
+}
+
+.workflow-panel--capture .workflow-panel-art {
+  inset: 0;
+}
+
+.workflow-panel--capture .workflow-locale-screenshot {
+  display: block;
+}
+
+.workflow-panel--capture .workflow-panel-art > :not(.workflow-locale-screenshot) {
+  display: none;
+}
+
+/* Step 04 uses the screenshot itself as the card surface. */
+.workflow-panel--live .workflow-panel-art {
+  inset: 0;
+}
+
+.workflow-panel--live .workflow-live-screenshot {
+  box-sizing: border-box;
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid rgba(193, 146, 47, .34);
+  border-radius: 14px;
+  object-fit: initial;
+  transform: translate(-50%, -50%);
+}
+
+.workflow-panel--live .workflow-panel-art > :not(.workflow-live-screenshot) {
+  display: none;
+}
+
 .workflow-browser {
   position: absolute;
   inset: 4% 4% 2%;
@@ -533,6 +589,92 @@
   border-radius: 50%;
   background: #6f9f92;
   content: '';
+}
+
+/* Step 03 uses one readable localized contribution surrounded by a softer
+   crowd, so the action stays clear while the depth suggests many people. */
+.workflow-contributor-crowd {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.workflow-contributor-crowd::before {
+  position: absolute;
+  inset: 7% 4% 0;
+  border-radius: 45%;
+  background:
+    radial-gradient(circle at 50% 58%, rgba(255, 253, 250, .92), transparent 48%),
+    radial-gradient(circle at 50% 54%, rgba(209, 96, 126, .16), transparent 72%);
+  content: '';
+  filter: blur(18px);
+}
+
+.workflow-panel--collect .workflow-guest-phone {
+  display: none;
+}
+
+.workflow-panel--collect .workflow-contributor-crowd {
+  display: block;
+}
+
+.workflow-contributor-phone {
+  position: absolute;
+  top: 50%;
+  overflow: visible;
+  transform-origin: 50% 92%;
+}
+
+.workflow-contributor-phone img {
+  display: block;
+  width: auto;
+  max-width: none;
+  height: 100%;
+  object-fit: contain;
+}
+
+.workflow-contributor-phone--far-left {
+  z-index: 1;
+  left: -1%;
+  height: 72%;
+  opacity: .2;
+  filter: blur(5px);
+  transform: translateY(-50%) rotate(-11deg);
+}
+
+.workflow-contributor-phone--left {
+  z-index: 2;
+  left: 14%;
+  height: 84%;
+  opacity: .54;
+  filter: blur(2.4px);
+  transform: translateY(-50%) rotate(-7deg);
+}
+
+.workflow-contributor-phone--far-right {
+  z-index: 1;
+  right: -1%;
+  height: 72%;
+  opacity: .2;
+  filter: blur(5px);
+  transform: translateY(-50%) rotate(11deg);
+}
+
+.workflow-contributor-phone--right {
+  z-index: 2;
+  right: 14%;
+  height: 84%;
+  opacity: .54;
+  filter: blur(2.4px);
+  transform: translateY(-50%) rotate(7deg);
+}
+
+.workflow-contributor-phone--focus {
+  z-index: 4;
+  left: 50%;
+  height: 94%;
+  filter: drop-shadow(0 30px 34px rgba(64, 15, 38, .24));
+  transform: translate(-50%, -50%);
 }
 
 /* Step 04: the growing word cloud on the room's big screen. */
@@ -981,6 +1123,11 @@
     aspect-ratio: .94;
     margin-bottom: 28px;
     border-radius: 25px;
+  }
+
+  .workflow-panel--live,
+  .workflow-step > .workflow-panel--live {
+    aspect-ratio: 840 / 1038;
   }
 
   .workflow-panel figcaption {

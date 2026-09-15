@@ -229,6 +229,45 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.equal((landing.match(/aria-hidden="false" data-workflow-panel=/g) || []).length, 5);
   assert.match(landing, /id="workflow-step-0"[^>]*aria-controls="workflow-panel-0"[^>]*aria-current="step"/);
   assert.match(landing, /id="workflow-panel-0"[^>]*aria-labelledby="workflow-step-0"[^>]*aria-hidden="false"/);
+  assert.match(landing, /class="workflow-locale-screenshot workflow-create-screenshot"[\s\S]*?asset\('\/assets\/workflow\/01_' \+ locale \+ '\.png'\)/);
+  assert.match(landing, /class="workflow-locale-screenshot workflow-share-screenshot"[\s\S]*?asset\('\/assets\/workflow\/02_' \+ locale \+ '\.png'\)/);
+  assert.match(landing, /class="workflow-locale-screenshot workflow-live-screenshot"[\s\S]*?asset\('\/assets\/workflow\/04_' \+ locale \+ '\.png'\)/);
+  assert.equal((landing.match(/asset\('\/assets\/workflow\/03_' \+ locale \+ '\.png'\)/g) || []).length, 5);
+  assert.match(landing, /workflow-contributor-phone--focus">\s*<img[\s\S]*?03_' \+ locale \+ '\.png'/);
+  for (const step of ['01', '02', '04']) {
+    for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+      assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/${step}_${locale}\\.png'\\) %>"`));
+    }
+  }
+  for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+    assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/03_${locale}\\.png'\\) %>"`));
+  }
+  assert.equal((landing.match(/data-workflow-locale-screenshot(?=[\s>])/g) || []).length, 3);
+  assert.equal((landing.match(/data-workflow-locale-screenshot-group/g) || []).length, 1);
+  assert.equal((landing.match(/workflow-panel--capture/g) || []).length, 3);
+  assert.match(landingWorkflowStyles, /\.workflow-locale-screenshot \{[\s\S]*?object-fit: cover;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \{[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \.workflow-panel-art \{[\s\S]*?inset: 0;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \.workflow-locale-screenshot \{[\s\S]*?display: block;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \.workflow-panel-art > :not\(\.workflow-locale-screenshot\) \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--live \.workflow-panel-art \{[\s\S]*?inset: 0;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--live \.workflow-live-screenshot \{[\s\S]*?width: auto;[\s\S]*?height: auto;[\s\S]*?max-width: 100%;[\s\S]*?max-height: 100%;[\s\S]*?border: 1px solid[\s\S]*?border-radius: 14px;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--collect \.workflow-guest-phone \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--collect \.workflow-contributor-crowd \{[\s\S]*?display: block;/);
+  assert.match(landingWorkflowStyles, /\.workflow-contributor-phone \{[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?overflow: visible;/);
+  assert.match(landingWorkflowStyles, /\.workflow-contributor-phone img \{[\s\S]*?width: auto;[\s\S]*?max-width: none;[\s\S]*?height: 100%;[\s\S]*?object-fit: contain;/);
+  assert.doesNotMatch(landingWorkflowStyles, /\.workflow-contributor-phone img \{[^}]*object-fit: fill;/);
+  assert.match(landingWorkflowStyles, /\.workflow-contributor-phone--focus \{[\s\S]*?left: 50%;[\s\S]*?height: 94%;/);
+  assert.match(landingWorkflowStyles, /@media \(max-width: 760px\) \{[\s\S]*?\.workflow-panel,[\s\S]*?\.workflow-step > \.workflow-panel \{[\s\S]*?aspect-ratio: \.94;/);
+  assert.match(landingWorkflowStyles, /@media \(max-width: 760px\) \{[\s\S]*?\.workflow-panel--live,[\s\S]*?\.workflow-step > \.workflow-panel--live \{[\s\S]*?aspect-ratio: 840 \/ 1038;/);
+  assert.match(landingWorkflowRuntime, /function updateLocaleScreenshots\(locale\)[\s\S]*?data-workflow-src-[\s\S]*?setAttribute\('src', nextSource\)/);
+  assert.match(landingWorkflowRuntime, /localeScreenshotGroups\.forEach[\s\S]*?group\.querySelectorAll\('img'\)[\s\S]*?setAttribute\('src', nextSource\)/);
+  assert.match(landingWorkflowRuntime, /wolkenworte:localechange[\s\S]*?updateLocaleScreenshots\(event\.detail && event\.detail\.locale\)/);
+  const applyProgressSource = landingWorkflowRuntime.slice(
+    landingWorkflowRuntime.indexOf('function applyProgress'),
+    landingWorkflowRuntime.indexOf('function measureScrollProgress')
+  );
+  assert.match(applyProgressSource, /var transitionBaseIndex = reducedMotion\.matches \? activeIndex : Math\.floor\(progress\);[\s\S]*?var opacity = index < transitionBaseIndex \? 0 : clamp\(reveal \* 1\.65\);/);
   assert.match(landingWorkflowStyles, /min-height: calc\(var\(--workflow-sticky-height\) \+ 200vh\)/);
   assert.match(landingWorkflowStyles, /html\.workflow-scroll-ready \.workflow-sticky \{[\s\S]*?position: sticky;/);
   assert.match(landing, /--landing-split-columns: repeat\(2, minmax\(0, 1fr\)\);/);
@@ -245,7 +284,6 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landingWorkflowRuntime, /window\.requestAnimationFrame\(renderScrollProgress\)/);
   assert.match(landingWorkflowRuntime, /window\.addEventListener\('scroll', requestScrollUpdate, \{ passive: true \}\)/);
   assert.match(landingWorkflowRuntime, /var scrubDurationMs = 240/);
-  assert.match(landingWorkflowRuntime, /var opacity = clamp\(reveal \* 1\.65\) \* clamp\(3\.15 - depth\)/);
   assert.match(landingWorkflowRuntime, /--workflow-panel-stack-y/);
   assert.match(landingWorkflowRuntime, /--workflow-panel-grayscale/);
   assert.doesNotMatch(landingWorkflowRuntime, /index < activeIndex \? 0/);

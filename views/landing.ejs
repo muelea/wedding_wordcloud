@@ -576,7 +576,7 @@
                 <li class="workflow-step">
                   <button class="workflow-step-copy" id="workflow-step-1" type="button" aria-controls="workflow-panel-1" data-workflow-trigger="1" data-active="false">
                     <span class="workflow-step-number" data-i18n-ignore>02</span>
-                    <span class="workflow-step-text"><strong>Wolke teilen</strong><span>Teilt den QR-Code oder Link mit euren Liebsten – ganz gleich, wo sie sind.</span></span>
+                    <span class="workflow-step-text"><strong>Wolke teilen</strong><span>Teilt den QR-Code oder Link mit allen, die mitmachen sollen – ganz gleich, wo sie sind.</span></span>
                   </button>
                 </li>
                 <li class="workflow-step">
@@ -600,9 +600,25 @@
               </ol>
 
               <div class="workflow-stage" data-workflow-stage>
-                <figure class="workflow-panel workflow-panel--create" id="workflow-panel-0" aria-labelledby="workflow-step-0" aria-hidden="false" data-workflow-panel="0" data-active="true">
+                <figure class="workflow-panel workflow-panel--capture workflow-panel--create" id="workflow-panel-0" aria-labelledby="workflow-step-0" aria-hidden="false" data-workflow-panel="0" data-active="true">
                   <figcaption><b data-i18n-ignore>01</b><span>Wolke anlegen</span></figcaption>
                   <div class="workflow-panel-art" aria-hidden="true">
+                    <img
+                      class="workflow-locale-screenshot workflow-create-screenshot"
+                      data-workflow-locale-screenshot
+                      src="<%= asset('/assets/workflow/01_' + locale + '.png') %>"
+                      data-workflow-src-de="<%= asset('/assets/workflow/01_de.png') %>"
+                      data-workflow-src-en="<%= asset('/assets/workflow/01_en.png') %>"
+                      data-workflow-src-es="<%= asset('/assets/workflow/01_es.png') %>"
+                      data-workflow-src-fr="<%= asset('/assets/workflow/01_fr.png') %>"
+                      data-workflow-src-it="<%= asset('/assets/workflow/01_it.png') %>"
+                      data-workflow-src-tr="<%= asset('/assets/workflow/01_tr.png') %>"
+                      alt=""
+                      width="867"
+                      height="1034"
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div class="workflow-browser">
                       <div class="workflow-browser-bar"><i></i><i></i><i></i><span class="workflow-browser-address" data-i18n-ignore>wolkenworte.io</span></div>
                       <div class="workflow-create-body">
@@ -620,9 +636,25 @@
                   </div>
                 </figure>
 
-                <figure class="workflow-panel workflow-panel--share" id="workflow-panel-1" aria-labelledby="workflow-step-1" aria-hidden="false" data-workflow-panel="1" data-active="false">
+                <figure class="workflow-panel workflow-panel--capture workflow-panel--share" id="workflow-panel-1" aria-labelledby="workflow-step-1" aria-hidden="false" data-workflow-panel="1" data-active="false">
                   <figcaption><b data-i18n-ignore>02</b><span>Wolke teilen</span></figcaption>
                   <div class="workflow-panel-art" aria-hidden="true">
+                    <img
+                      class="workflow-locale-screenshot workflow-share-screenshot"
+                      data-workflow-locale-screenshot
+                      src="<%= asset('/assets/workflow/02_' + locale + '.png') %>"
+                      data-workflow-src-de="<%= asset('/assets/workflow/02_de.png') %>"
+                      data-workflow-src-en="<%= asset('/assets/workflow/02_en.png') %>"
+                      data-workflow-src-es="<%= asset('/assets/workflow/02_es.png') %>"
+                      data-workflow-src-fr="<%= asset('/assets/workflow/02_fr.png') %>"
+                      data-workflow-src-it="<%= asset('/assets/workflow/02_it.png') %>"
+                      data-workflow-src-tr="<%= asset('/assets/workflow/02_tr.png') %>"
+                      alt=""
+                      width="867"
+                      height="1034"
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div class="workflow-invitation">
                       <svg class="workflow-invitation-mark" viewBox="0 0 80 70"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
                       <small>Wolke teilen</small>
@@ -666,12 +698,55 @@
                       <div class="workflow-phone-top"></div>
                       <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Zusammen</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
                     </div>
+                    <div
+                      class="workflow-contributor-crowd"
+                      data-i18n-ignore
+                      data-workflow-locale-screenshot-group
+                      data-workflow-src-de="<%= asset('/assets/workflow/03_de.png') %>"
+                      data-workflow-src-en="<%= asset('/assets/workflow/03_en.png') %>"
+                      data-workflow-src-es="<%= asset('/assets/workflow/03_es.png') %>"
+                      data-workflow-src-fr="<%= asset('/assets/workflow/03_fr.png') %>"
+                      data-workflow-src-it="<%= asset('/assets/workflow/03_it.png') %>"
+                      data-workflow-src-tr="<%= asset('/assets/workflow/03_tr.png') %>"
+                    >
+                      <div class="workflow-contributor-phone workflow-contributor-phone--far-left">
+                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
+                      </div>
+                      <div class="workflow-contributor-phone workflow-contributor-phone--left">
+                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
+                      </div>
+                      <div class="workflow-contributor-phone workflow-contributor-phone--far-right">
+                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
+                      </div>
+                      <div class="workflow-contributor-phone workflow-contributor-phone--right">
+                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
+                      </div>
+                      <div class="workflow-contributor-phone workflow-contributor-phone--focus">
+                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
+                      </div>
+                    </div>
                   </div>
                 </figure>
 
-                <figure class="workflow-panel workflow-panel--live" id="workflow-panel-3" aria-labelledby="workflow-step-3" aria-hidden="false" data-workflow-panel="3" data-active="false">
+                <figure class="workflow-panel workflow-panel--capture workflow-panel--live" id="workflow-panel-3" aria-labelledby="workflow-step-3" aria-hidden="false" data-workflow-panel="3" data-active="false">
                   <figcaption><b data-i18n-ignore>04</b><span>Staunen</span></figcaption>
                   <div class="workflow-panel-art" aria-hidden="true">
+                    <img
+                      class="workflow-locale-screenshot workflow-live-screenshot"
+                      data-workflow-locale-screenshot
+                      src="<%= asset('/assets/workflow/04_' + locale + '.png') %>"
+                      data-workflow-src-de="<%= asset('/assets/workflow/04_de.png') %>"
+                      data-workflow-src-en="<%= asset('/assets/workflow/04_en.png') %>"
+                      data-workflow-src-es="<%= asset('/assets/workflow/04_es.png') %>"
+                      data-workflow-src-fr="<%= asset('/assets/workflow/04_fr.png') %>"
+                      data-workflow-src-it="<%= asset('/assets/workflow/04_it.png') %>"
+                      data-workflow-src-tr="<%= asset('/assets/workflow/04_tr.png') %>"
+                      alt=""
+                      width="840"
+                      height="1038"
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div class="workflow-display">
                       <div class="workflow-display-frame">
                         <span class="workflow-display-live">Live-Vorschau</span>
@@ -794,7 +869,7 @@
         <h2 id="start-dialog-title">Wie soll eure Wortwolke heißen?</h2>
         <button class="start-dialog-close" id="start-dialog-close" type="button" aria-label="Startdialog schließen" data-i18n-aria-label-source="Startdialog schließen">×</button>
       </div>
-      <p class="start-dialog-copy">Wählt einen Namen, den eure Gäste sofort erkennen. Ihr könnt ihn später ändern.</p>
+      <p class="start-dialog-copy">Wählt einen Namen, den alle sofort erkennen. Ihr könnt ihn später ändern.</p>
       <label class="start-dialog-label" for="start-cloud-name">Name der Wortwolke
         <input
           class="start-dialog-input"
