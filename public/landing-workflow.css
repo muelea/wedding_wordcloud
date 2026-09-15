@@ -881,22 +881,18 @@
 .workflow-product-design span:nth-child(3) { color: #6f9f92; font-size: clamp(.58rem, 1.15vw, .95rem); }
 .workflow-product-design span:nth-child(4) { color: var(--coral); font-size: clamp(.5rem, 1vw, .82rem); }
 
-/* The German Step 05 layer uses the finished product renders supplied for this locale. */
+/* Step 05 uses the finished product renders supplied for each locale. */
 .workflow-keepsake-gallery {
   position: absolute;
   inset: 0;
-  display: none;
-}
-
-html[lang^='de'] .workflow-keepsake-default {
-  display: none;
-}
-
-html[lang^='de'] .workflow-keepsake-gallery--de {
   display: block;
 }
 
-.workflow-keepsake-gallery--de::before {
+.workflow-keepsake-default {
+  display: none;
+}
+
+.workflow-keepsake-gallery--localized::before {
   position: absolute;
   z-index: 0;
   right: 3%;

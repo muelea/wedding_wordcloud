@@ -242,7 +242,7 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
     assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/03_${locale}\\.png'\\) %>"`));
   }
-  assert.equal((landing.match(/data-workflow-locale-screenshot(?=[\s>])/g) || []).length, 3);
+  assert.equal((landing.match(/data-workflow-locale-screenshot(?=[\s>])/g) || []).length, 6);
   assert.equal((landing.match(/data-workflow-locale-screenshot-group/g) || []).length, 1);
   assert.equal((landing.match(/workflow-panel--capture/g) || []).length, 3);
   assert.match(landingWorkflowStyles, /\.workflow-locale-screenshot \{[\s\S]*?object-fit: cover;/);
@@ -259,10 +259,13 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.doesNotMatch(landingWorkflowStyles, /\.workflow-contributor-phone img \{[^}]*object-fit: fill;/);
   assert.match(landingWorkflowStyles, /\.workflow-contributor-phone--focus \{[\s\S]*?left: 50%;[\s\S]*?height: 94%;/);
   for (const product of ['01', '02', '03']) {
-    assert.match(landing, new RegExp(`asset\\('\\/assets\\/workflow\\/05_${product}_de\\.png'\\)`));
+    assert.match(landing, new RegExp(`asset\\('\\/assets\\/workflow\\/05_${product}_' \\+ locale \\+ '\\.png'\\)`));
+    for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+      assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/05_${product}_${locale}\\.png'\\) %>"`));
+    }
   }
-  assert.match(landingWorkflowStyles, /html\[lang\^='de'\] \.workflow-keepsake-default \{[\s\S]*?display: none;/);
-  assert.match(landingWorkflowStyles, /html\[lang\^='de'\] \.workflow-keepsake-gallery--de \{[\s\S]*?display: block;/);
+  assert.match(landingWorkflowStyles, /\.workflow-keepsake-default \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-keepsake-gallery \{[\s\S]*?display: block;/);
   assert.match(landingWorkflowStyles, /\.workflow-keepsake-asset--mug \{[\s\S]*?z-index: 3;[\s\S]*?width: 86%;/);
   assert.match(landingWorkflowStyles, /@media \(max-width: 760px\) \{[\s\S]*?\.workflow-panel,[\s\S]*?\.workflow-step > \.workflow-panel \{[\s\S]*?aspect-ratio: \.94;/);
   assert.match(landingWorkflowStyles, /@media \(max-width: 760px\) \{[\s\S]*?\.workflow-panel--live,[\s\S]*?\.workflow-step > \.workflow-panel--live \{[\s\S]*?aspect-ratio: 840 \/ 1038;/);
