@@ -9,6 +9,7 @@ const { sourceHashForRequest } = require('../clientIdentity');
 const rateLimits = require('../rateLimits');
 const stripe = require('../stripe');
 const printful = require('../printful');
+const printfulMockups = require('../printfulMockups');
 const { shippingTermsDiffer } = require('../printfulShipping');
 const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
@@ -272,6 +273,29 @@ function sendPrintfulError(res, error) {
   return res.status(502).json({
     error: 'pricing_unavailable',
     message: 'Die Preisberechnung ist gerade nicht erreichbar. Bitte versucht es gleich noch einmal.',
+  });
+}
+
+function sendPrintfulMockupError(res, error) {
+  const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 600
+    ? error.status
+    : 502;
+  if (error?.retryAfter) res.set('Retry-After', String(error.retryAfter));
+  if (error instanceof printfulMockups.PrintfulMockupError) {
+    return res.status(status).json({
+      error: error.code,
+      message: error.message,
+      ...(error.retryAfter ? { retryAfter: error.retryAfter } : {}),
+    });
+  }
+  log.error('printful_mockup_failed', {
+    operation: 'operator_mockup',
+    provider: 'printful',
+    errorCode: log.errorCode(error, 'printful_mockup_failed'),
+  });
+  return res.status(status).json({
+    error: 'mockup_unavailable',
+    message: 'Das Printful-Mockup konnte nicht erzeugt werden.',
   });
 }
 
@@ -1064,6 +1088,53 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const response = editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
+  }));
+
+  router.post(
+    '/operator/printful-mockups/events/:slug/configurations/:configurationId',
+    asyncRoute(async (req, res) => {
+      res.set('Cache-Control', 'private, no-store');
+      if (!printfulMockups.isOperatorCreateRequest(req)) {
+        return res.status(404).json({ error: 'not_found' });
+      }
+      const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
+      if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+      try {
+        return res.status(202).json(await printfulMockups.createForConfiguration(configuration));
+      } catch (error) {
+        return sendPrintfulMockupError(res, error);
+      }
+    })
+  );
+
+  router.get('/operator/printful-mockups/:jobId', asyncRoute(async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    if (!printfulMockups.isOperatorRequest(req)) return res.status(404).json({ error: 'not_found' });
+    try {
+      const result = await printfulMockups.getJob(req.params.jobId);
+      return res.json({
+        ...result,
+        mockups: result.mockups.map((mockup, index) => ({
+          ...mockup,
+          downloadUrl: `/api/operator/printful-mockups/${encodeURIComponent(result.jobId)}/files/${index}`,
+        })),
+      });
+    } catch (error) {
+      return sendPrintfulMockupError(res, error);
+    }
+  }));
+
+  router.get('/operator/printful-mockups/:jobId/files/:fileIndex', asyncRoute(async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    if (!printfulMockups.isOperatorRequest(req)) return res.status(404).send('not found');
+    try {
+      const file = await printfulMockups.download(req.params.jobId, req.params.fileIndex);
+      res.set('Content-Type', file.contentType);
+      res.set('Content-Disposition', `attachment; filename="${file.filename}"`);
+      return res.send(file.bytes);
+    } catch (error) {
+      return sendPrintfulMockupError(res, error);
+    }
   }));
 
   router.post(

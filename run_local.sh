@@ -6,10 +6,11 @@ PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
 usage() {
-  echo "Verwendung: ./run_local.sh [--seed-cloud DATEI.json]"
+  echo "Verwendung: ./run_local.sh [--seed-cloud DATEI.json] [--printful-mockups]"
 }
 
 SEED_CLOUD_FILE=""
+PRINTFUL_MOCKUP_TOOLS_ENABLED="false"
 while (( $# > 0 )); do
   case "$1" in
     --seed-cloud)
@@ -24,6 +25,14 @@ while (( $# > 0 )); do
       fi
       SEED_CLOUD_FILE="$2"
       shift 2
+      ;;
+    --printful-mockups)
+      if [[ "$PRINTFUL_MOCKUP_TOOLS_ENABLED" == "true" ]]; then
+        echo "Fehler: --printful-mockups darf nur einmal angegeben werden."
+        exit 1
+      fi
+      PRINTFUL_MOCKUP_TOOLS_ENABLED="true"
+      shift
       ;;
     --help|-h)
       usage
@@ -64,10 +73,15 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-node scripts/prepare-local.js
+env PRINTFUL_MOCKUP_TOOLS_ENABLED="$PRINTFUL_MOCKUP_TOOLS_ENABLED" node scripts/prepare-local.js
 
 if [[ -n "$SEED_CLOUD_FILE" ]]; then
-  node scripts/seed-local-cloud.js "$SEED_CLOUD_FILE"
+  env PRINTFUL_MOCKUP_TOOLS_ENABLED="$PRINTFUL_MOCKUP_TOOLS_ENABLED" \
+    node scripts/seed-local-cloud.js "$SEED_CLOUD_FILE"
 fi
 
-exec npm start
+if [[ "$PRINTFUL_MOCKUP_TOOLS_ENABLED" == "true" ]]; then
+  echo "[local] Printful-Mockup-Werkzeuge sind für diese Sitzung aktiviert."
+fi
+
+exec env PRINTFUL_MOCKUP_TOOLS_ENABLED="$PRINTFUL_MOCKUP_TOOLS_ENABLED" npm start

@@ -1633,8 +1633,9 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .order-item-actions { display: flex; align-items: center; gap: 6px; }
+    .order-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
     .order-edit,
+    .order-mockup,
     .order-remove {
       min-height: 32px;
       padding: 0;
@@ -1646,14 +1647,16 @@
       font-size: 18px;
       line-height: 1;
     }
-    .order-edit {
+    .order-edit,
+    .order-mockup {
       padding: 0 9px;
       border: 1px solid rgba(156, 28, 76, .18);
       color: var(--berry);
       font-size: 11px;
       font-weight: 600;
     }
-    .order-edit:hover { background: rgba(156, 28, 76, .06); border-color: rgba(156, 28, 76, .36); }
+    .order-edit:hover,
+    .order-mockup:hover { background: rgba(156, 28, 76, .06); border-color: rgba(156, 28, 76, .36); }
     .order-edit:disabled {
       border-color: transparent;
       background: rgba(156, 28, 76, .07);
@@ -1662,6 +1665,60 @@
     }
     .order-remove { width: 32px; }
     .order-remove:hover { background: rgba(156, 28, 76, .08); color: var(--berry); }
+    .order-mockup:disabled { cursor: wait; opacity: .62; }
+    .order-mockup-panel {
+      grid-column: 1 / -1;
+      padding: 12px;
+      border: 1px solid rgba(156, 28, 76, .13);
+      border-radius: 12px;
+      background: rgba(248, 240, 229, .55);
+    }
+    .order-mockup-status {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .order-mockup-status.is-error { color: #a12c43; }
+    .order-mockup-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .order-mockup-card {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .order-mockup-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+      object-fit: contain;
+      border: 0;
+      border-radius: 0;
+    }
+    .order-mockup-card-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-top: 1px solid var(--line);
+      font-size: 10px;
+    }
+    .order-mockup-card-foot span {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .order-mockup-download { color: var(--berry); font-weight: 600; }
+    .order-mockup-download:hover { text-decoration: underline; }
     .order-actions {
       display: flex;
       justify-content: flex-end;
@@ -1788,6 +1845,9 @@
       }
       .intro { margin-bottom: 25px; }
       .intro-copy { font-size: 15px; }
+      .order-item { grid-template-columns: 46px minmax(0, 1fr); align-items: start; }
+      .order-item > img { grid-row: 1 / span 2; }
+      .order-item-actions { grid-column: 2; justify-content: flex-start; }
       .workspace-tools { padding: 12px; border-radius: 16px; }
       .workbench { --workspace-stage-height: clamp(340px, 92vw, 470px); }
       .preview-card, .editor-card { padding: 20px; border-radius: 21px; }
@@ -2405,6 +2465,7 @@
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
+    const PRINTFUL_MOCKUP_TOOLS_ENABLED = <%- JSON.stringify(Boolean(pageData.printfulMockupTools)) %>;
     const paletteStorageKey = `wordcloud-palette:${slug}`;
     // The content fingerprint is also the revision of untouched automatic
     // drafts. A new layout engine regenerates those drafts on the next visit,
@@ -2529,6 +2590,7 @@
     const draftStore = WolkenworteConfiguratorSession.createDraftStore(slug);
     const workspace = new WolkenworteWorkspace(document);
     const toolbar = new WolkenworteToolbar(document);
+    const printfulMockupStates = new Map();
 
     let words = [];
     let liveWords = [];
@@ -2879,7 +2941,8 @@
         section.inert = isBusy;
       });
       orderList.querySelectorAll('button').forEach((button) => {
-        button.disabled = isBusy || button.getAttribute('aria-current') === 'true';
+        button.disabled = isBusy || button.getAttribute('aria-current') === 'true' ||
+          button.dataset.mockupPending === 'true';
       });
       if (!isBusy) updateCartActions();
     }
@@ -2965,6 +3028,155 @@
       headerCartCount.textContent = count ? String(count) : '';
     }
 
+    function clearPrintfulMockupState(configurationId) {
+      const state = printfulMockupStates.get(configurationId);
+      if (state?.timer) clearTimeout(state.timer);
+      printfulMockupStates.delete(configurationId);
+    }
+
+    function mockupErrorMessage(data) {
+      if (data?.message) return String(data.message);
+      return 'Das Printful-Mockup konnte nicht erzeugt werden.';
+    }
+
+    function schedulePrintfulMockupPoll(configurationId, jobId, token, delay = 4000) {
+      const state = printfulMockupStates.get(configurationId);
+      if (!state || state.token !== token) return;
+      state.timer = setTimeout(() => {
+        state.timer = null;
+        void pollPrintfulMockup(configurationId, jobId, token);
+      }, delay);
+    }
+
+    async function pollPrintfulMockup(configurationId, jobId, token) {
+      const current = printfulMockupStates.get(configurationId);
+      if (!current || current.token !== token) return;
+      if (Date.now() - current.startedAt > 10 * 60 * 1000) {
+        printfulMockupStates.set(configurationId, {
+          status: 'error', token, message: 'Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.',
+        });
+        renderOrderBox();
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/operator/printful-mockups/${encodeURIComponent(jobId)}`,
+          { cache: 'no-store', signal: AbortSignal.timeout(20000) }
+        );
+        const data = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(mockupErrorMessage(data));
+        const latest = printfulMockupStates.get(configurationId);
+        if (!latest || latest.token !== token) return;
+        if (data.status === 'pending') {
+          latest.status = 'pending';
+          renderOrderBox();
+          schedulePrintfulMockupPoll(configurationId, jobId, token);
+          return;
+        }
+        if (data.status !== 'completed' || !Array.isArray(data.mockups) || !data.mockups.length) {
+          throw new Error((data.failureReasons || []).filter(Boolean).join(' ') ||
+            'Printful hat kein Mockup geliefert.');
+        }
+        printfulMockupStates.set(configurationId, {
+          status: 'completed', token, jobId, mockups: data.mockups,
+          mockupWidthPx: data.mockupWidthPx || current.mockupWidthPx,
+          resolutionFallback: Boolean(data.resolutionFallback || current.resolutionFallback),
+        });
+        renderOrderBox();
+      } catch (error) {
+        if (printfulMockupStates.get(configurationId)?.token !== token) return;
+        printfulMockupStates.set(configurationId, {
+          status: 'error', token, message: error.message || mockupErrorMessage(),
+        });
+        renderOrderBox();
+      }
+    }
+
+    async function generatePrintfulMockup(configurationId) {
+      if (!PRINTFUL_MOCKUP_TOOLS_ENABLED) return;
+      clearPrintfulMockupState(configurationId);
+      const token = `${Date.now()}-${Math.random()}`;
+      printfulMockupStates.set(configurationId, { status: 'creating', token, startedAt: Date.now() });
+      renderOrderBox();
+      try {
+        const response = await fetch(
+          `/api/operator/printful-mockups/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}`,
+          {
+            method: 'POST',
+            headers: { 'X-Wolkenworte-Operator': 'printful-mockup' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(40000),
+          }
+        );
+        const data = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(mockupErrorMessage(data));
+        const latest = printfulMockupStates.get(configurationId);
+        if (!latest || latest.token !== token) return;
+        latest.status = 'pending';
+        latest.jobId = data.jobId;
+        latest.mockupWidthPx = data.mockupWidthPx;
+        latest.resolutionFallback = Boolean(data.resolutionFallback);
+        renderOrderBox();
+        schedulePrintfulMockupPoll(configurationId, data.jobId, token, data.status === 'completed' ? 0 : 3000);
+      } catch (error) {
+        if (printfulMockupStates.get(configurationId)?.token !== token) return;
+        printfulMockupStates.set(configurationId, {
+          status: 'error', token, message: error.message || mockupErrorMessage(),
+        });
+        renderOrderBox();
+      }
+    }
+
+    function createPrintfulMockupPanel(state) {
+      const panel = document.createElement('div');
+      panel.className = 'order-mockup-panel';
+      if (state.status !== 'completed') {
+        const status = document.createElement('p');
+        status.className = `order-mockup-status${state.status === 'error' ? ' is-error' : ''}`;
+        status.setAttribute('role', state.status === 'error' ? 'alert' : 'status');
+        status.textContent = state.status === 'creating'
+          ? 'Das Druckdesign wird sicher für Printful vorbereitet…'
+          : state.status === 'pending'
+          ? 'Printful erzeugt das Mockup. Das dauert meist einige Sekunden…'
+          : state.message;
+        panel.appendChild(status);
+        return panel;
+      }
+      if (Number.isSafeInteger(state.mockupWidthPx)) {
+        const resolution = document.createElement('p');
+        resolution.className = 'order-mockup-status';
+        resolution.textContent = state.resolutionFallback
+          ? `${state.mockupWidthPx} × ${state.mockupWidthPx} px · automatisch an das aktuelle Printful-Kontingent angepasst`
+          : `${state.mockupWidthPx} × ${state.mockupWidthPx} px`;
+        panel.appendChild(resolution);
+      }
+      const results = document.createElement('div');
+      results.className = 'order-mockup-results';
+      state.mockups.forEach((mockup) => {
+        const card = document.createElement('figure');
+        card.className = 'order-mockup-card';
+        const image = document.createElement('img');
+        image.src = mockup.url;
+        image.alt = `Printful-Mockup: ${mockup.displayName || mockup.placement || 'Ansicht'}`;
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        const foot = document.createElement('figcaption');
+        foot.className = 'order-mockup-card-foot';
+        const label = document.createElement('span');
+        label.textContent = mockup.displayName || mockup.placement || 'Ansicht';
+        const download = document.createElement('a');
+        download.className = 'order-mockup-download';
+        download.href = mockup.downloadUrl;
+        download.textContent = 'Download';
+        download.setAttribute('download', '');
+        foot.append(label, download);
+        card.append(image, foot);
+        results.appendChild(card);
+      });
+      panel.appendChild(results);
+      return panel;
+    }
+
     function renderOrderBox() {
       const items = loadOrderItems();
       const hasItems = items.length > 0;
@@ -3008,14 +3220,29 @@
         } else {
           edit.addEventListener('click', () => openOrderItem(item.id));
         }
+        const mockupState = printfulMockupStates.get(item.id);
+        let mockup = null;
+        if (PRINTFUL_MOCKUP_TOOLS_ENABLED) {
+          mockup = document.createElement('button');
+          mockup.type = 'button';
+          mockup.className = 'order-mockup';
+          mockup.textContent = mockupState?.status === 'completed' ? 'Neu erzeugen' : 'Printful-Mockup';
+          mockup.disabled = ['creating', 'pending'].includes(mockupState?.status);
+          mockup.dataset.mockupPending = String(mockup.disabled);
+          mockup.setAttribute('aria-label', `Printful-Mockup für ${productName} erzeugen`);
+          mockup.addEventListener('click', () => void generatePrintfulMockup(item.id));
+        }
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'order-remove';
         setTranslatedAttribute(remove, 'aria-label', '{{item}} aus dem Warenkorb entfernen', { item: productName });
         remove.textContent = '×';
         remove.addEventListener('click', () => removeOrderItem(item.id));
-        actions.append(edit, remove);
+        actions.append(edit);
+        if (mockup) actions.append(mockup);
+        actions.append(remove);
         row.append(image, copy, actions);
+        if (mockupState) row.appendChild(createPrintfulMockupPanel(mockupState));
         orderList.appendChild(row);
       });
       updateCartActions();
@@ -3024,6 +3251,9 @@
     function removeOrderItem(configurationId) {
       if (orderActionPending || leavingPage) return;
       try {
+        if (typeof clearPrintfulMockupState === 'function') {
+          clearPrintfulMockupState(configurationId);
+        }
         cart.write(cart.read().filter((candidate) => candidate.id !== configurationId));
         if (editingOrderItemId === configurationId) {
           editingOrderItemId = null;
@@ -4546,6 +4776,9 @@
       startProductDesign(product, selectedOrientation, { useSavedDraft: false, preserveEditingItem: true })));
 
     window.addEventListener('pagehide', () => {
+      for (const configurationId of printfulMockupStates.keys()) {
+        clearPrintfulMockupState(configurationId);
+      }
       destroyMug3D();
       draftStore.close();
     });

@@ -29,6 +29,7 @@ function validateRuntimeConfig() {
     'STRIPE_LIVE_PAYMENTS_ENABLED',
     'PRINTFUL_ALLOW_ORDER_WRITES',
     'PRINTFUL_CONFIRM_LIVE_ORDERS',
+    'PRINTFUL_MOCKUP_TOOLS_ENABLED',
   ]) {
     if (!['true', 'false'].includes(flag(name))) errors.push(`${name} muss true oder false sein.`);
   }
@@ -44,6 +45,9 @@ function validateRuntimeConfig() {
   } catch { /* The precise APP_ENVIRONMENT error is already included above. */ }
 
   if (production) {
+    if (flag('PRINTFUL_MOCKUP_TOOLS_ENABLED') === 'true') {
+      errors.push('PRINTFUL_MOCKUP_TOOLS_ENABLED darf im Webprozess nicht aktiviert sein.');
+    }
     if (flag('ALLOW_REMOTE_MARKETING_SEEDS') === 'true') {
       errors.push('ALLOW_REMOTE_MARKETING_SEEDS darf im Webprozess nicht aktiviert sein.');
     }
@@ -99,6 +103,19 @@ function validateRuntimeConfig() {
   }
   if (production && printfulMode !== 'mock' && (!printfulWebhookSecret || !printfulWebhookPublicKey)) {
     errors.push('Printful draft/live benötigt den signierten v2-Webhook.');
+  }
+  if (flag('PRINTFUL_MOCKUP_TOOLS_ENABLED') === 'true') {
+    if (process.env.APP_ENVIRONMENT !== 'local') {
+      errors.push('PRINTFUL_MOCKUP_TOOLS_ENABLED ist ausschließlich lokal erlaubt.');
+    }
+    if (!String(process.env.PRINTFUL_API_KEY || '').trim() ||
+        !String(process.env.PRINTFUL_STORE_ID || '').trim()) {
+      errors.push('Printful-Mockups benötigen PRINTFUL_API_KEY und PRINTFUL_STORE_ID.');
+    }
+    if (!String(process.env.SUPABASE_URL || '').trim() ||
+        !String(process.env.SUPABASE_SECRET_KEY || '').trim()) {
+      errors.push('Printful-Mockups benötigen SUPABASE_URL und SUPABASE_SECRET_KEY.');
+    }
   }
   if (errors.length) throw new Error(`Ungültige Laufzeitkonfiguration: ${errors.join(' ')}`);
   return true;

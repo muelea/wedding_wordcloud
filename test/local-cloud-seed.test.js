@@ -152,6 +152,32 @@ test('local cloud seed arguments require exactly one file', () => {
   assert.throws(() => seedTool.parseArgs(['--unknown']), /Unbekannte Option/);
 });
 
+test('combined mockup and seed startup prints localhost as the operator URL', async () => {
+  const lines = [];
+  const result = await seedTool.run({
+    argv: ['marketing-cloud.json'],
+    env: {
+      APP_ENVIRONMENT: 'local',
+      NODE_ENV: 'development',
+      DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+      PORT: '4312',
+      PUBLIC_URL: 'http://192.0.2.10:4312',
+      PRINTFUL_MOCKUP_TOOLS_ENABLED: 'true',
+    },
+    readFile: () => JSON.stringify(fixture()),
+    database: {
+      async assertDatabaseReady() {},
+      async createSeededEvent() { return { slug: 'mockup-seed' }; },
+    },
+    output: (line) => lines.push(line),
+  });
+
+  assert.equal(result.url, 'http://localhost:4312/e/mockup-seed');
+  assert.equal(result.networkUrl, 'http://192.0.2.10:4312/e/mockup-seed');
+  assert.match(lines.join('\n'), /Printful-Mockups.*http:\/\/localhost:4312\/e\/mockup-seed/);
+  assert.match(lines.join('\n'), /WLAN \(ohne Mockup-Werkzeug\).*http:\/\/192\.0\.2\.10:4312/);
+});
+
 test('seeded event stores aggregate counts and matching private contributions atomically', async (t) => {
   const app = await startTestServer();
   t.after(app.close);

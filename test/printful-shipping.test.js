@@ -107,3 +107,41 @@ test('Printful rejections, outages and malformed costs cannot produce a usable e
   global.fetch = async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('bad JSON'); } });
   await assert.rejects(printful.getShippingRates(request), { code: 'PRINTFUL_UNAVAILABLE' });
 });
+
+test('Printful errors retain v2 rate-limit details for mockup fallback decisions', async (t) => {
+  const oldFetch = global.fetch;
+  const oldKey = process.env.PRINTFUL_API_KEY;
+  process.env.PRINTFUL_API_KEY = 'test_only';
+  t.after(() => {
+    global.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.PRINTFUL_API_KEY;
+    else process.env.PRINTFUL_API_KEY = oldKey;
+  });
+  global.fetch = async () => ({
+    ok: false,
+    status: 429,
+    headers: {
+      get(name) {
+        return ({
+          'retry-after': '0',
+          'x-ratelimit-limit': '2',
+          'x-ratelimit-remaining': '2',
+          'x-ratelimit-reset': '60',
+        })[name.toLowerCase()] ?? null;
+      },
+    },
+    json: async () => ({
+      error: {
+        message: 'Request would exceed available attempts Please try again after 0 seconds.',
+      },
+    }),
+  });
+  const printful = require('../src/printful');
+
+  await assert.rejects(
+    printful.createMockupTasks({ products: [{}] }),
+    (error) => error.providerStatus === 429 && error.retryAfter === 0 &&
+      error.rateLimitLimit === 2 && error.rateLimitRemaining === 2 &&
+      error.rateLimitReset === 60
+  );
+});

@@ -134,6 +134,15 @@ function assertLocalSeedSafety(env) {
   return { localDatabase };
 }
 
+function flagEnabled(value) {
+  return String(value || '').trim().toLowerCase() === 'true';
+}
+
+function seedBaseUrl(env, port) {
+  const publicUrl = String(env.PUBLIC_URL || '').trim();
+  return publicUrl ? publicUrl.replace(/\/$/, '') : getBaseUrl(null, port);
+}
+
 async function run({
   argv = process.argv.slice(2),
   env = process.env,
@@ -164,17 +173,28 @@ async function run({
   }
   const event = await db.createSeededEvent(seed);
   const port = Number(env.PORT || 3000);
-  const baseUrl = getBaseUrl(null, port);
+  const baseUrl = seedBaseUrl(env, port);
+  const eventPath = `/e/${event.slug}`;
+  const networkUrl = `${baseUrl}${eventPath}`;
+  const mockupTools = flagEnabled(env.PRINTFUL_MOCKUP_TOOLS_ENABLED);
+  const operatorUrl = mockupTools ? `http://localhost:${port}${eventPath}` : null;
   const mergedCount = seed.inputWordCount - seed.words.length;
 
   output('');
   output('[local] Marketing-Wortwolke erstellt:');
-  output(`  ${baseUrl}/e/${event.slug}`);
+  if (operatorUrl) {
+    output(`  Printful-Mockups (dieser Rechner): ${operatorUrl}`);
+    if (networkUrl !== operatorUrl) {
+      output(`  WLAN (ohne Mockup-Werkzeug): ${networkUrl}`);
+    }
+  } else {
+    output(`  ${networkUrl}`);
+  }
   output(`  PIN: ${seed.pin}`);
   output(`  ${seed.words.length} Wörter, ${seed.contributionCount} simulierte Beiträge`);
   if (mergedCount) output(`  ${mergedCount} normalisierte Dopplung(en) wurden zusammengeführt.`);
   output('');
-  return { event, seed, url: `${baseUrl}/e/${event.slug}` };
+  return { event, seed, url: operatorUrl || networkUrl, networkUrl };
 }
 
 async function main() {
@@ -202,4 +222,5 @@ module.exports = {
   parseArgs,
   parseSeedJson,
   run,
+  seedBaseUrl,
 };

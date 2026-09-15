@@ -35,11 +35,12 @@ function isConfigured() {
 }
 
 class PrintfulApiError extends Error {
-  constructor(code, message, status = 500) {
+  constructor(code, message, status = 500, details = {}) {
     super(message);
     this.name = 'PrintfulApiError';
     this.code = code;
     this.status = status;
+    Object.assign(this, details);
   }
 }
 
@@ -106,7 +107,28 @@ async function printfulRequest(path, options = {}) {
       : apiStatus >= 400 && apiStatus < 500 && apiStatus !== 429
         ? 'PRINTFUL_REQUEST_REJECTED'
         : 'PRINTFUL_UNAVAILABLE';
-    throw new PrintfulApiError(code, message, apiStatus >= 500 || apiStatus === 429 ? 502 : apiStatus);
+    const numericHeader = (name) => {
+      const raw = response.headers?.get?.(name);
+      if (raw == null || raw === '') return null;
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    };
+    const retryAfterValue = numericHeader('retry-after');
+    const rateLimitLimit = numericHeader('x-ratelimit-limit');
+    const rateLimitRemaining = numericHeader('x-ratelimit-remaining');
+    const rateLimitReset = numericHeader('x-ratelimit-reset');
+    throw new PrintfulApiError(
+      code,
+      message,
+      apiStatus >= 500 || apiStatus === 429 ? 502 : apiStatus,
+      {
+        providerStatus: apiStatus,
+        ...(retryAfterValue != null ? { retryAfter: Math.ceil(retryAfterValue) } : {}),
+        ...(rateLimitLimit != null ? { rateLimitLimit } : {}),
+        ...(rateLimitRemaining != null ? { rateLimitRemaining } : {}),
+        ...(rateLimitReset != null ? { rateLimitReset: Math.ceil(rateLimitReset) } : {}),
+      }
+    );
   }
 
   performanceProbe.recordExternalCall('printful', {
@@ -222,6 +244,68 @@ async function getShippingRates({ variantId, quantity, recipient, items }) {
   } catch {
     throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keine gültigen Versandinformationen geliefert.', 502);
   }
+}
+
+async function getCatalogProductMockupStyles(productId, placements = []) {
+  const id = Number(productId);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_MOCKUP', 'Das Printful-Produkt ist ungültig.', 500);
+  }
+  const query = new URLSearchParams({ default_mockup_styles: 'true', limit: '100' });
+  const normalizedPlacements = [...new Set((placements || []).map(String).filter(Boolean))];
+  if (normalizedPlacements.length) query.set('placements', normalizedPlacements.join(','));
+  const result = await printfulRequest(`/v2/catalog-products/${id}/mockup-styles?${query}`, {
+    method: 'GET',
+    timeoutMs: 15_000,
+  });
+  if (!Array.isArray(result)) {
+    throw new PrintfulApiError(
+      'PRINTFUL_INVALID_RESPONSE',
+      'Printful hat keine gültigen Mockup-Stile geliefert.',
+      502
+    );
+  }
+  return result;
+}
+
+async function createMockupTasks(payload) {
+  if (!payload || !Array.isArray(payload.products) || !payload.products.length) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_MOCKUP', 'Die Mockup-Daten sind ungültig.', 500);
+  }
+  const result = await printfulRequest('/v2/mockup-tasks', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    timeoutMs: 30_000,
+  });
+  if (!Array.isArray(result) || !result.length ||
+      result.some((task) => !Number.isSafeInteger(Number(task?.id)))) {
+    throw new PrintfulApiError(
+      'PRINTFUL_INVALID_RESPONSE',
+      'Printful hat keine gültige Mockup-Aufgabe geliefert.',
+      502
+    );
+  }
+  return result;
+}
+
+async function getMockupTasks(taskIds) {
+  const ids = [...new Set((taskIds || []).map(Number))];
+  if (!ids.length || ids.some((id) => !Number.isSafeInteger(id) || id < 1)) {
+    throw new PrintfulApiError('PRINTFUL_INVALID_MOCKUP', 'Die Printful-Mockup-ID ist ungültig.', 500);
+  }
+  const query = new URLSearchParams({ id: ids.join(','), limit: String(Math.min(ids.length, 100)) });
+  const result = await printfulRequest(`/v2/mockup-tasks?${query}`, {
+    method: 'GET',
+    timeoutMs: 15_000,
+  });
+  if (!Array.isArray(result)) {
+    throw new PrintfulApiError(
+      'PRINTFUL_INVALID_RESPONSE',
+      'Printful hat keinen gültigen Mockup-Status geliefert.',
+      502
+    );
+  }
+  return result;
 }
 
 /**
@@ -404,6 +488,9 @@ module.exports = {
   getShippingCountries,
   estimateOrderCosts,
   getShippingRates,
+  getCatalogProductMockupStyles,
+  createMockupTasks,
+  getMockupTasks,
   createPrintfulOrder,
   getPrintfulOrderByExternalId,
   confirmPrintfulOrder,

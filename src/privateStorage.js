@@ -64,6 +64,13 @@ function activeAdapter() {
       const { error } = await storageClient().remove([objectKey]);
       if (error) throw error;
     },
+    async createSignedUrl(objectKey, expiresInSeconds) {
+      const { data, error } = await storageClient().createSignedUrl(objectKey, expiresInSeconds);
+      if (error || !data?.signedUrl) {
+        throw error || new Error('Storage konnte keine signierte URL erstellen.');
+      }
+      return data.signedUrl;
+    },
     async listPage(prefix, { limit, offset }) {
       const { data, error } = await storageClient().list(prefix, {
         limit,
@@ -90,6 +97,10 @@ function download(...args) {
 
 function remove(...args) {
   return activeAdapter().remove(...args);
+}
+
+function createSignedUrl(...args) {
+  return activeAdapter().createSignedUrl(...args);
 }
 
 async function listAllObjectKeys() {
@@ -155,6 +166,7 @@ module.exports = {
   upload,
   download,
   remove,
+  createSignedUrl,
   listAllObjectKeys,
   removeMany,
   setAdapterForTests,

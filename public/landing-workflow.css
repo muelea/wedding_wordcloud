@@ -881,6 +881,76 @@
 .workflow-product-design span:nth-child(3) { color: #6f9f92; font-size: clamp(.58rem, 1.15vw, .95rem); }
 .workflow-product-design span:nth-child(4) { color: var(--coral); font-size: clamp(.5rem, 1vw, .82rem); }
 
+/* The German Step 05 layer uses the finished product renders supplied for this locale. */
+.workflow-keepsake-gallery {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+html[lang^='de'] .workflow-keepsake-default {
+  display: none;
+}
+
+html[lang^='de'] .workflow-keepsake-gallery--de {
+  display: block;
+}
+
+.workflow-keepsake-gallery--de::before {
+  position: absolute;
+  z-index: 0;
+  right: 3%;
+  bottom: 2%;
+  left: 3%;
+  height: 24%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(64, 15, 38, .14), transparent 68%);
+  filter: blur(18px);
+  content: '';
+}
+
+.workflow-keepsake-asset {
+  position: absolute;
+  transform-origin: 50% 80%;
+}
+
+.workflow-keepsake-asset img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.workflow-keepsake-asset--poster {
+  z-index: 1;
+  top: -6%;
+  right: -8%;
+  width: 67%;
+  height: 88%;
+  opacity: .92;
+  transform: rotate(4deg);
+  filter: drop-shadow(0 22px 22px rgba(64, 15, 38, .16));
+}
+
+.workflow-keepsake-asset--tote {
+  z-index: 2;
+  top: 5%;
+  left: -13%;
+  width: 72%;
+  height: 87%;
+  transform: rotate(-6deg);
+  filter: drop-shadow(0 25px 24px rgba(64, 15, 38, .18));
+}
+
+.workflow-keepsake-asset--mug {
+  z-index: 3;
+  bottom: -10%;
+  left: 12%;
+  width: 86%;
+  height: 86%;
+  filter: drop-shadow(0 30px 28px rgba(64, 15, 38, .22));
+}
+
 .steps-cta {
   margin-top: 52px;
   text-align: center;

@@ -27,6 +27,7 @@ const { createSvgExportQueue } = require('./src/svgExportQueue');
 const fulfillment = require('./src/fulfillment');
 const emailDelivery = require('./src/emailDelivery');
 const printArtifacts = require('./src/printArtifacts');
+const printfulMockups = require('./src/printfulMockups');
 const { asyncRoute, makeSanitizedErrorHandler } = require('./src/asyncRoute');
 const { validateRuntimeConfig } = require('./src/runtimeConfig');
 const { staticCacheMiddleware } = require('./src/httpCache');
@@ -287,6 +288,9 @@ app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
       backHref: '#', backLabel: 'Zurück zur Wortwolke', backAria: 'Zurück zur Wortwolke',
       mobileMenu: true, mobileBackId: 'mobile-back-link', cartButton: true,
     },
+    pageData: {
+      printfulMockupTools: printfulMockups.isOperatorRequest(req),
+    },
   });
 }));
 
@@ -403,6 +407,9 @@ async function start() {
     } else {
       console.log('\n  ♡  Wolkenworte is running!\n');
       console.log(`  Create an event →  ${base}/`);
+      if (printfulMockups.isOperatorEnabled()) {
+        console.log(`  Printful-Mockups →  http://localhost:${PORT}/ (nur auf diesem Rechner)`);
+      }
       console.log(`  (each event then gets its own /e/<slug> URL)\n`);
     }
   });
@@ -463,6 +470,7 @@ function shutdown(signal = 'shutdown') {
     socketRuntime.stop();
     performanceProbe.stop();
     await svgExports.stop();
+    await printfulMockups.stop();
     if (!transportClosed) log.warn('server_transport_drain_timeout', { durationMs: 10_000 });
     if (!fulfillmentWorker.drained) {
       log.warn('server_fulfillment_drain_incomplete', { count: fulfillmentWorker.activeOrders });

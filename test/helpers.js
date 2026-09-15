@@ -27,6 +27,7 @@ function clearApplicationModules() {
     '../src/resend',
     '../src/stripe',
     '../src/printful',
+    '../src/printfulMockups',
     '../src/privateStorage',
     '../src/clientIdentity',
     '../src/rateLimits',
