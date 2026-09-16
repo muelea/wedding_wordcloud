@@ -128,17 +128,25 @@ async function runSmoke(fixture) {
       !String(html.headers.get('content-type')).includes('text/html')) {
     throw new Error('landing-page/cache smoke failed');
   }
-  const wordCloudAssetUrl = publicAssetUrl('/js/wordcloud-core.js');
+  const landingWorkflowAssetUrl = publicAssetUrl('/js/landing-workflow.js');
+  const landingMugAssetUrl = publicAssetUrl('/assets/workflow/05_01_de.png');
   const landingHtml = await html.text();
-  if (!landingHtml.includes(wordCloudAssetUrl)) {
-    throw new Error('landing page does not reference the released word-cloud runtime');
+  if (!landingHtml.includes(landingWorkflowAssetUrl) || !landingHtml.includes(landingMugAssetUrl)) {
+    throw new Error('landing page does not reference the released localized mug experience');
   }
-  const versionedAsset = await fetchWithTimeout(wordCloudAssetUrl);
-  if (versionedAsset.status !== 200 || !String(versionedAsset.headers.get('cache-control')).includes('immutable')) {
-    throw new Error('versioned static-asset cache smoke failed');
+  const landingWorkflowAsset = await fetchWithTimeout(landingWorkflowAssetUrl);
+  if (landingWorkflowAsset.status !== 200 ||
+      !String(landingWorkflowAsset.headers.get('cache-control')).includes('immutable')) {
+    throw new Error('versioned landing-workflow cache smoke failed');
   }
-  if (!(await versionedAsset.text()).includes('TEXT_BASELINE_OFFSET')) {
-    throw new Error('released word-cloud runtime is missing its baseline contract');
+  if (!(await landingWorkflowAsset.text()).includes('[data-workflow-locale-screenshot]')) {
+    throw new Error('released landing workflow is missing its localized-image contract');
+  }
+  const landingMugAsset = await fetchWithTimeout(landingMugAssetUrl);
+  if (landingMugAsset.status !== 200 ||
+      !String(landingMugAsset.headers.get('cache-control')).includes('immutable') ||
+      !String(landingMugAsset.headers.get('content-type')).includes('image/png')) {
+    throw new Error('localized landing mug asset smoke failed');
   }
 
   const adminPin = String(crypto.randomInt(1000, 10_000));
@@ -158,6 +166,7 @@ async function runSmoke(fixture) {
   }
   fixture.slug = event.slug;
 
+  const wordCloudAssetUrl = publicAssetUrl('/js/wordcloud-core.js');
   const eventPage = await fetchWithTimeout(`/e/${encodeURIComponent(event.slug)}`);
   const eventHtml = await eventPage.text();
   if (eventPage.status !== 200 || !eventHtml.includes(wordCloudAssetUrl) ||
