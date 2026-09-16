@@ -7,17 +7,24 @@ const DesignFonts = require('../public/js/design-fonts.js');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const embeddedFontData = new Map();
+const fontFiles = new Map();
 
 for (const font of DesignFonts.FONTS) {
   if (!font.file) continue;
   const filePath = font.packageFile
     ? require.resolve(font.packageFile)
     : path.join(PUBLIC_DIR, font.file.replace(/^\//, ''));
+  fontFiles.set(`${font.key}:400`, filePath);
   registerFont(filePath, { family: font.family, weight: 'normal', style: 'normal' });
   embeddedFontData.set(`${font.key}:400`, fs.readFileSync(filePath).toString('base64'));
   const boldPath = path.join(PUBLIC_DIR, font.boldFile.replace(/^\//, ''));
+  fontFiles.set(`${font.key}:700`, boldPath);
   registerFont(boldPath, { family: font.family, weight: 'bold', style: 'normal' });
   embeddedFontData.set(`${font.key}:700`, fs.readFileSync(boldPath).toString('base64'));
+}
+
+function fontFilePath(key, weight = 400) {
+  return fontFiles.get(`${DesignFonts.normalizeKey(key)}:${weight === 700 ? 700 : 400}`);
 }
 
 function embeddedSvgFontFaces(design) {
@@ -37,4 +44,4 @@ function embeddedSvgFontFaces(design) {
   return `  <defs><style type="text/css"><![CDATA[${rules.join('')}]]></style></defs>\n`;
 }
 
-module.exports = Object.freeze({ ...DesignFonts, embeddedSvgFontFaces });
+module.exports = Object.freeze({ ...DesignFonts, embeddedSvgFontFaces, fontFilePath });

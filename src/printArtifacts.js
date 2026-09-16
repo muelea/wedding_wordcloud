@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const db = require('./db');
 const storage = require('./privateStorage');
-const { buildProductPrintSvg } = require('./mugPrint');
+const { buildProviderPrintSvg } = require('./mugPrint');
 const { getProduct, resolveProductOrientation } = require('./products');
 
 const MIME_TYPE = 'image/svg+xml';
@@ -54,7 +54,7 @@ async function renderItemSurfaces(orderItem) {
   return product.printSurfaces.map((surface) => {
     const surfaceDesign = design.surfaces[surface.key];
     if (!Array.isArray(surfaceDesign)) throw new Error('Eine Druckfläche fehlt in der Bestellung.');
-    const bytes = Buffer.from(buildProductPrintSvg(product, surfaceDesign), 'utf8');
+    const bytes = Buffer.from(buildProviderPrintSvg(product, surfaceDesign), 'utf8');
     if (!bytes.length || bytes.length > MAX_ARTIFACT_BYTES) {
       throw new Error('Die erzeugte Druckdatei hat eine ungültige Größe.');
     }

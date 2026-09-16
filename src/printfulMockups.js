@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { createCanvas, loadImage } = require('canvas');
 const storage = require('./privateStorage');
 const printful = require('./printful');
-const { buildProductPrintSvg } = require('./mugPrint');
+const { buildProviderPrintSvg } = require('./mugPrint');
 const { getProduct, resolveProductOrientation } = require('./products');
 
 const SOURCE_PREFIX = 'operator-mockup-sources';
@@ -102,7 +102,7 @@ function parseConfiguration(configuration) {
     return {
       surface,
       placement: product.printful.placements[index],
-      bytes: Buffer.from(buildProductPrintSvg(product, surfaceDesign), 'utf8'),
+      bytes: Buffer.from(buildProviderPrintSvg(product, surfaceDesign), 'utf8'),
     };
   });
   return { product, rendered };
@@ -122,7 +122,20 @@ async function rasterizePrintSource(svgBytes, printFile) {
   const scale = Math.min(1, MAX_SOURCE_DIMENSION_PX / sourceWidth, MAX_SOURCE_DIMENSION_PX / sourceHeight);
   const width = Math.max(1, Math.round(sourceWidth * scale));
   const height = Math.max(1, Math.round(sourceHeight * scale));
-  const image = await loadImage(svgBytes);
+  const sourceSvg = svgBytes.toString('utf8');
+  const viewportPattern = /(<svg\b[^>]*\bwidth=")[^"]+("[^>]*\bheight=")[^"]+("[^>]*>)/i;
+  if (!viewportPattern.test(sourceSvg)) {
+    throw new PrintfulMockupError(
+      'mockup_configuration_invalid',
+      'Die gespeicherte Druckdatei ist ungültig.',
+      422
+    );
+  }
+  const resizedSvg = sourceSvg.replace(
+    viewportPattern,
+    `$1${width}$2${height}$3`
+  );
+  const image = await loadImage(Buffer.from(resizedSvg, 'utf8'));
   const canvas = createCanvas(width, height);
   canvas.getContext('2d').drawImage(image, 0, 0, width, height);
   return canvas.toBuffer('image/png');

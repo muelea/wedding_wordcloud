@@ -4,7 +4,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { createCanvas, loadImage } = require('canvas');
 const { productDesignPayload } = require('./helpers');
+const DesignFonts = require('../src/designFonts');
+const WordCloudCore = require('../public/js/wordcloud-core');
 const { getProduct, resolveProductOrientation } = require('../src/products');
 const {
   PrintfulMockupError,
@@ -42,6 +45,24 @@ function mockupStyleRows(product) {
       restricted_to_variants: [product.printful.variantId],
     }],
   }));
+}
+
+function alphaBounds(canvas) {
+  const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+  let left = canvas.width;
+  let top = canvas.height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < canvas.height; y += 1) {
+    for (let x = 0; x < canvas.width; x += 1) {
+      if (!pixels[(y * canvas.width + x) * 4 + 3]) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  return { left, top, right, bottom };
 }
 
 test('operator mockup access needs the explicit local flag, loopback socket and localhost host', () => {
@@ -174,6 +195,69 @@ test('mockup service sends exact saved surfaces, polls Printful, cleans sources 
   assert.deepEqual(downloaded.bytes, imageBytes);
   assert.equal(downloaded.contentType, 'image/png');
   assert.match(downloaded.filename, /^wolkenworte-all-over-basic-pillow-18in-front-700\.png$/);
+});
+
+test('mockup PNG preserves Caveat bold geometry instead of substituting a system font', async (t) => {
+  const product = resolveProductOrientation(getProduct('white-glossy-mug-duo-11oz'), 'default');
+  const configuration = configurationFor(product.key, 'default', 'favourite people');
+  const stored = JSON.parse(configuration.design_json);
+  const item = stored.surfaces.default[0];
+  Object.assign(item, {
+    x: product.printFile.width / 2,
+    y: product.printFile.height / 2,
+    fontSize: 180,
+    angle: 27,
+    color: '#ed2446',
+    fontFamily: 'caveat',
+    fontWeight: 700,
+    fontStyle: 'italic',
+    underline: true,
+    linethrough: true,
+  });
+  configuration.design_json = JSON.stringify(stored);
+  const uploads = [];
+  const service = createService({
+    storageClient: {
+      async upload(objectKey, bytes, contentType) {
+        uploads.push({ objectKey, bytes: Buffer.from(bytes), contentType });
+      },
+      async createSignedUrl(objectKey) {
+        return `https://storage.example.test/${encodeURIComponent(objectKey)}`;
+      },
+      async remove() {},
+    },
+    printfulClient: {
+      async getCatalogProductMockupStyles() { return mockupStyleRows(product); },
+      async createMockupTasks() { return [{ id: 222, status: 'pending' }]; },
+      async getMockupTasks() { return []; },
+    },
+  });
+  t.after(() => service.stop());
+  await service.createForConfiguration(configuration);
+  assert.equal(uploads.length, 1);
+  assert.equal(uploads[0].contentType, 'image/png');
+  const source = await loadImage(uploads[0].bytes);
+  const actual = createCanvas(source.width, source.height);
+  actual.getContext('2d').drawImage(source, 0, 0);
+  assert.equal(actual.getContext('2d').getImageData(0, 0, 1, 1).data[3], 0,
+    'the provider source must retain a transparent background');
+
+  const expected = createCanvas(product.printFile.width, product.printFile.height);
+  const context = expected.getContext('2d');
+  context.save();
+  context.translate(item.x, item.y);
+  context.rotate(item.angle * Math.PI / 180);
+  WordCloudCore.drawRichText(context, item.text, 0, 0, item.fontSize, {
+    ...item,
+    fontFamily: DesignFonts.cssFamily(item.fontFamily),
+  });
+  context.restore();
+  const actualBounds = alphaBounds(actual);
+  const expectedBounds = alphaBounds(expected);
+  for (const key of ['left', 'top', 'right', 'bottom']) {
+    assert.ok(Math.abs(actualBounds[key] - expectedBounds[key]) <= 2,
+      `${key}: ${actualBounds[key]} vs ${expectedBounds[key]}`);
+  }
 });
 
 test('mockup service falls back to 1000px when Printful rejects 2000px quota cost', async (t) => {

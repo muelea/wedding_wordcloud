@@ -287,12 +287,13 @@ pg_net merely queueing a request.
 
 The product editor ships the OFL-licensed Gelasio font as its deterministic
 `Wolkenworte Classic` serif plus Lora, Montserrat, Caveat and Baloo 2. Browser
-preview, local rendering and the Linux container register the same files, and
-used fonts are embedded directly into immutable print SVGs. Rendering therefore
-does not depend on Georgia or another host font being installed. The existing
-design-font `OFL.txt` files live next to their binaries. Each family includes a
-fixed 700-weight instance for identical bold output in browsers and the Linux
-print renderer; italic styling uses the same deterministic geometric slant in
+preview, local rendering and the Linux container register the same files.
+Browser-facing print previews embed the used fonts; immutable provider SVGs
+convert every glyph to vector outlines before they are frozen. Rendering at
+Printful therefore cannot substitute Georgia, Arial or another host font. The
+existing design-font `OFL.txt` files live next to their binaries. Each family
+includes a fixed 700-weight instance for identical bold output in browsers and
+the Linux print renderer; italic styling uses the same deterministic geometric slant in
 the editor, product preview and print SVG. Gelasio is the complete
 168,556-byte TTF pinned to the Google Fonts commit and SHA-256 in
 `public/assets/design-fonts/gelasio/VERSION`. Both renderers use that file;
@@ -367,13 +368,14 @@ For this combination, the seed command prints a `localhost` event URL labeled
 It also prints the LAN URL for phones and other devices, but that URL
 intentionally does not expose the mockup control.
 
-Printful cannot fetch a browser-only localhost URL. The server therefore
-renders each exact SVG print surface to a same-aspect PNG (bounded to 3000 px
-on its longest side), uploads it under a separate temporary prefix in the
-existing private Supabase Storage bucket and gives Printful a one-hour signed
-HTTPS URL. The PNG avoids indefinitely pending provider tasks observed with
-SVG layers; it is only a temporary mockup source and does not replace the
-immutable SVG used for fulfillment. Sources are deleted as soon as the task
+Printful cannot fetch a browser-only localhost URL. The server therefore freezes
+all text in the same provider SVG as local-font vector outlines, renders that
+exact surface to a transparent same-aspect PNG (bounded to 3000 px on its
+longest side), uploads it under a separate temporary prefix in the existing
+private Supabase Storage bucket and gives Printful a one-hour signed HTTPS URL.
+The PNG avoids indefinitely pending provider tasks observed with SVG layers;
+the immutable fulfillment SVG uses the same outlined geometry, so neither path
+depends on Printful loading a font. Sources are deleted as soon as the task
 completes or fails, on shutdown, or after the one-hour fallback timeout.
 Generated results are cached in memory for 12 hours so reopening the same
 design does not consume another generation request; restart the local process
@@ -669,7 +671,7 @@ src/
   privateStorage.js        backend-only Supabase Storage boundary
   lifecycle.js             expired-event cleanup + paid-data detachment
   maintenance.js           bounded fulfillment/retention orchestration + heartbeat
-  printArtifacts.js        frozen paid SVG upload, capability URL + integrity checks
+  printArtifacts.js        frozen paid outlined-SVG upload, capability URL + integrity checks
   clientIdentity.js        trusted normalized/HMAC source identity
   rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
   asyncRoute.js            rejected-promise boundary for Express routes
@@ -690,7 +692,7 @@ src/
   emailTemplates.js        immutable multilingual order/shipment/refund/cancellation messages
   pricing.js               integer-cent quote + catalog-wide markup rule
   exportSvg.js             Server-side SVG render for the print pipeline (real font metrics via node-canvas)
-  mugPrint.js              Product-sized SVG print-file renderer
+  mugPrint.js              Product-sized preview SVG + outlined provider renderer
   products.js              Curated, API-verified Printful variants and geometry
   routes/
     events.js              Event/configuration CRUD, pricing and checkout
