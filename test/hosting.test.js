@@ -60,7 +60,7 @@ test('health endpoints and static cache policy are deployment-safe', async (t) =
   const html = await fetch(`${baseUrl}/`);
   assert.equal(html.status, 200);
   assert.equal(html.headers.get('cache-control'), 'no-cache');
-  assert.ok((await html.text()).includes(publicAssetUrl('/js/wordcloud-core.js')));
+  assert.ok((await html.text()).includes(publicAssetUrl('/js/landing-workflow.js')));
 
   const directHtml = await fetch(`${baseUrl}/landing.html?v=stale-release`);
   assert.equal(directHtml.status, 404);

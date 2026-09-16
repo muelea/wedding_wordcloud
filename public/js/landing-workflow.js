@@ -12,7 +12,7 @@
     var panels = Array.prototype.slice.call(workflow.querySelectorAll('[data-workflow-panel]'));
     var stage = workflow.querySelector('[data-workflow-stage]');
     var sticky = workflow.querySelector('[data-workflow-sticky]');
-    var localeScreenshots = Array.prototype.slice.call(workflow.querySelectorAll('[data-workflow-locale-screenshot]'));
+    var localeScreenshots = Array.prototype.slice.call(document.querySelectorAll('[data-workflow-locale-screenshot]'));
     var localeScreenshotGroups = Array.prototype.slice.call(workflow.querySelectorAll('[data-workflow-locale-screenshot-group]'));
     var desktopLayout = window.matchMedia('(min-width: 1051px)');
     var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');

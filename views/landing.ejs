@@ -326,35 +326,21 @@
     .quote { text-align: center; position: relative; }
     .quote blockquote { max-width: 680px; margin: 16px auto 20px; font-family: 'Shadows Into Light', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, cursive; font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-style: normal; font-weight: 400; letter-spacing: 0; line-height: 1.5; }
     .quote cite { color: var(--sage-deep); font-family: 'Shadows Into Light', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, cursive; font-size: 1.25rem; font-style: normal; letter-spacing: .01em; }
-    /* The shared procedural mug renderer uses the locally served Three.js
-       browser build; the homepage and configurator render the same geometry. */
+    /* Localized real-product mockup. Step 05 uses the same source render. */
     .cup-stage { grid-area: visual; min-height: 430px; display: grid; place-items: center; position: relative; gap: 4px; }
-    .homepage-mug-viewer {
-      width: min(480px, 100%);
-      aspect-ratio: 48 / 43;
+    .homepage-mug-mockup {
+      width: min(520px, 100%);
+      aspect-ratio: 1;
       position: relative;
-      cursor: grab;
-      touch-action: pan-y pinch-zoom;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
+      display: grid;
+      place-items: center;
     }
-    #mug-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
-    .homepage-mug-viewer .mug-interaction-region {
-      position: absolute;
-      z-index: 2;
+    .homepage-mug-mockup img {
       display: block;
-      cursor: grab;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
-    .homepage-mug-viewer.dragging,
-    .homepage-mug-viewer.dragging .mug-interaction-region { cursor: grabbing; }
-    #mug-canvas:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 8px; }
-    .cup-caption { color: var(--muted); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
-    .cup-caption .icon-rotate { width: 13px; height: 13px; opacity: .7; }
 
     /* ── Playful accents: floating hearts. Kept decorative-only
        (aria-hidden, pointer-events:none). ── */
@@ -437,7 +423,7 @@
       .print-copy .eyebrow { justify-content: center; }
       .print-copy p { margin-left: auto; margin-right: auto; }
       .cup-stage { min-height: 340px; }
-      .homepage-mug-viewer { width: min(360px, 100%); aspect-ratio: 9 / 8; }
+      .homepage-mug-mockup { width: min(380px, 100%); aspect-ratio: 1; }
       .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
@@ -546,10 +532,23 @@
             <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
           </div>
           <div class="cup-stage">
-            <div class="homepage-mug-viewer" id="homepage-mug-viewer">
-              <canvas id="mug-canvas" tabindex="0" role="img" aria-label="Interaktive 3D-Vorschau einer bedruckten Tasse. Zum Drehen ziehen oder Pfeiltasten verwenden."></canvas>
+            <div class="homepage-mug-mockup" data-i18n-ignore>
+              <img
+                data-workflow-locale-screenshot
+                src="<%= asset('/assets/workflow/05_01_' + locale + '.png') %>"
+                data-workflow-src-de="<%= asset('/assets/workflow/05_01_de.png') %>"
+                data-workflow-src-en="<%= asset('/assets/workflow/05_01_en.png') %>"
+                data-workflow-src-es="<%= asset('/assets/workflow/05_01_es.png') %>"
+                data-workflow-src-fr="<%= asset('/assets/workflow/05_01_fr.png') %>"
+                data-workflow-src-it="<%= asset('/assets/workflow/05_01_it.png') %>"
+                data-workflow-src-tr="<%= asset('/assets/workflow/05_01_tr.png') %>"
+                alt=""
+                width="1000"
+                height="1000"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
-            <span class="cup-caption"><svg class="icon-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20"/><path d="M20 5v6h-6"/></svg>Zum Drehen ziehen</span>
           </div>
         </div>
       </div>
@@ -1115,108 +1114,5 @@
     })();
   </script>
 
-  <script src="/vendor/three.min.js?v=0.160.1"></script>
-  <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
-  <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
-  <script>
-    // The homepage and configurator intentionally instantiate the same mug
-    // renderer. Only the artwork supplied to its print texture differs.
-    (function () {
-      var canvas = document.getElementById('mug-canvas');
-      var mugHost = document.getElementById('homepage-mug-viewer');
-      if (!canvas || !mugHost || !window.WebGLRenderingContext) return;
-
-      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      // Landing-cup art direction. x/y are centres in the 2700 × 1050 print
-      // file; angle is 0 (horizontal) or -90 (vertical). Edit these values to
-      // refine an individual word without giving up the automatic layout as a
-      // safe starting point.
-      var WORDS = [
-        { source: 'Liebe', text: <%- JSON.stringify(t('Liebe')) %>, count: 45, displayScale: 2.15, x: 200, y: 450, angle: -90, color: '#a40e4c' },
-        { source: 'unvergesslich', text: <%- JSON.stringify(t('unvergesslich')) %>, count: 14, displayScale: 2.08, x: 655, y: 835, angle: 0, color: '#168f83' },
-        { source: 'Freude', text: <%- JSON.stringify(t('Freude')) %>, count: 22, displayScale: 2.2, x: 780, y: 435, angle: 0, color: '#d90368' },
-        { source: 'für immer', text: <%- JSON.stringify(t('für immer')) %>, count: 9, displayScale: 1.5, x: 2550, y: 530, angle: -90, color: '#6a4c93' },
-        { source: 'Zusammen', text: <%- JSON.stringify(t('Zusammen')) %>, count: 17, displayScale: 1.02, x: 800, y: 195, angle: 0, color: '#ff7f3f' },
-        { source: 'Herzklopfen', text: <%- JSON.stringify(t('Herzklopfen')) %>, count: 6, displayScale: 1.02, x: 1990, y: 570, angle: 0, color: '#d90368' },
-        { source: 'Sommerabend', text: <%- JSON.stringify(t('Sommerabend')) %>, count: 38, displayScale: .78, x: 1995, y: 915, angle: 0, color: '#f45b69' },
-        { source: 'Gänsehaut', text: <%- JSON.stringify(t('Gänsehaut')) %>, count: 11, displayScale: 1.02, x: 2000, y: 750, angle: 0, color: '#168f83' },
-        { source: 'Vertrauen', text: <%- JSON.stringify(t('Vertrauen')) %>, count: 27, displayScale: 1.5, x: 1295, y: 505, angle: -90, color: '#6a4c93' },
-        { source: 'goldenes Licht', text: <%- JSON.stringify(t('goldenes Licht')) %>, count: 20, displayScale: .72, x: 2000, y: 420, angle: 0, color: '#a40e4c' },
-        { source: 'Lachen', text: <%- JSON.stringify(t('Lachen')) %>, count: 32, displayScale: 1.48, x: 1950, y: 220, angle: 0, color: '#f45b69' },
-        { source: 'Geborgenheit', text: <%- JSON.stringify(t('Geborgenheit')) %>, count: 4, displayScale: 1.5, x: 1475, y: 505, angle: -90, color: '#ff7f3f' },
-        { source: 'Hand in Hand', text: <%- JSON.stringify(t('Hand in Hand')) %>, count: 24, displayScale: .86, x: 780, y: 665, angle: 0, color: '#6a4c93' }
-      ];
-
-      // This is the configurator's "Fläche optimal nutzen" print geometry.
-      // Keep the landing-page product preview on the exact same optimization
-      // path, rather than merely using its rectangular bounds.
-      var optimalLayout = [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }];
-
-      // The first texture is translated by the server. Later in-place language
-      // changes redraw it from the stable German source strings.
-      function buildDrawTexture(useRuntimeTranslations) {
-        var i18n = window.WolkenworteI18n;
-        var placed = WORDS.map(function (configuration, index) {
-          return {
-            id: 'homepage-word-' + index,
-            text: useRuntimeTranslations && i18n
-              ? i18n.t(configuration.source)
-              : configuration.text,
-            x: configuration.x,
-            y: configuration.y,
-            // This is intentionally independent per word: changing one
-            // displayScale cannot cause the other manual words to repack.
-            fontSize: configuration.fontSize || Math.round(configuration.displayScale * 100),
-            angle: configuration.angle,
-            color: configuration.color
-          };
-        });
-
-        return function drawHomepageWords(ctx, metrics) {
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'alphabetic';
-          placed.forEach(function (item) {
-            var x = metrics.offsetX + item.x;
-            var y = metrics.offsetY + item.y;
-            ctx.font = item.fontSize + 'px ' + WordCloudCore.FONT_FAMILY;
-            ctx.fillStyle = item.color;
-            if (item.angle === -90) {
-              ctx.save();
-              ctx.translate(x, y);
-              ctx.rotate(-Math.PI / 2);
-              ctx.fillText(item.text, 0, item.fontSize * .34);
-              ctx.restore();
-            } else {
-              ctx.fillText(item.text, x, y + item.fontSize * .34);
-            }
-          });
-        };
-      }
-
-      function createHomepageMug() { return Mug3DViewer.create({
-        THREE: window.THREE,
-        host: mugHost,
-        canvas: canvas,
-        interactionElement: mugHost,
-        product: Mug3DViewer.DEFAULT_PRODUCT,
-        drawTexture: buildDrawTexture(),
-        autoRotate: !reduceMotion,
-        autoRotateDurationMs: 9000
-      }); }
-      var mug = null;
-      function resumeHomepageMug() {
-        if (mug) return;
-        try { mug = createHomepageMug(); } catch { /* Never replace a failed 3D scene with a fake mug. */ }
-      }
-      resumeHomepageMug();
-      window.addEventListener('resize', function () { mug?.resize(); });
-      window.addEventListener('pagehide', function () { mug?.destroy(); mug = null; });
-      window.addEventListener('pageshow', resumeHomepageMug);
-      window.addEventListener('wolkenworte:localechange', function () {
-        mug?.updateTexture(buildDrawTexture(true));
-      });
-    })();
-  </script>
 </body>
 </html>

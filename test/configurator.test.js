@@ -909,10 +909,8 @@ test('configurator exposes every curated product with verified Printful geometry
   const [landingPage, configurePage] = await Promise.all([
     landingResponse.text(), configureResponse.text(),
   ]);
-  assert.ok(landingPage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
-  assert.match(landingPage, /x: 200, y: 450, angle: -90/);
-  assert.match(landingPage, /fontSize: configuration\.fontSize \|\| Math\.round\(configuration\.displayScale \* 100\)/);
-  assert.match(landingPage, /x: configuration\.x,[\s\S]*?y: configuration\.y,[\s\S]*?angle: configuration\.angle/);
+  assert.ok(landingPage.includes(publicAssetUrl('/assets/workflow/05_01_de.png')));
+  assert.doesNotMatch(landingPage, /mug-3d-viewer\.js|id="mug-canvas"|Mug3DViewer\.create/);
   assert.ok(configurePage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="mobile-back-link"/);
