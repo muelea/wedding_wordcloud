@@ -1773,10 +1773,12 @@
       padding: 0 24px 28px;
       display: flex;
       justify-content: center;
+      flex-wrap: wrap;
       gap: 12px;
       color: var(--muted);
       font-size: 11px;
     }
+    .config-footer-customs { flex: 1 0 100%; margin: 0; text-align: center; line-height: 1.5; }
     .config-footer a:hover { color: var(--berry); }
 
     @media (max-width: 1180px) {
@@ -2439,6 +2441,7 @@
 
   <footer class="config-footer" aria-label="Rechtliche Hinweise">
     <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a><span aria-hidden="true">·</span><a href="/impressum" target="_blank" rel="noopener">Impressum</a>
+    <p class="config-footer-customs">Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</p>
   </footer>
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>

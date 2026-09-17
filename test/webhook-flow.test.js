@@ -95,17 +95,21 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
   const paid = await db.getOrderById(order.id);
   assert.equal(paid.status, 'paid_test');
   assert.equal(paid.fulfillment_mode, 'mock');
-  assert.equal(paid.tax_cents, 421);
-  assert.equal(paid.total_cents, 2640);
+  assert.equal(paid.tax_cents, taxCents);
+  assert.equal(paid.total_cents, quote.totalCents + taxCents);
   assert.equal(paid.items_cents, quote.itemsCents);
-  assert.equal((await db.getOrderShipments(order.id))[0].tax_cents, 421);
+  assert.equal((await db.getOrderShipments(order.id))[0].tax_cents, taxCents);
   const jobs = await db.getEmailJobsForOrder(order.id);
   assert.equal(jobs.length, 1);
-  assert.match(jobs[0].text_body, /26,40\s*€/);
-  assert.match(jobs[0].text_body, /4,21\s*€/);
-  assert.equal((await send({ ...session, amount_total: 2641, total_details: { amount_tax: 422, amount_discount: 0 } },
+  assert.match(jobs[0].text_body, /30,06\s*€/);
+  assert.match(jobs[0].text_body, /4,80\s*€/);
+  assert.equal((await send({
+    ...session,
+    amount_total: session.amount_total + 1,
+    total_details: { amount_tax: taxCents + 1, amount_discount: 0 },
+  },
     'evt_tax_changed_after_payment')).ignored, 'order_mismatch');
-  assert.equal((await db.getOrderById(order.id)).total_cents, 2640);
+  assert.equal((await db.getOrderById(order.id)).total_cents, quote.totalCents + taxCents);
 });
 
 test('signed Stripe test webhook marks one trusted order paid exactly once and never calls Printful', async (t) => {
@@ -178,6 +182,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     quote: quoteRow,
   });
   const stripeSessionId = 'cs_test_webhook_flow';
+  await db.attachStripeCustomer(order.id, 'cus_webhookflow');
   await db.attachStripeSession(order.id, { id: stripeSessionId, url: 'https://checkout.stripe.test/session' });
 
   const payload = JSON.stringify({
@@ -187,10 +192,19 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     data: {
       object: {
         id: stripeSessionId,
+        customer: 'cus_webhookflow',
         amount_total: quote.totalCents,
+        amount_subtotal: quote.itemsCents,
         currency: 'eur',
         payment_status: 'paid',
         payment_intent: 'pi_test_paid_once',
+        automatic_tax: { enabled: true, status: 'complete' },
+        total_details: { amount_tax: 0, amount_discount: 0 },
+        shipping_cost: {
+          amount_subtotal: quote.shippingCents,
+          amount_tax: 0,
+          amount_total: quote.shippingCents,
+        },
         metadata: {
           eventSlug: event.slug,
           configurationId: configuration.id,

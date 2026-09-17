@@ -3,7 +3,7 @@
 const I18n = require('./i18n');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const TEMPLATE_VERSION = 'transactional-2026-09-13-v4';
+const TEMPLATE_VERSION = 'transactional-2026-09-16-v5';
 const CONTRACT_VERSION = 'contract-2026-09-13-v2';
 const SELLER = Object.freeze({
   name: 'JUSA Engineering UG (haftungsbeschränkt)',
@@ -216,8 +216,9 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Falls bereits eine Zahlung eingezogen wurde, bestätigen wir eine zugehörige Erstattung in einer separaten E-Mail.',
     },
     testNext: 'Für diese Testbestellung ist keine weitere Aktion erforderlich.',
-    customsPossible: 'Je nach Zielland können zusätzliche Zoll- oder Einfuhrgebühren anfallen.',
-    customsUnknown: 'Versandursprung und mögliche Einfuhrgebühren konnten für diese Lieferung nicht abschließend bestätigt werden.',
+    customsGeneral: 'Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.',
+    customsPossible: 'Für diese Lieferung können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.',
+    customsUnknown: 'Versandursprung und mögliche Einfuhrgebühren konnten für diese Lieferung nicht abschließend bestätigt werden. Zusätzliche Einfuhrkosten sind vom Empfänger zu tragen.',
     legalHeading: 'Vertrags- und Verbraucherinformationen', supportHeading: 'Wir sind für dich da',
     supportLead: 'Fragen zu deiner Bestellung?', seat: 'Sitz', managingDirector: 'Geschäftsführer',
     registerCourt: 'Registergericht', registrationNumber: 'Registernummer', vatId: 'USt-IdNr.',
@@ -247,8 +248,9 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'If payment had already been captured, we will confirm any related refund in a separate email.',
     },
     testNext: 'No further action is required for this test order.',
-    customsPossible: 'Additional customs or import fees may apply depending on the destination country.',
-    customsUnknown: 'The shipping origin and possible import fees could not be confirmed conclusively for this delivery.',
+    customsGeneral: 'Deliveries to certain countries may incur additional customs duties, import taxes or other import charges. These are payable by the recipient.',
+    customsPossible: 'This delivery may incur additional customs duties, import taxes or other import charges. These are payable by the recipient.',
+    customsUnknown: 'The shipping origin and possible import charges could not be confirmed conclusively for this delivery. Any additional import costs are payable by the recipient.',
     legalHeading: 'Contract and consumer information', supportHeading: 'We are here to help',
     supportLead: 'Questions about your order?', seat: 'Registered office', managingDirector: 'Managing Director',
     registerCourt: 'Register court', registrationNumber: 'Registration number', vatId: 'VAT ID',
@@ -278,8 +280,9 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Si un paiement avait déjà été prélevé, tout remboursement correspondant sera confirmé dans un e-mail distinct.',
     },
     testNext: 'Aucune autre action n’est requise pour cette commande de test.',
-    customsPossible: 'Des frais de douane ou d’importation supplémentaires peuvent s’appliquer selon le pays de destination.',
-    customsUnknown: 'L’origine de l’envoi et les éventuels frais d’importation n’ont pas pu être confirmés définitivement.',
+    customsGeneral: 'Les livraisons vers certains pays peuvent entraîner des droits de douane, des taxes d’importation ou d’autres frais d’importation supplémentaires. Ceux-ci sont à la charge du destinataire.',
+    customsPossible: 'Cette livraison peut entraîner des droits de douane, des taxes d’importation ou d’autres frais d’importation supplémentaires. Ceux-ci sont à la charge du destinataire.',
+    customsUnknown: 'L’origine de l’envoi et les éventuels frais d’importation n’ont pas pu être confirmés définitivement. Les frais d’importation supplémentaires sont à la charge du destinataire.',
     legalHeading: 'Informations contractuelles et consommateurs', supportHeading: 'Nous sommes à votre écoute',
     supportLead: 'Une question sur votre commande ?', seat: 'Siège social', managingDirector: 'Gérant',
     registerCourt: 'Tribunal du registre', registrationNumber: 'Numéro d’immatriculation', vatId: 'N° de TVA',
@@ -309,8 +312,9 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Se il pagamento era già stato riscosso, confermeremo l’eventuale rimborso con un’e-mail separata.',
     },
     testNext: 'Non è richiesta alcuna ulteriore azione per questo ordine di prova.',
-    customsPossible: 'A seconda del Paese di destinazione possono essere applicati ulteriori dazi o costi di importazione.',
-    customsUnknown: 'L’origine della spedizione e gli eventuali costi di importazione non hanno potuto essere confermati in modo definitivo.',
+    customsGeneral: 'Le consegne in determinati Paesi possono comportare dazi doganali, imposte o altri costi di importazione aggiuntivi. Tali costi sono a carico del destinatario.',
+    customsPossible: 'Questa consegna può comportare dazi doganali, imposte o altri costi di importazione aggiuntivi. Tali costi sono a carico del destinatario.',
+    customsUnknown: 'Non è stato possibile confermare definitivamente l’origine della spedizione e gli eventuali costi di importazione. I costi aggiuntivi sono a carico del destinatario.',
     legalHeading: 'Informazioni contrattuali e per il consumatore', supportHeading: 'Siamo qui per aiutarti',
     supportLead: 'Domande sul tuo ordine?', seat: 'Sede legale', managingDirector: 'Amministratore delegato',
     registerCourt: 'Tribunale del registro', registrationNumber: 'Numero di registrazione', vatId: 'Partita IVA',
@@ -340,8 +344,9 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Si el pago ya se había cobrado, confirmaremos cualquier reembolso relacionado en un correo separado.',
     },
     testNext: 'No es necesaria ninguna otra acción para este pedido de prueba.',
-    customsPossible: 'Según el país de destino, pueden aplicarse gastos adicionales de aduana o importación.',
-    customsUnknown: 'No se han podido confirmar de forma concluyente el origen del envío ni los posibles gastos de importación.',
+    customsGeneral: 'Los envíos a determinados países pueden generar aranceles, impuestos u otros gastos de importación adicionales. Estos corren a cargo del destinatario.',
+    customsPossible: 'Este envío puede generar aranceles, impuestos u otros gastos de importación adicionales. Estos corren a cargo del destinatario.',
+    customsUnknown: 'No se han podido confirmar de forma concluyente el origen del envío ni los posibles gastos de importación. Los gastos adicionales corren a cargo del destinatario.',
     legalHeading: 'Información contractual y para consumidores', supportHeading: 'Estamos aquí para ayudarte',
     supportLead: '¿Preguntas sobre tu pedido?', seat: 'Domicilio social', managingDirector: 'Administrador',
     registerCourt: 'Registro mercantil', registrationNumber: 'Número de registro', vatId: 'NIF-IVA',
@@ -371,8 +376,9 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Ödeme daha önce alındıysa ilgili geri ödemeyi ayrı bir e-postayla onaylayacağız.',
     },
     testNext: 'Bu test siparişi için başka bir işlem yapman gerekmez.',
-    customsPossible: 'Hedef ülkeye bağlı olarak ek gümrük veya ithalat ücretleri uygulanabilir.',
-    customsUnknown: 'Bu teslimat için gönderim kaynağı ve olası ithalat ücretleri kesin olarak doğrulanamadı.',
+    customsGeneral: 'Belirli ülkelere yapılan teslimatlarda ek gümrük vergileri, ithalat vergileri veya başka ithalat ücretleri doğabilir. Bu masraflar alıcıya aittir.',
+    customsPossible: 'Bu teslimatta ek gümrük vergileri, ithalat vergileri veya başka ithalat ücretleri doğabilir. Bu masraflar alıcıya aittir.',
+    customsUnknown: 'Bu teslimat için gönderim kaynağı ve olası ithalat ücretleri kesin olarak doğrulanamadı. Ek ithalat masrafları alıcıya aittir.',
     legalHeading: 'Sözleşme ve tüketici bilgileri', supportHeading: 'Yardım için buradayız',
     supportLead: 'Siparişinle ilgili sorun mu var?', seat: 'Merkez', managingDirector: 'Genel Müdür',
     registerCourt: 'Sicil mahkemesi', registrationNumber: 'Sicil numarası', vatId: 'KDV No.',
@@ -484,7 +490,7 @@ function customsNotice(shipping, premium) {
     : [];
   if (assessments.some((value) => value === true)) return premium.customsPossible;
   if (assessments.some((value) => value == null)) return premium.customsUnknown;
-  return '';
+  return premium.customsGeneral;
 }
 
 function storedShippingEntries(order) {

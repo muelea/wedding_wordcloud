@@ -90,8 +90,8 @@ test('Printful fulfillment creates a draft first and confirms it only when expli
   global.fetch = async (url, options) => {
     calls.push({ url, options });
     const result = calls.length === 1
-      ? { id: 451, status: 'draft' }
-      : { id: 451, status: 'pending' };
+      ? { id: 451, status: 'draft', costs: { currency: 'EUR', total: '18.00' } }
+      : { id: 451, status: 'pending', costs: { currency: 'EUR', total: '18.00' } };
     return {
       ok: true,
       status: 200,
@@ -115,6 +115,7 @@ test('Printful fulfillment creates a draft first and confirms it only when expli
   const result = await printful.createPrintfulOrder({ payload, confirm: true });
   assert.deepEqual(result, {
     printfulOrderId: '451', status: 'pending', mocked: false, confirmed: true,
+    printfulCosts: { currency: 'EUR', total: '18.00', totalCents: 1800 },
   });
   assert.equal(calls.length, 2);
   assert.equal(calls[0].url, 'https://api.printful.com/orders?confirm=false&update_existing=true');

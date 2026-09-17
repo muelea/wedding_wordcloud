@@ -2,7 +2,25 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload, stripeTaxPaymentSession } = require('./helpers');
+
+async function payLiveOrder(db, order, suffix, taxCents, shippingTaxCents) {
+  const sessionId = `cs_live_${suffix}`;
+  const customerId = `cus_fulfillment${suffix.replace(/[^A-Za-z0-9]/g, '')}`;
+  await db.attachStripeCustomer(order.id, customerId);
+  await db.attachStripeSession(order.id, {
+    id: sessionId,
+    url: `https://checkout.stripe.example/${suffix}`,
+  });
+  await db.recordSuccessfulPayment({
+    stripeEventId: `evt_live_${suffix}`,
+    eventType: 'checkout.session.completed',
+    stripeSessionId: sessionId,
+    paymentIntentId: `pi_live_${suffix}`,
+    livemode: true,
+    ...stripeTaxPaymentSession({ order, sessionId, customerId, taxCents, shippingTaxCents }),
+  });
+}
 
 test('fulfillment is immutable, idempotent and only writes a draft behind all live safety gates', async (t) => {
   const previous = {};
@@ -84,7 +102,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     printfulCosts: { currency: 'EUR', subtotal: 20, shipping: 5, vat: 5, total: 30 },
     quote: {
       currency: 'EUR', quantity: 4, itemsCents: 3600,
-      shippingCents: 500, taxCents: 500, totalCents: 4600,
+      shippingCents: 500, taxCents: 0, totalCents: 4100,
     },
   });
   const { order } = await db.createCheckoutOrder({
@@ -93,17 +111,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     quote,
     mode: 'live',
   });
-  await db.attachStripeSession(order.id, {
-    id: 'cs_live_fulfillment_test',
-    url: 'https://checkout.stripe.example/session',
-  });
-  await db.recordSuccessfulPayment({
-    stripeEventId: 'evt_live_fulfillment_test',
-    eventType: 'checkout.session.completed',
-    stripeSessionId: 'cs_live_fulfillment_test',
-    paymentIntentId: 'pi_live_fulfillment_test',
-    livemode: true,
-  });
+  await payLiveOrder(db, order, 'fulfillmenttest', 500, 95);
 
   const printful = require('../src/printful');
   const fulfillment = require('../src/fulfillment');
@@ -113,7 +121,10 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   printful.reconcilePrintfulOrder = async (options) => {
     calls += 1;
     captured = options;
-    return { printfulOrderId: '987654', status: 'draft', mocked: false, confirmed: false };
+    return {
+      printfulOrderId: '987654', status: 'draft', mocked: false, confirmed: false,
+      printfulCosts: { currency: 'EUR', total: '30', totalCents: 3000, vat: '5' },
+    };
   };
   t.after(() => { printful.reconcilePrintfulOrder = originalReconcile; });
 
@@ -130,6 +141,9 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   assert.equal(completed.fulfillment_mode, 'draft');
   assert.equal(completed.printful_order_id, '987654');
   assert.equal(captured.confirm, false, 'draft mode must never confirm the Printful order');
+  assert.deepEqual(captured.expectedCosts, {
+    currency: 'EUR', subtotal: 20, shipping: 5, vat: 5, total: 30,
+  });
   const externalId = fulfillment.shipmentExternalId(order, 0);
   assert.equal(captured.payload.external_id, externalId);
   assert.deepEqual(captured.payload.recipient, {
@@ -148,6 +162,55 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
   assert.match(captured.payload.items[0].files[0].url,
     /^https:\/\/shop\.wolkenworte\.example\/api\/print-files\/[A-Za-z0-9_-]{24}\/[A-Za-z0-9_-]{32}$/);
   assert.equal((await db.getOrderPrintArtifacts(order.id)).length, 1);
+  const [storedShipment] = await db.getOrderShipments(order.id);
+  assert.deepEqual(JSON.parse(storedShipment.fulfillment_payload_json).providerCosts, {
+    currency: 'EUR', total: '30', totalCents: 3000, vat: '5',
+  });
+
+  const changedCostQuote = await db.createCheckoutQuote({
+    eventId: event.id,
+    configurationId: configuration.id,
+    recipient: {
+      name: 'Kosten Kontrolle', address1: 'Prüfweg 4', city: 'Berlin',
+      zip: '10115', country_code: 'DE',
+    },
+    printfulCosts: { currency: 'EUR', subtotal: 20, shipping: 5, vat: 5, total: 30 },
+    quote: {
+      currency: 'EUR', quantity: 4, itemsCents: 3600,
+      shippingCents: 500, taxCents: 0, totalCents: 4100,
+    },
+  });
+  const { order: changedCostOrder } = await db.createCheckoutOrder({
+    eventId: event.id,
+    configurationId: configuration.id,
+    quote: changedCostQuote,
+    mode: 'live',
+  });
+  await payLiveOrder(db, changedCostOrder, 'costchanged', 500, 95);
+  process.env.PRINTFUL_FULFILLMENT_MODE = 'live';
+  process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'true';
+  let changedCostCall = null;
+  printful.reconcilePrintfulOrder = async (options) => {
+    changedCostCall = options;
+    const error = new Error('Printful total changed');
+    error.code = 'PRINTFUL_COST_CHANGED';
+    error.expectedCosts = { currency: 'EUR', total: '30', totalCents: 3000 };
+    error.actualCosts = { currency: 'EUR', total: '31', totalCents: 3100, vat: '6' };
+    throw error;
+  };
+  const blockedCostOrder = await fulfillment.processOrder(changedCostOrder.id);
+  assert.equal(changedCostCall.confirm, true);
+  assert.equal(blockedCostOrder.fulfillment_status, 'blocked', blockedCostOrder.fulfillment_error);
+  const [blockedCostShipment] = await db.getOrderShipments(changedCostOrder.id);
+  assert.equal(blockedCostShipment.fulfillment_status, 'failed');
+  assert.deepEqual(JSON.parse(blockedCostShipment.fulfillment_payload_json).expectedProviderCosts, {
+    currency: 'EUR', total: '30', totalCents: 3000,
+  });
+  assert.deepEqual(JSON.parse(blockedCostShipment.fulfillment_payload_json).providerCosts, {
+    currency: 'EUR', total: '31', totalCents: 3100, vat: '6',
+  });
+  process.env.PRINTFUL_FULFILLMENT_MODE = 'draft';
+  process.env.PRINTFUL_CONFIRM_LIVE_ORDERS = 'false';
 
   const splitQuote = await db.createCheckoutQuote({
     eventId: event.id,
@@ -178,7 +241,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     ],
     quote: {
       currency: 'EUR', quantity: 3, itemsCents: 3455,
-      shippingCents: 1100, taxCents: 560, totalCents: 5115,
+      shippingCents: 1100, taxCents: 0, totalCents: 4555,
     },
   });
   const { order: splitOrder } = await db.createCheckoutOrder({
@@ -187,17 +250,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     quote: splitQuote,
     mode: 'live',
   });
-  await db.attachStripeSession(splitOrder.id, {
-    id: 'cs_live_split_fulfillment_test',
-    url: 'https://checkout.stripe.example/split-session',
-  });
-  await db.recordSuccessfulPayment({
-    stripeEventId: 'evt_live_split_fulfillment_test',
-    eventType: 'checkout.session.completed',
-    stripeSessionId: 'cs_live_split_fulfillment_test',
-    paymentIntentId: 'pi_live_split_fulfillment_test',
-    livemode: true,
-  });
+  await payLiveOrder(db, splitOrder, 'splitfulfillmenttest', 560, 120);
 
   const splitCalls = [];
   printful.reconcilePrintfulOrder = async (options) => {
@@ -249,7 +302,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     }],
     quote: {
       currency: 'EUR', quantity: 3, itemsCents: 3350,
-      shippingCents: 600, taxCents: 751, totalCents: 4701,
+      shippingCents: 600, taxCents: 0, totalCents: 3950,
     },
   });
   const { order: mixedOrder } = await db.createCheckoutOrder({
@@ -258,17 +311,7 @@ test('fulfillment is immutable, idempotent and only writes a draft behind all li
     quote: mixedQuote,
     mode: 'live',
   });
-  await db.attachStripeSession(mixedOrder.id, {
-    id: 'cs_live_mixed_fulfillment_test',
-    url: 'https://checkout.stripe.example/mixed-session',
-  });
-  await db.recordSuccessfulPayment({
-    stripeEventId: 'evt_live_mixed_fulfillment_test',
-    eventType: 'checkout.session.completed',
-    stripeSessionId: 'cs_live_mixed_fulfillment_test',
-    paymentIntentId: 'pi_live_mixed_fulfillment_test',
-    livemode: true,
-  });
+  await payLiveOrder(db, mixedOrder, 'mixedfulfillmenttest', 751, 114);
 
   const mixedCalls = [];
   printful.reconcilePrintfulOrder = async (options) => {

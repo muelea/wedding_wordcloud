@@ -5,6 +5,7 @@ const performanceProbe = require('./performanceProbe');
 const stripeConfig = require('./stripeConfig');
 
 const PERSONALIZED_GOODS_NOTICE = 'Die Produkte werden nach euren individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Eure gesetzlichen Rechte bei Mängeln bleiben unberührt.';
+const CUSTOMS_NOTICE = 'Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.';
 
 /**
  * Stripe-hosted Checkout for trusted, server-side EUR quotes.
@@ -101,36 +102,35 @@ function freezeCheckoutRequest({
   const ids = (Array.isArray(configurationIds) && configurationIds.length
     ? configurationIds
     : [configurationId]).filter(Boolean).map(String);
-  const taxInputs = {};
-  if (shipments) {
-    if (shipments.length !== 1) throw new Error('Stripe Tax checkout requires one delivery address');
-    const shipment = shipments[0];
-    const recipient = shipment.recipient;
-    if (!recipient?.name || !recipient.address1 || !recipient.city || !recipient.country_code) {
-      throw new Error('Stripe Tax checkout requires a validated delivery address');
+  if (!Array.isArray(shipments) || shipments.length !== 1) {
+    throw new Error('Stripe Tax checkout requires one delivery address');
+  }
+  const shipment = shipments[0];
+  const recipient = shipment.recipient;
+  if (!recipient?.name || !recipient.address1 || !recipient.city || !recipient.country_code) {
+    throw new Error('Stripe Tax checkout requires a validated delivery address');
+  }
+  const shipping = {
+    name: recipient.name,
+    address: {
+      line1: recipient.address1, line2: recipient.address2 || '',
+      city: recipient.city, postal_code: recipient.zip || '',
+      state: recipient.state_code || '', country: recipient.country_code,
+    },
+  };
+  const basket = (shipment.items || [{ configurationId: ids[0], quantity }]).map((item) => {
+    const index = ids.indexOf(String(item.configurationId));
+    if (index < 0 || !frozenProducts[index] || !Number.isSafeInteger(item.quantity) || item.quantity < 1) {
+      throw new Error('Stripe Tax checkout contains an invalid product');
     }
-    taxInputs.taxMode = 'stripe';
-    taxInputs.shipping = {
-      name: recipient.name,
-      address: {
-        line1: recipient.address1, line2: recipient.address2 || '',
-        city: recipient.city, postal_code: recipient.zip || '',
-        state: recipient.state_code || '', country: recipient.country_code,
-      },
-    };
-    taxInputs.basket = (shipment.items || [{ configurationId: ids[0], quantity }]).map((item) => {
-      const index = ids.indexOf(String(item.configurationId));
-      if (index < 0 || !frozenProducts[index] || !Number.isSafeInteger(item.quantity) || item.quantity < 1) {
-        throw new Error('Stripe Tax checkout contains an invalid product');
-      }
-      return { configurationId: ids[index], quantity: item.quantity, product: frozenProducts[index] };
-    });
-    if (taxInputs.basket.reduce((sum, item) => sum + item.quantity, 0) !== Number(quantity)) {
-      throw new Error('Stripe Tax checkout quantity mismatch');
-    }
+    return { configurationId: ids[index], quantity: item.quantity, product: frozenProducts[index] };
+  });
+  if (basket.reduce((sum, item) => sum + item.quantity, 0) !== Number(quantity)) {
+    throw new Error('Stripe Tax checkout quantity mismatch');
   }
   return {
-    ...taxInputs,
+    shipping,
+    basket,
     products: frozenProducts,
     slug: String(slug || ''),
     configurationIds: ids,
@@ -148,17 +148,12 @@ function freezeCheckoutRequest({
  */
 async function createCheckoutSession({
   order,
-  product,
-  products = null,
   slug,
   configurationId,
   configurationIds = null,
   quoteId,
-  quantity,
-  shipmentCount = 1,
   baseUrl,
   locale = I18n.DEFAULT_LOCALE,
-  taxMode = null,
   shipping = null,
   basket = null,
   customerId = null,
@@ -189,25 +184,7 @@ async function createCheckoutSession({
     orderId: String(order.id),
     checkoutMode,
   };
-  const cartProducts = Array.isArray(products) && products.length ? products : product ? [product] : [];
-  const singleProduct = cartProducts.length === 1 ? cartProducts[0] : null;
   const checkoutLocale = I18n.normalizeLocale(locale);
-  const unitLabel = singleProduct
-    ? I18n.translate(quantity === 1 ? singleProduct.unit.singular : singleProduct.unit.plural, checkoutLocale)
-    : I18n.translate(quantity === 1 ? 'Produkt' : 'Produkte', checkoutLocale);
-  const shipmentLabel = shipmentCount > 1
-    ? ` · ${shipmentCount} ${I18n.translate('Lieferadressen', checkoutLocale)}`
-    : '';
-  const quantityLabel = singleProduct
-    ? `${quantity} ${unitLabel}${shipmentLabel} · ${I18n.translate(singleProduct.size.label, checkoutLocale)}`
-    : `${I18n.translate('Wolkenworte Bestellung', checkoutLocale)} · ${quantity} ${unitLabel}${shipmentLabel}`;
-  const description = singleProduct
-    ? I18n.translate('{{product}} mit persönlichem Design inklusive Standardversand', checkoutLocale, {
-        product: I18n.translate(singleProduct.name, checkoutLocale),
-      })
-    : I18n.translate('{{count}} persönliche Designs inklusive Standardversand', checkoutLocale, {
-        count: cartProducts.length,
-      });
   const cancelUrl = cartConfigurationIds.length > 1
     ? `${baseUrl}/e/${encodedSlug}/shipping?configurations=${encodeURIComponent(cartConfigurationIds.join(','))}` +
       `&quote=${encodeURIComponent(quoteId)}&checkout=cancelled&lang=${encodeURIComponent(checkoutLocale)}`
@@ -230,80 +207,60 @@ async function createCheckoutSession({
   const startedAt = Date.now();
   let session;
   try {
-    let taxParameters = {};
-    if (taxMode === 'stripe') {
-      if (!shipping?.address?.country || !basket?.length ||
-          !Number.isSafeInteger(order.items_cents) || order.items_cents <= 0 ||
-          !Number.isSafeInteger(order.shipping_cents) || order.shipping_cents < 0 ||
-          totalCents !== order.items_cents + order.shipping_cents || order.tax_cents !== 0) {
-        throw new Error('Der gespeicherte Nettopreis oder die Lieferadresse ist ungültig.');
-      }
-      if (!customerId) {
-        if (typeof persistCustomer !== 'function') throw new Error('Customer persistence is required');
-        // One technical customer per purchase, with immutable shipping input.
-        // Persist before Session creation so even a fast webhook can validate it.
-        const customer = await client.customers.create({
-          name: shipping.name, shipping,
-          metadata: { orderId: String(order.id), quoteId: String(quoteId) },
-        }, { idempotencyKey: `wolkenworte-${checkoutMode}-quote-${quoteId}-customer` });
-        customerId = customer.id;
-        await persistCustomer(customerId);
-      }
-      const basketDescription = basket.map((item) =>
-        `${item.quantity} × ${I18n.translate(item.product.name, checkoutLocale)} · ${I18n.translate(item.product.size.label, checkoutLocale)}`
-      ).join('; ');
-      taxParameters = {
-        customer: customerId,
-        automatic_tax: { enabled: true },
-        adaptive_pricing: { enabled: false },
-        // Printful supplies an aggregate product estimate, not reliable per-item
-        // retail prices. Keep that exact net basket amount, describe each design,
-        // and charge shipping separately without invented unit-price allocation.
-        line_items: [{ quantity: 1, price_data: {
-          currency, unit_amount: order.items_cents, tax_behavior: 'exclusive',
-          product_data: {
-            name: basket.length === 1
-              ? `${basket[0].quantity} × ${I18n.translate(basket[0].product.name, checkoutLocale)}`
-              : I18n.translate('Wolkenworte Bestellung', checkoutLocale),
-            description: basketDescription.slice(0, 500),
-            tax_code: 'txcd_99999999',
-            metadata: { configurationIds: cartConfigurationIds.join(',') },
-          },
-        } }],
-        shipping_options: [{ shipping_rate_data: {
-          type: 'fixed_amount',
-          fixed_amount: { amount: order.shipping_cents, currency },
-          display_name: I18n.translate('Versand', checkoutLocale),
-          tax_behavior: 'exclusive', tax_code: 'txcd_92010001',
-        } }],
-      };
+    if (!shipping?.address?.country || !basket?.length ||
+        !Number.isSafeInteger(order.items_cents) || order.items_cents <= 0 ||
+        !Number.isSafeInteger(order.shipping_cents) || order.shipping_cents < 0 ||
+        totalCents !== order.items_cents + order.shipping_cents || order.tax_cents !== 0) {
+      throw new Error('Der gespeicherte Nettopreis oder die Lieferadresse ist ungültig.');
     }
+    if (!customerId) {
+      if (typeof persistCustomer !== 'function') throw new Error('Customer persistence is required');
+      // One technical customer per purchase, with immutable shipping input.
+      // Persist before Session creation so even a fast webhook can validate it.
+      const customer = await client.customers.create({
+        name: shipping.name, shipping,
+        metadata: { orderId: String(order.id), quoteId: String(quoteId) },
+      }, { idempotencyKey: `wolkenworte-${checkoutMode}-quote-${quoteId}-customer` });
+      customerId = customer.id;
+      await persistCustomer(customerId);
+    }
+    const basketDescription = basket.map((item) =>
+      `${item.quantity} × ${I18n.translate(item.product.name, checkoutLocale)} · ${I18n.translate(item.product.size.label, checkoutLocale)}`
+    ).join('; ');
     session = await client.checkout.sessions.create({
       mode: 'payment',
       locale: checkoutLocale,
       payment_method_types: ['card'],
       client_reference_id: String(order.id),
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency,
-          unit_amount: totalCents,
-          product_data: {
-            name: quantityLabel,
-            description,
-            metadata: {
-              productKey: singleProduct?.key || 'mixed',
-              configurationId: cartConfigurationIds[0] || configurationId || '',
-              configurationIds: cartConfigurationIds.join(','),
-            },
-          },
+      customer: customerId,
+      automatic_tax: { enabled: true },
+      adaptive_pricing: { enabled: false },
+      // Printful supplies an aggregate product estimate, not reliable per-item
+      // retail prices. Keep that exact net basket amount, describe each design,
+      // and charge shipping separately without invented unit-price allocation.
+      line_items: [{ quantity: 1, price_data: {
+        currency, unit_amount: order.items_cents, tax_behavior: 'exclusive',
+        product_data: {
+          name: basket.length === 1
+            ? `${basket[0].quantity} × ${I18n.translate(basket[0].product.name, checkoutLocale)}`
+            : I18n.translate('Wolkenworte Bestellung', checkoutLocale),
+          description: basketDescription.slice(0, 500),
+          tax_code: 'txcd_99999999',
+          metadata: { configurationIds: cartConfigurationIds.join(',') },
         },
-      }],
-      ...taxParameters,
+      } }],
+      shipping_options: [{ shipping_rate_data: {
+        type: 'fixed_amount',
+        fixed_amount: { amount: order.shipping_cents, currency },
+        display_name: I18n.translate('Versand', checkoutLocale),
+        tax_behavior: 'exclusive', tax_code: 'txcd_92010001',
+      } }],
       metadata,
       payment_intent_data: { metadata },
       custom_text: {
-        submit: { message: I18n.translate(PERSONALIZED_GOODS_NOTICE, checkoutLocale) },
+        submit: {
+          message: `${I18n.translate(PERSONALIZED_GOODS_NOTICE, checkoutLocale)} ${I18n.translate(CUSTOMS_NOTICE, checkoutLocale)}`,
+        },
       },
       success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}` +
         `&lang=${encodeURIComponent(checkoutLocale)}`,

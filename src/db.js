@@ -7,7 +7,7 @@ const { getProduct, resolveProductOrientation } = require('./products');
 const { buildEmailSnapshot } = require('./emailTemplates');
 const I18n = require('./i18n');
 const log = require('./structuredLog');
-const { usesStripeTax, paymentAmounts } = require('./checkoutTax');
+const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
 const REQUIRED_SCHEMA_VERSION = '3';
@@ -919,7 +919,6 @@ async function attachStripeCustomer(orderId, customerId) {
     SET checkout_request_json = jsonb_set(checkout_request_json, '{customerId}', to_jsonb($2::text)),
         updated_at = transaction_timestamp()
     WHERE id = $1 AND status = 'creating_checkout' AND stripe_session_id IS NULL
-      AND checkout_request_json->>'taxMode' = 'stripe'
       AND (checkout_request_json->>'customerId' IS NULL OR checkout_request_json->>'customerId' = $2)
     RETURNING id
   `, [orderId, customerId]);
@@ -1109,12 +1108,9 @@ async function recordSuccessfulPayment({
     if (!order) throw new Error('checkout order not found or not payable');
 
     const expectedMode = livemode ? 'live' : 'test';
-    const stripeTax = usesStripeTax(order);
-    const confirmedAmounts = stripeTax ? paymentAmounts(order, checkoutSession) : null;
-    const trustedAmount = stripeTax
-      ? Boolean(confirmedAmounts) && amountTotal === confirmedAmounts.totalCents &&
-        checkoutSession.id === stripeSessionId && checkoutSession.payment_status === 'paid'
-      : amountTotal == null || Number(amountTotal) === order.total_cents;
+    const confirmedAmounts = paymentAmounts(order, checkoutSession);
+    const trustedAmount = Boolean(confirmedAmounts) && amountTotal === confirmedAmounts.totalCents &&
+      checkoutSession.id === stripeSessionId && checkoutSession.payment_status === 'paid';
     const trustedCurrency = currency == null || String(currency).toUpperCase() === order.currency;
     if (order.mode !== expectedMode || !trustedAmount || !trustedCurrency || paymentStatus !== 'paid') {
       throw new Error('checkout payment does not match trusted order data');
@@ -1164,15 +1160,13 @@ async function recordSuccessfulPayment({
       paymentState,
       fulfillmentMode,
       order.id,
-      confirmedAmounts?.taxCents ?? order.tax_cents,
-      confirmedAmounts?.totalCents ?? order.total_cents,
+      confirmedAmounts.taxCents,
+      confirmedAmounts.totalCents,
     ]);
-    if (stripeTax) {
-      // New checkouts have one address. Persist the final customer tax in the
-      // same transaction, before constructing the immutable confirmation email.
-      await client.query('UPDATE checkout_order_shipments SET tax_cents = $2 WHERE order_id = $1',
-        [order.id, confirmedAmounts.taxCents]);
-    }
+    // Every checkout has one address. Persist the final customer tax in the
+    // same transaction, before constructing the immutable confirmation email.
+    await client.query('UPDATE checkout_order_shipments SET tax_cents = $2 WHERE order_id = $1',
+      [order.id, confirmedAmounts.taxCents]);
     await client.query(
       'UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2',
       [order.id, stripeEventId]
@@ -1323,19 +1317,34 @@ async function completeOrderShipment(
   return rowToBoundary(result.rows[0]);
 }
 
-async function failOrderShipment(shipmentId, orderId, { lockedBy, leaseVersion }, error) {
+async function failOrderShipment(
+  shipmentId,
+  orderId,
+  { lockedBy, leaseVersion },
+  error,
+  diagnosticPayload = null
+) {
   const safeError = String(error?.message || error || 'Fulfillment fehlgeschlagen').slice(0, 1000);
   const result = await getPool().query(`
     UPDATE checkout_order_shipments shipment
-    SET fulfillment_status = 'failed', fulfillment_attempts = fulfillment_attempts + 1,
-        fulfillment_error = $1, updated_at = transaction_timestamp()
+    SET fulfillment_status = 'failed', fulfillment_attempts = shipment.fulfillment_attempts + 1,
+        fulfillment_error = $1,
+        fulfillment_payload_json = coalesce($2::jsonb, shipment.fulfillment_payload_json),
+        updated_at = transaction_timestamp()
     FROM orders lease
-    WHERE shipment.id = $2 AND shipment.order_id = $3 AND lease.id = shipment.order_id
+    WHERE shipment.id = $3 AND shipment.order_id = $4 AND lease.id = shipment.order_id
       AND lease.fulfillment_status = 'processing'
-      AND lease.fulfillment_locked_by = $4 AND lease.fulfillment_lease_version = $5
+      AND lease.fulfillment_locked_by = $5 AND lease.fulfillment_lease_version = $6
       AND lease.fulfillment_locked_until > transaction_timestamp()
     RETURNING shipment.*
-  `, [safeError, shipmentId, orderId, lockedBy, leaseVersion]);
+  `, [
+    safeError,
+    diagnosticPayload == null ? null : jsonValue(diagnosticPayload),
+    shipmentId,
+    orderId,
+    lockedBy,
+    leaseVersion,
+  ]);
   return rowToBoundary(result.rows[0]);
 }
 

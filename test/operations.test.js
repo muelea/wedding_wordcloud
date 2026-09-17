@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload, stripeTaxPaymentSession } = require('./helpers');
 const { publicAssetUrl } = require('../src/publicAssets');
 const { SITE_FONT_ASSETS } = require('../src/siteFonts');
 
@@ -31,13 +31,15 @@ async function createPaidTestOrder(db, event, suffix) {
     printfulCosts: { currency: 'EUR', subtotal: 10, shipping: 5, vat: 3, total: 18 },
     quote: {
       currency: 'EUR', quantity: 2, itemsCents: 2000,
-      shippingCents: 500, taxCents: 475, totalCents: 2975,
+      shippingCents: 500, taxCents: 0, totalCents: 2500,
     },
   });
   const { order } = await db.createCheckoutOrder({
     eventId: event.id, configurationId: configuration.id, quote, mode: 'test',
   });
   const sessionId = `cs_test_operations_${suffix}`;
+  const customerId = `cus_operations${suffix.replace(/[^A-Za-z0-9]/g, '')}`;
+  await db.attachStripeCustomer(order.id, customerId);
   await db.attachStripeSession(order.id, { id: sessionId, url: `https://checkout.test/${suffix}` });
   await db.recordSuccessfulPayment({
     stripeEventId: `evt_test_operations_${suffix}`,
@@ -46,6 +48,13 @@ async function createPaidTestOrder(db, event, suffix) {
     paymentIntentId: `pi_test_operations_${suffix}`,
     livemode: false,
     buyerEmail: 'private-person@example.test',
+    ...stripeTaxPaymentSession({
+      order,
+      sessionId,
+      customerId,
+      taxCents: 475,
+      shippingTaxCents: 95,
+    }),
   });
   return db.getOrderById(order.id);
 }

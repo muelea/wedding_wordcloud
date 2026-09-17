@@ -44,6 +44,50 @@ class PrintfulApiError extends Error {
   }
 }
 
+function moneyCents(value) {
+  if ((typeof value !== 'number' && typeof value !== 'string') ||
+      !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(String(value))) return null;
+  const cents = Math.round(Number(value) * 100);
+  return Number.isSafeInteger(cents) && cents >= 0 ? cents : null;
+}
+
+function normalizeOrderCosts(costs) {
+  const currency = String(costs?.currency || '').toUpperCase();
+  const totalCents = moneyCents(costs?.total);
+  if (!/^[A-Z]{3}$/.test(currency) || totalCents == null || totalCents <= 0) return null;
+  return {
+    currency,
+    total: String(costs.total),
+    totalCents,
+    ...(costs.subtotal != null ? { subtotal: String(costs.subtotal) } : {}),
+    ...(costs.discount != null ? { discount: String(costs.discount) } : {}),
+    ...(costs.shipping != null ? { shipping: String(costs.shipping) } : {}),
+    ...(costs.digitization != null ? { digitization: String(costs.digitization) } : {}),
+    ...(costs.additional_fee != null ? { additionalFee: String(costs.additional_fee) } : {}),
+    ...(costs.fulfillment_fee != null ? { fulfillmentFee: String(costs.fulfillment_fee) } : {}),
+    ...(costs.retail_delivery_fee != null ? { retailDeliveryFee: String(costs.retail_delivery_fee) } : {}),
+    ...(costs.tax != null ? { tax: String(costs.tax) } : {}),
+    ...(costs.vat != null ? { vat: String(costs.vat) } : {}),
+  };
+}
+
+function assertOrderCostsMatch(expectedCosts, actualCosts) {
+  const expected = normalizeOrderCosts(expectedCosts);
+  const actual = normalizeOrderCosts(actualCosts);
+  if (!expected || !actual || expected.currency !== actual.currency || expected.totalCents !== actual.totalCents) {
+    throw new PrintfulApiError(
+      'PRINTFUL_COST_CHANGED',
+      'Die tatsächlichen Printful-Kosten weichen vom eingefrorenen Angebot ab. Die Bestellung wurde zur manuellen Prüfung angehalten.',
+      409,
+      {
+        expectedCosts: expected,
+        actualCosts: actual,
+      }
+    );
+  }
+  return actual;
+}
+
 function getPrintfulHeaders() {
   return {
     'Authorization': `Bearer ${process.env.PRINTFUL_API_KEY}`,
@@ -340,6 +384,7 @@ async function createPrintfulOrder({ payload, confirm = false, timeoutMs = 10_00
       status: String(draft.status || 'draft'),
       mocked: false,
       confirmed: false,
+      printfulCosts: normalizeOrderCosts(draft.costs),
     };
   }
 
@@ -352,6 +397,7 @@ async function createPrintfulOrder({ payload, confirm = false, timeoutMs = 10_00
     status: String(confirmed?.status || 'pending'),
     mocked: false,
     confirmed: true,
+    printfulCosts: normalizeOrderCosts(confirmed?.costs || draft.costs),
   };
 }
 
@@ -383,15 +429,24 @@ async function confirmPrintfulOrder(printfulOrderId, options = {}) {
     status: String(confirmed.status || 'pending'),
     mocked: false,
     confirmed: true,
+    printfulCosts: normalizeOrderCosts(confirmed.costs),
   };
 }
 
-async function reconcilePrintfulOrder({ payload, confirm = false, timeoutMs = 10_000 }) {
+async function reconcilePrintfulOrder({ payload, expectedCosts, confirm = false, timeoutMs = 10_000 }) {
   let existing = await getPrintfulOrderByExternalId(payload.external_id, { timeoutMs });
   if (!existing) {
     const created = await createPrintfulOrder({ payload, confirm: false, timeoutMs });
-    if (created.mocked || !confirm) return created;
-    return confirmPrintfulOrder(created.printfulOrderId, { timeoutMs });
+    if (created.mocked) return created;
+    const printfulCosts = assertOrderCostsMatch(expectedCosts, created.printfulCosts);
+    if (!confirm) return { ...created, printfulCosts };
+    const confirmed = await confirmPrintfulOrder(created.printfulOrderId, { timeoutMs });
+    return {
+      ...confirmed,
+      printfulCosts: confirmed.printfulCosts
+        ? assertOrderCostsMatch(expectedCosts, confirmed.printfulCosts)
+        : printfulCosts,
+    };
   }
 
   const status = String(existing.status || 'draft').toLowerCase();
@@ -402,8 +457,15 @@ async function reconcilePrintfulOrder({ payload, confirm = false, timeoutMs = 10
       409
     );
   }
+  const printfulCosts = assertOrderCostsMatch(expectedCosts, existing.costs);
   if (confirm && status === 'draft') {
-    return confirmPrintfulOrder(existing.id, { timeoutMs });
+    const confirmed = await confirmPrintfulOrder(existing.id, { timeoutMs });
+    return {
+      ...confirmed,
+      printfulCosts: confirmed.printfulCosts
+        ? assertOrderCostsMatch(expectedCosts, confirmed.printfulCosts)
+        : printfulCosts,
+    };
   }
   return {
     printfulOrderId: String(existing.id),
@@ -411,6 +473,7 @@ async function reconcilePrintfulOrder({ payload, confirm = false, timeoutMs = 10
     mocked: false,
     confirmed: status !== 'draft',
     reconciled: true,
+    printfulCosts,
   };
 }
 

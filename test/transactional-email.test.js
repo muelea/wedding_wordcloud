@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
 const { Webhook } = require('standardwebhooks');
-const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload, stripeTaxPaymentSession } = require('./helpers');
 
 async function createPreparedOrder(db, event, suffix, { mode = 'test' } = {}) {
   const configuration = await db.createConfiguration({
@@ -29,15 +29,17 @@ async function createPreparedOrder(db, event, suffix, { mode = 'test' } = {}) {
     printfulCosts: { currency: 'EUR', subtotal: 10, shipping: 5, vat: 3, total: 18 },
     quote: {
       currency: 'EUR', quantity: 2, itemsCents: 2000,
-      shippingCents: 500, taxCents: 475, totalCents: 2975,
+      shippingCents: 500, taxCents: 0, totalCents: 2500,
     },
   });
   const { order } = await db.createCheckoutOrder({
     eventId: event.id, configurationId: configuration.id, quote, mode,
   });
   const sessionId = `cs_email_${suffix}`;
+  const customerId = `cus_email${suffix.replace(/[^A-Za-z0-9]/g, '')}`;
+  await db.attachStripeCustomer(order.id, customerId);
   await db.attachStripeSession(order.id, { id: sessionId, url: `https://checkout.test/${suffix}` });
-  return { order: await db.getOrderById(order.id), configuration, quote, sessionId };
+  return { order: await db.getOrderById(order.id), configuration, quote, sessionId, customerId };
 }
 
 async function payPreparedOrder(db, prepared, suffix, { mode = 'test', buyerEmail = 'buyer@example.test' } = {}) {
@@ -47,10 +49,14 @@ async function payPreparedOrder(db, prepared, suffix, { mode = 'test', buyerEmai
     stripeSessionId: prepared.sessionId,
     paymentIntentId: `pi_email_${suffix}`,
     livemode: mode === 'live',
-    amountTotal: prepared.order.total_cents,
-    currency: prepared.order.currency,
-    paymentStatus: 'paid',
     buyerEmail,
+    ...stripeTaxPaymentSession({
+      order: prepared.order,
+      sessionId: prepared.sessionId,
+      customerId: prepared.customerId,
+      taxCents: 475,
+      shippingTaxCents: 95,
+    }),
   });
 }
 
@@ -117,7 +123,7 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
   });
   assert.match(englishOrder.textBody, /Lea & Julian/);
   assert.match(englishOrder.textBody, /Jan 14\s*–\s*17, 2030/);
-  assert.match(englishOrder.textBody, /customs or import fees/i);
+  assert.match(englishOrder.textBody, /customs duties, import taxes or other import charges/i);
   assert.match(englishOrder.textBody, /Registered office: Heilbronn/);
   assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-13-v2"/);
 });
@@ -174,6 +180,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.match(paid.emailJob.text_body, /JUSA Engineering UG/);
     assert.match(paid.emailJob.text_body, /Sitz: Heilbronn/);
     assert.match(paid.emailJob.text_body, /§ 312g/);
+    assert.match(paid.emailJob.text_body, /zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren/);
     assert.match(paid.emailJob.html_body, /cid:wolkenworte-mark-v1/);
     assert.match(paid.emailJob.html_body, /Bestellung bestätigt/);
     assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-13-v2"/);
@@ -493,7 +500,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     const finalRefund = await db.recordStripeRefund({
       stripeEventId: 'evt_email_refund_final', eventType: 'charge.refunded',
       paymentIntentId: 'pi_email_notices', livemode: true,
-      amountRefunded: prepared.order.total_cents, currency: prepared.order.currency,
+      amountRefunded: paid.order.total_cents, currency: paid.order.currency,
     });
     assert.equal(finalRefund.emailJob.kind, 'refund_confirmation');
     assert.notEqual(finalRefund.emailJob.dedupe_key, firstRefund.emailJob.dedupe_key);

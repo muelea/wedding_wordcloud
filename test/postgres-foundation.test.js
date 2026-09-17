@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload, stripeTaxPaymentSession } = require('./helpers');
 
 async function storedEvent(db, baseUrl, name) {
   const created = await createEvent(baseUrl, { title: name });
@@ -49,7 +49,7 @@ async function quoteFor(db, eventId, configurations) {
         country_code: 'DE',
       },
       printfulCosts: { currency: 'EUR', subtotal: 10, shipping: 5, vat: 2.85, total: 17.85 },
-      customerCosts: { shippingCents: 500, taxCents: 380 },
+      customerCosts: { shippingCents: 500, taxCents: 0 },
     }],
     quote: {
       currency: 'EUR',
@@ -57,8 +57,8 @@ async function quoteFor(db, eventId, configurations) {
       itemsCents: 2000,
       paymentReserveCents: 100,
       shippingCents: 500,
-      taxCents: 380,
-      totalCents: 2980,
+      taxCents: 0,
+      totalCents: 2500,
     },
   });
 }
@@ -317,6 +317,7 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
       shipmentCount: 1,
       baseUrl: 'https://wolkenworte.example',
       locale: 'de',
+      customerId: 'cus_reconciledcrashwindow',
     };
     const { order } = await db.createCheckoutOrder({
       eventId: event.id,
@@ -336,6 +337,13 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
     );
 
     const stripeSessionId = 'cs_test_reconciled_crash_window';
+    const payment = stripeTaxPaymentSession({
+      order,
+      sessionId: stripeSessionId,
+      customerId: frozenRequest.customerId,
+      taxCents: 480,
+      shippingTaxCents: 100,
+    });
     const results = await Promise.all([
       db.recordSuccessfulPayment({
         stripeEventId: 'evt_reconciled_crash_window',
@@ -345,9 +353,7 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
         livemode: false,
         orderId: order.id,
         quoteId: quote.id,
-        amountTotal: 2980,
-        currency: 'eur',
-        paymentStatus: 'paid',
+        ...payment,
         buyerEmail: 'buyer@example.test',
       }),
       db.recordSuccessfulPayment({
@@ -358,9 +364,7 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
         livemode: false,
         orderId: order.id,
         quoteId: quote.id,
-        amountTotal: 2980,
-        currency: 'eur',
-        paymentStatus: 'paid',
+        ...payment,
         buyerEmail: 'buyer@example.test',
       }),
     ]);

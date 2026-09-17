@@ -185,4 +185,43 @@ function productDesignPayload(productKey = 'white-glossy-mug-duo-11oz', orientat
   };
 }
 
-module.exports = { startTestServer, createEvent, uniqueTitle, productDesignPayload };
+function stripeTaxPaymentSession({
+  order,
+  sessionId,
+  customerId,
+  taxCents,
+  shippingTaxCents = 0,
+}) {
+  const itemsCents = Number(order.items_cents);
+  const shippingCents = Number(order.shipping_cents);
+  const finalTaxCents = Number(taxCents);
+  const finalTotalCents = itemsCents + shippingCents + finalTaxCents;
+  return {
+    amountTotal: finalTotalCents,
+    currency: String(order.currency || '').toLowerCase(),
+    paymentStatus: 'paid',
+    checkoutSession: {
+      id: sessionId,
+      customer: customerId,
+      payment_status: 'paid',
+      currency: String(order.currency || '').toLowerCase(),
+      amount_subtotal: itemsCents,
+      amount_total: finalTotalCents,
+      automatic_tax: { enabled: true, status: 'complete' },
+      total_details: { amount_tax: finalTaxCents, amount_discount: 0 },
+      shipping_cost: {
+        amount_subtotal: shippingCents,
+        amount_tax: shippingTaxCents,
+        amount_total: shippingCents + shippingTaxCents,
+      },
+    },
+  };
+}
+
+module.exports = {
+  startTestServer,
+  createEvent,
+  uniqueTitle,
+  productDesignPayload,
+  stripeTaxPaymentSession,
+};

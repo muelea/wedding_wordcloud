@@ -256,6 +256,7 @@ async function executeClaimedOrder(order, { deadline = null, providerSmoke = fal
         continue;
       }
       const payload = buildPrintfulPayload({ order, orderItems, artifacts, mode, shipment });
+      const expectedCosts = parseJson(shipment.printful_costs_json);
       try {
         let result;
         if (mode === 'mock') {
@@ -270,15 +271,19 @@ async function executeClaimedOrder(order, { deadline = null, providerSmoke = fal
           await renew(order, deadline);
           result = await printful.reconcilePrintfulOrder({
             payload,
+            expectedCosts,
             confirm: mode === 'live',
             timeoutMs: providerTimeout(deadline),
           });
           await renew(order, deadline);
         }
         const completedMode = result.mocked ? 'mock' : mode;
+        const fulfillmentPayload = result.printfulCosts
+          ? { ...payload, providerCosts: result.printfulCosts }
+          : payload;
         const completed = await db.completeOrderShipment(shipment.id, order.id, lease, {
           mode: completedMode,
-          payload,
+          payload: fulfillmentPayload,
           printfulOrderId: result.printfulOrderId,
           printfulStatus: result.status,
         });
@@ -286,7 +291,14 @@ async function executeClaimedOrder(order, { deadline = null, providerSmoke = fal
         completedModes.push(completedMode);
       } catch (error) {
         if (error.code !== 'FULFILLMENT_LEASE_LOST') {
-          await db.failOrderShipment(shipment.id, order.id, lease, error);
+          const diagnosticPayload = error.code === 'PRINTFUL_COST_CHANGED'
+            ? {
+                ...payload,
+                expectedProviderCosts: error.expectedCosts || expectedCosts || null,
+                providerCosts: error.actualCosts || null,
+              }
+            : null;
+          await db.failOrderShipment(shipment.id, order.id, lease, error, diagnosticPayload);
         }
         throw error;
       }
@@ -317,7 +329,8 @@ async function executeClaimedOrder(order, { deadline = null, providerSmoke = fal
     return completed;
   } catch (error) {
     if (error.code === 'FULFILLMENT_LEASE_LOST') return db.getOrderById(order.id);
-    const blocked = error.code === 'FULFILLMENT_BLOCKED' || error.code === 'PRINTFUL_ORDER_TERMINAL';
+    const blocked = ['FULFILLMENT_BLOCKED', 'PRINTFUL_ORDER_TERMINAL', 'PRINTFUL_COST_CHANGED']
+      .includes(error.code);
     const failed = await db.failFulfillment(order.id, lease, error, { blocked });
     log.error(blocked ? 'fulfillment_blocked' : 'fulfillment_failed', {
       orderId: order.id,

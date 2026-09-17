@@ -42,12 +42,29 @@ implementation history is intentionally not maintained as a step-by-step diary.
 
 ### Business, tax and legal decisions
 
-- [ ] Decide the business's VAT status, EU/OSS obligations, invoicing and
-  bookkeeping/export process with qualified professional input.
-- [ ] Validate the Stripe Tax setup for live sales, including registrations,
-  product tax codes and the actual Printful shipping origins. Sandbox Checkout
-  now separates net products and shipping and records Stripe's confirmed tax;
-  the hosted integration still uses the configured head-office origin.
+- [x] Record the current sandbox tax model: B2C sales by the German JUSA
+  Engineering UG (haftungsbeschränkt), seller VAT ID stored in Stripe and
+  Printful, one active German Stripe Tax `small_seller` registration and no
+  active OSS registration. Buyer VAT IDs are intentionally not requested.
+- [x] Keep Printful tax/VAT as an internal procurement cost. It is included once
+  in the customer-facing product amount without the catalog markup; only Stripe
+  Tax creates the customer tax line. Draft/live fulfillment compares Printful's
+  actual currency and total with the frozen estimate before confirmation and
+  blocks changed or missing costs for manual review.
+- [x] Show a compact general customs/import-cost notice in the shop, address
+  review, Stripe Checkout, confirmation page and transactional messages. Keep
+  the more specific Printful customs-risk and unknown-state warnings as
+  additional information; the recipient bears external import charges.
+- [ ] Confirm the German `small_seller` treatment, invoicing and bookkeeping
+  process with qualified professional input. Monitor the EUR 10,000 EU
+  cross-border B2C threshold and register/activate OSS before applying that
+  regime; do not restore the removed sandbox OSS registration prematurely.
+- [ ] Validate the Stripe Tax setup for live worldwide sales, including live
+  registrations, product/shipping tax codes and the actual Printful fulfillment
+  origins. Sandbox Checkout records Stripe's confirmed destination tax but uses
+  the configured German head-office origin; observed Printful origins include
+  Germany, Latvia, Spain and the United States and are not passed to Stripe as a
+  per-order tax origin.
 - [ ] Review product margins and the provisional markup/payment-reserve values.
 - [ ] Approve the versioned order-confirmation, contract-formation,
   personalization/withdrawal, refund and cancellation wording.

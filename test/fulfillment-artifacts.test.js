@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload, stripeTaxPaymentSession } = require('./helpers');
 
 async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
   const configuration = await db.createConfiguration({
@@ -30,13 +30,15 @@ async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
     printfulCosts: { currency: 'EUR', subtotal: 10, shipping: 5, vat: 3, total: 18 },
     quote: {
       currency: 'EUR', quantity: 2, itemsCents: 2000,
-      shippingCents: 500, taxCents: 475, totalCents: 2975,
+      shippingCents: 500, taxCents: 0, totalCents: 2500,
     },
   });
   const { order } = await db.createCheckoutOrder({
     eventId: event.id, configurationId: configuration.id, quote, mode,
   });
   const sessionId = `cs_${mode}_${suffix}`;
+  const customerId = `cus_artifact${suffix.replace(/[^A-Za-z0-9]/g, '')}`;
+  await db.attachStripeCustomer(order.id, customerId);
   await db.attachStripeSession(order.id, { id: sessionId, url: `https://checkout.test/${suffix}` });
   await db.recordSuccessfulPayment({
     stripeEventId: `evt_${mode}_${suffix}`,
@@ -44,6 +46,13 @@ async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
     stripeSessionId: sessionId,
     paymentIntentId: `pi_${mode}_${suffix}`,
     livemode: mode === 'live',
+    ...stripeTaxPaymentSession({
+      order,
+      sessionId,
+      customerId,
+      taxCents: 475,
+      shippingTaxCents: 95,
+    }),
   });
   return { order: await db.getOrderById(order.id), configuration, quote };
 }
@@ -203,7 +212,10 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
         if (getCalls === 1) return new Response(JSON.stringify({ code: 404 }), { status: 404 });
         return new Response(JSON.stringify({
           code: 200,
-          result: { id: 991, external_id: 'ww_abcdefghijklmnopqrstuvwx', status: 'draft' },
+          result: {
+            id: 991, external_id: 'ww_abcdefghijklmnopqrstuvwx', status: 'draft',
+            costs: { currency: 'EUR', total: '18.00' },
+          },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       if (String(url).includes('/orders?') && options.method === 'POST') {
@@ -214,8 +226,9 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     };
     try {
       const payload = { external_id: 'ww_abcdefghijklmnopqrstuvwx', items: [] };
-      await assert.rejects(printful.reconcilePrintfulOrder({ payload, confirm: false }), /momentan nicht erreichbar/);
-      const reconciled = await printful.reconcilePrintfulOrder({ payload, confirm: false });
+      const expectedCosts = { currency: 'EUR', total: 18 };
+      await assert.rejects(printful.reconcilePrintfulOrder({ payload, expectedCosts, confirm: false }), /momentan nicht erreichbar/);
+      const reconciled = await printful.reconcilePrintfulOrder({ payload, expectedCosts, confirm: false });
       assert.equal(reconciled.printfulOrderId, '991');
       assert.equal(reconciled.reconciled, true);
       assert.equal(postCalls, 1, 'the retry must not create a second provider order');
@@ -232,6 +245,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
               id: 992,
               external_id: payload.external_id,
               status: confirmationGets === 1 ? 'draft' : 'pending',
+              costs: { currency: 'EUR', total: '18.00' },
             },
           }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
@@ -241,12 +255,52 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
         }
         throw new Error(`unexpected fetch ${options.method} ${url}`);
       };
-      await assert.rejects(printful.reconcilePrintfulOrder({ payload, confirm: true }), /momentan nicht erreichbar/);
-      const confirmed = await printful.reconcilePrintfulOrder({ payload, confirm: true });
+      await assert.rejects(printful.reconcilePrintfulOrder({ payload, expectedCosts, confirm: true }), /momentan nicht erreichbar/);
+      const confirmed = await printful.reconcilePrintfulOrder({ payload, expectedCosts, confirm: true });
       assert.equal(confirmed.status, 'pending');
       assert.equal(confirmed.reconciled, true);
       assert.equal(confirmationWrites, 1, 'an accepted confirmation must not be submitted twice');
       assert.equal(confirmationGets, 2);
+    } finally {
+      global.fetch = originalFetch;
+      printful.reconcilePrintfulOrder = async (options) => {
+        providerCalls.push(options);
+        return { printfulOrderId: 'draft-fulfillment', status: 'draft', mocked: false };
+      };
+    }
+  });
+
+  await t.test('a changed provider total blocks a draft before it can be confirmed', async () => {
+    printful.reconcilePrintfulOrder = originalReconcile;
+    const originalFetch = global.fetch;
+    let confirmationWrites = 0;
+    global.fetch = async (url, options = {}) => {
+      if (String(url).includes('/orders/%40ww_') && options.method === 'GET') {
+        return new Response(JSON.stringify({
+          code: 200,
+          result: {
+            id: 993,
+            external_id: 'ww_costchangedabcdefghijkl',
+            status: 'draft',
+            costs: { currency: 'EUR', total: '19.00', vat: '3.19' },
+          },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (String(url).endsWith('/confirm') && options.method === 'POST') {
+        confirmationWrites += 1;
+      }
+      throw new Error(`unexpected fetch ${options.method} ${url}`);
+    };
+    try {
+      await assert.rejects(
+        printful.reconcilePrintfulOrder({
+          payload: { external_id: 'ww_costchangedabcdefghijkl', items: [] },
+          expectedCosts: { currency: 'EUR', total: 18 },
+          confirm: true,
+        }),
+        (error) => error.code === 'PRINTFUL_COST_CHANGED' && error.status === 409
+      );
+      assert.equal(confirmationWrites, 0);
     } finally {
       global.fetch = originalFetch;
       printful.reconcilePrintfulOrder = async (options) => {

@@ -45,6 +45,7 @@
     .eyebrow { margin: 0 0 10px; color: var(--berry); font-size: 11px; font-weight: 600; letter-spacing: .17em; text-transform: uppercase; }
     h1 { margin: 0; overflow-wrap: anywhere; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(34px, 8vw, 49px); font-weight: 500; line-height: 1.08; }
     .copy { margin: 16px auto 0; max-width: 450px; color: var(--muted); font-size: 16px; line-height: 1.65; }
+    .customs-note { margin: 24px auto 0; max-width: 480px; color: var(--muted); font-size: 12px; line-height: 1.55; }
     .summary { margin: 28px 0 0; padding: 18px 20px; border-radius: 16px; background: #fbf2e7; text-align: left; }
     .summary-row { display: flex; justify-content: space-between; gap: 16px; margin: 7px 0; color: var(--muted); font-size: 14px; }
     .summary-row strong { color: var(--ink); font-weight: 600; }
@@ -87,6 +88,7 @@
       <button type="button" class="reorder-button" id="reorder-button" hidden>Erneut an eine andere Adresse bestellen</button>
       <p class="copy error" id="reorder-error" role="alert" hidden></p>
       <a class="home-link" id="home-link" href="/">Zurück zur Wortwolke</a>
+      <p class="customs-note">Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</p>
     </section>
   </main>
   <script src="<%= asset('/js/configurator-session.js') %>"></script>

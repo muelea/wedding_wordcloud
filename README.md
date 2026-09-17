@@ -123,8 +123,10 @@ frozen snapshot of the word cloud.
    the basis of the existing price calculation. The address page uses
    "Preise und Lieferung prüfen" and shows products, shipping and a tax-exclusive
    subtotal, with a note that the final total is shown on the payment page before
-   purchase. The quote contains net amounts; its zero tax field means pending
-   calculation, not tax exemption. Printful tax stays supplier information only.
+   purchase. The quote contains net amounts; its zero customer-tax field means
+   pending calculation, not tax exemption. Any tax or VAT charged by Printful is
+   an internal procurement cost: it is added once to the customer-facing product
+   amount without the catalog markup and is never presented as customer tax.
    The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
@@ -609,37 +611,40 @@ setting above. The single delivery address is estimated as one Printful order
 containing all selected products. All
 calculations use integer cents.
 
-Let `C` be Printful's product cost for the complete order after any Printful
-quantity or mixed-order discount, `u` the markup (default `0.50`) and `R` the
-internal payment-cost reserve. The customer product subtotal is:
+Let `C` be Printful's product cost excluding shipping and Printful tax/VAT for
+the complete order after any Printful quantity or mixed-order discount, `F` the
+sum of Printful tax and VAT, `u` the markup (default `0.50`) and `R` the internal
+payment-cost reserve. The customer-facing product amount is:
 
 ```text
-ceil(C * (1 + u)) + R
+ceil(C * (1 + u)) + F + R
 ```
 
-Printful's standard shipping is added separately. Customer tax/VAT is then
-calculated on the marked-up product subtotal plus shipping, using the
-destination rate implied by Printful's product+shipping tax estimate:
+`F` is added exactly once and receives no catalog markup. Printful's standard
+shipping is added separately. The address page and the locally frozen quote
+therefore still contain zero customer tax. Stripe Tax alone calculates the
+customer's final tax from the validated delivery address, the general tangible
+goods tax code (`txcd_99999999`) and the shipping tax code (`txcd_92010001`):
 
 ```text
-customer tax = round((customer product subtotal + shipping) * destination tax rate)
-customer total = customer product subtotal + shipping + customer tax
+pre-Stripe total = customer product amount + shipping
+customer total = pre-Stripe total + Stripe's confirmed tax
 ```
 
 The payment reserve is folded into the product subtotal, not displayed as a
 separate card/payment surcharge. By default it budgets `3.65% + 0,25 €` per
 purchase for Stripe processing and Stripe Tax. Its own calculation always
-assumes 20% tax on the marked-up products, shipping and reserve, independently
-of Printful's tax fields. It iterates until the reserve covers the estimated
-fees or returns the last estimate after 20 iterations. Differences from actual
-tax and payment fees affect the shop's margin. This internal assumption never
-sets the customer tax line; the current test-only customer tax calculation
-above remains separate until Stripe Tax is integrated.
+assumes 20% customer tax on the product amount (including `F`), shipping and
+reserve. It iterates until the reserve covers the estimated fees or returns the
+last estimate after 20 iterations. Differences from actual Stripe tax and
+payment fees affect the shop's margin. This internal assumption never sets the
+customer tax line.
 
-Example with 10,98 € Printful product costs, 6,24 € shipping and 19% German
-VAT: the 50% rule produces a 16,47 € marked-up product subtotal, the internal
-payment reserve is 1,31 € (budgeted with 20% tax), customer VAT is 4,56 € and
-the customer total is 28,58 €.
+Example with 10,98 € Printful product costs, 3,28 € Printful VAT and 6,24 €
+shipping: the 50% rule produces 16,47 €, Printful VAT is added without markup,
+and the internal payment reserve is 1,46 €. The product amount shown to Stripe
+is therefore 21,21 € and the pre-tax total is 27,45 €. Stripe determines and
+shows the final customer tax and gross total at Checkout.
 
 Because `C` is the actual product cost for the requested quantity, Printful
 quantity discounts automatically lower the customer unit price; there are no
@@ -647,10 +652,12 @@ separate, manually maintained discount tiers. The server repeats the Printful
 estimate immediately before Stripe Checkout, and a changed total must be
 confirmed again.
 
-This is intentionally a test calculation. The provisional tax is still part of
-test Checkout, but is no longer shown on the address page. The business's VAT
-status, OSS obligations and Stripe Tax configuration
-still need professional review before live payments are enabled.
+This remains a sandbox-only retail calculation until the tax review is signed
+off. The shop is B2C and does not request a buyer VAT ID. Sandbox Stripe Tax has
+one active German `small_seller` registration; there is no active OSS
+registration. The EUR 10,000 EU cross-border threshold and the tax treatment of
+Printful's actual fulfillment origins must be monitored and professionally
+reviewed before live payments are enabled.
 
 ## Project layout
 
@@ -1273,11 +1280,12 @@ keys in Fly for activation by `npm run deploy:hosted`.
   successful test payment can only produce a local `mocked` fulfillment
   record. Draft/live writes require a live Stripe payment plus the explicit
   safety switches described above.
-- **Final retail VAT configuration** — the quote schema separates products,
-  internal reserve, shipping and customer tax cents, and the current test
-  Checkout still uses customer tax from the destination rate implied by
-  Printful's estimate. Customer VAT/Stripe Tax must still be professionally
-  reviewed before live mode is enabled.
+- **Final retail VAT configuration** — Stripe Tax is the only source of customer
+  tax in Checkout. The sandbox has one active German `small_seller`
+  registration and no active OSS registration. Printful tax/VAT is included as
+  an unmarked-up procurement cost inside the product amount. The EUR 10,000 EU
+  cross-border threshold, actual Printful fulfillment origins and the live
+  registrations still require professional review before live mode is enabled.
 
 ## Known gotchas
 

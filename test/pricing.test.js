@@ -20,13 +20,13 @@ test.beforeEach((t) => {
   }
 });
 
-test('catalog-wide pricing adds a 50% markup and payment reserve to Printful product costs', () => {
+test('catalog-wide pricing marks up products, adds supplier tax once and reserves payment fees', () => {
   const quote = buildCustomerQuote({
     currency: 'EUR', subtotal: 10, shipping: 4, tax: 0, vat: 2.8, total: 16.8,
   }, 2);
   assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
-    currency: 'EUR', quantity: 2, itemsCents: 1614, paymentReserveCents: 114,
-    shippingCents: 400, taxCents: 0, totalCents: 2014, shipmentQuotes: undefined,
+    currency: 'EUR', quantity: 2, itemsCents: 1906, paymentReserveCents: 126,
+    shippingCents: 400, taxCents: 0, totalCents: 2306, shipmentQuotes: undefined,
   });
 });
 
@@ -34,10 +34,10 @@ test('inexpensive products use the same markup rule', () => {
   const quote = buildCustomerQuote({
     currency: 'EUR', subtotal: 2, shipping: 4, tax: 0, vat: 1.2, total: 7.2,
   }, 1);
-  assert.equal(quote.itemsCents, 359);
-  assert.equal(quote.paymentReserveCents, 59);
+  assert.equal(quote.itemsCents, 484);
+  assert.equal(quote.paymentReserveCents, 64);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 759);
+  assert.equal(quote.totalCents, 884);
 });
 
 test('split shipments apply the markup to the combined product subtotal', () => {
@@ -48,11 +48,11 @@ test('split shipments apply the markup to the combined product subtotal', () => 
   assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
     currency: 'EUR',
     quantity: 3,
-    itemsCents: 538,
-    paymentReserveCents: 88,
+    itemsCents: 789,
+    paymentReserveCents: 99,
     shippingCents: 900,
     taxCents: 0,
-    totalCents: 1438,
+    totalCents: 1689,
     shipmentQuotes: undefined,
   });
   assert.deepEqual(quote.shipmentQuotes.map((shipment) => shipment.taxCents), [0, 0]);
@@ -60,15 +60,16 @@ test('split shipments apply the markup to the combined product subtotal', () => 
   assert.equal(quote.paymentReserveCents, combined.paymentReserveCents, 'charge the fixed fee once per purchase');
 });
 
-test('supplier VAT never becomes customer tax', () => {
+test('supplier VAT is included in products but never becomes customer tax', () => {
   const quote = buildCustomerQuote({
     currency: 'EUR', shipping: 6.24, tax: 0, vat: 3.28, total: 20.50,
   }, 2);
-  assert.equal(quote.itemsCents, 1778);
-  assert.equal(quote.paymentReserveCents, 131);
+  assert.equal(quote.itemsCents, 2121);
+  assert.equal(quote.itemsCents - quote.paymentReserveCents, 1975, 'supplier VAT is added after the product markup');
+  assert.equal(quote.paymentReserveCents, 146);
   assert.equal(quote.shippingCents, 624);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 2402);
+  assert.equal(quote.totalCents, 2745);
 });
 
 test('a lower quantity-discounted Printful subtotal automatically lowers the customer unit price', () => {
@@ -79,15 +80,18 @@ test('a lower quantity-discounted Printful subtotal automatically lowers the cus
   assert.ok(discounted.itemsCents / 10 < regular.itemsCents / 10);
 });
 
-test('reserve uses 20% internally whether Printful returns no tax, zero tax, VAT or sales tax', () => {
+test('supplier VAT or sales tax is added without markup before the 20% reserve estimate', () => {
   const variants = [{}, { tax: 0, vat: 0 }, { vat: 2.85 }, { tax: 1.2 }, { tax: 2, vat: 3 }];
   for (const taxes of variants) {
     const supplierTax = (taxes.tax || 0) + (taxes.vat || 0);
     const quote = buildCustomerQuote({
       currency: 'EUR', subtotal: 10, shipping: 5, ...taxes, total: 15 + supplierTax,
     }, 2);
-    assert.equal(quote.paymentReserveCents, 118, JSON.stringify(taxes));
-    assert.equal(quote.itemsCents, 1618);
+    assert.equal(
+      quote.itemsCents - quote.paymentReserveCents,
+      1500 + Math.round(supplierTax * 100),
+      `supplier tax is added exactly once without markup: ${JSON.stringify(taxes)}`
+    );
     assert.equal(quote.shippingCents, 500);
     assert.equal(quote.shipmentQuotes[0].supplierTaxCents, Math.round(supplierTax * 100));
     assert.equal(quote.taxCents, 0, 'the internal 20% must not become customer tax');

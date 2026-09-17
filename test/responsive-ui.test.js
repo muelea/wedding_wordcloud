@@ -11,6 +11,7 @@ const landing = fs.readFileSync(path.join(ROOT, 'views', 'landing.ejs'), 'utf8')
 const display = fs.readFileSync(path.join(ROOT, 'views', 'display.ejs'), 'utf8');
 const configure = fs.readFileSync(path.join(ROOT, 'views', 'configure.ejs'), 'utf8');
 const shipping = fs.readFileSync(path.join(ROOT, 'views', 'shipping.ejs'), 'utf8');
+const orderConfirmation = fs.readFileSync(path.join(ROOT, 'views', 'order-confirmation.ejs'), 'utf8');
 const siteHeader = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'site-header.ejs'), 'utf8');
 const hamburgerIcon = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'hamburger-icon.ejs'), 'utf8');
 const siteHeaderStyles = fs.readFileSync(path.join(ROOT, 'public', 'site-header.css'), 'utf8');
@@ -160,6 +161,11 @@ test('shipping keeps both return links synchronized behind the same responsive h
   assert.match(shipping, /const backLinks = \[backLink, mobileBackLink\]\.filter\(Boolean\)/);
   assert.match(shipping, /function setBackHref\(href\)[\s\S]*?backLinks\.forEach/);
   assert.match(shipping, /backLinks\.forEach\(\(link\) => \{ link\.addEventListener\('click', saveShippingDraft\); \}\)/);
+});
+
+test('commercial pages always show the compact customs and import-cost notice', () => {
+  const notice = /Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen\. Diese sind vom Empfänger zu tragen\./;
+  for (const source of [landing, configure, shipping, orderConfirmation]) assert.match(source, notice);
 });
 
 test('the personal display palette is handed off to the configurator', () => {
@@ -324,6 +330,22 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landing, /@media \(max-width: 360px\)[\s\S]*?\.landing-start-button \{ display: none; \}/);
   assert.match(landing, /\.landing-menu-toggle \{ display: grid; margin-left: 0; \}/);
   assert.match(landing, /\.landing-start-button \{ min-height: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
+});
+
+test('landing intro selects a portrait-optimized video and poster on phones', () => {
+  assert.match(
+    landing,
+    /source src="<%= asset\('\/assets\/video\/teaser-mobile\.mp4'\) %>" type="video\/mp4" media="\(max-width: 760px\) and \(orientation: portrait\)"/
+  );
+  assert.match(
+    landing,
+    /source src="<%= asset\('\/assets\/video\/teaser\.mp4'\) %>" type="video\/mp4"/
+  );
+  assert.match(
+    landing,
+    /@media \(max-width: 760px\) and \(orientation: portrait\) \{[\s\S]*?teaser-poster-mobile\.jpg/
+  );
+  assert.doesNotMatch(landing, /poster="\/assets\/video\//);
 });
 
 test('mobile naming dialog is visual-viewport aware and does not force the keyboard open', () => {

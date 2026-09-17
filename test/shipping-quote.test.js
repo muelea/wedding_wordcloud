@@ -139,11 +139,11 @@ test('shipping page uses the immutable configuration and returns a server-side P
     configurationCount: 1,
     shipmentCount: 1,
     shippingDetails: undefined,
-    itemsCents: 1616,
-    paymentReserveCents: 116,
+    itemsCents: 1904,
+    paymentReserveCents: 129,
     shippingCents: 449,
     taxCents: 0,
-    totalCents: 2065,
+    totalCents: 2353,
     expiresAt: undefined,
   });
   assert.equal(captured.length, 1);
@@ -262,11 +262,11 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   assert.equal(quote.shipmentCount, 1);
   assert.equal(quote.configurationCount, 2);
   assert.equal(quote.productCount, 2);
-  assert.equal(quote.itemsCents, 3192);
-  assert.equal(quote.paymentReserveCents, 192);
+  assert.equal(quote.itemsCents, 3708);
+  assert.equal(quote.paymentReserveCents, 214);
   assert.equal(quote.shippingCents, 600);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 3792);
+  assert.equal(quote.totalCents, 4308);
   assert.equal(captured.length, 1, 'mixed items for one address must use one Printful estimate');
   assert.deepEqual(captured[0].items, [
     { configurationId: mug.id, variantId: 1320, quantity: 2 },

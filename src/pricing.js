@@ -95,9 +95,10 @@ function paymentReserveCents({ baseItemsCents, shippingCents }) {
  * catalog-wide retail rule. The actual, quantity-discounted Printful product
  * cost is the basis, so future curated products need no individual pricing.
  *
- * This is a net quote. Zero tax here means not yet calculated, not tax exempt.
- * Only Stripe's confirmed Checkout calculates customer tax. Supplier tax stays
- * in the procurement snapshot and never determines the customer's tax rate.
+ * This is a net quote. Zero customer tax here means not yet calculated, not tax
+ * exempt. Printful tax/VAT is a procurement cost: add it to the product price
+ * without applying the catalog markup. Only Stripe's confirmed Checkout
+ * calculates and exposes customer tax.
  */
 function buildCustomerQuote(costs, quantity) {
   return buildCustomerQuoteForShipments([{ quantity, costs }]);
@@ -111,6 +112,7 @@ function buildCustomerQuoteForShipments(shipments) {
   let currency = null;
   let quantity = 0;
   let printfulItemsCents = 0;
+  let supplierTaxCents = 0;
   let shippingCents = 0;
   const preparedShipments = [];
 
@@ -129,6 +131,7 @@ function buildCustomerQuoteForShipments(shipments) {
     const shipmentSupplierTaxCents = printfulSupplierTaxCents(shipment.costs);
     quantity += shipmentQuantity;
     printfulItemsCents += shipmentPrintfulItemsCents;
+    supplierTaxCents += shipmentSupplierTaxCents;
     shippingCents += shipmentShippingCents;
     preparedShipments.push({
       printfulItemsCents: shipmentPrintfulItemsCents,
@@ -138,14 +141,16 @@ function buildCustomerQuoteForShipments(shipments) {
   }
 
   const markup = productMarkupPercent() / 100;
-  const baseItemsCents = Math.ceil(printfulItemsCents * (1 + markup));
+  const markedUpItemsCents = Math.ceil(printfulItemsCents * (1 + markup));
+  const baseItemsCents = markedUpItemsCents + supplierTaxCents;
   const reserveCents = paymentReserveCents({ baseItemsCents, shippingCents });
   const itemsCents = baseItemsCents + reserveCents;
   const shipmentQuotes = shipmentNetQuotes(preparedShipments, itemsCents);
   const taxCents = 0;
   const totalCents = itemsCents + shippingCents + taxCents;
 
-  if ([printfulItemsCents, baseItemsCents, reserveCents, itemsCents, shippingCents, taxCents, totalCents].some((value) => value < 0)) {
+  if ([printfulItemsCents, supplierTaxCents, markedUpItemsCents, baseItemsCents,
+    reserveCents, itemsCents, shippingCents, taxCents, totalCents].some((value) => value < 0)) {
     throw new Error('invalid negative Printful costs');
   }
 

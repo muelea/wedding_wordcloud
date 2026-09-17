@@ -9,7 +9,7 @@ function fixture() {
   const order = {
     id: 42, mode: 'test', currency: 'EUR', items_cents: 1770,
     shipping_cents: 449, tax_cents: 0, total_cents: 2219, status: 'checkout_pending',
-    checkout_request_json: JSON.stringify({ taxMode: 'stripe', customerId: 'cus_testtax' }),
+    checkout_request_json: JSON.stringify({ customerId: 'cus_testtax' }),
     checkout_session_expires_at: new Date(Date.now() + 31 * 60 * 1000).toISOString(),
     stripe_idempotency_key: 'quote-test-key',
   };
@@ -55,8 +55,7 @@ test('automatic-tax payment rejects altered net amounts, currency, customer or i
   order.status = 'paid_test'; order.tax_cents = 422; order.total_cents = 2641;
   assert.equal(paymentAmounts(order, session), null, 'later events cannot change paid totals');
   order.checkout_request_json = '{}';
-  session.amount_total = 2641;
-  assert.equal(paymentAmounts(order, session).totalCents, 2641, 'existing legacy payments retain gross validation');
+  assert.equal(paymentAmounts(order, session), null, 'a checkout without its pinned Stripe customer is invalid');
 });
 
 test('hosted Checkout pins shipping, separates net products and shipping, and retries identical Stripe inputs', async (t) => {
@@ -109,6 +108,7 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   assert.equal(params.shipping_options[0].shipping_rate_data.display_name, 'Shipping');
   assert.match(params.custom_text.submit.message, /personalised goods/i);
   assert.match(params.custom_text.submit.message, /312g\(2\)\(1\)/i);
+  assert.match(params.custom_text.submit.message, /customs duties/i);
   assert.equal(options.idempotencyKey, order.stripe_idempotency_key);
   assert.equal(params.payment_intent_data.metadata.orderId, '42');
 });

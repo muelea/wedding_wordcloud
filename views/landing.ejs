@@ -277,15 +277,19 @@
        "Wolkenworte – for the people you love" title card) simply grows
        more and more transparent, dissolving straight into the site's real
        background instead of onto an intermediate color that itself shifts. */
-    #intro-overlay { position: fixed; inset: 0; z-index: 40; background: var(--paper); display: flex; align-items: center; justify-content: center; }
+    #intro-overlay { position: fixed; inset: 0; z-index: 40; background-color: var(--paper); background-image: url('<%= asset('/assets/video/teaser-poster.jpg') %>'); background-position: center; background-size: cover; display: flex; align-items: center; justify-content: center; }
     #intro-overlay.fade-out { pointer-events: none; }
-    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 1.2s ease; }
+    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; transition: opacity 1.2s ease; }
     #intro-overlay.fade-out #intro-video { opacity: 0; }
     #intro-scroll-cue { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #fff; cursor: pointer; transition: opacity .3s ease; }
     #intro-overlay.fade-out #intro-scroll-cue { opacity: 0; }
     #intro-scroll-cue svg { width: 22px; height: 22px; animation: scroll-cue-bounce 1.8s ease-in-out infinite; }
     #intro-scroll-cue span { font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
     @keyframes scroll-cue-bounce { 0%,100% { transform: translateY(0); opacity: .7; } 50% { transform: translateY(8px); opacity: 1; } }
+    @media (max-width: 760px) and (orientation: portrait) {
+      #intro-overlay { background-image: url('<%= asset('/assets/video/teaser-poster-mobile.jpg') %>'); }
+      #intro-scroll-cue { bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 18px)); }
+    }
     @media (prefers-reduced-motion: reduce) { #intro-overlay { display: none; } #intro-scroll-cue svg { animation: none; } }
 
     /* ── Sections shared ── */
@@ -356,7 +360,8 @@
     .trust:hover .trust-heart, .hero-inline-heart:hover { transform: scale(1.2) rotate(4deg); animation-play-state: paused; }
 
     footer { border-top: 1px solid var(--line); padding: 34px 0 40px; color: var(--muted); font-size: .76rem; }
-    .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .footer-customs { flex: 1 0 100%; margin: 0; font-size: .7rem; line-height: 1.55; }
     .footer-links { display: flex; gap: 22px; }
     .footer-links a:hover { color: var(--ink); }
 
@@ -456,8 +461,9 @@
 </head>
 <body>
   <div id="intro-overlay">
-    <video id="intro-video" autoplay muted playsinline preload="auto" poster="/assets/video/teaser-poster.jpg" aria-label="Wolkenworte Teaser-Video">
-      <source src="/assets/video/teaser.mp4" type="video/mp4" />
+    <video id="intro-video" autoplay muted playsinline preload="auto" aria-label="Wolkenworte Teaser-Video">
+      <source src="<%= asset('/assets/video/teaser-mobile.mp4') %>" type="video/mp4" media="(max-width: 760px) and (orientation: portrait)" />
+      <source src="<%= asset('/assets/video/teaser.mp4') %>" type="video/mp4" />
     </video>
     <div id="intro-scroll-cue" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -984,6 +990,7 @@
     <div class="shell footer-inner">
       <span>© 2026 Wolkenworte · Ein Produkt der JUSA Engineering UG (haftungsbeschränkt)</span>
       <span class="footer-links"><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a></span>
+      <p class="footer-customs">Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</p>
     </div>
   </footer>
 
