@@ -1,13 +1,36 @@
 'use strict';
 
 const crypto = require('crypto');
+const { createCanvas, loadImage } = require('canvas');
 const db = require('./db');
 const storage = require('./privateStorage');
 const { buildProviderPrintSvg } = require('./mugPrint');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const MIME_TYPE = 'image/svg+xml';
+const MIME_TYPE = 'image/png';
 const MAX_ARTIFACT_BYTES = 24 * 1024 * 1024;
+const MAX_PENDING_RENDERS = 4;
+let renderTail = Promise.resolve();
+let pendingRenders = 0;
+
+async function withRenderSlot(work) {
+  if (pendingRenders >= MAX_PENDING_RENDERS) {
+    const error = new Error('Die Druckdatei kann gerade nicht erzeugt werden. Bitte versucht es erneut.');
+    error.code = 'PRINT_RENDER_BUSY';
+    throw error;
+  }
+  pendingRenders += 1;
+  const previous = renderTail;
+  let release;
+  renderTail = new Promise((resolve) => { release = resolve; });
+  await previous;
+  try {
+    return await work();
+  } finally {
+    pendingRenders -= 1;
+    release();
+  }
+}
 
 function parseSnapshot(orderItem) {
   try {
@@ -40,6 +63,28 @@ function ensureBudget(deadline, minimumMs = 500) {
   }
 }
 
+async function renderProductSurfaces(product, design) {
+  const rendered = [];
+  for (const surface of product.printSurfaces) {
+    const surfaceDesign = design.surfaces[surface.key];
+    if (!Array.isArray(surfaceDesign)) throw new Error('Eine Druckfläche fehlt in der Bestellung.');
+    const svg = Buffer.from(buildProviderPrintSvg(product, surfaceDesign), 'utf8');
+    const image = await loadImage(svg);
+    const canvas = createCanvas(product.printFile.width, product.printFile.height);
+    canvas.getContext('2d').drawImage(image, 0, 0);
+    const bytes = await new Promise((resolve, reject) => {
+      canvas.toBuffer((error, output) => error ? reject(error) : resolve(output), 'image/png');
+    });
+    if (!bytes.length || bytes.length > MAX_ARTIFACT_BYTES) {
+      const error = new Error('Die erzeugte Druckdatei hat eine ungültige Größe.');
+      error.code = 'PRINT_FILE_TOO_LARGE';
+      throw error;
+    }
+    rendered.push({ surfaceKey: surface.key, placement: surface.printfulType || surface.key, bytes });
+  }
+  return rendered;
+}
+
 async function renderItemSurfaces(orderItem) {
   const snapshot = parseSnapshot(orderItem);
   const product = resolveProductOrientation(getProduct(snapshot.productKey), snapshot.orientation);
@@ -48,18 +93,16 @@ async function renderItemSurfaces(orderItem) {
       Number(snapshot.printHeight) !== product.printFile.height) {
     throw new Error('Die gespeicherte Druckkonfiguration passt nicht zum Produkt.');
   }
+  return withRenderSlot(() => renderProductSurfaces(product, snapshot.design));
+}
 
-  const design = snapshot.design;
-
-  return product.printSurfaces.map((surface) => {
-    const surfaceDesign = design.surfaces[surface.key];
-    if (!Array.isArray(surfaceDesign)) throw new Error('Eine Druckfläche fehlt in der Bestellung.');
-    const bytes = Buffer.from(buildProviderPrintSvg(product, surfaceDesign), 'utf8');
-    if (!bytes.length || bytes.length > MAX_ARTIFACT_BYTES) {
-      throw new Error('Die erzeugte Druckdatei hat eine ungültige Größe.');
-    }
-    return { surfaceKey: surface.key, placement: surface.printfulType || surface.key, bytes };
-  });
+async function validateProductPrintability(product, design) {
+  // An RGBA surface below this bound cannot approach the Storage cap even
+  // when PNG compression is ineffective. Larger surfaces are rendered before
+  // checkout so an unprintable image never becomes a paid order.
+  if (product.printFile.width * product.printFile.height * 4 <=
+      MAX_ARTIFACT_BYTES - 1024 * 1024) return;
+  await withRenderSlot(() => renderProductSurfaces(product, design));
 }
 
 async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
@@ -67,7 +110,7 @@ async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
   const sha256 = crypto.createHash('sha256').update(rendered.bytes).digest('hex');
   const candidateId = crypto.randomBytes(18).toString('base64url');
   const candidateNonce = crypto.randomBytes(24).toString('base64url');
-  const objectKey = `print-artifacts/${candidateId}/${sha256}.svg`;
+  const objectKey = `print-artifacts/${candidateId}/${sha256}.png`;
   const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
   let artifact = await db.getOrCreatePrintArtifact({
     id: candidateId,
@@ -148,4 +191,5 @@ module.exports = {
   ensureOrderArtifacts,
   loadActiveArtifactBytes,
   parseSnapshot,
+  validateProductPrintability,
 };

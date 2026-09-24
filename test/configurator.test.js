@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const vm = require('node:vm');
 const { createCanvas } = require('canvas');
 const { io: ioClient } = require('socket.io-client');
@@ -1157,6 +1158,33 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   assert.ok(svg.includes('>glück</text>'));
   assert.ok(!svg.includes('später'), 'words submitted after approval must never enter the saved print file');
   assert.equal((svg.match(/<text /g) || []).length, snapshot.length);
+});
+
+test('oversized raster artwork is rejected before it can become a paid configuration', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { title: 'Druckdatei Größenprüfung' });
+  const positions = [[2200, 2100], [7000, 2100], [2200, 5700], [7000, 5700]];
+  const design = positions.map(([x, y], index) => {
+    const source = createCanvas(850, 850);
+    const context = source.getContext('2d');
+    const pixels = context.createImageData(850, 850);
+    pixels.data.set(crypto.randomBytes(pixels.data.length));
+    context.putImageData(pixels, 0, 0);
+    return {
+      id: `image-${index}`, type: 'image', src: source.toDataURL('image/jpeg', .65),
+      x, y, width: 1900, height: 1900, angle: 0,
+    };
+  });
+  const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      productKey: 'throw-blanket-50x60in', theme: 'pastel', words: [['liebe', 1]],
+      designs: { default: design },
+    }),
+  });
+  assert.equal(response.status, 422);
+  assert.equal((await response.json()).error, 'print_file_too_large');
 });
 
 test('a sparse automatic design saves and freezes the exact preview geometry', async (t) => {

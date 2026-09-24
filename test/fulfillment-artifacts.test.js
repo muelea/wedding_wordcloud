@@ -148,7 +148,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     const artifacts = await db.getOrderPrintArtifacts(paid.order.id);
     assert.equal(artifacts.length, 1);
     assert.equal(artifacts[0].storage_status, 'active');
-    assert.match(artifacts[0].object_key, /^print-artifacts\/[A-Za-z0-9_-]{24}\/[a-f0-9]{64}\.svg$/);
+    assert.match(artifacts[0].object_key, /^print-artifacts\/[A-Za-z0-9_-]{24}\/[a-f0-9]{64}\.png$/);
     assert.equal(objects.size, 1);
     const fileUrl = providerCalls[0].payload.items[0].files[0].url;
     assert.equal(fileUrl, `${hosted.baseUrl}/api/print-files/${artifacts[0].id}/${artifacts[0].access_nonce}`);
@@ -156,7 +156,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
 
     const valid = await fetch(fileUrl);
     assert.equal(valid.status, 200);
-    assert.equal(valid.headers.get('content-type'), 'image/svg+xml');
+    assert.equal(valid.headers.get('content-type'), 'image/png');
     assert.equal(valid.headers.get('cache-control'), 'private, no-store');
     const bytes = Buffer.from(await valid.arrayBuffer());
     assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), artifacts[0].sha256);
@@ -164,14 +164,22 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     const snapshot = JSON.parse(orderItem.configuration_snapshot_json);
     const { buildProviderPrintSvg } = require('../src/mugPrint');
     const { getProduct, resolveProductOrientation } = require('../src/products');
+    const { createCanvas, loadImage } = require('canvas');
     const product = resolveProductOrientation(getProduct(snapshot.productKey), snapshot.orientation);
-    assert.equal(
-      bytes.toString('utf8'),
-      buildProviderPrintSvg(product, snapshot.design.surfaces.default),
-      'the exact immutable outlined snapshot is the file URL handed to Printful'
-    );
-    assert.match(bytes.toString('utf8'), /data-font-rendering="outlined"/);
-    assert.doesNotMatch(bytes.toString('utf8'), /<text\b|@font-face|font-family=/);
+    const svg = buildProviderPrintSvg(product, snapshot.design.surfaces.default);
+    assert.match(svg, /data-font-rendering="outlined"/);
+    assert.doesNotMatch(svg, /<text\b|@font-face|font-family=/);
+    const image = await loadImage(Buffer.from(svg));
+    const canvas = createCanvas(product.printFile.width, product.printFile.height);
+    canvas.getContext('2d').drawImage(image, 0, 0);
+    assert.deepEqual(bytes, canvas.toBuffer('image/png'),
+      'the exact immutable outlined snapshot is rasterized into the file URL handed to Printful');
+    const png = await loadImage(bytes);
+    assert.equal(png.width, product.printFile.width);
+    assert.equal(png.height, product.printFile.height);
+    const edge = createCanvas(1, 1);
+    edge.getContext('2d').drawImage(png, 0, 0);
+    assert.equal(edge.getContext('2d').getImageData(0, 0, 1, 1).data[3], 0);
 
     const wrongNonce = await fetch(`${hosted.baseUrl}/api/print-files/${artifacts[0].id}/${'x'.repeat(32)}`);
     assert.equal(wrongNonce.status, 404);
@@ -310,6 +318,44 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     }
   });
 
+  await t.test('provider smoke claims are exact and may inspect unquoted drafts only', async () => {
+    const smoke = await db.createProviderSmokeOrder({
+      productKey: 'white-glossy-mug-duo-11oz',
+      recipient: { name: 'Smoke Test', address1: 'Testweg 1', city: 'Berlin', zip: '10115', country_code: 'DE' },
+    });
+    const ordinary = await db.claimFulfillmentOrder({ orderId: smoke.order.id, lockedBy: 'ordinary' });
+    assert.equal(ordinary, null);
+    assert.ok(Date.parse(smoke.order.fulfillment_next_attempt_at) > Date.now() + 90 * 365 * 86400000);
+    await assert.rejects(db.claimFulfillmentOrder({ lockedBy: 'smoke', providerSmoke: true }),
+      /exact order id/);
+    const claimed = await db.claimFulfillmentOrder({ orderId: smoke.order.id, lockedBy: 'smoke', providerSmoke: true });
+    assert.equal(claimed.id, smoke.order.id);
+    printful.reconcilePrintfulOrder = originalReconcile;
+    const originalFetch = global.fetch;
+    global.fetch = async (url, options = {}) => {
+      if (String(url).includes('/orders/%40') && options.method === 'GET') {
+        return new Response(JSON.stringify({ code: 200, result: {
+          id: 994, status: 'draft', costs: { currency: 'EUR', total: '19.00' },
+        } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error(`unexpected fetch ${options.method} ${url}`);
+    };
+    try {
+      const payload = { external_id: fulfillment.shipmentExternalId(smoke.order, 0), items: [] };
+      const draft = await printful.reconcilePrintfulOrder({ payload, expectedCosts: {}, providerSmoke: true });
+      assert.equal(draft.status, 'draft');
+      assert.equal(draft.printfulCosts.totalCents, 1900);
+      await assert.rejects(printful.reconcilePrintfulOrder({ payload, expectedCosts: {},
+        providerSmoke: true, confirm: true }), /must never confirm/);
+    } finally {
+      global.fetch = originalFetch;
+      printful.reconcilePrintfulOrder = async (options) => {
+        providerCalls.push(options);
+        return { printfulOrderId: 'draft-fulfillment', status: 'draft', mocked: false };
+      };
+    }
+  });
+
   await t.test('signed Printful callbacks are replay-safe and unsigned callbacks change nothing', async () => {
     const artifact = (await db.getOrderPrintArtifacts(paid.order.id))[0];
     const shipment = (await db.getOrderShipments(paid.order.id))[0];
@@ -385,6 +431,16 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     assert.equal(expiredCapability.status, 404, 'an expired capability is unavailable even under support hold');
 
     await hosted.query('UPDATE print_artifacts SET support_hold = false WHERE id = $1', [artifact.id]);
+    const interrupted = await db.claimExpiredPrintArtifact();
+    assert.equal(interrupted.id, artifact.id);
+    await hosted.query("UPDATE print_artifacts SET deletion_claimed_at = transaction_timestamp() - interval '6 minutes' WHERE id = $1", [artifact.id]);
+    assert.ok((await db.getOperationalStatus()).storage.printArtifactFailures >= 1);
+    const reclaimed = await db.claimExpiredPrintArtifact();
+    assert.equal(reclaimed.id, artifact.id);
+    assert.equal(reclaimed.deletion_attempts, interrupted.deletion_attempts + 1);
+    assert.equal(await db.finishPrintArtifactDeletion(artifact.id, interrupted.deletion_attempts), false);
+    assert.equal(await db.failPrintArtifactDeletion(artifact.id, 'stale', interrupted.deletion_attempts), null);
+    await db.failPrintArtifactDeletion(artifact.id, 'retry', reclaimed.deletion_attempts);
     failNextRemoval = true;
     response = await run();
     assert.equal(response.status, 200);

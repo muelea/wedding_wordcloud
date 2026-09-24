@@ -70,12 +70,17 @@ async function main() {
   await db.assertDatabaseReady();
   let smoke;
   try {
-    smoke = await db.createProviderSmokeOrder({ productKey, recipient });
+    smoke = await db.createProviderSmokeOrder({
+      productKey, recipient, includeRaster: process.argv.includes('--sample-image'),
+    });
     const completed = await fulfillment.processOrder(smoke.order.id, { providerSmoke: true });
     if (completed?.fulfillment_status !== 'draft') throw new Error('Printful-Draft wurde nicht sicher erstellt.');
     const externalId = fulfillment.shipmentExternalId(smoke.order, 0);
     if (!await waitForPrintFiles(externalId)) throw new Error('Printful hat die Druckdatei nicht erfolgreich verarbeitet.');
-    await db.finishProviderSmokeRun(smoke.smokeRun.id, { succeeded: true, outcomeCode: 'draft_files_ok' });
+    await db.finishProviderSmokeRun(smoke.smokeRun.id, {
+      succeeded: true,
+      outcomeCode: process.argv.includes('--sample-image') ? 'draft_raster_ok' : 'draft_files_ok',
+    });
     console.log(`[printful-smoke] Draft und Druckdatei erfolgreich geprüft; Produkt ${productKey}.`);
   } catch (error) {
     if (smoke?.smokeRun?.id) {

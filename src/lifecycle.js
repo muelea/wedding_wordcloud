@@ -27,9 +27,9 @@ async function cleanupOneExpiredPrintArtifact(excludeIds) {
   excludeIds.add(artifact.id);
   try {
     await storage.remove(artifact.object_key);
-    await db.finishPrintArtifactDeletion(artifact.id);
+    await db.finishPrintArtifactDeletion(artifact.id, artifact.deletion_attempts);
   } catch {
-    await db.failPrintArtifactDeletion(artifact.id, 'storage_delete_failed');
+    await db.failPrintArtifactDeletion(artifact.id, 'storage_delete_failed', artifact.deletion_attempts);
   }
   return artifact.id;
 }
@@ -38,10 +38,14 @@ async function runRetentionBatch({
   deadline = null,
   eventLimit = 2,
   artifactLimit = 6,
+  quoteLimit = 500,
 } = {}) {
-  const summary = { events: 0, artifacts: 0 };
+  const summary = { events: 0, artifacts: 0, quotes: 0 };
   const attemptedArtifacts = new Set();
-  if (hasBudget(deadline)) {
+  if (quoteLimit > 0 && hasBudget(deadline, 1_000)) {
+    summary.quotes = await db.cleanupAbandonedQuotes(quoteLimit);
+  }
+  if (eventLimit > 0 && hasBudget(deadline)) {
     const eventIds = await db.getExpiredEventIds(eventLimit);
     for (const eventId of eventIds) {
       if (!hasBudget(deadline, 4_000)) break;

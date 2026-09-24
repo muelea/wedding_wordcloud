@@ -10,6 +10,7 @@ const rateLimits = require('../rateLimits');
 const stripe = require('../stripe');
 const printful = require('../printful');
 const printfulMockups = require('../printfulMockups');
+const printArtifacts = require('../printArtifacts');
 const { shippingTermsDiffer } = require('../printfulShipping');
 const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
@@ -1021,6 +1022,18 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const design = normalizeProductDesigns(req.body, product, event.locale);
     if (!design) {
       return res.status(400).json({ error: 'invalid_design' });
+    }
+
+    try {
+      await printArtifacts.validateProductPrintability(product, design);
+    } catch (error) {
+      if (error.code === 'PRINT_FILE_TOO_LARGE') {
+        return res.status(422).json({ error: 'print_file_too_large' });
+      }
+      if (error.code === 'PRINT_RENDER_BUSY') {
+        return res.status(503).json({ error: 'print_render_busy' });
+      }
+      throw error;
     }
 
     let configuration;

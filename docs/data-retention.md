@@ -1,6 +1,6 @@
 # Wolkenworte data-retention record
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-23
 
 This document records what the application enforces today and which commerce
 retention periods still require a German/EU legal and tax decision before live
@@ -13,13 +13,14 @@ customer support, bookkeeping or statutory evidence.
 |---|---:|---|
 | Word-cloud event, shared words, contribution receipts and event archives | 365 days from event creation | Postgres expiry plus the bounded maintenance cleanup |
 | Unpaid product configurations | 365 days from event creation | Removed with their expired event unless retained by a paid order |
-| Checkout quote containing address and current provider price | 5–120 minutes, 30 minutes by default | It cannot start Checkout after expiry; abandoned expired quotes are removed after a one-day cleanup grace period |
+| Checkout quote containing address and current provider price | Usable for 5–120 minutes, 30 minutes by default; eligible for deletion one day after expiry | It cannot start Checkout after expiry; each authenticated maintenance run deletes up to 500 oldest abandoned quotes before provider work |
 | Frozen paid print artifact | at least 90 days from submission, or 60 days after delivery | Expiry is extended by fulfillment/webhook state; Storage object is deleted before metadata |
 | Reserved event slug | Indefinite | Deliberately retained so an expired word-cloud URL is never assigned to another organizer |
 | Hashed reset-attempt source identity | No independent customer profile | Contains only an HMAC, never a raw IP; its event relationship is removed with the expired event |
 
 Support holds override print-artifact deletion. Failed Storage deletion remains
-retryable and prevents removal of the last metadata row.
+retryable and prevents removal of the last metadata row. A deletion interrupted
+after claiming the artifact becomes retryable after five minutes.
 
 ## Decision required before live sales
 

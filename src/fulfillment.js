@@ -273,6 +273,7 @@ async function executeClaimedOrder(order, { deadline = null, providerSmoke = fal
             payload,
             expectedCosts,
             confirm: mode === 'live',
+            providerSmoke,
             timeoutMs: providerTimeout(deadline),
           });
           await renew(order, deadline);
@@ -354,7 +355,10 @@ async function processOrder(orderId, options = {}) {
   if (stopping || workerBusy) return db.getOrderById(orderId);
   workerBusy = true;
   try {
-    const order = await db.claimFulfillmentOrder({ orderId, lockedBy: WORKER_ID, leaseMs: LEASE_MS });
+    const order = await db.claimFulfillmentOrder({
+      orderId, lockedBy: WORKER_ID, leaseMs: LEASE_MS,
+      providerSmoke: Boolean(options.providerSmoke),
+    });
     if (!order) return db.getOrderById(orderId);
     // Keep the busy flag until all provider and database work has settled.
     // Returning the promise without awaiting it runs finally too early.

@@ -1,6 +1,6 @@
 # Wolkenworte launch-readiness checklist
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-23
 
 The hosted-architecture refactor is complete. Wolkenworte now runs locally and
 on the Fly hosted test environment from the same application code, ordered
@@ -98,16 +98,20 @@ implementation history is intentionally not maintained as a step-by-step diary.
 
 ### Printful verification
 
-- [ ] Run the guarded unconfirmed-draft smoke for every materially different
-  placement type, including separate front/back output.
-- [ ] Confirm that Printful downloads the frozen capability URLs and accepts
-  the generated SVG files. Switch the final artifact format to PNG only if the
-  provider test proves it necessary.
-- [ ] Inspect the resulting mockups and cancel or remove synthetic drafts in
-  Printful after verification.
+- [x] Run the guarded unconfirmed-draft smoke for all 12 catalog variants,
+  including separate front/back output and an embedded sample image
+  (2026-09-23).
+- [x] Confirm that Printful downloads the frozen capability URLs. The first
+  real SVG was rejected; full-resolution transparent PNG files reached `ok`
+  on all 12 subsequent product drafts (2026-09-23).
+- [x] Inspect representative Printful previews for the mug, blanket and
+  two-sided pillow, then cancel all 13 synthetic drafts, including the failed
+  SVG draft (2026-09-23).
 - [ ] Run `npm run printful:configure-webhook -- --confirm-replace-webhook`,
   activate the returned signing values with `npm run deploy:hosted` and verify
-  replay-safe status callbacks.
+  replay-safe status callbacks. The current Printful order token lacks the
+  `webhooks` scope, so a scoped replacement token and explicit approval for
+  provider activation and deployment are prerequisites.
 - [ ] Keep `PRINTFUL_FULFILLMENT_MODE=mock`,
   `PRINTFUL_ALLOW_ORDER_WRITES=false` and
   `PRINTFUL_CONFIRM_LIVE_ORDERS=false` until the cutover is explicitly

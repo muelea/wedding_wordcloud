@@ -10,7 +10,7 @@ const log = require('./structuredLog');
 const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
-const REQUIRED_SCHEMA_VERSION = '3';
+const REQUIRED_SCHEMA_VERSION = '4';
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
 const MAX_ACTIVE_UNPAID_CONFIGURATIONS = 2000;
@@ -1189,8 +1189,9 @@ async function recordTestPayment(options) {
   return recordSuccessfulPayment({ ...options, livemode: false });
 }
 
-async function claimFulfillmentOrder({ orderId = null, lockedBy, leaseMs = 60_000 } = {}) {
+async function claimFulfillmentOrder({ orderId = null, lockedBy, leaseMs = 60_000, providerSmoke = false } = {}) {
   if (!lockedBy || String(lockedBy).length > 120) throw new Error('invalid fulfillment lease owner');
+  if (providerSmoke && orderId == null) throw new Error('provider smoke claims require an exact order id');
   const safeLeaseMs = Number.isSafeInteger(leaseMs) && leaseMs >= 15_000 && leaseMs <= 300_000
     ? leaseMs
     : 60_000;
@@ -1199,9 +1200,10 @@ async function claimFulfillmentOrder({ orderId = null, lockedBy, leaseMs = 60_00
       SELECT id
       FROM orders
       WHERE ($1::bigint IS NULL OR id = $1)
+        AND provider_smoke = $4
         AND status IN ('paid_test', 'paid')
         AND fulfillment_attempts < 3
-        AND fulfillment_next_attempt_at <= transaction_timestamp()
+        AND ($4::boolean OR fulfillment_next_attempt_at <= transaction_timestamp())
         AND (
           fulfillment_status IN ('pending', 'failed') OR
           (fulfillment_status = 'processing' AND fulfillment_locked_until <= transaction_timestamp())
@@ -1223,7 +1225,7 @@ async function claimFulfillmentOrder({ orderId = null, lockedBy, leaseMs = 60_00
     FROM candidate
     WHERE target.id = candidate.id
     RETURNING target.*
-  `, [orderId, String(lockedBy), safeLeaseMs]);
+  `, [orderId, String(lockedBy), safeLeaseMs, Boolean(providerSmoke)]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -1586,16 +1588,24 @@ function checkoutQuoteTtlMs() {
   return Math.round(safeMinutes * 60 * 1000);
 }
 
-async function cleanupAbandonedQuotes() {
-  await getPool().query(`
-    DELETE FROM checkout_quotes
-    WHERE expires_at < transaction_timestamp() - interval '1 day'
-      AND NOT EXISTS (SELECT 1 FROM orders WHERE orders.quote_id = checkout_quotes.id)
-  `);
+async function cleanupAbandonedQuotes(limit = 100) {
+  const safeLimit = Number.isSafeInteger(limit) && limit > 0 && limit <= 500 ? limit : 100;
+  const result = await getPool().query(`
+    WITH expired AS (
+      SELECT id FROM checkout_quotes
+      WHERE expires_at < transaction_timestamp() - interval '1 day'
+        AND NOT EXISTS (SELECT 1 FROM orders WHERE orders.quote_id = checkout_quotes.id)
+      ORDER BY expires_at, id
+      FOR UPDATE SKIP LOCKED
+      LIMIT $1
+    )
+    DELETE FROM checkout_quotes q USING expired
+    WHERE q.id = expired.id
+  `, [safeLimit]);
+  return result.rowCount;
 }
 
 async function createCheckoutQuote({ eventId, configurationId, configurationIds, recipient, shipments, printfulCosts, quote }) {
-  await cleanupAbandonedQuotes();
   const id = crypto.randomBytes(18).toString('base64url');
   const expiresAt = new Date(Date.now() + checkoutQuoteTtlMs());
   const storedConfigurationIds = uniqueConfigurationIds(configurationIds || [configurationId]);
@@ -2059,7 +2069,9 @@ async function claimExpiredPrintArtifact(excludeIds = []) {
     const selected = await client.query(`
       SELECT id FROM print_artifacts
       WHERE support_hold = false AND expires_at <= transaction_timestamp()
-        AND storage_status IN ('active', 'delete_failed')
+        AND (storage_status IN ('active', 'delete_failed') OR
+          (storage_status = 'deleting' AND
+           (deletion_claimed_at IS NULL OR deletion_claimed_at < transaction_timestamp() - interval '5 minutes')))
         AND NOT (id = ANY($1::text[]))
       ORDER BY expires_at, id
       FOR UPDATE SKIP LOCKED
@@ -2069,7 +2081,7 @@ async function claimExpiredPrintArtifact(excludeIds = []) {
     const claimed = await client.query(`
       UPDATE print_artifacts
       SET storage_status = 'deleting', deletion_attempts = deletion_attempts + 1,
-          last_delete_error = null
+          last_delete_error = null, deletion_claimed_at = transaction_timestamp()
       WHERE id = $1
       RETURNING *
     `, [selected.rows[0].id]);
@@ -2077,20 +2089,21 @@ async function claimExpiredPrintArtifact(excludeIds = []) {
   });
 }
 
-async function finishPrintArtifactDeletion(id) {
+async function finishPrintArtifactDeletion(id, deletionAttempts) {
   const result = await getPool().query(`
-    DELETE FROM print_artifacts WHERE id = $1 AND storage_status = 'deleting'
-  `, [id]);
+    DELETE FROM print_artifacts
+    WHERE id = $1 AND storage_status = 'deleting' AND deletion_attempts = $2
+  `, [id, deletionAttempts]);
   return result.rowCount === 1;
 }
 
-async function failPrintArtifactDeletion(id, errorCode = 'storage_delete_failed') {
+async function failPrintArtifactDeletion(id, errorCode = 'storage_delete_failed', deletionAttempts) {
   const result = await getPool().query(`
     UPDATE print_artifacts
-    SET storage_status = 'delete_failed', last_delete_error = $1
-    WHERE id = $2 AND storage_status = 'deleting'
+    SET storage_status = 'delete_failed', last_delete_error = $1, deletion_claimed_at = null
+    WHERE id = $2 AND storage_status = 'deleting' AND deletion_attempts = $3
     RETURNING *
-  `, [String(errorCode).slice(0, 240), id]);
+  `, [String(errorCode).slice(0, 240), id, deletionAttempts]);
   return rowToBoundary(result.rows[0]);
 }
 
@@ -2149,19 +2162,19 @@ async function getOperationalStatus() {
       (SELECT extract(epoch from transaction_timestamp() - max(completed_at))::bigint
        FROM maintenance_runs WHERE status = 'succeeded') AS maintenance_success_age_seconds,
       (SELECT count(*)::integer FROM orders
-       WHERE status IN ('paid_test', 'paid')
+       WHERE provider_smoke = false AND status IN ('paid_test', 'paid')
          AND fulfillment_status IN ('pending', 'failed', 'processing')) AS fulfillment_actionable,
       (SELECT count(*)::integer FROM orders
-       WHERE status IN ('paid_test', 'paid') AND fulfillment_status = 'blocked') AS fulfillment_blocked,
+       WHERE provider_smoke = false AND status IN ('paid_test', 'paid') AND fulfillment_status = 'blocked') AS fulfillment_blocked,
       (SELECT count(*)::integer FROM orders
-       WHERE status IN ('paid_test', 'paid') AND fulfillment_status = 'processing'
+       WHERE provider_smoke = false AND status IN ('paid_test', 'paid') AND fulfillment_status = 'processing'
          AND fulfillment_locked_until <= transaction_timestamp()) AS fulfillment_expired_leases,
       (SELECT count(*)::integer FROM orders
-       WHERE status IN ('paid_test', 'paid')
+       WHERE provider_smoke = false AND status IN ('paid_test', 'paid')
          AND fulfillment_status IN ('pending', 'failed', 'processing')
          AND paid_at < transaction_timestamp() - interval '5 minutes') AS fulfillment_over_five_minutes,
       (SELECT coalesce(extract(epoch from transaction_timestamp() - min(coalesce(fulfillment_updated_at, paid_at)))::bigint, 0)
-       FROM orders WHERE status IN ('paid_test', 'paid')
+       FROM orders WHERE provider_smoke = false AND status IN ('paid_test', 'paid')
          AND fulfillment_status IN ('pending', 'failed', 'processing')) AS oldest_fulfillment_age_seconds,
       (SELECT count(*)::integer FROM email_jobs
        WHERE status IN ('pending', 'failed', 'processing')) AS email_actionable,
@@ -2173,8 +2186,11 @@ async function getOperationalStatus() {
       (SELECT coalesce(extract(epoch from transaction_timestamp() - min(created_at))::bigint, 0)
        FROM email_jobs WHERE status IN ('pending', 'failed', 'processing')) AS oldest_email_age_seconds,
       (SELECT count(*)::integer FROM print_artifacts
-       WHERE storage_status IN ('uploading', 'delete_failed')
-         AND created_at < transaction_timestamp() - interval '10 minutes') AS print_artifact_failures,
+       WHERE (storage_status IN ('uploading', 'delete_failed')
+         AND created_at < transaction_timestamp() - interval '10 minutes')
+         OR (storage_status = 'deleting' AND
+           (deletion_claimed_at IS NULL OR deletion_claimed_at < transaction_timestamp() - interval '5 minutes'))
+       ) AS print_artifact_failures,
       (SELECT count(*)::integer FROM checkout_quotes
        WHERE expires_at <= transaction_timestamp()) AS expired_quotes,
       (SELECT count(*)::integer FROM events
@@ -2589,11 +2605,22 @@ async function recordPrintfulWebhook({
 }
 
 // ── Explicit operator-only provider smoke data ──────────────────────────
-async function createProviderSmokeOrder({ productKey, recipient }) {
+async function createProviderSmokeOrder({ productKey, recipient, includeRaster = false }) {
   const product = resolveProductOrientation(getProduct(productKey), 'default');
   if (!product) throw new Error('provider smoke product is invalid');
   const configurationId = crypto.randomBytes(12).toString('base64url');
   const quoteId = `smoke_${crypto.randomBytes(12).toString('base64url')}`;
+  let rasterSource = null;
+  if (includeRaster) {
+    const { createCanvas } = require('canvas');
+    const sample = createCanvas(32, 32);
+    const context = sample.getContext('2d');
+    context.fillStyle = '#167c89';
+    context.fillRect(0, 0, 32, 32);
+    context.fillStyle = '#fff';
+    context.fillRect(8, 8, 16, 16);
+    rasterSource = sample.toDataURL('image/png');
+  }
   const design = {
     version: 2,
     surfaces: Object.fromEntries(product.printSurfaces.map((surface, index) => [
@@ -2612,7 +2639,16 @@ async function createProviderSmokeOrder({ productKey, recipient }) {
         fontStyle: 'normal',
         underline: false,
         linethrough: false,
-      }],
+      }, ...(rasterSource ? [{
+        id: `smoke-image-${index + 1}`,
+        type: 'image',
+        src: rasterSource,
+        x: product.printFile.width * 0.75,
+        y: product.printFile.height * 0.75,
+        width: 100,
+        height: 100,
+        angle: 0,
+      }] : [])],
     ])),
   };
   return withTransaction(async (client) => {
@@ -2640,7 +2676,7 @@ async function createProviderSmokeOrder({ productKey, recipient }) {
       ) VALUES (
         null, 'provider-smoke', 'Wolkenworte Provider Smoke', $1, $2::jsonb,
         $3, 'paid', $4::jsonb, 'EUR', 0, 0, 0, 0, 'live',
-        transaction_timestamp(), 'pending', transaction_timestamp(), true
+        transaction_timestamp(), 'pending', transaction_timestamp() + interval '100 years', true
       ) RETURNING *
     `, [configuration.id, jsonValue([configuration.id]), quoteId, jsonValue(recipient)]);
     const order = rowToBoundary(orderResult.rows[0]);

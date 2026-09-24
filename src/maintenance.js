@@ -23,6 +23,9 @@ async function execute(triggerKind) {
     maintenanceRunId: run.id, operation: 'maintenance', outcome: 'running',
   });
   try {
+    // Address-bearing abandoned quotes have a fixed retention promise.
+    // Run this bounded delete before provider work can consume the wake-up.
+    const quotesCleaned = await db.cleanupAbandonedQuotes(500);
     const fulfillmentSummary = await fulfillment.drainDueJobs({
       maxJobs: 1,
       deadline: startedAt + FULFILLMENT_BUDGET_MS,
@@ -33,6 +36,7 @@ async function execute(triggerKind) {
     });
     const retentionSummary = await lifecycle.runRetentionBatch({
       deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250,
+      quoteLimit: 0,
     });
     const summary = {
       fulfillmentClaimed: fulfillmentSummary.claimed,
@@ -42,6 +46,7 @@ async function execute(triggerKind) {
       emailsBlocked: emailSummary.blocked,
       eventsCleaned: retentionSummary.events,
       artifactsCleaned: retentionSummary.artifacts,
+      quotesCleaned,
     };
     await db.finishMaintenanceRun(run.id, summary);
     log.info('maintenance_completed', {

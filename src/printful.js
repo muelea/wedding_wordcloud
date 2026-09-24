@@ -22,12 +22,9 @@ const { normalizeShippingRate } = require('./printfulShipping');
  * charge the Printful account. src/fulfillment.js owns the switches that
  * decide whether either external write is allowed.
  *
- * Printful's print-file upload expects a URL it can fetch (or a base64
- * payload for some endpoints) — not raw SVG text. Whether Printful's
- * pipeline accepts SVG directly or needs a print-resolution raster (PNG)
- * instead is still unverified against a real provider draft — see
- * docs/launch-readiness.md — but the immutable URL itself is real, not a
- * placeholder.
+ * Printful's print-file upload expects a URL it can fetch. The paid artifact
+ * is a full-resolution transparent PNG rasterized from the immutable outlined
+ * SVG. A real unconfirmed draft rejected SVG and accepted PNG.
  */
 
 function isConfigured() {
@@ -433,18 +430,20 @@ async function confirmPrintfulOrder(printfulOrderId, options = {}) {
   };
 }
 
-async function reconcilePrintfulOrder({ payload, expectedCosts, confirm = false, timeoutMs = 10_000 }) {
+async function reconcilePrintfulOrder({ payload, expectedCosts, confirm = false, providerSmoke = false, timeoutMs = 10_000 }) {
+  if (providerSmoke && confirm) throw new Error('provider smoke must never confirm a Printful order');
+  const checkedCosts = (costs) => providerSmoke ? normalizeOrderCosts(costs) : assertOrderCostsMatch(expectedCosts, costs);
   let existing = await getPrintfulOrderByExternalId(payload.external_id, { timeoutMs });
   if (!existing) {
     const created = await createPrintfulOrder({ payload, confirm: false, timeoutMs });
     if (created.mocked) return created;
-    const printfulCosts = assertOrderCostsMatch(expectedCosts, created.printfulCosts);
+    const printfulCosts = checkedCosts(created.printfulCosts);
     if (!confirm) return { ...created, printfulCosts };
     const confirmed = await confirmPrintfulOrder(created.printfulOrderId, { timeoutMs });
     return {
       ...confirmed,
       printfulCosts: confirmed.printfulCosts
-        ? assertOrderCostsMatch(expectedCosts, confirmed.printfulCosts)
+        ? checkedCosts(confirmed.printfulCosts)
         : printfulCosts,
     };
   }
@@ -457,13 +456,13 @@ async function reconcilePrintfulOrder({ payload, expectedCosts, confirm = false,
       409
     );
   }
-  const printfulCosts = assertOrderCostsMatch(expectedCosts, existing.costs);
+  const printfulCosts = checkedCosts(existing.costs);
   if (confirm && status === 'draft') {
     const confirmed = await confirmPrintfulOrder(existing.id, { timeoutMs });
     return {
       ...confirmed,
       printfulCosts: confirmed.printfulCosts
-        ? assertOrderCostsMatch(expectedCosts, confirmed.printfulCosts)
+        ? checkedCosts(confirmed.printfulCosts)
         : printfulCosts,
     };
   }

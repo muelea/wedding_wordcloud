@@ -212,6 +212,40 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
     }
   });
 
+  await t.test('scheduled retention removes abandoned quotes without a new checkout', async () => {
+    const { row: event } = await storedEvent(db, baseUrl, 'Quote Retention Test');
+    const configuration = await configurationFor(db, event.id);
+    const quote = await quoteFor(db, event.id, [configuration]);
+    await db.getPool().query(
+      "UPDATE checkout_quotes SET expires_at = transaction_timestamp() - interval '2 days' WHERE id = $1",
+      [quote.id]
+    );
+    const lifecycle = require('../src/lifecycle');
+    const summary = await lifecycle.runRetentionBatch({ eventLimit: 0, artifactLimit: 0 });
+    assert.equal(summary.quotes, 1);
+    assert.equal(await db.getCheckoutQuote(quote.id), null);
+  });
+
+  await t.test('quote privacy cleanup runs even when provider maintenance fails', async () => {
+    const { row: event } = await storedEvent(db, baseUrl, 'Quote Maintenance Failure Test');
+    const configuration = await configurationFor(db, event.id);
+    const quote = await quoteFor(db, event.id, [configuration]);
+    await db.getPool().query(
+      "UPDATE checkout_quotes SET expires_at = transaction_timestamp() - interval '2 days' WHERE id = $1",
+      [quote.id]
+    );
+    const fulfillment = require('../src/fulfillment');
+    const maintenance = require('../src/maintenance');
+    const originalDrain = fulfillment.drainDueJobs;
+    fulfillment.drainDueJobs = async () => { throw new Error('provider maintenance failed'); };
+    try {
+      await assert.rejects(maintenance.run('test'), /provider maintenance failed/);
+    } finally {
+      fulfillment.drainDueJobs = originalDrain;
+    }
+    assert.equal(await db.getCheckoutQuote(quote.id), null);
+  });
+
   await t.test('route recovery reuses one provider Session after attach interruption', async () => {
     const { row: event } = await storedEvent(db, baseUrl, 'Route Recovery Rosa & Stripe Ralf');
     const configuration = await configurationFor(db, event.id);

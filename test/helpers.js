@@ -14,6 +14,7 @@ const APPLICATION_MIGRATIONS = [
   '20260831000000_wolkenworte_baseline.sql',
   '20260901000000_generalize_event_naming.sql',
   '20260901010000_organizer_pin_and_personal_palettes.sql',
+  '20260923000000_recover_artifact_deletion.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {

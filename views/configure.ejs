@@ -4676,7 +4676,7 @@
         let data = pendingConfiguration?.revision === revision ? pendingConfiguration.data : null;
         if (!data) {
           const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
-            method: 'POST', signal: AbortSignal.timeout(15000),
+            method: 'POST', signal: AbortSignal.timeout(30000),
             headers: { 'Content-Type': 'application/json', 'X-Wolkenworte-Guest-Id': guestId },
             body: JSON.stringify({ productKey: product.key, orientation: selectedOrientation,
               theme: selectedTheme, words, designs }),
@@ -4711,7 +4711,9 @@
         return !currentDesignNeedsSave;
       } catch (error) {
         console.warn('Configurator save failed.', error);
-        setText(errorText, 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
+        setText(errorText, error.message === 'print_file_too_large'
+          ? 'Die Druckdatei ist für dieses Produkt zu groß. Verkleinert oder entfernt einige Bilder und versucht es erneut.'
+          : 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
         return false;
       }
     }

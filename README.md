@@ -159,8 +159,9 @@ frozen snapshot of the word cloud.
    transition the order to `paid_test` exactly once and enqueue the persisted
    fulfillment snapshot. Test payments are then completed by the local `mock`
    worker without making any Printful order request; the confirmation page
-   clearly states that no real fulfillment was created. Live payments and real
-   Printful orders remain hard-disabled until the tax review is signed off.
+   clearly states that no real fulfillment was created. Live payments and
+   payment-triggered Printful fulfillment remain hard-disabled until the tax
+   review is signed off.
    Only verified payment confirmation removes the purchased configuration IDs
    from the local cart and shipping draft. Other products, newer design versions
    remain intact; stale history entries cannot silently
@@ -232,8 +233,9 @@ dotted and dotless I.
   confirmations, leased Resend jobs, shipment/refund/cancellation notices and
   signed replay-safe Resend delivery webhooks are also implemented. Customer
   VAT/Stripe Tax treatment, legal review of the versioned contractual copy
-  and the first explicitly approved controlled Printful draft remain pending
-  before live sales.
+  and activation of signed Printful status webhooks remain pending before live
+  sales. Unconfirmed provider drafts have accepted full-resolution PNG print
+  files for all 12 catalog variants; no real order was confirmed.
 
 ## Guest ownership and lifecycle
 
@@ -283,16 +285,19 @@ expensive layout never runs on the HTTP/Socket.io event loop.
 The authenticated 15-second maintenance runner invokes race-safe cleanup
 primitives in bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
 so due work wakes a stopped Machine; completion is recorded separately from
-pg_net merely queueing a request.
+pg_net merely queueing a request. Address-bearing abandoned checkout quotes
+are removed first, in bounded batches, once they are one day past expiry;
+interrupted private-artifact deletion claims are retried after five minutes.
 
 ## Bundled design fonts
 
 The product editor ships the OFL-licensed Gelasio font as its deterministic
 `Wolkenworte Classic` serif plus Lora, Montserrat, Caveat and Baloo 2. Browser
 preview, local rendering and the Linux container register the same files.
-Browser-facing print previews embed the used fonts; immutable provider SVGs
-convert every glyph to vector outlines before they are frozen. Rendering at
-Printful therefore cannot substitute Georgia, Arial or another host font. The
+Browser-facing print previews embed the used fonts; immutable provider files
+convert every glyph to vector outlines and rasterize the result at the product's
+full print resolution into a transparent PNG. Rendering at Printful therefore
+cannot substitute Georgia, Arial or another host font. The
 existing design-font `OFL.txt` files live next to their binaries. Each family
 includes a fixed 700-weight instance for identical bold output in browsers and
 the Linux print renderer; italic styling uses the same deterministic geometric slant in
@@ -376,7 +381,7 @@ exact surface to a transparent same-aspect PNG (bounded to 3000 px on its
 longest side), uploads it under a separate temporary prefix in the existing
 private Supabase Storage bucket and gives Printful a one-hour signed HTTPS URL.
 The PNG avoids indefinitely pending provider tasks observed with SVG layers;
-the immutable fulfillment SVG uses the same outlined geometry, so neither path
+the immutable fulfillment PNG uses the same outlined geometry, so neither path
 depends on Printful loading a font. Sources are deleted as soon as the task
 completes or fails, on shutdown, or after the one-hour fallback timeout.
 Generated results are cached in memory for 12 hours so reopening the same
@@ -678,7 +683,7 @@ src/
   privateStorage.js        backend-only Supabase Storage boundary
   lifecycle.js             expired-event cleanup + paid-data detachment
   maintenance.js           bounded fulfillment/retention orchestration + heartbeat
-  printArtifacts.js        frozen paid outlined-SVG upload, capability URL + integrity checks
+  printArtifacts.js        frozen paid outlined-PNG upload, capability URL + integrity checks
   clientIdentity.js        trusted normalized/HMAC source identity
   rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
   asyncRoute.js            rejected-promise boundary for Express routes
@@ -737,8 +742,9 @@ Guest words and product text support the complete Unicode Emoji 17 RGI set,
 including skin tones, flags, keycaps and joined family/couple sequences. The
 application canonicalizes equivalent Unicode spellings and renders the pinned
 Noto Emoji 2.051 SVG artwork everywhere. Browser canvases and the configurator
-load locally served renditions of those tracked files; generated SVG print files inline the same
-artwork. The physical product therefore does not depend on whichever native
+load locally served renditions of those tracked files; SVG design previews inline
+the same artwork, which is rasterized into the frozen provider PNG. The physical
+product therefore does not depend on whichever native
 emoji font happens to be installed on a phone, browser, server or Printful
 renderer. The bundled Noto and regional-flag licenses live beside the artwork.
 
@@ -992,12 +998,15 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   This command is intentionally restricted to the current hosted-test
   environment; a future live release path must be reviewed separately before
   any safety mode changes.
-- The hosted test app is `wolkenworte` in Fly's `fra` region with one
-  `shared-cpu-2x`/512 MiB stateless web Machine, no volume, automatic stop/start
+- The checked-in Fly configuration specifies one
+  `shared-cpu-2x`/1024 MiB stateless web Machine for the `wolkenworte` hosted
+  test app in `fra`, no volume, automatic stop/start
   and the public origin `https://wolkenworte.io`. Durable business data is in
   Supabase. The Fly-provided `https://wolkenworte.fly.dev` hostname remains a
   stable infrastructure endpoint for the existing Stripe sandbox webhook,
   Supabase maintenance Cron and explicitly guarded hosted-test tools.
+  The 1024 MiB setting covers full-resolution blanket PNG rendering, which
+  exceeded the previous 512 MiB Machine size during provider verification.
 - Fly receives only the least-privileged `DATABASE_URL`. Migrations run first
   from local operator tooling with `MIGRATION_DATABASE_URL`, which must never be
   available to an ordinary web Machine.
@@ -1043,9 +1052,12 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - Keep one web Machine until both an official Socket.io cross-Machine adapter
   and tested Fly affinity/replay for long-polling exist. Increasing the Machine
   count with the current in-memory adapter would split rooms and is unsupported.
-- The Supabase bucket is private and accepts frozen SVG print artifacts up to
+- The Supabase bucket is private and accepts frozen PNG print artifacts up to
   24 MiB. Fly holds the backend-only Storage key; Printful receives only an
-  opaque application capability URL, never a Storage URL.
+  opaque application capability URL, never a Storage URL. Large designs are
+  rasterized and checked against the bucket limit when approved in the
+  configurator, before a customer can pay. If an uploaded image would exceed
+  the limit, the customer must reduce or remove images before saving.
 
 ## Socket capacity qualification
 
@@ -1262,6 +1274,7 @@ created draft is confirmed. Keep every switch false while developing locally.
 --product <key>` is the only non-payment provider smoke path. It refuses live
 Stripe mode, requires draft-only writes, creates marked synthetic data, never
 confirms the draft and verifies Printful processed the frozen capability URL.
+`--sample-image` adds a synthetic embedded PNG to each print side.
 `npm run printful:configure-webhook -- --confirm-replace-webhook` deliberately
 replaces the store's signed v2 webhook configuration and stages its returned
 keys in Fly for activation by `npm run deploy:hosted`.
