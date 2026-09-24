@@ -107,11 +107,13 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] Inspect representative Printful previews for the mug, blanket and
   two-sided pillow, then cancel all 13 synthetic drafts, including the failed
   SVG draft (2026-09-23).
-- [ ] Run `npm run printful:configure-webhook -- --confirm-replace-webhook`,
-  activate the returned signing values with `npm run deploy:hosted` and verify
-  replay-safe status callbacks. The current Printful order token lacks the
-  `webhooks` scope, so a scoped replacement token and explicit approval for
-  provider activation and deployment are prerequisites.
+- [x] Configure the signed Printful v2 webhook with an `orders` + `webhooks`
+  scoped token, activate its signing values with `npm run deploy:hosted`, and
+  verify provider-origin `order_created` and `order_updated` callbacks from one
+  unconfirmed synthetic draft (2026-09-23). The draft was archived after the
+  test; invalid signatures receive HTTP 400 and replay-safe persistence is
+  covered by the signed callback test. Shipment and return delivery remain to
+  be observed on the first real fulfilled order.
 - [ ] Keep `PRINTFUL_FULFILLMENT_MODE=mock`,
   `PRINTFUL_ALLOW_ORDER_WRITES=false` and
   `PRINTFUL_CONFIRM_LIVE_ORDERS=false` until the cutover is explicitly

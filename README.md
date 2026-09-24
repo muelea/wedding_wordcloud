@@ -232,10 +232,11 @@ dotted and dotless I.
   implemented. Verified Stripe buyer contact, immutable multilingual order
   confirmations, leased Resend jobs, shipment/refund/cancellation notices and
   signed replay-safe Resend delivery webhooks are also implemented. Customer
-  VAT/Stripe Tax treatment, legal review of the versioned contractual copy
-  and activation of signed Printful status webhooks remain pending before live
-  sales. Unconfirmed provider drafts have accepted full-resolution PNG print
-  files for all 12 catalog variants; no real order was confirmed.
+  VAT/Stripe Tax treatment and legal review of the versioned contractual copy
+  remain pending before live sales. Signed Printful status webhooks are active;
+  provider-origin order callbacks have been verified with an unconfirmed draft.
+  Unconfirmed provider drafts have accepted full-resolution PNG print files for
+  all 12 catalog variants; no real order was confirmed.
 
 ## Guest ownership and lifecycle
 
