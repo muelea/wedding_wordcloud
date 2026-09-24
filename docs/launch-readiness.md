@@ -93,8 +93,11 @@ implementation history is intentionally not maintained as a step-by-step diary.
 - [x] Approve and enable `EMAIL_DELIVERY_MODE=live` in the hosted test
   environment for real `[TEST]` confirmations while Stripe stays in sandbox
   mode and Printful fulfillment stays mocked. Automated tests remain mocked.
-- [ ] Complete one new hosted sandbox purchase and verify that its confirmation
+- [x] Complete one new hosted sandbox purchase and verify that its confirmation
   reaches the intended inbox and receives a signed Resend delivery callback.
+  Order `WW-00000031` passed the hosted Stripe verifier; its real `[TEST]`
+  confirmation arrived in the intended inbox and recorded `email.sent` and
+  `email.delivered` callbacks (2026-09-23).
 
 ### Printful verification
 
@@ -118,20 +121,6 @@ implementation history is intentionally not maintained as a step-by-step diary.
   `PRINTFUL_ALLOW_ORDER_WRITES=false` and
   `PRINTFUL_CONFIRM_LIVE_ORDERS=false` until the cutover is explicitly
   approved.
-
-### Monitoring and recovery
-
-- [ ] Configure one external error/uptime notification path for health-check
-  failures, stale maintenance heartbeats, failed Cron requests, blocked or
-  overdue fulfillment, and failed/bounced order confirmations. The built-in
-  aggregate status remains the diagnostic source; one notification provider is
-  enough.
-- [ ] Confirm and configure the Supabase database backup policy appropriate for
-  live commerce data.
-- [ ] Configure a separate encrypted export of the private Storage objects.
-  Database backups contain Storage metadata, not the print object bytes.
-- [ ] Perform and document one restoration exercise that restores both the
-  database and matching Storage objects before live payments are enabled.
 
 ## Controlled production cutover
 
@@ -169,6 +158,27 @@ are separate. The pre-live cleanup command must never be used after customer
 production data exists.
 
 ## After launch
+
+### Monitoring and recovery after initial paid orders
+
+The maintainer decided on 2026-09-23 to begin live sales with the existing Fly
+readiness check and built-in aggregate operational status, without adding an
+external alerting provider, verifying or upgrading the Supabase backup policy,
+exporting private Storage objects, or running a restore exercise beforehand.
+Revisit these safeguards after the first real paid orders bring in revenue.
+Until then, the current backup availability is unverified: a database or
+Storage loss could make early paid order data or frozen print files
+unrecoverable, and operational failures could be noticed late. This is an
+explicitly accepted initial-launch risk, not a verified recovery capability.
+
+- [ ] Reassess external alerts for health-check failures, stale maintenance
+  heartbeats, failed Cron requests, blocked or overdue fulfillment, and
+  failed/bounced order confirmations.
+- [ ] Confirm the Supabase database backup policy and configure it if needed.
+- [ ] Decide whether to export private Storage objects to separate encrypted
+  storage. Database backups contain Storage metadata, not the print bytes.
+- [ ] If backups are adopted, restore matching database and Storage data in an
+  isolated exercise and document the result.
 
 A separate staging Fly app and Supabase project are not needed for the initial
 launch. Create them before the first destructive data migration, high-risk

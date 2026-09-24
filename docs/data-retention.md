@@ -39,6 +39,7 @@ queries. They must not exist only as an informal operator convention.
 
 ## Related launch-readiness work
 
-Database backups, private Storage-object exports, restoration testing and one
-external error/uptime notification path remain required before live sales.
-They are tracked in `docs/launch-readiness.md` rather than duplicated here.
+The maintainer deferred database-backup verification, private Storage-object
+exports, restoration testing and external error/uptime alerts until after
+initial paid orders. The decision and accepted risk are tracked in
+`docs/launch-readiness.md` rather than duplicated here.

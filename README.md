@@ -605,9 +605,9 @@ or a deployment manifest.
 Built-in status, manual fulfillment retry and guarded hosted-test cleanup
 procedures are documented in [docs/operations.md](docs/operations.md). The
 current enforced and pending PII-retention decisions are recorded in
-[docs/data-retention.md](docs/data-retention.md). The remaining provider,
-backup, restoration, alerting and production-cutover work is tracked in the
-single [launch-readiness checklist](docs/launch-readiness.md).
+[docs/data-retention.md](docs/data-retention.md). The remaining provider and
+production-cutover work, plus deferred monitoring and recovery decisions, is
+tracked in the single [launch-readiness checklist](docs/launch-readiness.md).
 
 ## Provisional test pricing
 
@@ -1317,8 +1317,9 @@ keys in Fly for activation by `npm run deploy:hosted`.
 ## Remaining launch work
 
 The architecture refactor is complete. Live sales are still intentionally
-disabled until the external provider checks, legal/tax decisions, alerting,
-backup/restoration exercise and controlled cutover are complete. The ordered,
-up-to-date list lives only in
+disabled until the remaining business/legal decisions and controlled cutover
+are complete. External alerting, backup verification, private Storage export
+and restoration testing are deferred until after initial paid orders by the
+maintainer's explicit decision. The ordered, up-to-date list lives only in
 [docs/launch-readiness.md](docs/launch-readiness.md); do not maintain a second
 historical implementation checklist here.

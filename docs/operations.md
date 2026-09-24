@@ -1,8 +1,8 @@
 # Built-in operations runbook
 
 These operations use the existing Node.js, Fly and Supabase/Postgres stack.
-External notification and backup providers are deliberately separate launch
-readiness items tracked in `docs/launch-readiness.md`.
+External notification and backup decisions are deferred until after initial
+paid orders, as tracked in `docs/launch-readiness.md`.
 
 ## Read aggregate operational status
 
@@ -32,7 +32,7 @@ npm run stripe:verify-hosted-payment -- --session cs_test_...
 
 The read-only command verifies the exact enabled Stripe destination and events,
 the paid sandbox Session, completed Stripe delivery, the corresponding
-`paid_test` database order, mock fulfillment, mock confirmation email and the
+`paid_test` database order, mock fulfillment, delivered Resend confirmation and the
 public order-confirmation API. It rejects live keys and every target other than
 `https://wolkenworte.fly.dev`.
 
