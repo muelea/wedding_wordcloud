@@ -29,8 +29,7 @@ a { color: inherit; }
   background: rgba(255, 253, 250, .94);
 }
 
-.header-inner,
-.footer-inner {
+.header-inner {
   width: min(1120px, calc(100% - 48px));
   margin: 0 auto;
 }
@@ -72,8 +71,7 @@ a { color: inherit; }
   text-decoration: none;
 }
 
-.back-link:hover,
-.legal-footer a:hover { color: var(--burgundy); }
+.back-link:hover { color: var(--burgundy); }
 
 .legal-main {
   padding: 70px max(24px, var(--ww-safe-right)) 88px max(24px, var(--ww-safe-left));
@@ -199,32 +197,12 @@ h1 {
   line-height: 1.55;
 }
 
-.legal-footer {
-  padding: 32px 0 38px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: .78rem;
-}
-
-.footer-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.footer-links { display: flex; gap: 12px 20px; flex-wrap: wrap; justify-content: center; }
-.legal-footer a { text-decoration: none; }
-
 @media (max-width: 620px) {
-  .header-inner,
-  .footer-inner { width: min(100% - 32px, 820px); }
+  .header-inner { width: min(100% - 32px, 820px); }
 
   .header-inner { min-height: 72px; }
   .brand-icon { width: 28px; height: 26px; }
   .legal-main { padding: 48px max(16px, var(--ww-safe-right)) 62px max(16px, var(--ww-safe-left)); }
   .facts { grid-template-columns: 1fr; gap: 3px; }
   .facts dd + dt { margin-top: 10px; }
-  .footer-inner { flex-direction: column; text-align: center; }
-  .legal-footer { padding-bottom: var(--ww-safe-bottom); }
 }

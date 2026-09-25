@@ -360,11 +360,6 @@
     .trust-heart, .hero-inline-heart { transition: transform .35s ease; }
     .trust:hover .trust-heart, .hero-inline-heart:hover { transform: scale(1.2) rotate(4deg); animation-play-state: paused; }
 
-    footer { border-top: 1px solid var(--line); padding: 34px 0 40px; color: var(--muted); font-size: .76rem; }
-    .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
-    .footer-customs { flex: 1 0 100%; margin: 0; font-size: .7rem; line-height: 1.55; }
-    .footer-links { display: flex; gap: 12px 22px; flex-wrap: wrap; justify-content: center; }
-    .footer-links a:hover { color: var(--ink); }
 
     /* Subtle scroll-reveal, progressive enhancement only: content is fully
        visible by default, and only hidden pre-animation once JS confirms
@@ -430,7 +425,6 @@
       .print-copy p { margin-left: auto; margin-right: auto; }
       .cup-stage { min-height: 340px; }
       .homepage-mug-mockup { width: min(380px, 100%); aspect-ratio: 1; }
-      .footer-inner { flex-direction: column; gap: 14px; text-align: center; }
       .flourish { margin-bottom: 36px; }
       .flourish::before, .flourish::after { width: 32px; }
       .start-dialog {
@@ -457,6 +451,7 @@
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
 </head>
@@ -987,13 +982,7 @@
     </form>
   </dialog>
 
-  <footer>
-    <div class="shell footer-inner">
-      <span>© 2026 Wolkenworte · Ein Produkt der JUSA Engineering UG (haftungsbeschränkt)</span>
-      <span class="footer-links"><a href="/bestellinformationen">Bestellinformationen</a><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a></span>
-      <p class="footer-customs">Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</p>
-    </div>
-  </footer>
+  <%- include('partials/site-footer') %>
 
   <script src="<%= asset('/js/site-header.js') %>"></script>
   <script>

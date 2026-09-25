@@ -304,6 +304,7 @@
     .ww-display-menu-label { padding: 0 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
     .ww-display-menu-language { width: auto; flex: 0 0 auto; }
     .ww-display-menu-actions { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .ww-display-menu-legal { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
     .ww-display-menu-action {
       display: flex;
       align-items: center;
@@ -323,6 +324,8 @@
     .ww-display-menu-action:hover, .ww-display-menu-action:focus-visible { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
     .ww-display-menu-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; }
     .ww-display-menu-action[hidden] { display: none !important; }
+    .ww-display-menu-legal a.ww-display-menu-action { text-decoration: none; }
+    .ww-display-menu-legal .ww-analytics-settings:hover { text-decoration: none; }
     .ww-display-menu-action-label { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
     .ww-display-menu-action-label svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .ww-display-menu-count { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); font-size: 12px; }

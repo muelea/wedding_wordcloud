@@ -74,6 +74,7 @@
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
@@ -88,6 +89,7 @@
     <a class="button" href="/">Zurück zur Startseite</a>
     </div>
   </main>
+  <%- include('partials/site-footer') %>
   <%- include('partials/analytics-ui') %>
 </body>
 </html>

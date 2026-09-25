@@ -331,6 +331,7 @@
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
@@ -380,6 +381,8 @@
     </div>
     <div class="fatal" id="fatal-error" hidden></div>
   </main>
+
+  <%- include('partials/site-footer') %>
 
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
   <script src="<%= asset('/js/site-journey.js') %>"></script>

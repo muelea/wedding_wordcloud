@@ -76,7 +76,7 @@ test('blank configuration renders no analytics UI or Google code', () => {
     delete process.env.GA4_MEASUREMENT_ID;
     assert.equal(analyticsConfig.measurementId(), '');
     const root = path.join(__dirname, '..', 'views', 'partials');
-    for (const name of ['analytics-head.ejs', 'analytics-ui.ejs']) {
+    for (const name of ['analytics-head.ejs', 'analytics-ui.ejs', 'analytics-settings.ejs']) {
       const template = fs.readFileSync(path.join(root, name), 'utf8');
       assert.equal(ejs.render(template, { analyticsMeasurementId: '', asset: (value) => value }).trim(), '');
     }
@@ -129,8 +129,10 @@ test('Fly secret staging carries the optional GA4 Measurement ID', () => {
 });
 
 test('enabled consent controls render in the selected site language', () => {
-  const template = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'analytics-ui.ejs'), 'utf8');
-  const html = ejs.render(template, { analyticsMeasurementId: 'G-TEST123' });
+  const partials = path.join(__dirname, '..', 'views', 'partials');
+  const html = ['analytics-ui.ejs', 'analytics-settings.ejs'].map((name) => ejs.render(
+    fs.readFileSync(path.join(partials, name), 'utf8'), { analyticsMeasurementId: 'G-TEST123' }
+  )).join('');
   const english = localizeHtml(html, 'en');
   assert.match(english, /Continue without analytics/);
   assert.match(english, /Allow analytics/);
@@ -212,4 +214,16 @@ test('withdrawal denies tracking, removes GA cookies, and reloads', () => {
   assert.equal(state.cookies.has('_ga_TEST'), false);
   assert.equal(state.reloads(), 1);
   assert.equal(state.root.WolkenworteAnalytics.track('word_submitted'), false);
+});
+
+test('opening privacy settings from an overflow menu closes the menu', () => {
+  const state = browser({ cookie: 'wolkenworte-analytics=1-no' });
+  let closed = false;
+  state.elements['ww-analytics-settings'].closest = (selector) => {
+    assert.equal(selector, 'details');
+    return { removeAttribute(name) { assert.equal(name, 'open'); closed = true; } };
+  };
+  state.elements['ww-analytics-settings'].click();
+  assert.equal(closed, true);
+  assert.equal(state.elements['ww-analytics-banner'].hidden, false);
 });

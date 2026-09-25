@@ -329,7 +329,7 @@ test('server localization produces the selected language before browser scripts 
     ['404.ejs', {}, 'This word cloud does not exist.'],
     ['impressum.ejs', {}, 'Legal information'],
     ['datenschutz.ejs', {}, 'Privacy policy'],
-    ['bestellinformationen.ejs', {}, 'Ordering information'],
+    ['bestellinformationen.ejs', {}, 'Order information'],
   ];
   for (const [filename, header, expected] of cases) {
     const localized = localizeHtml(renderView(filename, header, 'en'), 'en');

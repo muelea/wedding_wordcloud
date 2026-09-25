@@ -164,9 +164,12 @@ test('shipping keeps both return links synchronized behind the same responsive h
   assert.match(shipping, /backLinks\.forEach\(\(link\) => \{ link\.addEventListener\('click', saveShippingDraft\); \}\)/);
 });
 
-test('commercial pages always show the compact customs and import-cost notice', () => {
+test('customs notice stays with purchase information instead of the site footer', () => {
   const notice = /Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen\. Diese sind vom Empfänger zu tragen\./;
-  for (const source of [landing, configure, shipping, orderConfirmation]) assert.match(source, notice);
+  for (const source of [shipping, orderConfirmation]) assert.match(source, notice);
+  for (const source of [landing, configure]) assert.doesNotMatch(source, notice);
+  const footer = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'site-footer.ejs'), 'utf8');
+  assert.doesNotMatch(footer, notice);
 });
 
 test('the personal display palette is handed off to the configurator', () => {

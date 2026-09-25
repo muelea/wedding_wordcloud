@@ -183,7 +183,10 @@
     if (!banner || !settings) return;
     banner.hidden = Boolean(choice);
     settings.hidden = !choice;
-    settings.addEventListener('click', () => { banner.hidden = false; });
+    settings.addEventListener('click', () => {
+      settings.closest?.('details')?.removeAttribute('open');
+      banner.hidden = false;
+    });
     root.document.getElementById('ww-analytics-accept').addEventListener('click', () => {
       saveChoice('yes');
       banner.hidden = true;

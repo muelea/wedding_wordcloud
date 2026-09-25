@@ -1,0 +1,48 @@
+.ww-site-footer {
+  border-top: 1px solid rgba(64, 15, 38, .1);
+  padding: 34px 0 max(40px, env(safe-area-inset-bottom, 0px));
+  color: #8a7178;
+  font: 400 .76rem/1.5 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
+}
+
+.ww-site-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.ww-site-footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 22px;
+  flex-wrap: wrap;
+}
+
+.ww-site-footer-links a,
+.ww-site-footer-links .ww-analytics-settings {
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+
+.ww-site-footer-links a:hover,
+.ww-site-footer-links .ww-analytics-settings:hover {
+  color: #400f26;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ww-site-footer-links a:focus-visible,
+.ww-site-footer-links .ww-analytics-settings:focus-visible {
+  outline: 3px solid #276e63;
+  outline-offset: 3px;
+}
+
+@media (max-width: 620px) {
+  .ww-site-footer-inner { flex-direction: column; gap: 14px; width: min(100% - 32px, 820px); text-align: center; }
+}

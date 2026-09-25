@@ -122,6 +122,11 @@
             <span class="ww-display-menu-switch" aria-hidden="true"><i></i></span>
           </button>
         </div>
+        <nav class="ww-display-menu-legal" aria-label="<%= t('Rechtliche Hinweise') %>">
+          <a class="ww-display-menu-action" href="/impressum">Impressum</a>
+          <a class="ww-display-menu-action" href="/datenschutz">Datenschutz</a>
+          <%- include('analytics-settings', { analyticsSettingsClass: 'ww-display-menu-action' }) %>
+        </nav>
       </div>
       </details>
     </div>

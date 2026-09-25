@@ -226,7 +226,8 @@ retention to **2 months**, turn off retention reset on new user activity, and
 keep Google signals and advertising personalization off.
 The site uses one optional analytics consent choice, kept for 180 days in a
 first-party cookie without a user ID. Google code loads only after acceptance.
-The visible privacy-settings control allows withdrawal on every page.
+The shared site footer holds privacy settings on standard pages; the live word cloud
+keeps the same control in its top-right menu. Consent can be withdrawn on every page.
 
 Analytics sends generic page types instead of event slugs, event titles, cart
 IDs, quote IDs or Stripe Session IDs. Events cover the start dialog, created

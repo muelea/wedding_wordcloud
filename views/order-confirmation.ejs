@@ -70,6 +70,7 @@
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
@@ -92,6 +93,7 @@
       <p class="customs-note">Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</p>
     </section>
   </main>
+  <%- include('partials/site-footer') %>
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script>

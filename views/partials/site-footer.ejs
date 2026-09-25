@@ -1,0 +1,11 @@
+<footer class="ww-site-footer">
+  <div class="ww-site-footer-inner">
+    <span class="ww-site-footer-copyright">© 2026 Wolkenworte</span>
+    <nav class="ww-site-footer-links" aria-label="<%= t('Rechtliche Hinweise') %>">
+      <a href="/impressum"<% if (typeof footerCurrentPage === 'string' && footerCurrentPage === 'impressum') { %> aria-current="page"<% } %>>Impressum</a>
+      <a href="/datenschutz"<% if (typeof footerCurrentPage === 'string' && footerCurrentPage === 'datenschutz') { %> aria-current="page"<% } %>>Datenschutz</a>
+      <%- include('analytics-settings') %>
+      <a href="/bestellinformationen"<% if (typeof footerCurrentPage === 'string' && footerCurrentPage === 'bestellinformationen') { %> aria-current="page"<% } %>>Bestellinformationen</a>
+    </nav>
+  </div>
+</footer>
