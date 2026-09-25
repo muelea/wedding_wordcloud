@@ -1030,8 +1030,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /location\.assign\(destination\)/);
   assert.doesNotMatch(configurePage, /location\.assign\(event\.currentTarget\.href\)/);
   assert.match(configurePage, /Euer Warenkorb/);
-  assert.match(configurePage, /href="\/datenschutz" target="_blank" rel="noopener"/);
-  assert.match(configurePage, /href="\/impressum" target="_blank" rel="noopener"/);
+  assert.match(configurePage, /<a href="\/datenschutz"(?![^>]*target=)[^>]*>/);
+  assert.match(configurePage, /<a href="\/impressum"(?![^>]*target=)[^>]*>/);
   assert.match(configurePage, /id="save-design"/);
   assert.match(configurePage, /!await saveCurrentDesign\(continueOrderButton\)\) return;[\s\S]*?navigateToShipping\(\)/);
   assert.match(configurePage, /const missingSurface = productSurfaces\(\)\.find/);
