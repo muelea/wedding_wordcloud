@@ -31,7 +31,23 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
   t.mock.method(Object.getPrototypeOf(sdk.customers), 'create', async () => ({ id: 'cus_taxwebhook' }));
   t.mock.method(Object.getPrototypeOf(sdk.checkout.sessions), 'create', async (params) => {
     sessionParams = params;
-    return { id: 'cs_test_tax_webhook', url: 'https://checkout.stripe.test/tax' };
+    const itemCents = params.line_items[0].price_data.unit_amount;
+    const shippingCents = params.shipping_options[0].shipping_rate_data.fixed_amount.amount;
+    const productTaxCents = Math.round(itemCents * 0.19);
+    const shippingTaxCents = Math.round(shippingCents * 0.19);
+    const taxCents = productTaxCents + shippingTaxCents;
+    return {
+      id: 'cs_test_tax_webhook', url: 'https://checkout.stripe.test/tax',
+      customer: params.customer, currency: 'eur',
+      amount_subtotal: itemCents, amount_total: itemCents + shippingCents + taxCents,
+      total_details: { amount_tax: taxCents, amount_discount: 0 },
+      shipping_cost: {
+        amount_subtotal: shippingCents,
+        amount_tax: shippingTaxCents,
+        amount_total: shippingCents + shippingTaxCents,
+      },
+      automatic_tax: { enabled: true, status: 'complete' },
+    };
   });
   const printful = require('../src/printful');
   require('./support/printful-fixtures').mockShippingRates(t, printful);
@@ -59,6 +75,8 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
   const order = await db.getOrderBySessionId('cs_test_tax_webhook');
   assert.equal(JSON.parse(order.checkout_request_json).customerId, 'cus_taxwebhook');
   const taxCents = Math.round(quote.itemsCents * 0.19) + Math.round(quote.shippingCents * 0.19);
+  assert.equal(JSON.parse(order.checkout_request_json).expectedTaxCents, taxCents);
+  assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents + taxCents);
   const session = {
     id: 'cs_test_tax_webhook', customer: 'cus_taxwebhook',
     currency: 'eur', payment_status: 'paid', payment_intent: 'pi_test_tax_webhook',

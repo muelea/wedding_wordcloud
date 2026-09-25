@@ -121,6 +121,17 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
     },
   }]);
 
+  await db.getPool().query(
+    'UPDATE orders SET checkout_session_expires_at = $1 WHERE id = $2',
+    ['2000-01-01T00:00:00.000Z', order.id]
+  );
+  const expiredSession = await fetch(checkoutUrl, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: quote.id }),
+  });
+  assert.equal(expiredSession.status, 409);
+  assert.equal((await expiredSession.json()).error, 'quote_expired');
+  assert.equal(checkoutCalls, 1, 'an expired final Session must never be replaced from a stale quote');
+
   const restoredResponse = await fetch(
     `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/quotes/${quote.id}`
   );
@@ -227,7 +238,13 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   };
   stripe.createCheckoutSession = async (options) => {
     capturedCheckout = options;
-    return { id: 'cs_test_cart_1', url: 'https://checkout.stripe.test/cs_test_cart_1' };
+    return {
+      id: 'cs_test_cart_1',
+      url: 'https://checkout.stripe.test/cs_test_cart_1',
+      taxCents: 321,
+      totalCents: Number(options.order.total_cents) + 321,
+      expiresAt: options.order.checkout_session_expires_at,
+    };
   };
   t.after(() => {
     printful.getShippingCountries = originalCountries;
@@ -256,13 +273,33 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   assert.equal(estimate.status, 200);
   const quote = (await estimate.json()).quote;
 
-  const checkout = await fetch(`${baseUrl}/api/events/${event.slug}/cart/checkout`, {
+  const checkoutUrl = `${baseUrl}/api/events/${event.slug}/cart/checkout`;
+  const preparedResponse = await fetch(checkoutUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configurationIds: [mug.id, coaster.id], quoteId: quote.id }),
+    body: JSON.stringify({
+      intent: 'prepare', configurationIds: [mug.id, coaster.id], quoteId: quote.id,
+    }),
+  });
+  assert.equal(preparedResponse.status, 200);
+  const prepared = await preparedResponse.json();
+  assert.equal(prepared.prepared, true);
+  assert.equal(prepared.url, undefined, 'preparation must not expose or open Stripe Checkout');
+  assert.equal(prepared.quote.checkoutPrepared, true);
+  assert.equal(prepared.quote.taxCents, 321);
+  assert.equal(prepared.quote.totalCents, quote.totalCents + 321);
+
+  const checkout = await fetch(checkoutUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      intent: 'pay', configurationIds: [mug.id, coaster.id], quoteId: quote.id,
+    }),
   });
   assert.equal(checkout.status, 200);
-  assert.deepEqual(await checkout.json(), { url: 'https://checkout.stripe.test/cs_test_cart_1' });
+  assert.deepEqual(await checkout.json(), {
+    url: 'https://checkout.stripe.test/cs_test_cart_1', reused: true,
+  });
   assert.equal(estimates.length, 2, 'one estimate for display and one revalidation before Stripe');
   assert.deepEqual(estimates.map((entry) => entry.items.map((item) => item.variantId)), [
     [1320, 15662],
@@ -275,6 +312,8 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
 
   const db = require('../src/db');
   const order = await db.getOrderBySessionId('cs_test_cart_1');
+  assert.equal(JSON.parse(order.checkout_request_json).expectedTaxCents, 321);
+  assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents + 321);
   assert.deepEqual(JSON.parse(order.configuration_ids_json), [mug.id, coaster.id]);
   const storedShipments = await db.getOrderShipments(order.id);
   assert.equal(storedShipments.length, 1);
@@ -287,7 +326,11 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
     `${baseUrl}/api/events/${event.slug}/cart/quotes/${quote.id}?ids=${encodeURIComponent([mug.id, coaster.id].join(','))}`
   );
   assert.equal(restored.status, 200);
-  assert.deepEqual((await restored.json()).shipments[0].items, [
+  const restoredBody = await restored.json();
+  assert.equal(restoredBody.quote.checkoutPrepared, true);
+  assert.equal(restoredBody.quote.taxCents, 321);
+  assert.equal(restoredBody.quote.totalCents, quote.totalCents + 321);
+  assert.deepEqual(restoredBody.shipments[0].items, [
     { configurationId: mug.id, quantity: 1 },
     { configurationId: coaster.id, quantity: 1 },
   ]);

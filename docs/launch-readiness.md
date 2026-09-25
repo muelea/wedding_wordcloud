@@ -105,10 +105,13 @@ project sign-off is required for these topics.
   `contract-2026-09-25-v4`; existing stored messages remain unchanged.
   Privacy copy describes live fulfillment, delivery-address transfer to Stripe
   and the approved commerce retention schedule described below.
-  The maintainer explicitly retains the existing shipping page, including
-  net product/shipping prices and its notice that tax and the final total are
-  shown at Stripe. No shipping-page or tax-calculation change is part of this
-  work; this preference is not a legal sign-off on the price presentation.
+- [x] Show the final price before redirecting to payment (2026-09-25): checking
+  prices now creates the final short-lived Stripe Checkout Session, validates and
+  displays its automatic-tax result, and keeps the customer on the shipping page.
+  "Weiter zur Zahlung" opens that exact Session. This uses native Stripe Checkout
+  automatic tax only—not the separately billed Tax Calculation API and not a
+  disposable preview Session. The signed paid Session must still match the frozen
+  net amounts, pinned customer, displayed tax and displayed gross total.
 - [ ] Have qualified German counsel review the legal notice and privacy policy
   together with the ordering information, price presentation and final live
   provider contracts/data-processing agreements. The implementation above is

@@ -25,6 +25,9 @@ function deferred() {
 function response(result, status = 200) {
   return { ok: status < 400, status, json: async () => result };
 }
+function preparedQuote(id) {
+  return { id, checkoutPrepared: true };
+}
 function harness(fetcher) {
   const handlers = {};
   function element() {
@@ -105,13 +108,23 @@ test('editing an address while pricing is pending cannot display the old address
 
 test('repeated form submit during one pricing request does not send a second request', async () => {
   const pending = deferred();
-  const page = harness(() => pending.promise);
+  const requests = [];
+  const page = harness((url, options) => {
+    requests.push({ url, body: options?.body && JSON.parse(options.body) });
+    return requests.length === 1
+      ? pending.promise
+      : Promise.resolve(response({ quote: preparedQuote('current-price') }));
+  });
   const first = page.submit();
   const second = page.submit();
   pending.resolve(response({ quote: { id: 'current-price' } }));
   await Promise.all([first, second]);
-  assert.equal(page.calls.fetches, 1);
+  assert.equal(page.calls.fetches, 2, 'one estimate and one final Checkout Session preparation');
+  assert.match(requests[0].url, /estimate-costs$/);
+  assert.match(requests[1].url, /checkout$/);
+  assert.equal(requests[1].body.intent, 'prepare');
   assert.equal(page.calls.shown.length, 1);
+  assert.equal(page.scope.currentQuote.checkoutPrepared, true);
 });
 
 test('a network failure during pricing restores controls and does not blame valid address fields', async () => {
@@ -151,7 +164,7 @@ test('a cancelled-checkout quote never replaces newer address or quantity edits 
 test('checkout locks address editing and rejects duplicate payment and pricing actions', async () => {
   const pending = deferred();
   const page = harness(() => pending.promise);
-  page.scope.currentQuote = { id: 'confirmed-price' };
+  page.scope.currentQuote = preparedQuote('confirmed-price');
   const first = page.checkout();
   await page.checkout();
   await page.submit();
@@ -172,7 +185,7 @@ test('leaving aborts an old request and its late result cannot unlock or navigat
     signals.push(options.signal);
     return responses[signals.length - 1].promise;
   });
-  page.scope.currentQuote = { id: 'confirmed-price' };
+  page.scope.currentQuote = preparedQuote('confirmed-price');
   const old = page.checkout();
   page.scope.cancelShippingRequest();
   assert.equal(signals[0].aborted, true);
@@ -186,8 +199,8 @@ test('leaving aborts an old request and its late result cannot unlock or navigat
   responses[1].resolve(response({ error: 'quote_changed', message: 'Neuer Preis', quote: { id: 'new-price' } }, 409));
   await latest;
   assert.equal(page.scope.form.inert, false);
-  assert.equal(page.scope.checkoutButton.disabled, false);
-  assert.equal(page.scope.checkoutButton.label, 'Neue Preise bestätigen');
+  assert.equal(page.scope.checkoutButton.disabled, true);
+  assert.equal(page.scope.submitButton.label, 'Neue Preise bestätigen');
 });
 
 test('deadline covers response body stalls and permits a safe retry after a checkout timeout', async () => {
@@ -204,7 +217,7 @@ test('deadline covers response body stalls and permits a safe retry after a chec
   });
   page.scope.setTimeout = (callback, delay) => { assert.equal(delay, 20000); expire = callback; return 42; };
   page.scope.clearTimeout = handle => { assert.equal(handle, 42); canceled++; };
-  page.scope.currentQuote = { id: 'unchanged-server-idempotency-key' };
+  page.scope.currentQuote = preparedQuote('unchanged-server-idempotency-key');
   const action = page.checkout();
   await bodyStarted.promise;
   expire();
@@ -220,17 +233,17 @@ test('deadline covers response body stalls and permits a safe retry after a chec
 test('updated delivery terms remain visible and require an explicit second checkout action', async () => {
   const page = harness(async () => response({ error: 'quote_shipping_changed',
     message: 'Die Lieferangaben haben sich geändert.', quote: { id: 'updated-shipping' } }, 409));
-  page.scope.currentQuote = { id: 'old-shipping' };
+  page.scope.currentQuote = preparedQuote('old-shipping');
   await page.checkout();
   assert.equal(page.scope.currentQuote.id, 'updated-shipping');
-  assert.equal(page.scope.checkoutButton.label, 'Aktualisierte Lieferung bestätigen');
+  assert.equal(page.scope.submitButton.label, 'Aktualisierte Lieferung bestätigen');
   assert.deepEqual(page.calls.navigation, []);
-  assert.equal(page.scope.checkoutButton.disabled, false);
+  assert.equal(page.scope.checkoutButton.disabled, true);
 });
 
 test('invalid JSON does not leave checkout busy or navigate to an undefined destination', async () => {
   const page = harness(async () => ({ ok: true, json: async () => { throw new SyntaxError('bad json'); } }));
-  page.scope.currentQuote = { id: 'confirmed-price' };
+  page.scope.currentQuote = preparedQuote('confirmed-price');
   await page.checkout();
   assert.equal(page.scope.form.inert, false);
   assert.equal(page.scope.checkoutButton.disabled, false);
@@ -240,7 +253,7 @@ test('invalid JSON does not leave checkout busy or navigate to an undefined dest
 
 test('a failed location assignment also restores checkout controls', async () => {
   const page = harness(async () => response({ url: '/checkout' }));
-  page.scope.currentQuote = { id: 'confirmed-price' };
+  page.scope.currentQuote = preparedQuote('confirmed-price');
   page.scope.location.assign = () => { throw new Error('navigation rejected'); };
   await page.checkout();
   assert.equal(page.scope.form.inert, false);
@@ -250,7 +263,7 @@ test('a failed location assignment also restores checkout controls', async () =>
 test('an explicit Printful failure invalidates the quote and prevents another checkout click', async () => {
   for (const error of ['shipping_unavailable', 'selection_not_available', 'pricing_unavailable']) {
     const page = harness(async () => response({ error, message: 'Lieferung konnte nicht bestätigt werden.' }, 422));
-    page.scope.currentQuote = { id: 'previously-valid' };
+    page.scope.currentQuote = preparedQuote('previously-valid');
     await page.checkout();
     assert.equal(page.scope.currentQuote, null);
     assert.equal(page.scope.checkoutButton.disabled, true);
@@ -270,6 +283,51 @@ test('a failed price refresh removes the previous quote and keeps checkout disab
   assert.equal(page.scope.quoteResult.hidden, true);
   assert.equal(page.scope.checkoutButton.disabled, true);
   assert.match(page.scope.formError.textContent, /Keine Lieferung möglich/);
+});
+
+test('the shipping summary shows Stripe tax and gross total only for a prepared Checkout Session', () => {
+  const nodes = Object.fromEntries([
+    'items-label', 'items-price', 'shipping-price', 'tax-row', 'tax-price', 'total-label', 'total-price',
+  ].map((id) => [id, { hidden: false, textContent: '' }]));
+  const quoteResult = { hidden: true, scrollIntoView() {} };
+  const checkoutButton = {
+    disabled: true,
+    classList: { contains: () => false },
+  };
+  const scope = vm.createContext({
+    currentQuote: null,
+    quoteResult,
+    checkoutButton,
+    checkoutError: { textContent: '' },
+    document: { getElementById: id => nodes[id] },
+    totalProductLabel: quantity => `${quantity} products`,
+    formatMoney: (cents, currency) => `${cents} ${currency}`,
+    renderDeliveryInformation() {},
+    setText: (node, value) => { node.textContent = value; },
+    clearText: node => { node.textContent = ''; },
+    setButtonLabel: (node, value) => { node.label = value; },
+    customerError: value => new Error(value),
+  });
+  vm.runInContext(pageFunction('showQuote'), scope);
+
+  scope.showQuote({
+    id: 'prepared', currency: 'EUR', quantity: 1, itemsCents: 800, shippingCents: 200,
+    taxCents: 190, totalCents: 1190, checkoutPrepared: true,
+  }, { scroll: false });
+  assert.equal(nodes['tax-row'].hidden, false);
+  assert.equal(nodes['tax-price'].textContent, '190 EUR');
+  assert.equal(nodes['total-label'].textContent, 'Gesamtbetrag');
+  assert.equal(nodes['total-price'].textContent, '1190 EUR');
+  assert.equal(checkoutButton.disabled, false);
+
+  scope.showQuote({
+    id: 'estimate-only', currency: 'EUR', quantity: 1, itemsCents: 800, shippingCents: 200,
+    taxCents: 0, totalCents: 1000, checkoutPrepared: false,
+  }, { scroll: false });
+  assert.equal(nodes['tax-row'].hidden, true);
+  assert.equal(nodes['total-label'].textContent, 'Zwischensumme');
+  assert.equal(nodes['total-price'].textContent, '1000 EUR');
+  assert.equal(checkoutButton.disabled, true);
 });
 
 function deliveryLines(delivery, { shipments = [{ customsFeesPossible: false, departureCountry: 'LV', items: [] }], locale = 'de' } = {}) {

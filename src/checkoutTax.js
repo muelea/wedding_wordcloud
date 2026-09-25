@@ -29,6 +29,12 @@ function paymentAmounts(order, session) {
       shipping.amount_total !== shipping.amount_subtotal + shipping.amount_tax ||
       !cents(session.amount_total) ||
       session.amount_total !== Number(order.items_cents) + Number(order.shipping_cents) + tax) return null;
+  const expectedTax = request.expectedTaxCents;
+  const expectedTotal = request.expectedTotalCents;
+  const hasExpectedAmounts = expectedTax !== undefined || expectedTotal !== undefined;
+  if (!alreadyPaid && hasExpectedAmounts &&
+      (!cents(expectedTax) || !cents(expectedTotal) ||
+       tax !== expectedTax || session.amount_total !== expectedTotal)) return null;
   if (alreadyPaid &&
       (tax !== Number(order.tax_cents) || session.amount_total !== Number(order.total_cents))) return null;
   return { taxCents: tax, totalCents: session.amount_total };

@@ -301,9 +301,22 @@ function sendPrintfulMockupError(res, error) {
   });
 }
 
-function checkoutQuoteResponse(quote) {
+function checkoutQuoteResponse(quote, order = null, session = null) {
   const shipments = db.getCheckoutQuoteShipments(quote);
   const configurationIds = db.getCheckoutQuoteConfigurationIds(quote);
+  const request = parseStoredCheckoutRequest(order);
+  const taxCents = Number.isSafeInteger(session?.taxCents)
+    ? session.taxCents
+    : request.expectedTaxCents;
+  const totalCents = Number.isSafeInteger(session?.totalCents)
+    ? session.totalCents
+    : request.expectedTotalCents;
+  const checkoutExpiresAt = session?.expiresAt || order?.checkout_session_expires_at;
+  const checkoutPrepared = Number.isSafeInteger(taxCents) && taxCents >= 0 &&
+    Number.isSafeInteger(totalCents) &&
+    totalCents === Number(quote.items_cents) + Number(quote.shipping_cents) + taxCents &&
+    Number.isFinite(Date.parse(checkoutExpiresAt || '')) && Date.parse(checkoutExpiresAt) > Date.now() &&
+    (Boolean(session?.url) || (order?.status === 'checkout_pending' && Boolean(order.stripe_checkout_url)));
   return {
     id: quote.id,
     currency: quote.currency,
@@ -313,8 +326,12 @@ function checkoutQuoteResponse(quote) {
     itemsCents: Number(quote.items_cents),
     paymentReserveCents: Number(quote.payment_reserve_cents || 0),
     shippingCents: Number(quote.shipping_cents),
-    taxCents: Number(quote.tax_cents),
-    totalCents: Number(quote.total_cents),
+    taxCents: checkoutPrepared ? taxCents : Number(quote.tax_cents),
+    totalCents: checkoutPrepared ? totalCents : Number(quote.total_cents),
+    checkoutPrepared,
+    ...(checkoutPrepared ? {
+      checkoutExpiresAt,
+    } : {}),
     expiresAt: quote.expires_at,
     ...(shipments[0]?.printfulShipping ? { shippingDetails: shipments[0].printfulShipping } : {}),
   };
@@ -345,6 +362,53 @@ function checkoutConfirmationUrl(eventSlug, sessionId, locale = null) {
   return locale ? `${path}&lang=${encodeURIComponent(I18n.normalizeLocale(locale))}` : path;
 }
 
+function storedCheckoutResult(order, extra = {}) {
+  const request = parseStoredCheckoutRequest(order);
+  return {
+    url: order.stripe_checkout_url,
+    taxCents: request.expectedTaxCents,
+    totalCents: request.expectedTotalCents,
+    expiresAt: order.checkout_session_expires_at,
+    ...extra,
+  };
+}
+
+function checkoutClientPayload(intent, quote, order, result, quoteSummary = {}) {
+  if (result?.confirmationUrl) {
+    return {
+      confirmationUrl: result.confirmationUrl,
+      ...(result.paymentProcessing ? { paymentProcessing: true } : {}),
+      ...(result.alreadyPaid ? { alreadyPaid: true } : {}),
+    };
+  }
+  if (intent === 'prepare') {
+    const preparedQuote = checkoutQuoteResponse(quote, order, result);
+    if (!preparedQuote.checkoutPrepared) return null;
+    return { prepared: true, quote: { ...preparedQuote, ...quoteSummary } };
+  }
+  return {
+    url: result?.url,
+    ...(result?.reused ? { reused: true } : {}),
+    ...(result?.replaced ? { replaced: true } : {}),
+    ...(result?.recovered ? { recovered: true } : {}),
+  };
+}
+
+function sendCheckoutResult(res, intent, quote, order, result, quoteSummary = {}) {
+  if (result?.quoteExpired) {
+    return res.status(409).json({
+      error: 'quote_expired',
+      message: 'Der Preis ist abgelaufen. Bitte berechnet den Gesamtpreis erneut.',
+    });
+  }
+  const payload = checkoutClientPayload(intent, quote, order, result, quoteSummary);
+  if (payload && (payload.confirmationUrl || payload.url || payload.quote)) return res.json(payload);
+  return res.status(502).json({
+    error: 'tax_calculation_failed',
+    message: 'Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
+  });
+}
+
 async function attemptPersistedCheckout(order) {
   const claimed = await db.claimCheckoutAttempt(order.id);
   if (!claimed) return null;
@@ -369,8 +433,12 @@ async function replacePendingCheckoutLocale(order, requestedLocale, eventSlug) {
   if (order?.status !== 'checkout_pending' || !order.stripe_checkout_url || !order.stripe_session_id) {
     return null;
   }
+  if (!Number.isFinite(Date.parse(order.checkout_session_expires_at || '')) ||
+      Date.parse(order.checkout_session_expires_at) <= Date.now()) {
+    return { quoteExpired: true };
+  }
   if (checkoutLocaleForOrder(order) === requestedLocale) {
-    return { url: order.stripe_checkout_url, reused: true };
+    return storedCheckoutResult(order, { reused: true });
   }
 
   const providerSession = await stripe.expireCheckoutSession(order.stripe_session_id);
@@ -397,7 +465,7 @@ async function replacePendingCheckoutLocale(order, requestedLocale, eventSlug) {
   });
   if (replacement) {
     const session = await attemptPersistedCheckout(replacement);
-    return session ? { url: session.url, replaced: true } : null;
+    return session ? { ...session, replaced: true } : null;
   }
 
   const latest = await db.getOrderById(order.id);
@@ -409,7 +477,7 @@ async function replacePendingCheckoutLocale(order, requestedLocale, eventSlug) {
   }
   if (latest?.status === 'checkout_pending' && latest.stripe_checkout_url &&
       checkoutLocaleForOrder(latest) === requestedLocale) {
-    return { url: latest.stripe_checkout_url, reused: true };
+    return storedCheckoutResult(latest, { reused: true });
   }
   return null;
 }
@@ -419,7 +487,7 @@ async function recoverCreatingCheckoutLocale(order, requestedLocale, eventSlug) 
   const recoveredSession = await attemptPersistedCheckout(order);
   if (!recoveredSession) return null;
   if (checkoutLocaleForOrder(order) === requestedLocale) {
-    return { url: recoveredSession.url, recovered: true };
+    return { ...recoveredSession, recovered: true };
   }
   const attachedOrder = await db.getOrderById(order.id);
   return replacePendingCheckoutLocale(attachedOrder, requestedLocale, eventSlug);
@@ -460,6 +528,12 @@ function sendCheckoutReplacementError(res, error, order) {
     return res.status(503).json({
       error: 'stripe_live_mode_blocked',
       message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+    });
+  }
+  if (error?.code === 'STRIPE_TAX_CALCULATION_INCOMPLETE') {
+    return res.status(502).json({
+      error: 'tax_calculation_failed',
+      message: 'Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
     });
   }
   performanceProbe.recordOperation('checkoutFailed');
@@ -1308,7 +1382,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
     const shipments = db.getCheckoutQuoteShipments(quote)
       .map((shipment) => ({ quantity: Number(shipment.quantity), recipient: shipment.recipient }));
-    return res.json({ quote: checkoutQuoteResponse(quote), recipient, shipments });
+    return res.json({ quote: checkoutQuoteResponse(quote, order), recipient, shipments });
   }));
 
   router.get('/events/:slug/cart/quotes/:quoteId', asyncRoute(async (req, res) => {
@@ -1329,7 +1403,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         items: Array.isArray(shipment.items) ? shipment.items : [],
       }));
     return res.json({
-      quote: { ...checkoutQuoteResponse(quote), ...cartSummary(configurations) },
+      quote: { ...checkoutQuoteResponse(quote, order), ...cartSummary(configurations) },
       shipments,
     });
   }));
@@ -1393,12 +1467,17 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
     if (rejectMultipleShippingAddresses(res, db.getCheckoutQuoteShipments(storedQuote))) return;
     const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
+    const checkoutIntent = req.body?.intent === 'prepare' ? 'prepare' : 'pay';
 
     let order = await db.getOrderByQuoteId(storedQuote.id);
     if (order) {
       try {
         const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
-        if (resolved) return res.json(resolved);
+        if (resolved) {
+          return sendCheckoutResult(
+            res, checkoutIntent, storedQuote, order, resolved, cartSummary(configurations)
+          );
+        }
       } catch (error) {
         return sendCheckoutReplacementError(res, error, order);
       }
@@ -1477,7 +1556,11 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       order = orderResult.order;
       if (!orderResult.created) {
         const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
-        if (resolved) return res.json(resolved);
+        if (resolved) {
+          return sendCheckoutResult(
+            res, checkoutIntent, refreshedQuote, order, resolved, cartSummary(configurations)
+          );
+        }
         return sendCheckoutInProgress(res);
       }
 
@@ -1489,7 +1572,9 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         });
       }
       performanceProbe.recordOperation('checkoutSucceeded');
-      return res.json({ url: session.url });
+      return sendCheckoutResult(
+        res, checkoutIntent, refreshedQuote, order, session, cartSummary(configurations)
+      );
     } catch (error) {
       if (error?.code === 'STRIPE_NOT_CONFIGURED') {
         return res.status(501).json({
@@ -1501,6 +1586,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         return res.status(503).json({
           error: 'stripe_live_mode_blocked',
           message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+        });
+      }
+      if (error?.code === 'STRIPE_TAX_CALCULATION_INCOMPLETE') {
+        return res.status(502).json({
+          error: 'tax_calculation_failed',
+          message: 'Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
         });
       }
       if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
@@ -1544,6 +1635,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       }
       if (rejectMultipleShippingAddresses(res, db.getCheckoutQuoteShipments(storedQuote))) return;
       const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
+      const checkoutIntent = req.body?.intent === 'prepare' ? 'prepare' : 'pay';
 
       // A repeated click returns the same Stripe Session. No re-estimate is
       // necessary because this exact quote was already revalidated before
@@ -1552,7 +1644,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       if (order) {
         try {
           const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
-          if (resolved) return res.json(resolved);
+          if (resolved) return sendCheckoutResult(res, checkoutIntent, storedQuote, order, resolved);
         } catch (error) {
           return sendCheckoutReplacementError(res, error, order);
         }
@@ -1633,7 +1725,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         order = orderResult.order;
         if (!orderResult.created) {
           const resolved = await resolveExistingCheckoutOrder(order, requestedLocale, event.slug);
-          if (resolved) return res.json(resolved);
+          if (resolved) return sendCheckoutResult(res, checkoutIntent, refreshedQuote, order, resolved);
           return sendCheckoutInProgress(res);
         }
 
@@ -1645,7 +1737,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           });
         }
         performanceProbe.recordOperation('checkoutSucceeded');
-        return res.json({ url: session.url });
+        return sendCheckoutResult(res, checkoutIntent, refreshedQuote, order, session);
       } catch (error) {
         if (error?.code === 'STRIPE_NOT_CONFIGURED') {
           return res.status(501).json({
@@ -1657,6 +1749,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           return res.status(503).json({
             error: 'stripe_live_mode_blocked',
             message: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+          });
+        }
+        if (error?.code === 'STRIPE_TAX_CALCULATION_INCOMPLETE') {
+          return res.status(502).json({
+            error: 'tax_calculation_failed',
+            message: 'Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
           });
         }
         if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);

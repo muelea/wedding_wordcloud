@@ -1,6 +1,7 @@
 'use strict';
 
 const I18n = require('./i18n');
+const { checkoutRequest, paymentAmounts } = require('./checkoutTax');
 const performanceProbe = require('./performanceProbe');
 const stripeConfig = require('./stripeConfig');
 
@@ -279,7 +280,24 @@ async function createCheckoutSession({
     durationMs: Date.now() - startedAt, succeeded: true,
   });
 
-  return { url: session.url, id: session.id };
+  const validationOrder = {
+    ...order,
+    checkout_request_json: JSON.stringify({ ...checkoutRequest(order), customerId }),
+  };
+  const amounts = paymentAmounts(validationOrder, session);
+  if (!session?.id || !session.url || !amounts) {
+    const error = new Error('Stripe konnte den endgültigen Steuer- und Gesamtbetrag nicht bestätigen.');
+    error.code = 'STRIPE_TAX_CALCULATION_INCOMPLETE';
+    throw error;
+  }
+
+  return {
+    url: session.url,
+    id: session.id,
+    taxCents: amounts.taxCents,
+    totalCents: amounts.totalCents,
+    expiresAt: order.checkout_session_expires_at,
+  };
 }
 
 /**

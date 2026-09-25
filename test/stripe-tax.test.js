@@ -58,6 +58,19 @@ test('automatic-tax payment rejects altered net amounts, currency, customer or i
   assert.equal(paymentAmounts(order, session), null, 'a checkout without its pinned Stripe customer is invalid');
 });
 
+test('payment keeps the tax and gross total preview pinned until the signed payment arrives', () => {
+  const { order, session } = fixture();
+  order.checkout_request_json = JSON.stringify({
+    customerId: 'cus_testtax', expectedTaxCents: 421, expectedTotalCents: 2640,
+  });
+  assert.deepEqual(paymentAmounts(order, session), { taxCents: 421, totalCents: 2640 });
+  session.amount_total += 1;
+  assert.equal(paymentAmounts(order, session), null);
+  const partial = fixture();
+  partial.order.checkout_request_json = JSON.stringify({ customerId: 'cus_testtax', expectedTaxCents: 421 });
+  assert.equal(paymentAmounts(partial.order, partial.session), null);
+});
+
 test('hosted Checkout pins shipping, separates net products and shipping, and retries identical Stripe inputs', async (t) => {
   process.env.STRIPE_PAYMENT_MODE = 'test';
   process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_tax_unit';
@@ -67,6 +80,7 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   const customerCalls = [];
   const sessionCalls = [];
   let persistedCustomer = null;
+  let returnIncompleteTax = false;
   t.mock.method(Object.getPrototypeOf(sdk.customers), 'create', async (...args) => {
     customerCalls.push(args); return { id: 'cus_testtax' };
   });
@@ -74,7 +88,17 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
     assert.equal(persistedCustomer, 'cus_testtax', 'customer is durable before a Session can be paid');
     sessionCalls.push(args);
     if (sessionCalls.length === 1) throw new Error('ambiguous connection timeout');
-    return { id: 'cs_test_tax', url: 'https://checkout.stripe.test/tax' };
+    if (returnIncompleteTax) {
+      return {
+        id: 'cs_test_incomplete_tax', url: 'https://checkout.stripe.test/incomplete',
+        automatic_tax: { enabled: true, status: 'requires_location_inputs' },
+      };
+    }
+    return {
+      ...fixture().session,
+      id: 'cs_test_tax',
+      url: 'https://checkout.stripe.test/tax',
+    };
   });
   const product = { key: 'mug', name: 'Weiße Tasse', unit: { singular: 'Tasse', plural: 'Tassen' }, size: { label: '11 oz' } };
   const request = integration.freezeCheckoutRequest({
@@ -87,7 +111,11 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   const { order } = fixture();
   const persistCustomer = async (id) => { persistedCustomer = id; };
   await assert.rejects(integration.createCheckoutSession({ order, ...request, persistCustomer }), /timeout/);
-  await integration.createCheckoutSession({ order, ...request, customerId: persistedCustomer, persistCustomer });
+  const created = await integration.createCheckoutSession({
+    order, ...request, customerId: persistedCustomer, persistCustomer,
+  });
+  assert.equal(created.taxCents, 421);
+  assert.equal(created.totalCents, 2640);
   assert.equal(customerCalls.length, 1);
   assert.equal(customerCalls[0][0].shipping.address.country, 'DE');
   assert.equal(customerCalls[0][0].shipping.address.postal_code, '10115');
@@ -115,4 +143,11 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   );
   assert.equal(options.idempotencyKey, order.stripe_idempotency_key);
   assert.equal(params.payment_intent_data.metadata.orderId, '42');
+  returnIncompleteTax = true;
+  await assert.rejects(
+    integration.createCheckoutSession({
+      order, ...request, customerId: persistedCustomer, persistCustomer,
+    }),
+    (error) => error.code === 'STRIPE_TAX_CALCULATION_INCOMPLETE'
+  );
 });

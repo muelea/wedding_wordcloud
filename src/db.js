@@ -926,15 +926,20 @@ async function attachStripeCustomer(orderId, customerId) {
   if (!result.rowCount) throw new Error('Stripe customer could not be attached');
 }
 
-async function attachStripeSession(orderId, { id, url }) {
+async function attachStripeSession(orderId, { id, url, taxCents, totalCents }) {
+  const expectedAmounts = Number.isSafeInteger(taxCents) && taxCents >= 0 &&
+      Number.isSafeInteger(totalCents) && totalCents >= 0
+    ? { expectedTaxCents: taxCents, expectedTotalCents: totalCents }
+    : {};
   const result = await getPool().query(`
     UPDATE orders
     SET stripe_session_id = $1, stripe_checkout_url = $2,
+        checkout_request_json = checkout_request_json || $3::jsonb,
         status = 'checkout_pending', checkout_ambiguous = false, checkout_expired_confirmed_at = null,
         checkout_error = null, updated_at = transaction_timestamp()
-    WHERE id = $3 AND status = 'creating_checkout' AND stripe_session_id IS NULL
+    WHERE id = $4 AND status = 'creating_checkout' AND stripe_session_id IS NULL
     RETURNING *
-  `, [id, url, orderId]);
+  `, [id, url, jsonValue(expectedAmounts), orderId]);
   if (!result.rows[0]) {
     const existing = await getOrderById(orderId);
     if (existing?.stripe_session_id === id) return existing;
@@ -965,6 +970,8 @@ async function replaceExpiredCheckoutSession(orderId, {
 }) {
   const normalizedLocale = I18n.normalizeLocale(locale);
   const request = { ...(checkoutRequest || {}), locale: normalizedLocale };
+  delete request.expectedTaxCents;
+  delete request.expectedTotalCents;
   const replacementKey = [
     'wolkenworte',
     'checkout',

@@ -120,19 +120,20 @@ frozen snapshot of the word cloud.
    products, including a clear unknown state for missing customs assessments. Delivery dates are
    estimates, and departure country is not a guaranteed production location.
    The shipping-rate amount remains provider metadata; the cost estimate stays
-   the basis of the existing price calculation. The address page uses
-   "Preise und Lieferung prüfen" and shows products, shipping and a tax-exclusive
-   subtotal, with a note that the final total is shown on the payment page before
-   purchase. The quote contains net amounts; its zero customer-tax field means
-   pending calculation, not tax exemption. Any tax or VAT charged by Printful is
+   the basis of the existing price calculation. "Preise und Lieferung prüfen"
+   revalidates the quote, creates the final short-lived Stripe Checkout Session
+   without navigating away, and then shows products, shipping, Stripe's tax and
+   the gross total on the address page. The underlying Printful quote contains
+   net amounts; its zero customer-tax field means pending calculation, not tax
+   exemption. Any tax or VAT charged by Printful is
    an internal procurement cost: it is added once to the customer-facing product
    amount without the catalog markup and is never presented as customer tax.
    The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
-7. "Weiter zur Zahlung" re-estimates the same trusted design basket and
-   delivery address immediately before creating a dynamic Stripe-hosted Checkout
-   Session. A changed price or shipping assessment must be reviewed and confirmed
+7. Before displaying the final total, the server re-estimates the same trusted
+   design basket and delivery address and creates the final dynamic Stripe-hosted
+   Checkout Session. A changed price or shipping assessment must be reviewed and confirmed
    again; failed shipping checks never silently reuse stale data to create a
    payment. Empty shipping options, rejected product/address selections and
    malformed prices return customer-safe errors. An explicit failed provider
@@ -147,10 +148,16 @@ frozen snapshot of the word cloud.
    general tangible-goods category. A technical Stripe Customer per purchase
    stores the validated shipping address; Checkout cannot change it. Customer
    creation and Session creation use independent persisted idempotency inputs.
+   The completed automatic-tax result is validated against the frozen order and
+   persisted as the expected tax and gross total. The browser receives those
+   amounts but not the Session URL. "Weiter zur Zahlung" then returns and opens
+   that exact Session; it does not call the standalone Stripe Tax Calculation API
+   and does not create a disposable preview Session.
    The signed paid Session must match the frozen net product/shipping amounts,
    currency and Customer and contain a completed automatic-tax calculation.
-   Its final tax and gross total are stored atomically before the confirmation
-   email snapshot. Existing older Session requests retain their original gross
+   Its final tax and gross total must also match the displayed expectation and
+   are stored as accounting values atomically before the confirmation email
+   snapshot. Existing older Session requests retain their original gross
    total and retry parameters. The maintainer accepted the initial tax
    configuration on 2026-09-24 after the international sandbox checks: Germany
    Union OSS as a calculation setting plus a GB standard registration. The
@@ -186,7 +193,9 @@ linked from the landing page, configurator and legal pages. New order-confirmati
 emails contain a shorter, durable summary of the contract, delivery, personalised-goods
 and support terms; the general customs wording comes from `src/purchaseTerms.js`.
 Contract/template versions identify the copy; existing message snapshots
-are never rewritten before their retention period expires. The shipping page and tax calculation remain unchanged.
+are never rewritten before their retention period expires. The shipping page
+shows Stripe's completed tax and gross total before redirecting to the same
+short-lived Checkout Session.
 The privacy page describes live fulfillment and current data transfers;
 the approved commerce deletion schedule is documented in `docs/data-retention.md`
 and runs through authenticated maintenance after the schema-5 release.
@@ -694,9 +703,9 @@ ceil(C * (1 + u)) + F + R
 ```
 
 `F` is added exactly once and receives no catalog markup. Printful's standard
-shipping is added separately. The address page and the locally frozen quote
-therefore still contain zero customer tax. Stripe Tax alone calculates the
-customer's final tax from the validated delivery address, the general tangible
+shipping is added separately. The locally frozen Printful quote therefore still
+contains zero customer tax. When the customer checks prices, Stripe Tax calculates
+the final tax from the validated delivery address, the general tangible
 goods tax code (`txcd_99999999`) and the shipping tax code (`txcd_92010001`):
 
 ```text
@@ -704,7 +713,9 @@ pre-Stripe total = customer product amount + shipping
 customer total = pre-Stripe total + Stripe's confirmed tax
 ```
 
-The payment reserve is folded into the product subtotal, not displayed as a
+The shipping page displays that tax and the gross total from the final Checkout
+Session; the payment button later opens the same Session. The payment reserve is
+folded into the product subtotal, not displayed as a
 separate card/payment surcharge. By default it budgets `3.65% + 0,25 €` per
 purchase for Stripe processing and Stripe Tax. Its own calculation always
 assumes 20% customer tax on the product amount (including `F`), shipping and
@@ -716,14 +727,15 @@ customer tax line.
 Example with 10,98 € Printful product costs, 3,28 € Printful VAT and 6,24 €
 shipping: the 50% rule produces 16,47 €, Printful VAT is added without markup,
 and the internal payment reserve is 1,46 €. The product amount shown to Stripe
-is therefore 21,21 € and the pre-tax total is 27,45 €. Stripe determines and
-shows the final customer tax and gross total at Checkout.
+is therefore 21,21 € and the pre-tax total is 27,45 €. Stripe determines the
+final customer tax and gross total, which are shown on the shipping page and
+again in the same Checkout Session.
 
 Because `C` is the actual product cost for the requested quantity, Printful
 quantity discounts automatically lower the customer unit price; there are no
 separate, manually maintained discount tiers. The server repeats the Printful
-estimate immediately before Stripe Checkout, and a changed total must be
-confirmed again.
+estimate before preparing Stripe Checkout, and a changed total must be confirmed
+again before a final gross amount is displayed.
 
 The shop is B2C and does not request a buyer VAT ID. On 2026-09-24 the maintainer
 accepted the tested configuration for the initial launch: native Stripe Tax

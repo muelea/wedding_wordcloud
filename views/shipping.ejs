@@ -291,7 +291,6 @@
     .quote-total { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--line); }
     .quote-total span { font-size: 14px; font-weight: 500; }
     .quote-total strong { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 29px; font-weight: 600; white-space: nowrap; }
-    .quote-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
     .purchase-legal-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; text-align: center; }
     .checkout-error { min-height: 18px; margin: 10px 2px 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .delivery-information { margin-top: 20px; padding: 16px; border-radius: 16px; background: var(--surface-soft); font-size: 13px; line-height: 1.55; color: var(--muted); }
@@ -369,8 +368,8 @@
         <div class="quote" id="quote-result" hidden aria-live="polite">
           <div class="quote-row"><span id="items-label" data-i18n-ignore>Produkte</span><strong id="items-price" data-i18n-ignore></strong></div>
           <div class="quote-row"><span>Versand</span><strong id="shipping-price" data-i18n-ignore></strong></div>
-          <div class="quote-total"><span>Zwischensumme</span><strong id="subtotal-price" data-i18n-ignore></strong></div>
-          <p class="quote-note">Zuzüglich Steuern. Den endgültigen Gesamtpreis seht ihr vor dem Kauf auf der Zahlungsseite.</p>
+          <div class="quote-row" id="tax-row" hidden><span>Steuern</span><strong id="tax-price" data-i18n-ignore></strong></div>
+          <div class="quote-total"><span id="total-label">Gesamtbetrag</span><strong id="total-price" data-i18n-ignore></strong></div>
           <div class="delivery-information" id="delivery-information" aria-live="polite" hidden></div>
           <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Zahlung <span aria-hidden="true">→</span></button>
           <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
@@ -442,6 +441,7 @@
       checkout_in_progress: 'Die Zahlungsseite wird bereits geöffnet. Bitte wartet einen Moment.',
       checkout_not_configured: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
       stripe_live_mode_blocked: 'Die Zahlung ist momentan nicht verfügbar. Bitte versucht es später erneut.',
+      tax_calculation_failed: 'Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.',
       checkout_failed: 'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.',
     });
 
@@ -1313,7 +1313,7 @@
       form.inert = false;
       WolkenworteActions.setBusy(submitButton, false);
       WolkenworteActions.setBusy(checkoutButton, false);
-      checkoutButton.disabled = !currentQuote?.id;
+      checkoutButton.disabled = currentQuote?.checkoutPrepared !== true;
     }
 
     function cancelShippingRequest() {
@@ -1381,21 +1381,34 @@
     }
 
     function showQuote(quote, { scroll = true, resetAction = true } = {}) {
+      const subtotalCents = quote?.itemsCents + quote?.shippingCents;
       if (!quote?.id || typeof quote.currency !== 'string' ||
-          ![quote.itemsCents, quote.shippingCents, quote.itemsCents + quote.shippingCents]
+          ![quote.itemsCents, quote.shippingCents, subtotalCents]
             .every((amount) => Number.isSafeInteger(amount) && amount >= 0)) {
         throw customerError('Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.');
+      }
+      const prepared = quote.checkoutPrepared === true;
+      if (prepared && (!Number.isSafeInteger(quote.taxCents) || quote.taxCents < 0 ||
+          !Number.isSafeInteger(quote.totalCents) || quote.totalCents !== subtotalCents + quote.taxCents)) {
+        throw customerError('Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.');
       }
       currentQuote = quote;
       const productLabel = totalProductLabel(Number(quote.quantity || 0));
       document.getElementById('items-label').textContent = productLabel;
       document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
       document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
-      document.getElementById('subtotal-price').textContent = formatMoney(quote.itemsCents + quote.shippingCents, quote.currency);
+      const taxRow = document.getElementById('tax-row');
+      taxRow.hidden = !prepared;
+      if (prepared) document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
+      setText(document.getElementById('total-label'), prepared ? 'Gesamtbetrag' : 'Zwischensumme');
+      document.getElementById('total-price').textContent = formatMoney(
+        prepared ? quote.totalCents : subtotalCents,
+        quote.currency
+      );
       renderDeliveryInformation(quote.shippingDetails);
       quoteResult.hidden = false;
       if (resetAction) clearText(checkoutError);
-      if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = false;
+      if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = !prepared;
       if (resetAction) setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
       if (scroll) quoteResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -1575,7 +1588,42 @@
           if (Array.isArray(result.fields)) markInvalidFields(result.fields);
           throw customerError(customerErrorSource(result, 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.'));
         }
-        showQuote(result.quote);
+        const { response: checkoutResponse, result: checkoutResult } = await fetchShippingJson(
+          `/api/events/${encodeURIComponent(slug)}/cart/checkout`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Wolkenworte-Guest-Id': guestId,
+            },
+            body: JSON.stringify({
+              intent: 'prepare',
+              configurationIds,
+              quoteId: result.quote.id,
+              locale: WolkenworteI18n.getLocale(),
+            }),
+          }, request.controller
+        );
+        if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
+        if (!checkoutResponse.ok) {
+          if (checkoutResult.quote &&
+              (checkoutResult.error === 'quote_changed' || checkoutResult.error === 'quote_shipping_changed')) {
+            showQuote(checkoutResult.quote);
+            setButtonLabel(submitButton, checkoutResult.error === 'quote_shipping_changed'
+              ? 'Aktualisierte Lieferung bestätigen' : 'Neue Preise bestätigen');
+            setText(formError, customerErrorSource(checkoutResult,
+              'Die Preise haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.'));
+            return;
+          }
+          if (Array.isArray(checkoutResult.fields)) markInvalidFields(checkoutResult.fields);
+          throw customerError(customerErrorSource(checkoutResult,
+            'Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.'));
+        }
+        if (checkoutResult.confirmationUrl) {
+          location.assign(checkoutResult.confirmationUrl);
+          return;
+        }
+        showQuote(checkoutResult.quote);
         globalThis.WolkenworteAnalytics?.track('shipping_quote');
         setButtonLabel(submitButton, 'Preise aktualisieren');
       } catch (error) {
@@ -1589,7 +1637,7 @@
     });
 
     checkoutButton.addEventListener('click', async () => {
-      if (!currentQuote?.id || activeShippingRequest) return;
+      if (currentQuote?.checkoutPrepared !== true || activeShippingRequest) return;
       const request = { controller: new AbortController(), revision: shippingRevision };
       activeShippingRequest = request;
       // Freeze the address being confirmed, but leave Home/Back available.
@@ -1608,6 +1656,7 @@
               'X-Wolkenworte-Guest-Id': guestId,
             },
             body: JSON.stringify({
+              intent: 'pay',
               configurationIds,
               quoteId: currentQuote.id,
               locale: WolkenworteI18n.getLocale(),
@@ -1625,9 +1674,9 @@
             return;
           }
           if (result.error === 'quote_changed' || result.error === 'quote_shipping_changed') {
-            setButtonLabel(checkoutButton, result.error === 'quote_shipping_changed'
+            setButtonLabel(submitButton, result.error === 'quote_shipping_changed'
               ? 'Aktualisierte Lieferung bestätigen' : 'Neue Preise bestätigen');
-            setText(checkoutError,
+            setText(formError,
               customerErrorSource(result, 'Die Preise haben sich geändert. Bitte prüft und bestätigt die aktualisierten Angaben.'));
             return;
           }

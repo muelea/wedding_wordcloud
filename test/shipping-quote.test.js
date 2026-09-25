@@ -144,6 +144,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
     shippingCents: 449,
     taxCents: 0,
     totalCents: 2353,
+    checkoutPrepared: false,
     expiresAt: undefined,
   });
   assert.equal(captured.length, 1);
