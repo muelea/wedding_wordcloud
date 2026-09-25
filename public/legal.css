@@ -213,7 +213,7 @@ h1 {
   gap: 20px;
 }
 
-.footer-links { display: flex; gap: 20px; }
+.footer-links { display: flex; gap: 12px 20px; flex-wrap: wrap; justify-content: center; }
 .legal-footer a { text-decoration: none; }
 
 @media (max-width: 620px) {

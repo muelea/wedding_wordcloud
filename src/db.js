@@ -10,7 +10,8 @@ const log = require('./structuredLog');
 const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
-const REQUIRED_SCHEMA_VERSION = '4';
+const REQUIRED_SCHEMA_VERSION = '5';
+const { yearEndDeadline, emailRetentionYears, evidenceAddresses } = require('./retentionPolicy');
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
 const MAX_ACTIVE_UNPAID_CONFIGURATIONS = 2000;
@@ -929,7 +930,7 @@ async function attachStripeSession(orderId, { id, url }) {
   const result = await getPool().query(`
     UPDATE orders
     SET stripe_session_id = $1, stripe_checkout_url = $2,
-        status = 'checkout_pending', checkout_ambiguous = false,
+        status = 'checkout_pending', checkout_ambiguous = false, checkout_expired_confirmed_at = null,
         checkout_error = null, updated_at = transaction_timestamp()
     WHERE id = $3 AND status = 'creating_checkout' AND stripe_session_id IS NULL
     RETURNING *
@@ -976,6 +977,7 @@ async function replaceExpiredCheckoutSession(orderId, {
     UPDATE orders
     SET stripe_session_id = NULL,
         stripe_checkout_url = NULL,
+        checkout_expired_confirmed_at = NULL,
         status = 'creating_checkout',
         checkout_request_json = $1::jsonb,
         stripe_idempotency_key = $2,
@@ -1582,6 +1584,265 @@ async function recoverStaleEmailJobs() {
 }
 
 // ── Expiring checkout quotes ────────────────────────────────────────────
+// A signed expired Session is required once Stripe creation was attempted.
+// Local expiry alone cannot rule out an accepted payment with a late webhook.
+async function recordExpiredCheckout({ stripeEventId, session, livemode }) {
+  if (session?.status !== 'expired' || session.payment_status !== 'unpaid' ||
+      !Number.isSafeInteger(session.expires_at) || session.expires_at > Date.now() / 1000) {
+    return { matched: false };
+  }
+  return withTransaction(async (client) => {
+    const result = await client.query(`
+      SELECT * FROM orders WHERE stripe_session_id = $1 OR
+        (id::text = $2 AND quote_id = $3 AND stripe_session_id IS NULL)
+      FOR UPDATE
+    `, [session.id, session.metadata?.orderId || '', session.metadata?.quoteId || '']);
+    const order = result.rows[0];
+    if (!order || order.mode !== (livemode ? 'live' : 'test') || order.paid_at ||
+        !['creating_checkout', 'checkout_pending'].includes(order.status)) return { matched: false };
+    if (!order.stripe_session_id &&
+        Math.floor(+new Date(order.checkout_session_expires_at) / 1000) !== session.expires_at) {
+      return { matched: false }; // expiration of an older, replaced Session
+    }
+    const inserted = await client.query(`
+      INSERT INTO stripe_webhook_events (stripe_event_id, event_type, stripe_session_id, order_id)
+      VALUES ($1, 'checkout.session.expired', $2, $3)
+      ON CONFLICT DO NOTHING RETURNING stripe_event_id
+    `, [stripeEventId, session.id, order.id]);
+    if (!inserted.rowCount) return { matched: true, duplicate: true };
+    await client.query(`
+      UPDATE orders SET checkout_expired_confirmed_at = to_timestamp($2),
+        stripe_session_id = $3, checkout_ambiguous = false WHERE id = $1
+    `, [order.id, session.expires_at, session.id]);
+    return { matched: true, duplicate: false };
+  });
+}
+
+async function setOrderRetentionPolicy({ orderId, holdReason = null, reviewAt = null, years = null }) {
+  const reasons = ['support', 'refund', 'dispute', 'audit', 'legal'];
+  if (!/^\d+$/.test(String(orderId)) ||
+      (holdReason && (!reasons.includes(holdReason) || !reviewAt ||
+        !Number.isFinite(new Date(reviewAt).getTime()) || new Date(reviewAt) <= new Date())) ||
+      (!holdReason && reviewAt) ||
+      (years != null && (!Number.isInteger(years) || years < 8 || years > 100))) {
+    throw new Error('invalid retention policy');
+  }
+  return withTransaction(async (client) => {
+    const selected = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
+    const order = selected.rows[0];
+    if (!order) throw new Error('order not found');
+    // Do not promise a hold on a file whose object deletion has already begun.
+    const deleting = await client.query(`
+      SELECT 1 FROM print_artifacts WHERE order_id = $1 AND storage_status = 'deleting'
+    `, [orderId]);
+    if (holdReason && deleting.rowCount) throw new Error('artifact deletion in progress; retry after completion');
+    await client.query(`
+      UPDATE orders SET retention_hold_reason = $2, retention_review_at = $3,
+        retention_years = coalesce($4, retention_years), retention_checked_at = null
+      WHERE id = $1
+    `, [orderId, holdReason, reviewAt, years]);
+    await client.query(`
+      INSERT INTO operator_actions (action_type, order_id, before_state, after_state,
+        status, summary_json, completed_at)
+      VALUES ('retention_policy', $1, $2, $3, 'succeeded', $4::jsonb, transaction_timestamp())
+    `, [orderId, order.retention_hold_reason || 'no_hold', holdReason || 'no_hold',
+      jsonValue({ years: years ?? order.retention_years, reviewAt })]);
+    return { orderId: String(orderId), holdReason, reviewAt, years: years ?? order.retention_years };
+  });
+}
+
+async function releaseRetainedConfigurations(client, ids) {
+  if (!ids.length) return;
+  // Shared or still-public designs must survive another order's expiration.
+  await client.query(`
+    DELETE FROM configurations c WHERE c.id = ANY($1::text[])
+      AND (c.event_id IS NULL OR EXISTS (
+        SELECT 1 FROM events e WHERE e.id = c.event_id AND e.expires_at <= transaction_timestamp()))
+      AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.configuration_id = c.id)
+      AND NOT EXISTS (SELECT 1 FROM order_items i WHERE i.configuration_id = c.id)
+      AND NOT EXISTS (SELECT 1 FROM print_artifacts a WHERE a.configuration_id = c.id)
+      AND NOT EXISTS (SELECT 1 FROM checkout_quotes q WHERE q.configuration_id = c.id
+        AND q.expires_at > transaction_timestamp())
+  `, [ids]);
+}
+
+async function cleanupOneCommerceRecord() {
+  return withTransaction(async (client) => {
+    await client.query("SET LOCAL statement_timeout = '1500ms'");
+    const selected = await client.query(`
+      SELECT * FROM orders o WHERE o.created_at < transaction_timestamp() - interval '30 days'
+        AND (retention_checked_at IS NULL OR retention_checked_at < transaction_timestamp() - interval '1 day')
+        AND retention_hold_reason IS NULL
+        AND NOT EXISTS (SELECT 1 FROM print_artifacts a WHERE a.order_id = o.id AND a.support_hold)
+      ORDER BY retention_checked_at NULLS FIRST, id FOR UPDATE SKIP LOCKED LIMIT 1
+    `);
+    const order = selected.rows[0];
+    if (!order) return null;
+    // NOWAIT avoids deadlocking provider callbacks which lock a child first.
+    const shipments = (await client.query(
+      'SELECT * FROM checkout_order_shipments WHERE order_id = $1 FOR UPDATE NOWAIT', [order.id])).rows;
+    const emails = (await client.query(
+      'SELECT * FROM email_jobs WHERE order_id = $1 FOR UPDATE NOWAIT', [order.id])).rows;
+    const items = (await client.query(
+      'SELECT * FROM order_items WHERE order_id = $1 FOR UPDATE NOWAIT', [order.id])).rows;
+    const artifacts = (await client.query(
+      'SELECT * FROM print_artifacts WHERE order_id = $1 FOR UPDATE NOWAIT', [order.id])).rows;
+    await client.query('UPDATE orders SET retention_checked_at = transaction_timestamp() WHERE id = $1', [order.id]);
+    const result = { checked: 1, unpaid: 0, technical: 0, operational: 0, emails: 0, orders: 0 };
+    const now = Date.now();
+    const days = (n) => n * 86400000;
+    const configIds = [...new Set([order.configuration_id, ...items.map((i) => i.configuration_id)].filter(Boolean))];
+    const activeEmail = emails.some((e) => !e.provider_terminal &&
+      (['pending', 'failed', 'processing', 'blocked'].includes(e.status) || e.delivery_ambiguous));
+    if (order.fulfillment_locked_by || activeEmail || artifacts.some((a) =>
+      a.support_hold || ['uploading', 'deleting', 'delete_failed'].includes(a.storage_status))) return result;
+
+    const expired = order.checkout_expired_confirmed_at ||
+      (!order.stripe_session_id && !order.checkout_first_attempt_at && !order.checkout_ambiguous
+        ? order.checkout_session_expires_at : null);
+    if (!order.paid_at && ['creating_checkout', 'checkout_pending'].includes(order.status) &&
+        !order.stripe_payment_intent_id && !artifacts.length && !emails.length && expired &&
+        new Date(expired).getTime() + days(30) <= now) {
+      await client.query('DELETE FROM orders WHERE id = $1', [order.id]);
+      await client.query('DELETE FROM checkout_quotes WHERE id = $1', [order.quote_id]);
+      await releaseRetainedConfigurations(client, configIds);
+      result.unpaid = 1;
+      return result;
+    }
+    if (!order.paid_at) return result;
+
+    // A dispatch is not delivery. Without a delivery callback we allow a
+    // 90-day completion window, provided no failure/return/support case exists.
+    let completedAt = null;
+    if (order.canceled_at && Number(order.refunded_cents) >= Number(order.total_cents) &&
+        Number(order.total_cents) > 0 && shipments.every((s) =>
+          s.delivered_at || s.printful_order_status === 'canceled')) {
+      completedAt = new Date(Math.max(+new Date(order.canceled_at), +new Date(order.refunded_at)));
+    } else if (['submitted', 'mocked'].includes(order.fulfillment_status) && shipments.length &&
+        shipments.every((s) => ['submitted', 'mocked'].includes(s.fulfillment_status) &&
+          !['returned', 'failed', 'canceled'].includes(s.printful_order_status) &&
+          (s.delivered_at || s.shipped_at))) {
+      completedAt = new Date(Math.max(...shipments.map((s) => s.delivered_at
+        ? +new Date(s.delivered_at) : +new Date(s.shipped_at) + days(90))));
+    }
+    if (!completedAt || +completedAt > now) return result;
+    const baseAt = new Date(Math.max(+completedAt, +new Date(order.paid_at),
+      order.refunded_at ? +new Date(order.refunded_at) : 0,
+      ...emails.map((e) => +new Date(e.created_at))));
+
+    // Essential order evidence lives in the order/items, not provider payloads.
+    if (!order.technical_data_erased_at && +baseAt + days(90) <= now) {
+      await client.query(`
+        UPDATE orders SET checkout_error = null, fulfillment_error = null,
+          fulfillment_payload_json = null, stripe_checkout_url = null,
+          technical_data_erased_at = transaction_timestamp() WHERE id = $1
+      `, [order.id]);
+      await client.query(`
+        UPDATE checkout_order_shipments SET fulfillment_error = null,
+          fulfillment_payload_json = CASE WHEN fulfillment_payload_json->>'external_id' IS NULL
+            THEN null ELSE jsonb_build_object('external_id', fulfillment_payload_json->>'external_id') END
+        WHERE order_id = $1
+      `, [order.id]);
+      // Terminal email reason codes and dedupe identities deliberately survive.
+      result.technical = 1;
+    }
+    if (!order.operational_data_erased_at && +yearEndDeadline(baseAt, 3) <= now && !artifacts.length) {
+      await client.query(`
+        UPDATE orders SET buyer_email = null, shipping_json = $2::jsonb,
+          checkout_request_json = jsonb_build_object('customerId', checkout_request_json->>'customerId'),
+          configuration_id = null, configuration_ids_json = null, event_title_snapshot = '[expired]',
+          operational_data_erased_at = transaction_timestamp() WHERE id = $1
+      `, [order.id, jsonValue(evidenceAddresses(order.shipping_json))]);
+      await client.query(`
+        UPDATE checkout_order_shipments SET recipient_json = '{}'::jsonb,
+          tracking_number = null, tracking_url = null WHERE order_id = $1
+      `, [order.id]);
+      await client.query(`
+        UPDATE order_items SET configuration_id = null,
+          configuration_snapshot_json = configuration_snapshot_json - 'words' - 'design'
+        WHERE order_id = $1
+      `, [order.id]);
+      await client.query('DELETE FROM checkout_quotes WHERE id = $1', [order.quote_id]);
+      await releaseRetainedConfigurations(client, configIds);
+      result.operational = 1;
+    }
+    for (const email of emails) {
+      if (!email.content_erased_at &&
+          +yearEndDeadline(email.created_at, emailRetentionYears(email.kind)) <= now) {
+        await client.query(`
+          UPDATE email_jobs SET recipient_email = null, subject = '[expired]',
+            html_body = '[expired]', text_body = '[expired]', provider_terminal = true,
+            content_erased_at = transaction_timestamp() WHERE id = $1
+        `, [email.id]);
+        result.emails += 1;
+      }
+    }
+    if (+yearEndDeadline(baseAt, order.retention_years) <= now && !artifacts.length) {
+      await client.query('DELETE FROM email_jobs WHERE order_id = $1', [order.id]);
+      await client.query('DELETE FROM operator_actions WHERE order_id = $1', [order.id]);
+      await client.query('DELETE FROM orders WHERE id = $1', [order.id]);
+      await client.query('DELETE FROM checkout_quotes WHERE id = $1', [order.quote_id]);
+      await releaseRetainedConfigurations(client, configIds);
+      result.orders = 1;
+    }
+    return result;
+  });
+}
+
+async function cleanupCommerceRecords({ limit = 5, deadline = null } = {}) {
+  const summary = { checked: 0, unpaid: 0, technical: 0, operational: 0, emails: 0, orders: 0 };
+  const boundedLimit = Number.isSafeInteger(limit) && limit > 0 ? Math.min(limit, 20) : 5;
+  for (let i = 0; i < boundedLimit && (!deadline || Date.now() + 2000 < deadline); i += 1) {
+    let result;
+    try { result = await cleanupOneCommerceRecord(); }
+    catch (error) {
+      if (['55P03', '57014', '40P01'].includes(error.code)) break; // busy: retry next wake-up
+      throw error;
+    }
+    if (!result) break;
+    for (const key of Object.keys(summary)) summary[key] += result[key];
+  }
+  return summary;
+}
+
+async function cleanupRetentionMetadata() {
+  // Provider IDs attached to retained evidence remain available for replay
+  // protection. Unmatched IDs and completed maintenance logs need only 90 days.
+  return withTransaction(async (client) => {
+    await client.query("SET LOCAL statement_timeout = '1500ms'");
+    const result = await client.query(`
+    WITH maintenance AS (
+      DELETE FROM maintenance_runs WHERE id IN (SELECT id FROM maintenance_runs
+        WHERE completed_at < transaction_timestamp() - interval '90 days'
+        ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING id
+    ), stripe AS (
+      DELETE FROM stripe_webhook_events WHERE stripe_event_id IN (SELECT stripe_event_id
+        FROM stripe_webhook_events WHERE order_id IS NULL
+          AND processed_at < transaction_timestamp() - interval '90 days'
+        ORDER BY processed_at LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING stripe_event_id
+    ), resend AS (
+      DELETE FROM resend_webhook_events WHERE svix_id IN (SELECT svix_id
+        FROM resend_webhook_events WHERE email_job_id IS NULL
+          AND processed_at < transaction_timestamp() - interval '90 days'
+        ORDER BY processed_at LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING svix_id
+    ), printful AS (
+      DELETE FROM printful_webhook_events WHERE event_key IN (SELECT e.event_key
+        FROM printful_webhook_events e
+        WHERE processed_at < transaction_timestamp() - interval '90 days'
+          AND NOT EXISTS (SELECT 1 FROM checkout_order_shipments s
+            WHERE s.printful_order_id = e.provider_order_id
+              OR s.fulfillment_payload_json->>'external_id' = e.external_order_id)
+        ORDER BY processed_at LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING event_key
+    ) SELECT (SELECT count(*) FROM maintenance) + (SELECT count(*) FROM stripe) +
+      (SELECT count(*) FROM resend) + (SELECT count(*) FROM printful) AS count
+  `);
+    return Number(result.rows[0].count);
+  }).catch((error) => {
+    if (['55P03', '57014', '40P01'].includes(error.code)) return 0;
+    throw error;
+  });
+}
+
 function checkoutQuoteTtlMs() {
   const minutes = Number(process.env.CHECKOUT_QUOTE_TTL_MINUTES || 30);
   const safeMinutes = Number.isFinite(minutes) && minutes >= 5 && minutes <= 120 ? minutes : 30;
@@ -1921,14 +2182,8 @@ async function prepareExpiredEventCleanup(eventId) {
     `, [eventId]);
     if (activeCheckout.rowCount) return null;
 
-    // Unpaid/abandoned checkout attempts are event-lifetime data. Removing
-    // them first releases their configuration references. Paid commerce is
-    // retained and detached below.
-    await client.query(`
-      DELETE FROM orders
-      WHERE event_id = $1 AND status NOT IN ('paid_test', 'paid', 'fulfilled')
-    `, [eventId]);
-
+    // Order cleanup owns payment certainty and holds. Detach every retained
+    // order's design; event expiry must never bypass those safeguards.
     const retainedResult = await client.query(`
       SELECT DISTINCT configuration_id
       FROM (
@@ -1936,13 +2191,11 @@ async function prepareExpiredEventCleanup(eventId) {
         FROM order_items item
         JOIN orders retained_order ON retained_order.id = item.order_id
         WHERE retained_order.event_id = $1
-          AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
           AND item.configuration_id IS NOT NULL
         UNION
         SELECT retained_order.configuration_id
         FROM orders retained_order
         WHERE retained_order.event_id = $1
-          AND retained_order.status IN ('paid_test', 'paid', 'fulfilled')
           AND retained_order.configuration_id IS NOT NULL
       ) retained
     `, [eventId]);
@@ -2067,14 +2320,15 @@ async function extendOrderArtifactRetention(orderId, expiresAt) {
 async function claimExpiredPrintArtifact(excludeIds = []) {
   return withTransaction(async (client) => {
     const selected = await client.query(`
-      SELECT id FROM print_artifacts
-      WHERE support_hold = false AND expires_at <= transaction_timestamp()
+      SELECT a.id FROM print_artifacts a JOIN orders o ON o.id = a.order_id
+      WHERE support_hold = false AND o.retention_hold_reason IS NULL
+        AND expires_at <= transaction_timestamp()
         AND (storage_status IN ('active', 'delete_failed') OR
           (storage_status = 'deleting' AND
            (deletion_claimed_at IS NULL OR deletion_claimed_at < transaction_timestamp() - interval '5 minutes')))
-        AND NOT (id = ANY($1::text[]))
-      ORDER BY expires_at, id
-      FOR UPDATE SKIP LOCKED
+        AND NOT (a.id = ANY($1::text[]))
+      ORDER BY expires_at, a.id
+      FOR UPDATE OF o, a SKIP LOCKED
       LIMIT 1
     `, [excludeIds]);
     if (!selected.rowCount) return null;
@@ -2193,6 +2447,11 @@ async function getOperationalStatus() {
        ) AS print_artifact_failures,
       (SELECT count(*)::integer FROM checkout_quotes
        WHERE expires_at <= transaction_timestamp()) AS expired_quotes,
+      (SELECT count(*)::integer FROM orders WHERE retention_hold_reason IS NOT NULL
+         AND retention_review_at <= transaction_timestamp()) AS retention_reviews_due,
+      (SELECT count(*)::integer FROM orders WHERE paid_at IS NULL
+         AND checkout_first_attempt_at IS NOT NULL AND checkout_expired_confirmed_at IS NULL
+         AND created_at < transaction_timestamp() - interval '30 days') AS checkout_retention_unresolved,
       (SELECT count(*)::integer FROM events
        WHERE expires_at <= transaction_timestamp()) AS expired_events
   `);
@@ -2225,6 +2484,8 @@ async function getOperationalStatus() {
     retention: {
       expiredQuotes: Number(row.expired_quotes || 0),
       expiredEvents: Number(row.expired_events || 0),
+      reviewsDue: Number(row.retention_reviews_due || 0),
+      unresolvedCheckouts: Number(row.checkout_retention_unresolved || 0),
     },
   };
 }
@@ -2368,6 +2629,7 @@ async function recordResendWebhook({
     }
     const job = providerMatch.rows[0] || tagMatch.rows[0];
     if (!job) return { duplicate: false, matched: false };
+    if (job.content_erased_at) return { duplicate: false, matched: true, ignored: true };
     if (job.provider_message_id && providerMessageId && job.provider_message_id !== providerMessageId) {
       return { duplicate: false, matched: false, mismatch: true };
     }
@@ -2506,8 +2768,9 @@ async function recordPrintfulWebhook({
     const shipmentResult = await client.query(`
       SELECT shipment.id, shipment.order_id
       FROM checkout_order_shipments shipment
-      WHERE ($1::text IS NOT NULL AND shipment.fulfillment_payload_json->>'external_id' = $1)
-         OR ($2::text IS NOT NULL AND shipment.printful_order_id = $2)
+      JOIN orders retained_order ON retained_order.id = shipment.order_id
+      WHERE retained_order.operational_data_erased_at IS NULL AND (($1::text IS NOT NULL AND shipment.fulfillment_payload_json->>'external_id' = $1)
+         OR ($2::text IS NOT NULL AND shipment.printful_order_id = $2))
       ORDER BY shipment.id
       LIMIT 1
       FOR UPDATE
@@ -2882,6 +3145,10 @@ module.exports = {
   getPendingEmailJobs,
   recoverStaleEmailJobs,
   cleanupAbandonedQuotes,
+  recordExpiredCheckout,
+  setOrderRetentionPolicy,
+  cleanupCommerceRecords,
+  cleanupRetentionMetadata,
   createCheckoutQuote,
   getCheckoutQuote,
   getEventCheckoutQuote,

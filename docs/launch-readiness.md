@@ -1,16 +1,23 @@
 # Wolkenworte launch-readiness checklist
 
-Last reviewed: 2026-09-23
+Last reviewed: 2026-09-24
 
 The hosted-architecture refactor is complete. Wolkenworte now runs locally and
 on the Fly hosted test environment from the same application code, ordered
 Postgres migrations, least-privileged runtime role and private Storage model.
-The remaining work is launch preparation: external provider activation,
-business/legal decisions, recoverability and the controlled production
-cutover. It does not require another application-architecture redesign.
+The remaining work is legal review and the controlled production cutover,
+including activation of the implemented commerce retention rules. Provider
+verification is complete; additional monitoring and recovery safeguards are
+explicitly deferred below. No application-architecture redesign is required.
 
 This file is the single source of truth for unfinished launch work. Completed
 implementation history is intentionally not maintained as a step-by-step diary.
+
+On 2026-09-24 the maintainer took invoicing, bookkeeping, seller VAT IDs,
+tax registrations/reporting and optional Stripe payment/refund receipts out of
+the project's go-live blockers. The maintainer handles these separately;
+this records ownership, not completion or professional approval. No additional
+project sign-off is required for these topics.
 
 ## Verified baseline
 
@@ -42,10 +49,35 @@ implementation history is intentionally not maintained as a step-by-step diary.
 
 ### Business, tax and legal decisions
 
-- [x] Record the current sandbox tax model: B2C sales by the German JUSA
-  Engineering UG (haftungsbeschränkt), seller VAT ID stored in Stripe and
-  Printful, one active German Stripe Tax `small_seller` registration and no
-  active OSS registration. Buyer VAT IDs are intentionally not requested.
+- [x] Initial tax configuration accepted by the maintainer on 2026-09-24;
+  configuration work is complete for the initial launch. B2C sales by the
+  German JUSA Engineering UG (haftungsbeschränkt) continue through native
+  Stripe Checkout with `automatic_tax`, the validated delivery address,
+  exclusive prices, goods code `txcd_99999999` and shipping code
+  `txcd_92010001`. Buyer VAT IDs are not requested.
+- [x] Replace the earlier `small_seller` baseline with the tested Stripe Tax
+  configuration: Germany `oss_union` plus Great Britain `standard`. The OSS
+  setting is the maintainer's chosen calculation workaround, not evidence
+  that the underlying Printful chain transactions qualify for legal OSS
+  reporting. Orders 32–40 covered DE, FR, LV, ES, GB, CH and three US states;
+  order 41 verified GB VAT at 20% after the GB setting was added. Amounts,
+  payment persistence and confirmation messages matched. All evidence is
+  sandbox-only; see the [test audit](stripe-printful-test-audit-2026-09-24.md).
+- [x] Accept the existing head-office-origin calculation for the initial
+  launch, primarily targeting Germany with possible isolated US sales.
+  Per-order Printful ship-from support, a separate Tax API integration and
+  Checkout preview access are not initial-launch blockers. US checkout
+  currently collects no tax under the business assumption of no nexus;
+  CH and other unconfigured destinations retain the current calculation.
+  These test results do not validate worldwide tax treatment or US nexus.
+  Stripe's live threshold monitoring is to support ongoing review, not replace
+  an assessment of obligations outside its monitoring coverage.
+- [x] Record the maintainer's registration preference: no speculative local
+  registrations in all 27 EU states; address destination-country obligations
+  as actual sales arise. This is not approval of a universal post-sale
+  registration grace period. Stripe settings do not establish registrations
+  with tax authorities or submit tax returns by themselves. The accepted
+  configuration does not certify that any required foreign registration exists.
 - [x] Keep Printful tax/VAT as an internal procurement cost. It is included once
   in the customer-facing product amount without the catalog markup; only Stripe
   Tax creates the customer tax line. Draft/live fulfillment compares Printful's
@@ -55,26 +87,39 @@ implementation history is intentionally not maintained as a step-by-step diary.
   review, Stripe Checkout, confirmation page and transactional messages. Keep
   the more specific Printful customs-risk and unknown-state warnings as
   additional information; the recipient bears external import charges.
-- [ ] Confirm the German `small_seller` treatment, invoicing and bookkeeping
-  process with qualified professional input. Monitor the EUR 10,000 EU
-  cross-border B2C threshold and register/activate OSS before applying that
-  regime; do not restore the removed sandbox OSS registration prematurely.
-- [ ] Validate the Stripe Tax setup for live worldwide sales, including live
-  registrations, product/shipping tax codes and the actual Printful fulfillment
-  origins. Sandbox Checkout records Stripe's confirmed destination tax but uses
-  the configured German head-office origin; observed Printful origins include
-  Germany, Latvia, Spain and the United States and are not passed to Stripe as a
-  per-order tax origin.
-- [ ] Review product margins and the provisional markup/payment-reserve values.
-- [ ] Approve the versioned order-confirmation, contract-formation,
-  personalization/withdrawal, refund and cancellation wording.
+- [x] Initial pricing approved by the maintainer on 2026-09-24: 50% markup on
+  Printful product costs, Printful tax/VAT and shipping passed through without
+  markup, and an embedded payment-cost reserve of 3.65% plus EUR 0.25 per
+  purchase. Stripe calculates customer tax separately. The reserve remains an
+  estimate; the markup is a contribution toward operating costs and profit,
+  not net profit. Review actual costs after the first real orders; no further
+  pricing approval or implementation is required before the initial launch.
+- [x] Prepare the live-sales legal copy (2026-09-24): public ordering
+  information at `/bestellinformationen`, linked from the landing page,
+  configurator and legal pages, explains contract formation, corrections,
+  payment, delivery, personalised goods, cancellation requests, statutory
+  defect rights, contract storage and supported languages. Confirmation
+  snapshots retain the relevant information in all six languages under
+  `contract-2026-09-24-v3`; existing stored messages remain unchanged.
+  Privacy copy describes live fulfillment, delivery-address transfer to Stripe
+  and the approved commerce retention schedule described below.
+  The maintainer explicitly retains the existing shipping page, including
+  net product/shipping prices and its notice that tax and the final total are
+  shown at Stripe. No shipping-page or tax-calculation change is part of this
+  work; this preference is not a legal sign-off on the price presentation.
 - [ ] Have qualified German counsel review the legal notice and privacy policy
-  together with the final live provider contracts and tax setup.
-- [ ] Define exact retention periods for paid orders, addresses, buyer email,
-  sent message bodies and provider metadata. Encode approved deletion periods
-  in bounded tests and cleanup queries; do not leave them as an operator habit.
-- [ ] Confirm whether Stripe's own payment/refund receipts should be enabled in
-  addition to Wolkenworte's transactional messages.
+  together with the ordering information, price presentation and final live
+  provider contracts/data-processing agreements. The implementation above is
+  not a record of an external legal review or verified provider agreements.
+- [x] Approve and implement commerce retention (2026-09-24): eight-year order
+  evidence, six/eight-year correspondence, three-year operational copies,
+  thirty-day confirmed unpaid checkouts and ninety-day technical details.
+  Calendar-year deadlines, reviewed holds, longer per-order statutory periods,
+  payment uncertainty and object-first deletion are enforced by bounded
+  maintenance queries. Policy, classifications and operator commands live in
+  `docs/data-retention.md`; the privacy page is updated in all six languages.
+  Schema version 5 and the new Stripe expiry subscription are prepared locally;
+  activation is part of the controlled cutover, not an already executed release.
 
 ### Resend activation
 
@@ -117,10 +162,10 @@ implementation history is intentionally not maintained as a step-by-step diary.
   test; invalid signatures receive HTTP 400 and replay-safe persistence is
   covered by the signed callback test. Shipment and return delivery remain to
   be observed on the first real fulfilled order.
-- [ ] Keep `PRINTFUL_FULFILLMENT_MODE=mock`,
+- [x] Retain the test-mode safety hold: `PRINTFUL_FULFILLMENT_MODE=mock`,
   `PRINTFUL_ALLOW_ORDER_WRITES=false` and
   `PRINTFUL_CONFIRM_LIVE_ORDERS=false` until the cutover is explicitly
-  approved.
+  approved. This is a cutover gate, not unfinished provider integration.
 
 ## Controlled production cutover
 
@@ -128,7 +173,9 @@ Execute this only after every item above has an owner and all launch blockers
 are signed off. Deployment, destructive cleanup, credential rotation and live
 provider activation each require explicit maintainer approval at action time.
 
-1. Run `npm run deploy:hosted` for the tested candidate while Stripe remains in
+1. Include `checkout.session.expired` in the sandbox webhook subscription via
+   the guarded configuration command, then run `npm run deploy:hosted` for the
+   tested candidate (including schema version 5) while Stripe remains in
    test mode, transactional test email remains enabled and Printful writes
    remain disabled.
 2. Set `MAINTENANCE_MODE=true` on Fly and verify public traffic receives the
@@ -142,7 +189,13 @@ provider activation each require explicit maintainer approval at action time.
    HMAC secret and maintenance secret. Update only the stores that consume each
    value.
 6. Configure the Stripe live key and a new live webhook destination/signing
-   secret. Never reuse the sandbox or local Stripe CLI webhook secret.
+   secret. Subscribe to `checkout.session.completed`,
+   `checkout.session.async_payment_succeeded`, `checkout.session.expired` and
+   `charge.refunded`. Never reuse the sandbox or local Stripe CLI webhook secret. Recreate
+   and verify the accepted DE `oss_union` + GB `standard` Tax configuration in
+   the live account, with the correct seller details and product/shipping codes;
+   sandbox settings are not proof of live configuration.
+   Check live threshold monitoring and its coverage for the intended markets.
 7. Configure the approved Resend and Printful production values while their
    independent live/write/confirmation gates remain disabled.
 8. Reconfirm the custom-domain certificates and canonical redirect, then set at

@@ -3,8 +3,9 @@
 const I18n = require('./i18n');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const TEMPLATE_VERSION = 'transactional-2026-09-16-v5';
-const CONTRACT_VERSION = 'contract-2026-09-13-v2';
+const PurchaseTerms = require('./purchaseTerms');
+const TEMPLATE_VERSION = 'transactional-2026-09-24-v6';
+const CONTRACT_VERSION = PurchaseTerms.VERSION;
 const SELLER = Object.freeze({
   name: 'JUSA Engineering UG (haftungsbeschränkt)',
   address: ['Münzerstraße 6', '74080 Heilbronn', 'Deutschland'],
@@ -43,7 +44,7 @@ const COPY = Object.freeze({
       trackingNumber: 'Sendungsnummer', tracking: 'Sendungsverfolgung', seller: 'Vertragspartner und Kontakt',
       contract: 'Vertragsinformationen', version: 'Textversion', shipment: 'Teillieferung',
     },
-    contract: 'Mit Versand dieser Bestellbestätigung nehmen wir deine Bestellung an; damit kommt der Vertrag über die oben aufgeführten personalisierten Produkte zustande. Diese E-Mail bestätigt den vereinbarten Inhalt und Preis. Die Zahlung wurde bereits über Stripe verarbeitet.',
+    contract: 'Mit Zugang dieser Bestellbestätigung nehmen wir deine Bestellung an; damit kommt der Vertrag über die oben aufgeführten personalisierten Produkte zustande. Diese E-Mail bestätigt den vereinbarten Inhalt und Preis. Die Zahlung wurde bereits über Stripe verarbeitet.',
     personalization: 'Die Produkte werden nach deinen individuellen Vorgaben angefertigt. Für Waren, die nicht vorgefertigt sind und für deren Herstellung deine individuelle Auswahl oder Bestimmung maßgeblich ist, besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Deine gesetzlichen Rechte bei Mängeln bleiben unberührt.',
     support: 'Bei Fragen antworte bitte auf diese E-Mail oder schreibe unter Angabe der Bestellnummer an {{email}}.',
     trackingMissing: 'Der Versanddienst hat noch keinen öffentlichen Tracking-Link bereitgestellt.',
@@ -71,7 +72,7 @@ const COPY = Object.freeze({
       tracking: 'Track shipment', seller: 'Contracting party and contact', contract: 'Contract information',
       version: 'Text version', shipment: 'Shipment',
     },
-    contract: 'By sending this order confirmation, we accept your order and the contract for the personalised products listed above is formed. This email confirms the agreed content and price. Payment has already been processed through Stripe.',
+    contract: 'When you receive this order confirmation, we accept your order and the contract for the personalised products listed above is formed. This email confirms the agreed content and price. Payment has already been processed through Stripe.',
     personalization: 'The products are made to your individual specifications. For goods that are not prefabricated and whose production is governed by your individual choice or specification, there is generally no statutory right of withdrawal (§ 312g(2)(1) German Civil Code). Your statutory rights in the event of defects remain unaffected.',
     support: 'If you have any questions, reply to this email or contact {{email}} and include your order number.',
     trackingMissing: 'The carrier has not yet provided a public tracking link.',
@@ -99,7 +100,7 @@ const COPY = Object.freeze({
       tracking: 'Suivre l’envoi', seller: 'Cocontractant et contact', contract: 'Informations contractuelles',
       version: 'Version du texte', shipment: 'Envoi',
     },
-    contract: 'Par l’envoi de cette confirmation, nous acceptons votre commande et le contrat portant sur les produits personnalisés indiqués ci-dessus est conclu. Cet e-mail confirme le contenu et le prix convenus. Le paiement a déjà été traité par Stripe.',
+    contract: 'À réception de cette confirmation, nous acceptons votre commande et le contrat portant sur les produits personnalisés indiqués ci-dessus est conclu. Cet e-mail confirme le contenu et le prix convenus. Le paiement a déjà été traité par Stripe.',
     personalization: 'Les produits sont fabriqués selon vos spécifications individuelles. Pour les biens non préfabriqués dont la fabrication dépend de votre choix ou de vos spécifications personnelles, il n’existe en principe aucun droit légal de rétractation (§ 312g, al. 2, no 1 du code civil allemand). Vos droits légaux en cas de défaut restent inchangés.',
     support: 'Pour toute question, répondez à cet e-mail ou écrivez à {{email}} en indiquant votre numéro de commande.',
     trackingMissing: 'Le transporteur n’a pas encore fourni de lien de suivi public.',
@@ -127,7 +128,7 @@ const COPY = Object.freeze({
       tracking: 'Traccia la spedizione', seller: 'Parte contrattuale e contatti', contract: 'Informazioni contrattuali',
       version: 'Versione del testo', shipment: 'Spedizione',
     },
-    contract: 'Con l’invio di questa conferma accettiamo il tuo ordine e si conclude il contratto per i prodotti personalizzati sopra indicati. Questa e-mail conferma il contenuto e il prezzo concordati. Il pagamento è già stato elaborato tramite Stripe.',
+    contract: 'Quando ricevi questa conferma accettiamo il tuo ordine e si conclude il contratto per i prodotti personalizzati sopra indicati. Questa e-mail conferma il contenuto e il prezzo concordati. Il pagamento è già stato elaborato tramite Stripe.',
     personalization: 'I prodotti sono realizzati secondo le tue specifiche individuali. Per i beni non prefabbricati la cui produzione è determinata dalla tua scelta o specifica personale, in linea di principio non sussiste un diritto legale di recesso (§ 312g, comma 2, n. 1 del codice civile tedesco). I diritti legali in caso di difetti restano invariati.',
     support: 'Per domande, rispondi a questa e-mail o scrivi a {{email}} indicando il numero d’ordine.',
     trackingMissing: 'Il corriere non ha ancora fornito un link pubblico per il tracciamento.',
@@ -155,7 +156,7 @@ const COPY = Object.freeze({
       tracking: 'Seguir el envío', seller: 'Parte contratante y contacto', contract: 'Información contractual',
       version: 'Versión del texto', shipment: 'Envío',
     },
-    contract: 'Al enviar esta confirmación aceptamos tu pedido y queda celebrado el contrato de los productos personalizados indicados arriba. Este correo confirma el contenido y el precio acordados. El pago ya ha sido procesado mediante Stripe.',
+    contract: 'Cuando recibes esta confirmación aceptamos tu pedido y queda celebrado el contrato de los productos personalizados indicados arriba. Este correo confirma el contenido y el precio acordados. El pago ya ha sido procesado mediante Stripe.',
     personalization: 'Los productos se fabrican conforme a tus especificaciones individuales. Para bienes no prefabricados cuya producción depende de tu elección o especificación personal, por regla general no existe derecho legal de desistimiento (§ 312g, apdo. 2, n.º 1 del Código Civil alemán). Tus derechos legales en caso de defectos no se ven afectados.',
     support: 'Si tienes preguntas, responde a este correo o escribe a {{email}} indicando el número de pedido.',
     trackingMissing: 'El transportista todavía no ha proporcionado un enlace público de seguimiento.',
@@ -183,7 +184,7 @@ const COPY = Object.freeze({
       tracking: 'Gönderiyi takip et', seller: 'Sözleşme tarafı ve iletişim', contract: 'Sözleşme bilgileri',
       version: 'Metin sürümü', shipment: 'Gönderi',
     },
-    contract: 'Bu sipariş onayını göndererek siparişini kabul ediyor ve yukarıda belirtilen kişiselleştirilmiş ürünlere ilişkin sözleşmeyi kuruyoruz. Bu e-posta kararlaştırılan içeriği ve fiyatı onaylar. Ödeme Stripe üzerinden işlenmiştir.',
+    contract: 'Bu sipariş onayı sana ulaştığında siparişini kabul ediyor ve yukarıda belirtilen kişiselleştirilmiş ürünlere ilişkin sözleşmeyi kuruyoruz. Bu e-posta kararlaştırılan içeriği ve fiyatı onaylar. Ödeme Stripe üzerinden işlenmiştir.',
     personalization: 'Ürünler kişisel talimatlarına göre üretilir. Önceden üretilmeyen ve üretimi kişisel seçimine veya belirlemene bağlı olan mallarda kural olarak yasal cayma hakkı bulunmaz (Alman Medeni Kanunu § 312g fıkra 2 no. 1). Ayıplara ilişkin yasal hakların saklıdır.',
     support: 'Soruların için bu e-postayı yanıtla veya sipariş numaranı belirterek {{email}} adresine yaz.',
     trackingMissing: 'Kargo şirketi henüz herkese açık bir takip bağlantısı sağlamadı.',
@@ -570,7 +571,11 @@ function buildEmailModel({ kind, order, orderItems, shipments, shipment, noticeA
       trackingNumber: shipment.tracking_number || '—',
       trackingUrl,
     } : null,
-    contract: kind === 'order_confirmation' ? [copy.contract, copy.personalization] : [],
+    contract: kind === 'order_confirmation' ? [copy.contract, copy.personalization,
+      ...PurchaseTerms.SECTIONS.filter((section) =>
+        ['payment', 'delivery', 'cancellation', 'storage'].includes(section.id))
+        .map((section) => I18n.translate(section.text, locale)),
+    ] : [],
     next: premium.next[kind],
     seller: sellerLines(locale, premium),
     sellerContact: `${SELLER.email} · ${SELLER.phone}`,

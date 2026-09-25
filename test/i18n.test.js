@@ -26,6 +26,7 @@ const PUBLIC_PAGES = [
   '404.ejs',
   'impressum.ejs',
   'datenschutz.ejs',
+  'bestellinformationen.ejs',
 ];
 const VIEW_ROOT = path.join(__dirname, '..', 'views');
 const TEST_LANGUAGES = I18n.SUPPORTED_LOCALES.map((code) => ({
@@ -54,6 +55,8 @@ function renderView(filename, header = {}, locale = 'de') {
       qrSvg: '<svg viewBox="0 0 1 1"><path d="M0 0h1v1H0z" /></svg>',
       cloudTitle: 'Lea & Max',
       paletteOptions: [],
+      purchaseTerms: require('../src/purchaseTerms'),
+      seller: require('../src/emailTemplates').SELLER,
     },
     languages: TEST_LANGUAGES,
     asset: publicAssetUrl,
@@ -133,6 +136,12 @@ test('locale catalogs cover the complete user journey and preserve interpolation
     const catalog = require(`../public/locales/${locale}.json`);
     assert.deepEqual(Object.keys(catalog).sort(), englishKeys,
       `${locale} must cover the complete English fallback catalog`);
+    for (const section of require('../src/purchaseTerms').SECTIONS) {
+      for (const source of [section.heading, section.text]) {
+        assert.ok(catalog[source]?.trim(), `${locale} is missing contract information: ${section.id}`);
+        assert.notEqual(catalog[source], source, `${locale} must translate contract information: ${section.id}`);
+      }
+    }
     for (const source of REQUIRED_MESSAGES) {
       assert.equal(typeof catalog[source], 'string', `${locale} is missing: ${source}`);
       assert.ok(catalog[source].trim(), `${locale} has an empty translation: ${source}`);
@@ -320,6 +329,7 @@ test('server localization produces the selected language before browser scripts 
     ['404.ejs', {}, 'This word cloud does not exist.'],
     ['impressum.ejs', {}, 'Legal information'],
     ['datenschutz.ejs', {}, 'Privacy policy'],
+    ['bestellinformationen.ejs', {}, 'Ordering information'],
   ];
   for (const [filename, header, expected] of cases) {
     const localized = localizeHtml(renderView(filename, header, 'en'), 'en');
@@ -427,6 +437,8 @@ test('legal pages describe the hosted product and enforced retention', () => {
   assert.match(privacy, /Plus Five Five, Inc\.[\s\S]*Öffnungs- und Klicktracking ist deaktiviert/);
   assert.match(privacy, /automatisch 365 Tage nach Erstellung/);
   assert.doesNotMatch(privacy, /ausschließlich lokal entwickelt|Google Fonts|künftige Hosting-Anbieter|künftigen Hosting-Anbieter/);
+  assert.doesNotMatch(privacy, /später aktivierten echten Bestellung|wird nach einer Zahlung ausdrücklich keine Bestellung|werden vor Aktivierung des Live-Verkaufs/);
+  assert.match(privacy, /Name und Lieferadresse[\s\S]*an Stripe/);
   assert.match(legalNotice, /interaktive Wortwolken[\s\S]*personalisierte Druckprodukte/);
 });
 
@@ -604,6 +616,10 @@ test('language URLs preserve page state and server locale resolution honors expl
 test('event locale is validated, persisted and returned by public APIs', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
+
+  const terms = await fetch(`${baseUrl}/bestellinformationen?lang=fr`);
+  assert.equal(terms.status, 200);
+  assert.match(await terms.text(), /Commande et conclusion du contrat/);
 
   const frenchLanding = await fetch(`${baseUrl}/?lang=fr`);
   assert.equal(frenchLanding.status, 200);

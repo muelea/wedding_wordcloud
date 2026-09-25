@@ -146,6 +146,13 @@ function makeWebhookRouter() {
       return res.json({ received: true, ignored: 'live_mode_blocked' });
     }
 
+    if (event.type === 'checkout.session.expired') {
+      const result = await db.recordExpiredCheckout({
+        stripeEventId: event.id, session: event.data.object, livemode: Boolean(event.livemode),
+      });
+      return res.json({ received: true, ...result });
+    }
+
     if (event.type === 'charge.refunded') {
       const charge = event.data.object;
       const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : null;

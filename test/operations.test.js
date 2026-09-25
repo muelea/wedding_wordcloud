@@ -165,11 +165,12 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
   });
 
   await t.test('an additive future migration does not stop the currently compatible release', async () => {
-    await hosted.query('INSERT INTO app_schema_versions (version) VALUES (5)');
+    const inserted = await hosted.query(`INSERT INTO app_schema_versions (version)
+      SELECT max(version) + 1 FROM app_schema_versions RETURNING version`);
     try {
       await assert.doesNotReject(db.assertDatabaseReady());
     } finally {
-      await hosted.query('DELETE FROM app_schema_versions WHERE version = 5');
+      await hosted.query('DELETE FROM app_schema_versions WHERE version = $1', [inserted.rows[0].version]);
     }
   });
 

@@ -26,6 +26,7 @@ const documentViews = [
   '404.ejs',
   'configure.ejs',
   'datenschutz.ejs',
+  'bestellinformationen.ejs',
   'display.ejs',
   'impressum.ejs',
   'landing.ejs',

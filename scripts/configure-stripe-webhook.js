@@ -10,6 +10,7 @@ const HOSTED_TEST_ORIGIN = 'https://wolkenworte.fly.dev';
 const STRIPE_WEBHOOK_EVENTS = Object.freeze([
   'checkout.session.completed',
   'checkout.session.async_payment_succeeded',
+  'checkout.session.expired',
   'charge.refunded',
 ]);
 

@@ -106,6 +106,13 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
       });
       parse5.parse(snapshot.htmlBody, { onParseError: (error) => parseErrors.push(error) });
       assert.equal(snapshot.templateVersion, TEMPLATE_VERSION);
+      if (kind === 'order_confirmation') {
+        for (const section of require('../src/purchaseTerms').SECTIONS.filter((entry) =>
+          ['payment', 'delivery', 'cancellation', 'storage'].includes(entry.id))) {
+          assert.ok(snapshot.textBody.includes(require('../src/i18n').translate(section.text, locale)),
+            `${locale}: confirmation must retain ${section.id} information on a durable medium`);
+        }
+      }
       assert.deepEqual(parseErrors, [], `${locale}/${kind} emits valid HTML`);
       assert.match(snapshot.htmlBody, /cid:wolkenworte-mark-v1/);
       assert.match(snapshot.htmlBody, /@media screen and \(max-width:680px\)/);
@@ -125,7 +132,7 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
   assert.match(englishOrder.textBody, /Jan 14\s*–\s*17, 2030/);
   assert.match(englishOrder.textBody, /customs duties, import taxes or other import charges/i);
   assert.match(englishOrder.textBody, /Registered office: Heilbronn/);
-  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-13-v2"/);
+  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-24-v3"/);
 });
 
 test('buyer contact, durable email jobs and provider reconciliation', async (t) => {
@@ -183,7 +190,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.match(paid.emailJob.text_body, /zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren/);
     assert.match(paid.emailJob.html_body, /cid:wolkenworte-mark-v1/);
     assert.match(paid.emailJob.html_body, /Bestellung bestätigt/);
-    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-13-v2"/);
+    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-24-v3"/);
 
     const duplicate = await payPreparedOrder(db, prepared, 'atomic', {
       buyerEmail: 'buyer@example.test',

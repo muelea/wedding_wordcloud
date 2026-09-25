@@ -26,6 +26,8 @@ async function execute(triggerKind) {
     // Address-bearing abandoned quotes have a fixed retention promise.
     // Run this bounded delete before provider work can consume the wake-up.
     const quotesCleaned = await db.cleanupAbandonedQuotes(500);
+    const commerce = await db.cleanupCommerceRecords({ limit: 1, deadline: startedAt + 5_000 });
+    const metadataCleaned = await db.cleanupRetentionMetadata();
     const fulfillmentSummary = await fulfillment.drainDueJobs({
       maxJobs: 1,
       deadline: startedAt + FULFILLMENT_BUDGET_MS,
@@ -47,6 +49,13 @@ async function execute(triggerKind) {
       eventsCleaned: retentionSummary.events,
       artifactsCleaned: retentionSummary.artifacts,
       quotesCleaned,
+      commerceChecked: commerce.checked,
+      unpaidOrdersCleaned: commerce.unpaid,
+      technicalCopiesCleaned: commerce.technical,
+      operationalCopiesCleaned: commerce.operational,
+      emailContentsCleaned: commerce.emails,
+      paidOrdersCleaned: commerce.orders,
+      metadataCleaned,
     };
     await db.finishMaintenanceRun(run.id, summary);
     log.info('maintenance_completed', {

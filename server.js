@@ -252,6 +252,16 @@ app.get('/datenschutz', asyncRoute(async (req, res) => {
   });
 }));
 
+app.get('/bestellinformationen', asyncRoute(async (req, res) => {
+  return renderPage(req, res, 'bestellinformationen', {
+    header: { variant: 'back', headerClass: 'site-header', navClass: 'header-inner' },
+    pageData: {
+      purchaseTerms: require('./src/purchaseTerms'),
+      seller: require('./src/emailTemplates').SELLER,
+    },
+  });
+}));
+
 app.get('/e/:slug', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });

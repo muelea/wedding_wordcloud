@@ -151,17 +151,19 @@ frozen snapshot of the word cloud.
    currency and Customer and contain a completed automatic-tax calculation.
    Its final tax and gross total are stored atomically before the confirmation
    email snapshot. Existing older Session requests retain their original gross
-   total and retry parameters. The Germany sandbox registration supports a first
-   domestic test; production registrations, product-specific foreign tax rules
-   and Printful's actual shipping origins still require the existing prelaunch
-   tax review. Hosted Checkout uses the configured head-office origin, not a
+   total and retry parameters. The maintainer accepted the initial tax
+   configuration on 2026-09-24 after the international sandbox checks: Germany
+   Union OSS as a calculation setting plus a GB standard registration. The
+   decision and remaining business sign-offs are recorded in
+   [docs/launch-readiness.md](docs/launch-readiness.md).
+   Hosted Checkout uses the configured head-office origin, not a
    per-order Printful ship-from override. Signed Stripe webhooks
    transition the order to `paid_test` exactly once and enqueue the persisted
    fulfillment snapshot. Test payments are then completed by the local `mock`
    worker without making any Printful order request; the confirmation page
    clearly states that no real fulfillment was created. Live payments and
-   payment-triggered Printful fulfillment remain hard-disabled until the tax
-   review is signed off.
+   payment-triggered Printful fulfillment remain hard-disabled until the
+   controlled production cutover is approved.
    Only verified payment confirmation removes the purchased configuration IDs
    from the local cart and shipping draft. Other products, newer design versions
    remain intact; stale history entries cannot silently
@@ -178,6 +180,16 @@ frozen snapshot of the word cloud.
    their original fulfillment data.
 
 ## Languages
+
+Live-sales ordering information is available at `/bestellinformationen` and
+linked from the landing page, configurator and legal pages. Shared source text
+in `src/purchaseTerms.js` also supplies the payment, delivery, cancellation and
+contract-storage information retained in new order-confirmation emails.
+Contract/template versions identify the new copy; existing message snapshots
+are never rewritten before their retention period expires. The shipping page and tax calculation remain unchanged.
+The privacy page describes live fulfillment and current data transfers;
+the approved commerce deletion schedule is documented in `docs/data-retention.md`
+and runs through authenticated maintenance after the schema-5 release.
 
 Wolkenworte supports German, English, French, Italian, Spanish and Turkish.
 The language chosen when an event is created is stored on the event and is
@@ -231,9 +243,10 @@ dotted and dotless I.
   leased fulfillment and signed replay-safe Printful status webhooks are
   implemented. Verified Stripe buyer contact, immutable multilingual order
   confirmations, leased Resend jobs, shipment/refund/cancellation notices and
-  signed replay-safe Resend delivery webhooks are also implemented. Customer
-  VAT/Stripe Tax treatment and legal review of the versioned contractual copy
-  remain pending before live sales. Signed Printful status webhooks are active;
+  signed replay-safe Resend delivery webhooks are also implemented. The
+  Stripe Tax configuration is accepted for the initial launch; remaining
+  business/legal sign-offs and cutover are tracked in the launch checklist.
+  Signed Printful status webhooks are active;
   provider-origin order callbacks have been verified with an unconfirmed draft.
   Unconfirmed provider drafts have accepted full-resolution PNG print files for
   all 12 catalog variants; no real order was confirmed.
@@ -604,12 +617,17 @@ or a deployment manifest.
 
 Built-in status, manual fulfillment retry and guarded hosted-test cleanup
 procedures are documented in [docs/operations.md](docs/operations.md). The
-current enforced and pending PII-retention decisions are recorded in
+approved PII-retention rules and their activation requirements are recorded in
 [docs/data-retention.md](docs/data-retention.md). The remaining provider and
 production-cutover work, plus deferred monitoring and recovery decisions, is
 tracked in the single [launch-readiness checklist](docs/launch-readiness.md).
 
-## Provisional test pricing
+## Approved initial pricing
+
+The maintainer approved the existing price rule for the initial launch on
+2026-09-24. No calculation change is required. Actual payment costs and margins
+will be reviewed after the first real orders; the payment reserve is an
+estimate and the product markup is not net profit.
 
 The current checkout does not use a fixed price per product. It calculates one
 customer price from Printful's live EUR estimate(s) and the catalog-wide markup
@@ -658,12 +676,15 @@ separate, manually maintained discount tiers. The server repeats the Printful
 estimate immediately before Stripe Checkout, and a changed total must be
 confirmed again.
 
-This remains a sandbox-only retail calculation until the tax review is signed
-off. The shop is B2C and does not request a buyer VAT ID. Sandbox Stripe Tax has
-one active German `small_seller` registration; there is no active OSS
-registration. The EUR 10,000 EU cross-border threshold and the tax treatment of
-Printful's actual fulfillment origins must be monitored and professionally
-reviewed before live payments are enabled.
+The shop is B2C and does not request a buyer VAT ID. On 2026-09-24 the maintainer
+accepted the tested configuration for the initial launch: native Stripe Tax
+with Germany `oss_union` and Great Britain `standard`, replacing the earlier
+`small_seller` setting. Printful's per-order shipping origin is not passed to
+Checkout; extending that integration is deferred. These are calculation
+settings, not proof of actual tax registrations or OSS eligibility. Verification
+is sandbox-only; the [audit](docs/stripe-printful-test-audit-2026-09-24.md)
+records the results and limitations. The accepted decision and remaining
+launch work live in [docs/launch-readiness.md](docs/launch-readiness.md).
 
 ## Project layout
 
@@ -1140,8 +1161,8 @@ npm run deploy:hosted
 
 The guarded command creates exactly one sandbox destination for
 `https://wolkenworte.fly.dev/webhook/stripe`, subscribes only to
-`checkout.session.completed`, `checkout.session.async_payment_succeeded` and
-`charge.refunded`, and stages it as `STRIPE_TEST_HOSTED_WEBHOOK_SECRET`
+`checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+`checkout.session.expired` and `charge.refunded`, and stages it as `STRIPE_TEST_HOSTED_WEBHOOK_SECRET`
 directly in Fly. It never writes or prints that secret, and the generic `npm run
 fly:secrets` command deliberately cannot overwrite it from the local `.env`.
 The hosted app selects it because `fly.toml` explicitly declares
@@ -1238,8 +1259,10 @@ fulfillment remains mocked. Provider setup and verification:
 5. After the provider smokes and explicit approval, set the hosted environment
    to `EMAIL_DELIVERY_MODE=live` and deploy. This enables real `[TEST]` email for
    new sandbox purchases without enabling Stripe live payments or any Printful
-   order write. Do not enable live sales until the contractual copy and
-   VAT/invoicing treatment have been approved.
+   order write. Live sales require approval of the contractual copy and the
+   controlled cutover described in [docs/launch-readiness.md](docs/launch-readiness.md).
+   The maintainer handles invoicing and bookkeeping separately; they are not
+   project go-live blockers.
 
 ## Fulfillment safety modes
 
@@ -1294,12 +1317,6 @@ keys in Fly for activation by `npm run deploy:hosted`.
   successful test payment can only produce a local `mocked` fulfillment
   record. Draft/live writes require a live Stripe payment plus the explicit
   safety switches described above.
-- **Final retail VAT configuration** — Stripe Tax is the only source of customer
-  tax in Checkout. The sandbox has one active German `small_seller`
-  registration and no active OSS registration. Printful tax/VAT is included as
-  an unmarked-up procurement cost inside the product amount. The EUR 10,000 EU
-  cross-border threshold, actual Printful fulfillment origins and the live
-  registrations still require professional review before live mode is enabled.
 
 ## Known gotchas
 

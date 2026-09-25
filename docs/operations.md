@@ -102,3 +102,12 @@ remaining metadata first.
 
 Deployment and this destructive cleanup each require separate explicit
 maintainer approval; implementing the command does not execute either action.
+
+
+## Retention holds
+
+The approved retention policy, data categories and guarded per-order hold /
+release / longer-period commands are in [data-retention.md](data-retention.md).
+`ops:status` exposes `retention.reviewsDue` and
+`retention.unresolvedCheckouts`. Review holds and uncertain payments before
+allowing their deletion; a review date never releases a hold automatically.
