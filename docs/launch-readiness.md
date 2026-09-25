@@ -196,9 +196,15 @@ provider activation each require explicit maintainer approval at action time.
 6. Configure the Stripe live key and a new live webhook destination/signing
    secret. Subscribe to `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`, `checkout.session.expired` and
-   `charge.refunded`. Never reuse the sandbox or local Stripe CLI webhook secret. Recreate
-   and verify the accepted DE `oss_union` + GB `standard` Tax configuration in
-   the live account, with the correct seller details and product/shipping codes;
+   `charge.refunded`. Never reuse the sandbox or local Stripe CLI webhook secret.
+   Preparation status on 2026-09-25: the live key is held only in the ignored
+   operator `.env`; the guarded command created and verified the separate live
+   destination at the stable Fly callback URL and stored its signing secret
+   locally without printing it. Neither live secret is present in hosted-test
+   Fly, and live payments remain disabled. At cutover, transfer both secrets to
+   the production secret store without recreating the endpoint. Recreate and
+   verify the accepted DE `oss_union` + GB `standard` Tax configuration in the
+   live account, with the correct seller details and product/shipping codes;
    sandbox settings are not proof of live configuration.
    Check live threshold monitoring and its coverage for the intended markets.
 7. Configure the approved Resend and Printful production values while their

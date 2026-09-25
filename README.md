@@ -641,8 +641,8 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `STRIPE_TEST_SECRET_KEY` | local/operator/Fly secret | Sandbox server key for test Checkout and hosted-test provider tooling. |
 | `STRIPE_TEST_LOCAL_WEBHOOK_SECRET` | local only | Stripe CLI listener secret that verifies callbacks forwarded to localhost. |
 | `STRIPE_TEST_HOSTED_WEBHOOK_SECRET` | Fly secret only | Signing secret for the current Stripe Dashboard destination at the Fly sandbox URL. |
-| `STRIPE_LIVE_SECRET_KEY` | future-live secret | Production Stripe server key; deliberately empty during sandbox development. |
-| `STRIPE_LIVE_WEBHOOK_SECRET` | future-live secret | Signing secret for the future production webhook destination. |
+| `STRIPE_LIVE_SECRET_KEY` | local operator + future-live secret | Production Stripe server key used by guarded live-account preparation and, at cutover, the production runtime; never placed in hosted-test Fly. |
+| `STRIPE_LIVE_WEBHOOK_SECRET` | local operator + future-live secret | Signing secret for the production webhook destination, stored locally by the guarded preparation command and transferred to the production secret store only at cutover. |
 | `STRIPE_LIVE_PAYMENTS_ENABLED` | shared safety setting | Independent gate required in addition to live mode; must remain `false` locally and on hosted-test. |
 | `CHECKOUT_QUOTE_TTL_MINUTES` | shared setting | Bounds saved address/price quote lifetime to 5–120 minutes (default 30). |
 | `PRINTFUL_API_KEY` | local/operator/Fly secret | Backend token for live quotes and gated fulfillment; needs `orders` and `webhooks`. |
@@ -1249,6 +1249,26 @@ matching durable `paid_test` order, mock fulfillment, delivered Resend confirmat
 and a successful public confirmation response. Unit tests still use signed
 fixtures and deliberately do not pretend to exercise Stripe's network.
 
+### Prepare the live webhook without enabling live payments
+
+Keep the local operator environment on `APP_ENVIRONMENT=local`,
+`STRIPE_PAYMENT_MODE=test` and `STRIPE_LIVE_PAYMENTS_ENABLED=false`. After the
+live `sk_live_...` key has been placed in the ignored local `.env`, run:
+
+```bash
+npm run stripe:prepare-live-webhook -- --confirm-replace-live-webhook
+```
+
+The guarded command uses only the live key to create exactly one live-mode
+destination for `https://wolkenworte.fly.dev/webhook/stripe`, with the same four
+explicit event types as the sandbox destination. It atomically stores the new
+endpoint-specific `STRIPE_LIVE_WEBHOOK_SECRET` in the ignored local `.env`,
+keeps that file private, never prints the secret and verifies the resulting
+live destination after replacing only an older live destination at the exact
+same URL. It does not stage either live secret in the hosted-test Fly app and
+does not enable or create a payment. Both live secrets move to the production
+secret store only during the separately approved production cutover.
+
 ## Transactional email safety and activation
 
 A signature-verified successful Stripe event is the only authority for the
@@ -1366,8 +1386,10 @@ keys in Fly for activation by `npm run deploy:hosted`.
 
 ## What's intentionally disabled
 
-- **Live Stripe payments** — `STRIPE_LIVE_SECRET_KEY` and live webhook events
-  remain unreachable while `STRIPE_PAYMENT_MODE=test` and
+- **Live Stripe payments** — the live credentials are prepared only in the
+  ignored operator `.env` and the separate live webhook destination is
+  registered, but neither secret is present in hosted-test Fly. They remain
+  unreachable while `STRIPE_PAYMENT_MODE=test` and
   `STRIPE_LIVE_PAYMENTS_ENABLED=false`.
 - **Real Printful fulfillment after test payments** — live countries and
   estimates are connected for the curated mug variants 1320, 4830 and 16586,

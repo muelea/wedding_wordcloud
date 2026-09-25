@@ -6,7 +6,8 @@ const Stripe = require('stripe');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { importSecrets } = require('./configure-fly-secrets');
 
-const HOSTED_TEST_ORIGIN = 'https://wolkenworte.fly.dev';
+const STRIPE_CALLBACK_ORIGIN = 'https://wolkenworte.fly.dev';
+const HOSTED_TEST_ORIGIN = STRIPE_CALLBACK_ORIGIN;
 const STRIPE_WEBHOOK_EVENTS = Object.freeze([
   'checkout.session.completed',
   'checkout.session.async_payment_succeeded',
@@ -15,9 +16,9 @@ const STRIPE_WEBHOOK_EVENTS = Object.freeze([
 ]);
 
 function hostedWebhookUrl(env = process.env) {
-  const publicUrl = new URL(String(env.PUBLIC_URL || HOSTED_TEST_ORIGIN));
-  if (publicUrl.origin !== HOSTED_TEST_ORIGIN || publicUrl.pathname !== '/') {
-    throw new Error(`PUBLIC_URL muss für diesen Test ${HOSTED_TEST_ORIGIN} sein.`);
+  const publicUrl = new URL(String(env.PUBLIC_URL || STRIPE_CALLBACK_ORIGIN));
+  if (publicUrl.origin !== STRIPE_CALLBACK_ORIGIN || publicUrl.pathname !== '/') {
+    throw new Error(`PUBLIC_URL muss für diesen Callback ${STRIPE_CALLBACK_ORIGIN} sein.`);
   }
   return new URL('/webhook/stripe', publicUrl).toString();
 }
@@ -98,6 +99,7 @@ if (require.main === module) {
 
 module.exports = {
   HOSTED_TEST_ORIGIN,
+  STRIPE_CALLBACK_ORIGIN,
   STRIPE_WEBHOOK_EVENTS,
   assertHostedStripeSafety,
   hasExactEvents,
