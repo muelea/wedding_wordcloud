@@ -2,9 +2,9 @@
 
 // Shared by the pre-contract page and immutable order-confirmation snapshots.
 // Bump the version whenever contractual content changes.
-const VERSION = 'contract-2026-09-24-v3';
+const VERSION = 'contract-2026-09-25-v4';
 const SECTIONS = Object.freeze([
-  { id: 'order', heading: 'Bestellung und Vertragsschluss', text: 'Du gestaltest deine Produkte, legst sie in den Warenkorb und gibst die Lieferadresse an. Die Darstellung im Shop ist noch kein verbindliches Vertragsangebot. Mit dem abschließenden zahlungspflichtigen Bestellbutton bei Stripe gibst du eine verbindliche Bestellung ab. Wir nehmen sie durch unsere Bestellbestätigung per E-Mail an. Mit Zugang dieser E-Mail kommt der Vertrag zustande.' },
+  { id: 'order', heading: 'Bestellung und Vertragsschluss', text: 'Du gestaltest deine Produkte, legst sie in den Warenkorb und gibst die Lieferadresse an. Die Darstellung im Shop ist noch kein verbindliches Vertragsangebot. Mit dem abschließenden zahlungspflichtigen Bestellbutton bei Stripe gibst du eine verbindliche Bestellung ab. Mit erfolgreichem Abschluss der Zahlung nehmen wir deine Bestellung an; damit kommt der Vertrag zustande. Wir bestätigen ihn anschließend per E-Mail.' },
   { id: 'correction', heading: 'Angaben prüfen und ändern', text: 'Vor der verbindlichen Bestellung kannst du Produkte, Gestaltung, Mengen und Lieferadresse auf unseren Seiten prüfen und ändern. Von Stripe kannst du dafür zum Shop zurückkehren. Bei Änderungen werden Preis und Lieferung erneut geprüft. Das Öffnen der Zahlungsseite allein löst keine Bestellung aus.' },
   { id: 'payment', heading: 'Preise und Zahlung', text: 'Der bei Stripe vor der verbindlichen Bestellung angezeigte Gesamtpreis enthält die berechnete Umsatzsteuer und die ausgewiesenen Versandkosten. Die Zahlung erfolgt per Karte über Stripe; dort verfügbare Karten-Wallets können ebenfalls genutzt werden. Die Zahlung wird im Bestellprozess eingezogen.' },
   { id: 'delivery', heading: 'Herstellung und Lieferung', text: 'Printful stellt die Produkte nach deiner Gestaltung her und versendet sie direkt an die angegebene Lieferadresse. Die für deine Bestellung verfügbare voraussichtliche Lieferzeit zeigen wir vor dem Kauf an und übernehmen sie in die Bestellbestätigung. Produkte können in mehreren Sendungen ankommen. Dein Vertragspartner bleibt JUSA Engineering UG (haftungsbeschränkt).' },

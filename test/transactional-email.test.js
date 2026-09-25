@@ -92,7 +92,7 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
   }];
   const shipment = {
     id: 4, shipment_index: 0, recipient_json: JSON.stringify({
-      name: 'Lea Beispiel', address1: 'Testweg 6', zip: '74080', city: 'Heilbronn', country_code: 'DE',
+      name: 'Lea Beispiel', address1: 'Testweg 6', zip: '8050', city: 'Zürich', country_code: 'CH',
     }),
     carrier: 'DHL', tracking_number: 'TRACK-6001', tracking_url: 'https://tracking.example.test/TRACK-6001',
   };
@@ -107,11 +107,12 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
       parse5.parse(snapshot.htmlBody, { onParseError: (error) => parseErrors.push(error) });
       assert.equal(snapshot.templateVersion, TEMPLATE_VERSION);
       if (kind === 'order_confirmation') {
-        for (const section of require('../src/purchaseTerms').SECTIONS.filter((entry) =>
-          ['payment', 'delivery', 'cancellation', 'storage'].includes(entry.id))) {
-          assert.ok(snapshot.textBody.includes(require('../src/i18n').translate(section.text, locale)),
-            `${locale}: confirmation must retain ${section.id} information on a durable medium`);
-        }
+        const customs = require('../src/purchaseTerms').SECTIONS.find((entry) => entry.id === 'customs');
+        assert.ok(snapshot.textBody.includes(require('../src/i18n').translate(customs.text, locale)),
+          `${locale}: confirmation must retain the general import-cost disclosure`);
+        const legalBlock = snapshot.htmlBody.match(/<div data-contract-version="[^"]+"[^>]*>([\s\S]*?)<\/div>/)?.[1];
+        assert.equal((legalBlock?.match(/<p\b/g) || []).length, 4,
+          `${locale}: confirmation keeps four concise legal paragraphs`);
       }
       assert.deepEqual(parseErrors, [], `${locale}/${kind} emits valid HTML`);
       assert.match(snapshot.htmlBody, /cid:wolkenworte-mark-v1/);
@@ -130,9 +131,50 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
   });
   assert.match(englishOrder.textBody, /Lea & Julian/);
   assert.match(englishOrder.textBody, /Jan 14\s*–\s*17, 2030/);
+  assert.match(englishOrder.textBody, /This delivery may incur additional customs duties/);
+  assert.match(englishOrder.textBody, /Deliveries to certain countries may incur/);
   assert.match(englishOrder.textBody, /customs duties, import taxes or other import charges/i);
   assert.match(englishOrder.textBody, /Registered office: Heilbronn/);
-  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-24-v3"/);
+  assert.match(englishOrder.textBody, /We have accepted your order and received your payment/);
+  assert.doesNotMatch(englishOrder.textBody, /Printful|Stripe/);
+  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-25-v4"/);
+
+  const germanDelivery = {
+    ...shipment,
+    recipient_json: JSON.stringify({
+      name: 'Lea Beispiel', address1: 'Testweg 6', zip: '74080', city: 'Heilbronn', country_code: 'DE',
+    }),
+  };
+  const withAssessment = (customsFeesPossible) => ({
+    ...order,
+    shipping_json: JSON.stringify([{ printfulShipping: {
+      delivery: { minDate: '2030-01-14', maxDate: '2030-01-17' },
+      shipments: [{ customsFeesPossible }],
+    } }]),
+  });
+  const noCustomsRisk = buildEmailSnapshot({
+    kind: 'order_confirmation', order: withAssessment(false), orderItems,
+    shipments: [germanDelivery], locale: 'en',
+  });
+  assert.match(noCustomsRisk.textBody, /Deliveries to certain countries may incur/);
+  assert.equal((noCustomsRisk.textBody.match(/Deliveries to certain countries may incur/g) || []).length, 1);
+  assert.doesNotMatch(noCustomsRisk.textBody, /This delivery may incur|could not be confirmed conclusively/);
+  const unknownCustomsRisk = buildEmailSnapshot({
+    kind: 'order_confirmation', order: withAssessment(null), orderItems,
+    shipments: [germanDelivery], locale: 'en',
+  });
+  assert.match(unknownCustomsRisk.textBody, /could not be confirmed conclusively/);
+  assert.match(unknownCustomsRisk.textBody, /Deliveries to certain countries may incur/);
+  const missingAssessment = buildEmailSnapshot({
+    kind: 'order_confirmation', order: { ...order, shipping_json: '[]' }, orderItems,
+    shipments: [germanDelivery], locale: 'en',
+  });
+  assert.match(missingAssessment.textBody, /could not be confirmed conclusively/);
+  const noCustomsRiskShipment = buildEmailSnapshot({
+    kind: 'shipment_confirmation', order: withAssessment(false), orderItems,
+    shipments: [germanDelivery], shipment: germanDelivery, locale: 'en',
+  });
+  assert.doesNotMatch(noCustomsRiskShipment.textBody, /customs duties|could not be confirmed conclusively/);
 });
 
 test('buyer contact, durable email jobs and provider reconciliation', async (t) => {
@@ -190,7 +232,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.match(paid.emailJob.text_body, /zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren/);
     assert.match(paid.emailJob.html_body, /cid:wolkenworte-mark-v1/);
     assert.match(paid.emailJob.html_body, /Bestellung bestätigt/);
-    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-24-v3"/);
+    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-25-v4"/);
 
     const duplicate = await payPreparedOrder(db, prepared, 'atomic', {
       buyerEmail: 'buyer@example.test',

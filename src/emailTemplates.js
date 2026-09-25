@@ -4,8 +4,9 @@ const I18n = require('./i18n');
 const { getProduct, resolveProductOrientation } = require('./products');
 
 const PurchaseTerms = require('./purchaseTerms');
-const TEMPLATE_VERSION = 'transactional-2026-09-24-v6';
+const TEMPLATE_VERSION = 'transactional-2026-09-25-v7';
 const CONTRACT_VERSION = PurchaseTerms.VERSION;
+const GENERAL_CUSTOMS_NOTICE = PurchaseTerms.SECTIONS.find((section) => section.id === 'customs').text;
 const SELLER = Object.freeze({
   name: 'JUSA Engineering UG (haftungsbeschränkt)',
   address: ['Münzerstraße 6', '74080 Heilbronn', 'Deutschland'],
@@ -44,8 +45,9 @@ const COPY = Object.freeze({
       trackingNumber: 'Sendungsnummer', tracking: 'Sendungsverfolgung', seller: 'Vertragspartner und Kontakt',
       contract: 'Vertragsinformationen', version: 'Textversion', shipment: 'Teillieferung',
     },
-    contract: 'Mit Zugang dieser Bestellbestätigung nehmen wir deine Bestellung an; damit kommt der Vertrag über die oben aufgeführten personalisierten Produkte zustande. Diese E-Mail bestätigt den vereinbarten Inhalt und Preis. Die Zahlung wurde bereits über Stripe verarbeitet.',
-    personalization: 'Die Produkte werden nach deinen individuellen Vorgaben angefertigt. Für Waren, die nicht vorgefertigt sind und für deren Herstellung deine individuelle Auswahl oder Bestimmung maßgeblich ist, besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Deine gesetzlichen Rechte bei Mängeln bleiben unberührt.',
+    contract: 'Wir haben deine Bestellung angenommen und deine Zahlung erhalten. JUSA Engineering UG (haftungsbeschränkt) ist dein Vertragspartner. Die oben aufgeführten personalisierten Produkte werden an die angegebene Lieferadresse geliefert; sie können in mehreren Sendungen ankommen.',
+    personalization: 'Die Produkte werden nach deinen individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Deine gesetzlichen Rechte bei Mängeln bleiben unberührt.',
+    aftercare: 'Für Änderungs- oder Stornierungswünsche und bei beschädigten oder mangelhaften Produkten melde dich bitte mit deiner Bestellnummer unter {{email}}. Wir prüfen, ob die Produktion noch geändert oder gestoppt werden kann; eine freiwillige Stornierung können wir nicht garantieren. Du kannst diese Bestätigung speichern oder eine Kopie bei uns anfordern.',
     support: 'Bei Fragen antworte bitte auf diese E-Mail oder schreibe unter Angabe der Bestellnummer an {{email}}.',
     trackingMissing: 'Der Versanddienst hat noch keinen öffentlichen Tracking-Link bereitgestellt.',
   },
@@ -72,8 +74,9 @@ const COPY = Object.freeze({
       tracking: 'Track shipment', seller: 'Contracting party and contact', contract: 'Contract information',
       version: 'Text version', shipment: 'Shipment',
     },
-    contract: 'When you receive this order confirmation, we accept your order and the contract for the personalised products listed above is formed. This email confirms the agreed content and price. Payment has already been processed through Stripe.',
-    personalization: 'The products are made to your individual specifications. For goods that are not prefabricated and whose production is governed by your individual choice or specification, there is generally no statutory right of withdrawal (§ 312g(2)(1) German Civil Code). Your statutory rights in the event of defects remain unaffected.',
+    contract: 'We have accepted your order and received your payment. JUSA Engineering UG (haftungsbeschränkt) is your seller. The personalised products shown above will be delivered to the address listed; items may arrive separately.',
+    personalization: 'The products are made to your individual specifications. For such personalised goods, there is generally no statutory right of withdrawal (§ 312g(2)(1) German Civil Code). Your statutory rights in the event of defects remain unaffected.',
+    aftercare: 'For changes, cancellation requests or damaged or defective products, contact {{email}} with your order number. We will check whether production can still be changed or stopped; we cannot guarantee a voluntary cancellation. You can save this confirmation or request a copy from us.',
     support: 'If you have any questions, reply to this email or contact {{email}} and include your order number.',
     trackingMissing: 'The carrier has not yet provided a public tracking link.',
   },
@@ -100,8 +103,9 @@ const COPY = Object.freeze({
       tracking: 'Suivre l’envoi', seller: 'Cocontractant et contact', contract: 'Informations contractuelles',
       version: 'Version du texte', shipment: 'Envoi',
     },
-    contract: 'À réception de cette confirmation, nous acceptons votre commande et le contrat portant sur les produits personnalisés indiqués ci-dessus est conclu. Cet e-mail confirme le contenu et le prix convenus. Le paiement a déjà été traité par Stripe.',
-    personalization: 'Les produits sont fabriqués selon vos spécifications individuelles. Pour les biens non préfabriqués dont la fabrication dépend de votre choix ou de vos spécifications personnelles, il n’existe en principe aucun droit légal de rétractation (§ 312g, al. 2, no 1 du code civil allemand). Vos droits légaux en cas de défaut restent inchangés.',
+    contract: 'Nous avons accepté votre commande et reçu votre paiement. JUSA Engineering UG (haftungsbeschränkt) est votre vendeur. Les produits personnalisés indiqués ci-dessus seront livrés à l’adresse mentionnée ; ils peuvent arriver en plusieurs envois.',
+    personalization: 'Les produits sont fabriqués selon vos spécifications individuelles. Pour ces biens personnalisés, il n’existe en principe aucun droit légal de rétractation (§ 312g, al. 2, no 1 du code civil allemand). Vos droits légaux en cas de défaut restent inchangés.',
+    aftercare: 'Pour une modification, une demande d’annulation ou un produit endommagé ou défectueux, contactez {{email}} avec votre numéro de commande. Nous vérifierons si la production peut encore être modifiée ou arrêtée ; nous ne pouvons pas garantir une annulation à titre commercial. Vous pouvez conserver cette confirmation ou nous en demander une copie.',
     support: 'Pour toute question, répondez à cet e-mail ou écrivez à {{email}} en indiquant votre numéro de commande.',
     trackingMissing: 'Le transporteur n’a pas encore fourni de lien de suivi public.',
   },
@@ -128,8 +132,9 @@ const COPY = Object.freeze({
       tracking: 'Traccia la spedizione', seller: 'Parte contrattuale e contatti', contract: 'Informazioni contrattuali',
       version: 'Versione del testo', shipment: 'Spedizione',
     },
-    contract: 'Quando ricevi questa conferma accettiamo il tuo ordine e si conclude il contratto per i prodotti personalizzati sopra indicati. Questa e-mail conferma il contenuto e il prezzo concordati. Il pagamento è già stato elaborato tramite Stripe.',
-    personalization: 'I prodotti sono realizzati secondo le tue specifiche individuali. Per i beni non prefabbricati la cui produzione è determinata dalla tua scelta o specifica personale, in linea di principio non sussiste un diritto legale di recesso (§ 312g, comma 2, n. 1 del codice civile tedesco). I diritti legali in caso di difetti restano invariati.',
+    contract: 'Abbiamo accettato il tuo ordine e ricevuto il pagamento. JUSA Engineering UG (haftungsbeschränkt) è il venditore. I prodotti personalizzati indicati sopra saranno consegnati all’indirizzo riportato; possono arrivare in spedizioni separate.',
+    personalization: 'I prodotti sono realizzati secondo le tue specifiche individuali. Per tali beni personalizzati, in linea di principio non sussiste un diritto legale di recesso (§ 312g, comma 2, n. 1 del codice civile tedesco). I diritti legali in caso di difetti restano invariati.',
+    aftercare: 'Per modifiche, richieste di annullamento o prodotti danneggiati o difettosi, contatta {{email}} indicando il numero d’ordine. Verificheremo se la produzione può ancora essere modificata o fermata; non possiamo garantire un annullamento volontario. Puoi conservare questa conferma o richiederne una copia.',
     support: 'Per domande, rispondi a questa e-mail o scrivi a {{email}} indicando il numero d’ordine.',
     trackingMissing: 'Il corriere non ha ancora fornito un link pubblico per il tracciamento.',
   },
@@ -156,8 +161,9 @@ const COPY = Object.freeze({
       tracking: 'Seguir el envío', seller: 'Parte contratante y contacto', contract: 'Información contractual',
       version: 'Versión del texto', shipment: 'Envío',
     },
-    contract: 'Cuando recibes esta confirmación aceptamos tu pedido y queda celebrado el contrato de los productos personalizados indicados arriba. Este correo confirma el contenido y el precio acordados. El pago ya ha sido procesado mediante Stripe.',
-    personalization: 'Los productos se fabrican conforme a tus especificaciones individuales. Para bienes no prefabricados cuya producción depende de tu elección o especificación personal, por regla general no existe derecho legal de desistimiento (§ 312g, apdo. 2, n.º 1 del Código Civil alemán). Tus derechos legales en caso de defectos no se ven afectados.',
+    contract: 'Hemos aceptado tu pedido y recibido el pago. JUSA Engineering UG (haftungsbeschränkt) es el vendedor. Los productos personalizados indicados arriba se entregarán en la dirección mostrada; pueden llegar en envíos separados.',
+    personalization: 'Los productos se fabrican conforme a tus especificaciones individuales. Para estos bienes personalizados, por regla general no existe derecho legal de desistimiento (§ 312g, apdo. 2, n.º 1 del Código Civil alemán). Tus derechos legales en caso de defectos no se ven afectados.',
+    aftercare: 'Para cambios, solicitudes de cancelación o productos dañados o defectuosos, escribe a {{email}} e indica tu número de pedido. Comprobaremos si todavía se puede modificar o detener la producción; no podemos garantizar una cancelación voluntaria. Puedes guardar esta confirmación o solicitarnos una copia.',
     support: 'Si tienes preguntas, responde a este correo o escribe a {{email}} indicando el número de pedido.',
     trackingMissing: 'El transportista todavía no ha proporcionado un enlace público de seguimiento.',
   },
@@ -184,8 +190,9 @@ const COPY = Object.freeze({
       tracking: 'Gönderiyi takip et', seller: 'Sözleşme tarafı ve iletişim', contract: 'Sözleşme bilgileri',
       version: 'Metin sürümü', shipment: 'Gönderi',
     },
-    contract: 'Bu sipariş onayı sana ulaştığında siparişini kabul ediyor ve yukarıda belirtilen kişiselleştirilmiş ürünlere ilişkin sözleşmeyi kuruyoruz. Bu e-posta kararlaştırılan içeriği ve fiyatı onaylar. Ödeme Stripe üzerinden işlenmiştir.',
-    personalization: 'Ürünler kişisel talimatlarına göre üretilir. Önceden üretilmeyen ve üretimi kişisel seçimine veya belirlemene bağlı olan mallarda kural olarak yasal cayma hakkı bulunmaz (Alman Medeni Kanunu § 312g fıkra 2 no. 1). Ayıplara ilişkin yasal hakların saklıdır.',
+    contract: 'Siparişini kabul ettik ve ödemeni aldık. Satıcın JUSA Engineering UG (haftungsbeschränkt) şirketidir. Yukarıda belirtilen kişiselleştirilmiş ürünler gösterilen adrese teslim edilir; ürünler ayrı gönderilerle ulaşabilir.',
+    personalization: 'Ürünler kişisel talimatlarına göre üretilir. Bu kişiselleştirilmiş ürünler için kural olarak yasal cayma hakkı bulunmaz (Alman Medeni Kanunu § 312g fıkra 2 no. 1). Ayıplara ilişkin yasal hakların saklıdır.',
+    aftercare: 'Değişiklik, iptal talebi veya hasarlı ya da ayıplı ürünler için sipariş numaranla birlikte {{email}} adresine yaz. Üretimin hâlâ değiştirilip durdurulamayacağını kontrol ederiz; gönüllü iptali garanti edemeyiz. Bu onayı saklayabilir veya bizden bir kopyasını isteyebilirsin.',
     support: 'Soruların için bu e-postayı yanıtla veya sipariş numaranı belirterek {{email}} adresine yaz.',
     trackingMissing: 'Kargo şirketi henüz herkese açık bir takip bağlantısı sağlamadı.',
   },
@@ -217,7 +224,6 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Falls bereits eine Zahlung eingezogen wurde, bestätigen wir eine zugehörige Erstattung in einer separaten E-Mail.',
     },
     testNext: 'Für diese Testbestellung ist keine weitere Aktion erforderlich.',
-    customsGeneral: 'Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.',
     customsPossible: 'Für diese Lieferung können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.',
     customsUnknown: 'Versandursprung und mögliche Einfuhrgebühren konnten für diese Lieferung nicht abschließend bestätigt werden. Zusätzliche Einfuhrkosten sind vom Empfänger zu tragen.',
     legalHeading: 'Vertrags- und Verbraucherinformationen', supportHeading: 'Wir sind für dich da',
@@ -249,7 +255,6 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'If payment had already been captured, we will confirm any related refund in a separate email.',
     },
     testNext: 'No further action is required for this test order.',
-    customsGeneral: 'Deliveries to certain countries may incur additional customs duties, import taxes or other import charges. These are payable by the recipient.',
     customsPossible: 'This delivery may incur additional customs duties, import taxes or other import charges. These are payable by the recipient.',
     customsUnknown: 'The shipping origin and possible import charges could not be confirmed conclusively for this delivery. Any additional import costs are payable by the recipient.',
     legalHeading: 'Contract and consumer information', supportHeading: 'We are here to help',
@@ -281,7 +286,6 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Si un paiement avait déjà été prélevé, tout remboursement correspondant sera confirmé dans un e-mail distinct.',
     },
     testNext: 'Aucune autre action n’est requise pour cette commande de test.',
-    customsGeneral: 'Les livraisons vers certains pays peuvent entraîner des droits de douane, des taxes d’importation ou d’autres frais d’importation supplémentaires. Ceux-ci sont à la charge du destinataire.',
     customsPossible: 'Cette livraison peut entraîner des droits de douane, des taxes d’importation ou d’autres frais d’importation supplémentaires. Ceux-ci sont à la charge du destinataire.',
     customsUnknown: 'L’origine de l’envoi et les éventuels frais d’importation n’ont pas pu être confirmés définitivement. Les frais d’importation supplémentaires sont à la charge du destinataire.',
     legalHeading: 'Informations contractuelles et consommateurs', supportHeading: 'Nous sommes à votre écoute',
@@ -313,7 +317,6 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Se il pagamento era già stato riscosso, confermeremo l’eventuale rimborso con un’e-mail separata.',
     },
     testNext: 'Non è richiesta alcuna ulteriore azione per questo ordine di prova.',
-    customsGeneral: 'Le consegne in determinati Paesi possono comportare dazi doganali, imposte o altri costi di importazione aggiuntivi. Tali costi sono a carico del destinatario.',
     customsPossible: 'Questa consegna può comportare dazi doganali, imposte o altri costi di importazione aggiuntivi. Tali costi sono a carico del destinatario.',
     customsUnknown: 'Non è stato possibile confermare definitivamente l’origine della spedizione e gli eventuali costi di importazione. I costi aggiuntivi sono a carico del destinatario.',
     legalHeading: 'Informazioni contrattuali e per il consumatore', supportHeading: 'Siamo qui per aiutarti',
@@ -345,7 +348,6 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Si el pago ya se había cobrado, confirmaremos cualquier reembolso relacionado en un correo separado.',
     },
     testNext: 'No es necesaria ninguna otra acción para este pedido de prueba.',
-    customsGeneral: 'Los envíos a determinados países pueden generar aranceles, impuestos u otros gastos de importación adicionales. Estos corren a cargo del destinatario.',
     customsPossible: 'Este envío puede generar aranceles, impuestos u otros gastos de importación adicionales. Estos corren a cargo del destinatario.',
     customsUnknown: 'No se han podido confirmar de forma concluyente el origen del envío ni los posibles gastos de importación. Los gastos adicionales corren a cargo del destinatario.',
     legalHeading: 'Información contractual y para consumidores', supportHeading: 'Estamos aquí para ayudarte',
@@ -377,7 +379,6 @@ const PREMIUM_COPY = Object.freeze({
       cancellation_confirmation: 'Ödeme daha önce alındıysa ilgili geri ödemeyi ayrı bir e-postayla onaylayacağız.',
     },
     testNext: 'Bu test siparişi için başka bir işlem yapman gerekmez.',
-    customsGeneral: 'Belirli ülkelere yapılan teslimatlarda ek gümrük vergileri, ithalat vergileri veya başka ithalat ücretleri doğabilir. Bu masraflar alıcıya aittir.',
     customsPossible: 'Bu teslimatta ek gümrük vergileri, ithalat vergileri veya başka ithalat ücretleri doğabilir. Bu masraflar alıcıya aittir.',
     customsUnknown: 'Bu teslimat için gönderim kaynağı ve olası ithalat ücretleri kesin olarak doğrulanamadı. Ek ithalat masrafları alıcıya aittir.',
     legalHeading: 'Sözleşme ve tüketici bilgileri', supportHeading: 'Yardım için buradayız',
@@ -490,8 +491,8 @@ function customsNotice(shipping, premium) {
     ? shipping.shipments.map((entry) => entry?.customsFeesPossible)
     : [];
   if (assessments.some((value) => value === true)) return premium.customsPossible;
-  if (assessments.some((value) => value == null)) return premium.customsUnknown;
-  return premium.customsGeneral;
+  if (!assessments.length || assessments.some((value) => value !== false)) return premium.customsUnknown;
+  return null;
 }
 
 function storedShippingEntries(order) {
@@ -571,10 +572,11 @@ function buildEmailModel({ kind, order, orderItems, shipments, shipment, noticeA
       trackingNumber: shipment.tracking_number || '—',
       trackingUrl,
     } : null,
-    contract: kind === 'order_confirmation' ? [copy.contract, copy.personalization,
-      ...PurchaseTerms.SECTIONS.filter((section) =>
-        ['payment', 'delivery', 'cancellation', 'storage'].includes(section.id))
-        .map((section) => I18n.translate(section.text, locale)),
+    contract: kind === 'order_confirmation' ? [
+      copy.contract,
+      copy.personalization,
+      interpolate(copy.aftercare, { email: SELLER.email }),
+      I18n.translate(GENERAL_CUSTOMS_NOTICE, locale),
     ] : [],
     next: premium.next[kind],
     seller: sellerLines(locale, premium),

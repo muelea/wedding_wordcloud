@@ -84,9 +84,10 @@ project sign-off is required for these topics.
   actual currency and total with the frozen estimate before confirmation and
   blocks changed or missing costs for manual review.
 - [x] Show a compact general customs/import-cost notice in the shop, address
-  review, Stripe Checkout, confirmation page and transactional messages. Keep
-  the more specific Printful customs-risk and unknown-state warnings as
-  additional information; the recipient bears external import charges.
+  review, Stripe Checkout, confirmation page and order-confirmation email.
+  Shipment-specific risk and unknown-state warnings appear beneath affected
+  deliveries in transactional emails; a known no-risk delivery has no warning
+  beneath its address. The recipient bears external import charges.
 - [x] Initial pricing approved by the maintainer on 2026-09-24: 50% markup on
   Printful product costs, Printful tax/VAT and shipping passed through without
   markup, and an embedded payment-cost reserve of 3.65% plus EUR 0.25 per
@@ -98,9 +99,10 @@ project sign-off is required for these topics.
   information at `/bestellinformationen`, linked from the landing page,
   configurator and legal pages, explains contract formation, corrections,
   payment, delivery, personalised goods, cancellation requests, statutory
-  defect rights, contract storage and supported languages. Confirmation
-  snapshots retain the relevant information in all six languages under
-  `contract-2026-09-24-v3`; existing stored messages remain unchanged.
+  defect rights, contract storage and supported languages. The order is
+  accepted after successful payment and confirmed by email. Shorter confirmation
+  snapshots retain the key terms in all six languages under
+  `contract-2026-09-25-v4`; existing stored messages remain unchanged.
   Privacy copy describes live fulfillment, delivery-address transfer to Stripe
   and the approved commerce retention schedule described below.
   The maintainer explicitly retains the existing shipping page, including

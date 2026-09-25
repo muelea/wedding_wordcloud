@@ -182,10 +182,10 @@ frozen snapshot of the word cloud.
 ## Languages
 
 Live-sales ordering information is available at `/bestellinformationen` and
-linked from the landing page, configurator and legal pages. Shared source text
-in `src/purchaseTerms.js` also supplies the payment, delivery, cancellation and
-contract-storage information retained in new order-confirmation emails.
-Contract/template versions identify the new copy; existing message snapshots
+linked from the landing page, configurator and legal pages. New order-confirmation
+emails contain a shorter, durable summary of the contract, delivery, personalised-goods
+and support terms; the general customs wording comes from `src/purchaseTerms.js`.
+Contract/template versions identify the copy; existing message snapshots
 are never rewritten before their retention period expires. The shipping page and tax calculation remain unchanged.
 The privacy page describes live fulfillment and current data transfers;
 the approved commerce deletion schedule is documented in `docs/data-retention.md`
