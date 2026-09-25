@@ -259,7 +259,7 @@ async function createCheckoutSession({
       payment_intent_data: { metadata },
       custom_text: {
         submit: {
-          message: `${I18n.translate(PERSONALIZED_GOODS_NOTICE, checkoutLocale)} ${I18n.translate(CUSTOMS_NOTICE, checkoutLocale)}`,
+          message: `${I18n.translate(CUSTOMS_NOTICE, checkoutLocale)} ${I18n.translate(PERSONALIZED_GOODS_NOTICE, checkoutLocale)}`,
         },
       },
       success_url: `${baseUrl}/e/${encodedSlug}/order-confirmation?session_id={CHECKOUT_SESSION_ID}` +

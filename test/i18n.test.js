@@ -361,6 +361,22 @@ test('server localization produces the selected language before browser scripts 
   assert.match(nested, />Start here <span aria-hidden="true">→<\/span><\/button>/);
 });
 
+test('shipping legal notice stays one paragraph and translates both sentences', () => {
+  const customs = 'Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.';
+  const withdrawal = 'Die Produkte werden nach euren individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Eure gesetzlichen Rechte bei Mängeln bleiben unberührt.';
+  for (const locale of CATALOG_LOCALES) {
+    const catalog = I18n.getCatalog(locale);
+    assert.ok(catalog[customs] && catalog[withdrawal], `${locale} must provide both translations`);
+    const localized = localizeHtml(renderView('shipping.ejs', {}, locale), locale);
+    const notice = localized.match(/<p class="purchase-legal-note">([\s\S]*?)<\/p>/)?.[1];
+    assert.ok(notice, `${locale} must have one purchase notice paragraph`);
+    assert.equal((notice.match(/data-i18n-source=/g) || []).length, 2,
+      `${locale} must keep both sentences bound for language switching`);
+    assert.ok(notice.includes(catalog[customs]), `${locale} must translate customs copy`);
+    assert.ok(notice.includes(catalog[withdrawal]), `${locale} must translate withdrawal copy`);
+  }
+});
+
 test('catalog edits reach server copy, language-switch bindings and browser URLs without restarting', async () => {
   const intro = 'Mit eurer Lieferadresse prüfen wir Produktpreise, Versandkosten und die voraussichtliche Lieferzeit.';
   const check = 'Preise und Lieferung prüfen';

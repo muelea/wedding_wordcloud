@@ -109,6 +109,10 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   assert.match(params.custom_text.submit.message, /personalised goods/i);
   assert.match(params.custom_text.submit.message, /312g\(2\)\(1\)/i);
   assert.match(params.custom_text.submit.message, /customs duties/i);
+  assert.ok(
+    params.custom_text.submit.message.indexOf('customs duties') < params.custom_text.submit.message.indexOf('personalised goods'),
+    'Stripe shows customs information before the personalised-goods notice, matching shipping'
+  );
   assert.equal(options.idempotencyKey, order.stripe_idempotency_key);
   assert.equal(params.payment_intent_data.metadata.orderId, '42');
 });

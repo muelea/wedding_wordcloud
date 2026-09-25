@@ -292,7 +292,7 @@
     .quote-total span { font-size: 14px; font-weight: 500; }
     .quote-total strong { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 29px; font-weight: 600; white-space: nowrap; }
     .quote-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
-    .purchase-legal-note { margin: 18px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .purchase-legal-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; text-align: center; }
     .checkout-error { min-height: 18px; margin: 10px 2px 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .delivery-information { margin-top: 20px; padding: 16px; border-radius: 16px; background: var(--surface-soft); font-size: 13px; line-height: 1.55; color: var(--muted); }
     .delivery-information p { margin: 0 0 8px; overflow-wrap: anywhere; }
@@ -372,10 +372,9 @@
           <div class="quote-total"><span>Zwischensumme</span><strong id="subtotal-price" data-i18n-ignore></strong></div>
           <p class="quote-note">Zuzüglich Steuern. Den endgültigen Gesamtpreis seht ihr vor dem Kauf auf der Zahlungsseite.</p>
           <div class="delivery-information" id="delivery-information" aria-live="polite" hidden></div>
-          <p class="purchase-legal-note">Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</p>
-          <p class="purchase-legal-note">Die Produkte werden nach euren individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Eure gesetzlichen Rechte bei Mängeln bleiben unberührt.</p>
           <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Zahlung <span aria-hidden="true">→</span></button>
           <p class="checkout-error" id="checkout-error" role="alert" aria-live="polite"></p>
+          <p class="purchase-legal-note"><span>Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.</span> <span>Die Produkte werden nach euren individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Eure gesetzlichen Rechte bei Mängeln bleiben unberührt.</span></p>
         </div>
       </section>
     </div>
