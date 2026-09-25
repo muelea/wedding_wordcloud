@@ -31,6 +31,7 @@
   <%- include('partials/site-fonts') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <title data-i18n-source="<%= statusCopy.title %>"><%= t(statusCopy.title) %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -87,5 +88,6 @@
     <a class="button" href="/">Zurück zur Startseite</a>
     </div>
   </main>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

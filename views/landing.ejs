@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
   <title data-i18n-source="Wolkenworte – Eure Erinnerungen in einem Wort"><%= t('Wolkenworte – Eure Erinnerungen in einem Wort') %></title>
   <style>
@@ -1022,6 +1023,7 @@
       document.querySelectorAll('[data-open-start-dialog]').forEach(function (button) {
         button.addEventListener('click', function (event) {
           event.preventDefault();
+          globalThis.WolkenworteAnalytics?.track('start_dialog_open');
           openDialog();
         });
       });
@@ -1052,7 +1054,9 @@
           event.preventDefault();
           pinConfirmation.setCustomValidity(WolkenworteI18n.t('Die beiden PINs stimmen nicht überein.'));
           pinConfirmation.reportValidity();
+          return;
         }
+        globalThis.WolkenworteAnalytics?.markNextPageEvent('cloud_created');
       });
       if (dialog.dataset.openOnLoad === 'true') {
         if (dialog.open) dialog.close();
@@ -1121,5 +1125,6 @@
     })();
   </script>
 
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

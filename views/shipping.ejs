@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <title data-i18n-source="Lieferadresse – Wolkenworte"><%= t('Lieferadresse – Wolkenworte') %></title>
   <style>
@@ -401,6 +402,7 @@
     ].map((id) => id.trim()).filter((id, index, list) => id && list.indexOf(id) === index);
     const savedQuoteId = query.get('quote');
     const checkoutWasCancelled = query.get('checkout') === 'cancelled';
+    if (checkoutWasCancelled) globalThis.WolkenworteAnalytics?.track('checkout_cancelled');
     const loading = document.getElementById('loading');
     const pageContent = document.getElementById('page-content');
     const fatalError = document.getElementById('fatal-error');
@@ -1572,6 +1574,7 @@
           throw customerError(customerErrorSource(result, 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.'));
         }
         showQuote(result.quote);
+        globalThis.WolkenworteAnalytics?.track('shipping_quote');
         setButtonLabel(submitButton, 'Preise aktualisieren');
       } catch (error) {
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
@@ -1632,6 +1635,7 @@
         const destination = result.confirmationUrl || result.url;
         if (!destination) throw customerError(
           'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.');
+        if (result.url) globalThis.WolkenworteAnalytics?.track('payment_redirect');
         location.assign(destination);
         navigating = true;
       } catch (error) {
@@ -1646,5 +1650,6 @@
 
     loadPage();
   </script>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

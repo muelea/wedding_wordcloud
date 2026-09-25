@@ -1,0 +1,13 @@
+<% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %>
+  <button class="ww-analytics-settings" id="ww-analytics-settings" type="button" hidden>Datenschutz-Einstellungen</button>
+  <section class="ww-analytics-banner" id="ww-analytics-banner" aria-label="Analyse-Einstellungen" hidden>
+    <div class="ww-analytics-copy">
+      <strong>Dürfen wir die Nutzung von Wolkenworte messen?</strong>
+      <p>Mit deiner Einwilligung nutzen wir Google Analytics, um Seitenaufrufe und wichtige Schritte bis zur Bestellung auszuwerten. Die Website funktioniert auch ohne Analyse. Mehr dazu steht im Datenschutz. <a href="/datenschutz">Datenschutz</a></p>
+    </div>
+    <div class="ww-analytics-actions">
+      <button id="ww-analytics-reject" type="button">Ohne Analyse fortfahren</button>
+      <button id="ww-analytics-accept" type="button">Analyse erlauben</button>
+    </div>
+  </section>
+<% } %>

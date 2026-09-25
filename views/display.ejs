@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/theme.js') %>"></script>
@@ -1596,6 +1597,7 @@
     pendingWordSubmission = '';
     pendingWordSubmissionOrigin = '';
     addOwnContribution(word, receipt);
+    globalThis.WolkenworteAnalytics?.track('word_submitted');
     announceWordAccepted();
     if (wasCloudAction) closeCloudWordActions();
   });
@@ -1868,5 +1870,6 @@
     resizeCloud();
   });
 </script>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

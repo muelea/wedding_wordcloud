@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <title data-i18n-source="Bestellung bestätigt – Wolkenworte"><%= t('Bestellung bestätigt – Wolkenworte') %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -143,6 +144,9 @@
     window.addEventListener('wolkenworte:localechange', () => {
       if (confirmedOrder) renderConfirmedSummary(confirmedOrder);
     });
+    window.addEventListener('wolkenworte:analytics-granted', () => {
+      if (confirmedOrder) globalThis.WolkenworteAnalytics?.trackPurchase(confirmedOrder);
+    });
 
     function resetReorderButton() {
       reorderPending = false;
@@ -219,6 +223,7 @@
           setText(title, 'Vielen Dank für eure Bestellung.');
           setText(copy, 'Eure Zahlung wurde bestätigt und eure Bestellung ist bei uns eingegangen.');
           confirmedOrder = order;
+          globalThis.WolkenworteAnalytics?.trackPurchase(order);
           renderConfirmedSummary(order);
           summary.hidden = false;
           void WolkenworteConfiguratorSession.clearPurchased(slug, order);
@@ -253,5 +258,6 @@
 
     start();
   </script>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

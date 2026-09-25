@@ -9,6 +9,7 @@
   <%- include('partials/site-fonts') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <title data-i18n-source="Datenschutz – Wolkenworte"><%= t('Datenschutz – Wolkenworte') %></title>
   <link rel="stylesheet" href="<%= asset('/legal.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -87,12 +88,23 @@
 
     <section class="legal-section">
       <h2>8. Speicherung im Browser</h2>
+      <% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %>
+      <p>Wolkenworte verwendet ein funktionales Sprachpräferenz-Cookie. Daneben bieten wir eine freiwillige Nutzungsanalyse mit Google Analytics 4 an. Ohne deine ausdrückliche Einwilligung laden wir keinen Google-Analytics-Code und senden keine Analysedaten an Google.</p>
+      <% } else { %>
       <p>Wolkenworte verwendet ausschließlich ein technisch erforderliches Sprachpräferenz-Cookie. Analyse- oder Werbetracker werden nicht eingesetzt.</p>
+      <% } %>
       <p>Im Session Storage wird eine zufällige, veranstaltungsbezogene Sitzungskennung gespeichert. Sie dient ausschließlich dazu, diesem Browser seine eigenen Wortbeiträge anzuzeigen und nur deren Entfernung zu erlauben.</p>
       <p>Die gewählte Sprache wird in einem funktionalen Cookie gespeichert. Die persönliche Farbpalette der Wortwolke, zuletzt verwendete Emojis und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Wortwolke, Konfiguration und Lieferadresse erhalten bleiben. Die Organisator-PIN wird nicht im Browser gespeichert.</p>
       <p>Lokale Designentwürfe können sieben Tage lang wiederhergestellt werden; abgelaufene Einträge werden beim nächsten Besuch bereinigt. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.</p>
       <p>Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden ebenfalls bis zu sieben Tage gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.</p>
       <p>Diese Speicherung ist für die ausdrücklich gewünschten Funktionen erforderlich. Rechtsgrundlage ist § 25 Abs. 2 Nr. 2 TDDDG sowie Art. 6 Abs. 1 lit. f DSGVO.</p>
+      <% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %>
+      <h3>Freiwillige Nutzungsanalyse</h3>
+      <p>Wenn du zustimmst, verarbeitet Google Analytics 4 Seitenaufrufe und ausgewählte Schritte wie Produktwahl, Warenkorb, Preisprüfung und bestätigte Bestellung. Wir übermitteln dafür allgemeine Seitentypen statt individueller Veranstaltungslinks oder Namen. Wörter, Lieferadressen, E-Mail-Adressen, PINs und Stripe-Sitzungskennungen senden wir nicht an Google.</p>
+      <p>Google Analytics setzt die Cookies _ga und _ga_* zur Unterscheidung von Browsern und Besuchen; sie laufen spätestens nach 180 Tagen ab. Deine Entscheidung speichern wir für 180 Tage in einem eigenen Cookie ohne Nutzerkennung. Google verarbeitet außerdem technische Verbindungs- und Gerätedaten sowie die ungefähre Herkunft des Aufrufs. Eine Weiterverarbeitung außerhalb des Europäischen Wirtschaftsraums ist möglich.</p>
+      <p>Anbieter ist Google Ireland Limited. Wir nutzen Google Analytics ausschließlich zur Auswertung der Nutzung unseres Angebots und nicht für personalisierte Werbung. Rechtsgrundlage für die Analyse und den Zugriff auf dein Gerät ist deine Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO und § 25 Abs. 1 TDDDG. Du kannst sie jederzeit über „Datenschutz-Einstellungen“ auf jeder Seite widerrufen; danach unterbinden wir weitere Analyse und löschen die Analytics-Cookies in diesem Browser. Die bis dahin erfolgte Verarbeitung bleibt rechtmäßig.</p>
+      <p>Die Aufbewahrung einzelner Ereignis- und Nutzerdaten in Google Analytics ist auf zwei Monate eingestellt; zusammengefasste Berichte können länger verfügbar sein. Weitere Informationen findest du in den <a href="https://policies.google.com/privacy" rel="noopener noreferrer">Datenschutzhinweisen von Google</a>.</p>
+      <% } %>
     </section>
 
     <section class="legal-section">
@@ -105,6 +117,7 @@
     <section class="legal-section">
       <h2>10. Empfänger und Drittlandübermittlungen</h2>
       <p>Empfänger sind Fly.io für Hosting, Supabase für Datenbank und privaten Dateispeicher, Printful und die eingesetzten Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestellnachrichten. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.</p>
+      <% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %><p>Bei erteilter Einwilligung ist Google Empfänger der Analysedaten.</p><% } %>
       <p>Soweit Anbieter Daten außerhalb des Europäischen Wirtschaftsraums verarbeiten, gelten die Anforderungen der Art. 44 ff. DSGVO. Je nach Anbieter stützen sich Übermittlungen insbesondere auf einen Angemessenheitsbeschluss wie das EU-US Data Privacy Framework oder auf EU-Standardvertragsklauseln mit ergänzenden Schutzmaßnahmen.</p>
       <p>Informationen zu den jeweiligen Übermittlungsgrundlagen und eine Kopie der einschlägigen Garantien kannst du unter kontakt@jusa.io anfordern; weitere Angaben enthalten die oben verlinkten Anbieterinformationen.</p>
     </section>
@@ -141,5 +154,6 @@
       </nav>
     </div>
   </footer>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

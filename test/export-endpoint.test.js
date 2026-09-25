@@ -76,7 +76,9 @@ test('GET /e/:slug/export.svg serves a well-formed SVG containing every submitte
     'zärtlichkeit',            // umlaut
     'veranstaltungsvorbereitung', // deliberately long
   ];
-  for (const word of submitted) {
+  for (const [index, word] of submitted.entries()) {
+    // A fast local Postgres can hit the production three-word burst limit.
+    if (index === 3) await new Promise((resolve) => setTimeout(resolve, 1100));
     const accepted = await submitWord(socket, word);
     assert.equal(accepted, word, `"${word}" should normalize to itself (already lowercase, no padding)`);
   }

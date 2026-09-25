@@ -1,6 +1,7 @@
 'use strict';
 
 const stripeConfig = require('./stripeConfig');
+const analyticsConfig = require('./analyticsConfig');
 
 function flag(name) {
   return String(process.env[name] || 'false').trim().toLowerCase();
@@ -34,6 +35,8 @@ function validateRuntimeConfig() {
     if (!['true', 'false'].includes(flag(name))) errors.push(`${name} muss true oder false sein.`);
   }
   errors.push(...stripeConfig.validationErrors());
+  const analyticsError = analyticsConfig.validationError();
+  if (analyticsError) errors.push(analyticsError);
   try {
     const appEnvironment = stripeConfig.appEnvironment();
     if (production && appEnvironment === 'local') {

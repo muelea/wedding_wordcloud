@@ -32,6 +32,7 @@ const I18n = require('../i18n');
 const { asyncRoute } = require('../asyncRoute');
 const log = require('../structuredLog');
 const performanceProbe = require('../performanceProbe');
+const { orderNumber } = require('../emailTemplates');
 
 const PIN_RE = /^\d{4,6}$/;
 const { MAX_EVENT_UNIQUE_WORDS: MAX_SNAPSHOT_WORDS,
@@ -1718,12 +1719,15 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.json({
       status: order.status,
       paymentConfirmed,
+      orderNumber: paymentConfirmed ? orderNumber(order) : null,
       configurationIds: paymentConfirmed ? configurationIds : [],
       fulfillmentCreated,
       fulfillmentStatus: order.fulfillment_status || 'not_started',
       mode: order.mode || 'test',
       currency: order.currency,
       totalCents: Number(order.total_cents),
+      shippingCents: paymentConfirmed ? Number(order.shipping_cents) : null,
+      taxCents: paymentConfirmed ? Number(order.tax_cents) : null,
       quantity: orderShipments.length
         ? orderShipments.reduce((sum, shipment) => sum + Number(shipment.quantity || 0), 0)
         : configuration ? Number(configuration.quantity) : null,

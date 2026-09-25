@@ -1,0 +1,4 @@
+<% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %>
+  <link rel="stylesheet" href="<%= asset('/analytics.css') %>" />
+  <script src="<%= asset('/js/analytics.js') %>" data-ga4-id="<%= analyticsMeasurementId %>"></script>
+<% } %>

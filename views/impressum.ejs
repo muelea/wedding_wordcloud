@@ -9,6 +9,7 @@
   <%- include('partials/site-fonts') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <title data-i18n-source="Impressum – Wolkenworte"><%= t('Impressum – Wolkenworte') %></title>
   <link rel="stylesheet" href="<%= asset('/legal.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -77,5 +78,6 @@
       </nav>
     </div>
   </footer>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>

@@ -207,6 +207,53 @@ Stripe Checkout all use the active locale. `Wolkenworte`, event names and word
 submissions are never translated. Word normalization is locale-aware, including Turkish
 dotted and dotless I.
 
+## Optional GA4 usage analytics
+
+`GA4_MEASUREMENT_ID` accepts a GA4 **web Measurement ID** (`G-...`), not the
+numeric property ID. With the variable empty, the site renders no analytics
+banner or Google tag. Use a separate GA4 test property for local and hosted-test
+traffic; set the live property's ID only during the approved live cutover. The
+measurement ID is public configuration, not a credential, but local `.env` is
+still never committed. The hosted runtime needs its own value; editing `.env`
+does not configure Fly. For the approved hosted-test release, `npm run
+fly:secrets` stages the value from `.env` along with the other runtime settings;
+the guarded `npm run deploy:hosted` then activates it.
+
+Create a Web data stream for `https://wolkenworte.io` in GA4 Admin → Data streams
+and copy its Measurement ID. In that stream, turn **Enhanced measurement** off;
+page views and selected actions are sent explicitly. Set event and user data
+retention to **2 months**, turn off retention reset on new user activity, and
+keep Google signals and advertising personalization off.
+The site uses one optional analytics consent choice, kept for 180 days in a
+first-party cookie without a user ID. Google code loads only after acceptance.
+The visible privacy-settings control allows withdrawal on every page.
+
+Analytics sends generic page types instead of event slugs, event titles, cart
+IDs, quote IDs or Stripe Session IDs. Events cover the start dialog, created
+clouds, accepted word submissions, product selection, cart additions/removals,
+shipping entry and a successful quote, Stripe redirects/cancellations, and
+verified purchases. Only the server-confirmed paid status can trigger a
+`purchase`; its transaction ID is the nonpersonal `WW-...` order number and its
+value excludes shipping and tax. Google cannot observe the Stripe-hosted
+payment page, and purchases without a return visit are absent from GA4.
+Stripe and the database remain the source of truth for sales totals.
+
+For a simple drop-off view in GA4, create a **Funnel exploration** with
+`cloud_created` → `select_item` → `add_to_cart` → `begin_checkout` →
+`shipping_quote` → `payment_redirect` → `purchase`. Check `page_view` by the
+generic `page_location` path for overall traffic. This measures consented
+visitors and selected decisions, not every click. Only `utm_source`,
+`utm_medium` and `utm_campaign` on the homepage are retained; use campaign
+values without names or other personal data.
+
+Before enabling a measurement ID on a hosted release, confirm the GA4 stream
+settings above and inspect browser network requests for both consent choices.
+After acceptance, use GA4 DebugView or Realtime to verify events, including a
+sandbox purchase. No page or event payload should contain an event slug,
+user-provided word/name, address, PIN, email, configuration/quote ID or Stripe
+Session ID. Exclude Stripe as an unwanted referral in GA4 if return visits
+distort traffic-source reports.
+
 ## Current development status
 
 - The full product now runs on Postgres. During this customer-free build phase,
@@ -557,6 +604,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | Variable | Scope | Purpose / why it exists |
 |---|---|---|
 | `APP_ENVIRONMENT` | local + hosted setting | Declares `local`, `hosted-test` or `production`, so environment-specific credentials are selected intentionally. |
+| `GA4_MEASUREMENT_ID` | optional local + hosted setting | Enables consent-gated GA4 with that environment's web Measurement ID. Blank disables analytics entirely. |
 | `NODE_ENV` | local + hosted setting | Node behavior profile (`development`, `test`, `production`); it does not select payment credentials. |
 | `FLY_APP_NAME` | operator | Names the Fly app targeted by repository operator scripts; defaults to `wolkenworte`. |
 | `PORT` | local + hosted setting | TCP port for Express and Socket.io; 3000 locally and 8080 on Fly. |

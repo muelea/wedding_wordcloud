@@ -12,6 +12,7 @@ const {
 const { publicAssetUrl } = require('./publicAssets');
 const { localizeHtml } = require('./htmlLocalizer');
 const { SITE_FONT_ASSETS, siteFontPreloads } = require('./siteFonts');
+const analyticsConfig = require('./analyticsConfig');
 
 const LANGUAGE_COOKIE = 'wolkenworte-language';
 const LANGUAGE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -120,6 +121,7 @@ async function renderPage(req, res, view, options = {}) {
     localeCatalogUrl: resolved.locale === DEFAULT_LOCALE
       ? ''
       : localeCatalogUrls[resolved.locale],
+    analyticsMeasurementId: analyticsConfig.measurementId(),
     t: (source, params) => translate(source, resolved.locale, params),
   };
   const renderedHtml = await ejs.renderFile(path.join(VIEW_ROOT, `${view}.ejs`), locals);

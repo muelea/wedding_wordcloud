@@ -1144,6 +1144,9 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   assert.equal(configuration.totalPriceCents, undefined);
 
   // The live event keeps changing after approval.
+  // A fast local Postgres can submit the first three words inside the
+  // one-second, three-word guest burst window.
+  await new Promise((resolve) => setTimeout(resolve, 1100));
   await submitWord(socket, 'Später');
 
   const printRes = await fetch(baseUrl + configuration.printFileUrl);

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
+  <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <title data-i18n-source="Erinnerung gestalten – Wolkenworte"><%= t('Erinnerung gestalten – Wolkenworte') %></title>
   <style>
@@ -3257,7 +3258,9 @@
         if (typeof clearPrintfulMockupState === 'function') {
           clearPrintfulMockupState(configurationId);
         }
+        const removedItem = cart.read().find((candidate) => candidate.id === configurationId);
         cart.write(cart.read().filter((candidate) => candidate.id !== configurationId));
+        if (removedItem) globalThis.WolkenworteAnalytics?.track('remove_from_cart', { itemId: removedItem.productKey });
         if (editingOrderItemId === configurationId) {
           editingOrderItemId = null;
           currentDesignNeedsSave = true;
@@ -3285,6 +3288,7 @@
         ? `configuration=${encodeURIComponent(ids[0])}`
         : `configurations=${encodeURIComponent(ids.join(','))}`;
       allowNavigation = true;
+      globalThis.WolkenworteAnalytics?.markNextPageEvent('begin_checkout');
       location.assign(`/e/${encodeURIComponent(slug)}/shipping?${query}&edit=${encodeURIComponent(editingOrderItemId || ids[0])}`);
     }
 
@@ -4206,6 +4210,7 @@
       if (leavingPage || orderActionPending) return;
       const nextProduct = dialogSelectedProduct();
       const another = startingAnotherProduct;
+      const previousProductKey = product?.key;
       productDialogCloseReason = 'confirm';
       resetProductDialogSelection();
       closeProductDialog();
@@ -4215,6 +4220,9 @@
         await runNavigation(() => startProductDesign(nextProduct, undefined, {
           preserveEditingItem: Boolean(editingOrderItemId),
         }));
+      }
+      if (nextProduct?.key === product?.key && (another || previousProductKey !== product.key)) {
+        globalThis.WolkenworteAnalytics?.track('select_item', { itemId: product.key });
       }
       updateProductOptionSelection();
     }
@@ -4686,6 +4694,7 @@
           pendingConfiguration = { revision, data };
         }
         addOrderItem(data, { replaceId: previousId });
+        if (!previousId) globalThis.WolkenworteAnalytics?.track('add_to_cart', { itemId: data.productKey });
         try {
           WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
             .replaceConfiguration(previousId, data.id);
@@ -4946,5 +4955,6 @@
       }
     }
   </script>
+  <%- include('partials/analytics-ui') %>
 </body>
 </html>
