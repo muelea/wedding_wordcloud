@@ -634,6 +634,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `SUPABASE_STORAGE_BUCKET` | shared setting | Private bucket containing frozen paid print artifacts. |
 | `RATE_LIMIT_HMAC_SECRET` | local/Fly secret | HMACs normalized source addresses so durable abuse data never stores raw IP addresses. |
 | `MAINTENANCE_SECRET` | local/Fly secret | Independent bearer secret for bounded Supabase Cron maintenance wake-ups. |
+| `CUTOVER_CURRENT_MAINTENANCE_SECRET` | temporary local operator secret | Holds the maintenance secret still active on the locked Fly Machine only while `arm` proves that rotated local credentials identify the same target; never uploaded and cleared immediately afterward. |
 | `MAINTENANCE_MODE` | shared setting | Temporarily blocks public HTTP/socket traffic during the guarded pre-live cleanup while health/operator checks remain available. |
 | `RESEND_API_KEY` | local operator/Fly runtime secret | Long-lived Sending-access key restricted to `mail.wolkenworte.io`; the dedicated webhook setup command stages it in Fly. |
 | `RESEND_MANAGEMENT_API_KEY` | temporary local operator secret | Separate Full-access key used only to register the Resend webhook; never staged to Fly and revoked immediately afterward. |
@@ -681,9 +682,9 @@ or a deployment manifest.
 Built-in status, manual fulfillment retry and guarded hosted-test cleanup
 procedures are documented in [docs/operations.md](docs/operations.md). The
 approved PII-retention rules and their activation requirements are recorded in
-[docs/data-retention.md](docs/data-retention.md). The remaining provider and
-production-cutover work, plus deferred monitoring and recovery decisions, is
-tracked in the single [launch-readiness checklist](docs/launch-readiness.md).
+[docs/data-retention.md](docs/data-retention.md). The remaining production
+cutover work, plus deferred monitoring and recovery decisions, is tracked in
+the single [launch-readiness checklist](docs/launch-readiness.md).
 
 ## Approved initial pricing
 
@@ -758,7 +759,11 @@ launch work live in [docs/launch-readiness.md](docs/launch-readiness.md).
 server.js                  Express + Socket.io bootstrap, route mounting
 Dockerfile                 Non-root Debian/Node 22 production image
 fly.toml                   Frankfurt hosted-test lifecycle and health config
+fly.cutover-maintenance.toml Hosted-test maintenance lock for pre-live cleanup
+fly.production-armed.toml  Production credentials selected; all sale/write gates still off
+fly.production.toml        Atomic live-sales gates with one Machine kept running
 scripts/deploy-hosted.js   Guarded local test → build → migrate → deploy → smoke command
+scripts/production-cutover.js Reviewed preflight → lock → arm → activate cutover command
 scripts/prepare-local.js   Deterministic dependencies + env/assets onboarding check
 scripts/seed-local-cloud.js Local-only validated marketing-cloud importer
 scripts/hosted-smoke.js    Sanitized HTTPS/Postgres/Socket.io hosted smoke
@@ -1085,8 +1090,25 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   Fly Secret names—not values—and rejects missing runtime secrets, any migration
   credential, or any secret that could override the committed safety modes.
   This command is intentionally restricted to the current hosted-test
-  environment; a future live release path must be reviewed separately before
-  any safety mode changes.
+  environment; it cannot activate live credentials or safety gates.
+- The only supported transition of that same app to live sales is the phased
+  local command below. The read-only phase validates the exact Git/Fly/secret/
+  certificate/single-Machine boundary without changing hosted state:
+
+  ```bash
+  npm run cutover:production -- --phase=preflight
+  ```
+
+  Its separately approved `lock`, `arm` and `activate` phases use the three
+  reviewed Fly configs shown in the project layout. `arm` stages live secrets
+  and test-secret removals but deploys them only with maintenance active and
+  payment/Printful gates disabled. `activate` changes all live gates and removes
+  maintenance in one release; a failed post-release check automatically
+  redeploys the armed safe posture. A guarded `rearm` phase provides the same
+  fast safe posture if the subsequent real acceptance transaction fails. Exact
+  commands and prerequisites are in
+  [the operations runbook](docs/operations.md). Never reproduce a phase with
+  individual Fly commands.
 - The checked-in Fly configuration specifies one
   `shared-cpu-2x`/1024 MiB stateless web Machine for the `wolkenworte` hosted
   test app in `fra`, no volume, automatic stop/start

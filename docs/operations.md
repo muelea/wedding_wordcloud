@@ -76,21 +76,29 @@ least-privileged runtime role remain intact.
 
 Do not run it during ordinary development. At the approved pre-live cutover:
 
-1. Run `npm run deploy:hosted` for the tested application code and migrations.
-2. Keep payments, email and fulfillment in their safe modes: live Stripe off,
-   email mock, Printful mock, order writes off and confirmations off.
-3. Temporarily set `MAINTENANCE_MODE=true` on Fly. Verify `/` returns `503` and
-   `X-Wolkenworte-Maintenance: active`; health endpoints remain available.
-4. In the local ignored `.env` only, temporarily set
+1. Run the reviewed maintenance-lock phase for the exact approved commit:
+
+   ```bash
+   npm run cutover:production -- \
+     --phase=lock \
+     --confirm-commit=<40-character-approved-commit> \
+     --confirm-maintenance-lock
+   ```
+
+   This keeps Stripe in test mode and Printful in mock/no-write mode, deploys
+   `fly.cutover-maintenance.toml`, and verifies the public maintenance response
+   plus health endpoints. Do not reproduce it with individual Fly commands.
+2. In the local ignored `.env` only, temporarily set
    `ALLOW_TEST_DATA_RESET=true` and retain the hosted runtime credentials.
-5. Run:
+3. Run:
 
    ```bash
    npm run ops:prelive-cleanup -- --target-url https://wolkenworte.fly.dev --confirm-prelive-cleanup
    ```
 
-6. Confirm the command reports `verifiedEmpty: true`, restore
-   `ALLOW_TEST_DATA_RESET=false`, and set `MAINTENANCE_MODE=false` on Fly.
+4. Confirm the command reports `verifiedEmpty: true` and restore
+   `ALLOW_TEST_DATA_RESET=false` immediately. Leave the Fly app locked in
+   maintenance mode for credential rotation and the production arm phase.
 
 Before deleting anything, the command also compares a secret-bound hash of the
 target app's database project, Supabase project and bucket with the local
@@ -102,6 +110,76 @@ remaining metadata first.
 
 Deployment and this destructive cleanup each require separate explicit
 maintainer approval; implementing the command does not execute either action.
+
+## Controlled production cutover command
+
+`npm run cutover:production` is the only supported path from the existing
+hosted-test app to live sales. It uses the same Fly and Supabase projects. A
+read-only preflight validates the clean `main` commit, `origin/main`, all three
+reviewed Fly configs, local production credential shapes, Fly authentication,
+Docker, certificates, the single-Machine topology, and the current secret
+boundary:
+
+```bash
+npm run cutover:production -- --phase=preflight
+```
+
+After the cleanup and credential rotations are complete, `arm` first verifies
+that the rotated database/Supabase identity still matches the locked Fly target
+and that every business table and the private Storage bucket are empty. If the
+maintenance secret was rotated locally, temporarily retain the still-active
+old value as `CUTOVER_CURRENT_MAINTENANCE_SECRET`; it is used only for this
+identity proof, never uploaded, and must be cleared after `arm` succeeds. The
+phase then stages the reviewed runtime values from the ignored local `.env`,
+stages removal of the two hosted Stripe test secrets, and only then deploys
+`fly.production-armed.toml`. That release selects the live Stripe credentials
+but keeps the site in maintenance, live payments disabled, and all Printful
+order writes disabled:
+
+```bash
+npm run cutover:production -- \
+  --phase=arm \
+  --confirm-commit=<40-character-approved-commit> \
+  --confirm-production-arm
+```
+
+The final `activate` phase is a separate approval. It re-runs the full release
+gate and empty-target verification, then applies `fly.production.toml` in one
+single-Machine release: maintenance is removed while Stripe payments and all
+three Printful live gates are enabled together. It performs only health and
+read-only HTTP checks. If deployment or those checks fail, the command
+automatically redeploys the armed maintenance configuration and verifies that
+safe posture before returning failure.
+
+```bash
+npm run cutover:production -- \
+  --phase=activate \
+  --confirm-commit=<40-character-approved-commit> \
+  --confirm-live-activation
+```
+
+If the later real acceptance transaction exposes a blocking problem, use the
+fast guarded rollback posture rather than an improvised Fly deployment. It is
+accepted only from the exact active posture and atomically restores maintenance
+with payments and Printful writes disabled while keeping the production secrets
+in place:
+
+```bash
+npm run cutover:production -- \
+  --phase=rearm \
+  --confirm-commit=<40-character-approved-commit> \
+  --confirm-emergency-rearm
+```
+
+Each mutating phase, including emergency re-arm, requires the exact full
+approved commit, its own phase-specific confirmation, and a clean local `main`
+that exactly matches `origin/main`. The normal `lock`, `arm` and `activate`
+phases re-run the complete test suite and migrations. Emergency `rearm`
+deliberately skips those slow release steps so it can restore the already-tested
+armed posture quickly. All phases reject multiple Fly Machines, mixed test/live
+Stripe secrets, staged or partially deployed secrets, an unexpected prior
+posture, or unsafe local gates. Never run `activate` until the live provider/tax
+review and explicit acceptance transaction approval are complete.
 
 
 ## Retention holds

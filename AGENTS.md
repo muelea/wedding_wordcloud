@@ -186,6 +186,12 @@ The only supported hosted-test release path is the guarded local
 workstation. Do not reproduce its release sequence in ad-hoc commands or a
 remote workflow.
 
+The only supported transition of that same app to live sales is the phased
+local `npm run cutover:production` command and its reviewed Fly configs. Its
+`lock`, `arm`, `activate` and emergency `rearm` phases require separate approvals
+and exact commits; never replace any phase with improvised Fly secret, config or
+deploy commands.
+
 The Supabase/Postgres foundation and least-privileged runtime role are active.
 The hosted test app is active at the canonical public origin
 `https://wolkenworte.io` on one stateless Fly Machine in Frankfurt with

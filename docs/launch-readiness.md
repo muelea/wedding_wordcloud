@@ -1,14 +1,15 @@
 # Wolkenworte launch-readiness checklist
 
-Last reviewed: 2026-09-24
+Last reviewed: 2026-09-25
 
 The hosted-architecture refactor is complete. Wolkenworte now runs locally and
 on the Fly hosted test environment from the same application code, ordered
 Postgres migrations, least-privileged runtime role and private Storage model.
-The remaining work is legal review and the controlled production cutover,
-including activation of the implemented commerce retention rules. Provider
-verification is complete; additional monitoring and recovery safeguards are
-explicitly deferred below. No application-architecture redesign is required.
+The remaining pre-launch work is the controlled production cutover, including
+activation of the implemented commerce retention rules. Qualified German legal
+review and provider verification are complete; additional monitoring and
+recovery safeguards are explicitly deferred below. No application-architecture
+redesign is required.
 
 This file is the single source of truth for unfinished launch work. Completed
 implementation history is intentionally not maintained as a step-by-step diary.
@@ -112,10 +113,10 @@ project sign-off is required for these topics.
   automatic tax only—not the separately billed Tax Calculation API and not a
   disposable preview Session. The signed paid Session must still match the frozen
   net amounts, pinned customer, displayed tax and displayed gross total.
-- [ ] Have qualified German counsel review the legal notice and privacy policy
+- [x] Qualified German counsel reviewed the legal notice and privacy policy
   together with the ordering information, price presentation and final live
-  provider contracts/data-processing agreements. The implementation above is
-  not a record of an external legal review or verified provider agreements.
+  provider contracts/data-processing agreements. The maintainer confirmed this
+  formal review and provider-agreement qualification complete on 2026-09-25.
 - [x] Approve and implement commerce retention (2026-09-24): eight-year order
   evidence, six/eight-year correspondence, three-year operational copies,
   thirty-day confirmed unpaid checkouts and ninety-day technical details.
@@ -183,8 +184,9 @@ provider activation each require explicit maintainer approval at action time.
    tested candidate (including schema version 5) while Stripe remains in
    test mode, transactional test email remains enabled and Printful writes
    remain disabled.
-2. Set `MAINTENANCE_MODE=true` on Fly and verify public traffic receives the
-   maintenance response while health endpoints remain available.
+2. Run the `lock` phase of `npm run cutover:production` for the exact approved
+   commit. It deploys the reviewed hosted-test maintenance configuration and
+   verifies public traffic is locked while health endpoints remain available.
 3. Set `ALLOW_TEST_DATA_RESET=true` only in the local operator environment and
    run the guarded cleanup from `docs/operations.md`. Verify that application
    tables and the configured private bucket are empty while the clean baseline
@@ -209,13 +211,17 @@ provider activation each require explicit maintainer approval at action time.
    Check live threshold monitoring and its coverage for the intended markets.
 7. Configure the approved Resend and Printful production values while their
    independent live/write/confirmation gates remain disabled.
-8. Reconfirm the custom-domain certificates and canonical redirect, then set at
-   least one Machine to remain running.
-9. Run production health and read-only smoke checks that create no real charge,
-   email or Printful order.
-10. Reconfirm live email, enable payment and fulfillment gates in the reviewed
-    order, perform the explicitly approved minimal live acceptance transaction,
-    then remove maintenance mode.
+8. Run the `arm` phase of `npm run cutover:production`. It verifies the empty
+   target, stages the reviewed production values and test-secret removals, keeps
+   all payment/fulfillment gates off behind maintenance, verifies certificates
+   and the canonical redirect, and pins one Machine running.
+9. Reconfirm live email and provider/tax settings, then run the separately
+   approved `activate` phase. It enables payment and fulfillment gates and
+   removes maintenance atomically, performs production health/read-only smoke
+   checks, and automatically re-arms maintenance if those checks fail.
+10. Complete the explicitly approved minimal live acceptance transaction. If
+    it exposes any blocking issue, immediately run the guarded `rearm` phase to
+    return the app to the reviewed armed maintenance posture before investigating.
 
 Stripe sandbox history does not need to be deleted. Stripe test and live data
 are separate. The pre-live cleanup command must never be used after customer

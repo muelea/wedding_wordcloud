@@ -31,8 +31,11 @@ test('random IDs preserve case and URL-safe symbols across the event journey', a
     const shareUrl = /data-event-url="([^"]+)"/.exec(await page.text())?.[1];
     assert.ok(shareUrl);
     assert.equal(new URL(shareUrl).pathname, `/e/${slug}`);
+    assert.equal(new URL(shareUrl).search, '?lang=de');
     const qr = await fetch(`${api}/qr`).then((response) => response.json());
-    assert.equal(qr.url, shareUrl);
+    const canonicalShareUrl = new URL(shareUrl);
+    canonicalShareUrl.search = '';
+    assert.equal(qr.url, canonicalShareUrl.toString());
     assert.match(qr.dataUrl, /^data:image\/png;base64,/);
     assert.equal((await fetch(`${baseUrl}/e/${slug.toLowerCase()}`)).status, 404);
     assert.equal((await fetch(`${baseUrl}/api/events/${slug.toLowerCase()}`)).status, 404);
@@ -139,8 +142,8 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.equal('isDraft' in startedInfo, false);
   assert.equal('isDraftOwner' in startedInfo, false);
 
-  // Creators and contributors use one canonical event page, which contains
-  // contribution and distinct sharing/copy-link controls.
+  // Creators and contributors use one canonical event page. Sharing pins the
+  // active language so external preview crawlers receive matching metadata.
   const eventPageResponse = await fetch(`${baseUrl}${event.eventUrl}`);
   assert.equal(eventPageResponse.status, 200);
   const displayHtml = await eventPageResponse.text();
@@ -181,7 +184,7 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /id="reset-cloud-button"/);
   assert.match(
     displayHtml,
-    new RegExp(`id="event-qr"[\\s\\S]*?data-event-url="http://[^"]+/e/${event.slug}"[\\s\\S]*?<svg\\b`)
+    new RegExp(`id="event-qr"[\\s\\S]*?data-event-url="http://[^"]+/e/${event.slug}\\?lang=de"[\\s\\S]*?<svg\\b`)
   );
   assert.match(displayHtml, /<svg\b[\s\S]*?<path\b/);
   assert.doesNotMatch(displayHtml, /id="qr-img"|src=""|\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/qr/);

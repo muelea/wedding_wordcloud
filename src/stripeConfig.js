@@ -73,7 +73,9 @@ function validationErrors(env = process.env) {
   if (environment === 'production' && mode !== 'live') {
     errors.push('APP_ENVIRONMENT=production verlangt STRIPE_PAYMENT_MODE=live.');
   }
-  if (mode === 'live' && liveFlag !== 'true') {
+  const armedProduction = environment === 'production' && mode === 'live' &&
+    liveFlag === 'false' && value(env, 'MAINTENANCE_MODE', 'false').toLowerCase() === 'true';
+  if (mode === 'live' && liveFlag !== 'true' && !armedProduction) {
     errors.push('STRIPE_PAYMENT_MODE=live verlangt STRIPE_LIVE_PAYMENTS_ENABLED=true.');
   }
   if (mode === 'test' && liveFlag === 'true') {
