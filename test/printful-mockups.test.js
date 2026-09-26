@@ -9,9 +9,9 @@ const { productDesignPayload } = require('./helpers');
 const DesignFonts = require('../src/designFonts');
 const WordCloudCore = require('../public/js/wordcloud-core');
 const { getProduct, resolveProductOrientation } = require('../src/products');
+const { renderProviderPng } = require('../src/printRaster');
 const {
   PrintfulMockupError,
-  MAX_SOURCE_DIMENSION_PX,
   SOURCE_PREFIX,
   createService,
   isOperatorCreateRequest,
@@ -159,10 +159,18 @@ test('mockup service sends exact saved surfaces, polls Printful, cleans sources 
   assert.ok(uploads.every((upload) => upload.contentType === 'image/png'));
   assert.ok(uploads.every((upload) => upload.bytes.subarray(0, 8)
     .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))));
-  const sourceImage = await require('canvas').loadImage(uploads[0].bytes);
-  assert.ok(sourceImage.width <= MAX_SOURCE_DIMENSION_PX);
-  assert.ok(sourceImage.height <= MAX_SOURCE_DIMENSION_PX);
-  assert.equal(sourceImage.width / sourceImage.height, product.printFile.width / product.printFile.height);
+  const storedDesign = JSON.parse(configuration.design_json);
+  for (let index = 0; index < product.printSurfaces.length; index += 1) {
+    const surface = product.printSurfaces[index];
+    const sourceImage = await loadImage(uploads[index].bytes);
+    assert.equal(sourceImage.width, product.printFile.width);
+    assert.equal(sourceImage.height, product.printFile.height);
+    assert.deepEqual(
+      uploads[index].bytes,
+      await renderProviderPng(product, storedDesign.surfaces[surface.key]),
+      `${surface.key} must use the byte-exact production PNG renderer`
+    );
+  }
 
   assert.equal(requests.length, 1);
   const payload = requests[0];
@@ -195,6 +203,39 @@ test('mockup service sends exact saved surfaces, polls Printful, cleans sources 
   assert.deepEqual(downloaded.bytes, imageBytes);
   assert.equal(downloaded.contentType, 'image/png');
   assert.match(downloaded.filename, /^wolkenworte-all-over-basic-pillow-18in-front-700\.png$/);
+});
+
+test('mockup source keeps full Printful dimensions beyond the former 3000px preview cap', async (t) => {
+  const product = resolveProductOrientation(getProduct('matte-poster-30x40cm'), 'portrait');
+  const configuration = configurationFor(product.key, 'portrait');
+  const uploads = [];
+  const service = createService({
+    storageClient: {
+      async upload(objectKey, bytes, contentType) {
+        uploads.push({ objectKey, bytes: Buffer.from(bytes), contentType });
+      },
+      async createSignedUrl(objectKey) {
+        return `https://storage.example.test/${encodeURIComponent(objectKey)}`;
+      },
+      async remove() {},
+    },
+    printfulClient: {
+      async getCatalogProductMockupStyles() { return mockupStyleRows(product); },
+      async createMockupTasks() { return [{ id: 333, status: 'pending' }]; },
+      async getMockupTasks() { return []; },
+    },
+  });
+  t.after(() => service.stop());
+
+  await service.createForConfiguration(configuration);
+  assert.equal(uploads.length, 1);
+  const source = await loadImage(uploads[0].bytes);
+  assert.equal(source.width, 3544);
+  assert.equal(source.height, 4724);
+  assert.deepEqual(
+    uploads[0].bytes,
+    await renderProviderPng(product, JSON.parse(configuration.design_json).surfaces.default)
+  );
 });
 
 test('mockup PNG preserves Caveat bold geometry instead of substituting a system font', async (t) => {

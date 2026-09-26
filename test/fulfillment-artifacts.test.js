@@ -163,17 +163,15 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     const [orderItem] = await db.getOrderItems(paid.order.id);
     const snapshot = JSON.parse(orderItem.configuration_snapshot_json);
     const { buildProviderPrintSvg } = require('../src/mugPrint');
+    const { renderProviderPng } = require('../src/printRaster');
     const { getProduct, resolveProductOrientation } = require('../src/products');
     const { createCanvas, loadImage } = require('canvas');
     const product = resolveProductOrientation(getProduct(snapshot.productKey), snapshot.orientation);
     const svg = buildProviderPrintSvg(product, snapshot.design.surfaces.default);
     assert.match(svg, /data-font-rendering="outlined"/);
     assert.doesNotMatch(svg, /<text\b|@font-face|font-family=/);
-    const image = await loadImage(Buffer.from(svg));
-    const canvas = createCanvas(product.printFile.width, product.printFile.height);
-    canvas.getContext('2d').drawImage(image, 0, 0);
-    assert.deepEqual(bytes, canvas.toBuffer('image/png'),
-      'the exact immutable outlined snapshot is rasterized into the file URL handed to Printful');
+    assert.deepEqual(bytes, await renderProviderPng(product, snapshot.design.surfaces.default),
+      'fulfillment hands Printful the exact shared immutable PNG rendering');
     const png = await loadImage(bytes);
     assert.equal(png.width, product.printFile.width);
     assert.equal(png.height, product.printFile.height);

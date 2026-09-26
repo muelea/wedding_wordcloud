@@ -1,10 +1,9 @@
 'use strict';
 
 const crypto = require('crypto');
-const { createCanvas, loadImage } = require('canvas');
 const storage = require('./privateStorage');
 const printful = require('./printful');
-const { buildProviderPrintSvg } = require('./mugPrint');
+const { renderProviderPng } = require('./printRaster');
 const { getProduct, resolveProductOrientation } = require('./products');
 
 const SOURCE_PREFIX = 'operator-mockup-sources';
@@ -15,7 +14,6 @@ const CREATE_LIMIT = 2;
 const CREATE_WINDOW_MS = 60 * 1000;
 const PREFERRED_MOCKUP_WIDTH_PX = 2000;
 const FALLBACK_MOCKUP_WIDTH_PX = 1000;
-const MAX_SOURCE_DIMENSION_PX = 3000;
 
 class PrintfulMockupError extends Error {
   constructor(code, message, status = 500, details = {}) {
@@ -90,7 +88,7 @@ function parseConfiguration(configuration) {
       422
     );
   }
-  const rendered = product.printSurfaces.map((surface, index) => {
+  const surfaces = product.printSurfaces.map((surface, index) => {
     const surfaceDesign = design.surfaces[surface.key];
     if (!Array.isArray(surfaceDesign) || !surfaceDesign.length) {
       throw new PrintfulMockupError(
@@ -102,43 +100,10 @@ function parseConfiguration(configuration) {
     return {
       surface,
       placement: product.printful.placements[index],
-      bytes: Buffer.from(buildProviderPrintSvg(product, surfaceDesign), 'utf8'),
+      design: surfaceDesign,
     };
   });
-  return { product, rendered };
-}
-
-async function rasterizePrintSource(svgBytes, printFile) {
-  const sourceWidth = Number(printFile?.width);
-  const sourceHeight = Number(printFile?.height);
-  if (!Number.isSafeInteger(sourceWidth) || !Number.isSafeInteger(sourceHeight) ||
-      sourceWidth < 1 || sourceHeight < 1) {
-    throw new PrintfulMockupError(
-      'mockup_configuration_invalid',
-      'Die gespeicherte Druckfläche ist ungültig.',
-      422
-    );
-  }
-  const scale = Math.min(1, MAX_SOURCE_DIMENSION_PX / sourceWidth, MAX_SOURCE_DIMENSION_PX / sourceHeight);
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
-  const sourceSvg = svgBytes.toString('utf8');
-  const viewportPattern = /(<svg\b[^>]*\bwidth=")[^"]+("[^>]*\bheight=")[^"]+("[^>]*>)/i;
-  if (!viewportPattern.test(sourceSvg)) {
-    throw new PrintfulMockupError(
-      'mockup_configuration_invalid',
-      'Die gespeicherte Druckdatei ist ungültig.',
-      422
-    );
-  }
-  const resizedSvg = sourceSvg.replace(
-    viewportPattern,
-    `$1${width}$2${height}$3`
-  );
-  const image = await loadImage(Buffer.from(resizedSvg, 'utf8'));
-  const canvas = createCanvas(width, height);
-  canvas.getContext('2d').drawImage(image, 0, 0, width, height);
-  return canvas.toBuffer('image/png');
+  return { product, design, surfaces };
 }
 
 function compatibleStyle(rows, product, placement) {
@@ -279,8 +244,8 @@ function createService({
     creationTimes.push(now());
   }
 
-  async function createUncached(configuration, cacheKey, product, rendered) {
-    const placements = rendered.map((entry) => entry.placement);
+  async function createUncached(configuration, cacheKey, product, surfaces) {
+    const placements = surfaces.map((entry) => entry.placement);
     const styleRows = await printfulClient.getCatalogProductMockupStyles(
       product.printful.productId,
       placements
@@ -293,10 +258,10 @@ function createService({
     const uploaded = [];
     const expiresAt = Math.floor(now() / 1000) + SOURCE_TTL_SECONDS;
     try {
-      for (const entry of rendered) {
+      for (const entry of surfaces) {
         const randomId = crypto.randomBytes(18).toString('base64url');
         const objectKey = `${SOURCE_PREFIX}/${expiresAt}-${randomId}.png`;
-        const sourcePng = await rasterizePrintSource(entry.bytes, product.printFile);
+        const sourcePng = await renderProviderPng(product, entry.design);
         await storageClient.upload(objectKey, sourcePng, 'image/png');
         sourceObjectKeys.push(objectKey);
         const signedUrl = await storageClient.createSignedUrl(objectKey, SOURCE_TTL_SECONDS);
@@ -383,7 +348,7 @@ function createService({
 
   async function createForConfiguration(configuration) {
     prune();
-    const { product, rendered } = parseConfiguration(configuration);
+    const { product, design, surfaces } = parseConfiguration(configuration);
     const digest = crypto.createHash('sha256');
     digest.update(JSON.stringify({
       productId: product.printful.productId,
@@ -392,7 +357,7 @@ function createService({
       options: product.printful.options,
       orientation: product.orientation,
     }));
-    for (const entry of rendered) digest.update(entry.bytes);
+    digest.update(JSON.stringify(design));
     const cacheKey = digest.digest('hex');
     const cachedJob = jobs.get(cache.get(cacheKey));
     if (cachedJob && now() - cachedJob.createdAt <= JOB_CACHE_MS) {
@@ -408,7 +373,7 @@ function createService({
       cache.delete(cacheKey);
     }
     if (!creating.has(cacheKey)) {
-      creating.set(cacheKey, createUncached(configuration, cacheKey, product, rendered)
+      creating.set(cacheKey, createUncached(configuration, cacheKey, product, surfaces)
         .finally(() => creating.delete(cacheKey)));
     }
     return creating.get(cacheKey);
@@ -532,7 +497,6 @@ module.exports = {
   PrintfulMockupError,
   SOURCE_PREFIX,
   SOURCE_TTL_SECONDS,
-  MAX_SOURCE_DIMENSION_PX,
   createService,
   isOperatorEnabled,
   isLoopbackAddress,

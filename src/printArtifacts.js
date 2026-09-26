@@ -1,14 +1,11 @@
 'use strict';
 
 const crypto = require('crypto');
-const { createCanvas, loadImage } = require('canvas');
 const db = require('./db');
 const storage = require('./privateStorage');
-const { buildProviderPrintSvg } = require('./mugPrint');
+const { MIME_TYPE, MAX_ARTIFACT_BYTES, renderProviderPng } = require('./printRaster');
 const { getProduct, resolveProductOrientation } = require('./products');
 
-const MIME_TYPE = 'image/png';
-const MAX_ARTIFACT_BYTES = 24 * 1024 * 1024;
 const MAX_PENDING_RENDERS = 4;
 let renderTail = Promise.resolve();
 let pendingRenders = 0;
@@ -68,18 +65,7 @@ async function renderProductSurfaces(product, design) {
   for (const surface of product.printSurfaces) {
     const surfaceDesign = design.surfaces[surface.key];
     if (!Array.isArray(surfaceDesign)) throw new Error('Eine Druckfläche fehlt in der Bestellung.');
-    const svg = Buffer.from(buildProviderPrintSvg(product, surfaceDesign), 'utf8');
-    const image = await loadImage(svg);
-    const canvas = createCanvas(product.printFile.width, product.printFile.height);
-    canvas.getContext('2d').drawImage(image, 0, 0);
-    const bytes = await new Promise((resolve, reject) => {
-      canvas.toBuffer((error, output) => error ? reject(error) : resolve(output), 'image/png');
-    });
-    if (!bytes.length || bytes.length > MAX_ARTIFACT_BYTES) {
-      const error = new Error('Die erzeugte Druckdatei hat eine ungültige Größe.');
-      error.code = 'PRINT_FILE_TOO_LARGE';
-      throw error;
-    }
+    const bytes = await renderProviderPng(product, surfaceDesign);
     rendered.push({ surfaceKey: surface.key, placement: surface.printfulType || surface.key, bytes });
   }
   return rendered;
