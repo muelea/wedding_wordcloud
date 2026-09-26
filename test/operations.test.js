@@ -233,6 +233,10 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
 
   await t.test('pre-live cleanup requires every guard and never removes DB rows after Storage failure', async () => {
     const cleanup = require('../src/preliveCleanup');
+    await db.createEmailSmokeJob({
+      recipientEmail: 'disposable-smoke@example.test',
+      locale: 'de',
+    });
     const [orderItem] = await db.getOrderItems(paidOrder.id);
     const preservedObjectKey = 'print-artifacts/preserved-event/test.png';
     await db.getOrCreatePrintArtifact({

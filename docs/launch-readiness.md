@@ -179,6 +179,13 @@ Execute this only after every item above has an owner and all launch blockers
 are signed off. Deployment, destructive cleanup, credential rotation and live
 provider activation each require explicit maintainer approval at action time.
 
+Execution status on 2026-09-25: the approved commit is deployed in the locked
+maintenance posture and the guarded cleanup completed successfully. It deleted
+31,077 unrelated hosted-test rows and independently verified that only the 126
+rows belonging to event `RimGaoN4-RJkaTJfIN26lg` remain; the private bucket is
+empty and the event has no referenced Storage artifacts. Public traffic remains
+locked while health checks pass. Continue with credential rotation at step 5.
+
 1. Include `checkout.session.expired` in the sandbox webhook subscription via
    the guarded configuration command, then run `npm run deploy:hosted` for the
    tested candidate (including schema version 5) while Stripe remains in

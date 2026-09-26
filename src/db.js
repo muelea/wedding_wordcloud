@@ -2699,7 +2699,7 @@ async function clearPreliveBusinessData({ preserveEventSlug = null } = {}) {
         await client.query(
           `DELETE FROM ${table}
            WHERE $1::text IS NOT NULL AND $2::bigint IS NOT NULL
-             AND NOT (${PRELIVE_PRESERVATION_PREDICATES[table]})`,
+             AND NOT coalesce((${PRELIVE_PRESERVATION_PREDICATES[table]}), false)`,
           [preservation.slug, preservation.eventId],
         );
       } else {
