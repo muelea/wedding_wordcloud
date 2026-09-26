@@ -7,6 +7,32 @@ const { cleanupTargetFingerprint } = require('./cleanupTarget');
 const CONFIRM_FLAG = '--confirm-prelive-cleanup';
 const HOSTED_TEST_ORIGIN = 'https://wolkenworte.fly.dev';
 
+function preservationChoice(options = {}) {
+  const preserveEventSlug = String(options.preserveEventSlug || '').trim();
+  const preserveNone = options.preserveNone === true;
+  if (Boolean(preserveEventSlug) === preserveNone) {
+    const error = new Error('Choose exactly one preserved event slug or explicitly preserve none.');
+    error.code = 'preservation_choice_required';
+    throw error;
+  }
+  if (preserveEventSlug && !/^[A-Za-z0-9_-]{1,120}$/.test(preserveEventSlug)) {
+    const error = new Error('The preserved event slug is invalid.');
+    error.code = 'invalid_preserved_event_slug';
+    throw error;
+  }
+  return preserveEventSlug || null;
+}
+
+function sameCounts(actual, expected) {
+  const names = new Set([...Object.keys(actual || {}), ...Object.keys(expected || {})]);
+  return [...names].every((name) => Number(actual?.[name] || 0) === Number(expected?.[name] || 0));
+}
+
+function sameObjectKeys(actual, expected) {
+  const normalized = (values) => [...new Set((values || []).map(String).filter(Boolean))].sort();
+  return JSON.stringify(normalized(actual)) === JSON.stringify(normalized(expected));
+}
+
 function normalizedFlag(env, name, fallback = 'false') {
   return String(env[name] || fallback).trim().toLowerCase();
 }
@@ -88,6 +114,7 @@ async function runPreliveCleanup(options = {}, dependencies = {}) {
     throw error;
   }
   assertSafetyConfiguration(env);
+  const preserveEventSlug = preservationChoice(options);
   const targetUrl = assertTargetUrl(options.targetUrl || env.PUBLIC_URL, env);
   const database = dependencies.db || db;
   const storage = dependencies.storage || privateStorage;
@@ -95,27 +122,55 @@ async function runPreliveCleanup(options = {}, dependencies = {}) {
 
   await verifyMaintenanceMode(targetUrl, env, dependencies.fetch || fetch);
   await database.assertDatabaseReady();
+  const preservation = preserveEventSlug
+    ? await database.getPrelivePreservationState(preserveEventSlug)
+    : null;
   const objectsBefore = await storage.listAllObjectKeys();
-  await storage.removeMany(objectsBefore);
+  const preservedObjectKeys = preservation?.storageObjectKeys || [];
+  if (!preservedObjectKeys.every((key) => objectsBefore.includes(key))) {
+    const error = new Error('A private object belonging to the preserved event is already missing.');
+    error.code = 'preserved_storage_incomplete';
+    throw error;
+  }
+  const preservedObjectSet = new Set(preservedObjectKeys);
+  const objectsToDelete = objectsBefore.filter((key) => !preservedObjectSet.has(key));
+  await storage.removeMany(objectsToDelete);
   const remainingObjects = await storage.listAllObjectKeys();
-  if (remainingObjects.length) {
-    const error = new Error('Storage bucket is not empty after deletion.');
+  if (!sameObjectKeys(remainingObjects, preservedObjectKeys)) {
+    const error = new Error('Storage bucket contains objects outside the preservation boundary.');
     error.code = 'storage_cleanup_incomplete';
     throw error;
   }
 
-  const result = await database.clearPreliveBusinessData();
+  const result = await database.clearPreliveBusinessData({ preserveEventSlug });
   const after = await database.getPreliveCleanupCounts();
-  if (Object.values(after).some((count) => Number(count) !== 0)) {
+  const expectedAfter = preservation?.counts || Object.fromEntries(
+    Object.keys(after).map((name) => [name, 0]),
+  );
+  if (!sameCounts(after, expectedAfter)) {
     const error = new Error('Database cleanup verification failed.');
     error.code = 'database_cleanup_incomplete';
     throw error;
   }
+  if (preserveEventSlug) {
+    const verifiedPreservation = await database.getPrelivePreservationState(preserveEventSlug);
+    if (!sameCounts(verifiedPreservation.counts, preservation.counts) ||
+        !sameObjectKeys(verifiedPreservation.storageObjectKeys, preservedObjectKeys)) {
+      const error = new Error('The preserved event graph changed during cleanup.');
+      error.code = 'preserved_event_verification_failed';
+      throw error;
+    }
+  }
   const summary = {
     operatorActionId: String(result.action.id),
-    storageObjectsDeleted: objectsBefore.length,
-    databaseRowsDeleted: Object.values(result.before).reduce((sum, count) => sum + Number(count), 0),
-    verifiedEmpty: true,
+    preservedEventSlug: preserveEventSlug,
+    storageObjectsDeleted: objectsToDelete.length,
+    storageObjectsPreserved: preservedObjectKeys.length,
+    databaseRowsDeleted: Object.keys(result.before).reduce(
+      (sum, name) => sum + Number(result.before[name]) - Number(result.after[name]), 0,
+    ),
+    verifiedClean: true,
+    verifiedEmpty: !preserveEventSlug,
   };
   output(JSON.stringify(summary, null, 2));
   return summary;
@@ -126,6 +181,7 @@ module.exports = {
   HOSTED_TEST_ORIGIN,
   assertSafetyConfiguration,
   assertTargetUrl,
+  preservationChoice,
   runPreliveCleanup,
   verifyMaintenanceMode,
 };

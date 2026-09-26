@@ -6,27 +6,78 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), override: t
 const db = require('../src/db');
 const privateStorage = require('../src/privateStorage');
 
-async function run({ database = db, storage = privateStorage, output = console.log } = {}) {
+function parseArgs(argv = process.argv.slice(2)) {
+  const preserveArgument = argv.find((argument) => argument.startsWith('--preserve-event-slug='));
+  const preserveNone = argv.includes('--preserve-none');
+  if (argv.some((argument) => argument !== '--preserve-none' &&
+      !argument.startsWith('--preserve-event-slug='))) {
+    throw new Error('Unknown pre-live verification argument.');
+  }
+  const preserveEventSlug = preserveArgument?.slice('--preserve-event-slug='.length) || null;
+  if (Boolean(preserveEventSlug) === preserveNone) {
+    throw new Error('Choose exactly one preserved event slug or explicitly preserve none.');
+  }
+  return { preserveEventSlug, preserveNone };
+}
+
+function sameEntries(actual, expected) {
+  const normalized = (values) => [...new Set((values || []).map(String).filter(Boolean))].sort();
+  return JSON.stringify(normalized(actual)) === JSON.stringify(normalized(expected));
+}
+
+async function run({
+  database = db,
+  storage = privateStorage,
+  output = console.log,
+  preserveEventSlug = null,
+  preserveNone = false,
+} = {}) {
+  if (Boolean(preserveEventSlug) === (preserveNone === true)) {
+    throw new Error('Choose exactly one preserved event slug or explicitly preserve none.');
+  }
   await database.assertDatabaseReady();
-  const [counts, objectKeys] = await Promise.all([
+  const [counts, objectKeys, preservation] = await Promise.all([
     database.getPreliveCleanupCounts(),
     storage.listAllObjectKeys(),
+    preserveEventSlug ? database.getPrelivePreservationState(preserveEventSlug) : null,
   ]);
-  const remainingRows = Object.values(counts).reduce((sum, count) => sum + Number(count), 0);
-  if (remainingRows || objectKeys.length) {
+  const expectedCounts = preservation?.counts || Object.fromEntries(
+    Object.keys(counts).map((name) => [name, 0]),
+  );
+  const unexpectedRows = Object.keys(counts).reduce(
+    (sum, name) => sum + Math.max(0, Number(counts[name]) - Number(expectedCounts[name] || 0)), 0,
+  );
+  const expectedObjectKeys = preservation?.storageObjectKeys || [];
+  if (unexpectedRows || Object.keys(counts).some(
+    (name) => Number(counts[name]) !== Number(expectedCounts[name] || 0),
+  ) || !sameEntries(objectKeys, expectedObjectKeys)) {
     const error = new Error(
-      `Pre-live target is not empty (${remainingRows} business rows, ${objectKeys.length} Storage objects).`,
+      `Pre-live target is outside its preservation boundary ` +
+      `(${unexpectedRows} unexpected business rows, ${objectKeys.length} Storage objects).`,
     );
     error.code = 'prelive_target_not_empty';
     throw error;
   }
-  const result = { verifiedEmpty: true, businessRows: 0, storageObjects: 0 };
+  const result = {
+    verifiedClean: true,
+    verifiedEmpty: !preserveEventSlug,
+    preservedEventSlug: preserveEventSlug,
+    businessRows: Object.values(counts).reduce((sum, count) => sum + Number(count), 0),
+    storageObjects: objectKeys.length,
+  };
   output(JSON.stringify(result, null, 2));
   return result;
 }
 
 if (require.main === module) {
-  run()
+  let options;
+  try {
+    options = parseArgs();
+  } catch (error) {
+    console.error(`[cutover:empty] verification failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+  (options ? run(options) : Promise.resolve())
     .catch((error) => {
       console.error(`[cutover:empty] verification failed: ${error.code || error.message}`);
       process.exitCode = 1;
@@ -34,4 +85,4 @@ if (require.main === module) {
     .finally(() => db.closePool().catch(() => {}));
 }
 
-module.exports = { run };
+module.exports = { parseArgs, run };

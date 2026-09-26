@@ -188,9 +188,10 @@ provider activation each require explicit maintainer approval at action time.
    commit. It deploys the reviewed hosted-test maintenance configuration and
    verifies public traffic is locked while health endpoints remain available.
 3. Set `ALLOW_TEST_DATA_RESET=true` only in the local operator environment and
-   run the guarded cleanup from `docs/operations.md`. Verify that application
-   tables and the configured private bucket are empty while the clean baseline
-   schema remains.
+   run the guarded cleanup from `docs/operations.md`, explicitly preserving
+   event `RimGaoN4-RJkaTJfIN26lg`. Verify that only its complete relational graph
+   and referenced private artifacts remain while the clean baseline schema is
+   unchanged.
 4. Restore `ALLOW_TEST_DATA_RESET=false` immediately.
 5. Rotate the database runtime credential, Supabase backend key, rate-limit
    HMAC secret and maintenance secret. Update only the stores that consume each
@@ -211,8 +212,9 @@ provider activation each require explicit maintainer approval at action time.
    Check live threshold monitoring and its coverage for the intended markets.
 7. Configure the approved Resend and Printful production values while their
    independent live/write/confirmation gates remain disabled.
-8. Run the `arm` phase of `npm run cutover:production`. It verifies the empty
-   target, stages the reviewed production values and test-secret removals, keeps
+8. Run the `arm` phase of `npm run cutover:production` with the same explicit
+   preserved-event slug. It verifies the preservation boundary, stages the
+   reviewed production values and test-secret removals, keeps
    all payment/fulfillment gates off behind maintenance, verifies certificates
    and the canonical redirect, and pins one Machine running.
 9. Reconfirm live email and provider/tax settings, then run the separately

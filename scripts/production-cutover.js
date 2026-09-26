@@ -304,10 +304,15 @@ function validateMachinePosture(json, posture, { requireHealthy = false } = {}) 
 
 function parseOptions(argv = process.argv.slice(2)) {
   const allowedPhases = new Set(['preflight', 'lock', 'arm', 'activate', 'rearm']);
-  const options = { phase: '', commit: '', confirmations: new Set() };
+  const options = {
+    phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false,
+  };
   for (const argument of argv) {
     if (argument.startsWith('--phase=')) options.phase = argument.slice('--phase='.length);
     else if (argument.startsWith('--confirm-commit=')) options.commit = argument.slice('--confirm-commit='.length);
+    else if (argument.startsWith('--preserve-event-slug=')) {
+      options.preserveEventSlug = argument.slice('--preserve-event-slug='.length);
+    } else if (argument === '--preserve-none') options.preserveNone = true;
     else if ([
       '--confirm-maintenance-lock',
       '--confirm-production-arm',
@@ -319,7 +324,24 @@ function parseOptions(argv = process.argv.slice(2)) {
   if (!allowedPhases.has(options.phase)) {
     fail('Use exactly one --phase=preflight|lock|arm|activate|rearm.');
   }
+  const hasPreservedSlug = Boolean(options.preserveEventSlug);
+  if (hasPreservedSlug && !/^[A-Za-z0-9_-]{1,120}$/.test(options.preserveEventSlug)) {
+    fail('The preserved event slug is invalid.');
+  }
+  if (['arm', 'activate'].includes(options.phase)) {
+    if (hasPreservedSlug === options.preserveNone) {
+      fail('Arm and activate require exactly one --preserve-event-slug=<slug> or --preserve-none.');
+    }
+  } else if (hasPreservedSlug || options.preserveNone) {
+    fail('A preservation choice is accepted only for arm and activate.');
+  }
   return options;
+}
+
+function preservationArgument(options) {
+  return options.preserveEventSlug
+    ? `--preserve-event-slug=${options.preserveEventSlug}`
+    : '--preserve-none';
 }
 
 function assertPhaseConfirmation(options, commit) {
@@ -515,9 +537,9 @@ function main() {
       args: ['scripts/verify-cutover-target.js'],
     });
     runStep({
-      label: 'Verify that database business rows and private Storage are empty',
+      label: 'Verify the database and private Storage preservation boundary',
       command: 'npm',
-      args: ['run', 'ops:verify-prelive-empty'],
+      args: ['run', 'ops:verify-prelive-empty', '--', preservationArgument(options)],
     });
     stageProductionSecrets(productionSecretValues());
     validateSecretBoundary(currentSecretJson(), 'production', { allowStaged: true });
@@ -531,9 +553,9 @@ function main() {
     verifyRemote('armed', 'production', { healthy: true });
   } else {
     runStep({
-      label: 'Re-verify the empty production target',
+      label: 'Re-verify the production preservation boundary',
       command: 'npm',
-      args: ['run', 'ops:verify-prelive-empty'],
+      args: ['run', 'ops:verify-prelive-empty', '--', preservationArgument(options)],
     });
     let activationStarted = false;
     try {

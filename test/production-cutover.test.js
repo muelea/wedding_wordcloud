@@ -164,35 +164,74 @@ test('each mutating phase requires its own flag and exact approved commit', () =
   ]);
   assert.equal(cutover.assertPhaseConfirmation(lock, commit), true);
   assert.throws(() => cutover.assertPhaseConfirmation(
-    cutover.parseOptions(['--phase=arm', `--confirm-commit=${commit}`]), commit),
+    cutover.parseOptions(['--phase=arm', `--confirm-commit=${commit}`, '--preserve-none']), commit),
   /confirm-production-arm/);
   assert.throws(() => cutover.assertPhaseConfirmation(
     cutover.parseOptions([
       '--phase=activate', `--confirm-commit=${'b'.repeat(40)}`, '--confirm-live-activation',
+      '--preserve-none',
     ]), commit), /exact approved commit/);
+  assert.equal(cutover.parseOptions([
+    '--phase=arm', `--confirm-commit=${commit}`, '--confirm-production-arm',
+    '--preserve-event-slug=RimGaoN4-RJkaTJfIN26lg',
+  ]).preserveEventSlug, 'RimGaoN4-RJkaTJfIN26lg');
+  assert.throws(() => cutover.parseOptions([
+    '--phase=arm', `--confirm-commit=${commit}`, '--confirm-production-arm',
+  ]), /preserve-event-slug/);
   const rearm = cutover.parseOptions([
     '--phase=rearm', `--confirm-commit=${commit}`, '--confirm-emergency-rearm',
   ]);
   assert.equal(cutover.assertPhaseConfirmation(rearm, commit), true);
 });
 
-test('the empty-target verifier is read-only and rejects either remaining store', async () => {
+test('the cleanup-boundary verifier is read-only and rejects unrelated rows', async () => {
   const database = {
     async assertDatabaseReady() {},
     async getPreliveCleanupCounts() { return { events: 0, orders: 0 }; },
   };
   const storage = { async listAllObjectKeys() { return []; } };
-  assert.deepEqual(await emptyTarget.run({ database, storage, output() {} }), {
-    verifiedEmpty: true, businessRows: 0, storageObjects: 0,
+  assert.deepEqual(await emptyTarget.run({
+    database, storage, output() {}, preserveNone: true,
+  }), {
+    verifiedClean: true,
+    verifiedEmpty: true,
+    preservedEventSlug: null,
+    businessRows: 0,
+    storageObjects: 0,
   });
   await assert.rejects(
     emptyTarget.run({
       database: { ...database, async getPreliveCleanupCounts() { return { events: 1 }; } },
       storage,
       output() {},
+      preserveNone: true,
     }),
     (error) => error.code === 'prelive_target_not_empty',
   );
+
+  const preservedDatabase = {
+    async assertDatabaseReady() {},
+    async getPreliveCleanupCounts() { return { events: 1, words: 2, orders: 0 }; },
+    async getPrelivePreservationState(slug) {
+      assert.equal(slug, 'RimGaoN4-RJkaTJfIN26lg');
+      return {
+        counts: { events: 1, words: 2, orders: 0 },
+        storageObjectKeys: ['print-artifacts/preserved.png'],
+      };
+    },
+  };
+  assert.deepEqual(await emptyTarget.run({
+    database: preservedDatabase,
+    storage: { async listAllObjectKeys() { return ['print-artifacts/preserved.png']; } },
+    output() {},
+    preserveEventSlug: 'RimGaoN4-RJkaTJfIN26lg',
+  }), {
+    verifiedClean: true,
+    verifiedEmpty: false,
+    preservedEventSlug: 'RimGaoN4-RJkaTJfIN26lg',
+    businessRows: 3,
+    storageObjects: 1,
+  });
 });
 
 test('the arm handoff proves target identity with the old secret without staging it', async () => {

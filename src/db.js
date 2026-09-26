@@ -2561,6 +2561,117 @@ const PRELIVE_BUSINESS_TABLES = Object.freeze([
   'reserved_event_slugs', 'maintenance_runs',
 ]);
 
+const PRELIVE_PRESERVATION_PREDICATES = Object.freeze({
+  email_smoke_runs: `
+    EXISTS (SELECT 1 FROM orders retained_order
+      WHERE retained_order.id = email_smoke_runs.order_id
+        AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))
+    OR EXISTS (SELECT 1 FROM email_jobs retained_job
+      JOIN orders retained_order ON retained_order.id = retained_job.order_id
+      WHERE retained_job.id = email_smoke_runs.email_job_id
+        AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  provider_smoke_runs: `EXISTS (SELECT 1 FROM orders retained_order
+    WHERE retained_order.id = provider_smoke_runs.order_id
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  resend_webhook_events: `EXISTS (SELECT 1 FROM email_jobs retained_job
+    JOIN orders retained_order ON retained_order.id = retained_job.order_id
+    WHERE (retained_job.id = resend_webhook_events.email_job_id
+        OR (resend_webhook_events.provider_message_id IS NOT NULL
+          AND retained_job.provider_message_id = resend_webhook_events.provider_message_id))
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  printful_webhook_events: `EXISTS (SELECT 1 FROM checkout_order_shipments retained_shipment
+    JOIN orders retained_order ON retained_order.id = retained_shipment.order_id
+    WHERE (retained_shipment.printful_order_id = printful_webhook_events.provider_order_id
+        OR retained_shipment.fulfillment_payload_json->>'external_id' =
+          printful_webhook_events.external_order_id)
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  stripe_webhook_events: `EXISTS (SELECT 1 FROM orders retained_order
+    WHERE (retained_order.id = stripe_webhook_events.order_id
+        OR (stripe_webhook_events.stripe_session_id IS NOT NULL
+          AND retained_order.stripe_session_id = stripe_webhook_events.stripe_session_id))
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  email_jobs: `EXISTS (SELECT 1 FROM orders retained_order
+    WHERE retained_order.id = email_jobs.order_id
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  print_artifacts: `EXISTS (SELECT 1 FROM orders retained_order
+    WHERE retained_order.id = print_artifacts.order_id
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  order_items: `EXISTS (SELECT 1 FROM orders retained_order
+    WHERE retained_order.id = order_items.order_id
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  checkout_order_shipments: `EXISTS (SELECT 1 FROM orders retained_order
+    WHERE retained_order.id = checkout_order_shipments.order_id
+      AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  orders: `orders.event_id = $2 OR orders.event_slug_snapshot = $1`,
+  checkout_quotes: `checkout_quotes.event_id = $2`,
+  configurations: `configurations.event_id = $2
+    OR EXISTS (SELECT 1 FROM orders retained_order
+      WHERE (retained_order.configuration_id = configurations.id
+          OR retained_order.configuration_ids_json ? configurations.id)
+        AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))
+    OR EXISTS (SELECT 1 FROM order_items retained_item
+      JOIN orders retained_order ON retained_order.id = retained_item.order_id
+      WHERE retained_item.configuration_id = configurations.id
+        AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  organizer_pin_failures: `organizer_pin_failures.event_id = $2`,
+  archives: `archives.event_id = $2`,
+  word_contributions: `word_contributions.event_id = $2`,
+  words: `words.event_id = $2`,
+  events: `events.id = $2`,
+  reserved_event_slugs: `reserved_event_slugs.slug = $1`,
+  maintenance_runs: 'false',
+});
+
+function assertPrelivePreservationSlug(value) {
+  const slug = String(value || '').trim();
+  if (!/^[A-Za-z0-9_-]{1,120}$/.test(slug)) {
+    const error = new Error('invalid preserved event slug');
+    error.code = 'invalid_preserved_event_slug';
+    throw error;
+  }
+  return slug;
+}
+
+async function getPrelivePreservationStateWithClient(client, preserveEventSlug, { lock = false } = {}) {
+  const slug = assertPrelivePreservationSlug(preserveEventSlug);
+  const eventResult = await client.query(`
+    SELECT id, slug FROM events WHERE slug = $1${lock ? ' FOR UPDATE' : ''}
+  `, [slug]);
+  if (eventResult.rowCount !== 1) {
+    const error = new Error('preserved event does not exist');
+    error.code = 'preserved_event_not_found';
+    throw error;
+  }
+  const eventId = eventResult.rows[0].id;
+  const selections = PRELIVE_BUSINESS_TABLES.map((table) =>
+    `(SELECT count(*)::integer FROM ${table} WHERE ${PRELIVE_PRESERVATION_PREDICATES[table]}) AS ${table}`
+  ).join(',\n');
+  const countResult = await client.query(`SELECT ${selections}`, [slug, eventId]);
+  const counts = Object.fromEntries(PRELIVE_BUSINESS_TABLES.map((table) => [
+    table, Number(countResult.rows[0]?.[table] || 0),
+  ]));
+  if (counts.events !== 1 || counts.reserved_event_slugs !== 1) {
+    const error = new Error('preserved event or permanent slug reservation is incomplete');
+    error.code = 'preserved_event_incomplete';
+    throw error;
+  }
+  const objectResult = await client.query(`
+    SELECT object_key FROM print_artifacts
+    WHERE ${PRELIVE_PRESERVATION_PREDICATES.print_artifacts}
+    ORDER BY object_key
+  `, [slug, eventId]);
+  return {
+    eventId: String(eventId),
+    slug,
+    counts,
+    storageObjectKeys: objectResult.rows.map((row) => String(row.object_key)),
+  };
+}
+
+async function getPrelivePreservationState(preserveEventSlug) {
+  return getPrelivePreservationStateWithClient(getPool(), preserveEventSlug);
+}
+
 async function getPreliveCleanupCounts() {
   const selections = PRELIVE_BUSINESS_TABLES
     .map((table) => `(SELECT count(*)::integer FROM ${table}) AS ${table}`)
@@ -2571,7 +2682,7 @@ async function getPreliveCleanupCounts() {
   ]));
 }
 
-async function clearPreliveBusinessData() {
+async function clearPreliveBusinessData({ preserveEventSlug = null } = {}) {
   return withTransaction(async (client) => {
     const beforeSelections = PRELIVE_BUSINESS_TABLES
       .map((table) => `(SELECT count(*)::integer FROM ${table}) AS ${table}`)
@@ -2580,18 +2691,59 @@ async function clearPreliveBusinessData() {
     const before = Object.fromEntries(PRELIVE_BUSINESS_TABLES.map((table) => [
       table, Number(beforeResult.rows[0]?.[table] || 0),
     ]));
+    const preservation = preserveEventSlug
+      ? await getPrelivePreservationStateWithClient(client, preserveEventSlug, { lock: true })
+      : null;
     for (const table of PRELIVE_BUSINESS_TABLES) {
-      await client.query(`DELETE FROM ${table}`);
+      if (preservation) {
+        await client.query(
+          `DELETE FROM ${table}
+           WHERE $1::text IS NOT NULL AND $2::bigint IS NOT NULL
+             AND NOT (${PRELIVE_PRESERVATION_PREDICATES[table]})`,
+          [preservation.slug, preservation.eventId],
+        );
+      } else {
+        await client.query(`DELETE FROM ${table}`);
+      }
     }
-    await client.query('DELETE FROM operator_actions');
+    if (preservation) {
+      await client.query(`
+        DELETE FROM operator_actions action
+        WHERE action.order_id IS NULL OR NOT EXISTS (SELECT 1 FROM orders retained_order
+          WHERE retained_order.id = action.order_id
+            AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))
+      `, [preservation.slug, preservation.eventId]);
+    } else {
+      await client.query('DELETE FROM operator_actions');
+    }
+    const afterSelections = PRELIVE_BUSINESS_TABLES
+      .map((table) => `(SELECT count(*)::integer FROM ${table}) AS ${table}`)
+      .join(',\n');
+    const afterResult = await client.query(`SELECT ${afterSelections}`);
+    const after = Object.fromEntries(PRELIVE_BUSINESS_TABLES.map((table) => [
+      table, Number(afterResult.rows[0]?.[table] || 0),
+    ]));
+    const expectedAfter = preservation?.counts || Object.fromEntries(
+      PRELIVE_BUSINESS_TABLES.map((table) => [table, 0]),
+    );
+    if (PRELIVE_BUSINESS_TABLES.some((table) => after[table] !== expectedAfter[table])) {
+      const error = new Error('selective pre-live cleanup verification failed');
+      error.code = 'database_cleanup_incomplete';
+      throw error;
+    }
     const actionResult = await client.query(`
       INSERT INTO operator_actions (
         action_type, before_state, after_state, status, summary_json, completed_at
-      ) VALUES ('prelive_cleanup', 'hosted_test_data', 'empty', 'succeeded', $1::jsonb,
+      ) VALUES ('prelive_cleanup', 'hosted_test_data', $2, 'succeeded', $1::jsonb,
                 transaction_timestamp())
       RETURNING *
-    `, [jsonValue({ deletedRows: before })]);
-    return { before, action: rowToBoundary(actionResult.rows[0]) };
+    `, [jsonValue({
+      deletedRows: Object.fromEntries(PRELIVE_BUSINESS_TABLES.map((table) => [
+        table, before[table] - after[table],
+      ])),
+      preserved: preservation?.counts || null,
+      preservedEventSlug: preservation?.slug || null }), preservation ? 'preserved_event' : 'empty']);
+    return { before, after, preservation, action: rowToBoundary(actionResult.rows[0]) };
   });
 }
 
@@ -3189,6 +3341,7 @@ module.exports = {
   finishOperatorAction,
   PRELIVE_BUSINESS_TABLES,
   getPreliveCleanupCounts,
+  getPrelivePreservationState,
   clearPreliveBusinessData,
   recordResendWebhook,
   recordStripeRefund,

@@ -112,6 +112,9 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
   const eventPublic = await createEvent(hosted.baseUrl, {
     title: 'Privatname Betrieb Test', clientIp: '192.0.2.88',
   });
+  const disposableEventPublic = await createEvent(hosted.baseUrl, {
+    title: 'Zu löschende Testwolke', clientIp: '192.0.2.89',
+  });
   const event = await db.getEventBySlug(eventPublic.slug);
 
   await t.test('JSON logs correlate requests while rejecting arbitrary and PII-like fields', () => {
@@ -230,6 +233,22 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
 
   await t.test('pre-live cleanup requires every guard and never removes DB rows after Storage failure', async () => {
     const cleanup = require('../src/preliveCleanup');
+    const [orderItem] = await db.getOrderItems(paidOrder.id);
+    const preservedObjectKey = 'print-artifacts/preserved-event/test.png';
+    await db.getOrCreatePrintArtifact({
+      id: 'A'.repeat(24),
+      orderId: paidOrder.id,
+      orderItemId: orderItem.id,
+      configurationId: orderItem.configuration_id,
+      surfaceKey: 'front',
+      objectKey: preservedObjectKey,
+      mimeType: 'image/png',
+      byteSize: 4,
+      sha256: 'a'.repeat(64),
+      accessNonce: 'N'.repeat(32),
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+    objects.set(preservedObjectKey, Buffer.from('keep'));
     objects.set('prelive-test/object.bin', Buffer.from('hosted-test-object'));
     const safeEnv = {
       ...process.env,
@@ -247,12 +266,21 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
       (error) => error.code === 'unsafe_runtime_configuration'
     );
     await assert.rejects(
-      cleanup.runPreliveCleanup({ confirmed: false }, { env: safeEnv }),
+      cleanup.runPreliveCleanup({
+        confirmed: false, preserveEventSlug: eventPublic.slug,
+      }, { env: safeEnv }),
       (error) => error.code === 'confirmation_required'
     );
     await assert.rejects(
       cleanup.runPreliveCleanup(
         { confirmed: true, targetUrl: hosted.baseUrl },
+        { env: safeEnv, output() {} }
+      ),
+      (error) => error.code === 'preservation_choice_required'
+    );
+    await assert.rejects(
+      cleanup.runPreliveCleanup(
+        { confirmed: true, targetUrl: hosted.baseUrl, preserveEventSlug: eventPublic.slug },
         {
           env: { ...safeEnv, SUPABASE_URL: 'https://different-project.supabase.co' },
           output() {},
@@ -264,7 +292,7 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
     rejectBulkRemoval = true;
     await assert.rejects(
       cleanup.runPreliveCleanup(
-        { confirmed: true, targetUrl: hosted.baseUrl },
+        { confirmed: true, targetUrl: hosted.baseUrl, preserveEventSlug: eventPublic.slug },
         { env: safeEnv, output() {} }
       ),
       (error) => error.code === 'storage_delete_failed'
@@ -272,16 +300,23 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
     assert.ok(await db.getEventBySlug(eventPublic.slug), 'Storage failure must preserve database rows');
 
     const summary = await cleanup.runPreliveCleanup(
-      { confirmed: true, targetUrl: hosted.baseUrl },
+      { confirmed: true, targetUrl: hosted.baseUrl, preserveEventSlug: eventPublic.slug },
       { env: safeEnv, output() {} }
     );
-    assert.equal(summary.verifiedEmpty, true);
+    assert.equal(summary.verifiedClean, true);
+    assert.equal(summary.verifiedEmpty, false);
+    assert.equal(summary.preservedEventSlug, eventPublic.slug);
     assert.ok(summary.databaseRowsDeleted > 0);
     assert.ok(summary.storageObjectsDeleted > 0);
-    assert.equal(objects.size, 0);
-    assert.ok(Object.values(await db.getPreliveCleanupCounts()).every((count) => count === 0));
+    assert.deepEqual([...objects.keys()], [preservedObjectKey]);
+    assert.ok(await db.getEventBySlug(eventPublic.slug));
+    assert.equal(await db.getEventBySlug(disposableEventPublic.slug), null);
+    const preservation = await db.getPrelivePreservationState(eventPublic.slug);
+    assert.deepEqual(await db.getPreliveCleanupCounts(), preservation.counts);
+    assert.deepEqual(preservation.storageObjectKeys, [preservedObjectKey]);
     const audit = await hosted.query(`
       SELECT action_type, status, summary_json FROM operator_actions
+      WHERE action_type = 'prelive_cleanup'
     `);
     assert.equal(audit.rowCount, 1);
     assert.equal(audit.rows[0].action_type, 'prelive_cleanup');

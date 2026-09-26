@@ -69,10 +69,11 @@ only after checking that exact blocked order.
 ## One-time hosted-test cleanup
 
 This command is deliberately restricted to `https://wolkenworte.fly.dev`. It
-cannot target a future custom production domain. It removes every object from
-the configured private Storage bucket first and clears hosted-test business
-rows only after the bucket is verified empty. Application migrations and the
-least-privileged runtime role remain intact.
+cannot target a future custom production domain. For the initial cutover it
+preserves the complete database graph and every referenced private artifact for
+event `RimGaoN4-RJkaTJfIN26lg`, while deleting all unrelated hosted-test objects
+and business rows. Application migrations and the least-privileged runtime role
+remain intact.
 
 Do not run it during ordinary development. At the approved pre-live cutover:
 
@@ -93,12 +94,17 @@ Do not run it during ordinary development. At the approved pre-live cutover:
 3. Run:
 
    ```bash
-   npm run ops:prelive-cleanup -- --target-url https://wolkenworte.fly.dev --confirm-prelive-cleanup
+   npm run ops:prelive-cleanup -- \
+     --target-url https://wolkenworte.fly.dev \
+     --preserve-event-slug=RimGaoN4-RJkaTJfIN26lg \
+     --confirm-prelive-cleanup
    ```
 
-4. Confirm the command reports `verifiedEmpty: true` and restore
-   `ALLOW_TEST_DATA_RESET=false` immediately. Leave the Fly app locked in
-   maintenance mode for credential rotation and the production arm phase.
+4. Confirm the command reports `verifiedClean: true`, `verifiedEmpty: false`
+   and the exact preserved slug. Verify that the event still opens after the
+   later activation, then restore `ALLOW_TEST_DATA_RESET=false` immediately.
+   Leave the Fly app locked in maintenance mode for credential rotation and the
+   production arm phase.
 
 Before deleting anything, the command also compares a secret-bound hash of the
 target app's database project, Supabase project and bucket with the local
@@ -126,7 +132,8 @@ npm run cutover:production -- --phase=preflight
 
 After the cleanup and credential rotations are complete, `arm` first verifies
 that the rotated database/Supabase identity still matches the locked Fly target
-and that every business table and the private Storage bucket are empty. If the
+and that only the explicitly preserved event graph and its private artifacts
+remain. If the
 maintenance secret was rotated locally, temporarily retain the still-active
 old value as `CUTOVER_CURRENT_MAINTENANCE_SECRET`; it is used only for this
 identity proof, never uploaded, and must be cleared after `arm` succeeds. The
@@ -140,11 +147,12 @@ order writes disabled:
 npm run cutover:production -- \
   --phase=arm \
   --confirm-commit=<40-character-approved-commit> \
+  --preserve-event-slug=RimGaoN4-RJkaTJfIN26lg \
   --confirm-production-arm
 ```
 
 The final `activate` phase is a separate approval. It re-runs the full release
-gate and empty-target verification, then applies `fly.production.toml` in one
+gate and preservation-boundary verification, then applies `fly.production.toml` in one
 single-Machine release: maintenance is removed while Stripe payments and all
 three Printful live gates are enabled together. It performs only health and
 read-only HTTP checks. If deployment or those checks fail, the command
@@ -155,6 +163,7 @@ safe posture before returning failure.
 npm run cutover:production -- \
   --phase=activate \
   --confirm-commit=<40-character-approved-commit> \
+  --preserve-event-slug=RimGaoN4-RJkaTJfIN26lg \
   --confirm-live-activation
 ```
 
