@@ -179,17 +179,18 @@ Execute this only after every item above has an owner and all launch blockers
 are signed off. Deployment, destructive cleanup, credential rotation and live
 provider activation each require explicit maintainer approval at action time.
 
-Execution status on 2026-09-25: the approved commit is deployed in the armed
-production posture and the guarded cleanup completed successfully. It deleted
+Execution status on 2026-09-25: the guarded production activation is complete
+for commit `b7dd9a214bd852d91c8d558cf631dd476c654d9c`. The guarded cleanup deleted
 31,077 unrelated hosted-test rows and independently verified that only the 126
 rows belonging to event `RimGaoN4-RJkaTJfIN26lg` remain; the private bucket is
 empty and the event has no referenced Storage artifacts. The live Stripe,
 Printful and Resend values are deployed, the Stripe test secrets are removed,
 the exact live webhook and DE `oss_union` + GB `standard` Tax registrations are
-verified, and one Frankfurt Machine is healthy in the initial pinned armed
-posture pending the separately guarded `autosleep` transition. Public traffic remains
-locked, Stripe charging is disabled and Printful remains mock/no-write/no-confirm.
-Continue only with the separate activation approval at step 9.
+verified, and one Frankfurt Machine uses automatic stop/start with no minimum
+running Machine. Public traffic, live Stripe charging, live Printful order
+writes/confirmation and live transactional email are active. The final active
+smoke and independent preflight passed; only the maintainer-run minimal live
+acceptance purchase at step 10 remains.
 
 1. Include `checkout.session.expired` in the sandbox webhook subscription via
    the guarded configuration command, then run `npm run deploy:hosted` for the
@@ -232,11 +233,17 @@ Continue only with the separate activation approval at step 9.
    running; the reviewed follow-up `autosleep` phase changes both the armed and
    final active lifecycle to automatic stop/start with no minimum running Machine.
    Completed on 2026-09-25 for commit
-   `6576af1f3fca67696d633f99ee0bc638b52539b3`; all 473 release tests passed.
+   `2184889391a8a47fff025b3ab4c8f25b8f8c371c`; all 473 release tests passed and
+   a cold-wake smoke confirmed automatic start.
 9. Reconfirm live email and provider/tax settings, then run the separately
    approved `activate` phase. It enables payment and fulfillment gates and
    removes maintenance atomically, performs production health/read-only smoke
    checks, and automatically re-arms maintenance if those checks fail.
+   Completed on 2026-09-25 for commit
+   `b7dd9a214bd852d91c8d558cf631dd476c654d9c`: all 473 release tests passed,
+   the preserved boundary remained 126 rows and zero objects, Fly release 83
+   passed health, canonical redirect and signature-bound webhook checks, and
+   the independent read-only preflight reported the exact `active` posture.
 10. Complete the explicitly approved minimal live acceptance transaction. If
     it exposes any blocking issue, immediately run the guarded `rearm` phase to
     return the app to the reviewed armed maintenance posture before investigating.
