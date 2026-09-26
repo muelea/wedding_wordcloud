@@ -21,7 +21,6 @@ const { makeEmojiArtworkRouter } = require('./src/routes/emojiArtwork');
 const { ASSET_BASE: EMOJI_BROWSER_ASSET_BASE } = require('./public/js/emoji-catalog');
 const { getBaseUrl } = require('./src/baseUrl');
 const { buildEventUrl, renderEventQrSvg } = require('./src/eventQr');
-const { publicAssetUrl } = require('./src/publicAssets');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('./src/eventNames');
 const { DEFAULT_PRODUCT, getPublicProduct } = require('./src/products');
 const { createSvgExportQueue } = require('./src/svgExportQueue');
@@ -267,10 +266,6 @@ app.get('/e/:slug', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });
   const eventUrl = buildEventUrl(getBaseUrl(req, PORT), event.slug);
-  const socialImageUrl = new URL(
-    publicAssetUrl('/assets/social/wolkenworte-share.png'),
-    eventUrl,
-  ).toString();
   const [qrSvg, initialWords] = await Promise.all([
     renderEventQrSvg(eventUrl),
     db.getWords(event.id),
@@ -282,7 +277,6 @@ app.get('/e/:slug', asyncRoute(async (req, res) => {
     header: { variant: 'display', paletteOptions, hasWords: initialWords.length > 0 },
     pageData: {
       eventUrl,
-      socialImageUrl,
       qrSvg,
       cloudTitle: event.title,
       initialWords,

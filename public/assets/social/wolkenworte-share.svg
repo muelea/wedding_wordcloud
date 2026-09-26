@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <title>Wolkenworte – Eure Erinnerungen in einem Wort</title>
-  <desc>Branded Wolkenworte social sharing card with a large speech-bubble heart mark.</desc>
+  <desc>Branded Wolkenworte social sharing card with a minimal heart speech-bubble mark.</desc>
   <defs>
     <linearGradient id="share-paper" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#fffdfa"/>
@@ -49,9 +49,9 @@
   </g>
   <text x="180" y="126" fill="#400f26" font-family="Georgia, 'Times New Roman', serif" font-size="43" font-weight="700" letter-spacing="0.3">Wolkenworte</text>
 
-  <text x="92" y="260" fill="#400f26" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="400" letter-spacing="-1.4">Eure Erinnerungen</text>
-  <text x="92" y="327" fill="#9c1c4c" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-style="italic" font-weight="400" letter-spacing="-1.4">in einem Wort.</text>
-  <text x="96" y="386" fill="#8a7178" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" letter-spacing="0.2">Gemeinsam sammeln · live erleben · für immer bewahren</text>
+  <text data-social-text="title-line-one" x="92" y="260" fill="#400f26" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="400" letter-spacing="-1.4">Eine Wolke</text>
+  <text data-social-text="title-line-two" x="92" y="327" fill="#9c1c4c" font-family="Georgia, 'Times New Roman', serif" font-size="60" font-style="italic" font-weight="400" letter-spacing="-1.4">voller Glück.</text>
+  <text data-social-text="tagline" x="96" y="386" fill="#8a7178" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" letter-spacing="0.2">Gemeinsam sammeln · live erleben · für immer bewahren</text>
 
   <g aria-hidden="true">
     <circle cx="897" cy="280" r="184" fill="url(#share-glow)"/>
@@ -64,7 +64,7 @@
     </g>
     <path d="m713 146 5 12 12 5-12 5-5 12-5-12-12-5 12-5Z" fill="#c1922f"/>
     <path d="m1066 420 4 9 9 4-9 4-4 9-4-9-9-4 9-4Z" fill="#d1607e"/>
-    <text x="820" y="486" fill="#8a7178" font-family="Georgia, 'Times New Roman', serif" font-size="25" font-style="italic" letter-spacing="0.5">Worte, die bleiben.</text>
+    <text data-social-text="note" x="897" y="486" fill="#8a7178" font-family="Georgia, 'Times New Roman', serif" font-size="25" font-style="italic" letter-spacing="0.5" text-anchor="middle">Worte, die bleiben.</text>
   </g>
 
   <line x1="92" y1="492" x2="606" y2="492" stroke="#c1922f" stroke-opacity="0.46"/>

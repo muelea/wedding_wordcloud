@@ -19,8 +19,10 @@ frozen snapshot of the word cloud.
    reserves IDs permanently and creation retries collisions. Share links and
    QR codes preserve the exact ID, including its case. Every public event URL
    also renders localized Open Graph and large-card metadata for link previews,
-   backed by a stable 1200×630 Wolkenworte image rather than a cached snapshot
-   of the still-changing live cloud.
+   backed by a matching stable 1200×630 Wolkenworte image for every supported
+   language rather than a cached snapshot of the still-changing live cloud.
+   Share actions pin the active language in the invitation URL so link-preview
+   crawlers receive the matching localized card.
 2. The event page works on phones and on a big screen; there is no separate
    setup, guest or display route. The organizer PIN authorizes renaming the
    cloud, removing any submitted word, resetting the cloud and replacing the

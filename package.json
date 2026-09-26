@@ -13,6 +13,7 @@
     "dev": "node --watch server.js",
     "local:prepare": "node scripts/prepare-local.js",
     "local:seed-cloud": "node scripts/seed-local-cloud.js",
+    "assets:social-preview": "node scripts/generate-social-preview-assets.js",
     "deploy:hosted": "node scripts/deploy-hosted.js",
     "db:migrate": "node scripts/db-migrate.js",
     "db:provision-runtime": "node scripts/provision-runtime-role.js",
