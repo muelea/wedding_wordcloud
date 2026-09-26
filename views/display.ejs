@@ -1,9 +1,38 @@
+<%
+  const socialTitle = t('{{name}} – Wortwolke', { name: pageData.cloudTitle });
+  const socialDescription = t(
+    'Ihr seid eingeladen, die Wortwolke „{{name}}“ mitzugestalten. Fügt ein Wort hinzu und erlebt live, wie sie gemeinsam wächst.',
+    { name: pageData.cloudTitle },
+  );
+  const socialImageAlt = t('Wolkenworte – Eure Erinnerungen in einem Wort');
+  const openGraphLocale = {
+    de: 'de_DE', en: 'en_US', fr: 'fr_FR', it: 'it_IT', es: 'es_ES', tr: 'tr_TR',
+  }[locale] || 'de_DE';
+%>
 <!DOCTYPE html>
 <html lang="<%= locale %>" data-theme="pastel" data-locale-source="<%= localeSource %>" data-locale-catalog-url="<%= localeCatalogUrl %>" data-locale-catalog-urls="<%= JSON.stringify(localeCatalogUrls) %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" id="theme-color" content="#fffdfa" />
+  <meta name="description" content="<%= socialDescription %>" />
+  <link rel="canonical" href="<%= pageData.eventUrl %>" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Wolkenworte" />
+  <meta property="og:locale" content="<%= openGraphLocale %>" />
+  <meta property="og:title" content="<%= socialTitle %>" />
+  <meta property="og:description" content="<%= socialDescription %>" />
+  <meta property="og:url" content="<%= pageData.eventUrl %>" />
+  <meta property="og:image" content="<%= pageData.socialImageUrl %>" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="<%= socialImageAlt %>" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="<%= socialTitle %>" />
+  <meta name="twitter:description" content="<%= socialDescription %>" />
+  <meta name="twitter:image" content="<%= pageData.socialImageUrl %>" />
+  <meta name="twitter:image:alt" content="<%= socialImageAlt %>" />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
   <%- include('partials/site-fonts', { preloadPlayfairItalic: true }) %>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -15,7 +44,7 @@
   <script src="<%= asset('/js/action-state.js') %>"></script>
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/theme.js') %>"></script>
-  <title data-i18n-ignore><%= t('{{name}} – Wortwolke', { name: pageData.cloudTitle }) %></title>
+  <title data-i18n-ignore><%= socialTitle %></title>
   <script>
     (function () {
       var palettes = Object.fromEntries(<%- JSON.stringify(pageData.paletteOptions || []).replace(/</g, '\\u003c') %>

@@ -231,7 +231,7 @@ test('shipping is the compact cart review with edit, remove and quantity control
 });
 
 test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {
-  assert.match(landing, /html \{ max-width: 100%;[\s\S]*?overflow-x: clip; \}/);
+  assert.match(landing, /html \{ max-width: 100%;[\s\S]*?overflow-x: clip;[^}]*\}/);
   assert.match(landing, /asset\('\/landing-workflow\.css'\)/);
   assert.match(landing, /asset\('\/js\/landing-workflow\.js'\)/);
   assert.equal((landing.match(/data-workflow-trigger="/g) || []).length, 5);
@@ -350,6 +350,17 @@ test('landing intro selects a portrait-optimized video and poster on phones', ()
     /@media \(max-width: 760px\) and \(orientation: portrait\) \{[\s\S]*?teaser-poster-mobile\.jpg/
   );
   assert.doesNotMatch(landing, /poster="\/assets\/video\//);
+});
+
+test('landing browser chrome returns to the opaque header color after the intro video', () => {
+  assert.match(
+    landing,
+    /html \{[^}]*background-color: var\(--paper\);[^}]*color-scheme: light;/,
+  );
+  assert.match(
+    landing,
+    /html:not\(\.intro-fade\) #site-header\.ww-site-header \{ background: var\(--paper\) !important; \}/,
+  );
 });
 
 test('mobile naming dialog is visual-viewport aware and does not force the keyboard open', () => {

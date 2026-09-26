@@ -17,7 +17,10 @@ frozen snapshot of the word cloud.
    `_`, `-`), with no fixed prefix or title-derived text. Both `/start` and
    `POST /api/events` generate the entire ID; callers cannot choose it. Postgres
    reserves IDs permanently and creation retries collisions. Share links and
-   QR codes preserve the exact ID, including its case.
+   QR codes preserve the exact ID, including its case. Every public event URL
+   also renders localized Open Graph and large-card metadata for link previews,
+   backed by a stable 1200×630 Wolkenworte image rather than a cached snapshot
+   of the still-changing live cloud.
 2. The event page works on phones and on a big screen; there is no separate
    setup, guest or display route. The organizer PIN authorizes renaming the
    cloud, removing any submitted word, resetting the cloud and replacing the

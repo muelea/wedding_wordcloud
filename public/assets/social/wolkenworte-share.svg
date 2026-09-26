@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>Wolkenworte – Eure Erinnerungen in einem Wort</title>
+  <desc>Branded Wolkenworte social sharing card with a large speech-bubble heart mark.</desc>
+  <defs>
+    <linearGradient id="share-paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdfa"/>
+      <stop offset="0.54" stop-color="#fbf6ee"/>
+      <stop offset="1" stop-color="#f8ecee"/>
+    </linearGradient>
+    <radialGradient id="share-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#d1607e" stop-opacity="0.19"/>
+      <stop offset="1" stop-color="#d1607e" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="share-rose-back" gradientUnits="userSpaceOnUse" cx="370" cy="301" r="248" fx="373" fy="321">
+      <stop offset="0" stop-color="#d43b68"/>
+      <stop offset="0.58" stop-color="#bd2055"/>
+      <stop offset="1" stop-color="#aa1243"/>
+    </radialGradient>
+    <radialGradient id="share-rose-left" gradientUnits="userSpaceOnUse" cx="292" cy="431" r="321" fx="307" fy="451">
+      <stop offset="0" stop-color="#ed7898"/>
+      <stop offset="0.58" stop-color="#df597c"/>
+      <stop offset="1" stop-color="#d4426b"/>
+    </radialGradient>
+    <radialGradient id="share-burgundy-right" gradientUnits="userSpaceOnUse" cx="501" cy="421" r="282" fx="498" fy="430">
+      <stop offset="0" stop-color="#750027"/>
+      <stop offset="0.62" stop-color="#61001f"/>
+      <stop offset="1" stop-color="#4b0018"/>
+    </radialGradient>
+    <clipPath id="share-heart-cutout" clipPathUnits="userSpaceOnUse">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0H726V672H0ZM364 488c-14-13-49-38-73-61-21-20-32-42-31-65 1-26 18-46 42-49 28-4 49 10 62 31 14-21 35-35 62-31 24 3 41 23 42 49 1 27-13 52-35 74-20 20-44 39-69 52Z"/>
+    </clipPath>
+    <filter id="share-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#400f26" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#share-paper)"/>
+  <circle cx="1086" cy="82" r="260" fill="url(#share-glow)"/>
+  <circle cx="80" cy="622" r="210" fill="#f3e3d1" opacity="0.42"/>
+  <path d="M34 136C230 29 348 50 468 106" fill="none" stroke="#c1922f" stroke-opacity="0.16" stroke-width="2"/>
+  <path d="M816 570c139 45 251 16 350-72" fill="none" stroke="#9c1c4c" stroke-opacity="0.12" stroke-width="2"/>
+
+  <rect x="42" y="38" width="1116" height="554" rx="34" fill="#fffdfa" fill-opacity="0.76" stroke="#c1922f" stroke-opacity="0.24" filter="url(#share-shadow)"/>
+
+  <g transform="translate(88 71) scale(.105)" clip-path="url(#share-heart-cutout)">
+    <ellipse cx="369" cy="244" rx="184.5" ry="186" fill="url(#share-rose-back)"/>
+    <path fill="url(#share-burgundy-right)" d="m364 344c33-66 94-110 163-110 101 0 179 76 179 173 0 76-50 136-129 150l30 54c3 6-1 9-8 6-45-16-83-36-120-54l-286 9c51-16 133-52 171-84 34-28 74-63 91-92 22-38 6-76-27-83-28-6-50 10-64 31Z"/>
+    <path fill="url(#share-rose-left)" d="M364 344c-29-62-90-100-160-100-100 0-178 74-178 166 0 93 72 162 167 162 60 0 110-31 171-84-33-25-71-55-88-80-27-39-18-77 25-94 27-6 49 9 63 30Z"/>
+  </g>
+  <text x="180" y="126" fill="#400f26" font-family="Georgia, 'Times New Roman', serif" font-size="43" font-weight="700" letter-spacing="0.3">Wolkenworte</text>
+
+  <text x="92" y="260" fill="#400f26" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="400" letter-spacing="-1.4">Eure Erinnerungen</text>
+  <text x="92" y="327" fill="#9c1c4c" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-style="italic" font-weight="400" letter-spacing="-1.4">in einem Wort.</text>
+  <text x="96" y="386" fill="#8a7178" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" letter-spacing="0.2">Gemeinsam sammeln · live erleben · für immer bewahren</text>
+
+  <g aria-hidden="true">
+    <circle cx="897" cy="280" r="184" fill="url(#share-glow)"/>
+    <circle cx="897" cy="280" r="152" fill="#f9e8ec" fill-opacity="0.62"/>
+    <circle cx="897" cy="280" r="102" fill="#fffdfa" fill-opacity="0.78"/>
+    <g transform="translate(748 141) scale(.41)" clip-path="url(#share-heart-cutout)">
+      <ellipse cx="369" cy="244" rx="184.5" ry="186" fill="url(#share-rose-back)"/>
+      <path fill="url(#share-burgundy-right)" d="m364 344c33-66 94-110 163-110 101 0 179 76 179 173 0 76-50 136-129 150l30 54c3 6-1 9-8 6-45-16-83-36-120-54l-286 9c51-16 133-52 171-84 34-28 74-63 91-92 22-38 6-76-27-83-28-6-50 10-64 31Z"/>
+      <path fill="url(#share-rose-left)" d="M364 344c-29-62-90-100-160-100-100 0-178 74-178 166 0 93 72 162 167 162 60 0 110-31 171-84-33-25-71-55-88-80-27-39-18-77 25-94 27-6 49 9 63 30Z"/>
+    </g>
+    <path d="m713 146 5 12 12 5-12 5-5 12-5-12-12-5 12-5Z" fill="#c1922f"/>
+    <path d="m1066 420 4 9 9 4-9 4-4 9-4-9-9-4 9-4Z" fill="#d1607e"/>
+    <text x="820" y="486" fill="#8a7178" font-family="Georgia, 'Times New Roman', serif" font-size="25" font-style="italic" letter-spacing="0.5">Worte, die bleiben.</text>
+  </g>
+
+  <line x1="92" y1="492" x2="606" y2="492" stroke="#c1922f" stroke-opacity="0.46"/>
+  <rect x="92" y="518" width="12" height="12" transform="rotate(45 98 524)" fill="none" stroke="#c1922f" stroke-width="1.5"/>
+  <text x="122" y="534" fill="#8a7178" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="2.2">WOLKENWORTE.IO</text>
+</svg>
