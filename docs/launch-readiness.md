@@ -186,7 +186,8 @@ rows belonging to event `RimGaoN4-RJkaTJfIN26lg` remain; the private bucket is
 empty and the event has no referenced Storage artifacts. The live Stripe,
 Printful and Resend values are deployed, the Stripe test secrets are removed,
 the exact live webhook and DE `oss_union` + GB `standard` Tax registrations are
-verified, and one Frankfurt Machine is pinned healthy. Public traffic remains
+verified, and one Frankfurt Machine is healthy in the initial pinned armed
+posture pending the separately guarded `autosleep` transition. Public traffic remains
 locked, Stripe charging is disabled and Printful remains mock/no-write/no-confirm.
 Continue only with the separate activation approval at step 9.
 
@@ -227,7 +228,9 @@ Continue only with the separate activation approval at step 9.
    preserved-event slug. It verifies the preservation boundary, stages the
    reviewed production values and test-secret removals, keeps
    all payment/fulfillment gates off behind maintenance, verifies certificates
-   and the canonical redirect, and pins one Machine running.
+   and the canonical redirect. The initial armed release pinned one Machine
+   running; the reviewed follow-up `autosleep` phase changes both the armed and
+   final active lifecycle to automatic stop/start with no minimum running Machine.
    Completed on 2026-09-25 for commit
    `6576af1f3fca67696d633f99ee0bc638b52539b3`; all 473 release tests passed.
 9. Reconfirm live email and provider/tax settings, then run the separately

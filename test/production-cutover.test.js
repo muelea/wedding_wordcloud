@@ -71,7 +71,8 @@ test('reviewed Fly configs encode each one-way cutover posture', () => {
   assert.equal(configs.active.env.STRIPE_LIVE_PAYMENTS_ENABLED, 'true');
   assert.equal(configs.active.env.PRINTFUL_FULFILLMENT_MODE, 'live');
   assert.equal(configs.active.env.PRINTFUL_CONFIRM_LIVE_ORDERS, 'true');
-  assert.equal(configs.active.minMachines, 1);
+  assert.equal(configs.armed.minMachines, 0);
+  assert.equal(configs.active.minMachines, 0);
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   assert.equal(packageJson.scripts['cutover:production'], 'node scripts/production-cutover.js');
@@ -150,6 +151,7 @@ test('machine posture is exact, single-machine and health checked', () => {
   const armed = JSON.stringify([machine('armed')]);
   assert.equal(cutover.detectMachinePosture(armed), 'armed');
   assert.equal(cutover.validateMachinePosture(armed, 'armed', { requireHealthy: true }), true);
+  assert.equal(cutover.detectMachinePosture(JSON.stringify([machine('armedPinned')])), 'armedPinned');
   assert.throws(() => cutover.validateMachinePosture(
     JSON.stringify([machine('armed'), machine('armed')]), 'armed'), /exactly one/);
   assert.throws(() => cutover.validateMachinePosture(
@@ -182,6 +184,10 @@ test('each mutating phase requires its own flag and exact approved commit', () =
     '--phase=rearm', `--confirm-commit=${commit}`, '--confirm-emergency-rearm',
   ]);
   assert.equal(cutover.assertPhaseConfirmation(rearm, commit), true);
+  const autosleep = cutover.parseOptions([
+    '--phase=autosleep', `--confirm-commit=${commit}`, '--confirm-production-autosleep',
+  ]);
+  assert.equal(cutover.assertPhaseConfirmation(autosleep, commit), true);
 });
 
 test('the cleanup-boundary verifier is read-only and rejects unrelated rows', async () => {

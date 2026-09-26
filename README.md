@@ -761,7 +761,7 @@ Dockerfile                 Non-root Debian/Node 22 production image
 fly.toml                   Frankfurt hosted-test lifecycle and health config
 fly.cutover-maintenance.toml Hosted-test maintenance lock for pre-live cleanup
 fly.production-armed.toml  Production credentials selected; all sale/write gates still off
-fly.production.toml        Atomic live-sales gates with one Machine kept running
+fly.production.toml        Atomic live-sales gates with automatic Machine stop/start
 scripts/deploy-hosted.js   Guarded local test → build → migrate → deploy → smoke command
 scripts/production-cutover.js Reviewed preflight → lock → arm → activate cutover command
 scripts/prepare-local.js   Deterministic dependencies + env/assets onboarding check
@@ -1105,8 +1105,11 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   payment/Printful gates disabled. `activate` changes all live gates and removes
   maintenance in one release; a failed post-release check automatically
   redeploys the armed safe posture. A guarded `rearm` phase provides the same
-  fast safe posture if the subsequent real acceptance transaction fails. Exact
-  commands and prerequisites are in
+  fast safe posture if the subsequent real acceptance transaction fails. A
+  one-time guarded `autosleep` phase converts the initially deployed armed
+  posture from one pinned Machine to the reviewed zero-minimum lifecycle before
+  activation. Both the armed and active configs then use automatic stop/start.
+  Exact commands and prerequisites are in
   [the operations runbook](docs/operations.md). Never reproduce a phase with
   individual Fly commands.
 - The checked-in Fly configuration specifies one

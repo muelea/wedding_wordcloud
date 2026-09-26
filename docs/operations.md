@@ -159,6 +159,24 @@ read-only HTTP checks. If deployment or those checks fail, the command
 automatically redeploys the armed maintenance configuration and verifies that
 safe posture before returning failure.
 
+The first armed release temporarily kept one Machine running. Before activation,
+convert that exact transitional posture to the reviewed automatic stop/start
+lifecycle. This phase keeps maintenance active and every payment/fulfillment
+gate disabled, runs the full release checks, and changes the Fly release to
+`min_machines_running=0`:
+
+```bash
+npm run cutover:production -- \
+  --phase=autosleep \
+  --confirm-commit=<40-character-approved-commit> \
+  --confirm-production-autosleep
+```
+
+The Supabase `wolkenworte-maintenance` pg_cron job remains active every five
+minutes. Its authenticated request can wake the Machine, runs bounded provider
+queue and retention work, and then allows Fly to stop the Machine again when it
+is idle.
+
 ```bash
 npm run cutover:production -- \
   --phase=activate \
@@ -180,9 +198,9 @@ npm run cutover:production -- \
   --confirm-emergency-rearm
 ```
 
-Each mutating phase, including emergency re-arm, requires the exact full
+Each mutating phase, including `autosleep` and emergency re-arm, requires the exact full
 approved commit, its own phase-specific confirmation, and a clean local `main`
-that exactly matches `origin/main`. The normal `lock`, `arm` and `activate`
+that exactly matches `origin/main`. The normal `lock`, `arm`, `autosleep` and `activate`
 phases re-run the complete test suite and migrations. Emergency `rearm`
 deliberately skips those slow release steps so it can restore the already-tested
 armed posture quickly. All phases reject multiple Fly Machines, mixed test/live

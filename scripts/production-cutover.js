@@ -14,6 +14,17 @@ const CONFIGS = Object.freeze({
   armed: 'fly.production-armed.toml',
   active: 'fly.production.toml',
 });
+const ARMED_ENV = Object.freeze({
+  APP_ENVIRONMENT: 'production',
+  EMAIL_DELIVERY_MODE: 'live',
+  MAINTENANCE_MODE: 'true',
+  ALLOW_TEST_DATA_RESET: 'false',
+  STRIPE_PAYMENT_MODE: 'live',
+  STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
+  PRINTFUL_FULFILLMENT_MODE: 'mock',
+  PRINTFUL_ALLOW_ORDER_WRITES: 'false',
+  PRINTFUL_CONFIRM_LIVE_ORDERS: 'false',
+});
 const POSTURES = Object.freeze({
   hosted: Object.freeze({
     APP_ENVIRONMENT: 'hosted-test',
@@ -37,17 +48,11 @@ const POSTURES = Object.freeze({
     PRINTFUL_ALLOW_ORDER_WRITES: 'false',
     PRINTFUL_CONFIRM_LIVE_ORDERS: 'false',
   }),
-  armed: Object.freeze({
-    APP_ENVIRONMENT: 'production',
-    EMAIL_DELIVERY_MODE: 'live',
-    MAINTENANCE_MODE: 'true',
-    ALLOW_TEST_DATA_RESET: 'false',
-    STRIPE_PAYMENT_MODE: 'live',
-    STRIPE_LIVE_PAYMENTS_ENABLED: 'false',
-    PRINTFUL_FULFILLMENT_MODE: 'mock',
-    PRINTFUL_ALLOW_ORDER_WRITES: 'false',
-    PRINTFUL_CONFIRM_LIVE_ORDERS: 'false',
-  }),
+  armed: ARMED_ENV,
+  // Transitional recognition for the already-deployed armed release. The
+  // guarded autosleep phase is the only supported path from this posture to
+  // the reviewed zero-minimum armed config.
+  armedPinned: ARMED_ENV,
   active: Object.freeze({
     APP_ENVIRONMENT: 'production',
     EMAIL_DELIVERY_MODE: 'live',
@@ -60,7 +65,7 @@ const POSTURES = Object.freeze({
     PRINTFUL_CONFIRM_LIVE_ORDERS: 'true',
   }),
 });
-const MIN_MACHINES = Object.freeze({ hosted: 0, locked: 0, armed: 1, active: 1 });
+const MIN_MACHINES = Object.freeze({ hosted: 0, locked: 0, armed: 0, armedPinned: 1, active: 0 });
 const COMMON_RUNTIME_SECRETS = Object.freeze([
   'DATABASE_URL',
   'SUPABASE_URL',
@@ -303,7 +308,7 @@ function validateMachinePosture(json, posture, { requireHealthy = false } = {}) 
 }
 
 function parseOptions(argv = process.argv.slice(2)) {
-  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'activate', 'rearm']);
+  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm']);
   const options = {
     phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false,
   };
@@ -316,13 +321,14 @@ function parseOptions(argv = process.argv.slice(2)) {
     else if ([
       '--confirm-maintenance-lock',
       '--confirm-production-arm',
+      '--confirm-production-autosleep',
       '--confirm-live-activation',
       '--confirm-emergency-rearm',
     ].includes(argument)) options.confirmations.add(argument);
     else fail(`Unknown cutover argument: ${argument}.`);
   }
   if (!allowedPhases.has(options.phase)) {
-    fail('Use exactly one --phase=preflight|lock|arm|activate|rearm.');
+    fail('Use exactly one --phase=preflight|lock|arm|autosleep|activate|rearm.');
   }
   const hasPreservedSlug = Boolean(options.preserveEventSlug);
   if (hasPreservedSlug && !/^[A-Za-z0-9_-]{1,120}$/.test(options.preserveEventSlug)) {
@@ -349,6 +355,7 @@ function assertPhaseConfirmation(options, commit) {
   const required = {
     lock: '--confirm-maintenance-lock',
     arm: '--confirm-production-arm',
+    autosleep: '--confirm-production-autosleep',
     activate: '--confirm-live-activation',
     rearm: '--confirm-emergency-rearm',
   }[options.phase];
@@ -496,7 +503,7 @@ function main() {
   const currentPosture = detectMachinePosture(currentMachineJson());
   validateSecretBoundary(
     currentSecretJson(),
-    ['armed', 'active'].includes(currentPosture) ? 'production' : 'hosted',
+    ['armed', 'armedPinned', 'active'].includes(currentPosture) ? 'production' : 'hosted',
   );
 
   if (options.phase === 'preflight') {
@@ -508,13 +515,13 @@ function main() {
   }
 
   const requiredPosture = {
-    lock: 'hosted', arm: 'locked', activate: 'armed', rearm: 'active',
+    lock: 'hosted', arm: 'locked', autosleep: 'armedPinned', activate: 'armed', rearm: 'active',
   }[options.phase];
   if (currentPosture !== requiredPosture) {
     fail(`Phase ${options.phase} requires ${requiredPosture} posture; found ${currentPosture}.`);
   }
   const targetPosture = {
-    lock: 'locked', arm: 'armed', activate: 'active', rearm: 'armed',
+    lock: 'locked', arm: 'armed', autosleep: 'armed', activate: 'active', rearm: 'armed',
   }[options.phase];
   if (options.phase === 'rearm') {
     runStep(deployStep('armed', 'Emergency re-arm: enable maintenance and disable every live gate'));
@@ -549,6 +556,10 @@ function main() {
       command: 'npm',
       args: ['run', 'maintenance:configure-cron', '--', '--url', 'https://wolkenworte.fly.dev'],
     });
+    runStep(smokeStep('maintenance'));
+    verifyRemote('armed', 'production', { healthy: true });
+  } else if (options.phase === 'autosleep') {
+    runStep(deployStep('armed', 'Enable automatic stop/start for the armed production posture'));
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
   } else {
