@@ -179,12 +179,16 @@ Execute this only after every item above has an owner and all launch blockers
 are signed off. Deployment, destructive cleanup, credential rotation and live
 provider activation each require explicit maintainer approval at action time.
 
-Execution status on 2026-09-25: the approved commit is deployed in the locked
-maintenance posture and the guarded cleanup completed successfully. It deleted
+Execution status on 2026-09-25: the approved commit is deployed in the armed
+production posture and the guarded cleanup completed successfully. It deleted
 31,077 unrelated hosted-test rows and independently verified that only the 126
 rows belonging to event `RimGaoN4-RJkaTJfIN26lg` remain; the private bucket is
-empty and the event has no referenced Storage artifacts. Public traffic remains
-locked while health checks pass. Continue with credential rotation at step 5.
+empty and the event has no referenced Storage artifacts. The live Stripe,
+Printful and Resend values are deployed, the Stripe test secrets are removed,
+the exact live webhook and DE `oss_union` + GB `standard` Tax registrations are
+verified, and one Frankfurt Machine is pinned healthy. Public traffic remains
+locked, Stripe charging is disabled and Printful remains mock/no-write/no-confirm.
+Continue only with the separate activation approval at step 9.
 
 1. Include `checkout.session.expired` in the sandbox webhook subscription via
    the guarded configuration command, then run `npm run deploy:hosted` for the
@@ -202,21 +206,21 @@ locked while health checks pass. Continue with credential rotation at step 5.
 4. Restore `ALLOW_TEST_DATA_RESET=false` immediately.
 5. Rotate the database runtime credential, Supabase backend key, rate-limit
    HMAC secret and maintenance secret. Update only the stores that consume each
-   value.
+   value. Maintainer decision on 2026-09-25: do not rotate these credentials;
+   the shared Fly/Supabase projects are intentionally becoming production,
+   repository history contains no production secret, the runtime database role
+   is least-privileged and there is no evidence of compromise. This is an
+   explicit risk acceptance rather than a completed rotation.
 6. Configure the Stripe live key and a new live webhook destination/signing
    secret. Subscribe to `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`, `checkout.session.expired` and
    `charge.refunded`. Never reuse the sandbox or local Stripe CLI webhook secret.
-   Preparation status on 2026-09-25: the live key is held only in the ignored
-   operator `.env`; the guarded command created and verified the separate live
-   destination at the stable Fly callback URL and stored its signing secret
-   locally without printing it. Neither live secret is present in hosted-test
-   Fly, and live payments remain disabled. At cutover, transfer both secrets to
-   the production secret store without recreating the endpoint. Recreate and
-   verify the accepted DE `oss_union` + GB `standard` Tax configuration in the
-   live account, with the correct seller details and product/shipping codes;
-   sandbox settings are not proof of live configuration.
-   Check live threshold monitoring and its coverage for the intended markets.
+   Completion status on 2026-09-25: the guarded arm phase deployed both live
+   secrets without printing them and removed both hosted Stripe test secrets.
+   The one live destination at the stable Fly callback URL is enabled for the
+   exact four events above. Stripe Tax is active with a German head office,
+   default tangible-goods tax code `txcd_99999999`, Germany `oss_union` and
+   Great Britain `standard`; live charging remains disabled.
 7. Configure the approved Resend and Printful production values while their
    independent live/write/confirmation gates remain disabled.
 8. Run the `arm` phase of `npm run cutover:production` with the same explicit
@@ -224,6 +228,8 @@ locked while health checks pass. Continue with credential rotation at step 5.
    reviewed production values and test-secret removals, keeps
    all payment/fulfillment gates off behind maintenance, verifies certificates
    and the canonical redirect, and pins one Machine running.
+   Completed on 2026-09-25 for commit
+   `6576af1f3fca67696d633f99ee0bc638b52539b3`; all 473 release tests passed.
 9. Reconfirm live email and provider/tax settings, then run the separately
    approved `activate` phase. It enables payment and fulfillment gates and
    removes maintenance atomically, performs production health/read-only smoke
