@@ -218,6 +218,18 @@ test('built-in observability, recovery and pre-live cleanup', async (t) => {
     const publicExport = await fetch(`${hosted.baseUrl}/e/unavailable/export.svg`);
     assert.equal(publicExport.status, 503,
       'only immutable presentation assets may pass the stop-the-world maintenance gate');
+    const unauthenticatedMaintenance = await fetch(`${hosted.baseUrl}/internal/maintenance/run`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    assert.equal(unauthenticatedMaintenance.status, 404,
+      'maintenance wake-ups must reach their own bearer-authentication boundary');
+    for (const provider of ['stripe', 'printful', 'resend']) {
+      const webhook = await fetch(`${hosted.baseUrl}/webhook/${provider}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      });
+      assert.notEqual(webhook.status, 503,
+        `${provider} callbacks must reach their own signature boundary during maintenance`);
+    }
     const live = await fetch(`${hosted.baseUrl}/health/live`);
     assert.equal(live.status, 200);
     const guard = require('../src/maintenanceMode');

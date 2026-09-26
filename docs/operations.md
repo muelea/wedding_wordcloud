@@ -172,10 +172,18 @@ npm run cutover:production -- \
   --confirm-production-autosleep
 ```
 
+The phase is deliberately idempotent from the resulting armed posture so a
+reviewed safety fix can be deployed and rechecked before activation without
+falling back to ad-hoc Fly commands.
+
 The Supabase `wolkenworte-maintenance` pg_cron job remains active every five
 minutes. Its authenticated request can wake the Machine, runs bounded provider
 queue and retention work, and then allows Fly to stop the Machine again when it
-is idle.
+is idle. Maintenance mode blocks browser and API traffic but deliberately lets
+that exact bearer-authenticated wake-up and the signature-verified Stripe,
+Printful and Resend callback paths reach their own authentication boundaries.
+The production smoke sends only invalid-signature probes and requires all three
+callbacks to reject them with HTTP 400; it creates no provider or business data.
 
 ```bash
 npm run cutover:production -- \

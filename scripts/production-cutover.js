@@ -515,10 +515,11 @@ function main() {
   }
 
   const requiredPosture = {
-    lock: 'hosted', arm: 'locked', autosleep: 'armedPinned', activate: 'armed', rearm: 'active',
+    lock: 'hosted', arm: 'locked', autosleep: ['armedPinned', 'armed'], activate: 'armed', rearm: 'active',
   }[options.phase];
-  if (currentPosture !== requiredPosture) {
-    fail(`Phase ${options.phase} requires ${requiredPosture} posture; found ${currentPosture}.`);
+  const acceptedPostures = Array.isArray(requiredPosture) ? requiredPosture : [requiredPosture];
+  if (!acceptedPostures.includes(currentPosture)) {
+    fail(`Phase ${options.phase} requires ${acceptedPostures.join(' or ')} posture; found ${currentPosture}.`);
   }
   const targetPosture = {
     lock: 'locked', arm: 'armed', autosleep: 'armed', activate: 'active', rearm: 'armed',
@@ -559,7 +560,7 @@ function main() {
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
   } else if (options.phase === 'autosleep') {
-    runStep(deployStep('armed', 'Enable automatic stop/start for the armed production posture'));
+    runStep(deployStep('armed', 'Apply the automatic stop/start armed production posture'));
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
   } else {

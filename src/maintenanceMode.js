@@ -17,8 +17,15 @@ function makeMiddleware({ renderPage } = {}) {
     if (!isEnabled()) return next();
     res.set('Cache-Control', 'no-store');
     res.set('X-Wolkenworte-Maintenance', 'active');
-    if (req.path.startsWith('/api/') || req.path === '/api' ||
+    // Provider callbacks and the bounded maintenance wake-up retain their own
+    // signature/bearer authentication and must remain reachable while public
+    // traffic is paused. This lets providers retry safely and lets pg_cron
+    // keep fulfillment, email and retention queues moving during maintenance.
+    if (req.path === '/internal/maintenance/run' ||
         req.path.startsWith('/webhook/') || req.path === '/webhook') {
+      return next();
+    }
+    if (req.path.startsWith('/api/') || req.path === '/api') {
       return res.status(503).json({ error: 'maintenance' });
     }
     // The branded maintenance document needs its local fonts, styles and

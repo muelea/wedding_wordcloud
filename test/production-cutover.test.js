@@ -258,7 +258,7 @@ test('the arm handoff proves target identity with the old secret without staging
     'CUTOVER_CURRENT_MAINTENANCE_SECRET'), false);
 });
 
-test('production smoke performs GET-only health, maintenance and canonical checks', async () => {
+test('production smoke checks health, maintenance, canonical redirect and signature-bound webhooks', async () => {
   const requested = [];
   const fakeFetch = async (url, options = {}) => {
     requested.push({ url, method: options.method || 'GET' });
@@ -266,6 +266,7 @@ test('production smoke performs GET-only health, maintenance and canonical check
     if (url.startsWith(productionSmoke.WWW_URL)) {
       return new Response('', { status: 308, headers: { location: `${productionSmoke.PUBLIC_URL}/` } });
     }
+    if (url.includes('/webhook/')) return new Response('invalid webhook signature', { status: 400 });
     return new Response('maintenance', {
       status: 503,
       headers: { 'x-wolkenworte-maintenance': 'active', 'content-type': 'text/html' },
@@ -275,6 +276,8 @@ test('production smoke performs GET-only health, maintenance and canonical check
     expected: 'maintenance', fetchImpl: fakeFetch, output() {},
   });
   assert.equal(result.publicStatus, 503);
-  assert.ok(requested.every((request) => request.method === 'GET'));
-  assert.equal(requested.length, 4);
+  assert.equal(result.webhookReachability, 'ok');
+  assert.equal(requested.filter((request) => request.method === 'GET').length, 4);
+  assert.equal(requested.filter((request) => request.method === 'POST').length, 3);
+  assert.equal(requested.length, 7);
 });

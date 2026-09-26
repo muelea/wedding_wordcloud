@@ -17,17 +17,29 @@ async function request(fetchImpl, url, options = {}) {
 }
 
 async function run({ expected = parseExpected(), fetchImpl = fetch, output = console.log } = {}) {
-  const [live, ready, root, www] = await Promise.all([
+  const webhookProbe = { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' };
+  const [live, ready, root, www, stripeWebhook, printfulWebhook, resendWebhook] = await Promise.all([
     request(fetchImpl, `${PUBLIC_URL}/health/live`),
     request(fetchImpl, `${PUBLIC_URL}/health/ready`),
     request(fetchImpl, `${PUBLIC_URL}/`, { redirect: 'manual' }),
     request(fetchImpl, `${WWW_URL}/`, { redirect: 'manual' }),
+    request(fetchImpl, `${PUBLIC_URL}/webhook/stripe`, webhookProbe),
+    request(fetchImpl, `${PUBLIC_URL}/webhook/printful`, webhookProbe),
+    request(fetchImpl, `${PUBLIC_URL}/webhook/resend`, webhookProbe),
   ]);
   if (live.status !== 200 || ready.status !== 200) {
     throw new Error(`Production health failed (live=${live.status}, ready=${ready.status}).`);
   }
   if (www.status !== 308 || www.headers.get('location') !== `${PUBLIC_URL}/`) {
     throw new Error('The www host does not redirect exactly to the canonical apex.');
+  }
+  const webhookStatuses = {
+    stripe: stripeWebhook.status,
+    printful: printfulWebhook.status,
+    resend: resendWebhook.status,
+  };
+  if (Object.values(webhookStatuses).some((status) => status !== 400)) {
+    throw new Error(`Production webhook reachability failed (${JSON.stringify(webhookStatuses)}).`);
   }
   if (expected === 'maintenance') {
     if (root.status !== 503 || root.headers.get('x-wolkenworte-maintenance') !== 'active') {
@@ -38,7 +50,13 @@ async function run({ expected = parseExpected(), fetchImpl = fetch, output = con
       throw new Error('The active production landing page is not healthy.');
     }
   }
-  const result = { expected, health: 'ok', canonicalRedirect: 'ok', publicStatus: root.status };
+  const result = {
+    expected,
+    health: 'ok',
+    canonicalRedirect: 'ok',
+    webhookReachability: 'ok',
+    publicStatus: root.status,
+  };
   output(JSON.stringify(result, null, 2));
   return result;
 }
