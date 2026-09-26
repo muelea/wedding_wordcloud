@@ -6,6 +6,11 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), override: t
 const db = require('../src/db');
 const privateStorage = require('../src/privateStorage');
 
+// A successful step-7 cron proof necessarily creates this bounded, non-customer
+// heartbeat before activation. It must remain observable, but it is not hosted
+// test business data and therefore cannot make the preservation boundary fail.
+const OPERATIONAL_TABLES = new Set(['maintenance_runs']);
+
 function parseArgs(argv = process.argv.slice(2)) {
   const preserveArgument = argv.find((argument) => argument.startsWith('--preserve-event-slug='));
   const preserveNone = argv.includes('--preserve-none');
@@ -44,11 +49,12 @@ async function run({
   const expectedCounts = preservation?.counts || Object.fromEntries(
     Object.keys(counts).map((name) => [name, 0]),
   );
-  const unexpectedRows = Object.keys(counts).reduce(
+  const businessTables = Object.keys(counts).filter((name) => !OPERATIONAL_TABLES.has(name));
+  const unexpectedRows = businessTables.reduce(
     (sum, name) => sum + Math.max(0, Number(counts[name]) - Number(expectedCounts[name] || 0)), 0,
   );
   const expectedObjectKeys = preservation?.storageObjectKeys || [];
-  if (unexpectedRows || Object.keys(counts).some(
+  if (unexpectedRows || businessTables.some(
     (name) => Number(counts[name]) !== Number(expectedCounts[name] || 0),
   ) || !sameEntries(objectKeys, expectedObjectKeys)) {
     const error = new Error(
@@ -62,7 +68,7 @@ async function run({
     verifiedClean: true,
     verifiedEmpty: !preserveEventSlug,
     preservedEventSlug: preserveEventSlug,
-    businessRows: Object.values(counts).reduce((sum, count) => sum + Number(count), 0),
+    businessRows: businessTables.reduce((sum, name) => sum + Number(counts[name]), 0),
     storageObjects: objectKeys.length,
   };
   output(JSON.stringify(result, null, 2));

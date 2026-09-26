@@ -193,7 +193,7 @@ test('each mutating phase requires its own flag and exact approved commit', () =
 test('the cleanup-boundary verifier is read-only and rejects unrelated rows', async () => {
   const database = {
     async assertDatabaseReady() {},
-    async getPreliveCleanupCounts() { return { events: 0, orders: 0 }; },
+    async getPreliveCleanupCounts() { return { events: 0, orders: 0, maintenance_runs: 1 }; },
   };
   const storage = { async listAllObjectKeys() { return []; } };
   assert.deepEqual(await emptyTarget.run({
@@ -217,11 +217,13 @@ test('the cleanup-boundary verifier is read-only and rejects unrelated rows', as
 
   const preservedDatabase = {
     async assertDatabaseReady() {},
-    async getPreliveCleanupCounts() { return { events: 1, words: 2, orders: 0 }; },
+    async getPreliveCleanupCounts() {
+      return { events: 1, words: 2, orders: 0, maintenance_runs: 1 };
+    },
     async getPrelivePreservationState(slug) {
       assert.equal(slug, 'RimGaoN4-RJkaTJfIN26lg');
       return {
-        counts: { events: 1, words: 2, orders: 0 },
+        counts: { events: 1, words: 2, orders: 0, maintenance_runs: 0 },
         storageObjectKeys: ['print-artifacts/preserved.png'],
       };
     },
