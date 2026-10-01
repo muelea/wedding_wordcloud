@@ -60,7 +60,7 @@ test('asset paths cannot escape public and every view asset exists', () => {
 });
 
 test('interactive word-cloud pages use the same content-addressed layout runtime', () => {
-  for (const filename of ['display.ejs', 'configure.ejs']) {
+  for (const filename of ['display.ejs', 'configure.ejs', 'landing.ejs']) {
     const source = fs.readFileSync(path.join(VIEW_ROOT, filename), 'utf8');
     assert.match(source, /asset\('\/js\/wordcloud-core\.js'\)/, filename);
     assert.doesNotMatch(source, /wordcloud-core\.js\?v=/, filename);
@@ -68,7 +68,7 @@ test('interactive word-cloud pages use the same content-addressed layout runtime
 
   const landing = fs.readFileSync(path.join(VIEW_ROOT, 'landing.ejs'), 'utf8');
   assert.match(landing, /asset\('\/js\/landing-workflow\.js'\)/);
-  assert.doesNotMatch(landing, /asset\('\/js\/wordcloud-core\.js'\)/);
+  assert.match(landing, /asset\('\/js\/hero-cloud-preview\.js'\)/);
 
   const display = fs.readFileSync(path.join(VIEW_ROOT, 'display.ejs'), 'utf8');
   assert.match(display, /Number\.isFinite\(WordCloudCore\.TEXT_BASELINE_OFFSET\)/);

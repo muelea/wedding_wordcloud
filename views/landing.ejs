@@ -10,6 +10,8 @@
   <%- include('partials/site-fonts', { preloadPlayfairItalic: true, preloadCormorantItalic: true }) %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/hero-preview.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/live-cloud-transition.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
@@ -211,59 +213,6 @@
     .trust-heart { width: 18px; height: auto; color: var(--coral); transform: rotate(-6deg); }
     .trust span.copy { color: var(--muted); font-size: .8rem; }
 
-    /* ── Live preview — open and airy, no boxed card: the words themselves
-       (each drifting on its own path) are the visual, not a frame around
-       them. ── */
-    .reel { position: relative; text-align: center; padding: 46px 34px 40px; border-radius: 22px; background: #fffefc; box-shadow: var(--shadow); }
-    .reel::before { content: ''; position: absolute; inset: -60px -40px; background: radial-gradient(ellipse at center, rgba(247,238,223,.6), transparent 70%); z-index: -1; }
-    .reel-label { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: .62rem; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 18px; }
-    .reel-label .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: pulse 1.8s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-    .demo-title { color: var(--ink); font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: 1.55rem; font-style: italic; font-weight: 500; }
-    .demo-subtitle { margin-top: 7px; color: var(--muted); font-size: .64rem; letter-spacing: .18em; text-transform: uppercase; }
-    .cloud { margin-top: 22px; padding: 10px 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; align-items: center; gap: 20px 18px; }
-    .reel-caption { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; }
-    .cloud span { display: inline-block; color: var(--ink); font-family: 'Cormorant Garamond', 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; font-weight: 500; line-height: 1.05; white-space: nowrap; will-change: transform; }
-    /* Size/color repeat in a 4-word cycle rather than one hand-tuned rule
-       per word — stays balanced no matter how many words are in the list.
-       Word 1 is the single deliberate stand-out ("hero" word), overridden
-       below so it wins regardless of which cycle position it lands on. */
-    .cloud span:nth-child(4n+1) { font-size: 1.3rem; }
-    .cloud span:nth-child(4n+2) { font-size: 1.5rem; color: var(--coral); }
-    .cloud span:nth-child(4n+3) { font-size: 1.35rem; color: var(--champagne); }
-    .cloud span:nth-child(4n)   { font-size: 1.4rem; }
-    .cloud span:nth-child(1) { font-size: clamp(1.9rem,3.8vw,2.3rem); color: var(--sage-deep); font-weight: 600; }
-    /* 5 more words picked at random (not the biggest word, but noticeably
-       larger than the base cycle) so the cloud has several standout spots
-       rather than just the one hero word. */
-    .cloud span:nth-child(4)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--coral); font-weight: 600; }
-    .cloud span:nth-child(5)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--champagne); font-weight: 600; }
-    .cloud span:nth-child(7)  { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--sage-deep); font-weight: 600; }
-    .cloud span:nth-child(10) { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--coral); font-weight: 600; }
-    .cloud span:nth-child(13) { font-size: clamp(1.7rem,3.3vw,2rem); color: var(--champagne); font-weight: 600; }
-    /* A few more standout words besides the hero one, so the cloud reads
-       as varied rather than one big word plus a flat field of small ones. */
-
-    /* Three drift paths (different offsets/rotation), cycled across words
-       with staggered duration + delay so nothing moves in lockstep. */
-    @keyframes drift-a { 0%,100% { transform: translate(0,0) rotate(-.6deg); } 50% { transform: translate(7px,-16px) rotate(1.2deg); } }
-    @keyframes drift-b { 0%,100% { transform: translate(0,0) rotate(.8deg); } 50% { transform: translate(-9px,-12px) rotate(-1.4deg); } }
-    @keyframes drift-c { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(4px,-20px) rotate(1.8deg); } }
-    .cloud span:nth-child(3n+1) { animation: drift-a 6.5s ease-in-out infinite; }
-    .cloud span:nth-child(3n+2) { animation: drift-b 7.5s ease-in-out infinite; }
-    .cloud span:nth-child(3n)   { animation: drift-c 8.5s ease-in-out infinite; }
-    /* 7-step delay cycle (coprime with the 3-step drift-path and 4-step
-       size cycles above) so no two words ever move in visual lockstep,
-       regardless of list length. */
-    .cloud span:nth-child(7n+1) { animation-delay: -.2s; }
-    .cloud span:nth-child(7n+2) { animation-delay: -1.4s; }
-    .cloud span:nth-child(7n+3) { animation-delay: -2.8s; }
-    .cloud span:nth-child(7n+4) { animation-delay: -3.6s; }
-    .cloud span:nth-child(7n+5) { animation-delay: -4.9s; }
-    .cloud span:nth-child(7n+6) { animation-delay: -1.1s; }
-    .cloud span:nth-child(7n)   { animation-delay: -5.7s; }
-    @media (prefers-reduced-motion: reduce) { .cloud span { animation: none; } }
-
     /* ── Full-screen intro ── */
     /* intro-lock blocks scrolling for the intro's *entire* life, including
        the fade-out: it's only lifted once the crossfade fully finishes, not
@@ -420,8 +369,6 @@
       .lead { margin-inline: auto; }
       .hero-actions, .trust { justify-content: center; }
       #resume-journey { margin-inline: auto; }
-      .reel { padding: 34px 22px 30px; }
-      .cloud { margin-bottom: 6px; }
       section { padding: 72px 0; }
       .inspiration-grid { grid-template-columns: 1fr; gap: 18px; }
       .print-grid { grid-template-areas: 'copy' 'visual'; text-align: center; }
@@ -517,15 +464,51 @@
           </div>
         </div>
 
-        <div class="reel" aria-label="Animierte Vorschau einer Wortwolke">
-          <span class="reel-label"><span class="live-dot" aria-hidden="true"></span>Live-Vorschau</span>
-          <div class="demo-title">Lea &amp; Julian</div>
-          <div class="demo-subtitle">Unsere Geschichte · 2026</div>
-          <div class="cloud">
-            <span>Liebe</span><span>für immer</span><span>Freude</span><span>unvergesslich</span><span>Zusammen</span><span>Herzklopfen</span><span>Sommerabend</span><span>Gänsehaut</span><span>Vertrauen</span><span>goldenes Licht</span><span>Lachen</span><span>Geborgenheit</span><span>Hand in Hand</span>
+        <figure class="hero-preview" data-hero-preview
+          data-core-url="<%= asset('/js/wordcloud-core.js') %>"
+          data-worker-url="<%= asset('/js/cloud-layout-worker.js') %>"
+          <% for (const demoLocale of ['de', 'en', 'fr', 'it', 'es', 'tr']) { %>
+          data-cloud-<%= demoLocale %>="<%= asset('/assets/hero-clouds/' + demoLocale + '.json') %>"
+          data-fallback-<%= demoLocale %>="<%= asset('/assets/hero-clouds/' + demoLocale + '.png') %>"
+          <% } %>
+        >
+          <div class="hero-preview-toolbar">
+            <span class="hero-preview-label"><span class="hero-preview-dot" aria-hidden="true"></span>Live-Vorschau</span>
+            <button class="hero-preview-toggle" type="button" data-preview-toggle hidden
+              aria-label="Vorschau pausieren" data-i18n-aria-label-source="Vorschau pausieren">
+              <svg class="hero-preview-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4zM10 2h3v12h-3z"/></svg>
+              <svg class="hero-preview-play" viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z"/></svg>
+            </button>
           </div>
-          <p class="reel-caption">Beispiel Hochzeit – eure Wortwolke wächst live auf dem großen Bildschirm – Wort für Wort, während eure Gäste feiern.</p>
-        </div>
+          <div class="hero-preview-frame">
+            <div class="hero-preview-screen" data-preview-screen>
+              <div class="hero-preview-header" aria-hidden="true">
+                <span class="hero-preview-brand" data-i18n-ignore><img src="<%= asset('/z_icons/icon.svg') %>" alt="" width="23" height="23" />Wolkenworte</span>
+                <span class="hero-preview-menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span>
+              </div>
+              <div class="hero-preview-stage" data-preview-stage>
+                <img class="hero-preview-fallback" data-preview-fallback
+                  src="<%= asset('/assets/hero-clouds/' + locale + '.png') %>" alt="" width="800" height="860" aria-hidden="true" />
+                <div class="cloud-word-highlights" data-preview-highlights aria-hidden="true"></div>
+                <canvas class="hero-preview-canvas" aria-label="Animierte Vorschau einer Wortwolke"
+                  data-i18n-aria-label-source="Animierte Vorschau einer Wortwolke" role="img"></canvas>
+              </div>
+              <div class="hero-preview-footer">
+                <span class="hero-preview-title" data-preview-title data-i18n-ignore>Lea &amp; Julian</span>
+                <div class="hero-preview-join">
+                  <div class="hero-preview-qr-label">
+                    <span class="hero-preview-join-label">Auf dem Handy mitmachen</span>
+                    <span class="hero-preview-scan-label">QR-Code scannen</span>
+                  </div>
+                  <a class="hero-preview-qr" href="https://wolkenworte.io" aria-label="wolkenworte.io" data-i18n-ignore>
+                    <img src="<%= asset('/assets/hero-clouds/home-qr.svg') %>" alt="" width="64" height="64" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption class="hero-preview-caption">Beispiel Hochzeit – eure Wortwolke wächst live auf dem großen Bildschirm – Wort für Wort, während eure Gäste feiern.</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -995,6 +978,12 @@
     window.addEventListener('pageshow', () => { void WolkenworteJourney.mountHome(document); });
   </script>
   <script src="<%= asset('/js/landing-workflow.js') %>"></script>
+  <script src="<%= asset('/js/emoji-data.js') %>" defer></script>
+  <script src="<%= asset('/js/emoji-catalog.js') %>" defer></script>
+  <script src="<%= asset('/js/wordcloud-core.js') %>" defer></script>
+  <script src="<%= asset('/js/live-cloud-layout.js') %>" defer></script>
+  <script src="<%= asset('/js/live-cloud-transition.js') %>" defer></script>
+  <script src="<%= asset('/js/hero-cloud-preview.js') %>" defer></script>
   <script>
     (function () {
       var dialog = document.getElementById('start-dialog');

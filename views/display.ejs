@@ -46,6 +46,7 @@
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/live-cloud-transition.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/action-state.js') %>"></script>
@@ -400,7 +401,6 @@
     #cloud-canvas {
       display: block;
       opacity: 0;
-      transition: opacity 0.25s ease;
     }
     #cloud-canvas.visible { opacity: 1; }
 
@@ -731,6 +731,7 @@
 <%- include('partials/site-header') %>
 
 <div id="cloud-container">
+  <div class="cloud-word-highlights" id="cloud-word-highlights" aria-hidden="true"></div>
   <canvas id="cloud-canvas"></canvas>
   <div id="empty-state"<% if ((pageData.initialWords || []).length) { %> class="hidden"<% } %>>
     <div class="empty-ornament">♡</div>
@@ -928,6 +929,7 @@
 <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
 <script src="<%= asset('/js/cloud-limits.js') %>"></script>
 <script src="<%= asset('/js/live-cloud-layout.js') %>"></script>
+<script src="<%= asset('/js/live-cloud-transition.js') %>"></script>
 <script src="<%= asset('/js/cloud-word-actions.js') %>"></script>
 <script src="<%= asset('/js/own-word-groups.js') %>"></script>
 <script>
@@ -999,6 +1001,20 @@
   let interactiveCloudSize = null;
   let activeCloudWord = '';
   let wordSubmissionAnnouncementTimer = null;
+  const cloudHighlights = document.getElementById('cloud-word-highlights');
+  const cloudMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let cloudHighlightTimer = null;
+  const cloudTransition = LiveCloudTransition.create({
+    initialWords: currentWords,
+    commit: paintCloud,
+    highlight: highlightCloudWords,
+    clearHighlights: clearCloudHighlights,
+    setOpacity: (opacity) => { canvas.style.opacity = String(opacity); },
+    motionAllowed: () => !cloudMotion.matches && !document.hidden,
+    isValid: validCloudSnapshot,
+    requestFrame: (callback) => window.requestAnimationFrame(callback),
+    cancelFrame: (id) => window.cancelAnimationFrame(id),
+  });
   const MAX_CANVAS_PIXEL_RATIO = 3;
   const TEXT_BASELINE_OFFSET = Number.isFinite(WordCloudCore.TEXT_BASELINE_OFFSET)
     ? WordCloudCore.TEXT_BASELINE_OFFSET
@@ -1133,13 +1149,22 @@
       height: Math.max(0, Math.floor(rect.height - margin * 2)) };
   }
 
-  function drawCloud(placed, size) {
+  function validCloudSnapshot({ placed, size }) {
     if (!currentWords.length || size.width !== desiredCloudSize?.width ||
-        size.height !== desiredCloudSize?.height) return;
-    const current = new Set(currentWords.map(([word]) => word));
+        size.height !== desiredCloudSize?.height) return false;
+    const current = new Map(currentWords);
     // An older completed addition snapshot can be displayed while the latest
     // is packing, but removal/reset must never resurrect a deleted word.
-    if (placed.some(item => !current.has(item.word))) return;
+    return placed.every(item => current.has(item.word) && item.count <= current.get(item.word));
+  }
+
+  function drawCloud(placed, size) {
+    if (!validCloudSnapshot({ placed, size })) return;
+    const colored = WordCloudCore.spreadPaletteColors(placed, getWordColor.palette);
+    cloudTransition.present({ placed: colored, size });
+  }
+
+  function paintCloud({ placed, size }) {
     const { width, height } = size;
     const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), MAX_CANVAS_PIXEL_RATIO,
       Math.sqrt(16000000 / (width * height)));
@@ -1149,18 +1174,45 @@
     canvas.height = Math.max(1, Math.round(height * pixelRatio));
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    const colored = WordCloudCore.spreadPaletteColors(placed, getWordColor.palette);
-    for (const item of colored) {
+    for (const item of placed) {
       WordCloudCore.drawPlacedWord(ctx, item, {
         emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
       });
     }
-    interactiveCloudWords = colored;
+    interactiveCloudWords = placed;
     interactiveCloudSize = size;
     if (activeCloudWord) closeCloudWordActions();
     setI18nAttribute(canvas, 'aria-label', 'Wortwolke mit {{count}} verschiedenen Wörtern', { count: placed.length });
     canvas.classList.add('visible');
   }
+
+  function clearCloudHighlights() {
+    clearTimeout(cloudHighlightTimer);
+    cloudHighlightTimer = null;
+    cloudHighlights.replaceChildren();
+  }
+
+  function highlightCloudWords({ placed, size }, changed) {
+    cloudHighlights.style.width = `${size.width}px`;
+    cloudHighlights.style.height = `${size.height}px`;
+    // Normal updates emphasize one word. A burst stays quiet and bounded.
+    const highlights = placed.filter(item => changed.has(item.word)).slice(0, 12).map(item => {
+      const glow = document.createElement('span');
+      const padding = Math.min(12, Math.max(5, item.fontPx * .2));
+      glow.className = 'cloud-word-highlight';
+      glow.style.left = `${item.x1 - padding}px`;
+      glow.style.top = `${item.y1 - padding}px`;
+      glow.style.width = `${item.x2 - item.x1 + padding * 2}px`;
+      glow.style.height = `${item.y2 - item.y1 + padding * 2}px`;
+      glow.style.setProperty('--word-glow', item.color);
+      return glow;
+    });
+    cloudHighlights.replaceChildren(...highlights);
+    cloudHighlightTimer = setTimeout(clearCloudHighlights, 1000);
+  }
+
+  cloudMotion.addEventListener('change', () => cloudTransition.finish());
+  document.addEventListener('visibilitychange', () => cloudTransition.finish());
 
   function renderCloud(words) {
     if (!words?.length) return;
@@ -1173,7 +1225,10 @@
       onLayout: drawCloud,
       onError: () => showToast(t('Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.')),
     });
-    liveLayout.request(WordCloudCore.measureWords(words, ctx, getWordColor),
+    const counts = new Map(words);
+    const boxes = WordCloudCore.measureWords(words, ctx, getWordColor)
+      .map(item => ({ ...item, count: counts.get(item.word) }));
+    liveLayout.request(boxes,
       desiredCloudSize.width, desiredCloudSize.height);
   }
 
@@ -1790,7 +1845,11 @@
 
   socket.on('word-update', (words) => {
     const activeWords = new Set(words.map(([word]) => word));
-    if (currentWords.some(([word]) => !activeWords.has(word))) liveLayout?.clear();
+    const nextCounts = new Map(words);
+    if (currentWords.some(([word, count]) => !activeWords.has(word) || count > nextCounts.get(word))) {
+      liveLayout?.clear();
+      cloudTransition.invalidate();
+    }
     currentWords = words;
     document.getElementById('reset-cloud-button').disabled = words.length === 0;
     let ownContributionsChanged = false;
@@ -1809,11 +1868,13 @@
       renderTimer = null;
       scheduledWords = [];
       liveLayout?.clear();
+      cloudTransition.reset();
       interactiveCloudWords = [];
       interactiveCloudSize = null;
       closeCloudWordActions();
       emptyState.classList.remove('hidden');
       canvas.classList.remove('visible');
+      canvas.style.opacity = '';
       return;
     }
     emptyState.classList.add('hidden');
@@ -1835,6 +1896,7 @@
     renderTimer = null;
     scheduledWords = [];
     currentWords = [];
+    cloudTransition.dispose();
     liveLayout?.dispose();
     const errorState = document.createElement('p');
     errorState.style.cssText = 'padding:60px;font-family:Georgia,serif;';
@@ -1900,6 +1962,7 @@
     ++renderRevision;
     clearTimeout(renderTimer);
     renderTimer = null;
+    cloudTransition.invalidate();
     liveLayout?.dispose();
     liveLayout = null;
     cloudResizeObserver?.disconnect();

@@ -33,7 +33,11 @@ frozen snapshot of the word cloud.
    contributions again; matching words are decremented rather than deleting
    another guest's vote.
 4. Words appear live on the event page via Socket.io — font size scales with
-   how many guests submitted the same word.
+   how many guests submitted the same word. Finished layouts use a brief
+   120 ms fade-out, switch while invisible, then fade in over 180 ms. New words
+   and increased counts get a soft one-second highlight after the reveal.
+   Rapid updates retain only the latest pending
+   transition, and reduced-motion/background-tab updates render immediately.
 5. After the event, the organizer opens a product configurator, chooses a white
    mug, cork-backed coaster, matte or framed poster, tote bag, throw blanket
    spiral notebook or decorative pillow from grouped product families, any
@@ -557,6 +561,18 @@ flag. Never configure this setting in Fly.
 
 There is no seed HTTP endpoint or deployed UI. The production image does not
 contain `run_local.sh`, `scripts/` or the marketing seed files.
+
+The landing-page hero simulates the localized wedding examples in a portrait
+presentation preview using the same font, emoji artwork, palette and layout
+worker as the event page. It adds one word at a time and pauses outside the
+viewport, behind the intro or in a background tab. The pause control stops the
+animation; reduced-motion visitors see the complete cloud. Rearrangements use
+the live page's fade-out/reveal and highlight. Its presentation footer puts the
+cloud name on the left and localized join instructions with a scannable QR code
+on the right; the demo QR always opens `https://wolkenworte.io`. Public demo assets
+contain only the title, normalized words/counts and palette, with a static
+real-engine fallback. After changing the wedding examples or default palette,
+regenerate these committed assets with `node scripts/generate-hero-cloud-assets.js`.
 
 The server prints a URL on startup (including the machine's LAN address, so
 phones on the same Wi-Fi can reach it). `/` is the landing page and `POST /start`

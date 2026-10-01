@@ -1,0 +1,25 @@
+/* The canvas is painted once while fully transparent, then fades back in.
+   A separate, inert layer keeps the highlight out of word hit testing/export. */
+#cloud-canvas { position: relative; z-index: 1; }
+.cloud-word-highlights {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.cloud-word-highlight {
+  position: absolute;
+  border-radius: 999px;
+  background: radial-gradient(ellipse closest-side, var(--word-glow), transparent);
+  filter: blur(6px);
+  animation: cloud-word-glow 1000ms ease-out both;
+}
+@keyframes cloud-word-glow {
+  0% { opacity: 0; }
+  15%, 35% { opacity: .4; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cloud-word-highlights { display: none; }
+}
