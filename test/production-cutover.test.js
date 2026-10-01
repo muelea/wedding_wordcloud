@@ -188,6 +188,113 @@ test('each mutating phase requires its own flag and exact approved commit', () =
     '--phase=autosleep', `--confirm-commit=${commit}`, '--confirm-production-autosleep',
   ]);
   assert.equal(cutover.assertPhaseConfirmation(autosleep, commit), true);
+  const release = cutover.parseOptions([
+    '--phase=release', `--confirm-commit=${commit}`, '--confirm-production-release',
+  ]);
+  assert.equal(cutover.assertPhaseConfirmation(release, commit), true);
+  assert.throws(() => cutover.assertPhaseConfirmation(
+    cutover.parseOptions(['--phase=release', `--confirm-commit=${commit}`]), commit),
+  /confirm-production-release/);
+  assert.throws(() => cutover.assertPhaseConfirmation(release, 'b'.repeat(40)), /exact approved commit/);
+  assert.throws(() => cutover.assertPhaseConfirmation(
+    cutover.parseOptions(['--phase=release', `--confirm-commit=${commit}`, '--confirm-live-activation']), commit),
+  /confirm-production-release/);
+  assert.throws(() => cutover.parseOptions([
+    '--phase=release', `--confirm-commit=${commit}`, '--confirm-production-release', '--preserve-none',
+  ]), /only for arm and activate/);
+});
+
+test('Linux candidate checks stop the release before migrations on failed image or font verification', () => {
+  const commit = 'a'.repeat(40);
+  const steps = cutover.verificationSteps('active', commit.slice(0, 12));
+  const linux = steps.find(step => step.args.includes('test/print-raster.test.js'));
+  assert.equal(linux.command, 'docker');
+  assert.ok(linux.args.includes('--read-only'));
+  assert.ok(linux.args.includes('--pull=never'));
+  assert.equal(linux.args[linux.args.indexOf('--network') + 1], 'none');
+  assert.ok(linux.args.includes(`wolkenworte:${commit.slice(0, 12)}`));
+  assert.ok(linux.args.includes('test/design-font-contract.test.js'));
+  assert.ok(linux.args.includes('test/design-font-geometry.test.js'));
+  const executed = [];
+  assert.throws(() => cutover.runVerificationSteps('active', commit, {
+    checkCommit() { assert.fail('Failed Linux verification must precede the migration boundary'); },
+    execute(step) {
+      executed.push(step);
+      if (step === linux || step.args.includes('test/print-raster.test.js')) throw new Error('Linux pixels missing');
+    },
+  }), /Linux pixels missing/);
+  assert.equal(executed.some(step => step.args.includes('db:migrate')), false);
+  assert.equal(executed.at(-1).args.includes('test/print-raster.test.js'), true);
+});
+
+test('post-launch release rechecks production then deploys and verifies without initial-cutover work', () => {
+  const commit = 'a'.repeat(40);
+  const calls = [];
+  cutover.deployActiveRelease(commit, {
+    checkCommit() { calls.push('commit'); return commit; },
+    verify(posture, secretTarget, options = {}) {
+      calls.push(options.healthy ? 'health' : 'boundary');
+      cutover.validateMachinePosture(JSON.stringify([machine('active')]), posture,
+        { requireHealthy: options.healthy });
+      cutover.validateSecretBoundary(secretList('production'), secretTarget);
+    },
+    execute(step) { calls.push(step); },
+    recover() { assert.fail('Successful release must not re-arm'); },
+  });
+  assert.equal(calls[0], 'commit');
+  assert.equal(calls[1], 'boundary');
+  assert.deepEqual(calls[2].args, [
+    'deploy', '--remote-only', '--ha=false', '--config', 'fly.production.toml', '--app', 'wolkenworte', '--yes',
+  ]);
+  assert.deepEqual(calls[3].args, ['scripts/production-readiness-smoke.js', '--expect-active']);
+  assert.equal(calls[4], 'health');
+  assert.equal(calls.length, 5, 'Release must not stage secrets, configure cron or run pre-live cleanup');
+});
+
+test('post-launch release refuses a changed commit, changed posture or mixed secrets before deployment', () => {
+  const commit = 'a'.repeat(40);
+  for (const scenario of ['commit', 'posture', 'secrets']) {
+    assert.throws(() => cutover.deployActiveRelease(commit, {
+      checkCommit() { return scenario === 'commit' ? 'b'.repeat(40) : commit; },
+      verify(posture, secretTarget) {
+        cutover.validateMachinePosture(JSON.stringify([machine(
+          scenario === 'posture' ? 'armed' : 'active')]), posture);
+        const records = JSON.parse(secretList('production'));
+        if (scenario === 'secrets') records.push({ name: 'STRIPE_TEST_SECRET_KEY', status: 'Deployed' });
+        cutover.validateSecretBoundary(JSON.stringify(records), secretTarget);
+      },
+      execute() { assert.fail('Unsafe boundary must prevent deployment'); },
+      recover() { assert.fail('A pre-deployment refusal must not change production'); },
+    }), /commit changed|not in active posture|Forbidden production/);
+  }
+});
+
+test('post-launch release invokes the existing maintenance recovery on deploy, smoke or health failure', () => {
+  const commit = 'a'.repeat(40);
+  for (const failedStep of ['deploy', 'smoke', 'health']) {
+    const failure = new Error(`${failedStep} failed`);
+    const executed = [];
+    let recovered = 0;
+    assert.throws(() => cutover.deployActiveRelease(commit, {
+      checkCommit() { return commit; },
+      verify(posture, secretTarget, options = {}) {
+        if (options.healthy && failedStep === 'health') throw failure;
+      },
+      execute(step) {
+        const name = step.command === 'flyctl' ? 'deploy' : 'smoke';
+        executed.push(name);
+        if (name === failedStep) throw failure;
+      },
+      recover(error, action) {
+        assert.equal(error, failure);
+        assert.equal(action, 'Production release');
+        recovered += 1;
+        throw new Error('safely re-armed');
+      },
+    }), /safely re-armed/);
+    assert.equal(recovered, 1);
+    assert.deepEqual(executed, failedStep === 'deploy' ? ['deploy'] : ['deploy', 'smoke']);
+  }
 });
 
 test('the cleanup-boundary verifier is read-only and rejects unrelated rows', async () => {

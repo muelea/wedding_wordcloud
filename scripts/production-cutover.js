@@ -308,7 +308,7 @@ function validateMachinePosture(json, posture, { requireHealthy = false } = {}) 
 }
 
 function parseOptions(argv = process.argv.slice(2)) {
-  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm']);
+  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm', 'release']);
   const options = {
     phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false,
   };
@@ -324,11 +324,12 @@ function parseOptions(argv = process.argv.slice(2)) {
       '--confirm-production-autosleep',
       '--confirm-live-activation',
       '--confirm-emergency-rearm',
+      '--confirm-production-release',
     ].includes(argument)) options.confirmations.add(argument);
     else fail(`Unknown cutover argument: ${argument}.`);
   }
   if (!allowedPhases.has(options.phase)) {
-    fail('Use exactly one --phase=preflight|lock|arm|autosleep|activate|rearm.');
+    fail('Use exactly one --phase=preflight|lock|arm|autosleep|activate|rearm|release.');
   }
   const hasPreservedSlug = Boolean(options.preserveEventSlug);
   if (hasPreservedSlug && !/^[A-Za-z0-9_-]{1,120}$/.test(options.preserveEventSlug)) {
@@ -358,6 +359,7 @@ function assertPhaseConfirmation(options, commit) {
     autosleep: '--confirm-production-autosleep',
     activate: '--confirm-live-activation',
     rearm: '--confirm-emergency-rearm',
+    release: '--confirm-production-release',
   }[options.phase];
   if (!options.confirmations.has(required)) fail(`Explicit confirmation missing: ${required}.`);
   if (!/^[a-f0-9]{40}$/.test(options.commit) || options.commit !== commit) {
@@ -395,6 +397,14 @@ function verificationSteps(posture, shortSha) {
       label: 'Build the approved production image locally',
       command: 'docker',
       args: ['build', '--platform', 'linux/amd64', '--tag', `${APP_NAME}:${shortSha}`, '.'],
+    },
+    {
+      label: 'Verify uploaded-image pixels and font contracts in the Linux candidate',
+      command: 'docker',
+      args: ['run', '--rm', '--pull=never', '--platform', 'linux/amd64', '--network', 'none', '--read-only',
+        '--mount', `type=bind,source=${path.join(ROOT, 'test')},target=/app/test,readonly`,
+        `${APP_NAME}:${shortSha}`, 'node', '--test',
+        'test/print-raster.test.js', 'test/design-font-contract.test.js', 'test/design-font-geometry.test.js'],
     },
     {
       label: `Validate ${config} strictly`,
@@ -450,13 +460,15 @@ function loadLocalEnvironment() {
   if (loaded.error) fail(`The local .env could not be loaded: ${loaded.error.message}`);
 }
 
-function runVerificationSteps(posture, commit) {
+function runVerificationSteps(posture, commit, {
+  checkCommit = assertGitReleaseCandidate, execute = runStep,
+} = {}) {
   for (const step of verificationSteps(posture, commit.slice(0, 12))) {
     if (step.releaseBoundary) {
-      const rechecked = assertGitReleaseCandidate();
+      const rechecked = checkCommit();
       if (rechecked !== commit) fail('Approved release commit changed during verification.');
     }
-    runStep(step);
+    execute(step);
   }
 }
 
@@ -478,15 +490,33 @@ function verifyCertificates() {
   runCapture('flyctl', ['certs', 'check', 'www.wolkenworte.io', '--app', APP_NAME, '--json']);
 }
 
-function rearmAfterFailedActivation(originalError) {
+function rearmAfterFailedActivation(originalError, action = 'Activation') {
   try {
     runStep(deployStep('armed', 'Re-arm maintenance and disable every live gate'));
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
   } catch (rearmError) {
-    fail(`Activation failed (${originalError.message}); automatic re-arm also failed (${rearmError.message}).`);
+    fail(`${action} failed (${originalError.message}); automatic re-arm also failed (${rearmError.message}).`);
   }
-  fail(`Activation failed and the app was safely re-armed: ${originalError.message}`);
+  fail(`${action} failed and the app was safely re-armed: ${originalError.message}`);
+}
+
+function deployActiveRelease(commit, {
+  checkCommit = assertGitReleaseCandidate, verify = verifyRemote,
+  execute = runStep, recover = rearmAfterFailedActivation,
+} = {}) {
+  if (checkCommit() !== commit) fail('Approved release commit changed during verification.');
+  // Recheck after the slow test/build gate, before any deployment. A stopped
+  // auto-start Machine is allowed here; the post-release smoke wakes it.
+  verify('active', 'production');
+  try {
+    execute(deployStep('active', 'Release the approved update to active production'));
+    execute(smokeStep('active'));
+    verify('active', 'production', { healthy: true });
+  } catch (error) {
+    recover(error, 'Production release');
+    throw error;
+  }
 }
 
 function main() {
@@ -516,13 +546,14 @@ function main() {
 
   const requiredPosture = {
     lock: 'hosted', arm: 'locked', autosleep: ['armedPinned', 'armed'], activate: 'armed', rearm: 'active',
+    release: 'active',
   }[options.phase];
   const acceptedPostures = Array.isArray(requiredPosture) ? requiredPosture : [requiredPosture];
   if (!acceptedPostures.includes(currentPosture)) {
     fail(`Phase ${options.phase} requires ${acceptedPostures.join(' or ')} posture; found ${currentPosture}.`);
   }
   const targetPosture = {
-    lock: 'locked', arm: 'armed', autosleep: 'armed', activate: 'active', rearm: 'armed',
+    lock: 'locked', arm: 'armed', autosleep: 'armed', activate: 'active', rearm: 'armed', release: 'active',
   }[options.phase];
   if (options.phase === 'rearm') {
     runStep(deployStep('armed', 'Emergency re-arm: enable maintenance and disable every live gate'));
@@ -563,6 +594,8 @@ function main() {
     runStep(deployStep('armed', 'Apply the automatic stop/start armed production posture'));
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
+  } else if (options.phase === 'release') {
+    deployActiveRelease(commit);
   } else {
     runStep({
       label: 'Re-verify the production preservation boundary',
@@ -605,9 +638,11 @@ module.exports = {
   TEST_STRIPE_SECRETS,
   assertPhaseConfirmation,
   detectMachinePosture,
+  deployActiveRelease,
   parseOptions,
   productionSecretValues,
   stageProductionSecrets,
+  runVerificationSteps,
   validateConfigFamily,
   validateCutoverConfig,
   validateLocalCutoverEnvironment,

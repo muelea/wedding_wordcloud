@@ -1127,6 +1127,13 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   Exact commands and prerequisites are in
   [the operations runbook](docs/operations.md). Never reproduce a phase with
   individual Fly commands.
+- After production activation, approved updates use
+  `npm run cutover:production -- --phase=release --confirm-commit=<full-sha> --confirm-production-release`.
+  This active-to-active release retains customer data and production credentials,
+  runs the full suite and Linux image/font checks, and automatically re-arms
+  maintenance if deployment or post-release verification fails. It never runs
+  initial-cutover cleanup. See [the operations runbook](docs/operations.md) for
+  its prerequisites; `deploy:hosted` remains restricted to hosted testing.
 - The checked-in Fly configuration specifies one
   `shared-cpu-2x`/1024 MiB stateless web Machine for the `wolkenworte` hosted
   test app in `fra`, no volume, automatic stop/start

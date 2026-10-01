@@ -217,6 +217,34 @@ posture, or unsafe local gates. Never run `activate` until the live provider/tax
 review and explicit acceptance transaction approval are complete.
 
 
+## Updates after production activation
+
+Once real customer data exists, deploy approved updates with the guarded
+`release` phase. It requires the exact active production posture, the production
+secret boundary and a clean `main` matching `origin/main`:
+
+```bash
+npm run cutover:production -- \
+  --phase=release \
+  --confirm-commit=<40-character-approved-commit> \
+  --confirm-production-release
+```
+
+The command runs `npm ci`, the complete test suite, an AMD64 production image
+build, uploaded-image pixel and font-contract/geometry tests inside that Linux
+candidate, strict configuration validation and ordered migrations. A failed
+check stops before deployment. It rechecks the exact commit and active
+production boundary immediately before deploying `fly.production.toml`, then
+verifies public health, callback authentication and the healthy Machine.
+Deployment or post-release verification failure invokes the existing automatic
+maintenance re-arm.
+
+This phase keeps the existing production credentials, maintenance Cron and
+customer data. It does not run pre-live cleanup or empty-database verification,
+stage secrets or send provider orders. Never repeat the initial `arm`/`activate`
+sequence or use `deploy:hosted` for a post-launch update. Each release requires
+explicit maintainer deployment approval for its exact reviewed commit.
+
 ## Retention holds
 
 The approved retention policy, data categories and guarded per-order hold /

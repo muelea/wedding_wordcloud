@@ -192,6 +192,12 @@ local `npm run cutover:production` command and its reviewed Fly configs. Its
 and exact commits; never replace any phase with improvised Fly secret, config or
 deploy commands.
 
+After production activation, approved updates use that command's `release`
+phase with the exact commit and `--confirm-production-release`. It keeps the
+active production posture and customer data, runs the full suite and Linux
+image/font checks, and re-arms maintenance on failed deployment verification.
+Never rerun initial-cutover cleanup or use `deploy:hosted` for a live update.
+
 The Supabase/Postgres foundation and least-privileged runtime role are active.
 The hosted test app is active at the canonical public origin
 `https://wolkenworte.io` on one stateless Fly Machine in Frankfurt with
