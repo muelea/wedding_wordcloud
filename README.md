@@ -936,6 +936,21 @@ deployment; those retain their separate guarded acceptance steps. Also run
 the font-contract tests inside the candidate image: a green macOS-only test
 suite cannot establish Linux print compatibility.
 
+Also verify uploaded-image pixels in that Linux candidate before releasing a
+print-pipeline change. `test/print-raster.test.js` checks PNG and JPEG pixels,
+rotation, transparency, interleaved layer order and failed decoding; SVG markup
+or Printful's `ok` file status alone cannot prove the photo is present. Uploaded
+images are decoded and composited directly by canvas because the production
+librsvg runtime silently omits embedded raster images. Designs with images are
+rendered before saving, including small mugs, so decoding failures cannot reach
+payment.
+
+```bash
+docker run --rm --pull=never --platform linux/amd64 --network none --read-only \
+  --mount "type=bind,source=$PWD/test/print-raster.test.js,target=/app/test/print-raster.test.js,readonly" \
+  wolkenworte:acceptance node --test test/print-raster.test.js
+```
+
 `npm test` checks all five print fonts against their actual glyph tables and
 exercises 7,580 real Fabric designs/restorations across every product and
 orientation. The matrix includes long/wide/narrow words, supported locale

@@ -86,7 +86,11 @@ async function validateProductPrintability(product, design) {
   // An RGBA surface below this bound cannot approach the Storage cap even
   // when PNG compression is ineffective. Larger surfaces are rendered before
   // checkout so an unprintable image never becomes a paid order.
-  if (product.printFile.width * product.printFile.height * 4 <=
+  const hasImages = product.printSurfaces.some((surface) =>
+    design.surfaces[surface.key]?.some((item) => item.type === 'image'));
+  // Even small surfaces must decode uploaded images before they can be paid.
+  // Header validation alone cannot establish that the raster is decodable.
+  if (!hasImages && product.printFile.width * product.printFile.height * 4 <=
       MAX_ARTIFACT_BYTES - 1024 * 1024) return;
   await withRenderSlot(() => renderProductSurfaces(product, design));
 }

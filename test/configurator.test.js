@@ -1163,6 +1163,91 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   assert.equal((svg.match(/<text /g) || []).length, snapshot.length);
 });
 
+test('undecodable uploaded artwork is rejected even on a small mug before saving', async (t) => {
+  const hosted = await startTestServer();
+  t.after(hosted.close);
+  const event = await createEvent(hosted.baseUrl, { title: 'Bildprüfung' });
+  const source = createCanvas(32, 24);
+  source.getContext('2d').fillRect(0, 0, 32, 24);
+  const bytes = source.toBuffer('image/png');
+  const idat = bytes.indexOf(Buffer.from('IDAT'));
+  bytes.fill(0xff, idat + 4, idat + 12);
+  const response = await fetch(`${hosted.baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      productKey: 'white-glossy-mug-duo-11oz', theme: 'pastel', words: [['liebe', 1]],
+      designs: { default: [{ id: 'bad-image', type: 'image',
+        src: `data:image/png;base64,${bytes.toString('base64')}`,
+        x: 1350, y: 525, width: 120, height: 90, angle: 0 }] },
+    }),
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, 'invalid_design');
+  assert.equal(Number((await hosted.query('SELECT count(*) AS count FROM configurations')).rows[0].count), 0);
+});
+
+test('multiple overlapping uploads and duplicates survive saving, with image limits shared across print sides', async (t) => {
+  const hosted = await startTestServer();
+  t.after(hosted.close);
+  const event = await createEvent(hosted.baseUrl, { title: 'Mehrere Bilder' });
+  const sources = ['#ff0000', '#00ff00', 'rgba(0,0,255,.5)', '#ffff00', '#ff00ff'].map((color, index) => {
+    const canvas = createCanvas(32, 24);
+    const context = canvas.getContext('2d');
+    context.fillStyle = color;
+    context.fillRect(0, 0, 32, 24);
+    if (index === 3) context.clearRect(8, 6, 16, 12);
+    return canvas.toDataURL(index === 1 ? 'image/jpeg' : 'image/png');
+  });
+  const image = (source, id, x = 1350, y = 525, angle = 0) => ({ id, type: 'image',
+    src: sources[source], x, y, width: 128, height: 96, angle });
+  const save = async (productKey, designs) => fetch(`${hosted.baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productKey, theme: 'pastel', words: [['liebe', 1]], designs }),
+  });
+  const design = sources.slice(0, 4).map((_, index) => image(index, `original-${index}`));
+  [900, 1100, 1700, 1950].forEach((x, index) => design.push(image(index, `copy-${index}`, x, 525, index % 2 ? -17 : 17)));
+  const response = await save('white-glossy-mug-duo-11oz', { default: design });
+  assert.equal(response.status, 201, 'four unique uploads plus duplicates are supported');
+  const configuration = await response.json();
+  const restored = await fetch(`${hosted.baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`).then(res => res.json());
+  assert.deepEqual(restored.designs.default, design, 'the immutable snapshot retains every image and its stacking order');
+  const { renderProviderPng } = require('../src/printRaster');
+  const { loadImage } = require('canvas');
+  const output = await loadImage(await renderProviderPng(getProduct('white-glossy-mug-duo-11oz'), restored.designs.default));
+  const probe = createCanvas(1, 1).getContext('2d');
+  const pixel = (x, y) => {
+    probe.clearRect(0, 0, 1, 1);
+    probe.drawImage(output, x, y, 1, 1, 0, 0, 1, 1);
+    return Array.from(probe.getImageData(0, 0, 1, 1).data);
+  };
+  const center = pixel(1350, 525);
+  assert.ok(center[0] < 3 && Math.abs(center[1] - 128) <= 2 && Math.abs(center[2] - 127) <= 2 && center[3] === 255,
+    'the top transparent hole reveals the blue/green overlap');
+  assert.deepEqual(pixel(900, 525), [255, 0, 0, 255]);
+  assert.ok(pixel(1100, 525)[1] > 250);
+  assert.ok(Math.abs(pixel(1700, 525)[3] - 127) <= 1);
+  assert.equal(pixel(1950, 525)[3], 0);
+
+  const fifth = await save('white-glossy-mug-duo-11oz', { default: [...design, image(4, 'fifth')] });
+  assert.equal(fifth.status, 400);
+  assert.equal((await fifth.json()).error, 'invalid_design');
+
+  const sides = { front: [image(0, 'front-red', 1425, 1425), image(1, 'front-green', 1700, 1425)],
+    back: [image(2, 'back-blue', 1425, 1425), image(3, 'back-yellow', 1700, 1425),
+      image(0, 'back-red-copy', 1425, 1700)] };
+  const twoSided = await save('all-over-basic-pillow-18in', sides);
+  assert.equal(twoSided.status, 201, 'four sources can be distributed across front/back with copies');
+  const twoSidedConfiguration = await twoSided.json();
+  const twoSidedRestored = await fetch(`${hosted.baseUrl}/api/events/${event.slug}/configurations/${twoSidedConfiguration.id}/edit`).then(res => res.json());
+  assert.deepEqual(twoSidedRestored.designs, sides);
+  const extraBack = await save('all-over-basic-pillow-18in', {
+    ...sides, back: [...sides.back, image(4, 'back-fifth', 1700, 1700)],
+  });
+  assert.equal(extraBack.status, 400, 'the four-source limit covers the whole product, not each side independently');
+  assert.equal((await extraBack.json()).error, 'invalid_design');
+  assert.equal(Number((await hosted.query('SELECT count(*) AS count FROM configurations')).rows[0].count), 2);
+});
+
 test('oversized raster artwork is rejected before it can become a paid configuration', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);

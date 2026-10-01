@@ -1102,6 +1102,9 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     try {
       await printArtifacts.validateProductPrintability(product, design);
     } catch (error) {
+      if (error.code === 'PRINT_IMAGE_INVALID') {
+        return res.status(400).json({ error: 'invalid_design' });
+      }
       if (error.code === 'PRINT_FILE_TOO_LARGE') {
         return res.status(422).json({ error: 'print_file_too_large' });
       }

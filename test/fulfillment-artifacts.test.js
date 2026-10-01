@@ -7,7 +7,18 @@ const fs = require('fs');
 const path = require('path');
 const { startTestServer, createEvent, productDesignPayload, stripeTaxPaymentSession } = require('./helpers');
 
-async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
+async function createPaidOrder(db, event, suffix, { mode = 'live', images = false } = {}) {
+  const surfaces = productDesignPayload().designs;
+  if (images) {
+    const { createCanvas } = require('canvas');
+    const source = createCanvas(32, 24);
+    source.getContext('2d').fillStyle = '#ef231a';
+    source.getContext('2d').fillRect(0, 0, 32, 24);
+    for (const [index, mimeType] of ['image/png', 'image/jpeg'].entries()) {
+      surfaces.default.push({ id: `photo-${index}`, type: 'image', src: source.toDataURL(mimeType),
+        x: 1800 + index * 300, y: 500, width: 120, height: 90, angle: 0 });
+    }
+  }
   const configuration = await db.createConfiguration({
     eventId: event.id,
     productKey: 'white-glossy-mug-duo-11oz',
@@ -16,7 +27,7 @@ async function createPaidOrder(db, event, suffix, { mode = 'live' } = {}) {
     unitPriceCents: 0,
     theme: 'pastel',
     words: [['liebe', 2]],
-    design: { version: 2, surfaces: productDesignPayload().designs },
+    design: { version: 2, surfaces },
     printWidth: 2700,
     printHeight: 1050,
   });
@@ -132,7 +143,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     assert.notEqual(item, fulfillment.itemExternalId(order, 1, 0));
   });
 
-  const paid = await createPaidOrder(db, event, 'artifact');
+  const paid = await createPaidOrder(db, event, 'artifact', { images: true });
   const originalReconcile = printful.reconcilePrintfulOrder;
   const providerCalls = [];
   printful.reconcilePrintfulOrder = async (options) => {
@@ -175,6 +186,13 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     const png = await loadImage(bytes);
     assert.equal(png.width, product.printFile.width);
     assert.equal(png.height, product.printFile.height);
+    const artwork = createCanvas(png.width, png.height);
+    artwork.getContext('2d').drawImage(png, 0, 0);
+    for (const x of [1800, 2100]) {
+      const pixel = artwork.getContext('2d').getImageData(x, 500, 1, 1).data;
+      assert.equal(pixel[3], 255, 'the served paid artifact contains each uploaded photo');
+      assert.ok(pixel[0] > 220 && pixel[1] < 50 && pixel[2] < 50);
+    }
     const edge = createCanvas(1, 1);
     edge.getContext('2d').drawImage(png, 0, 0);
     assert.equal(edge.getContext('2d').getImageData(0, 0, 1, 1).data[3], 0);

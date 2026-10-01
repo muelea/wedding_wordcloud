@@ -1,7 +1,7 @@
 'use strict';
 
 const { createCanvas, loadImage } = require('canvas');
-const { buildProviderPrintSvg } = require('./mugPrint');
+const { buildProviderPrintSvg, isPrintDesignWithinBounds } = require('./mugPrint');
 
 const MIME_TYPE = 'image/png';
 const MAX_ARTIFACT_BYTES = 24 * 1024 * 1024;
@@ -19,10 +19,45 @@ async function renderProviderPng(product, design) {
     throw new Error('Die gespeicherte Druckfläche ist ungültig.');
   }
 
-  const svg = Buffer.from(buildProviderPrintSvg(product, design), 'utf8');
-  const image = await loadImage(svg);
+  if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+    throw new Error('Cannot build a print with an invalid design');
+  }
   const canvas = createCanvas(width, height);
-  canvas.getContext('2d').drawImage(image, 0, 0);
+  const context = canvas.getContext('2d');
+  const drawVectors = async (elements) => {
+    if (!elements.length) return;
+    const svg = Buffer.from(buildProviderPrintSvg(product, elements), 'utf8');
+    context.drawImage(await loadImage(svg), 0, 0);
+  };
+
+  // The production librsvg runtime silently omits embedded raster <image>
+  // elements. Decode uploads through canvas instead, interleaving vector runs
+  // to preserve the exact approved stacking order. Decode errors abort the
+  // artifact; a partial design must never be uploaded or sent for fulfillment.
+  let vectors = [];
+  for (const item of design) {
+    if (item.type !== 'image') {
+      vectors.push(item);
+      continue;
+    }
+    await drawVectors(vectors);
+    vectors = [];
+    const source = Buffer.from(item.src.slice(item.src.indexOf(',') + 1), 'base64');
+    let image;
+    try {
+      image = await loadImage(source);
+    } catch {
+      const error = new Error('Ein hochgeladenes Bild kann nicht für den Druck gelesen werden.');
+      error.code = 'PRINT_IMAGE_INVALID';
+      throw error;
+    }
+    context.save();
+    context.translate(item.x, item.y);
+    context.rotate(item.angle * Math.PI / 180);
+    context.drawImage(image, -item.width / 2, -item.height / 2, item.width, item.height);
+    context.restore();
+  }
+  await drawVectors(vectors);
   const bytes = await new Promise((resolve, reject) => {
     canvas.toBuffer((error, output) => error ? reject(error) : resolve(output), MIME_TYPE);
   });
