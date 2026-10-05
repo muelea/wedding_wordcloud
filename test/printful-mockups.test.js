@@ -14,6 +14,7 @@ const {
   PrintfulMockupError,
   SOURCE_PREFIX,
   createService,
+  createCreationBudget,
   isOperatorCreateRequest,
   isOperatorEnabled,
   isOperatorRequest,
@@ -406,4 +407,110 @@ test('startup flag and configurator wiring keep the tool explicit and cart-scope
   assert.match(configure, /if \(PRINTFUL_MOCKUP_TOOLS_ENABLED\)[\s\S]*?order-mockup/);
   assert.match(configure, /X-Wolkenworte-Operator': 'printful-mockup'/);
   assert.match(server, /printfulMockupTools: printfulMockups\.isOperatorRequest\(req\)/);
+});
+
+test('customer jobs use 1000px, exact production sources, configuration-bound capabilities and safe links', async t => {
+  const product = getProduct('cork-back-coaster');
+  const configuration = { ...configurationFor(product.key), event_id: 1 };
+  const uploads = [];
+  const removed = [];
+  const widths = [];
+  const service = createService({ customer: true,
+    storageClient: {
+      async upload(key, bytes) { uploads.push({ key, bytes }); },
+      async createSignedUrl() { return 'https://storage.example.test/temporary'; },
+      async remove(key) { removed.push(key); },
+    },
+    printfulClient: {
+      async getCatalogProductMockupStyles() { return mockupStyleRows(product); },
+      async createMockupTasks(payload) { widths.push(payload.mockup_width_px); return [{ id: 23, status: 'pending' }]; },
+      async getMockupTasks() {
+        return [{ id: 23, status: 'completed', catalog_variant_mockups: [{
+          catalog_variant_id: product.printful.variantId, mockups: [
+            { mockup_url: 'https://printful-upload.s3-accelerate.amazonaws.com/tmp/product.png' },
+            { mockup_url: 'https://attacker.test/unsafe.png' },
+          ],
+        }] }];
+      },
+    },
+  });
+  t.after(() => service.stop());
+  const created = await service.createForConfiguration(configuration);
+  assert.deepEqual(widths, [1000]);
+  assert.equal(created.resolutionFallback, false);
+  assert.match(uploads[0].key, /^customer-mockup-sources\//);
+  assert.deepEqual(uploads[0].bytes,
+    await renderProviderPng(product, JSON.parse(configuration.design_json).surfaces.default));
+  await assert.rejects(service.getJob(created.jobId, { ...configuration, id: 'another' }), error => error.status === 404);
+  await assert.rejects(service.getJob(created.jobId, { ...configuration, event_id: 2 }), error => error.status === 404);
+  await assert.rejects(service.getJob(created.jobId), error => error.status === 404);
+  const result = await service.getJob(created.jobId, configuration);
+  assert.equal(result.status, 'completed');
+  assert.equal(result.mockups.length, 1);
+  assert.ok(result.expiresAt > Date.now());
+  assert.deepEqual(removed, uploads.map(entry => entry.key));
+  assert.equal((await service.createForConfiguration(configuration)).cached, true);
+  await service.createForConfiguration(configuration, { refresh: true });
+  assert.deepEqual(widths, [1000, 1000], 'a broken completed image can be regenerated explicitly');
+});
+
+test('customer and operator requests share a budget and public rejection happens before source work', async t => {
+  let time = 1_000_000;
+  const budget = createCreationBudget(() => time);
+  const product = getProduct('cork-back-coaster');
+  let rendered = 0;
+  let uploads = 0;
+  let tasks = 0;
+  const options = { now: () => time, consumeCreation: budget,
+    renderPng: async () => { rendered++; return Buffer.from('fake PNG'); },
+    storageClient: { async upload() { uploads++; }, async remove() {},
+      async createSignedUrl() { return 'https://storage.example.test/source'; } },
+    printfulClient: { async getCatalogProductMockupStyles() { return mockupStyleRows(product); },
+      async createMockupTasks() { return [{ id: ++tasks, status: 'pending' }]; },
+      async getMockupTasks() { return [{ status: 'pending' }]; } },
+  };
+  const customer = createService({ ...options, customer: true });
+  const operator = createService(options);
+  t.after(() => Promise.all([customer.stop(), operator.stop()]));
+  await operator.createForConfiguration(configurationFor(product.key, 'default', 'operator'));
+  time += 20_000;
+  const configuration = { ...configurationFor(product.key), event_id: 1 };
+  const [first, second] = await Promise.all([
+    customer.createForConfiguration(configuration), customer.createForConfiguration(configuration),
+  ]);
+  assert.equal(first.jobId, second.jobId);
+  assert.equal(tasks, 2);
+  const before = { rendered, uploads };
+  await assert.rejects(customer.createForConfiguration({ ...configuration, id: 'another' }),
+    error => error.status === 429 && error.retryAfter === 40);
+  assert.deepEqual({ rendered, uploads }, before);
+  time += 40_001;
+  await customer.createForConfiguration({ ...configuration, id: 'another' });
+  assert.equal(tasks, 3);
+});
+
+test('customer polling shares provider reads and returns provider throttling without raw details', async t => {
+  const product = getProduct('cork-back-coaster');
+  const configuration = { ...configurationFor(product.key), event_id: 1 };
+  let time = 1_000_000;
+  let polls = 0;
+  const service = createService({ customer: true, now: () => time, renderPng: async () => Buffer.from('PNG'),
+    storageClient: { async upload() {}, async remove() {}, async createSignedUrl() { return 'https://storage.example.test/source'; } },
+    printfulClient: {
+      async getCatalogProductMockupStyles() { return mockupStyleRows(product); },
+      async createMockupTasks() { return [{ id: 1, status: 'pending' }]; },
+      async getMockupTasks() {
+        polls++;
+        if (polls === 2) throw Object.assign(new Error('private provider detail'), { providerStatus: 429, retryAfter: 17 });
+        return [{ status: 'pending' }];
+      },
+    },
+  });
+  t.after(() => service.stop());
+  const created = await service.createForConfiguration(configuration);
+  await Promise.all([service.getJob(created.jobId, configuration), service.getJob(created.jobId, configuration)]);
+  await service.getJob(created.jobId, configuration);
+  assert.equal(polls, 1);
+  time += 3000;
+  await assert.rejects(service.getJob(created.jobId, configuration), error => error.status === 429 && error.retryAfter === 17);
 });

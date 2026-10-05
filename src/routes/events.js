@@ -301,6 +301,19 @@ function sendPrintfulMockupError(res, error) {
   });
 }
 
+function sendCustomerMockupError(res, error) {
+  const retryAfter = Math.max(0, Math.ceil(Number(error?.retryAfter) ||
+    (error?.code === 'PRINT_RENDER_BUSY' ? 2 : 0)));
+  const status = error instanceof printfulMockups.PrintfulMockupError ? error.status
+    : error?.code === 'PRINTFUL_NOT_CONFIGURED' ? 501
+      : error?.code === 'PRINT_RENDER_BUSY' ? 503 : 502;
+  if (retryAfter) res.set('Retry-After', String(retryAfter));
+  return res.status(status).json({
+    error: status === 429 ? 'mockup_rate_limited' : 'mockup_unavailable',
+    ...(retryAfter ? { retryAfter } : {}),
+  });
+}
+
 function checkoutQuoteResponse(quote, order = null, session = null) {
   const shipments = db.getCheckoutQuoteShipments(quote);
   const configurationIds = db.getCheckoutQuoteConfigurationIds(quote);
@@ -732,6 +745,7 @@ function configurationPrintFileUrls(slug, configurationId, product) {
     printFileUrl: printFileUrls[product.printSurfaces[0].key],
     printFileUrls,
     printPreviewUrls,
+    mockupUrl: base.replace(/\/print\.svg$/, '/mockups'),
   };
 }
 
@@ -1185,6 +1199,48 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const response = editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
+  }));
+
+  router.post(
+    '/events/:slug/configurations/:configurationId/mockups',
+    express.json({ limit: '1kb' }),
+    asyncRoute(async (req, res) => {
+      res.set('Cache-Control', 'private, no-store');
+      if (req.get('x-wolkenworte-preview') !== 'product-mockup') {
+        return res.status(400).json({ error: 'invalid_request' });
+      }
+      const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
+      if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+      try {
+        if (!printful.isConfigured()) return res.status(501).json({ error: 'mockup_unavailable' });
+        const result = await printfulMockups.createCustomerMockup(configuration, {
+          refresh: req.body?.refresh === true,
+        });
+        return res.status(202).json(result);
+      } catch (error) {
+        return sendCustomerMockupError(res, error);
+      }
+    })
+  );
+
+  router.get('/events/:slug/configurations/:configurationId/mockups/:jobId', asyncRoute(async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
+    if (!rateLimits.consume([{
+      name: 'customer-mockup-status', key: sourceHashForRequest(req), max: 120, windowMs: 60_000,
+    }])) return sendCustomerMockupError(res,
+      new printfulMockups.PrintfulMockupError('mockup_rate_limited', '', 429, { retryAfter: 60 }));
+    try {
+      const result = await printfulMockups.getCustomerMockup(req.params.jobId, configuration);
+      // Provider details are for the local operator tool; customers only need the images/status.
+      return res.json({
+        jobId: result.jobId, status: result.status, expiresAt: result.expiresAt,
+        mockups: result.mockups.map(({ url }) => ({ url })),
+      });
+    } catch (error) {
+      return sendCustomerMockupError(res, error);
+    }
   }));
 
   router.post(

@@ -5,6 +5,7 @@ const fulfillment = require('./fulfillment');
 const emailDelivery = require('./emailDelivery');
 const lifecycle = require('./lifecycle');
 const log = require('./structuredLog');
+const storage = require('./privateStorage');
 
 const WALL_CLOCK_BUDGET_MS = 15_000;
 const FULFILLMENT_BUDGET_MS = 7_000;
@@ -40,6 +41,13 @@ async function execute(triggerKind) {
       deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250,
       quoteLimit: 0,
     });
+    // One list and one delete each have a 3.5s timeout. Only use spare time;
+    // paid fulfillment, email and retention keep their existing priority.
+    if (Date.now() + 7_250 < startedAt + WALL_CLOCK_BUDGET_MS) {
+      await storage.cleanupExpiredMockupSources().catch(error => {
+        log.error('mockup_source_cleanup_failed', { errorCode: sanitizedCode(error) });
+      });
+    }
     const summary = {
       fulfillmentClaimed: fulfillmentSummary.claimed,
       fulfillmentCompleted: fulfillmentSummary.completed,

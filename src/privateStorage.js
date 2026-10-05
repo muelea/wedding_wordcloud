@@ -148,6 +148,22 @@ async function removeMany(objectKeys) {
   return keys.length;
 }
 
+async function cleanupExpiredMockupSources(now = Date.now()) {
+  // Timestamped temporary sources can be recovered after a process restart,
+  // without recording mockup jobs or touching paid print artifacts.
+  if (process.env.NODE_ENV === 'test' && !testAdapter) return 0;
+  if (!testAdapter && (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY)) return 0;
+  const adapter = activeAdapter();
+  if (typeof adapter.listPage !== 'function') return 0;
+  const prefix = 'customer-mockup-sources';
+  const entries = await adapter.listPage(prefix, { limit: STORAGE_LIST_PAGE_SIZE, offset: 0 });
+  const expired = entries.filter(entry => {
+    const match = /^(\d+)-[A-Za-z0-9_-]{24}\.png$/.exec(String(entry?.name || ''));
+    return match && Number(match[1]) * 1000 <= now;
+  }).map(entry => `${prefix}/${entry.name}`);
+  return removeMany(expired);
+}
+
 function setAdapterForTests(adapter) {
   if (process.env.NODE_ENV !== 'test') throw new Error('Storage adapter overrides are test-only.');
   testAdapter = adapter;
@@ -169,6 +185,7 @@ module.exports = {
   createSignedUrl,
   listAllObjectKeys,
   removeMany,
+  cleanupExpiredMockupSources,
   setAdapterForTests,
   resetAdapterForTests,
 };

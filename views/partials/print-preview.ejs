@@ -4,7 +4,7 @@
       <div>
         <h2 id="print-preview-title" data-preview-title></h2>
       </div>
-      <div class="print-preview-surfaces" data-preview-surfaces role="group" aria-label="Druckseite wählen" hidden></div>
+      <div class="print-preview-surfaces" data-preview-surfaces role="group" aria-label="Ansicht wählen" hidden></div>
       <button type="button" class="print-preview-close" data-preview-close aria-label="Vorschau schließen">×</button>
     </header>
     <div class="print-preview-viewport" data-preview-viewport tabindex="0" aria-label="Designvorschau">
@@ -13,6 +13,10 @@
         <p data-preview-status role="status" aria-live="polite">Druckvorschau wird geladen…</p>
         <button type="button" data-preview-retry hidden>Erneut versuchen</button>
       </div>
+    </div>
+    <div class="print-preview-mockup-actions" data-preview-mockup-actions hidden>
+      <button type="button" data-preview-mockup>Produktvorschau erstellen</button>
+      <p data-preview-mockup-status role="status" aria-live="polite" hidden></p>
     </div>
   </div>
 </dialog>

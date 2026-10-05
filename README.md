@@ -124,6 +124,22 @@ frozen snapshot of the word cloud.
    renderer used for Printful fulfillment; opening or closing a preview keeps
    the address, quantities and prepared price intact. Preview rendering does
    not create paid print artifacts or upload files to Storage.
+   Inside that dialog, “Produktvorschau erstellen” explicitly requests a
+   Printful product mockup at 1000 px. Opening the artwork preview never
+   generates one automatically. Completed image links (no image bytes) are
+   cached by immutable event/configuration URL in browser localStorage for up
+   to 12 hours; the normal browser image cache handles the pictures. Broken or
+   expired results require another explicit click. Pending work and result
+   metadata live only in bounded, expiring process memory, with no mockup
+   database records or queue. A restart during generation may require retrying.
+   Customer and local operator generation share the conservative two-request
+   per-minute allowance; rejection shows the server/provider retry time and
+   requires a manual retry. Customer mockups use separate event/configuration
+   endpoints; the guarded local operator workflow below is unchanged.
+   Exact production PNG sources use one-hour private signed Storage URLs under
+   `customer-mockup-sources`, separate from paid artifacts. Completion, failure,
+   shutdown and a one-hour timer remove sources; authenticated maintenance
+   removes expired leftovers after a restart in bounded batches.
    Each purchase has exactly one delivery address, with an independently
    selectable quantity for every design. Countries and state/province choices
    come directly from Printful; the server sends one Printful estimate containing all

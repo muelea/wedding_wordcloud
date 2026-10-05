@@ -186,16 +186,33 @@ function normalizedMockups(tasks) {
   );
 }
 
+function createCreationBudget(now = () => Date.now()) {
+  const creationTimes = [];
+  return () => {
+    const cutoff = now() - CREATE_WINDOW_MS;
+    while (creationTimes.length && creationTimes[0] <= cutoff) creationTimes.shift();
+    if (creationTimes.length >= CREATE_LIMIT) {
+      const retryAfter = Math.max(1, Math.ceil((creationTimes[0] + CREATE_WINDOW_MS - now()) / 1000));
+      throw new PrintfulMockupError('mockup_rate_limited',
+        `Bitte wartet ${retryAfter} Sekunden, bevor ihr ein weiteres Printful-Mockup erzeugt.`,
+        429, { retryAfter });
+    }
+    creationTimes.push(now());
+  };
+}
+
 function createService({
   storageClient = storage,
   printfulClient = printful,
   fetchImpl = (...args) => fetch(...args),
   now = () => Date.now(),
+  consumeCreation = createCreationBudget(now),
+  customer = false,
+  renderPng = renderProviderPng,
 } = {}) {
   const jobs = new Map();
   const cache = new Map();
   const creating = new Map();
-  const creationTimes = [];
 
   async function cleanupSources(job) {
     if (!job?.sourceObjectKeys?.length) return;
@@ -229,22 +246,10 @@ function createService({
     }
   }
 
-  function consumeCreation() {
-    const cutoff = now() - CREATE_WINDOW_MS;
-    while (creationTimes.length && creationTimes[0] <= cutoff) creationTimes.shift();
-    if (creationTimes.length >= CREATE_LIMIT) {
-      const retryAfter = Math.max(1, Math.ceil((creationTimes[0] + CREATE_WINDOW_MS - now()) / 1000));
-      throw new PrintfulMockupError(
-        'mockup_rate_limited',
-        `Bitte wartet ${retryAfter} Sekunden, bevor ihr ein weiteres Printful-Mockup erzeugt.`,
-        429,
-        { retryAfter }
-      );
-    }
-    creationTimes.push(now());
-  }
-
   async function createUncached(configuration, cacheKey, product, surfaces) {
+    // Public requests reserve the shared allowance before rendering/uploading.
+    // The local operator workflow keeps its existing resolution and timing.
+    if (customer) consumeCreation();
     const placements = surfaces.map((entry) => entry.placement);
     const styleRows = await printfulClient.getCatalogProductMockupStyles(
       product.printful.productId,
@@ -260,8 +265,8 @@ function createService({
     try {
       for (const entry of surfaces) {
         const randomId = crypto.randomBytes(18).toString('base64url');
-        const objectKey = `${SOURCE_PREFIX}/${expiresAt}-${randomId}.png`;
-        const sourcePng = await renderProviderPng(product, entry.design);
+        const objectKey = `${customer ? 'customer-mockup-sources' : SOURCE_PREFIX}/${expiresAt}-${randomId}.png`;
+        const sourcePng = await renderPng(product, entry.design);
         await storageClient.upload(objectKey, sourcePng, 'image/png');
         sourceObjectKeys.push(objectKey);
         const signedUrl = await storageClient.createSignedUrl(objectKey, SOURCE_TTL_SECONDS);
@@ -276,7 +281,7 @@ function createService({
         uploaded.push({ ...entry, signedUrl: parsedUrl.toString() });
       }
 
-      consumeCreation();
+      if (!customer) consumeCreation();
       const orientation = printfulOrientation(product);
       const payloadForWidth = (mockupWidthPx) => ({
         format: 'png',
@@ -301,13 +306,13 @@ function createService({
           } : {}),
         }],
       });
-      let mockupWidthPx = PREFERRED_MOCKUP_WIDTH_PX;
+      let mockupWidthPx = customer ? FALLBACK_MOCKUP_WIDTH_PX : PREFERRED_MOCKUP_WIDTH_PX;
       let resolutionFallback = false;
       let tasks;
       try {
         tasks = await printfulClient.createMockupTasks(payloadForWidth(mockupWidthPx));
       } catch (error) {
-        if (!shouldFallbackToStandardResolution(error)) {
+        if (customer || !shouldFallbackToStandardResolution(error)) {
           throw providerMockupError(error);
         }
         mockupWidthPx = FALLBACK_MOCKUP_WIDTH_PX;
@@ -324,6 +329,8 @@ function createService({
         sourceObjectKeys,
         createdAt: now(),
         productKey: product.key,
+        configurationId: configuration.id,
+        eventId: configuration.event_id,
         mockupWidthPx,
         resolutionFallback,
         status: tasks.every((task) => task.status === 'completed') ? 'completed' : 'pending',
@@ -346,10 +353,11 @@ function createService({
     }
   }
 
-  async function createForConfiguration(configuration) {
+  async function createForConfiguration(configuration, { refresh = false } = {}) {
     prune();
     const { product, design, surfaces } = parseConfiguration(configuration);
     const digest = crypto.createHash('sha256');
+    if (customer) digest.update(JSON.stringify([configuration.event_id, configuration.id]));
     digest.update(JSON.stringify({
       productId: product.printful.productId,
       variantId: product.printful.variantId,
@@ -361,7 +369,9 @@ function createService({
     const cacheKey = digest.digest('hex');
     const cachedJob = jobs.get(cache.get(cacheKey));
     if (cachedJob && now() - cachedJob.createdAt <= JOB_CACHE_MS) {
-      if (cachedJob.status !== 'failed') {
+      const sourceExpired = customer && cachedJob.status === 'pending' &&
+        now() - cachedJob.createdAt >= SOURCE_TTL_SECONDS * 1000;
+      if (cachedJob.status !== 'failed' && !sourceExpired && !(refresh && cachedJob.status === 'completed')) {
         return {
           jobId: cachedJob.id,
           status: cachedJob.status,
@@ -376,7 +386,7 @@ function createService({
       creating.set(cacheKey, createUncached(configuration, cacheKey, product, surfaces)
         .finally(() => creating.delete(cacheKey)));
     }
-    return creating.get(cacheKey);
+    return creating.get(cacheKey).catch(error => { throw providerMockupError(error); });
   }
 
   async function refreshJob(job, suppliedTasks = null) {
@@ -426,13 +436,31 @@ function createService({
     return job.result;
   }
 
-  async function getJob(jobId) {
+  async function getJob(jobId, configuration = null) {
     const id = String(jobId || '');
     const job = /^[A-Za-z0-9_-]{24}$/.test(id) ? jobs.get(id) : null;
-    if (!job || now() - job.createdAt > JOB_CACHE_MS) {
+    if (!job || now() - job.createdAt > JOB_CACHE_MS ||
+        (customer && (!configuration || job.configurationId !== configuration.id ||
+          job.eventId !== configuration.event_id))) {
       throw new PrintfulMockupError('mockup_job_not_found', 'Das Mockup wurde nicht gefunden.', 404);
     }
-    return refreshJob(job);
+    if (customer && !job.result) {
+      if (!job.refreshing && (!job.lastStatus || now() - job.checkedAt >= 2_000)) {
+        job.refreshing = refreshJob(job).then(result => {
+          job.lastStatus = result;
+          job.checkedAt = now();
+          return result;
+        }).finally(() => { job.refreshing = null; });
+      }
+    }
+    try {
+      const result = customer
+        ? await (job.refreshing || job.result || job.lastStatus)
+        : await refreshJob(job);
+      return customer ? { ...result, expiresAt: job.createdAt + JOB_CACHE_MS } : result;
+    } catch (error) {
+      throw providerMockupError(error);
+    }
   }
 
   async function download(jobId, index) {
@@ -477,7 +505,13 @@ function createService({
   return { createForConfiguration, getJob, download, stop };
 }
 
-const defaultService = createService();
+const sharedCreationBudget = createCreationBudget();
+const defaultService = createService({ consumeCreation: sharedCreationBudget });
+const customerService = createService({
+  customer: true,
+  consumeCreation: sharedCreationBudget,
+  renderPng: (...args) => require('./printArtifacts').renderPreviewSurface(...args),
+});
 let testAdapter = null;
 
 function activeService() {
@@ -498,6 +532,7 @@ module.exports = {
   SOURCE_PREFIX,
   SOURCE_TTL_SECONDS,
   createService,
+  createCreationBudget,
   isOperatorEnabled,
   isLoopbackAddress,
   isLocalHost,
@@ -506,7 +541,9 @@ module.exports = {
   createForConfiguration: (...args) => activeService().createForConfiguration(...args),
   getJob: (...args) => activeService().getJob(...args),
   download: (...args) => activeService().download(...args),
-  stop: (...args) => activeService().stop(...args),
+  createCustomerMockup: (...args) => customerService.createForConfiguration(...args),
+  getCustomerMockup: (...args) => customerService.getJob(...args),
+  stop: async (...args) => { await Promise.allSettled([activeService().stop(...args), customerService.stop()]); },
   setAdapterForTests,
   resetAdapterForTests,
 };
