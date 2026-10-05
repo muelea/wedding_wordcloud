@@ -159,6 +159,12 @@
     }
 
     makeObject(item) {
+      const object = this.makeDesignObject(item);
+      object.editorLayoutFingerprint = typeof item.layoutFingerprint === 'string' ? item.layoutFingerprint : undefined;
+      return object;
+    }
+
+    makeDesignObject(item) {
       if (item.type === 'icon') return this.makeIconObject(item);
       if (item.type === 'image') return this.makeImageObject(item);
       if (root.WolkenworteEmoji.hasEmoji(item.text)) return this.makeRichTextObject(item);
@@ -203,6 +209,7 @@
       text.editorUnderline = style.underline;
       text.editorLinethrough = style.linethrough;
       text.editorColorLocked = item.colorLocked === true;
+      text.editorLayoutFontSize = Number.isFinite(item.layoutFontSize) ? item.layoutFontSize : undefined;
       text.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
       text.setCoords();
       return text;
@@ -303,6 +310,7 @@
       group.editorUnderline = style.underline;
       group.editorLinethrough = style.linethrough;
       group.editorColorLocked = item.colorLocked === true;
+      group.editorLayoutFontSize = Number.isFinite(item.layoutFontSize) ? item.layoutFontSize : undefined;
       group.editorFontSize = fontSize;
       group.editorText = item.text;
       group.editorColor = item.color;
@@ -1227,6 +1235,7 @@
       }
       if (object.editorText !== undefined) return;
       const nextSize = Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, object.fontSize * object.scaleX);
+      if (Number.isFinite(object.editorLayoutFontSize)) object.editorLayoutFontSize *= Math.abs(object.scaleX);
       object.set({ fontSize: nextSize, scaleX: 1, scaleY: 1 });
       object.setCoords();
     }
@@ -1648,6 +1657,7 @@
         x: transform.translateX / this.editorScale,
         y: transform.translateY / this.editorScale,
         angle: transform.angle || 0,
+        ...(object.editorLayoutFingerprint ? { layoutFingerprint: object.editorLayoutFingerprint } : {}),
       };
       if (object.editorKind === 'image') {
         return {
@@ -1675,6 +1685,8 @@
         ...common,
         text: this.objectText(object),
         fontSize: (object.editorFontSize || object.fontSize) * Math.abs(transform.scaleX) / this.editorScale,
+        ...(Number.isFinite(object.editorLayoutFontSize)
+          ? { layoutFontSize: round(object.editorLayoutFontSize * Math.abs(transform.scaleX)) } : {}),
         fontFamily: root.DesignFonts.normalizeKey(object.editorFontKey),
         fontWeight: object.editorFontWeight === 700 ? 700 : 400,
         fontStyle: object.editorFontStyle === 'italic' ? 'italic' : 'normal',
@@ -1838,7 +1850,7 @@
       const entries = textObjects.map((object) => ({
         object,
         index: this.canvas.getObjects().indexOf(object),
-        item: { ...this.serializeObject(object), fontSize: printSize },
+        item: { ...this.serializeObject(object), fontSize: printSize, layoutFontSize: undefined },
       }));
       if (entries.some((entry) => !this.textItemFitsPrintArea(entry.item))) {
         this.setFeedback('Diese Schriftgröße passt nicht auf die aktuelle Druckfläche.');

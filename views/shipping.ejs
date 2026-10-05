@@ -109,6 +109,12 @@
       background: #fff;
     }
     .shipment-product-copy { min-width: 0; }
+    .shipment-product-preview, button.shipment-product-copy { padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .shipment-product-preview { position: relative; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
+    .shipment-product-preview::after { content: ''; position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--berry) url('<%= asset('/z_icons/expand.svg') %>') center / 13px 13px no-repeat; }
+    button.shipment-product-copy { min-height: 44px; font: inherit; }
+    button.shipment-product-copy:hover strong { color: var(--berry); text-decoration: underline; text-underline-offset: 3px; }
+    .shipment-product-preview:focus-visible, button.shipment-product-copy:focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; border-radius: 8px; }
     .shipment-product-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
     .shipment-product-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
     .shipment-product-actions { display: flex; align-items: center; gap: 4px; }
@@ -332,6 +338,7 @@
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/print-preview.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
 </head>
@@ -381,9 +388,11 @@
   </main>
 
   <%- include('partials/site-footer') %>
+  <%- include('partials/print-preview') %>
 
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
+  <script src="<%= asset('/js/print-preview.js') %>"></script>
   <script>
     'use strict';
 
@@ -393,6 +402,7 @@
     const t = (source, params) => WolkenworteI18n.t(source, params);
     const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
     const clearText = (element) => WolkenworteI18n.clearText(element);
+    const printPreview = WolkenwortePrintPreview.create(document.getElementById('print-preview'));
     const setTranslatedAttribute = (element, name, source, params) =>
       WolkenworteI18n.setAttribute(element, name, source, params);
     const guestId = getOrCreateGuestId();
@@ -1031,10 +1041,21 @@
       image.alt = '';
       image.loading = 'lazy';
 
-      const copy = document.createElement('div');
+      const preview = document.createElement('button');
+      preview.type = 'button';
+      preview.className = 'shipment-product-preview';
+      preview.appendChild(image);
+      const copy = document.createElement('button');
+      copy.type = 'button';
       copy.className = 'shipment-product-copy';
       const title = document.createElement('strong');
       const productName = t(itemConfiguration.product.displayName);
+      for (const trigger of [preview, copy]) {
+        trigger.setAttribute('aria-haspopup', 'dialog');
+        trigger.setAttribute('aria-controls', 'print-preview');
+        setTranslatedAttribute(trigger, 'aria-label', 'Design von {{item}} ansehen', { item: productName });
+        trigger.addEventListener('click', () => printPreview.open(itemConfiguration, trigger));
+      }
       setText(title, itemConfiguration.product.displayName);
       const size = document.createElement('span');
       size.setAttribute('data-i18n-ignore', '');
@@ -1109,7 +1130,7 @@
       });
 
       control.append(minus, input, plus);
-      row.append(image, copy, actions, control);
+      row.append(preview, copy, actions, control);
       updateQuantityButtons(row);
       return row;
     }

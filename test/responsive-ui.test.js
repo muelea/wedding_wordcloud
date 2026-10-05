@@ -227,7 +227,7 @@ test('shipping is the compact cart review with edit, remove and quantity control
   assert.match(shipping, /setText\(edit, 'Design anpassen'\)/);
   assert.match(shipping, /setText\(remove, 'Entfernen'\)/);
   assert.match(shipping, /removeConfigurationFromCart\(itemConfiguration\.id\)/);
-  assert.match(shipping, /row\.append\(image, copy, actions, control\)/);
+  assert.match(shipping, /row\.append\(preview, copy, actions, control\)/);
 });
 
 test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {

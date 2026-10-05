@@ -453,6 +453,8 @@
   "Eine Wortwolke über die gesamte Tasse verteilt": "A word cloud wrapped around the entire mug",
   "Fläche optimal nutzen": "Fill the area",
   "Fläche optimal genutzt": "Area filled",
+  "Fläche neu angeordnet": "Area rearranged",
+  "Keine bessere Anordnung gefunden.": "No better arrangement found.",
   "Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.": "The print area could not be rearranged. Please try again.",
   "Aktuellen Inhalt automatisch großflächig anordnen": "Automatically arrange the current design across the area",
   "Motiv mittig": "Centred design",
@@ -904,5 +906,12 @@
   "Datenschutzhinweisen von Google": "Google Privacy Policy",
   "Bei erteilter Einwilligung ist Google Empfänger der Analysedaten.": "When you consent, Google receives analytics data.",
   "Vorschau pausieren": "Pause preview",
-  "Vorschau abspielen": "Play preview"
+  "Vorschau abspielen": "Play preview",
+  "Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.": "The front design was transferred. The back remains saved in your draft.",
+  "Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.": "The design could not be transferred to the new product. Please try again.",
+  "Vorschau schließen": "Close preview",
+  "Designvorschau": "Design preview",
+  "Druckvorschau wird geladen…": "Loading print preview…",
+  "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "The print preview could not be loaded. Please try again.",
+  "Design von {{item}} ansehen": "View {{item}} design"
 }

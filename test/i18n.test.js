@@ -699,9 +699,9 @@ test('event locale is validated, persisted and returned by public APIs', async (
   assert.equal(germanDefault.locale, 'de');
 });
 
-test('word normalization uses the event locale without altering user content beyond normalization', () => {
-  assert.equal(normalizeWord('  İYİ  ', 'tr'), 'iyi');
-  assert.equal(normalizeWord('IŞIK', 'tr'), 'ışık');
-  assert.equal(normalizeWord('IŞIK', 'de'), 'işik');
-  assert.equal(normalizeWord('ÉTÉ', 'fr'), 'été');
+test('word normalization preserves capitalization in every event locale', () => {
+  assert.equal(normalizeWord('  İYİ  ', 'tr'), 'İYİ');
+  assert.equal(normalizeWord('IŞIK', 'tr'), 'IŞIK');
+  assert.equal(normalizeWord('IŞIK', 'de'), 'IŞIK');
+  assert.equal(normalizeWord('ÉTÉ', 'fr'), 'ÉTÉ');
 });

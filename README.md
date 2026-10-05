@@ -66,19 +66,27 @@ frozen snapshot of the word cloud.
    configurator URL restores the active local draft when available;
    ?edit=<id> opens that cart item's local working copy or its exact server snapshot, and
    ?cart=1 opens the last basket design. Returning from shipping uses ?edit.
-   Removing a position never automatically re-adds it. Starting another product
-   fetches the current cloud and confirms product selection before replacing the
-   editor. Changing product or orientation first stores the working draft and
-   then restores a matching local draft or starts from the current cloud.
-   Each new product starts with the current words filling every print surface.
+   Removing a position never automatically re-adds it. Changing product or
+   orientation first stores the working draft, then carries its edited words,
+   emojis, motifs, images and text styles to the new print area. Deleted elements
+   stay deleted. Manually arranged designs are fitted proportionally; untouched
+   automatic designs fill the new area. Returning to a product restores its own
+   arrangement with the active design's latest contents, without opening an
+   unrelated older product draft. These arrangements are retained in the local
+   draft across reloads. Starting another product creates an independent copy of
+   the current edited design. Only the explicit current-cloud refresh replaces
+   edited contents with the live event words. One-sided products use the front;
+   a separate back stays in the draft and returns on two-sided products. A first
+   two-sided product initializes both faces from the current design. Basket
+   snapshots change only through the explicit add/update action.
    Address/quantity drafts live only in sessionStorage for up to
    24 hours, survive design round trips, and never restore a trusted price:
    the existing server-side quote and checkout checks remain authoritative.
    Local illustrated thumbnails make the catalog scannable. A locally served
    Three.js preview maps mug artwork onto a rotatable model; flat products use
    the same design in a proportional print preview. Posters can be designed in
-   portrait or landscape format; switching orientation creates a fresh filled
-   design after protecting edits, swaps the immutable print-file dimensions
+   portrait or landscape format; switching orientation adapts the current edited
+   design, swaps the immutable print-file dimensions
    and keeps the same Printful variant and price basis. Products with two printable
    faces expose separate front/back editors plus a copy-to-back shortcut and
    store one immutable print file per side. The print area itself is a small
@@ -109,6 +117,13 @@ frozen snapshot of the word cloud.
    page. Products, address and the price result share one card. Products appear
    only once beside their quantity controls; prices and delivery details appear
    below the form only after a successful quote, with no initial placeholder.
+   Clicking a cart thumbnail or product name opens a large artwork preview
+   fitted to the print file's proportions, with front/back selection for
+   products with two print surfaces.
+   PNG previews render the saved immutable design through the same bounded
+   renderer used for Printful fulfillment; opening or closing a preview keeps
+   the address, quantities and prepared price intact. Preview rendering does
+   not create paid print artifacts or upload files to Storage.
    Each purchase has exactly one delivery address, with an independently
    selectable quantity for every design. Countries and state/province choices
    come directly from Printful; the server sends one Printful estimate containing all
@@ -222,8 +237,10 @@ runtime fallback, and each additional locale lives in `public/locales/`.
 Fixed interface copy, metadata, accessibility labels, browser dialogs,
 product descriptions, editor feedback, quantities, money, country names and
 Stripe Checkout all use the active locale. `Wolkenworte`, event names and word
-submissions are never translated. Word normalization is locale-aware, including Turkish
-dotted and dotless I.
+submissions are never translated. Word normalization preserves capitalization:
+`Love`, `love` and `LOVE` are separate entries with independent contribution counts.
+Whitespace cleanup, Unicode normalization, emoji validation and the length limit
+still apply.
 
 ## Optional GA4 usage analytics
 
@@ -344,11 +361,42 @@ hydration finishes.
 Live clouds use the available rectangular container and reflow on resize or
 presentation-mode changes. A worker packs measured boxes while keeping one
 active request and one latest pending snapshot; removal/reset fences stale
-results. Print layouts use the same rectangular packing geometry, preserve all
-words and use the product's safe area. A bounded set of measured arrangements
-is scored for individual corners, empty regions and emoji separation, allowing
-at most a 10% size tradeoff for better balance. Already full, balanced, safe
-arrangements remain stable on repeated optimization. Fonts retain their proportions and weights.
+results. Product layouts start independently from the submission-weight size
+curve and measured fonts, preserving every word within the product's safe area.
+The print-only optimizer scores the whole safe area at every word count,
+compares packing and sparse row arrangements, and chooses rotations for the
+product's shape. Text may vary by up to ±20% relative to its
+preferred size, in addition to overall proportional scaling. Fonts, styling,
+image proportions and approximate word importance remain intact. The optimizer
+uses two stages: first choose a complete packing with vertical text accents,
+then balance facing neighbors against one visible gap target in all four
+directions. The second stage adjusts positions and text sizes together, measuring
+glyph bounds to account for invisible font leading. Conservative line boxes
+still enforce print boundaries and non-overlap. Gap equality is an optimization
+target: different phrase lengths, bounded size changes and fixed print dimensions
+can prevent an exact solution. Large empty pockets and lost corner coverage
+disqualify a refinement. Work is bounded; designs above 120 elements use a
+shorter, position-only spacing pass without storing all pairwise constraints.
+Each fill reuses actual Canvas measurements locally, and size trials use 2% steps
+within the allowance to avoid accumulating almost identical native font instances.
+The optimizer also compares several placement orders and deterministic staggered
+arrangements, and penalizes repeated centre columns with greater weight on
+prominent words. Dense, wide print areas
+keep those leading words horizontal and use short words of small or medium size
+for vertical accents.
+For a medium or large cloud, the print layout aims for roughly one in five text
+entries to be vertical, with a horizontal majority. Several rotation sets and
+a bounded placement candidate with distributed vertical anchors avoid a lone
+upright label, parallel banks and an edge-only frame. The selected fonts' nominal
+line height controls initial padding, so rotating a long word does not give it
+an oversized halo. Emoji and artwork do not count toward the rotation target.
+Overlapping vertical spans are also scored by their edge gaps, including the
+worst nearby pair. Distributed candidates reserve space for horizontal words
+between them, and the spacing pass discourages renewed vertical grouping.
+Working drafts retain preferred sizes and a geometry fingerprint so repeated fill
+clicks stay stable; edits invalidate that fingerprint. Approved server snapshots
+contain only final print geometry and remain immutable. Filling runs at creation
+or on the explicit fill action, never while manually editing.
 Type smaller than 8 pt shows a readability hint; below 6 pt the hint is stronger.
 These are provisional product guidance thresholds, calculated from actual print
 size and product DPI, to be calibrated with physical samples. The 1-pixel
@@ -537,7 +585,7 @@ the number of simulated guest contributions, not a direct font size:
 }
 ```
 
-The importer applies the same locale-aware normalization and emoji validation
+The importer applies the same case-preserving normalization and emoji validation
 as guest input, merges entries that normalize to the same stored word, and
 enforces the live limits of 500 distinct words and 5,000 contributions. It
 creates matching synthetic ownership receipts, so later guest submissions,
@@ -799,7 +847,7 @@ src/
   asyncRoute.js            rejected-promise boundary for Express routes
   siteFonts.js             shared interface-font manifest + page preload selection
   slug.js                  128-bit random, URL-safe event IDs
-  words.js                 Word normalization (trim/case-fold/emoji-strip)
+  words.js                 Case-preserving word normalization and emoji validation
   baseUrl.js               LAN-IP / PUBLIC_URL resolution
   socket.js                Socket.io connection handling — room isolation lives here
   socketEventCache.js      bounded active-event lookup deduplication

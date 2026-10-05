@@ -400,6 +400,8 @@
   "Eine Wortwolke über die gesamte Tasse verteilt": "Un nuage de mots réparti sur tout le mug",
   "Fläche optimal nutzen": "Remplir la surface",
   "Fläche optimal genutzt": "Surface remplie",
+  "Fläche neu angeordnet": "Surface réorganisée",
+  "Keine bessere Anordnung gefunden.": "Aucune meilleure disposition trouvée.",
   "Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.": "La zone d’impression n’a pas pu être réorganisée. Veuillez réessayer.",
   "Aktuellen Inhalt automatisch großflächig anordnen": "Répartir automatiquement la création sur toute la surface",
   "Motiv mittig": "Motif centré",
@@ -904,5 +906,12 @@
   "Datenschutzhinweisen von Google": "règles de confidentialité de Google",
   "Bei erteilter Einwilligung ist Google Empfänger der Analysedaten.": "Avec votre consentement, Google reçoit les données d’analyse.",
   "Vorschau pausieren": "Mettre l’aperçu en pause",
-  "Vorschau abspielen": "Lancer l’aperçu"
+  "Vorschau abspielen": "Lancer l’aperçu",
+  "Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.": "Le recto a été transféré. Le verso reste enregistré dans votre brouillon.",
+  "Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.": "Le design n’a pas pu être transféré sur le nouveau produit. Veuillez réessayer.",
+  "Vorschau schließen": "Fermer l’aperçu",
+  "Designvorschau": "Aperçu du design",
+  "Druckvorschau wird geladen…": "Chargement de l’aperçu d’impression…",
+  "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "L’aperçu d’impression n’a pas pu être chargé. Veuillez réessayer.",
+  "Design von {{item}} ansehen": "Voir le design de {{item}}"
 }

@@ -802,7 +802,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.deepEqual(data.product.layoutGeometry.single, [{ x: 127, y: 65, side: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['full-wrap'], [{ x: 130, y: 65, width: 2440, height: 920 }]);
   assert.deepEqual(data.product.layoutGeometry['fit-area'], [{ x: 36, y: 36, width: 2628, height: 978, optimize: true }]);
-  assert.deepEqual(data.words, [['liebe', 1]]);
+  assert.deepEqual(data.words, [['Liebe', 1]]);
 
   const db = require('../src/db');
   for (const expected of [
@@ -1109,6 +1109,33 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.ok(MugIcons.ICONS.every((icon) => icon.id && icon.label && icon.path));
 });
 
+test('configuration snapshots merge only exact-case words and preserve capitalized design text', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { title: 'Case-sensitive print' });
+  const design = ['Love', 'love', 'LOVE'].map((text, index) => ({
+    id: `case-${index}`, text, x: 450 + index * 850, y: 500,
+    fontSize: 90, angle: 0, color: '#a40e4c',
+  }));
+  const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      theme: 'pastel', words: [['Love', 1], ['love', 1], ['LOVE', 1], ['Love  ', 1]],
+      ...oneSurfaceDesign(design),
+    }),
+  });
+  assert.equal(response.status, 201);
+  const configuration = await response.json();
+  const restored = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`)
+    .then(result => result.json());
+  assert.deepEqual(new Map(restored.words), new Map([['Love', 2], ['love', 1], ['LOVE', 1]]));
+  assert.deepEqual(restored.designs.default.map(item => item.text), ['Love', 'love', 'LOVE']);
+  const print = await fetch(baseUrl + configuration.printFileUrl);
+  assert.equal(print.status, 200);
+  const svg = await print.text();
+  for (const text of ['Love', 'love', 'LOVE']) assert.ok(svg.includes(`>${text}</text>`));
+});
+
 test('confirmed configuration freezes the approved words in a permanent Printful-sized SVG', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
@@ -1120,10 +1147,10 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   await submitWord(socket, 'Liebe');
   await submitWord(socket, 'Glück');
 
-  const snapshot = [['liebe', 2], ['glück', 1]];
+  const snapshot = [['Liebe', 2], ['Glück', 1]];
   const design = [
-    { id: 'liebe', text: 'liebe', x: 900, y: 500, fontSize: 120, angle: 0, color: '#a40e4c' },
-    { id: 'glueck', text: 'glück', x: 1750, y: 560, fontSize: 90, angle: 0, color: '#d90368' },
+    { id: 'liebe', text: 'Liebe', x: 900, y: 500, fontSize: 120, angle: 0, color: '#a40e4c' },
+    { id: 'glueck', text: 'Glück', x: 1750, y: 560, fontSize: 90, angle: 0, color: '#d90368' },
   ];
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
@@ -1157,9 +1184,9 @@ test('confirmed configuration freezes the approved words in a permanent Printful
   assert.match(svg, /width="2700" height="1050"/);
   assert.match(svg, /data-background="transparent"/);
   assert.doesNotMatch(svg, /<rect\b/, 'the Printful file must not print a background');
-  assert.ok(svg.includes('>liebe</text>'));
-  assert.ok(svg.includes('>glück</text>'));
-  assert.ok(!svg.includes('später'), 'words submitted after approval must never enter the saved print file');
+  assert.ok(svg.includes('>Liebe</text>'));
+  assert.ok(svg.includes('>Glück</text>'));
+  assert.ok(!svg.includes('Später'), 'words submitted after approval must never enter the saved print file');
   assert.equal((svg.match(/<text /g) || []).length, snapshot.length);
 });
 
@@ -1281,7 +1308,11 @@ test('a sparse automatic design saves and freezes the exact preview geometry', a
   const event = await createEvent(baseUrl, { title: 'Geometrie Greta & Linus' });
   const product = resolveProductOrientation(getProduct('white-glossy-mug-duo-11oz'), 'default');
   const words = [['liebe', 1]];
-  const design = automaticFitAreaDesign(product, words);
+  const design = DesignLayout.optimizeDesign(automaticFitAreaDesign(product, words),
+    product.layoutGeometry['fit-area'], createCanvas(1, 1).getContext('2d'),
+    { fontFamily: item => DesignFonts.cssFamily(item.fontFamily) });
+  assert.ok(design[0].layoutFingerprint);
+  assert.ok(design[0].layoutFontSize > 0);
 
   const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST',
@@ -1298,6 +1329,13 @@ test('a sparse automatic design saves and freezes the exact preview geometry', a
   const saveBody = await save.text();
   assert.equal(save.status, 201, saveBody);
   const configuration = JSON.parse(saveBody);
+  const restored = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`)
+    .then(response => response.json());
+  restored.designs.default.forEach((item, index) => {
+    for (const field of ['x', 'y', 'fontSize', 'angle']) assert.equal(item[field], design[index][field]);
+    assert.equal(Object.hasOwn(item, 'layoutFontSize'), false, 'preferred sizes stay in working drafts');
+    assert.equal(Object.hasOwn(item, 'layoutFingerprint'), false, 'packing provenance is not trusted print state');
+  });
   const print = await fetch(baseUrl + configuration.printFileUrl);
   assert.equal(print.status, 200);
   assert.equal(await print.text(), buildProductPrintSvg(product, design),

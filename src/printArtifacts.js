@@ -95,6 +95,10 @@ async function validateProductPrintability(product, design) {
   await withRenderSlot(() => renderProductSurfaces(product, design));
 }
 
+function renderPreviewSurface(product, design) {
+  return withRenderSlot(() => renderProviderPng(product, design));
+}
+
 async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
   ensureBudget(deadline, 1_000);
   const sha256 = crypto.createHash('sha256').update(rendered.bytes).digest('hex');
@@ -182,4 +186,5 @@ module.exports = {
   loadActiveArtifactBytes,
   parseSnapshot,
   validateProductPrintability,
+  renderPreviewSurface,
 };

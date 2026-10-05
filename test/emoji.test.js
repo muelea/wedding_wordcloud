@@ -190,7 +190,7 @@ test('mixed text canonicalizes normal keyboard emoji without splitting joined se
 
 test('guest normalization keeps supported emoji and applies the limit by grapheme', () => {
   assert.deepEqual(normalizeWordInput('  LIEBE ❤  ', 'de'), {
-    word: 'liebe ❤️',
+    word: 'LIEBE ❤️',
     error: null,
   });
   const family = '👨‍👩‍👧‍👦';

@@ -121,6 +121,7 @@
       customColors: Array.isArray(draft.customColors) ? copy(draft.customColors) : [],
       words: Array.isArray(draft.words) ? copy(draft.words) : [],
       designs: copy(draft.designs),
+      productDesignState: draft.productDesignState?.version === 1 ? copy(draft.productDesignState) : null,
       // Automatic drafts can be regenerated when the layout runtime changes.
       // Manually edited drafts remain portable across runtime revisions.
       layoutVersion: String(draft.layoutVersion || '').slice(0, 128),

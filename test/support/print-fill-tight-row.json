@@ -1,0 +1,48 @@
+[
+  {
+    "id": "spacing-0",
+    "text": "liebe",
+    "x": 1180,
+    "y": 525,
+    "fontSize": 100,
+    "layoutFontSize": 100,
+    "angle": 0,
+    "color": "#2455f5",
+    "fontFamily": "classic",
+    "fontWeight": 400,
+    "fontStyle": "normal",
+    "underline": false,
+    "linethrough": false,
+    "layoutFingerprint": "ea2c8077-d329545b"
+  },
+  {
+    "id": "spacing-1",
+    "text": "❤️",
+    "x": 1337.3,
+    "y": 525,
+    "fontSize": 100,
+    "layoutFontSize": 100,
+    "angle": 0,
+    "color": "#2455f5",
+    "fontFamily": "classic",
+    "fontWeight": 400,
+    "fontStyle": "normal",
+    "underline": false,
+    "linethrough": false
+  },
+  {
+    "id": "spacing-2",
+    "text": "glück",
+    "x": 1507.3,
+    "y": 525,
+    "fontSize": 100,
+    "layoutFontSize": 100,
+    "angle": 0,
+    "color": "#2455f5",
+    "fontFamily": "classic",
+    "fontWeight": 400,
+    "fontStyle": "normal",
+    "underline": false,
+    "linethrough": false
+  }
+]

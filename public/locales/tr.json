@@ -400,6 +400,8 @@
   "Eine Wortwolke über die gesamte Tasse verteilt": "Tüm kupayı saran kelime bulutu",
   "Fläche optimal nutzen": "Alanı doldur",
   "Fläche optimal genutzt": "Alan dolduruldu",
+  "Fläche neu angeordnet": "Alan yeniden düzenlendi",
+  "Keine bessere Anordnung gefunden.": "Daha iyi bir düzen bulunamadı.",
   "Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.": "Baskı alanı yeniden düzenlenemedi. Lütfen tekrar deneyin.",
   "Aktuellen Inhalt automatisch großflächig anordnen": "Mevcut tasarımı tüm alana otomatik yerleştir",
   "Motiv mittig": "Ortalanmış tasarım",
@@ -904,5 +906,12 @@
   "Datenschutzhinweisen von Google": "Google Gizlilik Politikası",
   "Bei erteilter Einwilligung ist Google Empfänger der Analysedaten.": "İzin verirseniz analiz verilerinin alıcısı Google olur.",
   "Vorschau pausieren": "Önizlemeyi duraklat",
-  "Vorschau abspielen": "Önizlemeyi oynat"
+  "Vorschau abspielen": "Önizlemeyi oynat",
+  "Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.": "Ön yüz tasarımı aktarıldı. Arka yüz taslağınızda kayıtlı kalır.",
+  "Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.": "Tasarım yeni ürüne aktarılamadı. Lütfen tekrar deneyin.",
+  "Vorschau schließen": "Önizlemeyi kapat",
+  "Designvorschau": "Tasarım önizlemesi",
+  "Druckvorschau wird geladen…": "Baskı önizlemesi yükleniyor…",
+  "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "Baskı önizlemesi yüklenemedi. Lütfen tekrar deneyin.",
+  "Design von {{item}} ansehen": "{{item}} tasarımını görüntüle"
 }

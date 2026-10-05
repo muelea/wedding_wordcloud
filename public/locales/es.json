@@ -400,6 +400,8 @@
   "Eine Wortwolke über die gesamte Tasse verteilt": "Una nube distribuida por toda la taza",
   "Fläche optimal nutzen": "Llenar el área",
   "Fläche optimal genutzt": "Área rellenada",
+  "Fläche neu angeordnet": "Área reorganizada",
+  "Keine bessere Anordnung gefunden.": "No se ha encontrado una distribución mejor.",
   "Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.": "No se ha podido reorganizar el área de impresión. Intentadlo de nuevo.",
   "Aktuellen Inhalt automatisch großflächig anordnen": "Distribuir automáticamente el diseño por toda el área",
   "Motiv mittig": "Diseño centrado",
@@ -904,5 +906,12 @@
   "Datenschutzhinweisen von Google": "política de privacidad de Google",
   "Bei erteilter Einwilligung ist Google Empfänger der Analysedaten.": "Si das tu consentimiento, Google recibe los datos de análisis.",
   "Vorschau pausieren": "Pausar vista previa",
-  "Vorschau abspielen": "Reproducir vista previa"
+  "Vorschau abspielen": "Reproducir vista previa",
+  "Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.": "Se ha transferido el diseño delantero. El reverso sigue guardado en tu borrador.",
+  "Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.": "No se ha podido transferir el diseño al nuevo producto. Inténtalo de nuevo.",
+  "Vorschau schließen": "Cerrar vista previa",
+  "Designvorschau": "Vista previa del diseño",
+  "Druckvorschau wird geladen…": "Cargando vista previa de impresión…",
+  "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "No se ha podido cargar la vista previa de impresión. Intentadlo de nuevo.",
+  "Design von {{item}} ansehen": "Ver el diseño de {{item}}"
 }

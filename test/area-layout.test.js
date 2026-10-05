@@ -12,7 +12,7 @@ const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/prod
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
 const { SCREENSHOT_WORDS, REPORTED_WORDS, EMOJI_WORDS, SCREENSHOT_EMOJI_WORDS,
   GAP_WORDS, FIVE_WORDS, AREA_CASES } = require('./support/area-layout-cases');
-const { largestEmptyFraction, occupiedFraction, envelope } = require('./support/layout-space');
+const { largestEmptyFraction, occupiedFraction } = require('./support/layout-space');
 
 const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
 const automaticSource = template.slice(template.indexOf('    function buildAutomaticDesign('),
@@ -111,14 +111,17 @@ test('the reported gaps stay closed in automatic print designs and repeated fill
       assert.equal(design.length, words.length, label);
       assertSafe(design, product, label);
       const boxes = design.map(bounds);
-      const area = words === FIVE_WORDS ? envelope(boxes)
-        : { x1: slot.x, y1: slot.y, x2: slot.x + slot.width, y2: slot.y + slot.height };
+      // Print fill now evaluates the complete safe area at every word count;
+      // cropping sparse designs would hide the unused surface we are fixing.
+      const area = { x1: slot.x, y1: slot.y, x2: slot.x + slot.width, y2: slot.y + slot.height };
       assert.ok(largestEmptyFraction(boxes, area) < (words === FIVE_WORDS ? .14 : .035),
         label + ': no large uninterrupted empty region');
+      // Measured gutters intentionally trade a little centre density for
+      // separation; coverage alone must not reward nearly touching labels.
       assert.ok(occupiedFraction(boxes, {
         x1: slot.x + slot.width * .25, x2: slot.x + slot.width * .75,
         y1: slot.y + slot.height * .25, y2: slot.y + slot.height * .75,
-      }) > .5, label + ': the centre participates');
+      }) > (words === FIVE_WORDS ? .45 : .48), label + ': the centre participates with visible gutters');
       assert.deepEqual(apply(JSON.parse(JSON.stringify(design)), product), design,
         label + ': saved/reloaded designs remain stable');
     }
@@ -166,7 +169,7 @@ test('the actual start layout survives repeated fit-area clicks on every product
   }
 });
 
-test('fit-area preserves all fonts, edits, rotations, duplicates, emoji and image proportions', () => {
+test('fit-area preserves fonts, edits, custom angles, duplicates, emoji and image proportions', () => {
   const product = getProduct('white-glossy-mug-duo-11oz');
   const image = createCanvas(3, 2).toDataURL();
   for (const font of Fonts.FONTS) {
@@ -183,9 +186,12 @@ test('fit-area preserves all fonts, edits, rotations, duplicates, emoji and imag
     assert.equal(output.length, input.length);
     output.forEach((item, index) => {
       for (const key of ['id', 'text', 'fontFamily', 'fontWeight', 'fontStyle', 'underline',
-        'linethrough', 'color', 'angle', 'src', 'type']) {
+        'linethrough', 'color', 'src', 'type']) {
         assert.equal(item[key], input[index][key], `${font.key}: preserve ${key}`);
       }
+      if (input[index].type === 'image' || input[index].type === 'icon' || input[index].angle % 90 !== 0) {
+        assert.equal(item.angle, input[index].angle, `${font.key}: preserve custom angle`);
+      } else assert.ok([0, -90].includes(item.angle), `${font.key}: choose a printable text orientation`);
     });
     const uploaded = output.find(item => item.type === 'image');
     assert.ok(Math.abs(uploaded.width / uploaded.height - 1.5) < .001);

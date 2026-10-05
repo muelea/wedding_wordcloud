@@ -2445,6 +2445,7 @@
   <script src="<%= asset('/js/mug-icons.js') %>"></script>
   <script src="<%= asset('/js/design-fonts.js') %>"></script>
   <script src="<%= asset('/js/design-layout.js') %>"></script>
+  <script src="<%= asset('/js/design-transfer.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
   <script src="<%= asset('/js/mug-editor.js') %>"></script>
   <script src="<%= asset('/js/configurator-workspace.js') %>"></script>
@@ -2605,6 +2606,7 @@
     let configuratorEmojiPicker = null;
     let activeSurface = 'default';
     let surfaceStates = new Map();
+    let productDesignState = null;
     let editingOrderItemId = null;
     let suppressDirty = false;
     let orderActionPending = false;
@@ -2722,13 +2724,16 @@
     }
 
     function draftSnapshot() {
+      const designs = getAllSurfaceDesigns();
+      productDesignState = DesignTransfer.capture(productDesignState, productDesignSource(designs));
       return {
         productKey: product.key,
         orientation: selectedOrientation,
         theme: selectedTheme,
         customColors,
         words,
-        designs: getAllSurfaceDesigns(),
+        designs,
+        productDesignState,
         layoutVersion: AUTOMATIC_LAYOUT_VERSION,
         editingOrderItemId,
         currentDesignEdited,
@@ -2956,9 +2961,10 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'load_failed');
         const adjusted = await applySavedConfiguration(data);
+        productDesignState = null;
         editingOrderItemId = loadOrderItems().some((item) => item.id === data.id) ? data.id : null;
         currentDesignNeedsSave = !editingOrderItemId || Boolean(adjusted);
-        currentDesignEdited = Boolean(adjusted);
+        currentDesignEdited = true;
         pendingConfiguration = null;
         cloudUpdateNotice.hidden = true;
         renderOrderBox();
@@ -3460,19 +3466,21 @@
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
       const slots = view.layoutGeometry['fit-area'];
+      // Share only the frequency curve and font measurement with the live
+      // cloud. Product placement starts afresh in the print-only optimizer.
+      const measured = WordCloudCore.measureWords(words, measurementContext,
+        makePaletteAssigner(getPalette(selectedTheme).colors));
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
-        const colors = makePaletteAssigner(getPalette(selectedTheme).colors);
-        const placed = WordCloudCore.layoutWordsInArea(words, slotWidth, slotHeight, measurementContext, colors);
-        placed.forEach((item, itemIndex) => {
+        measured.forEach((item, itemIndex) => {
           design.push({
             id: `fit-area-${slotIndex + 1}-${itemIndex + 1}`,
             text: item.word,
-            x: Math.round((slot.x + item.x) * 10) / 10,
-            y: Math.round((slot.y + item.y) * 10) / 10,
+            x: slot.x + slotWidth / 2,
+            y: slot.y + slotHeight / 2,
             fontSize: Math.max(CloudLimits.MIN_PRINT_FONT_SIZE, Math.floor(item.fontPx * 10) / 10),
-            angle: item.rotated ? -90 : 0,
+            angle: 0,
             color: item.color,
             fontFamily: DesignFonts.DEFAULT_FONT_KEY,
             fontWeight: 400,
@@ -3521,11 +3529,12 @@
           mugEditor.measureContext,
           { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
         );
-        if (JSON.stringify(optimizedDesign) !== JSON.stringify(currentDesign)) {
+        const changed = JSON.stringify(optimizedDesign) !== JSON.stringify(currentDesign);
+        if (changed) {
           mugEditor.setDesign(optimizedDesign, { record: true });
         }
         mugEditor.clearSelection();
-        mugEditor.setFeedback('Fläche optimal genutzt');
+        mugEditor.setFeedback(changed ? 'Fläche neu angeordnet' : 'Keine bessere Anordnung gefunden.');
         return true;
       } catch {
         mugEditor.setFeedback('Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.');
@@ -3560,13 +3569,13 @@
       if (mugEditor && activeSurface) surfaceStates.set(activeSurface, mugEditor.getState());
     }
 
-    function resetSurfaceStates(initialState) {
+    function resetSurfaceStates(initialState, designs = null) {
       const surfaces = productSurfaces();
       activeSurface = surfaces[0].key;
       surfaceStates = new Map(surfaces.map((surface, index) => [
         surface.key,
         index === 0 ? cloneEditorState(initialState) :
-          cloneEditorState({ design: buildAutomaticDesign(surface.key) }, false),
+          cloneEditorState({ design: designs?.[surface.key] || buildAutomaticDesign(surface.key) }, false),
       ]));
       buildSurfaceControls();
     }
@@ -3577,6 +3586,17 @@
         surface.key,
         cloneDesign(surfaceStates.get(surface.key)?.design || []),
       ]));
+    }
+
+    function productDesignSource(designs) {
+      return {
+        productKey: product.key,
+        orientation: selectedOrientation,
+        surfaces: productSurfaces().map(surface => ({
+          key: surface.key, area: productView(product, null, surface.key).safeArea,
+          design: designs[surface.key],
+        })),
+      };
     }
 
     function designsForProductSurfaces(rawDesigns) {
@@ -3667,6 +3687,7 @@
 
     async function applyLocalDraft(draft) {
       const adjusted = await applySavedConfiguration(draft);
+      productDesignState = DesignTransfer.normalizeState(draft.productDesignState);
       editingOrderItemId = draft.editingOrderItemId &&
         loadOrderItems().some((item) => item.id === draft.editingOrderItemId)
         ? draft.editingOrderItemId
@@ -4201,7 +4222,7 @@
       resetProductDialogSelection();
       closeProductDialog();
       if (another) {
-        await runNavigation(() => startProductDesign(nextProduct));
+        await runNavigation(() => startProductDesign(nextProduct, undefined, { independent: true }));
       } else if (nextProduct?.key !== product?.key) {
         await runNavigation(() => startProductDesign(nextProduct, undefined, {
           preserveEditingItem: Boolean(editingOrderItemId),
@@ -4243,43 +4264,60 @@
       orderActionPending = true;
       setOrderActionsBusy(true);
       try {
-        // Fetch and preload before replacing any edited surface. A failed
-        // refresh leaves the current design available to retry or save.
-        const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`,
-          { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-        if (!response.ok) throw new Error('load_failed');
-        const nextWords = (await response.json()).words;
-        if (!Array.isArray(nextWords) || !nextWords.length) throw new Error('no_words');
-        await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
-        await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
         const nextOrientation = orientation || nextProduct.defaultOrientation || 'default';
-        const localDraft = options.useSavedDraft === false || options.preserveEditingItem ? null : await loadLocalDraft({
-          productKey: nextProduct.key, orientation: nextOrientation,
-        });
         const previousEditingId = editingOrderItemId;
-        liveWords = nextWords;
-        if (localDraft) {
-          await applyLocalDraft(localDraft);
+        const wasEdited = currentDesignEdited;
+        let transferred = null;
+        let nextWords = words;
+        if (options.refreshCloud) {
+          // Only an explicit cloud refresh replaces the user's edited contents.
+          const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`,
+            { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+          if (!response.ok) throw new Error('load_failed');
+          nextWords = (await response.json()).words;
+          if (!Array.isArray(nextWords) || !nextWords.length) throw new Error('no_words');
+          await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
+          await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
         } else {
-          suppressDirty = true;
-          try {
-            words = nextWords;
-            selectProduct(nextProduct, orientation);
-            editingOrderItemId = options.preserveEditingItem ? previousEditingId : null;
-            mugEditor.flushPendingChange();
-          } finally { suppressDirty = false; }
-          markDirty();
-          currentDesignEdited = Boolean(options.preserveEditingItem);
-          cloudUpdateNotice.hidden = true;
+          const source = productDesignSource(getAllSurfaceDesigns());
+          const surfaces = nextProduct.printSurfaces?.length ? nextProduct.printSurfaces : [{ key: 'default' }];
+          const target = { productKey: nextProduct.key, orientation: nextOrientation,
+            surfaces: surfaces.map(surface => ({ key: surface.key,
+              area: productView(nextProduct, nextOrientation, surface.key).safeArea })) };
+          const state = DesignTransfer.capture(productDesignState, source);
+          const contents = state.surfaces.flatMap(surface => surface.design);
+          await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts(contents
+            .filter(item => item.type !== 'icon' && item.type !== 'image').map(item => item.fontFamily)));
+          await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(contents.map(item => item.text || '')));
+          transferred = DesignTransfer.prepare(state, source, target, mugEditor.measureContext, {
+            fontFamily: item => DesignFonts.cssFamily(item.fontFamily), automatic: !wasEdited && !previousEditingId,
+            independent: Boolean(options.independent),
+          });
+          await WolkenworteConfiguratorSession.withTimeout(mugEditor.preloadImages(Object.values(transferred.designs).flat()));
         }
-        if (!localDraft) {
-          draftSavedRevision = -1;
+        suppressDirty = true;
+        try {
+          words = nextWords;
+          if (options.refreshCloud) liveWords = nextWords;
+          selectProduct(nextProduct, nextOrientation, transferred?.designs);
+          productDesignState = transferred?.state || null;
+          editingOrderItemId = options.preserveEditingItem ? previousEditingId : null;
+          mugEditor.flushPendingChange();
+        } finally { suppressDirty = false; }
+        markDirty();
+        currentDesignEdited = options.refreshCloud ? Boolean(options.preserveEditingItem) : wasEdited;
+        cloudUpdateNotice.hidden = wordsMatch(words, liveWords);
+        draftSavedRevision = -1;
+        if (transferred?.retainedBack) {
+          mugEditor.setFeedback('Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.');
         }
         renderOrderBox();
         history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
         return true;
       } catch {
-        setText(errorText, 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.');
+        setText(errorText, options.refreshCloud
+          ? 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.'
+          : 'Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.');
         return false;
       } finally {
         orderActionPending = false;
@@ -4287,7 +4325,7 @@
       }
     }
 
-    function selectProduct(nextProduct, orientation) {
+    function selectProduct(nextProduct, orientation, designs = null) {
       product = nextProduct;
       activeSurface = productSurfaces()[0].key;
       selectedFamilyKey = product.familyKey;
@@ -4305,8 +4343,8 @@
           defaultX: defaultSlot.x + (defaultSlot.width || defaultSlot.side) / 2,
           defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         });
-        mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
-        resetSurfaceStates(mugEditor.getState());
+        mugEditor.setDesign(designs?.[activeSurface] || buildAutomaticDesign(), { resetHistory: true });
+        resetSurfaceStates(mugEditor.getState(), designs);
         mugEditor.setFeedback('Druckfläche für {{size}} angepasst', { size: t(view.size.label) });
       } else {
         activeSurface = productSurfaces()[0].key;
@@ -4687,7 +4725,7 @@
         } catch { /* Quantity drafts do not authorize checkout. */ }
         editingOrderItemId = data.id;
         currentDesignNeedsSave = revision !== designRevision;
-        currentDesignEdited = currentDesignNeedsSave;
+        currentDesignEdited = currentDesignEdited || currentDesignNeedsSave;
         pendingConfiguration = null;
         if (!currentDesignNeedsSave) {
           try {
@@ -4773,7 +4811,7 @@
     });
 
     applyLiveWordsButton.addEventListener('click', () => runNavigation(() =>
-      startProductDesign(product, selectedOrientation, { useSavedDraft: false, preserveEditingItem: true })));
+      startProductDesign(product, selectedOrientation, { refreshCloud: true, preserveEditingItem: true })));
 
     window.addEventListener('pagehide', () => {
       for (const configurationId of printfulMockupStates.keys()) {

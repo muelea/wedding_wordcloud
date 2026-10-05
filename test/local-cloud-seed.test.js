@@ -74,12 +74,13 @@ test('every bundled marketing cloud is valid and has meaningful weighting', () =
   for (const weights of translatedWeights) assert.deepEqual(weights, germanWeights);
 });
 
-test('local cloud seed parser normalizes and merges weighted words', () => {
+test('local cloud seed parser normalizes and merges only matching capitalization', () => {
   const normalized = seedTool.normalizeSeedDocument(fixture({
     event: { title: '  Marketing   mit Herz  ', locale: 'DE-de', pin: '02468' },
     words: [
       { word: ' Liebe ', count: 5 },
       { word: 'LIEBE', count: 2 },
+      { word: 'Liebe  ', count: 1 },
       { word: 'Glück', count: 3 },
       { word: '❤️', count: 2 },
     ],
@@ -89,9 +90,9 @@ test('local cloud seed parser normalizes and merges weighted words', () => {
     title: 'Marketing mit Herz',
     locale: 'de',
     pin: '02468',
-    words: [['liebe', 7], ['glück', 3], ['❤️', 2]],
-    inputWordCount: 4,
-    contributionCount: 12,
+    words: [['Liebe', 6], ['LIEBE', 2], ['Glück', 3], ['❤️', 2]],
+    inputWordCount: 5,
+    contributionCount: 13,
   });
 });
 

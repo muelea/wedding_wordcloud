@@ -585,7 +585,7 @@ function normalizeDesignText(rawText, locale = I18n.DEFAULT_LOCALE) {
   ).trim();
   // Reuse the guest-word sanitizer as the source of truth for unsupported
   // characters, but preserve intentional capitalization in the editor.
-  return normalizeWord(text, locale) === text.toLocaleLowerCase(locale) ? text : '';
+  return normalizeWord(text, locale) === text ? text : '';
 }
 
 function normalizeDesign(
@@ -718,14 +718,20 @@ function normalizeProductDesigns(
 function configurationPrintFileUrls(slug, configurationId, product) {
   const base = `/api/events/${encodeURIComponent(slug)}/configurations/` +
     `${encodeURIComponent(configurationId)}/print.svg`;
+  const previewBase = base.replace(/\.svg$/, '.png');
   const multipleSurfaces = product.printSurfaces.length > 1;
   const printFileUrls = Object.fromEntries(product.printSurfaces.map((surface) => [
     surface.key,
     multipleSurfaces ? `${base}?surface=${encodeURIComponent(surface.key)}` : base,
   ]));
+  const printPreviewUrls = Object.fromEntries(product.printSurfaces.map((surface) => [
+    surface.key,
+    multipleSurfaces ? `${previewBase}?surface=${encodeURIComponent(surface.key)}` : previewBase,
+  ]));
   return {
     printFileUrl: printFileUrls[product.printSurfaces[0].key],
     printFileUrls,
+    printPreviewUrls,
   };
 }
 
@@ -1411,7 +1417,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     });
   }));
 
-  router.get('/events/:slug/configurations/:configurationId/print.svg', asyncRoute(async (req, res) => {
+  router.get([
+    '/events/:slug/configurations/:configurationId/print.svg',
+    '/events/:slug/configurations/:configurationId/print.png',
+  ], asyncRoute(async (req, res) => {
+    const pngPreview = req.path.endsWith('/print.png');
+    if (pngPreview) res.set('Cache-Control', 'private, no-cache');
     const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
     if (!configuration) return res.status(404).send('configuration not found');
     const product = resolveProductOrientation(
@@ -1443,6 +1454,21 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       return res.status(500).send('configuration is invalid');
     }
     if (!design) return res.status(500).send('configuration is invalid');
+    if (pngPreview) {
+      if (!rateLimits.consume([
+        { name: 'print-preview:source', key: sourceHashForRequest(req), ...rateLimits.LIMITS.exportSource },
+        { name: 'print-preview:event', key: configuration.event_id, ...rateLimits.LIMITS.exportEvent },
+      ])) return rateLimited(res);
+      try {
+        const png = await printArtifacts.renderPreviewSurface(product, design);
+        res.set('Content-Type', printArtifacts.MIME_TYPE);
+        return res.send(png);
+      } catch (error) {
+        if (error.code !== 'PRINT_RENDER_BUSY') throw error;
+        res.set('Retry-After', '2');
+        return res.status(503).json({ error: 'print_preview_busy' });
+      }
+    }
     const svg = buildProductPrintSvg(product, design);
     res.set('Content-Type', 'image/svg+xml; charset=utf-8');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');

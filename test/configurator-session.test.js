@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const Session = require('../public/js/configurator-session');
+const Transfer = require('../public/js/design-transfer');
 
 function storage() {
   const values = new Map();
@@ -72,7 +73,8 @@ function harness(extra = {}) {
   const context = vm.createContext({
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, requestAnimationFrame: callback => callback(),
     console: { warn() {} },
-    WolkenworteConfiguratorSession: Session, sessionStorage: local, cart, draftStore,
+    WolkenworteConfiguratorSession: Session, DesignTransfer: Transfer, sessionStorage: local, cart, draftStore,
+    productDesignState: null,
     CloudLimits: require('../public/js/cloud-limits'),
     slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' },
     AUTOMATIC_LAYOUT_VERSION: '/js/wordcloud-core.js?v=current|/js/design-layout.js?v=current',
@@ -92,6 +94,8 @@ function harness(extra = {}) {
     workspace: { close() {}, show: (panel) => calls.panels.push(panel) },
     mobileEditorMedia: { matches: false }, setMobileEditorExpanded() {},
     getAllSurfaceDesigns: () => ({ default: [{ text: 'sonne' }] }),
+    productDesignSource: designs => ({ productKey: 'mug', orientation: 'default',
+      surfaces: [{ key: 'default', area: { x: 0, y: 0, width: 1000, height: 1000 }, design: designs.default }] }),
     productSurfaces: () => [{ key: 'default', label: 'Druckfläche' }],
     mugEditor: { flushPendingChange() {}, hasPendingTextChange: () => false },
     setText: (element, message) => { element.textContent = message; }, clearText: element => { element.textContent = ''; },
@@ -113,7 +117,7 @@ function harness(extra = {}) {
     ...extra,
   });
   vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
-    'draftSnapshot', 'updateCartActions', 'continueToShipping',
+    'draftSnapshot', 'wordsMatch', 'updateCartActions', 'continueToShipping',
     'hasUnpersistedDraft', 'persistCurrentDraft', 'runNavigation', 'saveBeforeLeaving',
     'openOrderItem', 'removeOrderItem', 'navigateToShipping',
     'showRestorationError', 'initializeWorkspace', 'updateHeaderCart'].map(pageFunction).join('\n'), context);
@@ -304,6 +308,17 @@ test('explicit Add saves once; unchanged repeats do not duplicate; edits replace
   assert.deepEqual(cart.read().map(item => item.id), [id('2')]);
 });
 
+test('approving manual work retains its edited provenance so layout releases cannot regenerate it', async () => {
+  const { context: page } = harness({ currentDesignEdited: true });
+  assert.equal(await page.saveCurrentDesign(page.saveDesignButton), true);
+  assert.equal(page.currentDesignNeedsSave, false);
+  assert.equal(page.currentDesignEdited, true);
+  await page.persistCurrentDraft();
+  const saved = await page.draftStore.loadActive();
+  assert.equal(saved.currentDesignEdited, true);
+  assert.equal(saved.productDesignState.version, 1);
+});
+
 test('explicit approval sends every whole-word style in the immutable surface snapshot', async () => {
   const styled = [{ id: 'word', text: 'Liebe ❤️', x: 1200, y: 500, fontSize: 140,
     angle: 12, color: '#2455f5', fontFamily: 'montserrat', fontWeight: 700,
@@ -482,12 +497,14 @@ test('Design another product starts a separate design even when choosing the sam
   page.dialogSelectedProduct = () => page.product;
   await page.confirmProductDialog();
   assert.equal(calls.warnings.length, 0);
-  assert.deepEqual(calls.switches, [['mug', undefined, undefined]]);
+  assert.equal(calls.switches.length, 1);
+  assert.equal(calls.switches[0][0], 'mug');
+  assert.equal(calls.switches[0][2].independent, true);
   assert.match(template, /designAnotherButton\.addEventListener\('click',[\s\S]*?openProductDialog\(\)/);
   assert.doesNotMatch(template, /designAnotherButton\.addEventListener[\s\S]{0,200}runNavigation/);
 });
 
-test('new product designs refresh the cloud and detach from a saved basket item only after loading succeeds', async () => {
+test('only explicit cloud refresh replaces contents and failed refresh keeps the edited design', async () => {
   for (const failure of [null, 'network', 'empty', 'font']) {
     const { context: page, cart, calls } = switchingHarness({ editingOrderItemId: id('a'), currentDesignEdited: true });
     cart.replace({ id: id('a'), productKey: 'mug' });
@@ -504,7 +521,7 @@ test('new product designs refresh the cloud and detach from a saved basket item 
       page.product = product;
     };
     vm.runInContext(pageFunction('startProductDesign'), page);
-    const result = await page.startProductDesign({ key: 'poster' }, 'landscape');
+    const result = await page.startProductDesign({ key: 'poster' }, 'landscape', { refreshCloud: true });
     assert.equal(result, !failure);
     assert.equal(calls.switches.length, failure ? 0 : 1);
     assert.equal(page.editingOrderItemId, failure ? id('a') : null);
@@ -512,6 +529,46 @@ test('new product designs refresh the cloud and detach from a saved basket item 
     assert.deepEqual(cart.read().map(item => item.id), [id('a')], 'approved work stays in the cart');
     if (failure) assert.equal(page.words, previousWords);
     else assert.deepEqual(calls.switches[0], ['poster', 'landscape', [['neu', 2]]]);
+    assert.equal(page.orderActionPending, false);
+    assert.equal(page.suppressDirty, false);
+  }
+});
+
+test('product changes transfer edited artwork offline without consulting unrelated product drafts', async () => {
+  for (const failure of [null, 'font', 'image']) {
+    const { context: page, calls, cart } = switchingHarness({ editingOrderItemId: id('a'), currentDesignEdited: true });
+    cart.replace({ id: id('a'), productKey: 'mug' });
+    const artwork = [{ id: 'added', text: 'Unser Wort ❤️', x: 400, y: 400, fontSize: 80,
+      fontFamily: 'classic', color: '#ff7100', fontWeight: 700, underline: true },
+    { id: 'photo', type: 'image', src: 'data:image/png;base64,photo', x: 700, y: 650, width: 120, height: 80 }];
+    page.getAllSurfaceDesigns = () => ({ default: artwork });
+    page.fetch = async () => { throw new Error('must not fetch live words'); };
+    page.loadLocalDraft = async () => { throw new Error('must not replace current contents with an old product draft'); };
+    page.DesignFonts = { cssFamily: () => 'serif' };
+    page.ensureDesignFonts = async () => { if (failure === 'font') throw new Error('font failed'); };
+    page.WolkenworteEmoji = { preloadTexts: async () => {} };
+    page.mugEditor.preloadImages = async () => { if (failure === 'image') throw new Error('image failed'); };
+    page.productView = () => ({ safeArea: { x: 0, y: 0, width: 1500, height: 1000 } });
+    page.selectProduct = (product, orientation, designs) => {
+      calls.switches.push({ product, orientation, designs });
+      page.product = product;
+    };
+    vm.runInContext([pageFunction('wordsMatch'), pageFunction('startProductDesign')].join('\n'), page);
+    const beforeWords = page.words;
+    const result = await page.startProductDesign({ key: 'poster' }, 'landscape', { preserveEditingItem: true });
+    assert.equal(result, !failure);
+    assert.equal(calls.switches.length, failure ? 0 : 1);
+    assert.equal(page.words, beforeWords, 'event seed stays separate from edited canvas contents');
+    assert.equal(page.editingOrderItemId, id('a'));
+    assert.deepEqual(cart.read().map(item => item.id), [id('a')], 'conversion never rewrites an approved basket item');
+    if (!failure) {
+      const transferred = calls.switches[0].designs.default;
+      assert.deepEqual(transferred.map(item => item.id), ['added', 'photo']);
+      assert.equal(transferred[0].text, artwork[0].text);
+      assert.equal(transferred[0].underline, true);
+      assert.equal(transferred[1].src, artwork[1].src);
+      assert.equal(page.currentDesignEdited, true);
+    }
     assert.equal(page.orderActionPending, false);
     assert.equal(page.suppressDirty, false);
   }

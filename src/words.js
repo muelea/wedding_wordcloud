@@ -16,7 +16,7 @@ function normalizeWordInput(rawWord, locale = 'de') {
   word = EmojiCatalog.canonicalizeText(word);
   word = EmojiCatalog.truncateGraphemes(word, MAX_WORD_LENGTH).trim();
   if (!word) return { word: '', error: 'invalid_word' };
-  return { word: word.toLocaleLowerCase(locale), error: null };
+  return { word, error: null };
 }
 
 function normalizeWord(rawWord, locale = 'de') {

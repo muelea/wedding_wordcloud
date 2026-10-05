@@ -49,12 +49,12 @@ test('random IDs preserve case and URL-safe symbols across the event journey', a
     assert.deepEqual(await initial, [[]]);
     const update = once(socket, 'word-update', { signal: AbortSignal.timeout(5000) });
     socket.emit('submit-word', 'Freude');
-    assert.deepEqual(await update, [[['freude', 1]]]);
+    assert.deepEqual(await update, [[['Freude', 1]]]);
     socket.close();
 
     const configurator = await fetch(`${api}/configurator`).then((response) => response.json());
     assert.equal(configurator.event.slug, slug);
-    assert.deepEqual(configurator.words, [['freude', 1]]);
+    assert.deepEqual(configurator.words, [['Freude', 1]]);
     const saved = await fetch(`${api}/configurations`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ theme: 'pastel', ...productDesignPayload() }),

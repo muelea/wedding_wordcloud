@@ -224,7 +224,7 @@ test('rapid language switches discard late assets and late worker results', asyn
   h.window.fire('wolkenworte:localechange', { detail: { locale: 'de' } });
   pending.get('de')({ ok: true, json: async () => demo('de') });
   await flush(); h.finish();
-  assert.ok(h.jobs.at(-1).boxes.some(item => item.word === 'liebe'));
+  assert.ok(h.jobs.at(-1).boxes.some(item => item.word === 'Liebe'));
   pending.get('en')({ ok: true, json: async () => demo('en') });
   await flush();
   assert.equal(h.fallback.src, 'de.png');
