@@ -1545,7 +1545,7 @@
         if (!countriesResponse.ok) throw new Error(countriesData.message || 'countries');
         if (!eventResponse.ok) throw new Error('configuration');
         await WolkenworteI18n.useEventLocale(eventData.locale);
-        WolkenworteJourney.remember(slug, eventData.title, true);
+        WolkenworteJourney.remember(slug, eventData.title, true, undefined, Date.now(), eventData.directDesign);
         refreshCountryDisplayNames();
         configurations = Array.isArray(configurationData.configurations)
           ? configurationData.configurations

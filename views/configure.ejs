@@ -2093,7 +2093,7 @@
 
   <main class="page">
     <div class="loading" id="loading">
-      <span id="loading-message">Eure Wortwolke wird vorbereitet&hellip;</span>
+      <span id="loading-message"><%= pageData.directDesign ? 'Euer Design wird vorbereitet…' : 'Eure Wortwolke wird vorbereitet…' %></span>
       <button class="secondary-button" id="retry-configurator-loading" type="button" hidden>Konfigurator erneut laden</button>
     </div>
 
@@ -2101,7 +2101,7 @@
       <section class="intro">
         <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
-        <p class="intro-copy" id="config-intro">Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
+        <p class="intro-copy" id="config-intro"><%= pageData.directDesign ? 'Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.' : 'Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.' %></p>
       </section>
 
       <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
@@ -2398,7 +2398,7 @@
   <dialog class="config-panel editor-reset-panel" id="editor-reset-panel" aria-labelledby="editor-reset-title" aria-describedby="editor-reset-description">
     <div class="config-panel-head"><h2 id="editor-reset-title" tabindex="-1">Design zurücksetzen?</h2></div>
     <div class="config-panel-body">
-      <p id="editor-reset-description">Die Gestaltung auf der aktuellen Druckseite wird durch die automatische Wortwolke ersetzt. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.</p>
+      <p id="editor-reset-description"><%= pageData.directDesign ? 'Die Gestaltung auf der aktuellen Druckseite wird geleert. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.' : 'Die Gestaltung auf der aktuellen Druckseite wird durch die automatische Wortwolke ersetzt. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.' %></p>
       <p class="editor-reset-note">Ihr könnt das Zurücksetzen anschließend rückgängig machen.</p>
     </div>
     <div class="config-panel-foot editor-reset-actions">
@@ -2456,6 +2456,7 @@
     'use strict';
 
     const slug = location.pathname.split('/').filter(Boolean)[1];
+    const directDesign = <%- JSON.stringify(Boolean(pageData.directDesign)) %>;
     const PRINTFUL_MOCKUP_TOOLS_ENABLED = <%- JSON.stringify(Boolean(pageData.printfulMockupTools)) %>;
     const paletteStorageKey = `wordcloud-palette:${slug}`;
     // The content fingerprint is also the revision of untouched automatic
@@ -2629,7 +2630,7 @@
     const backLink = document.getElementById('back-link');
     const mobileBackLink = document.getElementById('mobile-back-link');
     [backLink, mobileBackLink].forEach((link) => {
-      if (link) link.href = `/e/${encodeURIComponent(slug)}`;
+      if (link) link.href = directDesign ? '/' : `/e/${encodeURIComponent(slug)}`;
     });
 
     function loadOrderItems() {
@@ -4623,7 +4624,7 @@
           // history step and leaves the other print side and palette intact.
           mugEditor.recordHistory();
           mugEditor.setDesign(buildAutomaticDesign(), { record: true });
-          mugEditor.setFeedback('Automatische Wortwolke wiederhergestellt');
+          mugEditor.setFeedback(directDesign ? 'Design zurückgesetzt' : 'Automatische Wortwolke wiederhergestellt');
           markDirty();
         }),
       });
@@ -4878,7 +4879,7 @@
     }, 2)
       .then(async (data) => {
         await WolkenworteI18n.useEventLocale(data.event.locale);
-        WolkenworteJourney.remember(slug, data.event.title, true);
+        WolkenworteJourney.remember(slug, data.event.title, true, undefined, Date.now(), directDesign);
         words = data.words;
         liveWords = data.words;
         products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
@@ -4908,7 +4909,9 @@
         buildThemeOptions();
         renderCustomColorControls();
 
-        setText(document.querySelector('title'), 'Erinnerung für {{name}} gestalten – Wolkenworte', {
+        setText(document.querySelector('title'), directDesign
+          ? 'Erinnerungsstück gestalten – Wolkenworte'
+          : 'Erinnerung für {{name}} gestalten – Wolkenworte', {
           name: data.event.title,
         });
         updateProductPresentation();
@@ -4961,6 +4964,9 @@
           if (localDraft) await applyLocalDraft(localDraft);
         }
         workspaceReady = true;
+        if (directDesign && mobileEditorMedia.matches && !query.has('cart')) {
+          setMobileEditorExpanded(true, { scroll: false });
+        }
         if (!requestedEdit && !query.has('cart') && draftSavedRevision < 0) scheduleDraftSave(0);
         if (query.has('cart')) {
           if (mobileEditorMedia.matches) setMobileEditorExpanded(true, { scroll: false });

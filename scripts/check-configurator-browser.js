@@ -10,11 +10,20 @@ const { ASSET_BASE } = require('../public/js/emoji-catalog');
 const { makeEmojiArtworkRouter } = require('../src/routes/emojiArtwork');
 const FIXTURE_SLUG = '-_AbCdEf0123456789xyZQ';
 
-function createFixture({ words = [['test', 1]] } = {}) {
+function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
   const app = express();
   const root = path.join(__dirname, '..');
   app.use(express.json({ limit: '2mb' }));
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  if (directDesign) {
+    app.get('/', (req, res, next) => renderPage(req, res, 'landing', {
+      header: { variant: 'landing', headerClass: 'site-header', navClass: 'shell nav', id: 'site-header',
+        navLinks: [{ href: '#erinnerungsstuecke', label: 'Erinnerungsstücke' },
+          { href: '#so-gehts', label: "So geht's" }, { href: '#inspiration', label: 'Inspiration' },
+          { href: '#testimonials', label: 'Testimonials' }] },
+    }).catch(next));
+    app.post('/design/start', (req, res) => res.redirect(303, `/e/${FIXTURE_SLUG}/configure?lang=de`));
+  }
   app.get(`/e/${FIXTURE_SLUG}`, (req, res) => res.type('html').send(`<!doctype html>
     <html lang="en"><head><meta charset="utf-8"><title>Responsive test word cloud</title></head>
     <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en">Keepsake</a></body></html>`));
@@ -27,16 +36,21 @@ function createFixture({ words = [['test', 1]] } = {}) {
     renderPage(req, res, 'configure', {
       eventLocale: 'en',
       header: { variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
-        backHref: `/e/${FIXTURE_SLUG}`, backLabel: 'Zurück zur Wortwolke',
+        backHref: directDesign ? '/' : `/e/${FIXTURE_SLUG}`,
+        backLabel: directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
         mobileMenu: true, mobileBackId: 'mobile-back-link', cartButton: true },
+      pageData: { directDesign },
     }).catch(next);
   });
   app.get(`/api/events/${FIXTURE_SLUG}/configurator`, (req, res) => res.json({
-    event: { slug: FIXTURE_SLUG, title: 'Responsive test', locale: 'en' },
+    event: { slug: FIXTURE_SLUG, title: 'Responsive test', locale: 'en', directDesign },
     words,
     product: getPublicProduct(DEFAULT_PRODUCT),
     products: getPublicProducts(),
     productFamilies: getPublicProductFamilies(),
+  }));
+  app.get(`/api/events/${FIXTURE_SLUG}`, (req, res) => res.json({
+    slug: FIXTURE_SLUG, title: 'Responsive test', locale: 'en', directDesign,
   }));
   app.post(`/api/events/${FIXTURE_SLUG}/configurations`, (req, res) => res.status(201).json({
     id: 'FixtureCart00001',
@@ -57,10 +71,12 @@ function createFixture({ words = [['test', 1]] } = {}) {
 }
 
 if (require.main === module) {
-  const options = process.argv.includes('--layout')
-    ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS } : {};
+  const options = process.argv.includes('--direct-design') ? { words: [], directDesign: true }
+    : process.argv.includes('--layout')
+      ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS } : {};
   const server = createFixture(options).listen(0, '127.0.0.1', () => {
     console.log(`Configurator: http://127.0.0.1:${server.address().port}/e/${FIXTURE_SLUG}/configure?lang=en`);
+    if (options.directDesign) console.log(`Direct design Home: http://127.0.0.1:${server.address().port}/?lang=de`);
     console.log('Add &probe=1 for repeatable browser geometry/interaction checks. No product records are written.');
     console.log(`Fixture PID: ${process.pid}`);
   });

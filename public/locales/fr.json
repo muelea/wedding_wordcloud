@@ -925,5 +925,15 @@
   "Designvorschau": "Aperçu du design",
   "Druckvorschau wird geladen…": "Chargement de l’aperçu d’impression…",
   "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "L’aperçu d’impression n’a pas pu être chargé. Veuillez réessayer.",
-  "Design von {{item}} ansehen": "Voir le design de {{item}}"
+  "Design von {{item}} ansehen": "Voir le design de {{item}}",
+  "Direkt ein Erinnerungsstück gestalten": "Créer directement un souvenir",
+  "Erinnerungsstück gestalten": "Créer un souvenir",
+  "Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.": "Vous pouvez aussi créer directement votre souvenir – avec vos propres mots, images et motifs.",
+  "Euer Erinnerungsstück": "Votre souvenir",
+  "Das Design konnte nicht gestartet werden. Bitte versucht es erneut.": "Votre création n’a pas pu être démarrée. Veuillez réessayer.",
+  "Euer Design wird vorbereitet…": "Préparation de votre création…",
+  "Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.": "Personnalisez votre tasse avec vos propres mots, images et motifs. Vous pouvez changer de produit et de palette à tout moment.",
+  "Die Gestaltung auf der aktuellen Druckseite wird geleert. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.": "La création sur la face actuelle sera effacée. Vos éléments ajoutés et vos modifications seront supprimés. La palette choisie sera conservée.",
+  "Design zurückgesetzt": "Création réinitialisée",
+  "Erinnerungsstück gestalten – Wolkenworte": "Créer un souvenir – Wolkenworte"
 }

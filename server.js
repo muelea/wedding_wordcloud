@@ -22,6 +22,8 @@ const { ASSET_BASE: EMOJI_BROWSER_ASSET_BASE } = require('./public/js/emoji-cata
 const { getBaseUrl } = require('./src/baseUrl');
 const { buildEventUrl, renderEventQrSvg } = require('./src/eventQr');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('./src/eventNames');
+const { DIRECT_DESIGN_TITLE, isDirectDesignEvent } = require('./src/directDesign');
+const { translate } = require('./src/i18n');
 const { DEFAULT_PRODUCT, getPublicProduct } = require('./src/products');
 const { createSvgExportQueue } = require('./src/svgExportQueue');
 const fulfillment = require('./src/fulfillment');
@@ -171,6 +173,35 @@ app.get('/', asyncRoute(async (req, res) => {
   return renderPage(req, res, 'landing', landingPageOptions());
 }));
 
+// A deliberate POST starts an independent design; visiting Home or following
+// a prefetched link never creates a workspace. Share the cloud creation limit.
+app.post('/design/start', asyncRoute(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!rateLimits.consume([{
+    name: 'event:create', key: sourceHashForRequest(req), ...rateLimits.LIMITS.eventCreate,
+  }])) {
+    res.set('Retry-After', '3600');
+    return renderPage(req, res, 'landing', {
+      ...landingPageOptions({ directDesignError: 'Bitte versucht es in einem Moment erneut.' }),
+      status: 429,
+      cacheControl: 'no-store',
+    });
+  }
+  const locale = resolvePageLocale(req).locale;
+  let event;
+  try {
+    event = await db.createEvent({ title: translate(DIRECT_DESIGN_TITLE, locale), pin: null, locale });
+  } catch (error) {
+    if (error?.code !== 'event_id_generation_failed') throw error;
+    return renderPage(req, res, 'landing', {
+      ...landingPageOptions({ directDesignError: 'Das Design konnte nicht gestartet werden. Bitte versucht es erneut.' }),
+      status: 500,
+      cacheControl: 'no-store',
+    });
+  }
+  return res.redirect(303, `/e/${encodeURIComponent(event.slug)}/configure`);
+}));
+
 app.param('slug', (req, res, next, slug) => {
   if (!isEventSlug(slug)) {
     renderPage(req, res, '404', { status: 404 }).catch(next);
@@ -288,6 +319,7 @@ app.get('/e/:slug', asyncRoute(async (req, res) => {
 app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });
+  const directDesign = isDirectDesignEvent(event);
   return renderPage(req, res, 'configure', {
     eventLocale: event.locale,
     // A configurator document selects a content-addressed layout runtime.
@@ -295,10 +327,13 @@ app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
     cacheControl: 'no-store',
     header: {
       variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
-      backHref: '#', backLabel: 'Zurück zur Wortwolke', backAria: 'Zurück zur Wortwolke',
+      backHref: directDesign ? '/' : '#',
+      backLabel: directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
+      backAria: directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
       mobileMenu: true, mobileBackId: 'mobile-back-link', cartButton: true,
     },
     pageData: {
+      directDesign,
       printfulMockupTools: printfulMockups.isOperatorRequest(req),
     },
   });

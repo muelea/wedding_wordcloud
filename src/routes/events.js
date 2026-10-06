@@ -16,6 +16,7 @@ const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
 const EmojiCatalog = require('../../public/js/emoji-catalog.js');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('../eventNames');
+const { isDirectDesignEvent } = require('../directDesign');
 const {
   DEFAULT_PRODUCT,
   getProduct,
@@ -570,8 +571,8 @@ function quoteAmountsDiffer(stored, fresh) {
     Number(stored.total_cents) !== fresh.totalCents;
 }
 
-function normalizeSnapshotWords(rawWords, locale = I18n.DEFAULT_LOCALE) {
-  if (!Array.isArray(rawWords) || rawWords.length === 0 || rawWords.length > MAX_SNAPSHOT_WORDS) {
+function normalizeSnapshotWords(rawWords, locale = I18n.DEFAULT_LOCALE, allowEmpty = false) {
+  if (!Array.isArray(rawWords) || (!allowEmpty && rawWords.length === 0) || rawWords.length > MAX_SNAPSHOT_WORDS) {
     return null;
   }
   const merged = new Map();
@@ -968,6 +969,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       title: event.title,
       locale: event.locale,
       hasOrganizerPin: Boolean(event.organizer_pin_hash && event.organizer_pin_salt),
+      directDesign: isDirectDesignEvent(event),
     });
   }));
 
@@ -1051,13 +1053,15 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     res.set('Cache-Control', 'no-store');
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
+    const directDesign = isDirectDesignEvent(event);
     const words = await db.getWords(event.id);
-    if (!words.length) return res.status(409).json({ error: 'no_words' });
+    if (!words.length && !directDesign) return res.status(409).json({ error: 'no_words' });
     res.json({
       event: {
         slug: event.slug,
         title: event.title,
         locale: event.locale,
+        directDesign,
       },
       words,
       // The default product initializes the editor; the full curated list
@@ -1107,10 +1111,11 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
     // The browser sends the exact snapshot it previewed. Re-normalize it at
     // this trust boundary, then store it independently from the live event.
+    const directDesign = isDirectDesignEvent(event);
     const words = req.body && Object.hasOwn(req.body, 'words')
-      ? normalizeSnapshotWords(req.body.words, event.locale)
+      ? normalizeSnapshotWords(req.body.words, event.locale, directDesign)
       : await db.getWords(event.id);
-    if (!words || !words.length) {
+    if (!words || (!words.length && !directDesign)) {
       return res.status(400).json({ error: 'invalid_words' });
     }
 

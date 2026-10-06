@@ -154,6 +154,12 @@
     h1 em { color: var(--sage-deep); font-style: italic; font-weight: 500; }
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .direct-design-form { margin: 0; }
+    .hero-direct-design { margin-top: 6px; }
+    .direct-design-link { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; max-width: 100%; padding: 8px 0; border: 0; background: transparent; color: var(--sage-deep); font: 400 .84rem/1.5 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; text-align: inherit; cursor: pointer; }
+    .direct-design-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+    .direct-design-link:focus-visible, .direct-design-form .button:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 4px; }
+    .direct-design-error { margin: 8px 0 0; color: var(--sage-deep); font-size: .84rem; line-height: 1.5; }
     #resume-journey[hidden], #resume-journey a[hidden] { display: none; }
     #resume-journey {
       position: relative;
@@ -442,11 +448,17 @@
           <div class="hero-actions">
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
           </div>
+          <form class="direct-design-form hero-direct-design" action="/design/start" method="post">
+            <button class="direct-design-link" type="submit">Direkt ein Erinnerungsstück gestalten <span aria-hidden="true">→</span></button>
+          </form>
+          <% if (pageData.directDesignError) { %>
+            <p class="direct-design-error" role="alert"><%= pageData.directDesignError %></p>
+          <% } %>
           <aside id="resume-journey" hidden aria-label="Hier weitermachen">
             <p class="resume-kicker">Zuletzt geöffnet</p>
             <strong class="resume-title" data-resume-title data-i18n-ignore></strong>
             <div class="resume-links">
-              <a class="resume-link resume-link-primary" data-resume-cloud href="/">Zur Wortwolke <span aria-hidden="true">→</span></a>
+              <a class="resume-link resume-link-primary" data-resume-cloud href="/"><span data-resume-cloud-label>Zur Wortwolke</span> <span aria-hidden="true">→</span></a>
               <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
             </div>
           </aside>
@@ -519,6 +531,10 @@
             <p class="eyebrow">Eine Erinnerung zum Anfassen</p>
             <h2 id="keepsakes-title">Aus eurer Wolke wird ein Lieblingsstück.</h2>
             <p>Nach dem großen Moment kann eure ganz persönliche Wortwolke auf einem Erinnerungsstück weiterleben – als Tasse für den nächsten gemeinsamen Kaffee, als Poster oder als Geschenk für eure Liebsten.</p>
+            <p>Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.</p>
+            <form class="direct-design-form" action="/design/start" method="post">
+              <button class="button outline" type="submit">Erinnerungsstück gestalten <span aria-hidden="true">→</span></button>
+            </form>
             <p class="print-note">Gemeinsam gestaltet · für immer bewahrt</p>
           </div>
           <div class="cup-stage">

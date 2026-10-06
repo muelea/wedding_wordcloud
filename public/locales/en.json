@@ -925,5 +925,15 @@
   "Designvorschau": "Design preview",
   "Druckvorschau wird geladen…": "Loading print preview…",
   "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "The print preview could not be loaded. Please try again.",
-  "Design von {{item}} ansehen": "View {{item}} design"
+  "Design von {{item}} ansehen": "View {{item}} design",
+  "Direkt ein Erinnerungsstück gestalten": "Design a keepsake directly",
+  "Erinnerungsstück gestalten": "Design a keepsake",
+  "Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.": "You can also design your keepsake directly – with your own words, images and motifs.",
+  "Euer Erinnerungsstück": "Your keepsake",
+  "Das Design konnte nicht gestartet werden. Bitte versucht es erneut.": "Your design could not be started. Please try again.",
+  "Euer Design wird vorbereitet…": "Preparing your design…",
+  "Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.": "Design your mug with your own words, images and motifs. You can change the product and colours at any time.",
+  "Die Gestaltung auf der aktuellen Druckseite wird geleert. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.": "The design on the current print side will be cleared. Your added elements and changes will be removed. Your selected colours will stay the same.",
+  "Design zurückgesetzt": "Design reset",
+  "Erinnerungsstück gestalten – Wolkenworte": "Design a keepsake – Wolkenworte"
 }

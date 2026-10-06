@@ -15,13 +15,15 @@
     } catch {}
     return null;
   }
-  function remember(slug, title, hasDesign, storage, now = Date.now()) {
+  function remember(slug, title, hasDesign, storage, now = Date.now(), directDesign) {
     if (!validSlug(slug)) return;
     try {
       if (storage === undefined) storage = localStorage;
       const previous = read(storage, now);
       storage.setItem(KEY, JSON.stringify({ slug, title: String(title || slug).slice(0, 120),
         hasDesign: hasDesign == null ? previous?.slug === slug && previous.hasDesign === true : Boolean(hasDesign),
+        ...((directDesign ?? (previous?.slug === slug && previous.directDesign === true))
+          ? { directDesign: true } : {}),
         expiresAt: now + TTL }));
     } catch {}
   }
@@ -38,8 +40,14 @@
     if (!saved) return;
     const cloudLink = card.querySelector('[data-resume-cloud]');
     const designLink = card.querySelector('[data-resume-design]');
-    cloudLink.href = `/e/${encodeURIComponent(saved.slug)}`;
-    designLink.href = `${cloudLink.getAttribute('href')}/configure?cart=1`;
+    const eventUrl = `/e/${encodeURIComponent(saved.slug)}`;
+    cloudLink.href = saved.directDesign ? `${eventUrl}/configure` : eventUrl;
+    if (saved.directDesign) {
+      const label = cloudLink.querySelector?.('[data-resume-cloud-label]') || cloudLink;
+      if (globalThis.WolkenworteI18n) globalThis.WolkenworteI18n.setText(label, 'Gestaltung fortsetzen');
+      else label.textContent = 'Gestaltung fortsetzen';
+    }
+    designLink.href = `${eventUrl}/configure?cart=1`;
     let hasCart = false;
     try {
       const cartKey = `wolkenworte-order:${saved.slug}`;

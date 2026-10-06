@@ -925,5 +925,15 @@
   "Designvorschau": "Tasarım önizlemesi",
   "Druckvorschau wird geladen…": "Baskı önizlemesi yükleniyor…",
   "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "Baskı önizlemesi yüklenemedi. Lütfen tekrar deneyin.",
-  "Design von {{item}} ansehen": "{{item}} tasarımını görüntüle"
+  "Design von {{item}} ansehen": "{{item}} tasarımını görüntüle",
+  "Direkt ein Erinnerungsstück gestalten": "Doğrudan bir hatıra tasarlayın",
+  "Erinnerungsstück gestalten": "Bir hatıra tasarlayın",
+  "Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.": "Hatıranızı kendi kelimeleriniz, görselleriniz ve motiflerinizle doğrudan da tasarlayabilirsiniz.",
+  "Euer Erinnerungsstück": "Hatıranız",
+  "Das Design konnte nicht gestartet werden. Bitte versucht es erneut.": "Tasarım başlatılamadı. Lütfen tekrar deneyin.",
+  "Euer Design wird vorbereitet…": "Tasarımınız hazırlanıyor…",
+  "Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.": "Kupanızı kendi kelimeleriniz, görselleriniz ve motiflerinizle tasarlayın. Ürünü ve renk paletini istediğiniz zaman değiştirebilirsiniz.",
+  "Die Gestaltung auf der aktuellen Druckseite wird geleert. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.": "Mevcut baskı yüzündeki tasarım temizlenecek. Eklediğiniz öğeler ve değişiklikler kaldırılacak. Seçtiğiniz renk paleti korunacak.",
+  "Design zurückgesetzt": "Tasarım sıfırlandı",
+  "Erinnerungsstück gestalten – Wolkenworte": "Bir hatıra tasarlayın – Wolkenworte"
 }

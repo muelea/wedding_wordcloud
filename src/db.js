@@ -225,7 +225,9 @@ function prepareSeedWords(words) {
 }
 
 async function createEventRecord({ title, pin, locale, seed = null }) {
-  const { hash, salt } = await hashPin(pin);
+  // Only the direct-design start deliberately supplies null. Public clouds
+  // still validate and hash their organizer PIN before creating the event.
+  const { hash, salt } = pin === null ? { hash: null, salt: null } : await hashPin(pin);
   for (let attempt = 0; attempt < EVENT_SLUG_ATTEMPTS; attempt += 1) {
     const slug = generateEventSlug();
     try {

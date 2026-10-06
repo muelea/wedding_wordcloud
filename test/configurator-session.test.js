@@ -76,7 +76,7 @@ function harness(extra = {}) {
     WolkenworteConfiguratorSession: Session, DesignTransfer: Transfer, sessionStorage: local, cart, draftStore,
     productDesignState: null,
     CloudLimits: require('../public/js/cloud-limits'),
-    slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' },
+    slug: 'event-a', guestId: 'a'.repeat(32), product: { key: 'mug' }, directDesign: false,
     AUTOMATIC_LAYOUT_VERSION: '/js/wordcloud-core.js?v=current|/js/design-layout.js?v=current',
     words: [['sonne', 1]], liveWords: [['sonne', 1], ['neu', 1]],
     selectedOrientation: 'default', selectedTheme: 'confetti', customColors: ['#ff7100'],
@@ -688,6 +688,22 @@ test('fresh entry restores the active local draft while explicit edit and cart e
     assert.equal(page.content.inert, false);
   }
   assert.match(template, /const localDraft = await loadLocalDraft\(\)/);
+});
+
+test('a direct design opens its blank mobile editor and approves custom content without live words', async () => {
+  const expanded = [];
+  const { context: page, calls } = harness({
+    directDesign: true, workspaceReady: false, words: [], liveWords: [],
+    mobileEditorMedia: { matches: true },
+    setMobileEditorExpanded: value => expanded.push(value),
+  });
+  await page.initializeWorkspace();
+  assert.equal(page.restorationFailed, false);
+  assert.equal(page.workspaceReady, true);
+  assert.deepEqual(expanded, [true]);
+  assert.equal(await page.saveCurrentDesign(page.saveDesignButton), true);
+  assert.deepEqual(calls.bodies[0].words, []);
+  assert.equal(calls.bodies[0].designs.default[0].text, 'sonne');
 });
 
 test('loading a saved design uses a matching local working copy before its immutable server snapshot', async () => {

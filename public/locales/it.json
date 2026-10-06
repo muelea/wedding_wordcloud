@@ -925,5 +925,15 @@
   "Designvorschau": "Anteprima del design",
   "Druckvorschau wird geladen…": "Caricamento dell’anteprima di stampa…",
   "Die Druckvorschau konnte nicht geladen werden. Bitte versucht es erneut.": "Impossibile caricare l’anteprima di stampa. Riprovate.",
-  "Design von {{item}} ansehen": "Visualizza il design di {{item}}"
+  "Design von {{item}} ansehen": "Visualizza il design di {{item}}",
+  "Direkt ein Erinnerungsstück gestalten": "Crea direttamente un ricordo",
+  "Erinnerungsstück gestalten": "Crea un ricordo",
+  "Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.": "Potete anche creare direttamente il vostro ricordo – con parole, immagini e motivi scelti da voi.",
+  "Euer Erinnerungsstück": "Il vostro ricordo",
+  "Das Design konnte nicht gestartet werden. Bitte versucht es erneut.": "Non è stato possibile avviare il design. Riprovate.",
+  "Euer Design wird vorbereitet…": "Preparazione del vostro design…",
+  "Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.": "Personalizzate la vostra tazza con parole, immagini e motivi scelti da voi. Potete cambiare prodotto e palette in qualsiasi momento.",
+  "Die Gestaltung auf der aktuellen Druckseite wird geleert. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.": "Il design sul lato di stampa attuale verrà cancellato. Gli elementi aggiunti e le modifiche verranno rimossi. La palette scelta verrà mantenuta.",
+  "Design zurückgesetzt": "Design ripristinato",
+  "Erinnerungsstück gestalten – Wolkenworte": "Crea un ricordo – Wolkenworte"
 }

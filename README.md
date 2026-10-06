@@ -23,6 +23,15 @@ frozen snapshot of the word cloud.
    language rather than a cached snapshot of the still-changing live cloud.
    Share actions pin the active language in the invitation URL so link-preview
    crawlers receive the matching localized card.
+   Visitors can also select “Direkt ein Erinnerungsstück gestalten” below the
+   main homepage action or “Erinnerungsstück gestalten” in the keepsake section.
+   A deliberate `POST /design/start` creates an isolated design workspace using
+   the existing event lifetime, slug reservation and creation limits, with no
+   organizer PIN or live words. Its configurator opens on a blank default mug;
+   the mobile editor is immediately expanded. Customers can add their own text,
+   images and motifs, change products and use the existing basket/checkout flow.
+   These workspaces have a null organizer-PIN pair and no organizer actions;
+   their Home return link resumes the design rather than opening a live cloud.
 2. The event page works on phones and on a big screen; there is no separate
    setup, guest or display route. The organizer PIN authorizes renaming the
    cloud, removing any submitted word, resetting the cloud and replacing the

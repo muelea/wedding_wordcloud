@@ -68,6 +68,16 @@ function renderView(filename, header = {}, locale = 'de') {
   }, { filename: fullPath });
 }
 const REQUIRED_MESSAGES = [
+  'Direkt ein Erinnerungsstück gestalten',
+  'Erinnerungsstück gestalten',
+  'Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.',
+  'Euer Erinnerungsstück',
+  'Das Design konnte nicht gestartet werden. Bitte versucht es erneut.',
+  'Euer Design wird vorbereitet…',
+  'Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.',
+  'Die Gestaltung auf der aktuellen Druckseite wird geleert. Eure hinzugefügten Elemente und Änderungen werden entfernt. Die gewählte Farbwelt bleibt erhalten.',
+  'Design zurückgesetzt',
+  'Erinnerungsstück gestalten – Wolkenworte',
   'Wortwolke starten',
   'Erinnerung gestalten',
   'Andenken',
