@@ -415,10 +415,11 @@
 </head>
 <body>
   <div id="intro-overlay">
-    <video id="intro-video" autoplay muted playsinline preload="auto" aria-label="Wolkenworte Teaser-Video">
-      <source src="<%= asset('/assets/video/teaser-mobile.mp4') %>" type="video/mp4" media="(max-width: 760px) and (orientation: portrait)" />
-      <source src="<%= asset('/assets/video/teaser.mp4') %>" type="video/mp4" />
-    </video>
+    <video id="intro-video" autoplay muted playsinline preload="none" aria-label="Wolkenworte Teaser-Video"
+      data-mobile-src="<%= asset('/assets/video/teaser-mobile.mp4') %>"
+      data-desktop-src="<%= asset('/assets/video/teaser.mp4') %>"
+      data-mobile-poster="<%= asset('/assets/video/teaser-poster-mobile.jpg') %>"
+      data-desktop-poster="<%= asset('/assets/video/teaser-poster.jpg') %>"></video>
     <div id="intro-scroll-cue" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
       <span>Scrollen zum Fortfahren</span>
@@ -426,12 +427,24 @@
   </div>
   <script>
     (function () {
+      var overlay = document.getElementById('intro-overlay');
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduceMotion || WolkenworteJourney.recent()) {
-        var overlay = document.getElementById('intro-overlay');
         if (overlay) overlay.remove();
       } else {
         document.documentElement.classList.add('intro-lock', 'intro-fade');
+        // Choose one URL before loading media, including on reload, so the
+        // video and poster stay paired without a native desktop fallback.
+        var video = document.getElementById('intro-video');
+        var portraitPhone = window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
+        var variant = portraitPhone ? 'mobile' : 'desktop';
+        var poster = video.dataset[variant + 'Poster'];
+        video.muted = true;
+        video.poster = poster;
+        overlay.style.backgroundImage = 'url("' + poster + '")';
+        video.preload = 'auto';
+        video.src = video.dataset[variant + 'Src'];
+        video.load();
       }
     })();
   </script>

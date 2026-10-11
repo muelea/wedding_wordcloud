@@ -339,16 +339,17 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
 test('landing intro selects a portrait-optimized video and poster on phones', () => {
   assert.match(
     landing,
-    /source src="<%= asset\('\/assets\/video\/teaser-mobile\.mp4'\) %>" type="video\/mp4" media="\(max-width: 760px\) and \(orientation: portrait\)"/
+    /data-mobile-src="<%= asset\('\/assets\/video\/teaser-mobile\.mp4'\) %>"/
   );
   assert.match(
     landing,
-    /source src="<%= asset\('\/assets\/video\/teaser\.mp4'\) %>" type="video\/mp4"/
+    /data-desktop-src="<%= asset\('\/assets\/video\/teaser\.mp4'\) %>"/
   );
   assert.match(
     landing,
     /@media \(max-width: 760px\) and \(orientation: portrait\) \{[\s\S]*?teaser-poster-mobile\.jpg/
   );
+  assert.doesNotMatch(landing.match(/<video id="intro-video"[\s\S]*?<\/video>/)?.[0] || '', /<source\b/);
   assert.doesNotMatch(landing, /poster="\/assets\/video\//);
 });
 
