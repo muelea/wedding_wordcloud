@@ -143,6 +143,7 @@
       this.renderSwatches();
       this.renderIconPicker();
       this.setZoom(1);
+      this.bindTouchEvents();
       if (root.ResizeObserver && this.shell) {
         this.shellResizeObserver = new root.ResizeObserver(() => {
           this.updateImageQualityBadge(this.canvas.getActiveObject());
@@ -541,6 +542,157 @@
       this.canvas.on('mouse:dblclick', (event) => {
         this.beginTextEditing(event.target);
       });
+    }
+
+    bindTouchEvents() {
+      if (!root.CanvasTouch || !root.PointerEvent || !this.scroll) return;
+      this.touchMedia = root.matchMedia('(max-width: 940px), (pointer: coarse)');
+      this.touchController = new root.CanvasTouch({
+        navigation: () => this.mobileNavigation === true,
+        hit: point => this.touchTarget(point),
+        select: object => {
+          this.canvas.getActiveObject()?.exitEditing?.();
+          this.canvas.setActiveObject(object);
+          this.updateSelectionPanel();
+          this.canvas.requestRenderAll();
+        },
+        toScene: point => this.touchScenePoint(point),
+        readObject: object => {
+          const center = object.getCenterPoint();
+          const minimumScale = Math.max(...this.selectedObjects(object).map(child => {
+            const item = this.serializeObject(child);
+            return item.type === 'image' ? MIN_PRINT_IMAGE_SIZE / Math.min(item.width, item.height)
+              : item.type === 'icon' ? MIN_PRINT_ICON_SIZE / item.size : MIN_PRINT_FONT_SIZE / item.fontSize;
+          }));
+          return { x: center.x, y: center.y, angle: object.angle || 0,
+            scaleX: object.scaleX, scaleY: object.scaleY, minimumScale };
+        },
+        writeObject: (object, state) => {
+          if (!this.canvas.getObjects().includes(object) && this.canvas.getActiveObject() !== object) return;
+          object.set({ angle: state.angle, scaleX: state.scaleX, scaleY: state.scaleY });
+          object.setPositionByOrigin(new root.fabric.Point(state.x, state.y), 'center', 'center');
+          this.keepInside(object);
+          this.canvas.requestRenderAll();
+          this.emitChange();
+        },
+        readView: () => {
+          const rect = this.scroll.getBoundingClientRect();
+          return { zoom: this.zoom, panX: this.mobilePanX || 0, panY: this.mobilePanY || 0,
+            center: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } };
+        },
+        writeView: (view, pair) => {
+          if (!this.mobileViewport) { this.setZoom(view.zoom * pair.scale); return; }
+          const zoom = Math.max(1, Math.min(6, view.zoom * pair.scale)), ratio = zoom / view.zoom;
+          this.mobilePanX = pair.end.x - view.center.x - (pair.start.x - view.center.x - view.panX) * ratio;
+          this.mobilePanY = pair.end.y - view.center.y - (pair.start.y - view.center.y - view.panY) * ratio;
+          this.setZoom(zoom);
+        },
+        commit: object => {
+          if (!this.canvas.getObjects().includes(object) && this.canvas.getActiveObject() !== object) return;
+          this.absorbScale(object);
+          this.keepInside(object);
+          this.recordHistory();
+          this.emitChange();
+          this.updateSelectionPanel();
+          this.canvas.requestRenderAll();
+        },
+      });
+      const handles = () => {
+        this.touchController.finish();
+        this.updateTouchControls();
+      };
+      this.touchMedia.addEventListener('change', handles);
+      root.addEventListener?.('blur', () => this.touchController.finish());
+      root.addEventListener?.('pagehide', () => this.touchController.finish());
+      root.document?.addEventListener('visibilitychange', () => {
+        if (root.document.hidden) this.touchController.finish();
+      });
+      this.canvas.on('object:added', () => this.updateTouchControls());
+      this.canvas.on('selection:created', () => this.updateTouchControls());
+      this.canvas.on('selection:updated', () => this.updateTouchControls());
+      const enabled = event => this.mobileViewport || (this.touchMedia.matches && event.pointerType === 'touch');
+      this.scroll.addEventListener('pointerdown', event => {
+        if (!enabled(event) || event.button > 0) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        try { this.scroll.setPointerCapture(event.pointerId); } catch { /* Synthetic fixture events have no capture. */ }
+        this.touchController.down(event.pointerId, { x: event.clientX, y: event.clientY });
+      }, true);
+      this.scroll.addEventListener('pointermove', event => {
+        if (!this.touchController.points.has(event.pointerId)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this.touchController.move(event.pointerId, { x: event.clientX, y: event.clientY });
+      }, true);
+      for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+        this.scroll.addEventListener(name, event => {
+          if (!this.touchController.points.has(event.pointerId)) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          this.touchController.up(event.pointerId);
+        }, true);
+      }
+      // Fabric's default touch listener must not run alongside our Pointer Events
+      // controller. Prevent compatibility mouse events as well as native scrolling.
+      for (const name of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+        this.scroll.addEventListener(name, event => {
+          if (!this.touchMedia.matches && !this.mobileViewport) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }, { capture: true, passive: false });
+      }
+      this.updateTouchControls();
+    }
+
+    updateTouchControls() {
+      const controls = !(this.mobileViewport || this.touchMedia?.matches);
+      for (const object of [...this.canvas.getObjects(), this.canvas.getActiveObject()].filter(Boolean)) {
+        object.set({ hasControls: controls });
+      }
+      this.canvas.requestRenderAll();
+    }
+
+    touchScenePoint(point) {
+      const rect = this.shell.getBoundingClientRect();
+      return new root.fabric.Point((point.x - rect.left) / rect.width * this.canvasWidth,
+        (point.y - rect.top) / rect.height * this.canvasHeight);
+    }
+
+    touchTarget(point) {
+      const scene = this.touchScenePoint(point);
+      if (scene.x < 0 || scene.y < 0 || scene.x > this.canvasWidth || scene.y > this.canvasHeight) return null;
+      const active = this.canvas.getActiveObject();
+      if (this.isActiveSelection(active) && active.containsPoint(scene)) return active;
+      const objects = this.canvas.getObjects().filter(object => object.selectable !== false);
+      const exact = this.canvas.searchPossibleTargets(objects, scene).target;
+      if (exact) return exact;
+      // A small CSS-pixel tolerance makes tiny words selectable without inflating
+      // every object's handles or letting an already selected word grab the page.
+      const tolerance = 10 * this.canvasWidth / this.shell.getBoundingClientRect().width;
+      let nearest = null, best = tolerance;
+      for (const object of [...objects].reverse()) {
+        const box = object.getBoundingRect();
+        const d = Math.hypot(Math.max(box.left - scene.x, 0, scene.x - box.left - box.width),
+          Math.max(box.top - scene.y, 0, scene.y - box.top - box.height));
+        if (d < best) { best = d; nearest = object; }
+      }
+      return nearest;
+    }
+
+    setMobileViewport(enabled) {
+      this.touchController?.finish();
+      if (enabled === Boolean(this.mobileViewport)) return;
+      if (enabled) {
+        this.inlineZoom = this.zoom;
+        this.mobileViewport = true;
+        this.mobilePanX = this.mobilePanY = 0;
+        this.setZoom(1);
+      } else {
+        this.mobileViewport = false;
+        this.shell.style.removeProperty('transform');
+        this.setZoom(this.inlineZoom || 1);
+      }
+      this.updateTouchControls();
     }
 
     beginTextEditing(object) {
@@ -1066,6 +1218,7 @@
     }
 
     setDesign(design, { resetHistory = false, record = false } = {}) {
+      this.touchController?.finish();
       this.fontChangeRevision = (this.fontChangeRevision || 0) + 1;
       this.suspended = true;
       this.canvas.discardActiveObject();
@@ -1120,6 +1273,7 @@
     }
 
     setSafeArea(area) {
+      this.touchController?.finish();
       this.safeArea = area;
       const bounds = this.getSafeArea();
       this.defaultX = bounds.x + bounds.width / 2;
@@ -1140,7 +1294,7 @@
     }
 
     refreshViewport() {
-      if (!this.shell || !this.scroll) return;
+      if (!this.shell || !this.scroll || !this.scroll.clientWidth || !this.scroll.clientHeight) return;
       const styles = getComputedStyle(this.scroll);
       const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
       const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
@@ -1151,10 +1305,18 @@
       const fitHeight = fitWidth / aspect;
       this.shell.style.width = `${fitWidth * this.zoom}px`;
       this.shell.style.height = `${fitHeight * this.zoom}px`;
+      if (this.mobileViewport) {
+        const limitX = Math.max(0, (fitWidth * this.zoom - viewportWidth) / 2);
+        const limitY = Math.max(0, (fitHeight * this.zoom - viewportHeight) / 2);
+        this.mobilePanX = Math.max(-limitX, Math.min(limitX, this.mobilePanX || 0));
+        this.mobilePanY = Math.max(-limitY, Math.min(limitY, this.mobilePanY || 0));
+        this.shell.style.transform = `translate(-50%, -50%) translate(${this.mobilePanX}px, ${this.mobilePanY}px)`;
+      }
       this.canvas?.calcOffset();
     }
 
     resizePrintArea({ printWidth, printHeight, printFileDpi, defaultX, defaultY, safeMargin, safeArea }) {
+      this.touchController?.finish();
       const nextWidth = Number(printWidth);
       const nextHeight = Number(printHeight);
       if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight) || nextWidth < 1 || nextHeight < 1) {
@@ -1403,10 +1565,12 @@
     }
 
     undo() {
+      this.touchController?.finish();
       this.restoreHistory(this.historyIndex - 1);
     }
 
     redo() {
+      this.touchController?.finish();
       this.restoreHistory(this.historyIndex + 1);
     }
 
@@ -1445,8 +1609,10 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
-      this.textInput.focus();
-      this.textInput.select();
+      if (!this.openTextEditor?.()) {
+        this.textInput.focus();
+        this.textInput.select();
+      }
       this.setFeedback('Neues Wort hinzugefügt');
     }
 
@@ -2186,7 +2352,8 @@
     }
 
     setZoom(nextZoom) {
-      this.zoom = Math.min(2, Math.max(1, Math.round(nextZoom * 4) / 4));
+      const maximum = this.mobileViewport ? 6 : 2;
+      this.zoom = Math.min(maximum, Math.max(1, this.mobileViewport ? nextZoom : Math.round(nextZoom * 4) / 4));
       this.scroll.classList.toggle('is-fit', this.zoom === 1);
       this.refreshViewport();
       if (this.zoom === 1) {
@@ -2194,8 +2361,9 @@
         this.scroll.scrollTop = 0;
       }
       this.zoomOutButton.disabled = this.zoom === 1;
-      this.zoomInButton.disabled = this.zoom === 2;
+      this.zoomInButton.disabled = this.zoom === maximum;
       this.zoomLabel.textContent = `${Math.round(this.zoom * 100)} %`;
+      this.onViewChange?.(this.zoom);
     }
 
     setFeedback(message, params) {

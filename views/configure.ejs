@@ -2179,6 +2179,7 @@
         <div class="workspace-shell">
         <section class="workspace-tools" id="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
               <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
+                <button type="button" class="editor-button mobile-canvas-open-button" id="editor-mobile-open" aria-haspopup="dialog" aria-controls="mobile-canvas-dialog">Canvas-Modus öffnen</button>
                   <div class="surface-editor" id="surface-editor" hidden>
                     <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
                     <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
@@ -2313,7 +2314,7 @@
           <section class="preview-card" aria-labelledby="preview-title">
             <div class="preview-head">
               <h2 class="workspace-section-title" id="preview-title">Euer Design</h2>
-              <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="design-toolbar editor-card">
+              <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog">
                 <span id="mobile-editor-toggle-label">Design anpassen</span><span class="mobile-editor-caret" aria-hidden="true"></span>
               </button>
               <div class="mobile-preview-summary">
@@ -2448,7 +2449,10 @@
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
   <script src="<%= asset('/js/mug-editor.js') %>"></script>
+  <%- include('partials/mobile-canvas') %>
   <script src="<%= asset('/js/configurator-workspace.js') %>"></script>
+  <script src="<%= asset('/js/canvas-touch.js') %>"></script>
+  <script src="<%= asset('/js/mobile-canvas-workspace.js') %>"></script>
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script src="<%= asset('/js/configurator-toolbar.js') %>"></script>
@@ -2661,10 +2665,9 @@
       mobileEditorExpanded = Boolean(expanded);
       configStudio.dataset.mobileEditorExpanded = String(mobileEditorExpanded);
       content.dataset.mobileEditorExpanded = String(mobileEditorExpanded);
-      mobileEditorToggle.setAttribute('aria-expanded', String(mobileEditorExpanded));
+      mobileEditorToggle.setAttribute('aria-expanded', String(Boolean(workspace.mobileCanvas?.active)));
       mobileEditorCollapse.setAttribute('aria-expanded', String(mobileEditorExpanded));
-      setText(mobileEditorToggleLabel, mobileEditorExpanded
-        ? 'Nur Vorschau anzeigen' : 'Design anpassen');
+      setText(mobileEditorToggleLabel, 'Design anpassen');
       setText(mobileEditorCollapseLabel, 'Nur Vorschau anzeigen');
       updateCartActions();
 
@@ -2693,6 +2696,7 @@
     }
 
     mobileEditorToggle.addEventListener('click', () => {
+      if (workspace.mobileCanvas?.open(mobileEditorToggle)) return;
       setMobileEditorExpanded(!mobileEditorExpanded);
     });
 
@@ -3878,6 +3882,13 @@
       // Font/emoji loading can schedule this while the workspace is hidden.
       // Do not turn a temporary zero width into a persistent tiny print area.
       if (!product) return;
+      if (workspace.mobileCanvas?.active) {
+        mugEditor?.refreshViewport();
+        workspace.mobileCanvas.updateHint();
+        refreshFlatProductPreviewFit();
+        resizeMug3D();
+        return;
+      }
       if (!editorScroll.clientWidth) {
         refreshFlatProductPreviewFit();
         resizeMug3D();
@@ -4627,6 +4638,11 @@
           mugEditor.setFeedback(directDesign ? 'Design zurückgesetzt' : 'Automatische Wortwolke wiederhergestellt');
           markDirty();
         }),
+      });
+      workspace.mobileCanvas = new MobileCanvasWorkspace({ document, editor: mugEditor, workspace,
+        onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
+        onExit: () => { if (mobileEditorMedia.matches) setMobileEditorExpanded(false, { scroll: false }); },
+        onLayout: () => { refreshWorkspaceLayout(); renderAll(); },
       });
       mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
       resetSurfaceStates(mugEditor.getState());

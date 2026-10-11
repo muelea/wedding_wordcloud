@@ -82,6 +82,7 @@
     }
 
     mountInspector() {
+      if (this.mobileCanvas?.active) return;
       if (this.media.matches) {
         this.compactToolbarHost.append(this.toolbar);
         this.compactHost.append(this.selection);
@@ -141,9 +142,11 @@
 
     updateSelection(capabilities) {
       this.capabilities = capabilities;
+      this.mobileCanvas?.updateSelection();
     }
 
     openTextEditor() {
+      if (this.mobileCanvas?.active) return this.mobileCanvas.openTextEditor();
       if (!this.media.matches || !this.capabilities.text) return false;
       const input = this.document.getElementById('editor-text');
       if (!input || input.disabled) return false;

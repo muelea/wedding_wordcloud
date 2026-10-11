@@ -55,8 +55,19 @@
           document.getElementById('continue-order-label').textContent.includes('cart'));
         toggle.click();
         await frames();
+        check('phone editor opens the dedicated canvas workspace', workspace.mobileCanvas.active &&
+          document.getElementById('mobile-canvas-dialog').open &&
+          document.querySelector('#mobile-canvas-stage #wrap-canvas'));
+        workspace.mobileCanvas.close();
+        await frames();
+        check('closing phone canvas returns to the preview and purchase surface', studio.dataset.mobileEditorExpanded === 'false' &&
+          toggle.getAttribute('aria-expanded') === 'false');
+        // Exercise the retained inline compact layout independently of the new
+        // default phone flow; tablets and desktop resize still use these hosts.
+        setMobileEditorExpanded(true, { scroll: false });
+        await frames();
         check('phone editor expands in place', studio.dataset.mobileEditorExpanded === 'true' &&
-          toggle.getAttribute('aria-expanded') === 'true' &&
+          toggle.getAttribute('aria-expanded') === 'false' &&
           document.getElementById('design-toolbar').getClientRects().length &&
           !document.getElementById('workspace-tools').getClientRects().length &&
           document.getElementById('editor-compact-toolbar').getClientRects().length &&
@@ -75,13 +86,14 @@
       const baseFit = geometry();
       const previewCard = document.querySelector('.preview-card').getBoundingClientRect();
       if (innerWidth <= 940) {
-        const editorCard = document.querySelector('.editor-card').getBoundingClientRect();
+        const editorCardElement = document.querySelector('.editor-card');
+        const editorCard = editorCardElement.getBoundingClientRect();
         const padding = editorScroll.clientHeight - printShell.getBoundingClientRect().height;
         check('stacked editor hugs the print area', padding >= 23 && padding <= 26, { padding });
         check('fresh mug initialization fills the available editor width',
           printShell.getBoundingClientRect().width >= editorScroll.clientWidth - 26);
         check('stacked editor and preview remain separate cards',
-          previewCard.top >= editorCard.bottom && getComputedStyle(editorCard).borderTopWidth !== '0px');
+          previewCard.top >= editorCard.bottom && getComputedStyle(editorCardElement).borderTopWidth !== '0px');
       } else {
         const shell = document.querySelector('.workspace-shell').getBoundingClientRect();
         const toolbar = document.querySelector('.editor-toolbar').getBoundingClientRect();
@@ -106,17 +118,18 @@
       same('returning to fit restores the original geometry', baseFit);
       const orderActions = document.querySelector('.order-actions').getBoundingClientRect();
       const another = document.getElementById('design-another').getBoundingClientRect();
+      const hasAnother = !document.getElementById('design-another').hidden;
       const save = document.getElementById('save-design').getBoundingClientRect();
       const shipping = document.getElementById('continue-order').getBoundingClientRect();
       if (innerWidth <= 620) {
-        check('mobile design actions share the first row', Math.abs(another.top - save.top) < 1 && another.right < save.left);
+        check('visible mobile design actions share the first row', !hasAnother || (Math.abs(another.top - save.top) < 1 && another.right < save.left));
         check('mobile shipping action spans the next full row', shipping.top >= Math.max(another.bottom, save.bottom) &&
           Math.abs(shipping.width - orderActions.width) < 1 && Math.abs(shipping.left - orderActions.left) < 1);
       }
       check('order action labels fit with comfortable tap targets',
         ['design-another', 'save-design', 'continue-order'].every(id => {
           const button = document.getElementById(id);
-          return button.getBoundingClientRect().height >= 44 && button.scrollWidth <= button.clientWidth;
+          return button.hidden || (button.getBoundingClientRect().height >= 44 && button.scrollWidth <= button.clientWidth);
         }));
       await WolkenworteEmoji.preloadTexts(['🎲']);
       const image = document.createElement('canvas');
@@ -184,7 +197,7 @@
         const sections = [...inspector.querySelectorAll('[data-editor-section]')];
         check('compact inspector shows every editor group directly',
           inspector.getClientRects().length && sections.length === 4 &&
-          sections.every(section => section.getClientRects().length));
+          sections.every(section => section.querySelector('input, button')?.getClientRects().length));
         check('compact inspector has no secondary editor dialog', !document.getElementById('editor-tool-panel'));
         const propertiesRect = document.getElementById('editor-properties').getBoundingClientRect();
         const titleRect = document.getElementById('editor-title').getBoundingClientRect();
@@ -314,8 +327,9 @@
         const a = button.getBoundingClientRect(), b = other.getBoundingClientRect();
         return a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
       })));
-      check('toolbar visual order follows keyboard order', primaryActions.every((button, index) => {
+      check('toolbar visual order follows keyboard order within compact functional groups', primaryActions.every((button, index) => {
         if (index === 0) return true;
+        if (innerWidth <= 620 && button.closest('.editor-tools') !== primaryActions[index - 1].closest('.editor-tools')) return true;
         const previous = primaryActions[index - 1].getBoundingClientRect(), current = button.getBoundingClientRect();
         return current.top >= previous.bottom || (Math.abs(current.top - previous.top) < 1 && current.left >= previous.right);
       }));

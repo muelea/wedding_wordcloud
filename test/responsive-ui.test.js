@@ -189,7 +189,7 @@ test('the personal display palette is handed off to the configurator', () => {
 
 test('the phone configurator starts with one preview-first purchase path', () => {
   assert.match(configure, /id="config-studio" data-mobile-editor-expanded="false"/);
-  assert.match(configure, /id="mobile-editor-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="design-toolbar editor-card"/);
+  assert.match(configure, /id="mobile-editor-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="mobile-canvas-dialog"[^>]*aria-haspopup="dialog"/);
   assert.match(configure, /id="mobile-editor-collapse"[^>]*aria-expanded="true"[^>]*aria-controls="design-toolbar editor-card"/);
   assert.match(configure, /id="mobile-selected-product-name"/);
   assert.match(configure, /id="mobile-selected-theme-swatches"/);

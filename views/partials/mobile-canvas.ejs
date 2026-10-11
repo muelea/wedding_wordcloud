@@ -1,0 +1,54 @@
+<dialog class="mobile-canvas-dialog" id="mobile-canvas-dialog" aria-labelledby="mobile-canvas-title">
+  <header class="mobile-canvas-header">
+    <strong id="mobile-canvas-title">Design bearbeiten</strong>
+    <nav aria-label="Ansicht wählen">
+      <button type="button" data-canvas-view="canvas" aria-pressed="true">Canvas</button>
+      <button type="button" data-canvas-view="product" aria-pressed="false">Produkt</button>
+    </nav>
+    <button type="button" id="mobile-canvas-settings-toggle" aria-label="Produkt und Farben" aria-controls="mobile-canvas-drawer" aria-expanded="false">
+      <svg class="editor-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#editor-icon-palette"></use></svg>
+    </button>
+    <button type="button" id="mobile-canvas-close" aria-label="Canvas-Modus schließen">×</button>
+  </header>
+  <div class="mobile-canvas-body">
+    <nav class="mobile-canvas-rail" aria-label="Canvas-Werkzeuge">
+      <% for (const tool of [{ key:'move', label:'Bewegen', icon:'arrow-right' },
+        { key:'view', label:'Ansicht', icon:'zoom-in' }, { key:'properties', label:'Anpassen', icon:'sliders-horizontal' },
+        { key:'add', label:'Neu', icon:'plus' }, { key:'elements', label:'Elemente', icon:'scan' }]) { %>
+      <button type="button" data-canvas-tool="<%= tool.key %>" aria-pressed="<%= tool.key === 'move' %>">
+        <svg class="editor-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#editor-icon-<%= tool.icon %>"></use></svg>
+        <span><%= tool.label %></span>
+      </button>
+      <% } %>
+    </nav>
+    <div class="mobile-canvas-stage" id="mobile-canvas-stage"></div>
+    <div class="mobile-canvas-product" id="mobile-canvas-product" hidden></div>
+    <aside class="mobile-canvas-drawer" id="mobile-canvas-drawer" aria-labelledby="mobile-canvas-panel-title" hidden>
+      <div class="mobile-canvas-drawer-head"><strong id="mobile-canvas-panel-title">Anpassen</strong>
+        <button type="button" id="mobile-canvas-panel-close" aria-label="Werkzeuge schließen">×</button></div>
+      <div class="mobile-canvas-drawer-content">
+        <div id="mobile-canvas-properties" hidden></div>
+        <div id="mobile-canvas-settings" hidden></div>
+        <div id="mobile-canvas-add" hidden>
+          <div class="mobile-canvas-emojis" role="group" aria-label="Emoji hinzufügen">
+            <% for (const emoji of ['❤️', '✨', '🥂', '💍', '🥰', '🎉']) { %>
+            <button type="button" data-canvas-emoji="<%= emoji %>" aria-label="<%= emoji %>"><%= emoji %></button>
+            <% } %>
+          </div>
+        </div>
+        <div id="mobile-canvas-elements" hidden>
+          <label for="mobile-canvas-search">Element suchen</label>
+          <input id="mobile-canvas-search" type="search" autocomplete="off" />
+          <div id="mobile-canvas-element-list"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <footer class="mobile-canvas-footer">
+    <span id="mobile-canvas-hint" role="status">Ein Finger bewegt · Zwei Finger vergrößern und drehen</span>
+    <div id="mobile-canvas-surfaces"></div>
+    <div id="mobile-canvas-history"></div>
+    <div id="mobile-canvas-zoom"></div>
+    <button type="button" id="mobile-canvas-fit" aria-label="Einpassen" aria-describedby="editor-zoom-label">100 %</button>
+  </footer>
+</dialog>

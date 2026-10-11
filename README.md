@@ -57,7 +57,16 @@ frozen snapshot of the word cloud.
    Phones open on a preview-first purchase surface: the finished product, its
    compact product/palette summary and the explicit “In den Warenkorb & zur
    Lieferadresse” action stay ahead of the collapsed editor. “Design anpassen”
-   reveals the existing editor without creating a second draft or editor state.
+   opens a dedicated fullscreen canvas workspace without creating a second draft
+   or editor state. A compact side toolbar leaves the print area prominent;
+   Canvas/Product switches reuse the same Fabric canvas and real product preview.
+   A header button keeps product, palette and orientation choices available.
+   Wide print areas suggest turning the phone sideways; portrait and square
+   products keep their own proportions. One finger moves an element. Adding a
+   second finger scales/rotates that same element, even if the second contact
+   lands elsewhere. Background gestures pan/zoom the view; the View tool always
+   navigates without editing objects. Each completed transform is one Undo step.
+   Explicit adjustment buttons remain available for single-finger operation.
    With an empty basket the primary continuation action adds the current design
    before opening shipping. With an existing basket it simply reads “Zur
    Lieferadresse”; if the current draft or edits would otherwise be omitted, one
