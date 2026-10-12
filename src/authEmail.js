@@ -32,7 +32,8 @@ const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 function signingKey() {
   const value=String(process.env.AUTH_EMAIL_HOOK_SECRET||'').replace(/^(?:v1,)?whsec_/,'');
   const bytes=Buffer.from(value,'base64');
-  if(bytes.length!==32||bytes.toString('base64')!==value) throw db.accountError('auth_email_unconfigured',503);
+  // Supabase's dashboard generates a longer HMAC key than the AES session key.
+  if(bytes.length<32||bytes.length>128||bytes.toString('base64')!==value) throw db.accountError('auth_email_unconfigured',503);
   return bytes;
 }
 

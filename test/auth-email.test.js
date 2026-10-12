@@ -8,9 +8,9 @@ const key=Buffer.alloc(32,4);
 process.env.AUTH_EMAIL_HOOK_SECRET='v1,whsec_'+key.toString('base64');
 function fixture(type='signup',language='de') {return {user:{email:'old@example.test',new_email:'new@example.test',user_metadata:{language}},
   email_data:{email_action_type:type,token:'123456',token_new:'654321',old_email:'previous@example.test',redirect_to:'https://attacker.example'}};}
-function signed(payload,id='hook_test',seconds=Math.floor(Date.now()/1000)) {
+function signed(payload,id='hook_test',seconds=Math.floor(Date.now()/1000),signingKey=key) {
   const raw=Buffer.from(JSON.stringify(payload));const headers={'webhook-id':id,'webhook-timestamp':String(seconds),
-    'webhook-signature':'v1,'+crypto.createHmac('sha256',key).update(`${id}.${seconds}.`).update(raw).digest('base64')};
+    'webhook-signature':'v1,'+crypto.createHmac('sha256',signingKey).update(`${id}.${seconds}.`).update(raw).digest('base64')};
   return {raw,headers};
 }
 test('Auth mail verifies the exact signed body and rejects expired, modified and missing signatures',()=>{
@@ -20,6 +20,22 @@ test('Auth mail verifies the exact signed body and rejects expired, modified and
   assert.throws(()=>email.verify(raw,{}),/invalid_signature/);
   const expired=signed(fixture(),'hook_expired',Math.floor(Date.now()/1000)-301);
   assert.throws(()=>email.verify(expired.raw,expired.headers),/invalid_signature/);
+});
+test('Auth mail accepts longer dashboard HMAC keys while rejecting weak or malformed keys',()=>{
+  const previous=process.env.AUTH_EMAIL_HOOK_SECRET;
+  try {
+    for(const length of [32,60,64,128]) {
+      const dashboardKey=Buffer.alloc(length,7);
+      process.env.AUTH_EMAIL_HOOK_SECRET='v1,whsec_'+dashboardKey.toString('base64');
+      const {raw,headers}=signed(fixture(),'dashboard_key',Math.floor(Date.now()/1000),dashboardKey);
+      assert.equal(email.verify(raw,headers).id,'dashboard_key');
+    }
+    for(const value of [Buffer.alloc(31).toString('base64'),Buffer.alloc(129).toString('base64'),key.toString('base64')+'!']) {
+      process.env.AUTH_EMAIL_HOOK_SECRET='v1,whsec_'+value;
+      const {raw,headers}=signed(fixture());
+      assert.throws(()=>email.verify(raw,headers),/auth_email_unconfigured/);
+    }
+  } finally { process.env.AUTH_EMAIL_HOOK_SECRET=previous; }
 });
 test('secure email change sends the correct OTP to each address and notifications go to the former address',()=>{
   const messages=email.messages(fixture('email_change'),'test-id');assert.equal(messages.length,2);

@@ -123,7 +123,8 @@ function designAccountSettings(env=process.env) {
   for(const name of ['AUTH_SESSION_SECRET','AUTH_EMAIL_HOOK_SECRET']) {
     const raw=values[name].replace(/^(?:v1,)?whsec_/,'');
     const key=Buffer.from(raw,'base64');
-    if(key.length!==32||key.toString('base64')!==raw) fail(`${name} must contain a 32-byte Base64 key.`);
+    const validLength=name==='AUTH_SESSION_SECRET'?key.length===32:key.length>=32&&key.length<=128;
+    if(!validLength||key.toString('base64')!==raw) fail(`${name} must contain a ${name==='AUTH_SESSION_SECRET'?'32-byte':'32–128-byte'} Base64 key.`);
   }
   if(values.AUTH_SESSION_SECRET===values.AUTH_EMAIL_HOOK_SECRET.replace(/^(?:v1,)?whsec_/,'')) fail('Account signing and encryption keys must be independent.');
   if(!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(values.SUPABASE_DESIGNS_BUCKET)||values.SUPABASE_DESIGNS_BUCKET==='wolkenworte-private') fail('Account Storage must use its separate private bucket.');
