@@ -2,6 +2,7 @@
 
 const stripeConfig = require('./stripeConfig');
 const analyticsConfig = require('./analyticsConfig');
+const authSecrets = require('./authSecrets');
 
 function flag(name) {
   return String(process.env[name] || 'false').trim().toLowerCase();
@@ -54,12 +55,12 @@ function validateRuntimeConfig() {
     if(flag('DESIGN_ACCOUNTS_ENABLED')==='true') {
       if(!String(process.env.SUPABASE_PUBLISHABLE_KEY||'').startsWith('sb_publishable_')) errors.push('Designkonten benötigen den Supabase-Publishable-Key.');
       const sessionSecret=String(process.env.AUTH_SESSION_SECRET||'');
-      const sessionKey=Buffer.from(sessionSecret,'base64');
-      if(sessionKey.length!==32 || sessionKey.toString('base64')!==sessionSecret) errors.push('AUTH_SESSION_SECRET muss ein unabhängiger Base64-Schlüssel mit 32 Bytes sein.');
+      const sessionKey=authSecrets.sessionKey(sessionSecret);
+      if(!sessionKey) errors.push('AUTH_SESSION_SECRET muss ein unabhängiger Base64-Schlüssel mit 32 Bytes sein.');
       if([process.env.RATE_LIMIT_HMAC_SECRET,process.env.MAINTENANCE_SECRET,process.env.AUTH_EMAIL_HOOK_SECRET].includes(sessionSecret)) errors.push('AUTH_SESSION_SECRET muss unabhängig sein.');
-      const hookSecret=String(process.env.AUTH_EMAIL_HOOK_SECRET||'').replace(/^(?:v1,)?whsec_/,'');
-      const hookKey=Buffer.from(hookSecret,'base64');
-      if(hookKey.length!==32||hookKey.toString('base64')!==hookSecret) errors.push('Designkonten benötigen AUTH_EMAIL_HOOK_SECRET mit 32 Bytes.');
+      const hookKey=authSecrets.emailHookKey(process.env.AUTH_EMAIL_HOOK_SECRET);
+      if(!hookKey) errors.push('Designkonten benötigen AUTH_EMAIL_HOOK_SECRET mit 32–128 Bytes.');
+      if(sessionKey&&hookKey&&sessionKey.equals(hookKey)) errors.push('AUTH_SESSION_SECRET muss unabhängig sein.');
       if(authEmailMode!=='live'||!String(process.env.RESEND_API_KEY||'').trim()) errors.push('Designkonten benötigen Resend-Liveversand für Auth-E-Mails.');
     }
     const designsBucket=String(process.env.SUPABASE_DESIGNS_BUCKET||'wolkenworte-designs');

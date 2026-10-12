@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { assertGitReleaseCandidate, validateOperatorEnvironment } = require('./deploy-hosted');
+const authSecrets = require('../src/authSecrets');
 
 const ROOT = path.join(__dirname, '..');
 const APP_NAME = 'wolkenworte';
@@ -121,10 +122,8 @@ function designAccountSettings(env=process.env) {
   if(values.DESIGN_ACCOUNTS_ENABLED!=='true'||values.AUTH_EMAIL_DELIVERY_MODE!=='live') fail('Account activation requires DESIGN_ACCOUNTS_ENABLED=true and AUTH_EMAIL_DELIVERY_MODE=live locally.');
   if(!values.SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_')) fail('Account activation requires a Supabase publishable key.');
   for(const name of ['AUTH_SESSION_SECRET','AUTH_EMAIL_HOOK_SECRET']) {
-    const raw=values[name].replace(/^(?:v1,)?whsec_/,'');
-    const key=Buffer.from(raw,'base64');
-    const validLength=name==='AUTH_SESSION_SECRET'?key.length===32:key.length>=32&&key.length<=128;
-    if(!validLength||key.toString('base64')!==raw) fail(`${name} must contain a ${name==='AUTH_SESSION_SECRET'?'32-byte':'32–128-byte'} Base64 key.`);
+    const key=name==='AUTH_SESSION_SECRET'?authSecrets.sessionKey(values[name]):authSecrets.emailHookKey(values[name]);
+    if(!key) fail(`${name} must contain a ${name==='AUTH_SESSION_SECRET'?'32-byte':'32–128-byte'} Base64 key.`);
   }
   if(values.AUTH_SESSION_SECRET===values.AUTH_EMAIL_HOOK_SECRET.replace(/^(?:v1,)?whsec_/,'')) fail('Account signing and encryption keys must be independent.');
   if(!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(values.SUPABASE_DESIGNS_BUCKET)||values.SUPABASE_DESIGNS_BUCKET==='wolkenworte-private') fail('Account Storage must use its separate private bucket.');

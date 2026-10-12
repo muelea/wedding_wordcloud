@@ -5,6 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const db = require('./db');
 const { parseCookies, resolvePageLocale } = require('./pageRenderer');
 const { sourceHashForRequest } = require('./clientIdentity');
+const authSecrets = require('./authSecrets');
 
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -16,8 +17,8 @@ const isTest = () => process.env.NODE_ENV === 'test';
 
 function encryptionKey() {
   const raw = String(process.env.AUTH_SESSION_SECRET || '');
-  const key = Buffer.from(raw, 'base64');
-  if (key.length === 32 && key.toString('base64') === raw) return key;
+  const key = authSecrets.sessionKey(raw);
+  if (key) return key;
   if (process.env.NODE_ENV !== 'production') return localKey;
   throw db.accountError('account_unavailable', 503);
 }
