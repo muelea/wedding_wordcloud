@@ -436,6 +436,11 @@ go to the previous address. Keep tracking off. Confirm signup, recovery and both
 email-change destinations with a controlled inbox after activation. Never log
 codes, callback URLs, credentials or message bodies.
 
+The email-hook HMAC signing key accepts canonical Base64 encoding of 32–128
+bytes, including Supabase's `v1,whsec_...` dashboard format. The independent
+`AUTH_SESSION_SECRET` remains exactly 32 bytes of canonical Base64 for AES-256
+session encryption. Never reuse one key for both purposes.
+
 Recovery safeguards remain the maintainer's existing deferred operational
 decision in [launch-readiness](docs/launch-readiness.md). Supabase database
 backups do not include Storage bytes; the editable bucket needs separate backup

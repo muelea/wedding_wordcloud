@@ -256,24 +256,48 @@ production data exists.
 
 ### Optional design account activation
 
-The optional library implementation is separate from the paid-sales cutover.
-Guest participation and checkout remain account-free. Before enabling it:
+The optional library was activated on 2026-10-12 through the approved production
+release of `1b12c99e6349f0199a8eb060d3a9fb13f8f7e5a4`. Guest participation and
+checkout remain account-free. Activation evidence and the remaining branding
+follow-up are recorded here:
 
-- [ ] Review the account/privacy UI and the exact candidate commit, then approve
+- [x] Review the account/privacy UI and the exact candidate commit, then approve
   the guarded production `release` with `--enable-design-accounts`.
-- [ ] Supply the current Supabase publishable key and independent account-session
+- [x] Supply the current Supabase publishable key and independent account-session
   and HTTP email-hook secrets in the ignored operator `.env`. The release option
   stages only these account settings after verification; no ad-hoc deployment.
-- [ ] Apply schema 6 through the release migration gate and verify the new private
+- [x] Apply schema 6 through the release migration gate and verify the new private
   `wolkenworte-designs` bucket and runtime-only account table permissions.
-- [ ] Publish Google OAuth from Testing to Production and verify its minimal
-  scopes, domain branding and exact callbacks for ordinary customer accounts.
-- [ ] After the handler is deployed, activate the signed Supabase Send Email HTTP
+- [x] Publish Google OAuth from Testing to Production and verify its minimal
+  identity scopes and exact callbacks. A real Google sign-in returned to the
+  deployed library and created a verified application account and server session.
+- [ ] Retry Google's branding check after its stated 24-hour ownership-update
+  period. The approved root TXT record was added and Search Console verified
+  `wolkenworte.io` for the project-owner account on 2026-10-12. Branding remains
+  pending; functional Google sign-in is published and verified.
+- [x] After the handler is deployed, activate the signed Supabase Send Email HTTP
   hook at `https://wolkenworte.io/auth/email-hook`; verify localized verification,
   recovery, both email-change codes and seller Reply-To through Resend.
-- [ ] Run controlled production checks for save/reopen, deletion and account
+- [x] Run controlled production checks for save/reopen, deletion and account
   deletion; verify the maintenance completion heartbeat and cleanup queues.
   Never use customer data as fixtures.
+
+The release passed all 699 application tests and all 37 Linux image/font checks.
+Fly Machine `185e6ddc9d1548`, version 95, was verified in the reviewed active production
+posture in Frankfurt with passing readiness. Public health, canonical redirect,
+webhook reachability and the account-free homepage passed. Account runtime
+secrets were verified deployed without exposing their values.
+
+Controlled live checks covered explicit save/update and reopen with formatting,
+private previews, cross-account isolation, immediate design-file deletion,
+password recovery with restricted recovery sessions, both email-change
+confirmations, security notifications and account deletion with session
+revocation. A browser check confirmed later edits leave the account copy
+unchanged until another explicit save. The library showed the three-month
+expiry date. All marked email/Google fixtures and private files were removed;
+pending account deletions and design-file deletions were both zero. The bounded
+maintenance verification stored a successful completion at
+`2026-10-12T23:36:32.659Z`.
 
 The existing deferred backup decision below also applies to editable design
 files. Storage bytes require their own backup if adopted. A restore must replay
