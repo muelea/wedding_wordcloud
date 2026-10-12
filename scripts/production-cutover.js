@@ -111,6 +111,24 @@ const CONFIG_ONLY_NAMES = new Set([
   'MIGRATION_DATABASE_URL',
   'TEST_DATABASE_URL',
 ]);
+const DESIGN_ACCOUNT_SETTINGS=Object.freeze(['DESIGN_ACCOUNTS_ENABLED','SUPABASE_PUBLISHABLE_KEY',
+  'AUTH_SESSION_SECRET','SUPABASE_DESIGNS_BUCKET','AUTH_EMAIL_HOOK_SECRET','AUTH_EMAIL_DELIVERY_MODE','AUTH_RESEND_FROM_EMAIL']);
+
+function designAccountSettings(env=process.env) {
+  const values=Object.fromEntries(DESIGN_ACCOUNT_SETTINGS.map(name=>[name,normalized(env[name])]));
+  values.SUPABASE_DESIGNS_BUCKET ||= 'wolkenworte-designs';
+  values.AUTH_RESEND_FROM_EMAIL ||= 'Wolkenworte <konto@mail.wolkenworte.io>';
+  if(values.DESIGN_ACCOUNTS_ENABLED!=='true'||values.AUTH_EMAIL_DELIVERY_MODE!=='live') fail('Account activation requires DESIGN_ACCOUNTS_ENABLED=true and AUTH_EMAIL_DELIVERY_MODE=live locally.');
+  if(!values.SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_')) fail('Account activation requires a Supabase publishable key.');
+  for(const name of ['AUTH_SESSION_SECRET','AUTH_EMAIL_HOOK_SECRET']) {
+    const raw=values[name].replace(/^(?:v1,)?whsec_/,'');
+    const key=Buffer.from(raw,'base64');
+    if(key.length!==32||key.toString('base64')!==raw) fail(`${name} must contain a 32-byte Base64 key.`);
+  }
+  if(values.AUTH_SESSION_SECRET===values.AUTH_EMAIL_HOOK_SECRET.replace(/^(?:v1,)?whsec_/,'')) fail('Account signing and encryption keys must be independent.');
+  if(!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(values.SUPABASE_DESIGNS_BUCKET)||values.SUPABASE_DESIGNS_BUCKET==='wolkenworte-private') fail('Account Storage must use its separate private bucket.');
+  return values;
+}
 
 function fail(message) {
   throw new Error(message);
@@ -161,7 +179,7 @@ function validateCutoverConfig(text, posture) {
     fail(`${CONFIGS[posture]} must set min_machines_running=${MIN_MACHINES[posture]}.`);
   }
   if (/^\s*release_command\s*=/m.test(text)) fail('Database migrations must not run as a Fly release_command.');
-  for (const name of [...COMMON_RUNTIME_SECRETS, ...TEST_STRIPE_SECRETS, ...LIVE_STRIPE_SECRETS,
+  for (const name of [...COMMON_RUNTIME_SECRETS, ...TEST_STRIPE_SECRETS, ...LIVE_STRIPE_SECRETS, 'AUTH_SESSION_SECRET','AUTH_EMAIL_HOOK_SECRET',
     'MIGRATION_DATABASE_URL', 'TEST_DATABASE_URL']) {
     if (new RegExp(`^\\s*${name}\\s*=`, 'm').test(text)) {
       fail(`${name} must not be committed to a Fly config.`);
@@ -310,7 +328,7 @@ function validateMachinePosture(json, posture, { requireHealthy = false } = {}) 
 function parseOptions(argv = process.argv.slice(2)) {
   const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm', 'release']);
   const options = {
-    phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false,
+    phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false, enableDesignAccounts:false,
   };
   for (const argument of argv) {
     if (argument.startsWith('--phase=')) options.phase = argument.slice('--phase='.length);
@@ -318,6 +336,7 @@ function parseOptions(argv = process.argv.slice(2)) {
     else if (argument.startsWith('--preserve-event-slug=')) {
       options.preserveEventSlug = argument.slice('--preserve-event-slug='.length);
     } else if (argument === '--preserve-none') options.preserveNone = true;
+    else if(argument==='--enable-design-accounts') options.enableDesignAccounts=true;
     else if ([
       '--confirm-maintenance-lock',
       '--confirm-production-arm',
@@ -331,6 +350,7 @@ function parseOptions(argv = process.argv.slice(2)) {
   if (!allowedPhases.has(options.phase)) {
     fail('Use exactly one --phase=preflight|lock|arm|autosleep|activate|rearm|release.');
   }
+  if(options.enableDesignAccounts&&options.phase!=='release') fail('--enable-design-accounts is allowed only with the approved production release phase.');
   const hasPreservedSlug = Boolean(options.preserveEventSlug);
   if (hasPreservedSlug && !/^[A-Za-z0-9_-]{1,120}$/.test(options.preserveEventSlug)) {
     fail('The preserved event slug is invalid.');
@@ -504,11 +524,13 @@ function rearmAfterFailedActivation(originalError, action = 'Activation') {
 function deployActiveRelease(commit, {
   checkCommit = assertGitReleaseCandidate, verify = verifyRemote,
   execute = runStep, recover = rearmAfterFailedActivation,
+  accountSettings=null,stageAccounts=stageDesignAccountSettings,
 } = {}) {
   if (checkCommit() !== commit) fail('Approved release commit changed during verification.');
   // Recheck after the slow test/build gate, before any deployment. A stopped
   // auto-start Machine is allowed here; the post-release smoke wakes it.
   verify('active', 'production');
+  if(accountSettings) stageAccounts(accountSettings);
   try {
     execute(deployStep('active', 'Release the approved update to active production'));
     execute(smokeStep('active'));
@@ -519,6 +541,15 @@ function deployActiveRelease(commit, {
   }
 }
 
+function stageDesignAccountSettings(values,spawn=spawnSync) {
+  if(Object.keys(values).some(name=>!DESIGN_ACCOUNT_SETTINGS.includes(name))) fail('Only account settings may be staged by account activation.');
+  const checked=designAccountSettings(values);
+  const payload=Object.entries(checked).map(([name,value])=>`${name}=${value.replace(/\r?\n/g,'\\n')}`).join('\n');
+  const imported=spawn('flyctl',['secrets','import','--stage','--app',APP_NAME],{
+    cwd:ROOT,input:payload+'\n',encoding:'utf8',stdio:['pipe','inherit','inherit'],env:process.env});
+  if(imported.error||imported.status!==0) fail('Account settings could not be staged; no deployment started.');
+}
+
 function main() {
   const options = parseOptions();
   loadLocalEnvironment();
@@ -526,6 +557,7 @@ function main() {
   validateLocalCutoverEnvironment();
   const commit = assertGitReleaseCandidate();
   assertPhaseConfirmation(options, commit);
+  const accountSettings=options.enableDesignAccounts?designAccountSettings():null;
 
   runCapture('flyctl', ['auth', 'whoami']);
   runCapture('docker', ['info', '--format', '{{.ServerVersion}}']);
@@ -595,7 +627,7 @@ function main() {
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
   } else if (options.phase === 'release') {
-    deployActiveRelease(commit);
+    deployActiveRelease(commit,{accountSettings});
   } else {
     runStep({
       label: 'Re-verify the production preservation boundary',
@@ -641,6 +673,7 @@ module.exports = {
   deployActiveRelease,
   parseOptions,
   productionSecretValues,
+  designAccountSettings,stageDesignAccountSettings,DESIGN_ACCOUNT_SETTINGS,
   stageProductionSecrets,
   runVerificationSteps,
   validateConfigFamily,

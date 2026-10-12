@@ -110,7 +110,7 @@ frozen snapshot of the word cloud.
    failed local draft write can produce a leave-without-saving warning.
    Basket references live in event-scoped localStorage for seven days, while
    approved print snapshots continue using the existing immutable server
-   configuration IDs. No draft service or account is involved. A plain
+   configuration IDs. Local recovery does not require an account. A plain
    configurator URL restores the active local draft when available;
    ?edit=<id> opens that cart item's local working copy or its exact server snapshot, and
    ?cart=1 opens the last basket design. Returning from shipping uses ?edit.
@@ -174,8 +174,8 @@ frozen snapshot of the word cloud.
    design links open the requested immutable design even without a local cart;
    adding that detached design to a cart remains an explicit action. The home
    page offers a seven-day, browser-local return link to the last opened cloud
-   plus a link to its current tab's basket, without storing a PIN or introducing
-   an account. The previous IndexedDB draft store is no longer read or written.
+   plus a link to its current tab's basket, without storing a PIN. This browser
+   recovery remains independent of the optional account library below.
 6. The saved designs continue to a dedicated, mobile-first shipping-address
    page. Products, address and the price result share one card. Products appear
    only once beside their quantity controls; prices and delivery details appear
@@ -320,6 +320,128 @@ submissions are never translated. Word normalization preserves capitalization:
 `Love`, `love` and `LOVE` are separate entries with independent contribution counts.
 Whitespace cleanup, Unicode normalization, emoji validation and the length limit
 still apply.
+
+## Optional app installation
+
+Wolkenworte can be installed from supporting browsers and opened in its own
+app window with the existing brand mark as its home-screen/app icon. Installation
+is optional; QR codes and ordinary website links continue to work. The shared
+`/manifest.webmanifest` keeps one app identity across all pages, starts at `/`
+and includes every Wolkenworte route in its scope.
+New public page templates should include `partials/pwa-head` inside `<head>`;
+the shared footer supplies the optional install action.
+
+“Wolkenworte installieren” appears in the footer and live-cloud menu when the
+browser offers a native installation prompt. It opens that prompt only after a
+click. On iPhone/iPad it instead shows localized Safari home-screen instructions.
+The action is hidden inside the installed app. Other browsers may offer installation
+through their own menus (for example Safari's Add to Dock). Browser installation
+criteria and prior dismissals can affect whether a native prompt is available.
+
+This initial PWA support needs HTTPS (or loopback localhost for development).
+It adds no service worker, offline cache or background queue: live clouds, design
+loading, shipping quotes and payment still require an internet connection.
+Browser-local drafts keep their existing behavior; this change does not transfer
+them between browser profiles or an installed app's separate storage context.
+
+The tracked PNG icons are generated directly from `public/z_icons/icon.svg`,
+including a padded maskable icon and a 180px Apple touch icon. After changing
+the logo, regenerate them with `node scripts/generate-pwa-icons.js`. This is
+an asset-maintenance command; normal startup requires no extra build step.
+
+## Optional design accounts
+
+Guests can create clouds, participate, configure products and order without an
+account. `DESIGN_ACCOUNTS_ENABLED=true` adds subtle configurator save controls,
+the homepage overflow link and `/konto`. Google or verified email/password
+authentication uses Supabase Auth. Registration and recovery use six-digit,
+ten-minute codes. The account UI and Auth email hook support all six languages.
+Apple sign-in is outside this release.
+
+Account saves are **manual**. Editing never updates a library snapshot. Existing
+seven-day IndexedDB recovery remains browser-local; account-bound records are
+checked against the current owner and live design before restoration. Reopening
+a library design preserves newer local unsaved work where available. Library
+access never grants event organizer privileges.
+
+Each explicit save stores an allowlisted editable snapshot, including both print
+faces, uploads, text styles, product/orientation and retained product layouts,
+plus a small PNG preview. Snapshots deduplicate embedded image bytes. Empty
+surfaces are allowed for work in progress; checkout still requires a valid print
+design. The library is capped at 20 designs and 100 MiB per account (20 MiB per
+snapshot plus preview). A successful write reserves capacity, uploads immutable
+objects, then commits the new version. Failed or concurrent writes preserve the
+previous saved copy. Rename/save requests use version checks; retries of a
+completed request are idempotent. Preview/download routes check ownership and
+never expose bucket URLs.
+
+Designs expire after **three calendar months**. Full opening, explicit saving and
+a verified successful payment renew only the relevant unexpired design.
+Authentication, browsing the overview, renaming, export and cart addition do not
+renew it. The UI displays the deletion date; no reminder emails are sent. Saved
+designs reopen in an independent workspace with no public artwork or private
+design name, even after the original cloud has expired.
+
+Deletion removes library access and metadata immediately, and deletes objects
+through the Storage API. Failed removals and in-flight uploads retain a durable,
+fenced retry ledger; there is no trash or user recovery window. Account deletion
+requires identity verification within ten minutes, blocks all sessions first,
+then deletes Supabase Auth data and all designs. A UUID-only tombstone survives
+35 days to prevent stale in-flight login responses recreating a deleted account.
+Independent cart snapshots, order records and frozen paid print files retain
+their existing lifecycle. Never cascade an account deletion into commerce.
+Unverified registrations expire after seven days; verified empty accounts after
+twelve months of account inactivity. The existing authenticated maintenance
+wake-up performs bounded cleanup, including when account UI is disabled.
+
+Account cookies are opaque, HttpOnly, SameSite=Lax and Secure in production,
+lasting at most 30 days. Recovery sessions last ten minutes and cannot open the
+library or delete the account until a password is changed. Supabase tokens and
+OAuth PKCE verifiers are encrypted server-side; cookies contain no provider JWT.
+Mutations require a same-origin custom-header request, with persistent hashed
+abuse limits. Password changes revoke other application sessions. Account
+settings offer secure email changes at both addresses, password updates,
+editable JSON export, logout and permanent deletion.
+
+Activation uses the established reviewed production release, with its exact
+commit and `--confirm-production-release`. To enable accounts in that same
+release, additionally pass `--enable-design-accounts`. This explicit option
+validates and stages only the account settings from the ignored operator `.env`
+after the complete test/image/migration gate; it never stages Stripe credentials
+or performs initial-cutover cleanup. Ordinary releases keep existing behavior.
+Account migration `20261012000000_optional_design_accounts.sql` creates schema 6,
+runtime-only table privileges and private bucket `wolkenworte-designs`.
+Accounts remain off unless explicitly enabled. Deployment needs separate
+maintainer authorization.
+
+Provider settings: enable Google with only `openid email profile`; keep nonce
+and email-security bypasses off. Use Google callback
+`https://fqgoguwmflgosgvivpxw.supabase.co/auth/v1/callback`, site origin
+`https://wolkenworte.io` and app callback `https://wolkenworte.io/auth/callback`.
+Google must be published to Production before general customer use. Local
+Google testing needs its own explicitly allowlisted redirect; do not add wildcard
+or preview redirects to the production project.
+
+Keep email verification, secure email changes and secure password changes on;
+use minimum 12-character passwords without composition rules, six-digit OTPs
+and ten-minute expiry. Existing Resend SMTP remains available before the hook
+is activated. After the reviewed deployment exposes `/auth/email-hook`, configure
+Supabase's **Send Email HTTP hook** to
+`https://wolkenworte.io/auth/email-hook`, copying its separate signing secret to
+`AUTH_EMAIL_HOOK_SECRET`. The hook replaces SMTP delivery, verifies the exact
+signed body/timestamp, sends localized code messages with seller Reply-To and
+uses permanent receipt hashes plus stable Resend idempotency keys. Security
+notifications for password/email changes are enabled; email-change notifications
+go to the previous address. Keep tracking off. Confirm signup, recovery and both
+email-change destinations with a controlled inbox after activation. Never log
+codes, callback URLs, credentials or message bodies.
+
+Recovery safeguards remain the maintainer's existing deferred operational
+decision in [launch-readiness](docs/launch-readiness.md). Supabase database
+backups do not include Storage bytes; the editable bucket needs separate backup
+if backups are adopted. Any restore must reapply completed deletion tombstones
+and expiry checks before serving traffic. No restore must reactivate deleted
+account data. [Supabase backup documentation](https://supabase.com/docs/guides/platform/backups).
 
 ## Optional GA4 usage analytics
 
@@ -775,6 +897,13 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `SUPABASE_URL` | local/operator/Fly runtime | Supabase API origin used by the backend for private Storage; browsers never call it directly. |
 | `SUPABASE_SECRET_KEY` | local/operator/Fly secret | Backend-only `sb_secret_...` key for private Storage operations; never exposed to clients. |
 | `SUPABASE_STORAGE_BUCKET` | shared setting | Private bucket containing frozen paid print artifacts. |
+| `DESIGN_ACCOUNTS_ENABLED` | local/Fly setting | `false` by default. Enables the optional account UI and APIs after schema 6 and provider setup; guest purchase stays independent. |
+| `SUPABASE_PUBLISHABLE_KEY` | local/Fly runtime | Current `sb_publishable_...` key for Supabase Auth. Auth calls run on the server. |
+| `AUTH_SESSION_SECRET` | local/Fly secret | Independent random 32-byte Base64 AES-GCM key for provider tokens and PKCE verifiers; stable across stateless restarts. Rotation invalidates account sessions. |
+| `SUPABASE_DESIGNS_BUCKET` | local/Fly setting | Private editable snapshot/preview bucket, default `wolkenworte-designs`; must differ from the paid print bucket. |
+| `AUTH_EMAIL_HOOK_SECRET` | local/Fly secret | Standard Webhooks signing secret for Supabase's Send Email HTTP hook at `/auth/email-hook`. Never use the Resend webhook secret here. |
+| `AUTH_EMAIL_DELIVERY_MODE` | local/Fly setting | `mock` default; `live` uses the existing Resend key for account mail. Tests always mock. Independent of order email mode. |
+| `AUTH_RESEND_FROM_EMAIL` | local/Fly setting | Verified sender, default `Wolkenworte <konto@mail.wolkenworte.io>`. Account messages explicitly reply to the canonical seller contact. |
 | `RATE_LIMIT_HMAC_SECRET` | local/Fly secret | HMACs normalized source addresses so durable abuse data never stores raw IP addresses. |
 | `MAINTENANCE_SECRET` | local/Fly secret | Independent bearer secret for bounded Supabase Cron maintenance wake-ups. |
 | `CUTOVER_CURRENT_MAINTENANCE_SECRET` | temporary local operator secret | Holds the maintenance secret still active on the locked Fly Machine only while `arm` proves that rotated local credentials identify the same target; never uploaded and cleared immediately afterward. |

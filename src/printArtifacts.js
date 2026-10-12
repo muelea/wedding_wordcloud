@@ -180,6 +180,7 @@ async function loadActiveArtifactBytes(id, accessNonce) {
 }
 
 module.exports = {
+  withRenderSlot,
   MIME_TYPE,
   artifactCapabilityUrl,
   ensureOrderArtifacts,

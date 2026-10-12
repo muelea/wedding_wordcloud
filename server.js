@@ -16,6 +16,8 @@ const { attachSocketHandlers } = require('./src/socket');
 const { makeRouter: makeEventsRouter } = require('./src/routes/events');
 const { makeWebhookRouter } = require('./src/routes/webhook');
 const { makeMaintenanceRouter } = require('./src/routes/maintenance');
+const { makeAccountRouter } = require('./src/routes/accounts');
+const { makeAuthEmailRouter } = require('./src/authEmail');
 const { makePerformanceRouter } = require('./src/routes/performance');
 const { makeEmojiArtworkRouter } = require('./src/routes/emojiArtwork');
 const { ASSET_BASE: EMOJI_BROWSER_ASSET_BASE } = require('./public/js/emoji-catalog');
@@ -102,6 +104,8 @@ io.use(maintenanceMode.socketGuard);
 // must be mounted BEFORE any express.json() body parser touches this path.
 app.use('/webhook', makeWebhookRouter({ port: PORT }));
 app.use('/internal/maintenance', makeMaintenanceRouter());
+app.use('/auth/email-hook', makeAuthEmailRouter());
+app.use(makeAccountRouter());
 
 // Serve the pinned Three.js module locally so the configurator's 3D preview
 // never depends on a third-party CDN being reachable from an event venue.

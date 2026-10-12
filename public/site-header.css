@@ -369,3 +369,10 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
     animation: none !important;
   }
 }
+.ww-account-entry { position:relative; }
+.ww-account-entry summary { display:grid;place-items:center;min-width:44px;min-height:44px;font-size:26px;cursor:pointer;list-style:none; }
+.ww-account-entry summary::-webkit-details-marker { display:none; }
+.ww-account-entry > div { position:absolute;right:0;top:100%;min-width:170px;padding:16px;background:#fffdfa;border:1px solid #eadce1;border-radius:12px;box-shadow:0 8px 24px #400f2614;z-index:40; }
+.ww-account-entry a { white-space:nowrap;color:#400f26; }
+.landing-account-link { display:none; }
+@media(max-width:1050px) { .ww-account-entry { display:none; }.landing-account-link { display:block; } }

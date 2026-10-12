@@ -3,7 +3,7 @@
 const { hasCurrentPublicAssetVersion } = require('./publicAssets');
 
 const VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
-const STATIC_EXTENSION_RE = /\.(?:css|gif|html?|ico|jpe?g|js|json|mp4|png|svg|webp|woff2?|ttf)$/i;
+const STATIC_EXTENSION_RE = /\.(?:css|gif|html?|ico|jpe?g|js|json|mp4|png|svg|webmanifest|webp|woff2?|ttf)$/i;
 
 function isLocaleManifest(pathname) {
   return /^\/locales\/[^/]+\.json$/i.test(pathname);

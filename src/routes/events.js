@@ -27,6 +27,7 @@ const {
 } = require('../products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../mugPrint');
 const DesignFonts = require('../designFonts');
+const accountAuth = require('../accountAuth');
 const { inspectRasterDataUrl } = require('../designImages');
 const MugIcons = require('../../public/js/mug-icons.js');
 const I18n = require('../i18n');
@@ -1140,6 +1141,17 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     }
 
     let configuration;
+    let savedDesignSource = null;
+    if (accountAuth.UUID.test(req.body?.accountDesignId || '')) {
+      // Attribution is optional. Expired login or provider downtime must
+      // never turn the established guest checkout into an account requirement.
+      try {
+        const context = await accountAuth.resolveSession(req, res);
+        if (context && await db.getSavedDesign(context.user.id, req.body.accountDesignId)) {
+          savedDesignSource = { id: req.body.accountDesignId, ownerId: context.user.id };
+        }
+      } catch { /* This remains an independent guest basket snapshot. */ }
+    }
     try {
       configuration = await db.createConfiguration({
         eventId: event.id,
@@ -1155,6 +1167,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         orientation: product.orientation,
         printWidth: product.printFile.width,
         printHeight: product.printFile.height,
+        savedDesignSource,
       });
     } catch (error) {
       if (error.code === 'configuration_limit') return rateLimited(res);
@@ -1932,4 +1945,4 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   return router;
 }
 
-module.exports = { makeRouter };
+module.exports = { makeRouter, normalizeDesign, normalizeSnapshotWords };

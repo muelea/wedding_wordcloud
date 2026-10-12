@@ -33,9 +33,15 @@
         <% for (const link of navLinks) { %>
           <a class="landing-section-link" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
         <% } %>
+        <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+        <a class="landing-section-link landing-account-link" href="/konto">Meine Designs</a>
+        <% } %>
         <%- include('language-picker', { languagePickerClass: 'landing-menu-language' }) %>
       </nav>
       <div class="landing-header-actions">
+        <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+        <details class="ww-account-entry"><summary aria-label="Weitere Optionen">⋯</summary><div><a href="/konto">Meine Designs</a></div></details>
+        <% } %>
         <button class="button primary landing-start-button" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
         <button class="landing-menu-toggle ww-menu-trigger" type="button" aria-label="<%= t('Seitennavigation öffnen') %>" data-i18n-aria-label-source="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-section-links">
           <%- include('hamburger-icon') %>
@@ -107,6 +113,7 @@
         </section>
         <% } %>
         <div class="ww-display-menu-actions">
+          <%- include('pwa-install', { installButtonClass: 'ww-display-menu-action' }) %>
           <button class="ww-display-menu-action" id="display-own-words-button" type="button" aria-haspopup="dialog" aria-controls="display-own-words-dialog" hidden>
             <span>Deine Wörter</span>
             <span class="ww-display-menu-count" id="display-own-words-count" aria-live="polite">0</span>
@@ -158,6 +165,9 @@
           <%- include('hamburger-icon') %>
         </summary>
         <div class="ww-mobile-header-menu-panel">
+          <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled && cartButton) { %>
+          <a class="ww-mobile-header-menu-back" href="/konto" data-account-library-link>Meine Designs</a>
+          <% } %>
           <a class="ww-mobile-header-menu-back"<% if (mobileBackId) { %> id="<%= mobileBackId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>">
             <span aria-hidden="true">←</span>
             <span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span>

@@ -52,6 +52,9 @@
         <div id="mobile-canvas-picker" hidden></div>
         <div id="mobile-canvas-add" hidden></div>
         <div id="mobile-canvas-more" hidden>
+          <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+          <button type="button" data-account-save>Design im Konto speichern</button>
+          <% } %>
           <button type="button" id="mobile-canvas-multi-select">Mehrere auswählen</button>
           <button type="button" data-canvas-tool="elements">Element suchen</button>
           <div id="mobile-canvas-design-actions"></div>

@@ -15,7 +15,7 @@ function storage() {
 const template = fs.readFileSync(path.join(__dirname, '../views/configure.ejs'), 'utf8');
 
 test('checkout actions are contextual and only ask when current work would be omitted', () => {
-  assert.doesNotMatch(template, /cart-action-hint|save-status|Nur ausdrücklich übernommene Designs|Design im Warenkorb gespeichert/);
+  assert.doesNotMatch(template, /cart-action-hint|id="save-status"|Nur ausdrücklich übernommene Designs|Design im Warenkorb gespeichert/);
   assert.match(template, /\.primary-button:disabled\s*\{[^}]*cursor:\s*default/);
   assert.match(template, /\.primary-button\.ww-is-busy:disabled\s*\{[^}]*cursor:\s*wait/);
   const secondaryHover = template.match(/\.secondary-button:hover:not\(:disabled\)\s*\{([^}]*)\}/)?.[1] || '';
@@ -70,6 +70,7 @@ function harness(extra = {}) {
     },
   };
   const context = vm.createContext({
+    accountController:null,accountDesignReference:null,
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, requestAnimationFrame: callback => callback(),
     console: { warn() {} },
     WolkenworteConfiguratorSession: Session, DesignTransfer: Transfer, sessionStorage: local, cart, draftStore,
@@ -89,7 +90,7 @@ function harness(extra = {}) {
     productSwitchUndo: element(), draftSaveState: element(), cartSaveState: element(),
     orderList: { querySelectorAll: () => [] }, cartRemovalNotice: element(), cartRemovalMessage: element(),
     products: [{ key: 'mug', displayName: 'Tasse' }, { key: 'poster', displayName: 'Poster' }],
-    document: { createElement: element },
+    document: { createElement: element, querySelectorAll:()=>[] },
     headerCart: { hidden: true }, headerCartCount: element(),
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true }, loadingMessage: element(),
     content: { inert: false }, orderBox: { scrollIntoView() {} },

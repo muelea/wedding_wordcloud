@@ -6,9 +6,11 @@
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Eure Worte. Eure Erinnerung.') %>" data-i18n-content-source="Eure Worte. Eure Erinnerung." />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <%- include('partials/pwa-head') %>
   <%- include('partials/site-fonts') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
+  <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %><link rel="stylesheet" href="<%= asset('/account.css') %>" /><% } %>
   <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <%- include('partials/analytics-head') %>
@@ -2351,6 +2353,10 @@
           </section>
 
           <section class="preview-card" aria-labelledby="preview-title">
+            <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+            <div class="ww-account-controls"><button type="button" data-account-save>Design im Konto speichern</button><a href="/konto" data-account-library-link>Meine Designs</a></div>
+            <p class="ww-account-save-note" data-account-save-note role="status" aria-live="polite"></p>
+            <% } %>
             <div class="preview-head">
               <h2 class="workspace-section-title" id="preview-title">Euer Design</h2>
               <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog">
@@ -2509,6 +2515,13 @@
   </dialog>
 
   <%- include('partials/site-footer') %>
+  <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+  <dialog class="ww-account-dialog" id="account-auth-dialog"><div class="ww-account-dialog-head"><h2>Designs im Konto speichern</h2><button type="button" data-account-dialog-close aria-label="Schließen">×</button></div><%- include('partials/account-auth') %></dialog>
+  <dialog class="ww-account-dialog" id="account-save-dialog"><div class="ww-account-dialog-head"><h2>Design speichern</h2><button type="button" data-account-dialog-close aria-label="Schließen">×</button></div>
+    <form><label>Designname<input name="name" maxlength="80" required /></label><p>Nur mit diesem Klick wird dein Design im Konto gespeichert. Weitere Änderungen bleiben ungespeichert, bis du erneut speicherst.</p>
+      <div class="ww-account-actions"><button class="ww-account-primary" type="submit">Im Konto speichern</button><button type="button" data-account-save-copy>Als neues Design speichern</button></div><p data-account-save-status role="status" aria-live="polite"></p></form>
+  </dialog>
+  <% } %>
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
@@ -2535,6 +2548,7 @@
   <script src="<%= asset('/js/mobile-canvas-workspace.js') %>"></script>
   <script src="<%= asset('/js/artwork-overlap-warnings.js') %>"></script>
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
+  <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %><script src="<%= asset('/js/account.js') %>"></script><% } %>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script src="<%= asset('/js/configurator-toolbar.js') %>"></script>
   <script>
@@ -2730,6 +2744,8 @@
     let previousProductDraft = null;
     let cartDrafts = new Map();
     let removedEditingState = null;
+    let accountDesignReference = null;
+    let accountController = null;
 
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
@@ -2761,6 +2777,9 @@
         : 'Zur Lieferadresse');
       continueOrderButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
+      document.querySelectorAll('[data-account-save]').forEach(button => {
+        button.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
+      });
       designAnotherButton.hidden = !items.length;
       updateSaveState();
       updateCartDraftMarkers();
@@ -2773,6 +2792,7 @@
 
     function updateSaveState() {
       if (!workspaceReady || restorationFailed) return;
+      accountController?.changed();
       const draftMessage = draftStorageFailed
         ? 'Entwurf nicht gesichert. Bitte lasst diese Seite geöffnet.'
         : hasUnpersistedDraft() ? 'Entwurf wird in diesem Browser gesichert…'
@@ -2893,6 +2913,7 @@
         words,
         designs,
         productDesignState,
+        accountDesign: accountDesignReference,
         layoutVersion: AUTOMATIC_LAYOUT_VERSION,
         editingOrderItemId,
         needsCartUpdate: currentDesignNeedsSave,
@@ -2946,12 +2967,14 @@
       finally { draftSavePromise = null; }
     }
 
-    async function loadLocalDraft(criteria = null) {
+    async function loadLocalDraft(criteria = null, { accountDesignId = null } = {}) {
       const read = () => criteria ? draftStore.loadFor(criteria) : draftStore.loadActive();
       let lastError = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           const draft = await WolkenworteConfiguratorSession.withTimeout(read(), 2500);
+          if (accountDesignId && draft?.accountDesign?.id !== accountDesignId) return null;
+          if (draft?.accountDesign && (!accountController || !await accountController.validateLocal(draft.accountDesign))) return null;
           if (!draft || draft.currentDesignEdited !== false ||
               draft.layoutVersion === AUTOMATIC_LAYOUT_VERSION) return draft;
           // This is an untouched automatic layout from an older runtime. It is
@@ -3200,6 +3223,7 @@
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'load_failed');
+        accountController?.detach();
         const adjusted = await applySavedConfiguration(data);
         productDesignState = null;
         editingOrderItemId = loadOrderItems().some((item) => item.id === data.id) ? data.id : null;
@@ -3950,7 +3974,8 @@
           ? configurationData.theme
           : product.themes[0].key;
         if (Array.isArray(configurationData.customColors)) {
-          customColors = configurationData.customColors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)).slice(0, 8);
+          const restoredColors = configurationData.customColors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)).slice(0, 8);
+          if (restoredColors.length) customColors = restoredColors;
         }
         words = Array.isArray(configurationData.words) ? configurationData.words : words;
 
@@ -4010,6 +4035,10 @@
     }
 
     async function applyLocalDraft(draft) {
+      if (draft.accountDesign && (!accountController || !await accountController.validateLocal(draft.accountDesign))) {
+        throw new Error('account_unauthorized');
+      }
+      if (!draft.accountDesign) accountController?.detach();
       const adjusted = await applySavedConfiguration(draft);
       productDesignState = DesignTransfer.normalizeState(draft.productDesignState);
       editingOrderItemId = draft.editingOrderItemId &&
@@ -4672,6 +4701,7 @@
           if (options.refreshCloud) liveWords = nextWords;
           selectProduct(nextProduct, nextOrientation, transferred?.designs);
           productDesignState = transferred?.state || null;
+          if (options.independent) accountController?.detach();
           editingOrderItemId = options.preserveEditingItem ? previousEditingId : null;
           if (!editingOrderItemId) savedDesignFingerprint = null;
           mugEditor.flushPendingChange();
@@ -5130,7 +5160,7 @@
             method: 'POST', signal: AbortSignal.timeout(30000),
             headers: { 'Content-Type': 'application/json', 'X-Wolkenworte-Guest-Id': guestId },
             body: JSON.stringify({ productKey: product.key, orientation: selectedOrientation,
-              theme: selectedTheme, words, designs }),
+              theme: selectedTheme, words, designs, accountDesignId: accountController?.source()?.id }),
           });
           data = await response.json();
           if (!response.ok) throw new Error(data.error || 'save_failed');
@@ -5349,6 +5379,27 @@
       throw lastError;
     }
 
+    accountController = globalThis.WolkenworteAccount?.createConfigurator({
+      getSnapshot: draftSnapshot,
+      prepare: () => {
+        if (!workspaceReady || restorationFailed || orderActionPending || fitAreaPending) throw new Error('workspace_unavailable');
+        return finalizeCurrentText();
+      },
+      getFingerprint: () => {
+        if (!product || !mugEditor) return '';
+        const snapshot = draftSnapshot();
+        return WolkenworteConfiguratorSession.accountDesignFingerprint({ productKey: snapshot.productKey,
+          orientation: snapshot.orientation, theme: snapshot.theme, customColors: snapshot.customColors,
+          words: snapshot.words, designs: snapshot.designs, productDesignState: snapshot.productDesignState });
+      },
+      preserve: () => persistCurrentDraft(),
+      onBeforeDialog: () => { workspace.mobileCanvas?.close(); workspace.close(false); },
+      onSourceChange: reference => { accountDesignReference = reference; },
+    });
+    document.querySelectorAll('[data-account-library-link]').forEach(link => link.addEventListener('click', event => {
+      event.preventDefault(); void runNavigation(() => location.assign('/konto'));
+    }));
+
     retryStartupTask(async () => {
       const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`, {
         cache: 'no-store', signal: AbortSignal.timeout(15000),
@@ -5430,7 +5481,21 @@
         void initMug3D();
         const query = new URLSearchParams(location.search);
         const requestedEdit = query.get('edit');
-        if (requestedEdit) {
+        if (query.get('accountDesign')) {
+          if (!accountController) throw new Error('account_unauthorized');
+          const localDraft = await loadLocalDraft(null, { accountDesignId: query.get('accountDesign') });
+          if (localDraft?.accountDesign?.id === query.get('accountDesign')) {
+            await applyLocalDraft(localDraft);
+          } else {
+            const snapshot = await accountController.restore(query.get('accountDesign'));
+            await applySavedConfiguration(snapshot);
+            productDesignState = DesignTransfer.normalizeState(snapshot.productDesignState);
+            currentDesignEdited = true;
+            editingOrderItemId = null;
+            currentDesignNeedsSave = true;
+            accountController.restored();
+          }
+        } else if (requestedEdit) {
           setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
           await loadOrderItem(requestedEdit);
         }
@@ -5450,6 +5515,7 @@
           }
         }
         workspaceReady = true;
+        await accountController?.ready();
         void refreshCartDrafts().catch(error => {
           console.warn('Configurator draft markers unavailable.', error);
         });

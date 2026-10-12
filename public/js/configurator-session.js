@@ -27,7 +27,7 @@
     return `${text.length}:${(first >>> 0).toString(16)}:${(second >>> 0).toString(16)}`;
   }
 
-  function designFingerprint(design) {
+  function designFingerprint(design, includeAll = false) {
     function canonical(value, key = '') {
       if (key === 'src' && typeof value === 'string') {
         if (!imageFingerprints.has(value)) {
@@ -39,10 +39,10 @@
       if (Array.isArray(value)) return value.map(item => canonical(item));
       if (!value || typeof value !== 'object') return value;
       return Object.fromEntries(Object.keys(value).sort()
-        .filter(name => !['id', 'colorLocked'].includes(name))
+        .filter(name => includeAll || !['id', 'colorLocked'].includes(name))
         .map(name => [name, canonical(value[name], name)]));
     }
-    return fingerprint(JSON.stringify(canonical({ productKey: design.productKey,
+    return fingerprint(JSON.stringify(canonical(includeAll ? design : { productKey: design.productKey,
       orientation: design.orientation || 'default', theme: design.theme, designs: design.designs })));
   }
 
@@ -194,6 +194,11 @@
       words: Array.isArray(draft.words) ? copy(draft.words) : [],
       designs: copy(draft.designs),
       productDesignState: draft.productDesignState?.version === 1 ? copy(draft.productDesignState) : null,
+      accountDesign: draft.accountDesign && /^[0-9a-f-]{36}$/i.test(draft.accountDesign.id || '') &&
+        /^[0-9a-f-]{36}$/i.test(draft.accountDesign.ownerId || '')
+        ? { id: draft.accountDesign.id, ownerId: draft.accountDesign.ownerId,
+          version: Number(draft.accountDesign.version) || 1, fingerprint: String(draft.accountDesign.fingerprint || '').slice(0, 100) }
+        : null,
       // Automatic drafts can be regenerated when the layout runtime changes.
       // Manually edited drafts remain portable across runtime revisions.
       layoutVersion: String(draft.layoutVersion || '').slice(0, 128),
@@ -489,6 +494,34 @@
     return combined.map((entry) => entry.id);
   }
 
-  return { createCart, createDraftStore, createShippingDraft, normalizeCart, normalizeDraft, designFingerprint, validId, withTimeout,
+  async function clearAccountDrafts(ownerId, designId = null) {
+    if (!globalThis.indexedDB) return;
+    const database = await new Promise((resolve, reject) => {
+      const open = globalThis.indexedDB.open(DRAFT_DATABASE, 1);
+      open.onupgradeneeded = () => { if (!open.result.objectStoreNames.contains(DRAFT_STORE)) open.result.createObjectStore(DRAFT_STORE, { keyPath: 'key' }); };
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error);
+      open.onblocked = () => reject(new Error('draft_storage_unavailable'));
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(DRAFT_STORE, 'readwrite');
+        const store = transaction.objectStore(DRAFT_STORE);
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const rows = request.result;
+          const keys = new Set(rows.filter(row => row.accountDesign?.ownerId === ownerId &&
+            (!designId || row.accountDesign.id === designId)).map(row => row.key));
+          rows.forEach(row => { if (keys.has(row.key) || keys.has(row.draftKey)) store.delete(row.key); });
+        };
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } finally { database.close(); }
+  }
+
+  return { createCart, createDraftStore, createShippingDraft, normalizeCart, normalizeDraft, designFingerprint,
+    accountDesignFingerprint: snapshot => designFingerprint(snapshot, true), clearAccountDrafts, validId, withTimeout,
     purchasedIds, clearPurchased, prepareReorder, MAX_CART_ITEMS, DRAFT_TTL_MS, CART_TTL_MS };
 }));

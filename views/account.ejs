@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>" data-locale-source="<%= localeSource %>" data-locale-catalog-url="<%= localeCatalogUrl %>" data-locale-catalog-urls="<%= JSON.stringify(localeCatalogUrls) %>">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" /><meta name="referrer" content="no-referrer" />
+  <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <%- include('partials/pwa-head') %>
+  <%- include('partials/site-fonts') %>
+  <link rel="stylesheet" href="<%= asset('/i18n.css') %>" /><link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" /><link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/account.css') %>" />
+  <script src="<%= asset('/js/i18n.js') %>"></script><script src="<%= asset('/js/site-header.js') %>" defer></script>
+  <title>Meine Designs – Wolkenworte</title>
+</head>
+<body class="ww-account-body">
+  <%- include('partials/site-header') %>
+  <main class="ww-account-main" id="account-page" data-page="<%= pageData.accountPage %>" data-return-to="<%= pageData.returnTo %>" data-available="<%= pageData.accountAvailable %>">
+    <div class="ww-account-heading"><h1><%= pageData.accountPage === 'settings' ? 'Mein Konto' : 'Meine Designs' %></h1>
+      <nav data-account-nav hidden><a href="/konto">Meine Designs</a><a href="/konto/einstellungen">Mein Konto</a><button type="button" class="ww-account-link" data-account-logout>Abmelden</button></nav></div>
+    <p id="account-page-status" role="status" aria-live="polite"></p>
+    <% if (!pageData.accountAvailable) { %><p>Das Speichern im Konto ist gerade nicht verfügbar. Du kannst weiterhin ohne Konto gestalten und bestellen.</p><% } %>
+    <div class="ww-account-card" data-account-signin <%= !pageData.accountAvailable ? 'hidden' : '' %>>
+      <%- include('partials/account-auth') %>
+    </div>
+    <section data-account-library hidden>
+      <p>Designs werden nach drei Monaten ohne Nutzung dauerhaft gelöscht. Öffnen, Speichern oder ein erfolgreicher Kauf verlängern die Frist.</p>
+      <p class="ww-account-small" data-account-usage></p>
+      <div class="ww-account-grid" data-account-design-list></div>
+      <p data-account-empty hidden>Du hast noch keine Designs gespeichert. Im Konfigurator kannst du ein Design ausdrücklich in deinem Konto speichern.</p>
+      <a href="/" class="ww-account-link">Ein neues Design gestalten</a>
+    </section>
+    <section data-account-settings hidden>
+      <p data-account-email></p>
+      <div class="ww-account-card">
+        <h2>E-Mail-Adresse ändern</h2>
+        <form data-account-email-form><label>Neue E-Mail-Adresse<input type="email" name="email" autocomplete="email" required maxlength="254" /></label><button class="ww-account-primary" type="submit">Codes anfordern</button></form>
+        <div data-account-email-codes hidden><p>Bestätige die bisherige und die neue E-Mail-Adresse mit den beiden Codes.</p>
+          <form data-account-email-code="current"><label data-email-code-label>Bisherige E-Mail-Adresse<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required /></label><button type="submit">Code bestätigen</button></form>
+          <form data-account-email-code="new"><label data-email-code-label>Neue E-Mail-Adresse<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required /></label><button type="submit">Code bestätigen</button></form>
+        </div>
+      </div>
+      <div class="ww-account-card"><h2>Passwort ändern</h2>
+        <form data-account-password-form><label>Neues Passwort<input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label>
+          <label>Passwort wiederholen<input type="password" name="repeat" autocomplete="new-password" minlength="12" maxlength="256" required /></label>
+          <label data-account-password-code hidden>Sicherheitscode<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" /></label>
+          <button class="ww-account-primary" type="submit">Passwort speichern</button><button type="button" class="ww-account-link" data-account-password-request hidden>Sicherheitscode anfordern</button></form>
+      </div>
+      <div class="ww-account-card"><h2>Deine Daten</h2><p>Du kannst deine Kontodaten und alle gespeicherten, bearbeitbaren Designs herunterladen.</p>
+        <a href="/api/account/export" class="ww-account-link" download>Daten herunterladen</a></div>
+      <div class="ww-account-card"><h2>Konto löschen</h2><p>Dein Konto und alle gespeicherten Designs werden dauerhaft gelöscht. Bestehende Warenkorbkopien und notwendige Bestelldaten bleiben davon unabhängig.</p>
+        <button class="ww-account-danger" type="button" data-account-delete>Konto dauerhaft löschen</button></div>
+    </section>
+  </main>
+  <dialog class="ww-account-dialog" id="account-confirm-dialog"><form method="dialog"><div class="ww-account-dialog-head"><h2 data-confirm-title>Design löschen?</h2><button value="cancel" aria-label="Schließen">×</button></div><p data-confirm-description></p><label data-confirm-name hidden>Designname<input name="name" maxlength="80" /></label><div class="ww-account-actions"><button value="cancel">Abbrechen</button><button class="ww-account-primary" value="confirm" data-confirm-action>Bestätigen</button></div></form></dialog>
+  <dialog class="ww-account-dialog" id="account-reauth-dialog"><div class="ww-account-dialog-head"><h2>Identität bestätigen</h2><button type="button" data-reauth-close aria-label="Schließen">×</button></div>
+    <p>Bestätige deine Identität, bevor du dein Konto dauerhaft löschst.</p><button class="ww-account-primary" type="button" data-reauth-google>Mit Google bestätigen</button>
+    <form data-reauth-form><label>Passwort<input type="password" name="password" autocomplete="current-password" required maxlength="256" /></label><button class="ww-account-primary" type="submit">Bestätigen</button></form><p data-reauth-status role="status"></p></dialog>
+  <%- include('partials/site-footer') %>
+  <script src="<%= asset('/js/configurator-session.js') %>"></script><script src="<%= asset('/js/account.js') %>"></script>
+</body></html>

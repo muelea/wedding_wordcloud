@@ -18,6 +18,8 @@ function validateRuntimeConfig() {
   if (!['mock', 'live'].includes(emailMode)) {
     errors.push('EMAIL_DELIVERY_MODE muss mock oder live sein.');
   }
+  const authEmailMode=String(process.env.AUTH_EMAIL_DELIVERY_MODE||'mock').trim().toLowerCase();
+  if(!['mock','live'].includes(authEmailMode)) errors.push('AUTH_EMAIL_DELIVERY_MODE muss mock oder live sein.');
   const resendConfigured = Boolean(
     String(process.env.RESEND_API_KEY || '').trim() &&
     String(process.env.RESEND_FROM_EMAIL || '').trim() &&
@@ -31,6 +33,7 @@ function validateRuntimeConfig() {
     'PRINTFUL_ALLOW_ORDER_WRITES',
     'PRINTFUL_CONFIRM_LIVE_ORDERS',
     'PRINTFUL_MOCKUP_TOOLS_ENABLED',
+    'DESIGN_ACCOUNTS_ENABLED',
   ]) {
     if (!['true', 'false'].includes(flag(name))) errors.push(`${name} muss true oder false sein.`);
   }
@@ -48,6 +51,19 @@ function validateRuntimeConfig() {
   } catch { /* The precise APP_ENVIRONMENT error is already included above. */ }
 
   if (production) {
+    if(flag('DESIGN_ACCOUNTS_ENABLED')==='true') {
+      if(!String(process.env.SUPABASE_PUBLISHABLE_KEY||'').startsWith('sb_publishable_')) errors.push('Designkonten benötigen den Supabase-Publishable-Key.');
+      const sessionSecret=String(process.env.AUTH_SESSION_SECRET||'');
+      const sessionKey=Buffer.from(sessionSecret,'base64');
+      if(sessionKey.length!==32 || sessionKey.toString('base64')!==sessionSecret) errors.push('AUTH_SESSION_SECRET muss ein unabhängiger Base64-Schlüssel mit 32 Bytes sein.');
+      if([process.env.RATE_LIMIT_HMAC_SECRET,process.env.MAINTENANCE_SECRET,process.env.AUTH_EMAIL_HOOK_SECRET].includes(sessionSecret)) errors.push('AUTH_SESSION_SECRET muss unabhängig sein.');
+      const hookSecret=String(process.env.AUTH_EMAIL_HOOK_SECRET||'').replace(/^(?:v1,)?whsec_/,'');
+      const hookKey=Buffer.from(hookSecret,'base64');
+      if(hookKey.length!==32||hookKey.toString('base64')!==hookSecret) errors.push('Designkonten benötigen AUTH_EMAIL_HOOK_SECRET mit 32 Bytes.');
+      if(authEmailMode!=='live'||!String(process.env.RESEND_API_KEY||'').trim()) errors.push('Designkonten benötigen Resend-Liveversand für Auth-E-Mails.');
+    }
+    const designsBucket=String(process.env.SUPABASE_DESIGNS_BUCKET||'wolkenworte-designs');
+    if(!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(designsBucket)||designsBucket===(process.env.SUPABASE_STORAGE_BUCKET||'wolkenworte-private')) errors.push('Der Design-Bucket muss gültig und unabhängig vom Druckdatei-Bucket sein.');
     if (flag('PRINTFUL_MOCKUP_TOOLS_ENABLED') === 'true') {
       errors.push('PRINTFUL_MOCKUP_TOOLS_ENABLED darf im Webprozess nicht aktiviert sein.');
     }

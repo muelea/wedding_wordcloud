@@ -9,8 +9,21 @@ const cutover = require('../scripts/production-cutover');
 const cutoverTarget = require('../scripts/verify-cutover-target');
 const emptyTarget = require('../scripts/verify-prelive-empty');
 const productionSmoke = require('../scripts/production-readiness-smoke');
+const crypto=require('node:crypto');
 
 const ROOT = path.join(__dirname, '..');
+
+test('optional account activation is bound to an approved release and stages only validated account settings',()=>{
+  const env={DESIGN_ACCOUNTS_ENABLED:'true',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_fixture',AUTH_SESSION_SECRET:crypto.randomBytes(32).toString('base64'),
+    AUTH_EMAIL_HOOK_SECRET:'v1,whsec_'+crypto.randomBytes(32).toString('base64'),AUTH_EMAIL_DELIVERY_MODE:'live'};
+  const values=cutover.designAccountSettings(env);assert.equal(values.SUPABASE_DESIGNS_BUCKET,'wolkenworte-designs');
+  assert.throws(()=>cutover.designAccountSettings({...env,AUTH_SESSION_SECRET:'short'}),/32-byte/);
+  assert.throws(()=>cutover.parseOptions(['--phase=arm','--enable-design-accounts']),/only.*release/);
+  let input;
+  cutover.stageDesignAccountSettings(values,(command,args,options)=>{assert.equal(command,'flyctl');assert.deepEqual(args,['secrets','import','--stage','--app','wolkenworte']);input=options.input;return {status:0};});
+  assert.match(input,/DESIGN_ACCOUNTS_ENABLED=true/);assert.doesNotMatch(input,/STRIPE_|MIGRATION_DATABASE_URL/);
+  assert.throws(()=>cutover.stageDesignAccountSettings({...values,STRIPE_LIVE_SECRET_KEY:'forbidden'}),/Only account/);
+});
 
 function localCutoverEnv(overrides = {}) {
   return {

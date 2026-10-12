@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#fffdfa" />
   <meta name="description" content="<%= t('Datenschutzerklärung für Wolkenworte.') %>" data-i18n-content-source="Datenschutzerklärung für Wolkenworte." />
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
+  <%- include('partials/pwa-head') %>
   <%- include('partials/site-fonts') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
@@ -24,7 +25,7 @@
   <main class="legal-main">
     <p class="eyebrow">Rechtliches</p>
     <h1>Datenschutzerklärung</h1>
-    <p class="updated">Stand: September 2026</p>
+    <p class="updated">Stand: Oktober 2026</p>
     <p class="intro">Diese Erklärung beschreibt, wie personenbezogene Daten bei der Nutzung von Wolkenworte verarbeitet werden – von der gemeinsamen Wortwolke bis zur optionalen Bestellung eines personalisierten Druckprodukts.</p>
 
     <div class="flourish" aria-hidden="true"><span></span></div>
@@ -94,11 +95,12 @@
       <% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %>
       <p>Wolkenworte verwendet ein funktionales Sprachpräferenz-Cookie. Daneben bieten wir eine freiwillige Nutzungsanalyse mit Google Analytics 4 an. Ohne deine ausdrückliche Einwilligung laden wir keinen Google-Analytics-Code und senden keine Analysedaten an Google.</p>
       <% } else { %>
-      <p>Wolkenworte verwendet ausschließlich ein technisch erforderliches Sprachpräferenz-Cookie. Analyse- oder Werbetracker werden nicht eingesetzt.</p>
+      <p>Wolkenworte verwendet funktionale Cookies für Sprache und die freiwillige Kontoanmeldung. Analyse- oder Werbetracker werden nicht eingesetzt.</p>
       <% } %>
       <p>Im Session Storage wird eine zufällige, veranstaltungsbezogene Sitzungskennung gespeichert. Sie dient ausschließlich dazu, diesem Browser seine eigenen Wortbeiträge anzuzeigen und nur deren Entfernung zu erlauben.</p>
       <p>Die gewählte Sprache wird in einem funktionalen Cookie gespeichert. Die persönliche Farbpalette der Wortwolke, zuletzt verwendete Emojis und Entwürfe im Warenkorb werden lokal gespeichert, damit sie bei weiteren Seitenaufrufen beziehungsweise beim Wechsel zwischen Wortwolke, Konfiguration und Lieferadresse erhalten bleiben. Die Organisator-PIN wird nicht im Browser gespeichert.</p>
       <p>Lokale Designentwürfe können sieben Tage lang wiederhergestellt werden; abgelaufene Einträge werden beim nächsten Besuch bereinigt. Lieferangaben und Mengen werden im Browser-Tab für bis zu 24 Stunden zur Wiederherstellung gespeichert. Daraus entsteht keine Bestellung.</p>
+      <p>Bei der freiwilligen Anmeldung wird eine zufällige, geschützte Sitzungskennung in einem HttpOnly-Cookie für höchstens 30 Tage gespeichert. Eine Anmeldung zur Passwortwiederherstellung ist auf zehn Minuten beschränkt; die Kennung für die Google-Anmeldung ebenfalls. Zugangstokens bleiben verschlüsselt auf dem Server. Kontoentwürfe in diesem Browser sind an das jeweilige Konto gebunden und werden beim Abmelden oder Löschen in diesem Browser entfernt.</p>
       <p>Für den Wiedereinstieg merkt sich dieser Browser die zuletzt geöffnete Wortwolke für sieben Tage. Technische Kennungen bereits gekaufter Designs werden ebenfalls bis zu sieben Tage gespeichert, damit sie beim Zurückgehen nicht wieder im Warenkorb erscheinen.</p>
       <p>Diese Speicherung ist für die ausdrücklich gewünschten Funktionen erforderlich. Rechtsgrundlage ist § 25 Abs. 2 Nr. 2 TDDDG sowie Art. 6 Abs. 1 lit. f DSGVO.</p>
       <% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %>
@@ -119,7 +121,7 @@
 
     <section class="legal-section">
       <h2>10. Empfänger und Drittlandübermittlungen</h2>
-      <p>Empfänger sind Fly.io für Hosting, Supabase für Datenbank und privaten Dateispeicher, Printful und die eingesetzten Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestellnachrichten. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.</p>
+      <p>Empfänger sind Fly.io für Hosting, Supabase für Datenbank, Anmeldung und privaten Dateispeicher, Printful und Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestell- und Kontonachrichten. Bei der Google-Anmeldung ist auch Google beteiligt. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.</p>
       <% if (typeof analyticsMeasurementId === 'string' && analyticsMeasurementId) { %><p>Bei erteilter Einwilligung ist Google Empfänger der Analysedaten.</p><% } %>
       <p>Soweit Anbieter Daten außerhalb des Europäischen Wirtschaftsraums verarbeiten, gelten die Anforderungen der Art. 44 ff. DSGVO. Je nach Anbieter stützen sich Übermittlungen insbesondere auf einen Angemessenheitsbeschluss wie das EU-US Data Privacy Framework oder auf EU-Standardvertragsklauseln mit ergänzenden Schutzmaßnahmen.</p>
       <p>Informationen zu den jeweiligen Übermittlungsgrundlagen und eine Kopie der einschlägigen Garantien kannst du unter kontakt@jusa.io anfordern; weitere Angaben enthalten die oben verlinkten Anbieterinformationen.</p>
@@ -132,6 +134,16 @@
       <p>Steuerlich erforderliche Bestell- und Zahlungsnachweise einschließlich der notwendigen Adressangaben bewahren wir grundsätzlich acht Jahre nach Ablauf des maßgeblichen Kalenderjahres auf. Bestell- und Erstattungsbestätigungen dienen ebenfalls als Belege und werden acht Jahre aufbewahrt, Versand- und Stornierungsnachrichten grundsätzlich sechs Jahre ab Jahresende. Besondere gesetzliche Pflichten können eine Aufbewahrung von zehn Jahren oder länger erfordern.</p>
       <p>Zusätzliche betriebliche Kopien von Liefer- und Kontaktdaten sowie gespeicherte Produktentwürfe entfernen wir drei Jahre nach Ablauf des Jahres der abgeschlossenen Abwicklung. Nicht mehr benötigte technische Fehler- und Anbieterdetails werden nach 90 Tagen entfernt. Sicher unbezahlte Kaufvorgänge werden 30 Tage nach ihrem bestätigten Ablauf gelöscht; unklare Zahlungsfälle bleiben bis zur Klärung geschützt. Gesetzlich erforderliche Nachweise bleiben von diesen kürzeren Fristen unberührt.</p>
       <p>Offene Reklamationen, Erstattungen, Rechtsstreitigkeiten oder Prüfungen können die Löschung erforderlicher Daten verlängern. Entsprechende Löschsperren werden regelmäßig überprüft. Für Daten bei Fly.io, Supabase, Stripe, Printful und Resend gelten ergänzend deren jeweilige Speicher- und Löschfristen; unsere lokale Löschung entfernt dort gespeicherte Kopien nicht automatisch.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>Optionales Konto und gespeicherte Designs</h2>
+      <p>Gestaltung, Teilnahme und Bestellung funktionieren ohne Konto. Wenn du ein Konto erstellst, verarbeiten wir E-Mail-Adresse, Authentifizierungsdaten, gewählte Sprache sowie Erstellungs-, Anmelde- und Nutzungszeitpunkte. Supabase übernimmt die Anmeldung und speichert Passwörter kryptografisch abgeleitet. Resend versendet Bestätigungs-, Wiederherstellungs- und Sicherheitsnachrichten.</p>
+      <p>Bei „Mit Google fortfahren“ erhalten Supabase und Wolkenworte die Google-Kontokennung, E-Mail-Adresse und grundlegende Profilinformationen wie Name und Profilbild. Wir fordern keinen Zugriff auf Gmail oder andere Google-Inhalte an. Für Google gilt zusätzlich dessen Datenschutzerklärung unter policies.google.com/privacy.</p>
+      <p>Nur beim ausdrücklichen Speichern übertragen wir dein bearbeitbares Design mit Namen, Produkt, Wörtern, Farben, Schriften, Anordnung, Bildern und Vorschau in einen privaten Dateispeicher. Weitere Änderungen werden nicht automatisch im Konto gespeichert. Pro Konto sind höchstens 20 Designs und insgesamt 100 MB vorgesehen. Die Verarbeitung dient der von dir angeforderten Kontofunktion nach Art. 6 Abs. 1 lit. b DSGVO; Sicherheitsmaßnahmen und begrenzte technische Nachweise beruhen auf Art. 6 Abs. 1 lit. f DSGVO.</p>
+      <p>Ein Design läuft drei Kalendermonate nach dem letzten vollständigen Öffnen, ausdrücklichen Speichern oder bestätigten erfolgreichen Kauf ab. Das Ablaufdatum wird beim Design angezeigt. Anmeldung, Übersicht und Hinzufügen zum Warenkorb verlängern die Frist nicht. Nicht bestätigte Registrierungen löschen wir nach sieben Tagen; bestätigte Konten ohne Designs nach zwölf Monaten ohne Kontonutzung.</p>
+      <p>Du kannst Designs oder dein Konto dauerhaft löschen. Der Zugriff endet sofort; Dateien und Authentifizierungsdaten werden unmittelbar zur Löschung übergeben. Bei einer Anbieter-Störung wiederholen wir die technische Löschung. Es gibt keinen Papierkorb. Eine technische Kontokennung bleibt höchstens 35 Tage als Sperrvermerk bestehen, damit bereits laufende Anmeldungen ein gelöschtes Konto nicht wiederherstellen. Kurzlebige Speicher- und Versandnachweise werden nach einem Tag bereinigt. Unabhängige Warenkorbkopien und erforderliche Bestellnachweise unterliegen ihren eigenen Fristen.</p>
+      <p>In „Mein Konto“ kannst du E-Mail-Adresse und Passwort ändern, deine Kontodaten und bearbeitbaren Designs herunterladen sowie dein Konto nach erneuter Identitätsbestätigung löschen. Weitere Datenschutzrechte kannst du unter kontakt@jusa.io geltend machen. Anbieter-Protokolle und vorhandene Sicherungskopien unterliegen deren gesonderten Löschfristen; daraus werden gelöschte Konten und Designs nicht wieder für den normalen Betrieb freigeschaltet.</p>
     </section>
 
     <section class="legal-section">

@@ -16,11 +16,16 @@ const APPLICATION_MIGRATIONS = [
   '20260901010000_organizer_pin_and_personal_palettes.sql',
   '20260923000000_recover_artifact_deletion.sql',
   '20260924000000_commerce_retention.sql',
+  '20261012000000_optional_design_accounts.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
   for (const modulePath of [
     '../src/db',
+    '../src/accountAuth',
+    '../src/savedDesigns',
+    '../src/authEmail',
+    '../src/routes/accounts',
     '../src/routes/events',
     '../src/routes/webhook',
     '../src/fulfillment',

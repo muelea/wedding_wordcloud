@@ -6,6 +6,7 @@
       <a href="/datenschutz"<% if (typeof footerCurrentPage === 'string' && footerCurrentPage === 'datenschutz') { %> aria-current="page"<% } %>>Datenschutz</a>
       <%- include('analytics-settings') %>
       <a href="/bestellinformationen"<% if (typeof footerCurrentPage === 'string' && footerCurrentPage === 'bestellinformationen') { %> aria-current="page"<% } %>>Bestellinformationen</a>
+      <%- include('pwa-install', { installButtonClass: '' }) %>
     </nav>
   </div>
 </footer>

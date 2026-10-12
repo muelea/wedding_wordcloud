@@ -108,6 +108,7 @@ async function renderPage(req, res, view, options = {}) {
     localeSource: resolved.source,
     header: options.header || {},
     pageData: options.pageData || {},
+    designAccountsEnabled: process.env.DESIGN_ACCOUNTS_ENABLED === 'true',
     languages: SUPPORTED_LOCALES.map((code) => ({
       code,
       name: LANGUAGE_NAMES[code],

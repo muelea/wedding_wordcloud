@@ -254,6 +254,31 @@ production data exists.
 
 ## After launch
 
+### Optional design account activation
+
+The optional library implementation is separate from the paid-sales cutover.
+Guest participation and checkout remain account-free. Before enabling it:
+
+- [ ] Review the account/privacy UI and the exact candidate commit, then approve
+  the guarded production `release` with `--enable-design-accounts`.
+- [ ] Supply the current Supabase publishable key and independent account-session
+  and HTTP email-hook secrets in the ignored operator `.env`. The release option
+  stages only these account settings after verification; no ad-hoc deployment.
+- [ ] Apply schema 6 through the release migration gate and verify the new private
+  `wolkenworte-designs` bucket and runtime-only account table permissions.
+- [ ] Publish Google OAuth from Testing to Production and verify its minimal
+  scopes, domain branding and exact callbacks for ordinary customer accounts.
+- [ ] After the handler is deployed, activate the signed Supabase Send Email HTTP
+  hook at `https://wolkenworte.io/auth/email-hook`; verify localized verification,
+  recovery, both email-change codes and seller Reply-To through Resend.
+- [ ] Run controlled production checks for save/reopen, deletion and account
+  deletion; verify the maintenance completion heartbeat and cleanup queues.
+  Never use customer data as fixtures.
+
+The existing deferred backup decision below also applies to editable design
+files. Storage bytes require their own backup if adopted. A restore must replay
+completed deletions and expiry before reopening traffic.
+
 ### Monitoring and recovery after initial paid orders
 
 The maintainer decided on 2026-09-23 to begin live sales with the existing Fly

@@ -32,6 +32,7 @@ const JSON_COLUMNS = new Set([
 ]);
 
 let pool = null;
+let accountSchemaAvailable = false;
 
 function getPool() {
   if (pool) return pool;
@@ -97,9 +98,11 @@ async function assertDatabaseReady() {
       has_schema_privilege(current_user, current_schema(), 'CREATE') AS can_create_schema_objects
   `);
   const currentVersion = Number(result.rows[0]?.version);
-  if (!Number.isSafeInteger(currentVersion) || currentVersion < Number(REQUIRED_SCHEMA_VERSION)) {
+  accountSchemaAvailable = currentVersion >= 6;
+  const requiredVersion=process.env.DESIGN_ACCOUNTS_ENABLED === 'true' ? 6 : REQUIRED_SCHEMA_VERSION;
+  if (!Number.isSafeInteger(currentVersion) || currentVersion < Number(requiredVersion)) {
     throw new Error(
-      `Postgres-Schema ist nicht aktuell (mindestens erwartet: ${REQUIRED_SCHEMA_VERSION}). ` +
+      `Postgres-Schema ist nicht aktuell (mindestens erwartet: ${requiredVersion}). ` +
       'Bitte zuerst die Supabase-Migrationen anwenden.'
     );
   }
@@ -1182,6 +1185,15 @@ async function recordSuccessfulPayment({
       'UPDATE stripe_webhook_events SET order_id = $1 WHERE stripe_event_id = $2',
       [order.id, stripeEventId]
     );
+    if (accountSchemaAvailable) {
+      await client.query(`UPDATE saved_designs d SET last_activity_at=transaction_timestamp(),
+        expires_at=transaction_timestamp()+interval '3 months'
+        FROM design_accounts a WHERE a.id=d.account_id AND a.status='active'
+        AND d.expires_at > transaction_timestamp() AND EXISTS (
+          SELECT 1 FROM order_items i JOIN configurations c ON c.id=i.configuration_id
+          WHERE i.order_id=$1 AND c.saved_design_id=d.id AND c.saved_design_owner_id=d.account_id
+        )`, [order.id]);
+    }
     const email = await insertEmailJobForOrder(client, {
       order: updated.rows[0],
       kind: 'order_confirmation',
@@ -2090,6 +2102,7 @@ async function createConfiguration({
   orientation = 'default',
   printWidth,
   printHeight,
+  savedDesignSource = null,
 }) {
   if (!design) throw new TypeError('A configuration requires an immutable canvas design.');
   return withTransaction(async (client) => {
@@ -2117,6 +2130,12 @@ async function createConfiguration({
       id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
       jsonValue(words), jsonValue(design), orientation, printWidth, printHeight, event.expires_at,
     ]);
+    if (savedDesignSource && accountSchemaAvailable) {
+      await client.query(`UPDATE configurations SET saved_design_id=$2,saved_design_owner_id=$3
+        WHERE id=$1 AND EXISTS(SELECT 1 FROM saved_designs d JOIN design_accounts a ON a.id=d.account_id
+          WHERE d.id=$2 AND d.account_id=$3 AND a.status='active' AND d.expires_at>transaction_timestamp())`,
+      [id,savedDesignSource.id,savedDesignSource.ownerId]);
+    }
     return rowToBoundary(result.rows[0]);
   });
 }
@@ -3236,7 +3255,441 @@ async function finishEmailSmokeRun(id, { succeeded, outcomeCode }) {
   return rowToBoundary(result.rows[0]);
 }
 
+// Optional account persistence. Opaque sessions and private object ledgers
+// never participate in organizer PIN, guest receipt or paid-artifact ownership.
+function accountError(code, status = 409) {
+  return Object.assign(new Error(code), { code, status });
+}
+
+async function ensureDesignAccount({ id, locale = 'de', verified = false, createdAt = null, activityAt = null }) {
+  const r = await getPool().query(`
+    INSERT INTO design_accounts(id, locale, verified, created_at, last_activity_at)
+    SELECT $1, $2, $3, coalesce($4::timestamptz, transaction_timestamp()),
+      coalesce($5::timestamptz, $4::timestamptz, transaction_timestamp())
+    WHERE NOT EXISTS (SELECT 1 FROM account_deletions WHERE account_id = $1)
+    ON CONFLICT (id) DO UPDATE SET verified = design_accounts.verified OR excluded.verified
+    WHERE design_accounts.status = 'active' RETURNING *
+  `, [id, I18n.normalizeLocale(locale), verified, createdAt, activityAt]);
+  return rowToBoundary(r.rows[0]);
+}
+
+async function getDesignAccount(id) {
+  return rowToBoundary((await getPool().query("SELECT * FROM design_accounts WHERE id = $1 AND status = 'active'", [id])).rows[0]);
+}
+
+async function discoverDesignAccounts(users) {
+  if(!users.length)return;
+  await getPool().query(`INSERT INTO design_accounts(id,locale,verified,created_at,last_activity_at)
+    SELECT u.id,u.locale,u.verified,u.created_at,u.last_activity_at
+    FROM jsonb_to_recordset($1::jsonb) AS u(id uuid,locale text,verified boolean,created_at timestamptz,last_activity_at timestamptz)
+    WHERE NOT EXISTS(SELECT 1 FROM account_deletions d WHERE d.account_id=u.id)
+    ON CONFLICT(id) DO UPDATE SET verified=design_accounts.verified OR excluded.verified,
+      last_activity_at=greatest(design_accounts.last_activity_at,excluded.last_activity_at)
+    WHERE design_accounts.status='active'`,[jsonValue(users.slice(0,50).map(user=>({id:user.id,
+      locale:I18n.normalizeLocale(user.user_metadata?.language),verified:Boolean(user.email_confirmed_at),
+      created_at:user.created_at,last_activity_at:user.last_sign_in_at||user.created_at})))]);
+}
+
+async function touchDesignAccount(id, locale = null) {
+  return (await getPool().query(`UPDATE design_accounts SET last_activity_at = transaction_timestamp(),
+    locale = coalesce($2, locale) WHERE id = $1 AND status = 'active' RETURNING id`, [id, locale])).rowCount > 0;
+}
+
+async function createAccountSession(session) {
+  return (await getPool().query(`INSERT INTO account_sessions
+    (id_hash, account_id, tokens_ciphertext, access_expires_at, expires_at, purpose, reauthenticated_at)
+    SELECT $1,$2,$3,$4,transaction_timestamp() + CASE WHEN $5='recovery' THEN interval '10 minutes' ELSE interval '30 days' END,$5,$6
+    FROM design_accounts WHERE id = $2 AND status = 'active' AND verified
+    RETURNING id_hash`, [session.hash, session.accountId, session.ciphertext,
+    session.accessExpiresAt, session.purpose || 'signin', session.reauthenticatedAt || null])).rowCount > 0;
+}
+
+async function getAccountSession(hash) {
+  return rowToBoundary((await getPool().query(`SELECT s.* FROM account_sessions s
+    JOIN design_accounts a ON a.id = s.account_id AND a.status = 'active' AND a.verified
+    WHERE s.id_hash = $1 AND s.expires_at > transaction_timestamp()`, [hash])).rows[0]);
+}
+
+async function deleteAccountSession(hash) {
+  await getPool().query('DELETE FROM account_sessions WHERE id_hash = $1', [hash]);
+}
+
+async function deleteOtherAccountSessions(accountId, hash) {
+  await getPool().query('DELETE FROM account_sessions WHERE account_id=$1 AND id_hash<>$2',[accountId,hash]);
+}
+
+async function claimAccountSessionRefresh(hash, lease) {
+  return (await getPool().query(`UPDATE account_sessions SET refresh_lease = $2,
+    refresh_lease_until = transaction_timestamp() + interval '20 seconds'
+    WHERE id_hash = $1 AND expires_at > transaction_timestamp()
+      AND (refresh_lease_until IS NULL OR refresh_lease_until < transaction_timestamp())
+    RETURNING id_hash`, [hash, lease])).rowCount > 0;
+}
+
+async function finishAccountSessionRefresh(hash, lease, ciphertext, accessExpiresAt) {
+  return (await getPool().query(`UPDATE account_sessions SET tokens_ciphertext = $3,
+    access_expires_at = $4, refresh_lease = null, refresh_lease_until = null
+    WHERE id_hash = $1 AND refresh_lease = $2 AND refresh_lease_until > transaction_timestamp()
+    RETURNING id_hash`, [hash, lease, ciphertext, accessExpiresAt])).rowCount > 0;
+}
+
+async function releaseAccountSessionRefresh(hash, lease) {
+  await getPool().query('UPDATE account_sessions SET refresh_lease=null,refresh_lease_until=null WHERE id_hash=$1 AND refresh_lease=$2',[hash,lease]);
+}
+
+async function completeAccountRecovery(hash) {
+  await getPool().query(`UPDATE account_sessions SET purpose = 'signin',
+    reauthenticated_at = transaction_timestamp(),expires_at=transaction_timestamp()+interval '30 days' WHERE id_hash = $1`, [hash]);
+}
+
+async function createAccountOAuthFlow(flow) {
+  await getPool().query(`INSERT INTO account_oauth_flows
+    (id_hash, verifier_ciphertext, return_to, purpose, account_id) VALUES ($1,$2,$3,$4,$5)`,
+  [flow.hash, flow.ciphertext, flow.returnTo, flow.purpose, flow.accountId || null]);
+}
+
+async function consumeAccountOAuthFlow(hash) {
+  return rowToBoundary((await getPool().query(`DELETE FROM account_oauth_flows
+    WHERE id_hash = $1 AND expires_at > transaction_timestamp() RETURNING *`, [hash])).rows[0]);
+}
+
+async function consumeAccountRateLimits(rules) {
+  return withTransaction(async client => {
+    for (const rule of [...rules].sort((a, b) => a.hash.localeCompare(b.hash))) {
+      const r = await client.query(`INSERT INTO account_rate_limits(key_hash,hits,expires_at)
+        VALUES ($1,1,transaction_timestamp() + $2 * interval '1 millisecond')
+        ON CONFLICT(key_hash) DO UPDATE SET
+          hits = CASE WHEN account_rate_limits.expires_at <= transaction_timestamp() THEN 1 ELSE account_rate_limits.hits + 1 END,
+          expires_at = CASE WHEN account_rate_limits.expires_at <= transaction_timestamp() THEN excluded.expires_at ELSE account_rate_limits.expires_at END
+        RETURNING hits`, [rule.hash, rule.windowMs]);
+      if (r.rows[0].hits > rule.max) throw accountError('account_rate_limited', 429);
+    }
+    return true;
+  });
+}
+
+async function lockDesignAccount(client, id) {
+  const r = await client.query("SELECT * FROM design_accounts WHERE id = $1 AND status = 'active' AND verified FOR UPDATE", [id]);
+  if (!r.rowCount) throw accountError('account_not_found', 401);
+  return r.rows[0];
+}
+
+async function queueDesignObjects(client, keys) {
+  if (!keys.length) return;
+  await client.query(`UPDATE saved_design_objects SET state = 'delete_pending',
+    delete_after = CASE WHEN state = 'uploading' THEN greatest(delete_after, upload_deadline + interval '1 minute') ELSE transaction_timestamp() END,
+    next_attempt_at = transaction_timestamp() WHERE object_key = ANY($1::text[])`, [keys]);
+}
+
+async function abandonDesignWrites(client, accountId, designId = null, expiredOnly = false) {
+  const r = await client.query(`UPDATE saved_design_writes SET status = 'failed'
+    WHERE account_id = $1 AND ($2::uuid IS NULL OR design_id = $2) AND status = 'pending'
+      AND (NOT $3 OR expires_at <= transaction_timestamp()) RETURNING snapshot_key, preview_key`, [accountId, designId, expiredOnly]);
+  await queueDesignObjects(client, r.rows.flatMap(row => [row.snapshot_key, row.preview_key]));
+}
+
+async function reserveSavedDesignWrite(write) {
+  return withTransaction(async client => {
+    await lockDesignAccount(client, write.accountId);
+    await abandonDesignWrites(client, write.accountId, null, true);
+    const prior = (await client.query('SELECT * FROM saved_design_writes WHERE id = $1', [write.id])).rows[0];
+    if (prior) {
+      if (prior.account_id !== write.accountId || prior.snapshot_sha256 !== write.sha256 ||
+          prior.name !== write.name || prior.design_id !== write.designId || prior.status === 'failed') {
+        throw accountError('design_conflict');
+      }
+      if (prior.status === 'pending') throw accountError('design_busy');
+      return rowToBoundary(prior);
+    }
+    const previous = (await client.query(`SELECT * FROM saved_designs WHERE id = $1 AND account_id = $2
+      AND expires_at > transaction_timestamp() FOR UPDATE`, [write.designId, write.accountId])).rows[0];
+    if ((write.expectedVersion === 0 && previous) || (write.expectedVersion !== 0 && !previous)) {
+      throw accountError(write.expectedVersion ? 'design_not_found' : 'design_conflict', write.expectedVersion ? 404 : 409);
+    }
+    if (previous && previous.version !== write.expectedVersion) throw accountError('design_conflict');
+    const capacity = (await client.query(`SELECT
+      (SELECT count(*) FROM saved_designs WHERE account_id = $1 AND expires_at > transaction_timestamp()) +
+        (SELECT count(*) FROM saved_design_writes WHERE account_id = $1 AND status = 'pending' AND is_new) AS designs,
+      (SELECT coalesce(sum(byte_size),0) FROM saved_designs WHERE account_id = $1 AND expires_at > transaction_timestamp()) +
+        (SELECT coalesce(sum(additional_bytes),0) FROM saved_design_writes WHERE account_id = $1 AND status = 'pending') AS bytes`, [write.accountId])).rows[0];
+    const additional = Math.max(0, write.byteSize - Number(previous?.byte_size || 0));
+    if ((!previous && Number(capacity.designs) >= 20) || Number(capacity.bytes) + additional > 100 * 1024 * 1024) {
+      throw accountError('design_quota', 413);
+    }
+    if ((await client.query("SELECT 1 FROM saved_design_writes WHERE design_id = $1 AND status = 'pending'", [write.designId])).rowCount) {
+      throw accountError('design_busy');
+    }
+    const r = await client.query(`INSERT INTO saved_design_writes
+      (id,account_id,design_id,expected_version,snapshot_key,preview_key,snapshot_sha256,byte_size,additional_bytes,is_new,name,product_key,orientation)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+    [write.id,write.accountId,write.designId,write.expectedVersion,write.snapshotKey,write.previewKey,
+      write.sha256,write.byteSize,additional,!previous,write.name,write.productKey,write.orientation]);
+    for (const key of [write.snapshotKey, write.previewKey]) {
+      await client.query(`INSERT INTO saved_design_objects(object_key,account_id,state,upload_deadline)
+        VALUES ($1,$2,'uploading',transaction_timestamp() + interval '1 minute')`, [key, write.accountId]);
+    }
+    return rowToBoundary(r.rows[0]);
+  });
+}
+
+async function finishSavedDesignWrite(accountId, writeId) {
+  return withTransaction(async client => {
+    await lockDesignAccount(client, accountId);
+    const w = (await client.query(`SELECT * FROM saved_design_writes WHERE id = $1 AND account_id = $2
+      AND status = 'pending' AND expires_at > transaction_timestamp() FOR UPDATE`, [writeId,accountId])).rows[0];
+    if (!w) throw accountError('design_conflict');
+    const old = (await client.query(`SELECT * FROM saved_designs WHERE id = $1 AND account_id = $2
+      AND expires_at > transaction_timestamp() FOR UPDATE`, [w.design_id,accountId])).rows[0];
+    if ((w.is_new && old) || (!w.is_new && (!old || old.version !== w.expected_version))) throw accountError('design_conflict');
+    let result;
+    if (w.is_new) {
+      result = await client.query(`INSERT INTO saved_designs
+        (id,account_id,name,product_key,orientation,snapshot_key,preview_key,snapshot_sha256,byte_size)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [w.design_id,accountId,w.name,w.product_key,w.orientation,w.snapshot_key,w.preview_key,w.snapshot_sha256,w.byte_size]);
+    } else {
+      result = await client.query(`UPDATE saved_designs SET name=$3,product_key=$4,orientation=$5,
+        snapshot_key=$6,preview_key=$7,snapshot_sha256=$8,byte_size=$9,version=version+1,
+        saved_at=transaction_timestamp(),last_activity_at=transaction_timestamp(),
+        expires_at=transaction_timestamp() + interval '3 months' WHERE id=$1 AND account_id=$2 RETURNING *`,
+      [w.design_id,accountId,w.name,w.product_key,w.orientation,w.snapshot_key,w.preview_key,w.snapshot_sha256,w.byte_size]);
+      await queueDesignObjects(client, [old.snapshot_key,old.preview_key]);
+    }
+    await client.query("UPDATE saved_design_objects SET state='active' WHERE object_key = ANY($1::text[])", [[w.snapshot_key,w.preview_key]]);
+    await client.query("UPDATE saved_design_writes SET status='complete',result_version=$2 WHERE id=$1", [writeId,result.rows[0].version]);
+    await client.query('UPDATE design_accounts SET last_activity_at=transaction_timestamp() WHERE id=$1', [accountId]);
+    return rowToBoundary(result.rows[0]);
+  });
+}
+
+async function failSavedDesignWrite(accountId, writeId, keys = []) {
+  return withTransaction(async client => {
+    const r = await client.query(`UPDATE saved_design_writes SET status='failed'
+      WHERE id=$1 AND account_id=$2 AND status='pending' RETURNING snapshot_key,preview_key`, [writeId,accountId]);
+    await queueDesignObjects(client, r.rows.flatMap(row => [row.snapshot_key,row.preview_key]));
+    const status=(await client.query('SELECT status FROM saved_design_writes WHERE id=$1 AND account_id=$2',[writeId,accountId])).rows[0]?.status;
+    const removable=await client.query(`SELECT object_key FROM saved_design_objects WHERE account_id=$1
+      AND object_key=ANY($2::text[]) AND state='delete_pending'`,[accountId,keys]);
+    return {status,keys:removable.rows.map(row=>row.object_key)};
+  });
+}
+
+async function listSavedDesigns(accountId) {
+  return rowsToBoundary((await getPool().query(`SELECT d.* FROM saved_designs d JOIN design_accounts a
+    ON a.id=d.account_id AND a.status='active' WHERE d.account_id=$1
+    AND d.expires_at > transaction_timestamp() ORDER BY d.saved_at DESC LIMIT 20`, [accountId])).rows);
+}
+
+async function getSavedDesign(accountId, id) {
+  return rowToBoundary((await getPool().query(`SELECT d.* FROM saved_designs d JOIN design_accounts a
+    ON a.id=d.account_id AND a.status='active' WHERE d.account_id=$1 AND d.id=$2
+    AND d.expires_at > transaction_timestamp()`, [accountId,id])).rows[0]);
+}
+
+async function touchSavedDesign(accountId, id, version) {
+  return rowToBoundary((await getPool().query(`UPDATE saved_designs SET last_activity_at=transaction_timestamp(),
+    expires_at=transaction_timestamp() + interval '3 months' WHERE id=$2 AND account_id=$1 AND version=$3
+    AND expires_at > transaction_timestamp() AND EXISTS
+      (SELECT 1 FROM design_accounts WHERE id=$1 AND status='active') RETURNING *`, [accountId,id,version])).rows[0]);
+}
+
+async function renameSavedDesign(accountId, id, name, version) {
+  return withTransaction(async client => {
+    await lockDesignAccount(client, accountId);
+    const r = await client.query(`UPDATE saved_designs SET name=$3,version=version+1
+      WHERE account_id=$1 AND id=$2 AND version=$4 AND expires_at > transaction_timestamp() RETURNING *`, [accountId,id,name,version]);
+    if (!r.rowCount) throw accountError('design_conflict');
+    return rowToBoundary(r.rows[0]);
+  });
+}
+
+async function removeSavedDesignWithClient(client, accountId, id, expiredOnly = false) {
+  const r = await client.query(`DELETE FROM saved_designs WHERE account_id=$1 AND id=$2
+    AND (NOT $3 OR expires_at <= transaction_timestamp()) RETURNING *`, [accountId,id,expiredOnly]);
+  if (!r.rowCount) return null;
+  await queueDesignObjects(client, [r.rows[0].snapshot_key,r.rows[0].preview_key]);
+  await abandonDesignWrites(client,accountId,id);
+  await client.query('DELETE FROM saved_design_writes WHERE account_id=$1 AND design_id=$2',[accountId,id]);
+  await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_id=$1 AND saved_design_owner_id=$2',[id,accountId]);
+  return rowToBoundary(r.rows[0]);
+}
+
+async function deleteSavedDesign(accountId,id) {
+  return withTransaction(async client => {
+    await lockDesignAccount(client,accountId);
+    return removeSavedDesignWithClient(client,accountId,id);
+  });
+}
+
+async function savedDesignWorkspace(accountId,id) {
+  return withTransaction(async client => {
+    const account = await lockDesignAccount(client,accountId);
+    const d = (await client.query(`SELECT * FROM saved_designs WHERE id=$2 AND account_id=$1
+      AND expires_at > transaction_timestamp() FOR UPDATE`, [accountId,id])).rows[0];
+    if (!d) throw accountError('design_not_found',404);
+    const prior = (await client.query('SELECT slug FROM events WHERE id=$1 AND expires_at > transaction_timestamp()', [d.workspace_event_id])).rows[0];
+    if (prior) return prior.slug;
+    const slug = generateEventSlug();
+    await client.query('INSERT INTO reserved_event_slugs(slug,original_created_at) VALUES ($1,transaction_timestamp())',[slug]);
+    const event = (await client.query(`INSERT INTO events(slug,title,locale,created_at,expires_at)
+      VALUES ($1,$2,$3,transaction_timestamp(),transaction_timestamp()+interval '365 days') RETURNING id`,
+    [slug,I18n.translate('Gespeichertes Design',account.locale),account.locale])).rows[0];
+    await client.query('UPDATE saved_designs SET workspace_event_id=$2 WHERE id=$1',[id,event.id]);
+    return slug;
+  });
+}
+
+async function beginDesignAccountDeletion(accountId) {
+  return withTransaction(async client => {
+    const a = await client.query("UPDATE design_accounts SET status='deleting' WHERE id=$1 AND status='active' RETURNING id",[accountId]);
+    if (!a.rowCount) return false;
+    await client.query('DELETE FROM account_sessions WHERE account_id=$1',[accountId]);
+    await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_owner_id=$1',[accountId]);
+    await client.query('DELETE FROM account_oauth_flows WHERE account_id=$1',[accountId]);
+    await abandonDesignWrites(client,accountId);
+    await client.query('DELETE FROM saved_design_writes WHERE account_id=$1',[accountId]);
+    const rows = (await client.query('DELETE FROM saved_designs WHERE account_id=$1 RETURNING snapshot_key,preview_key',[accountId])).rows;
+    await queueDesignObjects(client,rows.flatMap(row=>[row.snapshot_key,row.preview_key]));
+    await client.query('INSERT INTO account_deletions(account_id) VALUES ($1) ON CONFLICT DO NOTHING',[accountId]);
+    return true;
+  });
+}
+
+async function claimDesignObjectDeletion(accountId = null) {
+  const lease = crypto.randomUUID();
+  return rowToBoundary((await getPool().query(`UPDATE saved_design_objects SET lease=$2,
+    lease_until=transaction_timestamp()+interval '20 seconds',attempts=attempts+1
+    WHERE object_key=(SELECT object_key FROM saved_design_objects WHERE state='delete_pending'
+      AND ($1::uuid IS NULL OR account_id=$1) AND delete_after <= transaction_timestamp()
+      AND next_attempt_at <= transaction_timestamp() AND (lease_until IS NULL OR lease_until < transaction_timestamp())
+      ORDER BY next_attempt_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[accountId,lease])).rows[0]);
+}
+
+async function finishDesignObjectDeletion(key,lease,succeeded) {
+  if (succeeded) await getPool().query(`DELETE FROM saved_design_objects WHERE object_key=$1 AND lease=$2
+    AND lease_until > transaction_timestamp()`,[key,lease]);
+  else await getPool().query(`UPDATE saved_design_objects SET lease=null,lease_until=null,
+    next_attempt_at=transaction_timestamp()+interval '5 minutes' WHERE object_key=$1 AND lease=$2
+    AND lease_until > transaction_timestamp()`,[key,lease]);
+}
+
+async function claimDesignObjectDeletionBatch(accountId = null, limit = 20) {
+  const lease=crypto.randomUUID();
+  return rowsToBoundary((await getPool().query(`UPDATE saved_design_objects SET lease=$2,
+    lease_until=transaction_timestamp()+interval '20 seconds',attempts=attempts+1
+    WHERE object_key IN (SELECT object_key FROM saved_design_objects WHERE state='delete_pending'
+      AND ($1::uuid IS NULL OR account_id=$1) AND delete_after <= transaction_timestamp()
+      AND next_attempt_at <= transaction_timestamp() AND (lease_until IS NULL OR lease_until < transaction_timestamp())
+      ORDER BY next_attempt_at FOR UPDATE SKIP LOCKED LIMIT $3) RETURNING *`,[accountId,lease,Math.min(40,Math.max(1,limit))])).rows);
+}
+
+async function finishDesignObjectDeletionBatch(keys,lease,succeeded) {
+  if(succeeded) await getPool().query(`DELETE FROM saved_design_objects WHERE object_key=ANY($1::text[])
+    AND lease=$2 AND lease_until > transaction_timestamp()`,[keys,lease]);
+  else await getPool().query(`UPDATE saved_design_objects SET lease=null,lease_until=null,
+    next_attempt_at=transaction_timestamp()+interval '5 minutes' WHERE object_key=ANY($1::text[])
+    AND lease=$2 AND lease_until > transaction_timestamp()`,[keys,lease]);
+}
+
+async function claimDesignAccountDeletion(accountId = null) {
+  const lease=crypto.randomUUID();
+  return rowToBoundary((await getPool().query(`UPDATE account_deletions SET lease=$2,
+    lease_until=transaction_timestamp()+interval '20 seconds',attempts=attempts+1
+    WHERE account_id=(SELECT account_id FROM account_deletions WHERE completed_at IS NULL
+      AND ($1::uuid IS NULL OR account_id=$1) AND next_attempt_at <= transaction_timestamp()
+      AND (lease_until IS NULL OR lease_until < transaction_timestamp())
+      ORDER BY next_attempt_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,[accountId,lease])).rows[0]);
+}
+
+async function finishDesignAccountDeletion(id,lease,succeeded) {
+  await withTransaction(async client=> {
+    const r=await client.query(`UPDATE account_deletions SET lease=null,lease_until=null,
+      completed_at=CASE WHEN $3 THEN transaction_timestamp() ELSE null END,
+      next_attempt_at=transaction_timestamp()+interval '5 minutes'
+      WHERE account_id=$1 AND lease=$2 AND lease_until > transaction_timestamp() RETURNING account_id`,[id,lease,succeeded]);
+    if (succeeded&&r.rowCount) await client.query('DELETE FROM design_accounts WHERE id=$1',[id]);
+  });
+}
+
+async function sweepDesignAccountRetention({ deadline = Date.now() + 3000 } = {}) {
+  const result={designsExpired:0,accountsExpired:0};
+  if(Date.now()>=deadline)return result;
+  // Each housekeeping mutation is bounded; one round trip leaves time for
+  // durable provider deletions in the authenticated maintenance wake-up.
+  await getPool().query(`WITH uploads AS (
+    UPDATE saved_design_objects SET state='delete_pending',delete_after=greatest(delete_after,upload_deadline+interval '1 minute')
+    WHERE object_key IN(SELECT object_key FROM saved_design_objects WHERE state='uploading' AND upload_deadline<transaction_timestamp() LIMIT 100)
+  ), writes AS (
+    UPDATE saved_design_writes SET status='failed' WHERE id IN(SELECT id FROM saved_design_writes WHERE status='pending' AND expires_at<transaction_timestamp() LIMIT 100)
+  ), sessions AS (
+    DELETE FROM account_sessions WHERE id_hash IN(SELECT id_hash FROM account_sessions WHERE expires_at<=transaction_timestamp() LIMIT 500)
+  ), flows AS (
+    DELETE FROM account_oauth_flows WHERE id_hash IN(SELECT id_hash FROM account_oauth_flows WHERE expires_at<=transaction_timestamp() LIMIT 500)
+  ), limits AS (
+    DELETE FROM account_rate_limits WHERE key_hash IN(SELECT key_hash FROM account_rate_limits WHERE expires_at<=transaction_timestamp() LIMIT 500)
+  ), old_writes AS (
+    DELETE FROM saved_design_writes WHERE id IN(SELECT id FROM saved_design_writes WHERE status<>'pending' AND created_at<transaction_timestamp()-interval '1 day' LIMIT 500)
+  ), receipts AS (
+    DELETE FROM auth_email_receipts WHERE id_hash IN(SELECT id_hash FROM auth_email_receipts WHERE created_at<transaction_timestamp()-interval '1 day' LIMIT 500)
+  ) DELETE FROM account_deletions WHERE account_id IN(SELECT account_id FROM account_deletions WHERE completed_at<transaction_timestamp()-interval '35 days' LIMIT 500)`);
+  if(Date.now()>=deadline)return result;
+  const expired=(await getPool().query('SELECT id,account_id FROM saved_designs WHERE expires_at <= transaction_timestamp() LIMIT 5')).rows;
+  for(const row of expired) { if (Date.now() >= deadline) break; await withTransaction(async client=> {
+    const a=await client.query('SELECT id FROM design_accounts WHERE id=$1 FOR UPDATE',[row.account_id]);
+    if(a.rowCount && await removeSavedDesignWithClient(client,row.account_id,row.id,true)) result.designsExpired++;
+  }); }
+  if(Date.now()>=deadline)return result;
+  const dormant=(await getPool().query(`SELECT id FROM design_accounts a WHERE status='active' AND
+    ((NOT verified AND created_at < transaction_timestamp()-interval '7 days') OR
+    (verified AND last_activity_at < transaction_timestamp()-interval '12 months'
+        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id))) LIMIT 5`)).rows;
+  // Eligibility is rechecked under the account lock, so a concurrent login/save wins safely.
+  for(const row of dormant) { if (Date.now() >= deadline) break; await withTransaction(async client=> {
+    const a=(await client.query(`SELECT * FROM design_accounts WHERE id=$1 AND status='active' FOR UPDATE`,[row.id])).rows[0];
+    if(!a) return;
+    const eligible=await client.query(`SELECT id FROM design_accounts a WHERE id=$1 AND
+      ((NOT verified AND created_at < transaction_timestamp()-interval '7 days') OR
+      (verified AND last_activity_at < transaction_timestamp()-interval '12 months'
+        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)))`,[row.id]);
+    if(!eligible.rowCount) return;
+    await client.query("UPDATE design_accounts SET status='deleting' WHERE id=$1",[row.id]);
+    await client.query('DELETE FROM account_sessions WHERE account_id=$1',[row.id]);
+    await client.query('DELETE FROM account_oauth_flows WHERE account_id=$1',[row.id]);
+    await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_owner_id=$1',[row.id]);
+    await abandonDesignWrites(client,row.id);
+    await client.query('DELETE FROM saved_design_writes WHERE account_id=$1',[row.id]);
+    await client.query('INSERT INTO account_deletions(account_id) VALUES ($1) ON CONFLICT DO NOTHING',[row.id]);
+    result.accountsExpired++;
+  }); }
+  return result;
+}
+
+async function accountMaintenancePage(nextPage = null) {
+  if(nextPage != null) await getPool().query('UPDATE account_maintenance_cursor SET page=$1 WHERE id=true',[nextPage]);
+  return (await getPool().query('SELECT page FROM account_maintenance_cursor WHERE id=true')).rows[0]?.page || 1;
+}
+
+async function recordAuthEmailReceipt(hash,payloadHash,delivered = false) {
+  if(delivered) return getPool().query('UPDATE auth_email_receipts SET delivered=true WHERE id_hash=$1 AND payload_hash=$2',[hash,payloadHash]);
+  const r=await getPool().query(`INSERT INTO auth_email_receipts(id_hash,payload_hash) VALUES ($1,$2)
+    ON CONFLICT(id_hash) DO UPDATE SET id_hash=excluded.id_hash RETURNING *`,[hash,payloadHash]);
+  if(r.rows[0].payload_hash!==payloadHash) throw accountError('auth_email_replay_mismatch',400);
+  return r.rows[0];
+}
+
 module.exports = {
+  hasAccountSchema: () => accountSchemaAvailable,
+  accountError, ensureDesignAccount, discoverDesignAccounts, getDesignAccount, touchDesignAccount,
+  createAccountSession, getAccountSession, deleteAccountSession, deleteOtherAccountSessions,
+  claimAccountSessionRefresh, finishAccountSessionRefresh, releaseAccountSessionRefresh, completeAccountRecovery,
+  createAccountOAuthFlow, consumeAccountOAuthFlow, consumeAccountRateLimits,
+  reserveSavedDesignWrite, finishSavedDesignWrite, failSavedDesignWrite,
+  listSavedDesigns, getSavedDesign, touchSavedDesign, renameSavedDesign,
+  deleteSavedDesign, savedDesignWorkspace, beginDesignAccountDeletion,
+  claimDesignObjectDeletion, finishDesignObjectDeletion,
+  claimDesignObjectDeletionBatch, finishDesignObjectDeletionBatch,
+  claimDesignAccountDeletion, finishDesignAccountDeletion,
+  sweepDesignAccountRetention, accountMaintenancePage, recordAuthEmailReceipt,
   get pool() { return getPool(); },
   getPool,
   closePool,

@@ -1,0 +1,48 @@
+.ww-pwa-install {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.ww-pwa-install[hidden] { display: none !important; }
+.ww-pwa-install:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ww-pwa-install:focus-visible { outline: 3px solid #276e63; outline-offset: 3px; }
+
+.ww-pwa-dialog {
+  box-sizing: border-box;
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid rgba(64, 15, 38, .12);
+  border-radius: 20px;
+  padding: 24px;
+  background: #fffdfa;
+  color: #400f26;
+  font: 400 1rem/1.6 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
+  text-align: left;
+  box-shadow: 0 24px 60px rgba(64, 15, 38, .18);
+}
+
+.ww-pwa-dialog::backdrop { background: rgba(64, 15, 38, .35); }
+.ww-pwa-dialog-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.ww-pwa-dialog-heading h2 { margin: 0; font-family: inherit; font-size: 1.2rem; font-weight: 600; line-height: 1.35; }
+.ww-pwa-dialog p { margin: 0 0 14px; }
+.ww-pwa-dialog p:last-child { margin-bottom: 0; }
+.ww-pwa-dialog-close {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  border: 1px solid rgba(64, 15, 38, .12);
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.ww-pwa-dialog-close:focus-visible { outline: 3px solid #276e63; outline-offset: 3px; }

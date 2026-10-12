@@ -6,6 +6,7 @@ const emailDelivery = require('./emailDelivery');
 const lifecycle = require('./lifecycle');
 const log = require('./structuredLog');
 const storage = require('./privateStorage');
+const savedDesigns = require('./savedDesigns');
 
 const WALL_CLOCK_BUDGET_MS = 15_000;
 const FULFILLMENT_BUDGET_MS = 7_000;
@@ -48,7 +49,18 @@ async function execute(triggerKind) {
         log.error('mockup_source_cleanup_failed', { errorCode: sanitizedCode(error) });
       });
     }
+    let accounts = {};
+    if (Date.now() + 1000 < startedAt + WALL_CLOCK_BUDGET_MS - 250) {
+      accounts = await savedDesigns.maintenance({ deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250 }).catch(error=> {
+        log.error('design_account_maintenance_failed',{errorCode:sanitizedCode(error)});
+        return {failed:true};
+      });
+    }
     const summary = {
+      designsExpired: accounts.designsExpired || 0,
+      accountsExpired: accounts.accountsExpired || 0,
+      designObjectsRemoved: accounts.objectsRemoved || 0,
+      designAccountMaintenanceFailed: accounts.failed ? 1 : 0,
       fulfillmentClaimed: fulfillmentSummary.claimed,
       fulfillmentCompleted: fulfillmentSummary.completed,
       emailsClaimed: emailSummary.claimed,

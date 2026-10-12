@@ -169,9 +169,12 @@ behavior changes, even during focused iteration:
 - German is the source language throughout (`views/*.ejs` copy, form
   labels, error messages). Keep new user-facing strings in German unless
   told otherwise.
-- No accounts/login system for guests or couples. The admin PIN authorizes only
-  one reset request at a time; it is not a session/cookie/JWT mechanism. Don't
-  add a login system as a "nice to have."
+- Guest participation, event creation, checkout and organizer PINs never require
+  an account. The explicitly requested optional design library uses Supabase
+  Auth only for private editable designs and account settings; it grants no
+  organizer/reset privileges. The admin PIN still authorizes one reset request
+  at a time and is not a session/cookie/JWT mechanism. Account saves are manual;
+  never introduce cloud autosave or cascade account deletion into commerce.
 - The architecture refactor is complete. Current launch blockers and the
   production cutover order live in `docs/launch-readiness.md`; do not recreate
   historical numbered plans or duplicate that checklist in other documents.
