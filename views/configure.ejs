@@ -1728,10 +1728,25 @@
     }
 
     .order-actions button[hidden] { display: none; }
+    .design-save-state { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .design-save-state p { margin: 3px 0; }
+    .design-save-state [data-pending="true"], .order-draft-status { color: var(--berry); }
+    .order-draft-status { display: block; font-size: 11px; margin-top: 4px; }
+    .cart-removal-notice { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+    .cart-removal-notice[hidden], #product-switch-undo[hidden] { display: none; }
+    .cart-removal-notice button, #product-switch-undo { min-width: 0; }
+    .cart-review-list { padding: 0; list-style: none; }
+    .cart-review-list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .cart-review-list button { min-width: 0; margin-top: 5px; }
+    .product-dialog-description { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
     #draft-loss-dialog .config-panel-foot,
-    #shipping-choice-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
+    #shipping-choice-dialog .config-panel-foot,
+    #another-choice-dialog .config-panel-foot,
+    #design-replace-dialog .config-panel-foot { display: flex; gap: 10px; flex-wrap: wrap; }
     #draft-loss-dialog .config-panel-foot button,
-    #shipping-choice-dialog .config-panel-foot button { min-width: 0; flex: 1 1 190px; }
+    #shipping-choice-dialog .config-panel-foot button,
+    #another-choice-dialog .config-panel-foot button,
+    #design-replace-dialog .config-panel-foot button { min-width: 0; flex: 1 1 190px; }
     .secondary-button {
       width: auto;
       min-width: 210px;
@@ -1749,7 +1764,8 @@
     .secondary-button:hover:not(:disabled) { background: rgba(123, 70, 82, .055); color: var(--ink); }
     .secondary-button:focus { outline: none; }
     .secondary-button:focus-visible { background: rgba(123, 70, 82, .055); color: var(--ink); }
-    .secondary-button:disabled { cursor: wait; opacity: .6; }
+    .secondary-button:disabled { cursor: default; opacity: .6; }
+    .secondary-button.ww-is-busy:disabled { cursor: wait; }
     .order-actions .continue-button {
       min-width: 190px;
       background: linear-gradient(135deg, var(--berry), var(--berry-dark));
@@ -2105,6 +2121,7 @@
         <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
         <p class="intro-copy" id="config-intro"><%= pageData.directDesign ? 'Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.' : 'Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.' %></p>
+        <p class="design-save-state">Produktpreise, Versandkosten und Lieferzeit werden im nächsten Schritt mit Menge und Lieferadresse berechnet.</p>
       </section>
 
       <p class="configurator-progress" data-configurator-progress role="status" aria-live="polite" hidden></p>
@@ -2159,6 +2176,7 @@
               <dialog class="config-panel" id="theme-panel" aria-labelledby="theme-panel-title">
                 <div class="config-panel-head"><h2 id="theme-panel-title" tabindex="-1">Farbwelt</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
                 <div class="config-panel-body">
+                <p class="design-save-state">Die Farbwelt gilt für alle Druckseiten dieses Designs.</p>
                 <div class="option-grid" id="theme-options"></div>
                 <div class="custom-palette-panel" id="custom-palette-panel" hidden>
                   <div class="custom-palette-head">
@@ -2372,6 +2390,11 @@
         <p class="print-readability" id="print-readability" role="status" aria-live="polite" hidden></p>
 
         <section class="checkout-panel" id="checkout-panel" aria-label="Bestellung fortsetzen">
+          <div class="design-save-state" aria-live="polite" aria-atomic="true">
+            <p id="draft-save-state"></p>
+            <p id="cart-save-state"></p>
+            <button class="secondary-button" id="product-switch-undo" type="button" hidden>Produktwechsel rückgängig</button>
+          </div>
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
               <strong>Euer Warenkorb</strong>
@@ -2379,9 +2402,13 @@
             </div>
             <div class="order-list" id="order-list"></div>
           </div>
+          <div class="cart-removal-notice" id="cart-removal-notice" role="status" hidden>
+            <span id="cart-removal-message"></span>
+            <button class="secondary-button" id="cart-removal-undo" type="button">Rückgängig</button>
+          </div>
           <div class="order-actions">
             <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
-            <button class="primary-button" id="save-design" type="button">In den Warenkorb</button>
+            <button class="secondary-button" id="save-design" type="button">In den Warenkorb</button>
             <button class="primary-button continue-button" id="continue-order" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="shipping-choice-dialog"><span id="continue-order-label">Zur Lieferadresse</span> <span aria-hidden="true">→</span></button>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
@@ -2402,15 +2429,36 @@
 
   <dialog class="config-panel" id="shipping-choice-dialog" aria-labelledby="shipping-choice-title" aria-describedby="shipping-choice-description">
     <div class="config-panel-head">
-      <h2 id="shipping-choice-title" tabindex="-1">Aktuelles Design mitnehmen?</h2>
+      <h2 id="shipping-choice-title" tabindex="-1">Designs vor dem Weitergehen prüfen</h2>
       <button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button>
     </div>
     <div class="config-panel-body">
-      <p id="shipping-choice-description">Dieses Design ist noch nicht im Warenkorb. Möchtet ihr es hinzufügen oder nur mit eurem aktuellen Warenkorb fortfahren?</p>
+      <p id="shipping-choice-description">Dieses Design ist noch nicht im Warenkorb. Möchtet ihr es hinzufügen oder nur mit den bisherigen Designs fortfahren?</p>
+      <ul class="cart-review-list" id="shipping-choice-list"></ul>
     </div>
     <div class="config-panel-foot">
-      <button class="secondary-button" id="shipping-choice-current-cart" type="button">Mit aktuellem Warenkorb weiter</button>
-      <button class="primary-button" id="shipping-choice-save" type="button">In den Warenkorb und weiter</button>
+      <button class="secondary-button" type="button" data-panel-close>Weiter bearbeiten</button>
+      <button class="secondary-button" id="shipping-choice-current-cart" type="button">Mit bisherigen Designs weiter</button>
+      <button class="primary-button" id="shipping-choice-save" type="button">Designs übernehmen und weiter</button>
+    </div>
+  </dialog>
+
+  <dialog class="config-panel" id="another-choice-dialog" aria-labelledby="another-choice-title" aria-describedby="another-choice-description">
+    <div class="config-panel-head"><h2 id="another-choice-title" tabindex="-1">Aktuelles Design zuerst übernehmen?</h2></div>
+    <div class="config-panel-body"><p id="another-choice-description"></p></div>
+    <div class="config-panel-foot">
+      <button class="secondary-button" type="button" data-panel-close>Weiter bearbeiten</button>
+      <button class="secondary-button" id="another-choice-skip" type="button">Ohne Aktualisieren weiter</button>
+      <button class="primary-button" id="another-choice-save" type="button">Warenkorb aktualisieren und weiter</button>
+    </div>
+  </dialog>
+
+  <dialog class="config-panel" id="design-replace-dialog" aria-labelledby="design-replace-title" aria-describedby="design-replace-description">
+    <div class="config-panel-head"><h2 id="design-replace-title" tabindex="-1"></h2></div>
+    <div class="config-panel-body"><p id="design-replace-description"></p></div>
+    <div class="config-panel-foot">
+      <button class="secondary-button" type="button" data-panel-close>Weiter bearbeiten</button>
+      <button class="primary-button" id="design-replace-confirm" type="button">Design ersetzen</button>
     </div>
   </dialog>
 
@@ -2427,7 +2475,7 @@
   </dialog>
   <div class="editor-tooltip" id="editor-toolbar-tooltip" role="tooltip" hidden></div>
 
-  <dialog class="product-dialog ww-mobile-dialog" id="product-dialog" aria-labelledby="product-dialog-title" tabindex="-1">
+  <dialog class="product-dialog ww-mobile-dialog" id="product-dialog" aria-labelledby="product-dialog-title" aria-describedby="product-dialog-description" tabindex="-1">
     <div class="product-dialog-shell">
       <div class="product-dialog-head">
         <div>
@@ -2436,6 +2484,7 @@
         <button class="product-dialog-close" id="product-dialog-close" type="button" aria-label="Produktwahl schließen">×</button>
       </div>
       <div class="product-dialog-body">
+        <p class="product-dialog-description" id="product-dialog-description"></p>
         <div class="product-options" id="product-options" role="radiogroup" aria-label="Produktgruppe wählen"></div>
         <div class="variant-panel" id="variant-panel" hidden>
           <p class="variant-head" id="variant-title">Ausführung wählen</p>
@@ -2591,6 +2640,11 @@
     const continueOrderButton = document.getElementById('continue-order');
     const continueOrderLabel = document.getElementById('continue-order-label');
     const saveDesignButton = document.getElementById('save-design');
+    const draftSaveState = document.getElementById('draft-save-state');
+    const cartSaveState = document.getElementById('cart-save-state');
+    const productSwitchUndo = document.getElementById('product-switch-undo');
+    const cartRemovalNotice = document.getElementById('cart-removal-notice');
+    const cartRemovalMessage = document.getElementById('cart-removal-message');
     const cloudUpdateNotice = document.getElementById('cloud-update-notice');
     const applyLiveWordsButton = document.getElementById('apply-live-words');
     const draftLossDialog = document.getElementById('draft-loss-dialog');
@@ -2602,6 +2656,11 @@
     const shippingChoiceDescription = document.getElementById('shipping-choice-description');
     const shippingChoiceCurrentCart = document.getElementById('shipping-choice-current-cart');
     const shippingChoiceSave = document.getElementById('shipping-choice-save');
+    const shippingChoiceList = document.getElementById('shipping-choice-list');
+    const anotherChoiceDialog = document.getElementById('another-choice-dialog');
+    const anotherChoiceSave = document.getElementById('another-choice-save');
+    const anotherChoiceSkip = document.getElementById('another-choice-skip');
+    const designReplaceDialog = document.getElementById('design-replace-dialog');
     const cart = WolkenworteConfiguratorSession.createCart(slug);
     const draftStore = WolkenworteConfiguratorSession.createDraftStore(slug);
     const workspace = new WolkenworteWorkspace(document);
@@ -2651,6 +2710,11 @@
     let draftSavePromise = null;
     let draftSavedRevision = -1;
     let draftStorageFailed = false;
+    let savedDesignFingerprint = null;
+    let productTransitionPending = false;
+    let previousProductDraft = null;
+    let cartDrafts = new Map();
+    let removedEditingState = null;
 
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
@@ -2671,18 +2735,68 @@
       const items = loadOrderItems();
       saveDesignButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
       if (!saveDesignButton.classList?.contains('ww-is-busy')) {
-        setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
+        setText(saveDesignButton, editingOrderItemId ? 'Warenkorb aktualisieren' : 'In den Warenkorb');
       }
       if (!continueOrderButton.classList?.contains('ww-is-busy')) setText(continueOrderLabel, items.length
         ? 'Zur Lieferadresse'
         : currentDesignNeedsSave
         ? (editingOrderItemId
-          ? 'Änderungen übernehmen & zur Lieferadresse'
+          ? 'Warenkorb aktualisieren & zur Lieferadresse'
           : 'In den Warenkorb & zur Lieferadresse')
         : 'Zur Lieferadresse');
       continueOrderButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       designAnotherButton.hidden = !items.length;
+      updateSaveState();
+      updateCartDraftMarkers();
+    }
+
+    function currentDesignFingerprint() {
+      return WolkenworteConfiguratorSession.designFingerprint({ productKey: product.key,
+        orientation: selectedOrientation, theme: selectedTheme, designs: getAllSurfaceDesigns() });
+    }
+
+    function updateSaveState() {
+      if (!workspaceReady || restorationFailed) return;
+      const draftMessage = draftStorageFailed
+        ? 'Entwurf nicht gesichert. Bitte lasst diese Seite geöffnet.'
+        : hasUnpersistedDraft() ? 'Entwurf wird in diesem Browser gesichert…'
+        : 'Entwurf in diesem Browser gesichert · 7 Tage verfügbar';
+      cartSaveState.dataset.pending = String(currentDesignNeedsSave);
+      const cartMessage = editingOrderItemId
+        ? currentDesignNeedsSave
+          ? 'Änderungen noch nicht im Warenkorb. Bestellt wird die bisherige Version, bis ihr den Warenkorb aktualisiert.'
+          : 'Dieses Design ist im Warenkorb aktuell.'
+        : 'Dieses Design ist noch nicht im Warenkorb.';
+      // Announce state transitions once, rather than every frame of a drag.
+      if (draftSaveState.textContent !== t(draftMessage)) setText(draftSaveState, draftMessage);
+      if (cartSaveState.textContent !== t(cartMessage)) setText(cartSaveState, cartMessage);
+    }
+
+    function updateCartDraftMarkers() {
+      for (const marker of orderList.querySelectorAll('[data-cart-draft-status]')) {
+        const isCurrent = marker.dataset.cartDraftStatus === editingOrderItemId;
+        const pending = isCurrent ? currentDesignNeedsSave : cartDrafts.has(marker.dataset.cartDraftStatus);
+        marker.hidden = !pending;
+        if (pending) setText(marker, 'Änderungen noch nicht übernommen');
+      }
+    }
+
+    async function refreshCartDrafts() {
+      const records = await WolkenworteConfiguratorSession.withTimeout(
+        draftStore.loadCartDrafts(loadOrderItems().map(item => item.id)));
+      cartDrafts = new Map(records.filter(draft => draft.needsCartUpdate !== false)
+        .map(draft => [draft.editingOrderItemId, draft]));
+      updateCartDraftMarkers();
+      return [...cartDrafts.values()];
+    }
+
+    function renderRemovalNotice() {
+      const removed = cart.pendingRemoval();
+      cartRemovalNotice.hidden = !removed;
+      if (removed) setText(cartRemovalMessage, '{{item}} wurde aus dem Warenkorb entfernt.', {
+        item: t(products.find(candidate => candidate.key === removed.item.productKey)?.displayName || 'Design'),
+      });
     }
 
     function setMobileEditorExpanded(expanded, { scroll = true } = {}) {
@@ -2748,7 +2862,7 @@
       if (!items.length) return 'add';
       const currentDesignIsInCart = Boolean(editingOrderItemId) &&
         items.some((item) => item.id === editingOrderItemId);
-      if (currentDesignIsInCart && !hasUnsavedDesign()) return 'continue';
+      if (currentDesignIsInCart && !hasUnsavedDesign()) return cartDrafts.size ? 'choose-review' : 'continue';
       return currentDesignIsInCart ? 'choose-update' : 'choose-add';
     }
 
@@ -2765,6 +2879,8 @@
         productDesignState,
         layoutVersion: AUTOMATIC_LAYOUT_VERSION,
         editingOrderItemId,
+        needsCartUpdate: currentDesignNeedsSave,
+        savedDesignFingerprint,
         currentDesignEdited,
         designRevision,
       };
@@ -2791,14 +2907,21 @@
           if (finalize) await finalizeCurrentText();
           else mugEditor.flushPendingChange();
           const snapshot = draftSnapshot();
-          await draftStore.save(snapshot);
+          const record = await draftStore.save(snapshot);
           draftSavedRevision = snapshot.designRevision;
           draftStorageFailed = false;
+          if (record.editingOrderItemId) {
+            if (record.needsCartUpdate) cartDrafts.set(record.editingOrderItemId, record);
+            else cartDrafts.delete(record.editingOrderItemId);
+          }
+          updateSaveState();
+          updateCartDraftMarkers();
           return true;
         } catch (error) {
           console.warn('Configurator draft save failed.', error);
           draftStorageFailed = true;
           setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
+          updateSaveState();
           return false;
         }
       };
@@ -2859,14 +2982,46 @@
     draftLossStay.addEventListener('click', () => draftLossDialog.close('stay'));
     draftLossLeave.addEventListener('click', () => draftLossDialog.close('leave'));
 
-    function askShippingChoice(action) {
+    function askShippingChoice(action, drafts = []) {
       const isUpdate = action === 'choose-update';
-      setText(shippingChoiceTitle, 'Aktuelles Design mitnehmen?');
-      setText(shippingChoiceDescription, isUpdate
-        ? 'Dieses Design enthält Änderungen, die noch nicht im Warenkorb gespeichert sind. Möchtet ihr sie übernehmen oder mit der gespeicherten Version fortfahren?'
-        : 'Dieses Design ist noch nicht im Warenkorb. Möchtet ihr es hinzufügen oder nur mit eurem aktuellen Warenkorb fortfahren?');
-      setText(shippingChoiceSave, isUpdate
-        ? 'Änderungen übernehmen und weiter' : 'In den Warenkorb und weiter');
+      const multiple = drafts.some(draft => draft.editingOrderItemId !== editingOrderItemId);
+      setText(shippingChoiceTitle, multiple ? 'Designs vor dem Weitergehen prüfen'
+        : isUpdate ? 'Änderungen vor dem Weitergehen übernehmen?' : 'Aktuelles Design hinzufügen?');
+      setText(shippingChoiceDescription, multiple
+        ? 'Bei diesen Designs gibt es Änderungen, die noch nicht im Warenkorb übernommen sind. Übernehmt sie für die Bestellung oder fahrt mit den bisherigen Designs fort. Eure Entwürfe bleiben in diesem Browser erhalten.'
+        : isUpdate
+        ? 'Die Änderungen sind noch nicht im Warenkorb. Übernehmt sie für die Bestellung oder fahrt mit der bisherigen Version fort. Euer Entwurf bleibt in diesem Browser erhalten.'
+        : 'Dieses Design ist noch nicht im Warenkorb. Fügt es hinzu oder fahrt ohne dieses Design fort.');
+      setText(shippingChoiceSave, multiple ? 'Designs übernehmen und weiter'
+        : isUpdate ? 'Warenkorb aktualisieren und weiter' : 'In den Warenkorb und weiter');
+      shippingChoiceList.replaceChildren();
+      for (const draft of drafts) {
+        const row = document.createElement('li');
+        const saved = loadOrderItems().find(item => item.id === draft.editingOrderItemId);
+        const oldProduct = products.find(candidate => candidate.key === saved?.productKey);
+        const newProduct = products.find(candidate => candidate.key === draft.productKey);
+        const oldName = oldProduct ? `${t(oldProduct.displayName)} · ${productSizeText(oldProduct, saved.orientation)}` : t('Design');
+        const newName = newProduct ? `${t(newProduct.displayName)} · ${productSizeText(newProduct, draft.orientation)}` : oldName;
+        const position = document.createElement('strong');
+        setText(position, 'Design {{number}}', {
+          number: loadOrderItems().findIndex(item => item.id === draft.editingOrderItemId) + 1,
+        });
+        const label = document.createElement('div');
+        setText(label, saved?.productKey === draft.productKey ? '{{item}}: Änderungen übernehmen'
+          : '{{previous}} durch {{item}} ersetzen', { previous: t(oldName), item: t(newName) });
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'secondary-button';
+        setText(edit, 'Design prüfen');
+        edit.addEventListener('click', () => shippingChoiceDialog.close(`edit:${draft.editingOrderItemId}`));
+        row.append(position, label, edit);
+        shippingChoiceList.appendChild(row);
+      }
+      if (action === 'choose-add') {
+        const row = document.createElement('li');
+        setText(row, '{{item}}: neues Design hinzufügen', { item: t(product.displayName) });
+        shippingChoiceList.appendChild(row);
+      }
       shippingChoiceDialog.returnValue = 'cancel';
       return new Promise((resolve) => {
         shippingChoiceDialog.addEventListener('close', () => resolve(shippingChoiceDialog.returnValue), { once: true });
@@ -2877,6 +3032,37 @@
 
     shippingChoiceCurrentCart.addEventListener('click', () => shippingChoiceDialog.close('cart'));
     shippingChoiceSave.addEventListener('click', () => shippingChoiceDialog.close('save'));
+
+    function askAnotherProductChoice() {
+      const updating = Boolean(editingOrderItemId);
+      setText(document.getElementById('another-choice-title'), updating
+        ? 'Änderungen zuerst in den Warenkorb übernehmen?' : 'Aktuelles Design zuerst hinzufügen?');
+      setText(document.getElementById('another-choice-description'), updating
+        ? 'Das weitere Produkt erhält eine Kopie eures aktuellen Designs. Im Warenkorb bleibt die bisherige Version, wenn ihr die Änderungen jetzt nicht übernehmt.'
+        : 'Das weitere Produkt erhält eine Kopie eures aktuellen Designs. Dieses Design wird nur bestellt, wenn ihr es ausdrücklich in den Warenkorb legt.');
+      setText(anotherChoiceSave, updating ? 'Warenkorb aktualisieren und weiter' : 'In den Warenkorb und weiter');
+      setText(anotherChoiceSkip, updating ? 'Ohne Aktualisieren weiter' : 'Ohne Hinzufügen weiter');
+      anotherChoiceDialog.returnValue = 'cancel';
+      return new Promise(resolve => {
+        anotherChoiceDialog.addEventListener('close', () => resolve(anotherChoiceDialog.returnValue), { once: true });
+        workspace.close(false);
+        workspace.show(anotherChoiceDialog, designAnotherButton);
+      });
+    }
+    anotherChoiceSave.addEventListener('click', () => anotherChoiceDialog.close('save'));
+    anotherChoiceSkip.addEventListener('click', () => anotherChoiceDialog.close('skip'));
+
+    function askDesignReplacement(title, description, trigger) {
+      setText(document.getElementById('design-replace-title'), title);
+      setText(document.getElementById('design-replace-description'), description);
+      designReplaceDialog.returnValue = 'cancel';
+      return new Promise(resolve => {
+        designReplaceDialog.addEventListener('close', () => resolve(designReplaceDialog.returnValue === 'replace'), { once: true });
+        workspace.close(false);
+        workspace.show(designReplaceDialog, trigger);
+      });
+    }
+    document.getElementById('design-replace-confirm').addEventListener('click', () => designReplaceDialog.close('replace'));
 
     async function runNavigation(action) {
       if (leavingPage || orderActionPending) return;
@@ -3002,6 +3188,7 @@
         productDesignState = null;
         editingOrderItemId = loadOrderItems().some((item) => item.id === data.id) ? data.id : null;
         currentDesignNeedsSave = !editingOrderItemId || Boolean(adjusted);
+        savedDesignFingerprint = !adjusted ? currentDesignFingerprint() : null;
         currentDesignEdited = true;
         pendingConfiguration = null;
         cloudUpdateNotice.hidden = true;
@@ -3239,6 +3426,11 @@
         const size = document.createElement('span');
         size.textContent = itemSize;
         copy.append(title, size);
+        const draftStatus = document.createElement('span');
+        draftStatus.className = 'order-draft-status';
+        draftStatus.dataset.cartDraftStatus = item.id;
+        draftStatus.hidden = true;
+        copy.appendChild(draftStatus);
         const actions = document.createElement('div');
         actions.className = 'order-item-actions';
         const edit = document.createElement('button');
@@ -3280,6 +3472,7 @@
         orderList.appendChild(row);
       });
       updateCartActions();
+      renderRemovalNotice();
     }
 
     function removeOrderItem(configurationId) {
@@ -3289,10 +3482,18 @@
           clearPrintfulMockupState(configurationId);
         }
         const removedItem = cart.read().find((candidate) => candidate.id === configurationId);
-        cart.write(cart.read().filter((candidate) => candidate.id !== configurationId));
+        const editingState = editingOrderItemId === configurationId
+          ? { id: configurationId, fingerprint: currentDesignFingerprint(), savedDesignFingerprint }
+          : null;
+        const quantity = WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
+          .restore([configurationId])?.[0]?.items?.find(item => item.configurationId === configurationId)?.quantity
+          ?? products.find(candidate => candidate.key === removedItem?.productKey)?.defaultQuantity ?? 1;
+        cart.remove(configurationId, { quantity });
+        removedEditingState = editingState;
         if (removedItem) globalThis.WolkenworteAnalytics?.track('remove_from_cart', { itemId: removedItem.productKey });
         if (editingOrderItemId === configurationId) {
           editingOrderItemId = null;
+          savedDesignFingerprint = null;
           currentDesignNeedsSave = true;
           currentDesignEdited = true;
           designRevision += 1;
@@ -3307,6 +3508,31 @@
         setText(errorText, 'Der Warenkorb konnte nicht aktualisiert werden. Bitte versucht es erneut.');
       }
     }
+
+    function undoCartRemoval() {
+      if (orderActionPending || leavingPage) return;
+      try {
+        const restored = cart.undoRemoval();
+        if (!restored) { renderRemovalNotice(); return; }
+        WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
+          .restoreConfiguration(restored.item.id, restored.quantity);
+        const sameWorkingCopy = removedEditingState?.id === restored.item.id &&
+          currentDesignFingerprint() === removedEditingState.fingerprint;
+        const openedRemovedDesign = new URLSearchParams(location.search).get('edit') === restored.item.id;
+        if (!editingOrderItemId && (sameWorkingCopy || openedRemovedDesign)) {
+          editingOrderItemId = restored.item.id;
+          if (sameWorkingCopy) savedDesignFingerprint = removedEditingState.savedDesignFingerprint;
+          currentDesignNeedsSave = !savedDesignFingerprint || currentDesignFingerprint() !== savedDesignFingerprint;
+          scheduleDraftSave(0);
+        }
+        removedEditingState = null;
+        renderOrderBox();
+        void refreshCartDrafts().catch(() => {});
+      } catch {
+        setText(errorText, 'Das Design konnte nicht wiederhergestellt werden. Bitte prüft den Warenkorb und versucht es erneut.');
+      }
+    }
+    document.getElementById('cart-removal-undo').addEventListener('click', undoCartRemoval);
 
     function navigateToShipping() {
       const ids = loadOrderItems().map((item) => item.id);
@@ -3774,7 +4000,9 @@
         loadOrderItems().some((item) => item.id === draft.editingOrderItemId)
         ? draft.editingOrderItemId
         : null;
-      currentDesignNeedsSave = true;
+      savedDesignFingerprint = draft.savedDesignFingerprint || null;
+      currentDesignNeedsSave = !editingOrderItemId || adjusted || (savedDesignFingerprint
+        ? currentDesignFingerprint() !== savedDesignFingerprint : draft.needsCartUpdate !== false);
       currentDesignEdited = draft.currentDesignEdited !== false || adjusted;
       designRevision = Math.max(0, Number(draft.designRevision) || 0);
       draftSavedRevision = designRevision;
@@ -3859,10 +4087,14 @@
       }
     }
 
-    surfaceCopy.addEventListener('click', () => {
+    surfaceCopy.addEventListener('click', async () => {
+      if (orderActionPending || leavingPage) return;
       storeActiveSurfaceState();
       const front = surfaceStates.get('front');
       if (!front) return;
+      if (surfaceStates.get('back')?.design?.length && !await askDesignReplacement(
+        'Rückseite durch die Vorderseite ersetzen?',
+        'Die aktuelle Gestaltung der Rückseite wird ersetzt. Ihr könnt diese Änderung anschließend rückgängig machen.', surfaceCopy)) return;
       const copied = cloneEditorState(front, false);
       const sourceArea = productView(product, null, 'front').safeArea;
       const targetArea = productView(product, null, 'back').safeArea;
@@ -3870,8 +4102,11 @@
         x: item.x + targetArea.x - sourceArea.x,
         y: item.y + targetArea.y - sourceArea.y,
       }));
-      surfaceStates.set('back', copied);
-      if (activeSurface === 'back') mugEditor.setState(copied);
+      if (activeSurface === 'back') {
+        mugEditor.recordHistory();
+        mugEditor.setDesign(copied.design, { record: true });
+        surfaceStates.set('back', mugEditor.getState());
+      }
       mugEditor.setFeedback('Vorderseite auf die Rückseite übernommen');
       markDirty();
       renderAll();
@@ -4112,10 +4347,13 @@
     function markDirty() {
       if (suppressDirty) return;
       clearText(errorText);
-      currentDesignNeedsSave = true;
+      currentDesignNeedsSave = !editingOrderItemId || !savedDesignFingerprint ||
+        currentDesignFingerprint() !== savedDesignFingerprint;
       currentDesignEdited = true;
       designRevision += 1;
       pendingConfiguration = null;
+      previousProductDraft = null;
+      productSwitchUndo.hidden = true;
       if (workspaceReady) {
         updateCartActions();
         scheduleDraftSave();
@@ -4296,6 +4534,14 @@
     }
 
     function openProductDialog() {
+      setText(document.getElementById('product-dialog-title'), startingAnotherProduct
+        ? 'Weiteres Produkt mit diesem Design gestalten' : 'Produkt für dieses Design ändern');
+      setText(document.getElementById('product-dialog-description'), startingAnotherProduct
+        ? 'Ihr erstellt eine separate Kopie. Eure bisherigen Warenkorb-Designs bleiben unverändert.'
+        : editingOrderItemId
+          ? 'Euer Design wird auf das neue Produkt übertragen. Erst „Warenkorb aktualisieren“ ersetzt das bisherige Produkt im Warenkorb.'
+          : 'Euer Design wird auf das neue Produkt übertragen. Es wird erst durch „In den Warenkorb“ zur Bestellung hinzugefügt.');
+      setText(productDialogDone, startingAnotherProduct ? 'Weiteres Design starten' : 'Produkt ändern');
       pendingProductKey = product?.key || null;
       pendingFamilyKey = selectedFamilyKey;
       productDialogCloseReason = 'cancel';
@@ -4328,7 +4574,8 @@
       productDialog.querySelector('.product-dialog-footer').hidden = step !== 'variants';
       const body = productDialog.querySelector('.product-dialog-body');
       body.scrollTop = 0;
-      const title = step === 'variants' ? '{{item}} wählen' : 'Produkt wählen';
+      const title = step === 'variants' ? '{{item}} wählen' : startingAnotherProduct
+        ? 'Weiteres Produkt gestalten' : 'Produkt für dieses Design ändern';
       setText(document.getElementById('mobile-canvas-panel-title'), title, {
         item: t(productFamilies.find(family => family.key === pendingFamilyKey)?.label || 'Ausführung'),
       });
@@ -4339,20 +4586,29 @@
     }
 
     async function confirmProductDialog() {
-      if (leavingPage || orderActionPending) return;
+      if (leavingPage || orderActionPending || productTransitionPending) return;
       const nextProduct = dialogSelectedProduct();
       const another = startingAnotherProduct;
       const previousProductKey = product?.key;
       productDialogCloseReason = 'confirm';
       resetProductDialogSelection();
       closeProductDialog();
-      if (another) {
-        await runNavigation(() => startProductDesign(nextProduct, undefined, { independent: true }));
-      } else if (nextProduct?.key !== product?.key) {
-        await runNavigation(() => startProductDesign(nextProduct, undefined, {
-          preserveEditingItem: Boolean(editingOrderItemId),
-        }));
-      }
+      productTransitionPending = true;
+      try {
+        if (another) {
+          if (hasUnsavedDesign() && Object.values(getAllSurfaceDesigns()).some(design => design.length)) {
+            const choice = await askAnotherProductChoice();
+            if (choice === 'cancel') return;
+            if (choice === 'save' && !await saveCurrentDesign(designAnotherButton)) return;
+            if (!['save', 'skip'].includes(choice)) return;
+          }
+          await runNavigation(() => startProductDesign(nextProduct, undefined, { independent: true }));
+        } else if (nextProduct?.key !== product?.key) {
+          await runNavigation(() => startProductDesign(nextProduct, undefined, {
+            preserveEditingItem: Boolean(editingOrderItemId),
+          }));
+        }
+      } finally { productTransitionPending = false; }
       if (nextProduct?.key === product?.key && (another || previousProductKey !== product.key)) {
         globalThis.WolkenworteAnalytics?.track('select_item', { itemId: product.key });
       }
@@ -4394,6 +4650,7 @@
       setOrderActionsBusy(true, null, options.refreshCloud
         ? 'Die aktuellen Wörter werden geladen…' : 'Euer Design wird aktualisiert…');
       try {
+        const previousDraft = draftSnapshot();
         const nextOrientation = orientation || nextProduct.defaultOrientation || 'default';
         const previousEditingId = editingOrderItemId;
         const wasEdited = currentDesignEdited;
@@ -4432,6 +4689,7 @@
           selectProduct(nextProduct, nextOrientation, transferred?.designs);
           productDesignState = transferred?.state || null;
           editingOrderItemId = options.preserveEditingItem ? previousEditingId : null;
+          if (!editingOrderItemId) savedDesignFingerprint = null;
           mugEditor.flushPendingChange();
         } finally { suppressDirty = false; }
         markDirty();
@@ -4442,6 +4700,12 @@
           mugEditor.setFeedback('Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.');
         }
         renderOrderBox();
+        if (!options.independent && !options.refreshCloud) {
+          previousProductDraft = previousDraft;
+          productSwitchUndo.hidden = false;
+          setText(productSwitchUndo, previousDraft.productKey === product.key
+            ? 'Formatwechsel rückgängig' : 'Produktwechsel rückgängig');
+        }
         history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
         return true;
       } catch {
@@ -4454,6 +4718,18 @@
         setOrderActionsBusy(false);
       }
     }
+
+    productSwitchUndo.addEventListener('click', () => runNavigation(async () => {
+      const previous = previousProductDraft;
+      if (!previous) return;
+      previousProductDraft = null;
+      productSwitchUndo.hidden = true;
+      try {
+        await applyLocalDraft(previous);
+        await persistCurrentDraft();
+        mugEditor.setFeedback('Vorheriges Produkt und Design wiederhergestellt');
+      } catch (error) { showRestorationError(error); }
+    }));
 
     function selectProduct(nextProduct, orientation, designs = null) {
       product = nextProduct;
@@ -4828,6 +5104,10 @@
         setText(errorText, 'Der Warenkorb konnte in diesem Browser nicht gesichert werden. Bitte erlaubt das Speichern von Websitedaten.');
         return false;
       }
+      if (editingOrderItemId && !loadOrderItems().some(item => item.id === editingOrderItemId)) {
+        setText(errorText, 'Der Warenkorb hat sich geändert. Bitte öffnet das Design erneut, bevor ihr Änderungen übernehmt.');
+        return false;
+      }
       if (!editingOrderItemId && loadOrderItems().length >= WolkenworteConfiguratorSession.MAX_CART_ITEMS) {
         setText(errorText, 'Euer Warenkorb enthält bereits 20 Designs. Entfernt zuerst ein Design.');
         return false;
@@ -4867,6 +5147,7 @@
           if (!response.ok) throw new Error(data.error || 'save_failed');
           pendingConfiguration = { revision, data };
         }
+        if (previousId && !loadOrderItems().some(item => item.id === previousId)) throw new Error('cart_changed');
         addOrderItem(data, { replaceId: previousId });
         if (!previousId) globalThis.WolkenworteAnalytics?.track('add_to_cart', { itemId: data.productKey });
         try {
@@ -4875,8 +5156,13 @@
         } catch { /* Quantity drafts do not authorize checkout. */ }
         editingOrderItemId = data.id;
         currentDesignNeedsSave = revision !== designRevision;
+        savedDesignFingerprint = WolkenworteConfiguratorSession.designFingerprint({ productKey: product.key,
+          orientation: selectedOrientation, theme: selectedTheme, designs });
         currentDesignEdited = currentDesignEdited || currentDesignNeedsSave;
         pendingConfiguration = null;
+        cartDrafts.delete(previousId);
+        previousProductDraft = null;
+        productSwitchUndo.hidden = true;
         if (!currentDesignNeedsSave) {
           try {
             await draftStore.removeFor(previousId
@@ -4894,7 +5180,9 @@
         return !currentDesignNeedsSave;
       } catch (error) {
         console.warn('Configurator save failed.', error);
-        setText(errorText, error.message === 'print_file_too_large'
+        setText(errorText, error.message === 'cart_changed'
+          ? 'Der Warenkorb hat sich geändert. Bitte öffnet das Design erneut, bevor ihr Änderungen übernehmt.'
+          : error.message === 'print_file_too_large'
           ? 'Die Druckdatei ist für dieses Produkt zu groß. Verkleinert oder entfernt einige Bilder und versucht es erneut.'
           : 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
         return false;
@@ -4931,18 +5219,51 @@
       startingAnotherProduct = true;
       openProductDialog();
     });
+    async function saveReviewedDesigns(drafts) {
+      const original = draftSnapshot();
+      const others = drafts.filter(draft => draft.editingOrderItemId !== original.editingOrderItemId);
+      for (const draft of others) {
+        if (!loadOrderItems().some(item => item.id === draft.editingOrderItemId)) {
+          setText(errorText, 'Der Warenkorb hat sich geändert. Bitte prüft eure Designs erneut.');
+          return false;
+        }
+        orderActionPending = true;
+        setOrderActionsBusy(true, continueOrderButton, 'Designs werden in den Warenkorb übernommen…');
+        try { await applyLocalDraft(draft); }
+        finally { orderActionPending = false; setOrderActionsBusy(false); }
+        if (!await saveCurrentDesign(continueOrderButton)) return false;
+      }
+      if (others.length) {
+        orderActionPending = true;
+        setOrderActionsBusy(true, continueOrderButton, 'Euer Design wird wiederhergestellt…');
+        try { await applyLocalDraft(original); }
+        finally { orderActionPending = false; setOrderActionsBusy(false); }
+      }
+      return !hasUnsavedDesign() || await saveCurrentDesign(continueOrderButton);
+    }
+
     async function continueToShipping() {
       if (leavingPage || orderActionPending) return;
       leavingPage = true;
       try {
+        orderActionPending = true;
+        setOrderActionsBusy(true, continueOrderButton, 'Warenkorb wird geprüft…');
+        try {
+          if (!await persistCurrentDraft()) return;
+          await refreshCartDrafts();
+        } finally { orderActionPending = false; setOrderActionsBusy(false); }
         const action = shippingAction();
         if (action === 'add') {
           if (!await saveCurrentDesign(continueOrderButton)) return;
         } else if (action !== 'continue') {
-          const choice = await askShippingChoice(action);
+          const choice = await askShippingChoice(action, [...cartDrafts.values()]);
           if (choice === 'cancel') return;
           if (choice === 'save') {
-            if (!await saveCurrentDesign(continueOrderButton)) return;
+            if (!await saveReviewedDesigns([...cartDrafts.values()])) return;
+          } else if (choice.startsWith('edit:')) {
+            await loadOrderItem(choice.slice(5));
+            history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(editingOrderItemId)}`);
+            return;
           } else if (choice === 'cart') {
             const saved = await persistCurrentDraft();
             if (!saved && await askToLeaveWithoutDraft() !== 'leave') return;
@@ -4951,6 +5272,9 @@
           }
         }
         navigateToShipping();
+      } catch (error) {
+        console.warn('Configurator cart review failed.', error);
+        setText(errorText, 'Eure Entwürfe konnten nicht vollständig geprüft werden. Bitte bleibt hier und versucht es erneut.');
       } finally {
         leavingPage = false;
       }
@@ -4960,8 +5284,14 @@
       void continueToShipping();
     });
 
-    applyLiveWordsButton.addEventListener('click', () => runNavigation(() =>
-      startProductDesign(product, selectedOrientation, { refreshCloud: true, preserveEditingItem: true })));
+    async function refreshDesignFromCloud() {
+      if (leavingPage || orderActionPending) return;
+      if (currentDesignEdited && !await askDesignReplacement('Design mit aktuellen Wörtern ersetzen?',
+        'Eure Gestaltung auf allen Druckseiten wird durch die aktuelle Wortwolke ersetzt. Hinzugefügte Elemente und der bisherige Bearbeitungsverlauf werden entfernt. Der Warenkorb bleibt unverändert, bis ihr ihn aktualisiert.',
+        applyLiveWordsButton)) return;
+      await runNavigation(() => startProductDesign(product, selectedOrientation, { refreshCloud: true, preserveEditingItem: true }));
+    }
+    applyLiveWordsButton.addEventListener('click', () => { void refreshDesignFromCloud(); });
 
     window.addEventListener('pagehide', () => {
       for (const configurationId of printfulMockupStates.keys()) {
@@ -5000,6 +5330,8 @@
       renderCustomColorControls();
       renderOrderBox();
       updateProductPresentation();
+      updateSaveState();
+      renderRemovalNotice();
       setMobileEditorExpanded(mobileEditorExpanded, { scroll: false });
     }
 
@@ -5129,6 +5461,9 @@
           }
         }
         workspaceReady = true;
+        void refreshCartDrafts().catch(error => {
+          console.warn('Configurator draft markers unavailable.', error);
+        });
         if (directDesign && mobileEditorMedia.matches && !query.has('cart')) {
           setMobileEditorExpanded(true, { scroll: false });
         }

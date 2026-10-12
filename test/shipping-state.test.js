@@ -77,9 +77,10 @@ test('shipping cart review removes only the chosen item and keeps last-item remo
     const navigation = [];
     const scope = vm.createContext({
       slug: 'shipping-test',
-      cart: { read: () => items, write: next => { items = next; } },
+      cart: { read: () => items, remove: id => { items = items.filter(item => item.id !== id); } },
       shippingDraft: { removeConfigurations: ids => removedFromDraft.push(...ids) },
       saveShippingDraft() {},
+      collectShipments: () => ({ shipments: [{ items: [] }] }),
       location: { assign: url => navigation.push(url) },
       setText() {}, formError: {},
     });

@@ -13,6 +13,38 @@
   const DRAFT_STORE = 'design-drafts';
   const validId = (id) => /^[A-Za-z0-9_-]{16}$/.test(String(id || ''));
   const copy = (value) => value == null ? null : JSON.parse(JSON.stringify(value));
+  const imageFingerprints = new Map();
+
+  // Comparison for UI state only. Approval and print validation remain server-side.
+  function fingerprint(text) {
+    let first = 0xdeadbeef;
+    let second = 0x41c6ce57;
+    for (let index = 0; index < text.length; index += 1) {
+      const character = text.charCodeAt(index);
+      first = Math.imul(first ^ character, 2654435761);
+      second = Math.imul(second ^ character, 1597334677);
+    }
+    return `${text.length}:${(first >>> 0).toString(16)}:${(second >>> 0).toString(16)}`;
+  }
+
+  function designFingerprint(design) {
+    function canonical(value, key = '') {
+      if (key === 'src' && typeof value === 'string') {
+        if (!imageFingerprints.has(value)) {
+          if (imageFingerprints.size >= 8) imageFingerprints.delete(imageFingerprints.keys().next().value);
+          imageFingerprints.set(value, fingerprint(value));
+        }
+        return imageFingerprints.get(value);
+      }
+      if (Array.isArray(value)) return value.map(item => canonical(item));
+      if (!value || typeof value !== 'object') return value;
+      return Object.fromEntries(Object.keys(value).sort()
+        .filter(name => !['id', 'colorLocked'].includes(name))
+        .map(name => [name, canonical(value[name], name)]));
+    }
+    return fingerprint(JSON.stringify(canonical({ productKey: design.productKey,
+      orientation: design.orientation || 'default', theme: design.theme, designs: design.designs })));
+  }
 
   function browserStorage(name) {
     try {
@@ -49,6 +81,7 @@
     const storage = () => suppliedStorage === undefined ? defaultCartStorage() : suppliedStorage;
     const key = `wolkenworte-order:${slug}`;
     const expiryKey = `${key}:expires`;
+    const removalKey = `${key}:removed`;
     function read() {
       const primary = storage();
       if (!primary) throw new Error('storage_unavailable');
@@ -99,7 +132,46 @@
       next.splice(index < 0 ? next.length : index, 0, configuration);
       return write(next);
     }
-    return { read, write, replace };
+    function pendingRemoval() {
+      try {
+        const record = JSON.parse(storage()?.getItem(removalKey));
+        if (record?.expiresAt > now() && normalizeCart([record.item]).length) return record;
+        storage()?.removeItem(removalKey);
+      } catch { /* An unavailable undo does not prevent reading the cart. */ }
+      return null;
+    }
+    function remove(configurationId, { quantity = 1 } = {}) {
+      const items = read();
+      const index = items.findIndex(item => item.id === configurationId);
+      if (index < 0) return null;
+      const record = { item: items[index], index, quantity: Math.max(0, Math.min(99, Math.round(Number(quantity) || 0))),
+        expiresAt: now() + 10 * 60 * 1000 };
+      const previous = storage().getItem(removalKey);
+      storage().setItem(removalKey, JSON.stringify(record));
+      try { write(items.filter(item => item.id !== configurationId)); }
+      catch (error) {
+        if (previous) storage().setItem(removalKey, previous);
+        else storage().removeItem(removalKey);
+        throw error;
+      }
+      return record;
+    }
+    function undoRemoval() {
+      const record = pendingRemoval();
+      if (!record) return null;
+      const items = read();
+      if (!items.some(item => item.id === record.item.id)) {
+        if (items.length >= MAX_CART_ITEMS) throw new Error('cart_full');
+        items.splice(Math.max(0, Math.min(items.length, record.index)), 0, record.item);
+        write(items);
+      }
+      storage().removeItem(removalKey);
+      return record;
+    }
+    function clearRemoval(ids) {
+      if (ids.includes(pendingRemoval()?.item.id)) storage()?.removeItem(removalKey);
+    }
+    return { read, write, replace, remove, pendingRemoval, undoRemoval, clearRemoval };
   }
 
   function normalizeDraft(slug, draft, now = Date.now()) {
@@ -126,6 +198,9 @@
       // Manually edited drafts remain portable across runtime revisions.
       layoutVersion: String(draft.layoutVersion || '').slice(0, 128),
       editingOrderItemId,
+      needsCartUpdate: draft.needsCartUpdate !== false,
+      savedDesignFingerprint: typeof draft.savedDesignFingerprint === 'string'
+        ? draft.savedDesignFingerprint.slice(0, 100) : null,
       currentDesignEdited: draft.currentDesignEdited !== false,
       designRevision: Math.max(0, Math.round(Number(draft.designRevision) || 0)),
       updatedAt: now,
@@ -276,7 +351,12 @@
       await removeKeys(keys);
     }
 
-    return { save, loadActive, loadFor, clearActive, removeFor, close };
+    async function loadCartDrafts(ids) {
+      const records = await Promise.all([...new Set(ids)].filter(validId).map(editingOrderItemId =>
+        loadFor({ editingOrderItemId, productKey: '_cart_' })));
+      return records.filter(Boolean);
+    }
+    return { save, loadActive, loadFor, loadCartDrafts, clearActive, removeFor, close };
   }
 
   function createShippingDraft(slug, storage, now = Date.now) {
@@ -319,16 +399,25 @@
               quantity: Math.max(0, Math.min(99, Math.round(Number(item.quantity) || 0))) })),
         }));
     }
-    function removeConfigurations(ids) {
+    function removeConfigurations(ids, { keepRecipient = false } = {}) {
       const record = read();
       if (!record) return;
       const remaining = record.shipments.map((shipment) => ({ ...shipment,
         items: (shipment.items || []).filter((item) => !ids.includes(item.configurationId)),
-      })).filter((shipment) => shipment.items.length);
+      })).filter((shipment) => keepRecipient || shipment.items.length);
       if (remaining.length) write(remaining);
       else { try { storage.removeItem(key); } catch {} }
     }
-    return { write, restore, replaceConfiguration, removeConfigurations };
+    function restoreConfiguration(configurationId, quantity = 1) {
+      const record = read();
+      if (!record || !validId(configurationId)) return;
+      const items = record.shipments[0].items ||= [];
+      if (!items.some(item => item.configurationId === configurationId)) {
+        items.push({ configurationId, quantity: Math.max(0, Math.min(99, Math.round(Number(quantity) || 0))) });
+      }
+      write(record.shipments);
+    }
+    return { write, restore, replaceConfiguration, removeConfigurations, restoreConfiguration };
   }
 
 
@@ -362,6 +451,7 @@
         : options.shippingStorage;
       const cart = createCart(slug, storage);
       cart.write(cart.read().filter((item) => !ids.includes(item.id)));
+      cart.clearRemoval(ids);
       const purchasedKey = `wolkenworte-purchased:${slug}`;
       storage.setItem(purchasedKey, JSON.stringify(
         [...new Set([...purchasedIds(slug, storage), ...ids])].slice(-200)
@@ -399,6 +489,6 @@
     return combined.map((entry) => entry.id);
   }
 
-  return { createCart, createDraftStore, createShippingDraft, normalizeCart, normalizeDraft, validId, withTimeout,
+  return { createCart, createDraftStore, createShippingDraft, normalizeCart, normalizeDraft, designFingerprint, validId, withTimeout,
     purchasedIds, clearPurchased, prepareReorder, MAX_CART_ITEMS, DRAFT_TTL_MS, CART_TTL_MS };
 }));

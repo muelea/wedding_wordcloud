@@ -39,8 +39,6 @@
   font-size: 12px;
   font-weight: 600;
   letter-spacing: .01em;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
   list-style: none;
 }

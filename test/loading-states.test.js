@@ -131,6 +131,7 @@ test('configurator progress survives cart refreshes and resets both button and w
     saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
     checkoutPanel: { setAttribute() {} }, content: { querySelectorAll: () => [] }, orderList: { querySelectorAll: () => [] },
     loadOrderItems: () => [{ id: 'a'.repeat(16) }], editingOrderItemId: null,
+    updateSaveState() {}, updateCartDraftMarkers() {},
     orderActionPending: true, fitAreaPending: false, workspaceReady: true, restorationFailed: false, currentDesignNeedsSave: true,
     setText: (element, source) => { element.textContent = translate(source, 'en'); },
     clearText: element => { element.textContent = ''; },

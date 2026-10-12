@@ -291,6 +291,11 @@
     .privacy-note a { color: var(--berry); text-underline-offset: 2px; }
     .form-error { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; line-height: 1.45; }
     .form-error:empty, .checkout-error:empty, #shipping-draft-status:empty { display: none; }
+    .cart-removal-notice { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0; font-size: 13px; }
+    .cart-removal-notice[hidden] { display: none; }
+    .cart-removal-notice button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--berry); cursor: pointer; }
+    .quantity-excluded { display: block; color: var(--danger); font-size: 12px; }
+    .quantity-excluded[hidden] { display: none; }
     .quote { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); scroll-margin-top: 100px; }
     .quote-row { display: flex; justify-content: space-between; gap: 18px; margin: 0 0 11px; color: var(--muted); font-size: 14px; }
     .quote-row strong { color: var(--ink); font-weight: 500; }
@@ -365,6 +370,10 @@
       <section class="card address-card" aria-labelledby="address-title">
         <h2 class="card-title" id="address-title">Lieferadresse</h2>
         <p class="card-copy">Wählt die Mengen und gebt eure Lieferadresse ein. Nach dem Kauf könnt ihr dieselben Designs erneut an eine andere Adresse bestellen.</p>
+        <div class="cart-removal-notice" id="cart-removal-notice" role="status" hidden>
+          <span id="cart-removal-message"></span>
+          <button id="cart-removal-undo" type="button">Rückgängig</button>
+        </div>
         <form id="address-form" novalidate>
           <div class="shipment-list" id="shipment-list"></div>
           <button class="submit-button" id="submit-button" type="submit" disabled>Preise und Lieferung prüfen <span aria-hidden="true">→</span></button>
@@ -550,17 +559,45 @@
     function removeConfigurationFromCart(configurationId) {
       saveShippingDraft();
       try {
-        const remaining = cart.read().filter((item) => item.id !== configurationId);
-        cart.write(remaining);
-        shippingDraft?.removeConfigurations([configurationId]);
+        const quantity = collectShipments({ validate: false }).shipments[0]?.items
+          .find(item => item.configurationId === configurationId)?.quantity;
+        cart.remove(configurationId, { quantity });
+        const remaining = cart.read();
+        shippingDraft?.removeConfigurations([configurationId], { keepRecipient: true });
         const remainingIds = remaining.map((item) => item.id);
+        shippingDraftReady = false;
         location.assign(remainingIds.length
           ? shippingHref(remainingIds, remainingIds[0])
           : configureHref(configurationId));
       } catch {
+        shippingDraftReady = true;
+        renderRemovalNotice();
         setText(formError, 'Der Warenkorb konnte nicht aktualisiert werden. Bitte versucht es erneut.');
       }
     }
+
+    function renderRemovalNotice() {
+      const notice = document.getElementById('cart-removal-notice');
+      const record = cart.pendingRemoval();
+      notice.hidden = !record;
+      if (record) setText(document.getElementById('cart-removal-message'), 'Ein Design wurde aus dem Warenkorb entfernt.');
+    }
+    function undoCartRemoval() {
+      cancelShippingRequest();
+      try {
+        const restored = cart.undoRemoval();
+        if (!restored) { renderRemovalNotice(); return; }
+        saveShippingDraft();
+        shippingDraft?.restoreConfiguration(restored.item.id, restored.quantity);
+        shippingDraftReady = false;
+        location.assign(shippingHref(cart.read().map(item => item.id), restored.item.id));
+      } catch {
+        shippingDraftReady = true;
+        setText(formError, 'Das Design konnte nicht wiederhergestellt werden. Bitte prüft den Warenkorb und versucht es erneut.');
+      }
+    }
+    document.getElementById('cart-removal-undo').addEventListener('click', undoCartRemoval);
+    renderRemovalNotice();
 
     window.addEventListener('beforeunload', (event) => {
       if (!shippingDraftUnstored) return;
@@ -1044,6 +1081,7 @@
         row.querySelector('[data-quantity-minus]').disabled = value <= 0;
         row.querySelector('[data-quantity-plus]').disabled = value >= itemConfiguration.product.maxQuantity;
         row.querySelector('[data-quantity-copy]').textContent = quantityLabel(Math.max(0, value || 0), itemConfiguration);
+        row.querySelector('[data-quantity-excluded]').hidden = value > 0;
       });
     }
 
@@ -1080,6 +1118,11 @@
       quantityCopy.dataset.quantityCopy = '';
       quantityCopy.setAttribute('data-i18n-ignore', '');
       copy.append(title, size, quantityCopy);
+      const excluded = document.createElement('span');
+      excluded.className = 'quantity-excluded';
+      excluded.dataset.quantityExcluded = '';
+      setText(excluded, 'Menge 0: nicht in dieser Bestellung enthalten');
+      copy.appendChild(excluded);
 
       const actions = document.createElement('div');
       actions.className = 'shipment-product-actions';

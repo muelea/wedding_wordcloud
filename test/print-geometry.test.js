@@ -99,7 +99,7 @@ test('official safe guides reserve notebook binding, textile seams and poster tr
   }
 });
 
-test('automatic front/back layouts and preview mapping use the selected side', () => {
+test('automatic front/back layouts and preview mapping use the selected side', async () => {
   const p = page('spiral-notebook-dotted');
   const designs = {};
   for (const side of ['front', 'back']) {
@@ -113,13 +113,21 @@ test('automatic front/back layouts and preview mapping use the selected side', (
     assert.ok(isPrintDesignWithinBounds(designs[side],1725,2625,view.safeArea));
   }
   // Execute the actual copy handler, including its offset correction.
-  Object.assign(p, { surfaceStates: new Map([['front', {design:designs.front}]]),
-    storeActiveSurfaceState() {}, mugEditor: {setState() {}, setFeedback() {}}, markDirty() {}, renderAll() {} });
+  let workingDesign = designs.back;
+  Object.assign(p, { surfaceStates: new Map([['front', {design:designs.front}], ['back', {design:designs.back}]]),
+    orderActionPending: false, leavingPage: false, askDesignReplacement: async () => true,
+    storeActiveSurfaceState() {}, mugEditor: {
+      recordHistory() {}, setDesign(design) { workingDesign = design; },
+      getState: () => ({ design: workingDesign }), setFeedback() {},
+    }, markDirty() {}, renderAll() {} });
   vm.runInContext(['cloneDesign','cloneEditorState'].map(pageFunction).join('\n'), p);
-  const start = template.indexOf("    surfaceCopy.addEventListener('click', () => {");
+  const start = template.indexOf("    surfaceCopy.addEventListener('click', async () => {");
+  assert.notEqual(start, -1);
   const body = template.slice(start,template.indexOf('\n    });',start)+8);
-  p.surfaceCopy = { addEventListener: (_, handler) => handler() };
+  let copy;
+  p.surfaceCopy = { addEventListener: (_, handler) => { copy = handler; } };
   vm.runInContext(body, p);
+  await copy();
   const copied = p.surfaceStates.get('back').design;
   assert.ok(isPrintDesignWithinBounds(copied,1725,2625,p.product.designSafeAreas.back));
   assert.equal(copied[0].x, designs.front[0].x - 73);

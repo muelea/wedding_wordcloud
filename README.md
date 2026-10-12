@@ -53,7 +53,10 @@ frozen snapshot of the word cloud.
    color palette, and approves an
    immutable Printful-sized file with a transparent background. Each approved
    design enters the browser-local basket only through “In den Warenkorb”. Editing a basket design
-   uses “Änderungen übernehmen” and replaces that position without duplicating it.
+   uses “Warenkorb aktualisieren” and replaces that position without duplicating it.
+   The configurator separately shows whether the browser draft is retained and
+   whether the cart contains its current version. Cart rows mark pending edits,
+   including edits on designs that are not currently open.
    Phones open on a preview-first purchase surface: the finished product, its
    compact product/palette summary and the explicit “In den Warenkorb & zur
    Lieferadresse” action stay ahead of the collapsed editor. “Design anpassen”
@@ -84,9 +87,13 @@ frozen snapshot of the word cloud.
    Explicit adjustment buttons remain available for single-finger operation.
    With an empty basket the primary continuation action adds the current design
    before opening shipping. With an existing basket it simply reads “Zur
-   Lieferadresse”; if the current draft or edits would otherwise be omitted, one
-   focused choice offers either adding/saving them or continuing with the existing
-   basket. Failed cart saves never navigate. Ordinary product,
+   Lieferadresse”; it checks the local working copies of every cart position before
+   proceeding. A focused review lists pending designs, offers opening each one,
+   and explicitly chooses between applying the listed changes (and adding the
+   current new design, where applicable) or using the previous cart versions.
+   Unchanged retained drafts do not prompt. Failed draft checks or cart saves
+   never navigate; after a partly successful batch, remaining edits stay pending
+   and already approved positions remain in the cart. Ordinary product,
    orientation and page navigation has no save/discard dialog. Working designs
    are debounced into event-scoped IndexedDB drafts for seven days and restore on
    the same browser without creating server configurations. Untouched automatic
@@ -107,11 +114,22 @@ frozen snapshot of the word cloud.
    arrangement with the active design's latest contents, without opening an
    unrelated older product draft. These arrangements are retained in the local
    draft across reloads. Starting another product creates an independent copy of
-   the current edited design. Only the explicit current-cloud refresh replaces
+   the current edited design. Its picker explains that it creates another item;
+   pending changes first offer updating/adding the current item, proceeding
+   without doing so, or continuing to edit. The change-product picker instead
+   explains that the existing cart position is replaced only by the explicit
+   update action. Product/orientation switches offer restoring the previous
+   product and artwork until the next edit or cart approval. Only the explicit current-cloud refresh replaces
    edited contents with the live event words. One-sided products use the front;
    a separate back stays in the draft and returns on two-sided products. A first
    two-sided product initializes both faces from the current design. Basket
-   snapshots change only through the explicit add/update action.
+   snapshots change only through the explicit add/update action. Replacing manual
+   artwork with the current cloud requires confirmation. Copying the front over
+   an existing back also confirms the overwrite and retains Undo. Removing a cart
+   position offers a browser-local, ten-minute Undo, including after returning
+   from shipping; restoring it retains the tab's address and quantity draft but
+   requires a fresh price check. Quantity zero is explicitly marked as excluded
+   from the order on the shipping page.
    Address/quantity drafts live only in sessionStorage for up to
    24 hours, survive design round trips, and never restore a trusted price:
    the existing server-side quote and checkout checks remain authoritative.

@@ -13,6 +13,7 @@ const FIXTURE_SLUG = '-_AbCdEf0123456789xyZQ';
 function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
   const app = express();
   const root = path.join(__dirname, '..');
+  const configurations = new Map();
   app.use(express.json({ limit: '2mb' }));
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   if (directDesign) {
@@ -52,13 +53,20 @@ function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
   app.get(`/api/events/${FIXTURE_SLUG}`, (req, res) => res.json({
     slug: FIXTURE_SLUG, title: 'Responsive test', locale: 'en', directDesign,
   }));
-  app.post(`/api/events/${FIXTURE_SLUG}/configurations`, (req, res) => res.status(201).json({
-    id: 'FixtureCart00001',
-    productKey: req.body?.productKey || DEFAULT_PRODUCT,
-    orientation: req.body?.orientation || 'default',
-    printFileUrl: '',
-    createdAt: new Date(0).toISOString(),
-  }));
+  app.post(`/api/events/${FIXTURE_SLUG}/configurations`, (req, res) => {
+    const configuration = { ...req.body,
+      id: `FixtureCart${String(configurations.size + 1).padStart(5, '0')}`,
+      productKey: req.body?.productKey || DEFAULT_PRODUCT,
+      orientation: req.body?.orientation || 'default',
+      printFileUrl: '', createdAt: new Date(0).toISOString() };
+    configurations.set(configuration.id, structuredClone(configuration));
+    res.status(201).json(configuration);
+  });
+  app.get(`/api/events/${FIXTURE_SLUG}/configurations/:id/edit`, (req, res) => {
+    const configuration = configurations.get(req.params.id);
+    if (!configuration) return res.status(404).json({ error: 'not_found' });
+    res.json(configuration);
+  });
   app.get('/responsive-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/configurator-workspace-probe.js')));
   app.get('/area-layout-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/area-layout-probe.js')));
   app.get('/mobile-canvas-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/mobile-canvas-probe.js')));
