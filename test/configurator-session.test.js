@@ -81,12 +81,12 @@ function harness(extra = {}) {
     words: [['sonne', 1]], liveWords: [['sonne', 1], ['neu', 1]],
     selectedOrientation: 'default', selectedTheme: 'confetti', customColors: ['#ff7100'],
     currentDesignNeedsSave: true, currentDesignEdited: false, editingOrderItemId: null, designRevision: 0, pendingConfiguration: null,
-    workspaceReady: true, restorationFailed: false, orderActionPending: false,
+    workspaceReady: true, restorationFailed: false, orderActionPending: false, fitAreaPending: false,
     leavingPage: false, allowNavigation: false, suppressDirty: false,
     draftSaveTimer: null, draftSavePromise: null, draftSavedRevision: -1, draftStorageFailed: false,
     saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
     headerCart: { hidden: true }, headerCartCount: element(),
-    errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true },
+    errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true }, loadingMessage: element(),
     content: { inert: false }, orderBox: { scrollIntoView() {} },
     cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
     shippingChoiceDialog, shippingChoiceTitle: element(),
@@ -294,6 +294,16 @@ test('full carts reject an addition but allow replacing a position', () => {
   cart.replace({ id: id('a') }, '0'.repeat(16));
   assert.equal(cart.read().length, 20);
   assert.equal(cart.read()[0].id, id('a'));
+});
+
+test('layout work disables purchase actions and cannot approve a partial arrangement', async () => {
+  const { context: page, calls } = harness({ fitAreaPending: true });
+  page.updateCartActions();
+  assert.equal(page.saveDesignButton.disabled, true);
+  assert.equal(page.continueOrderButton.disabled, true);
+  assert.equal(page.designAnotherButton.disabled, true);
+  assert.equal(await page.saveCurrentDesign(page.saveDesignButton), false);
+  assert.equal(calls.posts, 0);
 });
 
 test('explicit Add saves once; unchanged repeats do not duplicate; edits replace the position', async () => {
@@ -841,6 +851,7 @@ test('final text is awaited before capture and unchanged text does not dirty a r
     mugEditor: {
       flushPendingChange() {}, getDesign: () => design,
       commitFontSizeInput() {},
+      commitAngleInput() {},
       async commitTextInput() { await new Promise((resolve) => setTimeout(resolve, 1)); },
     },
   });

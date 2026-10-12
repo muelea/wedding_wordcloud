@@ -1769,6 +1769,9 @@
       font-style: italic;
     }
     .config-content[hidden], .loading[hidden] { display: none; }
+    .configurator-progress { margin: 10px 0; color: var(--muted); text-align: center; font-size: 13px; }
+    .configurator-progress[hidden] { display: none; }
+    .mobile-canvas-header .configurator-progress { flex-basis: 100%; margin: 2px 0; font-size: 12px; }
 
     @media (max-width: 1180px) {
       .design-toolbar { grid-template-columns: 1fr; align-items: stretch; }
@@ -2092,8 +2095,8 @@
   <%- include('partials/site-header') %>
 
   <main class="page">
-    <div class="loading" id="loading">
-      <span id="loading-message"><%= pageData.directDesign ? 'Euer Design wird vorbereitet…' : 'Eure Wortwolke wird vorbereitet…' %></span>
+    <div class="loading" id="loading" role="status" aria-live="polite">
+      <span id="loading-message">Euer Design wird geöffnet…</span>
       <button class="secondary-button" id="retry-configurator-loading" type="button" hidden>Konfigurator erneut laden</button>
     </div>
 
@@ -2104,6 +2107,7 @@
         <p class="intro-copy" id="config-intro"><%= pageData.directDesign ? 'Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.' : 'Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.' %></p>
       </section>
 
+      <p class="configurator-progress" data-configurator-progress role="status" aria-live="polite" hidden></p>
       <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
         <span>Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.</span>
         <button id="apply-live-words" type="button">Design mit aktuellen Wörtern neu erstellen</button>
@@ -2279,8 +2283,15 @@
                   <div class="editor-transform-controls">
                     <%- include('partials/editor-action', { action: { id: 'editor-smaller', icon: 'minus', label: 'Element verkleinern', disabled: true } }) %>
                     <%- include('partials/editor-action', { action: { id: 'editor-larger', icon: 'plus', label: 'Element vergrößern', disabled: true } }) %>
-                    <%- include('partials/editor-action', { action: { id: 'editor-rotate-left', icon: 'rotate-ccw-square', label: 'Nach links drehen', disabled: true } }) %>
-                    <%- include('partials/editor-action', { action: { id: 'editor-rotate-right', icon: 'rotate-cw-square', label: 'Nach rechts drehen', disabled: true } }) %>
+                    <div class="editor-rotation-controls" role="group" aria-label="Drehung">
+                      <%- include('partials/editor-action', { action: { id: 'editor-rotate-left', icon: 'rotate-ccw-square', label: 'Nach links drehen', disabled: true } }) %>
+                      <%- include('partials/editor-action', { action: { id: 'editor-rotate-right', icon: 'rotate-cw-square', label: 'Nach rechts drehen', disabled: true } }) %>
+                      <label class="editor-angle-field editor-font-size-control">
+                        <input class="editor-font-size-input editor-angle-input" id="editor-angle" type="number" inputmode="decimal" step="0.1" autocomplete="off" aria-label="Drehung in Grad" placeholder="—" disabled />
+                        <span class="editor-font-size-unit" aria-hidden="true">°</span>
+                      </label>
+                      <button class="editor-button editor-icon-button editor-angle-reset" id="editor-angle-reset" type="button" aria-label="Drehung auf 0° setzen" data-editor-tooltip disabled>0°</button>
+                    </div>
                     <%- include('partials/editor-action', { action: { id: 'editor-duplicate', icon: 'copy', label: 'Duplizieren', disabled: true } }) %>
                     <%- include('partials/editor-action', { action: { id: 'editor-bring-front', icon: 'bring-to-front', label: 'Ganz nach vorn', disabled: true } }) %>
                     <%- include('partials/editor-action', { action: { id: 'editor-delete', icon: 'trash-2', label: 'Löschen', disabled: true, danger: true } }) %>
@@ -2305,6 +2316,13 @@
                     <strong class="editor-image-quality-label" id="editor-image-quality-label"></strong>
                   </div>
                 </div>
+              </div>
+              <div class="editor-angle-badge" id="editor-angle-badge" aria-hidden="true" hidden></div>
+              <div class="editor-layout-feedback" id="editor-layout-feedback" role="status" aria-live="polite" aria-atomic="true" hidden>
+                <span class="editor-layout-feedback-chip">
+                  <span class="ww-loading-spinner" aria-hidden="true"></span>
+                  <span id="editor-layout-message"></span>
+                </span>
               </div>
               <p class="editor-status" id="editor-feedback" aria-live="polite"></p>
             </div>
@@ -2560,6 +2578,8 @@
     const surfaceTabs = document.getElementById('surface-tabs');
     const surfaceCopy = document.getElementById('surface-copy');
     const fitAreaButton = document.getElementById('editor-fit-area');
+    const fitAreaFeedback = document.getElementById('editor-layout-feedback');
+    const fitAreaMessage = document.getElementById('editor-layout-message');
     const customPalettePanel = document.getElementById('custom-palette-panel');
     const customColorList = document.getElementById('custom-color-list');
     const customColorAdd = document.getElementById('custom-color-add');
@@ -2616,6 +2636,8 @@
     let suppressDirty = false;
     let orderActionPending = false;
     let fitAreaPending = false;
+    let fitAreaInertStates = [];
+    let fitAreaFeedbackTimer = null;
     let currentDesignNeedsSave = true;
     let currentDesignEdited = false;
     let mobileEditorExpanded = false;
@@ -2647,17 +2669,19 @@
 
     function updateCartActions() {
       const items = loadOrderItems();
-      saveDesignButton.disabled = orderActionPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
-      setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
-      setText(continueOrderLabel, items.length
+      saveDesignButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
+      if (!saveDesignButton.classList?.contains('ww-is-busy')) {
+        setText(saveDesignButton, editingOrderItemId ? 'Änderungen übernehmen' : 'In den Warenkorb');
+      }
+      if (!continueOrderButton.classList?.contains('ww-is-busy')) setText(continueOrderLabel, items.length
         ? 'Zur Lieferadresse'
         : currentDesignNeedsSave
         ? (editingOrderItemId
           ? 'Änderungen übernehmen & zur Lieferadresse'
           : 'In den Warenkorb & zur Lieferadresse')
         : 'Zur Lieferadresse');
-      continueOrderButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
-      designAnotherButton.disabled = orderActionPending || !workspaceReady || restorationFailed;
+      continueOrderButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
+      designAnotherButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       designAnotherButton.hidden = !items.length;
     }
 
@@ -2870,6 +2894,7 @@
       try {
         await WolkenworteConfiguratorSession.withTimeout(mugEditor.pendingFontChange);
         mugEditor.commitFontSizeInput();
+        mugEditor.commitAngleInput();
         await WolkenworteConfiguratorSession.withTimeout(mugEditor.commitTextInput());
         mugEditor.flushPendingChange();
       } finally { suppressDirty = wasSuppressed; }
@@ -2931,10 +2956,18 @@
       return cart.replace(orderItemFromConfiguration(configuration), replaceId);
     }
 
-    function setOrderActionsBusy(isBusy, activeButton = null) {
+    function setOrderActionsBusy(isBusy, activeButton = null, progressSource = '') {
       for (const button of [designAnotherButton, continueOrderButton, saveDesignButton]) {
         WolkenworteActions.setBusy(button, isBusy && button === activeButton);
         button.disabled = isBusy;
+      }
+      if (isBusy && activeButton && progressSource) {
+        setText(activeButton === continueOrderButton ? continueOrderLabel : activeButton, progressSource);
+      }
+      for (const status of document.querySelectorAll('[data-configurator-progress]')) {
+        status.hidden = !isBusy || !progressSource || Boolean(activeButton);
+        if (!status.hidden) setText(status, progressSource);
+        else clearText(status);
       }
       checkoutPanel.setAttribute('aria-busy', String(isBusy));
       content.querySelectorAll('.design-toolbar, .workspace-tools, .workbench').forEach((section) => {
@@ -2950,7 +2983,7 @@
     async function loadOrderItem(configurationId) {
       if (!WolkenworteConfiguratorSession.validId(configurationId)) throw new Error('invalid_design_link');
       orderActionPending = true;
-      setOrderActionsBusy(true);
+      setOrderActionsBusy(true, null, 'Euer Design wird geladen…');
       clearText(errorText);
       try {
         const localDraft = await loadLocalDraft({ editingOrderItemId: configurationId,
@@ -3510,14 +3543,59 @@
       fitAreaButton.disabled = fitAreaPending || !mugEditor || mugEditor.getDesign().length === 0;
     }
 
+    function showFitAreaFeedback(message, { pending = false, error = false } = {}) {
+      clearTimeout(fitAreaFeedbackTimer);
+      setText(fitAreaMessage, message);
+      fitAreaFeedback.classList.toggle('is-pending', pending);
+      fitAreaFeedback.hidden = false;
+      if (!pending && !error) {
+        fitAreaFeedbackTimer = setTimeout(() => { fitAreaFeedback.hidden = true; }, 3000);
+      }
+    }
+
+    function setFitAreaBusy(busy) {
+      fitAreaPending = busy;
+      WolkenworteActions.setBusy(fitAreaButton, busy);
+      WolkenworteI18n.setAttribute(fitAreaButton, 'aria-label', busy
+        ? 'Design wird angeordnet…' : 'Fläche optimal nutzen');
+      editorScroll.setAttribute('aria-busy', String(busy));
+      if (busy) {
+        // Lock the actual nodes, including controls moved into the mobile dialog.
+        fitAreaInertStates = [...document.querySelectorAll(
+          '.editor-toolbar, #editor-selection, #editor-scroll, .design-toolbar-controls, ' +
+          '#surface-editor, .order-actions, #order-list, #apply-live-words, ' +
+          '.mobile-canvas-header, .mobile-canvas-rail, .mobile-canvas-drawer, #mobile-canvas-selection'
+        )].map(element => ({ element, inert: element.inert }));
+        fitAreaInertStates.forEach(({ element }) => { element.inert = true; });
+        showFitAreaFeedback('Design wird angeordnet…', { pending: true });
+      } else {
+        fitAreaInertStates.forEach(({ element, inert }) => { element.inert = inert; });
+        fitAreaInertStates = [];
+        fitAreaFeedback.classList.remove('is-pending');
+      }
+      syncFitAreaButton();
+      updateCartActions();
+    }
+
+    function paintFitAreaFeedback() {
+      // One rAF resumes before paint. The second lets the busy state reach the
+      // screen before synchronous font measurement and layout occupy the thread.
+      return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+
     async function fitCurrentDesignToArea() {
       if (!mugEditor || fitAreaPending || orderActionPending) return false;
-      fitAreaPending = true;
-      syncFitAreaButton();
+      mugEditor.touchController?.finish();
+      if (workspace.mobileCanvas?.active) workspace.mobileCanvas.chooseTool('move');
+      setFitAreaBusy(true);
       try {
+        await paintFitAreaFeedback();
         await finalizeCurrentText();
         const currentDesign = mugEditor.getDesign();
-        if (!currentDesign.length) return false;
+        if (!currentDesign.length) {
+          fitAreaFeedback.hidden = true;
+          return false;
+        }
         await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts(currentDesign
           .filter((item) => item.type !== 'icon' && item.type !== 'image')
           .map((item) => item.fontFamily)));
@@ -3539,14 +3617,13 @@
           mugEditor.setDesign(optimizedDesign, { record: true });
         }
         mugEditor.clearSelection();
-        mugEditor.setFeedback(changed ? 'Fläche neu angeordnet' : 'Keine bessere Anordnung gefunden.');
+        showFitAreaFeedback(changed ? 'Fläche neu angeordnet' : 'Keine bessere Anordnung gefunden.');
         return true;
       } catch {
-        mugEditor.setFeedback('Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.');
+        showFitAreaFeedback('Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.', { error: true });
         return false;
       } finally {
-        fitAreaPending = false;
-        syncFitAreaButton();
+        setFitAreaBusy(false);
       }
     }
 
@@ -4303,7 +4380,8 @@
     async function startProductDesign(nextProduct, orientation, options = {}) {
       if (!nextProduct || orderActionPending || !workspaceReady || restorationFailed) return false;
       orderActionPending = true;
-      setOrderActionsBusy(true);
+      setOrderActionsBusy(true, null, options.refreshCloud
+        ? 'Die aktuellen Wörter werden geladen…' : 'Euer Design wird aktualisiert…');
       try {
         const nextOrientation = orientation || nextProduct.defaultOrientation || 'default';
         const previousEditingId = editingOrderItemId;
@@ -4615,6 +4693,9 @@
         fontCurrent: document.getElementById('editor-font-current'),
         fontMenu: document.getElementById('editor-font-menu'),
         fontSizeInput: document.getElementById('editor-font-size'),
+        angleInput: document.getElementById('editor-angle'),
+        angleBadge: document.getElementById('editor-angle-badge'),
+        angleResetButton: document.getElementById('editor-angle-reset'),
         boldButton: document.getElementById('editor-bold'),
         italicButton: document.getElementById('editor-italic'),
         underlineButton: document.getElementById('editor-underline'),
@@ -4702,9 +4783,10 @@
     });
 
     async function saveCurrentDesign(activeButton) {
-      if (restorationFailed || !workspaceReady || orderActionPending) return false;
+      if (restorationFailed || !workspaceReady || orderActionPending || fitAreaPending) return false;
       orderActionPending = true;
-      setOrderActionsBusy(true, activeButton);
+      setOrderActionsBusy(true, activeButton, editingOrderItemId
+        ? 'Eure Änderungen werden gespeichert…' : 'Euer Design wird in den Warenkorb gelegt…');
       try {
         await finalizeCurrentText();
         return await approveCurrentDesign();
@@ -4903,6 +4985,16 @@
 
     window.addEventListener('wolkenworte:localechange', refreshLocalizedConfigurator);
 
+    async function showReadyWorkspace() {
+      // Initialize while hidden, then measure and paint the restored design
+      // before dismissing the loader.
+      await initializeWorkspace();
+      content.hidden = false;
+      refreshWorkspaceLayout();
+      renderAll();
+      loading.hidden = true;
+    }
+
     async function retryStartupTask(task, attempts = 2) {
       let lastError;
       for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -4967,12 +5059,11 @@
           WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY])), 2);
         await retryStartupTask(() =>
           WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(words.map(([word]) => word))), 2);
-        loading.hidden = true;
-        content.hidden = false;
-        await initializeWorkspace();
+        await showReadyWorkspace();
       })
       .catch((error) => {
         content.inert = false;
+        content.hidden = true;
         loading.hidden = false;
         retryConfiguratorLoading.hidden = false;
         setText(loadingMessage, error.message === 'no_words'
@@ -4998,17 +5089,24 @@
         void initMug3D();
         const query = new URLSearchParams(location.search);
         const requestedEdit = query.get('edit');
-        if (requestedEdit) await loadOrderItem(requestedEdit);
+        if (requestedEdit) {
+          setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
+          await loadOrderItem(requestedEdit);
+        }
         else if (query.has('cart')) {
           const basket = cart.read();
           if (basket.length) {
+            setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
             const id = basket[basket.length - 1].id;
             await loadOrderItem(id);
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(id)}`);
           }
         } else {
           const localDraft = await loadLocalDraft();
-          if (localDraft) await applyLocalDraft(localDraft);
+          if (localDraft) {
+            setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
+            await applyLocalDraft(localDraft);
+          }
         }
         workspaceReady = true;
         if (directDesign && mobileEditorMedia.matches && !query.has('cart')) {

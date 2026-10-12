@@ -333,8 +333,8 @@ test('server localization produces the selected language before browser scripts 
   const cases = [
     ['landing.ejs', { variant: 'landing' }, 'Collect wishes &amp; memories'],
     ['display.ejs', { variant: 'display' }, 'Waiting for your words…'],
-    ['configure.ejs', {}, 'Preparing your word cloud…'],
-    ['shipping.ejs', {}, 'Loading your design…'],
+    ['configure.ejs', {}, 'Opening your design…'],
+    ['shipping.ejs', {}, 'Loading your cart and shipping details…'],
     ['order-confirmation.ejs', {}, 'Confirming payment'],
     ['404.ejs', {}, 'This word cloud does not exist.'],
     ['impressum.ejs', {}, 'Legal information'],

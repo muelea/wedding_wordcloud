@@ -33,7 +33,7 @@ test('every toolbar action renders its intended local mark and a translated acce
     const page = await rendered(locale);
     const symbols = new Set(nodes(page, node => node.tagName === 'symbol').map(node => attr(node, 'id')));
     const actions = nodes(page, node => attr(node, 'data-editor-tooltip') !== undefined);
-    assert.equal(actions.length, 26);
+    assert.equal(actions.length, 27);
     for (const action of actions) {
       assert.equal(action.tagName, 'button');
       assert.equal(attr(action, 'type'), 'button');
@@ -49,6 +49,10 @@ test('every toolbar action renders its intended local mark and a translated acce
         assert.equal(attr(mark, 'aria-hidden'), 'true');
         assert.match(nodes(mark, node => node.nodeName === '#text')
           .map(node => node.value).join('').trim(), /^[BIUS]$/);
+      } else if (attr(action, 'id') === 'editor-angle-reset') {
+        assert.equal(svg.length, 0);
+        assert.equal(nodes(action, node => node.nodeName === '#text')
+          .map(node => node.value).join('').trim(), '0°');
       } else {
         assert.equal(svg.length, 1);
         assert.equal(attr(svg[0], 'aria-hidden'), 'true');

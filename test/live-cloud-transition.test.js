@@ -208,7 +208,7 @@ test('the page carries exact counts through packing, rejects removed votes and c
   const drawn = [];
   const page = vm.createContext({ currentWords: [['liebe', 2]], desiredCloudSize: size,
     canvas, window: { devicePixelRatio: 2 }, MAX_CANVAS_PIXEL_RATIO: 3,
-    ctx: { setTransform() {}, clearRect() {} },
+    ctx: { setTransform() {}, clearRect() {} }, hideCloudLoading() {},
     WordCloudCore: { drawPlacedWord(ctx, item) { drawn.push(item); } },
     WolkenworteEmoji: { getLoadedImage() {} }, setI18nAttribute() {},
     interactiveCloudWords: [], interactiveCloudSize: null, activeCloudWord: '',

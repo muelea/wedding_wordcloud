@@ -53,7 +53,7 @@ test('both Home entries deliberately start a blank default mug without cloud set
   const page = await fetch(`${app.baseUrl}${first.location}`).then(response => response.text());
   assert.match(page, /const directDesign = true/);
   assert.match(page, /id="back-link"[^>]*href="\/"|href="\/"[^>]*id="back-link"/);
-  assert.match(page, /Preparing your design/);
+  assert.match(page, /Opening your design/);
 
   const verify = await fetch(`${app.baseUrl}/api/events/${first.slug}/organizer/verify`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: '1234' }),

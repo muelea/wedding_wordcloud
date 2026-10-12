@@ -166,7 +166,7 @@
       reorderPending = true;
       reorderButton.disabled = true;
       reorderButton.setAttribute('aria-busy', 'true');
-      setText(reorderButton, 'Designs werden übernommen…');
+      setText(reorderButton, 'Designs werden in den Warenkorb übernommen…');
       reorderError.hidden = true;
       try {
         if (!WolkenworteConfiguratorSession.clearPurchased(slug, confirmedOrder)) {
@@ -236,7 +236,7 @@
           setTimeout(() => checkStatus(attempt + 1), 1000);
           return;
         }
-        setText(title, 'Zahlung wird noch verarbeitet');
+        setText(title, 'Wir warten auf die Zahlungsbestätigung.');
         setText(copy, 'Die Bestätigung dauert länger als erwartet. Bitte ladet diese Seite in einem Moment erneut.');
       } catch (error) {
         if (attempt < 4) {

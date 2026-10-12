@@ -403,6 +403,8 @@
       opacity: 0;
     }
     #cloud-canvas.visible { opacity: 1; }
+    #cloud-loading { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; pointer-events: none; color: var(--muted); font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; }
+    #cloud-loading[hidden] { display: none; }
 
     #empty-state {
       position: absolute;
@@ -731,6 +733,7 @@
 <%- include('partials/site-header') %>
 
 <div id="cloud-container">
+  <p id="cloud-loading" role="status" aria-live="polite" hidden>Eure Wortwolke wird geladen…</p>
   <div class="cloud-word-highlights" id="cloud-word-highlights" aria-hidden="true"></div>
   <canvas id="cloud-canvas"></canvas>
   <div id="empty-state"<% if ((pageData.initialWords || []).length) { %> class="hidden"<% } %>>
@@ -993,6 +996,8 @@
 
   let currentWords = <%- JSON.stringify(pageData.initialWords || []).replace(/</g, '\\u003c') %>;
   let renderTimer  = null;
+  const cloudLoading = document.getElementById('cloud-loading');
+  let cloudLoadingTimer = null;
   let renderRevision = 0;
   let scheduledWords = currentWords;
   let liveLayout = null;
@@ -1165,6 +1170,7 @@
   }
 
   function paintCloud({ placed, size }) {
+    hideCloudLoading();
     const { width, height } = size;
     const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), MAX_CANVAS_PIXEL_RATIO,
       Math.sqrt(16000000 / (width * height)));
@@ -1223,7 +1229,10 @@
       workerUrl: <%- JSON.stringify(asset('/js/cloud-layout-worker.js')) %>,
       coreUrl: <%- JSON.stringify(asset('/js/wordcloud-core.js')) %>,
       onLayout: drawCloud,
-      onError: () => showToast(t('Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.')),
+      onError: () => {
+        hideCloudLoading();
+        showToast(t('Die Wortwolke konnte nicht angeordnet werden. Bitte ladet die Seite erneut.'));
+      },
     });
     const counts = new Map(words);
     const boxes = WordCloudCore.measureWords(words, ctx, getWordColor)
@@ -1232,7 +1241,22 @@
       desiredCloudSize.width, desiredCloudSize.height);
   }
 
+  function hideCloudLoading() {
+    clearTimeout(cloudLoadingTimer);
+    cloudLoadingTimer = null;
+    cloudLoading.hidden = true;
+  }
+
+  function showCloudLoading() {
+    if (canvas.classList.contains('visible') || cloudLoadingTimer !== null || !cloudLoading.hidden) return;
+    cloudLoadingTimer = setTimeout(() => {
+      cloudLoadingTimer = null;
+      if (currentWords.length && !canvas.classList.contains('visible')) cloudLoading.hidden = false;
+    }, 150);
+  }
+
   function scheduleRender(words, delay = 100) {
+    if (words.length) showCloudLoading();
     scheduledWords = words;
     ++renderRevision;
     if (renderTimer !== null) return;
@@ -1246,7 +1270,10 @@
       ]).then(() => {
         if (revision === renderRevision) renderCloud(snapshot);
       }).catch(() => {
-        if (revision === renderRevision) showToast(t('Ein Emoji konnte nicht geladen werden.'));
+        if (revision === renderRevision) {
+          hideCloudLoading();
+          showToast(t('Ein Emoji konnte nicht geladen werden.'));
+        }
       });
     }, delay);
   }
@@ -1863,6 +1890,7 @@
     memoryCta.classList.toggle('visible', words.length > 0);
 
     if (words.length === 0) {
+      hideCloudLoading();
       ++renderRevision;
       clearTimeout(renderTimer);
       renderTimer = null;
@@ -1891,6 +1919,7 @@
   });
 
   socket.on('fatal-error', () => {
+    hideCloudLoading();
     ++renderRevision;
     clearTimeout(renderTimer);
     renderTimer = null;
@@ -1959,6 +1988,7 @@
   cloudResizeObserver?.observe(container);
   window.addEventListener('resize', resizeCloud);
   window.addEventListener('pagehide', () => {
+    hideCloudLoading();
     ++renderRevision;
     clearTimeout(renderTimer);
     renderTimer = null;

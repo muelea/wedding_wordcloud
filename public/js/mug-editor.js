@@ -33,6 +33,11 @@
     return Math.round(value * 10) / 10;
   }
 
+  function normalizedAngle(value) {
+    const angle = value % 360;
+    return angle > 180 ? angle - 360 : angle <= -180 ? angle + 360 : angle || 0;
+  }
+
   function cloneDesign(design) {
     return design.map((item) => ({ ...item }));
   }
@@ -77,6 +82,8 @@
       this.fontCurrent = options.fontCurrent;
       this.fontMenu = options.fontMenu;
       this.fontSizeInput = options.fontSizeInput;
+      this.angleInput = options.angleInput;
+      this.angleBadge = options.angleBadge;
       this.styleButtons = {
         fontWeight: options.boldButton,
         fontStyle: options.italicButton,
@@ -103,6 +110,7 @@
         options.largerButton,
         options.rotateLeftButton,
         options.rotateRightButton,
+        options.angleResetButton,
         options.duplicateButton,
         options.bringFrontButton,
         options.deleteButton,
@@ -493,17 +501,27 @@
 
     bindCanvasEvents() {
       this.canvas.on('selection:created', () => {
+        this.hideAngleBadge();
         this.configureActiveSelection();
         this.updateSelectionPanel();
       });
       this.canvas.on('selection:updated', () => {
+        this.hideAngleBadge();
         this.configureActiveSelection();
         this.updateSelectionPanel();
       });
-      this.canvas.on('selection:cleared', () => this.updateSelectionPanel());
+      this.canvas.on('selection:cleared', () => {
+        this.hideAngleBadge();
+        this.updateSelectionPanel();
+      });
       this.canvas.on('object:moving', (event) => this.handleTransform(event.target));
       this.canvas.on('object:scaling', (event) => this.handleTransform(event.target));
-      this.canvas.on('object:rotating', (event) => this.handleTransform(event.target));
+      this.canvas.on('object:rotating', (event) => {
+        this.handleTransform(event.target);
+        this.syncAngleInput();
+        this.showAngleBadge(event.target);
+      });
+      this.canvas.on('mouse:up', () => this.finishAngleBadge());
       this.canvas.on('object:modified', (event) => {
         this.absorbScale(event.target);
         this.keepInside(event.target);
@@ -572,9 +590,14 @@
         },
         writeObject: (object, state) => {
           if (!this.canvas.getObjects().includes(object) && this.canvas.getActiveObject() !== object) return;
+          const rotated = Math.abs(normalizedAngle(state.angle - (object.angle || 0))) > .001;
           object.set({ angle: state.angle, scaleX: state.scaleX, scaleY: state.scaleY });
           object.setPositionByOrigin(new root.fabric.Point(state.x, state.y), 'center', 'center');
           this.keepInside(object);
+          if (rotated) {
+            this.syncAngleInput();
+            this.showAngleBadge(object);
+          }
           this.canvas.requestRenderAll();
           this.emitChange();
         },
@@ -592,6 +615,7 @@
         },
         commit: object => {
           if (!this.canvas.getObjects().includes(object) && this.canvas.getActiveObject() !== object) return;
+          this.finishAngleBadge();
           this.absorbScale(object);
           this.keepInside(object);
           this.recordHistory();
@@ -863,6 +887,22 @@
       options.largerButton.addEventListener('click', () => this.resizeActive(1.1));
       options.rotateLeftButton.addEventListener('click', () => this.rotateActive(-15));
       options.rotateRightButton.addEventListener('click', () => this.rotateActive(15));
+      options.angleResetButton?.addEventListener('click', () => this.setActiveAngle(0));
+      this.angleInput?.addEventListener('focus', () => this.angleInput.select());
+      this.angleInput?.addEventListener('change', () => this.commitAngleInput());
+      this.angleInput?.addEventListener('blur', () => this.syncAngleInput());
+      this.angleInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.commitAngleInput();
+          this.angleInput.select();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          this.syncAngleInput();
+          this.angleInput.blur();
+        }
+      });
       options.duplicateButton.addEventListener('click', () => this.duplicateActive());
       options.bringFrontButton.addEventListener('click', () => this.bringActiveToFront());
       options.deleteButton.addEventListener('click', () => this.deleteActive());
@@ -915,6 +955,7 @@
       this.colorInput = options.colorInput;
 
       document.addEventListener('keydown', (event) => {
+        if (this.scroll.inert) return;
         if (document.querySelector('dialog[open], [data-panel-trigger][aria-expanded="true"]')) return;
         const activeElement = document.activeElement;
         const editingField = /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement?.tagName || '') ||
@@ -1544,7 +1585,7 @@
     }
 
     hasPendingTextChange() {
-      if (this.pendingFontChange || this.hasPendingFontSizeChange()) return true;
+      if (this.pendingFontChange || this.hasPendingFontSizeChange() || this.hasPendingAngleChange()) return true;
       const active = this.canvas.getActiveObject();
       return active?.editorKind === 'text' && Boolean(this.textInput.value.trim()) &&
         this.normalizeText(this.textInput.value) !== this.normalizeText(this.objectText(active));
@@ -1919,6 +1960,95 @@
       this.recordHistory();
       this.emitChange();
       this.updateSelectionPanel();
+      this.showAngleBadge(active);
+      this.finishAngleBadge();
+    }
+
+    selectionAngle() {
+      const angles = this.selectedObjects().map(object =>
+        normalizedAngle(round(root.fabric.util.qrDecompose(object.calcTransformMatrix()).angle)));
+      return angles.length && angles.every(angle => angle === angles[0]) ? angles[0] : null;
+    }
+
+    syncAngleInput() {
+      if (!this.angleInput) return;
+      this.angleInput.disabled = !this.canvas.getActiveObject();
+      const angle = this.selectionAngle();
+      this.angleInput.value = angle === null ? '' : String(angle);
+    }
+
+    angleInputValue() {
+      const value = String(this.angleInput?.value ?? '').trim();
+      return value ? Number(value.replace(',', '.')) : NaN;
+    }
+
+    hasPendingAngleChange() {
+      if (!this.angleInput || this.angleInput.disabled) return false;
+      const value = this.angleInputValue();
+      return Number.isFinite(value) && normalizedAngle(round(value)) !== this.selectionAngle();
+    }
+
+    commitAngleInput() {
+      const changed = this.setActiveAngle(this.angleInputValue());
+      this.syncAngleInput();
+      return changed;
+    }
+
+    setActiveAngle(value) {
+      if (!Number.isFinite(value)) return false;
+      const active = this.canvas.getActiveObject();
+      if (!active) return false;
+      const angle = normalizedAngle(value);
+      const current = this.selectionAngle();
+      if (current !== null && Math.abs(normalizedAngle(angle - current)) < .001) {
+        return false;
+      }
+      // A temporary multi-selection has its own zero. Apply absolute angles to
+      // its ungrouped children so 0° always restores each element's orientation.
+      const selected = this.selectedObjects(active);
+      const multiple = this.isActiveSelection(active);
+      if (multiple) this.canvas.discardActiveObject();
+      selected.forEach(object => {
+        object.rotate(angle);
+        this.keepInside(object);
+      });
+      const selection = multiple ? this.setActiveObjects(selected) : active;
+      this.canvas.requestRenderAll();
+      this.recordHistory();
+      this.emitChange();
+      this.updateSelectionPanel();
+      this.showAngleBadge(selection);
+      this.finishAngleBadge();
+      return true;
+    }
+
+    showAngleBadge(active = this.canvas.getActiveObject()) {
+      if (!this.angleBadge || !active) return;
+      clearTimeout(this.angleBadgeTimer);
+      const angle = this.selectionAngle();
+      // Mixed selections have no single absolute angle. Label their group turn
+      // explicitly; the input continues to show mixed rather than a new zero.
+      const source = angle === null ? 'Auswahl {{angle}}°' : 'Drehung {{angle}}°';
+      const degrees = normalizedAngle(Math.round(angle === null ? active.angle || 0 : angle));
+      const params = { angle: angle === null && degrees > 0 ? `+${degrees}` : degrees };
+      if (root.WolkenworteI18n) root.WolkenworteI18n.setText(this.angleBadge, source, params);
+      else this.angleBadge.textContent = translate(source, params);
+      this.angleBadge.classList.remove('is-settled');
+      this.angleBadge.hidden = false;
+    }
+
+    finishAngleBadge() {
+      if (!this.angleBadge || this.angleBadge.hidden) return;
+      clearTimeout(this.angleBadgeTimer);
+      this.angleBadge.classList.add('is-settled');
+      this.angleBadgeTimer = setTimeout(() => this.hideAngleBadge(), 900);
+    }
+
+    hideAngleBadge() {
+      if (!this.angleBadge) return;
+      clearTimeout(this.angleBadgeTimer);
+      this.angleBadge.hidden = true;
+      this.angleBadge.classList.remove('is-settled');
     }
 
     setActiveColor(color) {
@@ -2221,7 +2351,8 @@
       this.textInput.disabled = !hasSelection || isMultiple || isIcon || isImage;
       this.colorInput.disabled = !hasSelection || !canColor;
       this.syncFontSizeInput(selectedTexts);
-      this.selectionActions.forEach((button) => { button.disabled = !hasSelection; });
+      this.syncAngleInput();
+      this.selectionActions.filter(Boolean).forEach((button) => { button.disabled = !hasSelection; });
       Object.entries(this.styleButtons).filter(([, button]) => button).forEach(([property, button]) => {
         button.disabled = styleableTexts.length === 0;
         const selectedCount = styleableTexts.filter((object) =>

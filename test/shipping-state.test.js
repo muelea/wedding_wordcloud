@@ -32,7 +32,7 @@ function harness(fetcher) {
   const handlers = {};
   function element() {
     const classes = new Set();
-    return { disabled: false, hidden: false, textContent: '', inert: false,
+    return { disabled: false, hidden: false, textContent: '', inert: false, dataset: {},
       classList: { contains: name => classes.has(name), toggle: (name, on) => on ? classes.add(name) : classes.delete(name) },
       addEventListener: (name, action) => { handlers[name] = action; },
       querySelectorAll: () => [], reportValidity: () => true,
@@ -46,7 +46,7 @@ function harness(fetcher) {
     submitButton: element(), checkoutButton: element(), form: element(), formError: element(),
     checkoutError: element(), quoteResult: element(),
     setText: (node, value) => { node.textContent = value; }, clearText: node => { node.textContent = ''; },
-    setButtonLabel: (node, value) => { node.label = value; },
+    setButtonLabel: (node, value) => { node.label = value; node.dataset.labelSource = value; },
     customerErrorSource: (result, fallback) => result.message || fallback,
     customerError: customerSource => Object.assign(new Error(customerSource), { customerSource }),
     markInvalidFields() {}, saveShippingDraft() {},
@@ -57,7 +57,7 @@ function harness(fetcher) {
     fetch: (...args) => { calls.fetches++; return fetcher(...args); },
   });
   scope.showQuote = quote => { scope.currentQuote = quote; calls.shown.push(quote); };
-  const functions = ['clearFieldErrors', 'clearQuote'];
+  const functions = ['setShippingActionBusy', 'clearFieldErrors', 'clearQuote'];
   for (const name of ['fetchShippingJson', 'finishShippingRequest', 'cancelShippingRequest']) {
     if (source.includes(`function ${name}(`)) functions.push(name);
   }

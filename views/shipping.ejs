@@ -346,7 +346,7 @@
   <%- include('partials/site-header') %>
 
   <main>
-    <div class="loading" id="loading">Euer Entwurf wird geladen&hellip;</div>
+    <div class="loading" id="loading" role="status" aria-live="polite">Warenkorb und Lieferangaben werden geladen…</div>
     <div id="page-content" hidden>
       <section class="intro">
         <p class="eyebrow">Fast geschafft</p>
@@ -477,6 +477,21 @@
       button.replaceChildren(label, document.createTextNode(' '), arrow);
     }
 
+    function setShippingActionBusy(button, busy, progressSource = '') {
+      if (busy && progressSource) {
+        button.dataset.idleLabelSource = button.dataset.labelSource;
+        setButtonLabel(button, progressSource);
+      } else if (!busy && button.dataset.idleLabelSource) {
+        // A completed response may already have installed a new action label.
+        if (['Preise und Lieferung werden geprüft…', 'Die Zahlungsseite wird geöffnet…']
+            .includes(button.dataset.labelSource)) {
+          setButtonLabel(button, button.dataset.idleLabelSource);
+        }
+        delete button.dataset.idleLabelSource;
+      }
+      WolkenworteActions.setBusy(button, busy);
+    }
+
     setButtonLabel(submitButton, 'Preise und Lieferung prüfen');
     setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
 
@@ -566,8 +581,8 @@
 
     window.addEventListener('pageshow', (event) => {
       if (!event.persisted) return;
-      WolkenworteActions.setBusy(submitButton, false);
-      WolkenworteActions.setBusy(checkoutButton, false);
+      setShippingActionBusy(submitButton, false);
+      setShippingActionBusy(checkoutButton, false);
       if (shippingReturnIsStale(true)) {
         currentQuote = null;
         setBackHref(`/e/${encodeURIComponent(slug)}/configure`);
@@ -1333,8 +1348,8 @@
       if (activeShippingRequest !== request) return;
       activeShippingRequest = null;
       form.inert = false;
-      WolkenworteActions.setBusy(submitButton, false);
-      WolkenworteActions.setBusy(checkoutButton, false);
+      setShippingActionBusy(submitButton, false);
+      setShippingActionBusy(checkoutButton, false);
       checkoutButton.disabled = currentQuote?.checkoutPrepared !== true;
     }
 
@@ -1592,7 +1607,7 @@
       clearQuote();
       const request = { controller: new AbortController(), revision: shippingRevision };
       activeShippingRequest = request;
-      WolkenworteActions.setBusy(submitButton, true);
+      setShippingActionBusy(submitButton, true, 'Preise und Lieferung werden geprüft…');
       try {
         const { response, result } = await fetchShippingJson(
           `/api/events/${encodeURIComponent(slug)}/cart/estimate-costs`,
@@ -1665,7 +1680,7 @@
       // Freeze the address being confirmed, but leave Home/Back available.
       form.inert = true;
       submitButton.disabled = true;
-      WolkenworteActions.setBusy(checkoutButton, true);
+      setShippingActionBusy(checkoutButton, true, 'Die Zahlungsseite wird geöffnet…');
       clearText(checkoutError);
       let navigating = false;
       try {
