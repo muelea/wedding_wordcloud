@@ -57,3 +57,17 @@ test('quick text entry requires a single text object and keeps the existing sess
   assert.equal(workspace.openTextEditor(), true);
   assert.equal(workspace.textSession, session);
 });
+
+test('narrow phones reuse the warning button in the rail and return it to the top toolbar after resizing', t => {
+  const { dom, document, root, workspace } = fixture();
+  t.after(() => dom.window.close());
+  document.body.insertAdjacentHTML('beforeend', '<button id="editor-overlap-trigger">! 1</button><div id="mobile-canvas-overlap-rail"></div><div id="mobile-canvas-overlaps"></div>');
+  const trigger = document.getElementById('editor-overlap-trigger');
+  root.innerWidth = 320;
+  workspace.placeOverlapTrigger();
+  assert.equal(trigger.parentElement.id, 'mobile-canvas-overlap-rail');
+  root.innerWidth = 390;
+  workspace.placeOverlapTrigger();
+  assert.equal(trigger.parentElement.id, 'mobile-canvas-overlaps');
+  assert.equal(document.querySelectorAll('#editor-overlap-trigger').length, 1);
+});

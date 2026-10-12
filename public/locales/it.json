@@ -1,4 +1,13 @@
 {
+  "Überlagerungen prüfen": "Controlla le sovrapposizioni",
+  "{{count}} Überlagerungen prüfen": "Controlla {{count}} sovrapposizioni",
+  "Überlagerungen werden geprüft…": "Controllo delle sovrapposizioni…",
+  "Überlagerungen konnten nicht geprüft werden. Bitte verändert ein Element oder öffnet das Design erneut.": "Non è stato possibile controllare le sovrapposizioni. Modifica un elemento o riapri il design.",
+  "Diese Elemente überlagern sich. Wenn das beabsichtigt ist, könnt ihr euer Design so bestellen.": "Questi elementi si sovrappongono. Se è intenzionale, puoi ordinare il design così com’è.",
+  "Keine Überlagerungen gefunden.": "Nessuna sovrapposizione trovata.",
+  "{{first}} überlagert {{second}}": "{{first}} si sovrappone a {{second}}",
+  "{{element}} auswählen": "Seleziona {{element}}",
+  "Weitere Überlagerungen werden nach dem Bearbeiten angezeigt.": "Altre sovrapposizioni verranno mostrate dopo la modifica.",
   "Euer Design wird geöffnet…": "Apertura del vostro design…",
   "Euer Design wird wiederhergestellt…": "Ripristino del vostro design…",
   "Euer Design wird aktualisiert…": "Aggiornamento del vostro design…",

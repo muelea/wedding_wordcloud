@@ -1,4 +1,13 @@
 {
+  "Überlagerungen prüfen": "Check overlaps",
+  "{{count}} Überlagerungen prüfen": "Check {{count}} overlaps",
+  "Überlagerungen werden geprüft…": "Checking overlaps…",
+  "Überlagerungen konnten nicht geprüft werden. Bitte verändert ein Element oder öffnet das Design erneut.": "Overlaps could not be checked. Please adjust an element or reopen the design.",
+  "Diese Elemente überlagern sich. Wenn das beabsichtigt ist, könnt ihr euer Design so bestellen.": "These elements overlap. If this is intentional, you can order your design as it is.",
+  "Keine Überlagerungen gefunden.": "No overlaps found.",
+  "{{first}} überlagert {{second}}": "{{first}} overlaps {{second}}",
+  "{{element}} auswählen": "Select {{element}}",
+  "Weitere Überlagerungen werden nach dem Bearbeiten angezeigt.": "More overlaps will be shown after editing.",
   "Euer Design wird geöffnet…": "Opening your design…",
   "Euer Design wird wiederhergestellt…": "Restoring your design…",
   "Euer Design wird aktualisiert…": "Updating your design…",

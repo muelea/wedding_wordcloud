@@ -1,4 +1,13 @@
 {
+  "Überlagerungen prüfen": "Üst üste binmeleri kontrol et",
+  "{{count}} Überlagerungen prüfen": "{{count}} üst üste binmeyi kontrol et",
+  "Überlagerungen werden geprüft…": "Üst üste binmeler kontrol ediliyor…",
+  "Überlagerungen konnten nicht geprüft werden. Bitte verändert ein Element oder öffnet das Design erneut.": "Üst üste binmeler kontrol edilemedi. Lütfen bir öğeyi değiştirin veya tasarımı yeniden açın.",
+  "Diese Elemente überlagern sich. Wenn das beabsichtigt ist, könnt ihr euer Design so bestellen.": "Bu öğeler üst üste biniyor. Bu kasıtlıysa tasarımınızı bu şekilde sipariş edebilirsiniz.",
+  "Keine Überlagerungen gefunden.": "Üst üste binme bulunamadı.",
+  "{{first}} überlagert {{second}}": "{{first}}, {{second}} ile üst üste biniyor",
+  "{{element}} auswählen": "{{element}} öğesini seç",
+  "Weitere Überlagerungen werden nach dem Bearbeiten angezeigt.": "Düzenlemeden sonra diğer üst üste binmeler gösterilecek.",
   "Euer Design wird geöffnet…": "Tasarımınız açılıyor…",
   "Euer Design wird wiederhergestellt…": "Tasarımınız geri yükleniyor…",
   "Euer Design wird aktualisiert…": "Tasarımınız güncelleniyor…",

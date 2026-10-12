@@ -8,6 +8,7 @@
     <div class="mobile-canvas-controls" aria-label="Ansicht und Verlauf">
       <div id="mobile-canvas-selection" hidden><button type="button" id="mobile-canvas-deselect">Auswahl aufheben</button></div>
       <div id="mobile-canvas-history"></div>
+      <div id="mobile-canvas-overlaps"></div>
       <div id="mobile-canvas-zoom"></div>
       <button type="button" id="mobile-canvas-fit" aria-label="Einpassen" aria-describedby="editor-zoom-label">100 %</button>
     </div>
@@ -25,6 +26,7 @@
   </header>
   <div class="mobile-canvas-body">
     <nav class="mobile-canvas-rail" aria-label="Canvas-Werkzeuge">
+      <div id="mobile-canvas-overlap-rail"></div>
       <% for (const tool of [{ key:'move', label:'Bewegen', icon:'arrow-right' },
         { key:'view', label:'Zoom & Ansicht', icon:'zoom-in' }, { key:'properties', label:'Anpassen', icon:'sliders-horizontal' },
         { key:'add', label:'Neu', icon:'plus' }, { key:'more', label:'Mehr', icon:'ellipsis' }]) { %>

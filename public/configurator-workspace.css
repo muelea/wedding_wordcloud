@@ -59,6 +59,64 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 #editor-compact-inspector { display: none; }
 #editor-compact-toolbar { display: none; }
 
+.editor-button.artwork-overlap-trigger {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid #d6b66e;
+  color: #704708;
+  background: #fff4d8;
+  font-weight: 700;
+}
+.artwork-overlap-trigger[hidden] { display: none; }
+.artwork-overlap-trigger > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.artwork-overlap-panel { width: min(440px, calc(100% - 24px)); }
+#editor-overlap-status { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
+#editor-overlap-list { display: grid; gap: 10px; }
+.artwork-overlap-finding {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff4d8;
+  overflow-wrap: anywhere;
+}
+.artwork-overlap-finding > strong, .artwork-overlap-finding > span { width: 100%; }
+.artwork-overlap-finding > span { color: var(--muted); font-size: 12px; }
+.artwork-overlap-finding button {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #d6b66e;
+  border-radius: 8px;
+  color: #704708;
+  background: #fffdfb;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.artwork-overlap-finding button:focus-visible, .artwork-overlap-trigger:focus-visible {
+  outline: 3px solid var(--berry);
+  outline-offset: 2px;
+}
+
 /* One local, stroke-based SVG family; button hit areas never shrink with icons. */
 .editor-symbols { position: absolute; width: 0; height: 0; overflow: hidden; }
 .editor-icon {
@@ -404,7 +462,7 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-header strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .mobile-canvas-header nav { display: flex; gap: 4px; }
 .mobile-canvas-controls, .mobile-canvas-header-actions { display: flex; align-items: center; gap: 4px; }
-.mobile-canvas-controls { margin-left: auto; }
+.mobile-canvas-controls { margin-left: auto; min-width: 0; flex-wrap: wrap; }
 .mobile-canvas-header-actions { margin-left: auto; }
 .mobile-canvas-header .editor-icon-button { width: 44px; padding: 8px; }
 .mobile-canvas-header .editor-tools { gap: 4px; }
@@ -414,6 +472,8 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-rail { flex: 0 0 62px; display: flex; flex-direction: column; gap: 3px; padding: 4px; border-right: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain; }
 .mobile-canvas-rail button { flex: 0 0 46px; min-width: 0; padding: 3px 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1px; font-size: 11px; }
 .mobile-canvas-rail .editor-icon { width: 18px; height: 18px; }
+#mobile-canvas-overlap-rail:empty, #mobile-canvas-overlap-rail:has([hidden]) { display: none; }
+#mobile-canvas-overlap-rail .artwork-overlap-trigger { width: 100%; flex-direction: row; gap: 3px; padding: 3px; }
 .mobile-canvas-stage, .mobile-canvas-product { flex: 1; min-width: 0; min-height: 0; position: relative; background: #f8f2f0; }
 .mobile-canvas-stage .wrap-preview { width: 100%; height: 100%; margin: 0; padding: 0; border: 0; }
 .mobile-canvas-stage .editor-scroll { position: relative; height: 100%; padding: 10px; display: block; overflow: clip; touch-action: none; }

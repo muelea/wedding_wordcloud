@@ -143,7 +143,11 @@ frozen snapshot of the word cloud.
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
    and every curated editorial motif can be moved, resized, rotated, recolored,
-   duplicated or removed. Customers can also upload PNG or JPEG images; uploads
+   duplicated or removed. An advisory overlap badge checks the painted artwork,
+   ignoring selection boxes, spaces and transparent margins. Its findings let
+   customers select either affected element and jump to that print side, including
+   in the mobile canvas workspace. Intentional layering never blocks ordering.
+   Customers can also upload PNG or JPEG images; uploads
    are safely resized, embedded in the immutable design and can be moved, resized,
    rotated, duplicated or removed like other elements. A selection rectangle, Shift/Command/Control-click and
    “Select all” support the familiar temporary multi-selection workflow; desktop

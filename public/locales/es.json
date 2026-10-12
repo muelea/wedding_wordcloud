@@ -1,4 +1,13 @@
 {
+  "Überlagerungen prüfen": "Revisar superposiciones",
+  "{{count}} Überlagerungen prüfen": "Revisar {{count}} superposiciones",
+  "Überlagerungen werden geprüft…": "Revisando superposiciones…",
+  "Überlagerungen konnten nicht geprüft werden. Bitte verändert ein Element oder öffnet das Design erneut.": "No se pudieron revisar las superposiciones. Modifica un elemento o vuelve a abrir el diseño.",
+  "Diese Elemente überlagern sich. Wenn das beabsichtigt ist, könnt ihr euer Design so bestellen.": "Estos elementos se superponen. Si es intencional, podéis pedir vuestro diseño tal como está.",
+  "Keine Überlagerungen gefunden.": "No se encontraron superposiciones.",
+  "{{first}} überlagert {{second}}": "{{first}} se superpone a {{second}}",
+  "{{element}} auswählen": "Seleccionar {{element}}",
+  "Weitere Überlagerungen werden nach dem Bearbeiten angezeigt.": "Se mostrarán más superposiciones después de editar.",
   "Euer Design wird geöffnet…": "Abriendo vuestro diseño…",
   "Euer Design wird wiederhergestellt…": "Restaurando vuestro diseño…",
   "Euer Design wird aktualisiert…": "Actualizando vuestro diseño…",

@@ -87,6 +87,7 @@
       const resize = () => {
         if (!this.active) return;
         this.syncViewport();
+        this.placeOverlapTrigger();
         // A viewport/orientation change ends the current contact sequence before
         // changing screen-to-print coordinates, keeping its single Undo entry.
         editor.touchController?.finish();
@@ -121,6 +122,8 @@
       this.mount(this.document.querySelector('.design-toolbar-controls'), get('mobile-canvas-settings'));
       this.mount(this.document.querySelector('.editor-tools-history'), get('mobile-canvas-history'));
       this.mount(this.document.querySelector('.editor-tools-view'), get('mobile-canvas-zoom'));
+      this.mount(get('editor-overlap-trigger'), get('mobile-canvas-overlaps'));
+      this.placeOverlapTrigger();
       this.mount(get('surface-editor'), get('mobile-canvas-surfaces'));
       this.mount(this.document.querySelector('.editor-tools-primary'), get('mobile-canvas-add'));
       for (const group of ['selection', 'layout', 'reset']) {
@@ -166,6 +169,14 @@
       this.document.getElementById('mobile-editor-toggle').setAttribute('aria-expanded', 'false');
       this.onLayout();
       this.invoker?.focus({ preventScroll: true });
+    }
+
+    placeOverlapTrigger() {
+      // Narrow phones keep the 44px history, zoom and deselect controls in one
+      // row. Move the same warning button to the rail instead of shrinking taps.
+      const host = this.document.getElementById(root.innerWidth <= 360
+        ? 'mobile-canvas-overlap-rail' : 'mobile-canvas-overlaps');
+      host.append(this.document.getElementById('editor-overlap-trigger'));
     }
 
     chooseView(view) {

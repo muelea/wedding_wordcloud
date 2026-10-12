@@ -2236,6 +2236,9 @@
                   <span class="editor-zoom-label" id="editor-zoom-label">100 %</span>
                   <%- include('partials/editor-action', { action: { id: 'editor-zoom-in', icon: 'zoom-in', label: 'Ansicht vergrößern' } }) %>
                 </div>
+                <button type="button" class="editor-button artwork-overlap-trigger" id="editor-overlap-trigger" data-panel-trigger="editor-overlap-panel" aria-haspopup="dialog" aria-controls="editor-overlap-panel" aria-expanded="false" aria-label="Überlagerungen prüfen" hidden>
+                  <span aria-hidden="true">!</span><span id="editor-overlap-count" aria-hidden="true">0</span>
+                </button>
                 <div class="editor-tools editor-tools-separated editor-tools-reset" role="group" aria-label="Design zurücksetzen">
                   <%- include('partials/editor-action', { action: { id: 'editor-reset', icon: 'refresh-cw', label: 'Design zurücksetzen', controls: 'editor-reset-panel' } }) %>
                 </div>
@@ -2497,6 +2500,14 @@
     </div>
   </dialog>
 
+  <dialog class="config-panel artwork-overlap-panel" id="editor-overlap-panel" aria-labelledby="editor-overlap-title">
+    <div class="config-panel-head"><h2 id="editor-overlap-title" tabindex="-1">Überlagerungen prüfen</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+    <div class="config-panel-body">
+      <p id="editor-overlap-status" role="status" aria-live="polite"></p>
+      <div id="editor-overlap-list"></div>
+    </div>
+  </dialog>
+
   <%- include('partials/site-footer') %>
 
   <script src="/vendor/three.min.js?v=0.160.1"></script>
@@ -2512,6 +2523,7 @@
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
   <script src="<%= asset('/js/mug-icons.js') %>"></script>
   <script src="<%= asset('/js/design-fonts.js') %>"></script>
+  <script src="<%= asset('/js/artwork-overlap.js') %>"></script>
   <script src="<%= asset('/js/design-layout.js') %>"></script>
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
@@ -2520,6 +2532,7 @@
   <script src="<%= asset('/js/configurator-workspace.js') %>"></script>
   <script src="<%= asset('/js/canvas-touch.js') %>"></script>
   <script src="<%= asset('/js/mobile-canvas-workspace.js') %>"></script>
+  <script src="<%= asset('/js/artwork-overlap-warnings.js') %>"></script>
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script src="<%= asset('/js/configurator-toolbar.js') %>"></script>
@@ -2687,6 +2700,7 @@
     let previewState = 'loading';
     let restorationFailed = false;
     let mugEditor = null;
+    let overlapWarnings = null;
     let configuratorEmojiPicker = null;
     let activeSurface = 'default';
     let surfaceStates = new Map();
@@ -4117,48 +4131,16 @@
     }
 
     function drawDesign(ctx, offsetX = 0, offsetY = 0, scale = 1) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
+      ctx.save();
+      ctx.translate(offsetX, offsetY);
       for (const item of getCurrentDesign()) {
-        ctx.save();
-        ctx.translate(offsetX + item.x * scale, offsetY + item.y * scale);
-        ctx.rotate((item.angle || 0) * Math.PI / 180);
-        if (item.type === 'image') {
-          const image = mugEditor?.getImageElement(item.src);
-          if (image) {
-            ctx.drawImage(
-              image,
-              -item.width * scale / 2,
-              -item.height * scale / 2,
-              item.width * scale,
-              item.height * scale
-            );
-          }
-        } else if (item.type === 'icon') {
-          const icon = MugIcons.get(item.icon);
-          if (icon) {
-            const iconScale = item.size * scale / MugIcons.VIEWBOX_SIZE;
-            ctx.scale(iconScale, iconScale);
-            ctx.translate(-MugIcons.VIEWBOX_SIZE / 2, -MugIcons.VIEWBOX_SIZE / 2);
-            ctx.strokeStyle = item.color;
-            ctx.lineWidth = MugIcons.STROKE_WIDTH;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.stroke(new Path2D(icon.path));
-          }
-        } else {
-          WordCloudCore.drawRichText(ctx, item.text, 0, 0, item.fontSize * scale, {
-            fontFamily: DesignFonts.cssFamily(item.fontFamily),
-            color: item.color,
-            fontWeight: item.fontWeight,
-            fontStyle: item.fontStyle,
-            underline: item.underline,
-            linethrough: item.linethrough,
-            emojiImage: (run) => WolkenworteEmoji.getLoadedImage(run),
-          });
-        }
-        ctx.restore();
+        ArtworkOverlap.drawItem(ctx, item, {
+          allowMissing: true,
+          image: src => mugEditor?.getImageElement(src),
+          emojiImage: run => WolkenworteEmoji.getLoadedImage(run),
+        }, scale);
       }
+      ctx.restore();
     }
 
     function resizeMug3D() {
@@ -4341,6 +4323,7 @@
       renderFrame = requestAnimationFrame(() => {
         renderProductPreview();
         updatePrintReadability();
+        overlapWarnings?.schedule();
       });
     }
 
@@ -5045,6 +5028,11 @@
         onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
         onExit: () => { if (mobileEditorMedia.matches) setMobileEditorExpanded(false, { scroll: false }); },
         onLayout: () => { refreshWorkspaceLayout(); updateProductPresentation(); renderAll(); },
+      });
+      overlapWarnings = new ArtworkOverlapWarnings({ document, editor: mugEditor, workspace, selectSurface,
+        getSurfaces: () => productSurfaces().map(surface => ({ key: surface.key, label: surface.label,
+          design: surface.key === activeSurface ? mugEditor.getDesign() : (surfaceStates.get(surface.key)?.design || []),
+        })),
       });
       mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
       resetSurfaceStates(mugEditor.getState());

@@ -107,7 +107,7 @@
     }
 
     show(panel, trigger, popover = false) {
-      const embedded = this.mobileCanvas?.active && ['theme-panel', 'orientation-panel', 'editor-reset-panel'].includes(panel.id);
+      const embedded = this.mobileCanvas?.active && ['theme-panel', 'orientation-panel', 'editor-reset-panel', 'editor-overlap-panel'].includes(panel.id);
       const mode = embedded ? 'embedded' : popover ? 'popover' : 'modal';
       this.active = { panel, trigger, mode };
       trigger.setAttribute('aria-expanded', 'true');

@@ -1427,6 +1427,7 @@
     }
 
     handleTransform(object) {
+      this.clearArtworkHighlight?.();
       if (!object) return;
       this.keepInside(object);
       this.updateImageQualityBadge(object);
@@ -2512,6 +2513,72 @@
       this.zoomInButton.disabled = this.zoom === maximum;
       this.zoomLabel.textContent = `${Math.round(this.zoom * 100)} %`;
       this.onViewChange?.(this.zoom);
+    }
+
+    focusArtworkElement(id, relatedIds = [id]) {
+      this.touchController?.finish();
+      const objects = this.canvas.getObjects();
+      const target = objects.find(object => object.editorId === id);
+      if (!target) return false;
+      // A deliberate warning-list action may replace the mobile selection lock.
+      // Keep just the requested element selected, so dragging never moves a pair.
+      this.canvas.discardActiveObject();
+      this.canvas.setActiveObject(target);
+      this.updateSelectionPanel();
+      const related = objects.filter(object => object === target || relatedIds.includes(object.editorId));
+      const bounds = related.map(object => object.getBoundingRect());
+      const left = Math.min(...bounds.map(box => box.left));
+      const top = Math.min(...bounds.map(box => box.top));
+      const right = Math.max(...bounds.map(box => box.left + box.width));
+      const bottom = Math.max(...bounds.map(box => box.top + box.height));
+      const viewportWidth = this.scroll.clientWidth;
+      const viewportHeight = this.scroll.clientHeight;
+      const fitWidth = Math.min(viewportWidth, viewportHeight * this.canvasWidth / this.canvasHeight);
+      const scale = fitWidth / this.canvasWidth;
+      this.setZoom(Math.min(this.mobileViewport ? 4 : 2,
+        viewportWidth * .8 / Math.max(1, (right - left) * scale),
+        viewportHeight * .8 / Math.max(1, (bottom - top) * scale)));
+      const x = (left + right) / 2 / this.canvasWidth;
+      const y = (top + bottom) / 2 / this.canvasHeight;
+      if (this.mobileViewport) {
+        this.mobilePanX = (.5 - x) * this.shell.clientWidth;
+        this.mobilePanY = (.5 - y) * this.shell.clientHeight;
+        this.refreshViewport();
+      } else {
+        this.scroll.scrollLeft = x * this.shell.clientWidth - viewportWidth / 2;
+        this.scroll.scrollTop = y * this.shell.clientHeight - viewportHeight / 2;
+      }
+      this.clearArtworkHighlight?.();
+      const highlight = () => {
+        const ctx = this.canvas.contextTop;
+        if (!ctx) return;
+        ctx.save();
+        ctx.transform(...this.canvas.viewportTransform);
+        ctx.strokeStyle = '#b27612';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        for (const object of related) {
+          if (!this.canvas.getObjects().includes(object)) continue;
+          const points = object.getCoords();
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          points.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
+          ctx.closePath(); ctx.stroke();
+        }
+        ctx.restore();
+        this.canvas.contextTopDirty = true;
+      };
+      const unsubscribe = this.canvas.on('after:render', highlight);
+      const timer = setTimeout(() => this.clearArtworkHighlight?.(), 1500);
+      this.clearArtworkHighlight = () => {
+        clearTimeout(timer);
+        unsubscribe();
+        this.clearArtworkHighlight = null;
+        this.canvas.clearContext(this.canvas.contextTop);
+        this.canvas.requestRenderAll();
+      };
+      this.canvas.requestRenderAll();
+      return true;
     }
 
     setFeedback(message, params) {

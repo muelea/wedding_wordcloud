@@ -1,4 +1,13 @@
 {
+  "Überlagerungen prüfen": "Vérifier les superpositions",
+  "{{count}} Überlagerungen prüfen": "Vérifier {{count}} superpositions",
+  "Überlagerungen werden geprüft…": "Vérification des superpositions…",
+  "Überlagerungen konnten nicht geprüft werden. Bitte verändert ein Element oder öffnet das Design erneut.": "Les superpositions n’ont pas pu être vérifiées. Modifiez un élément ou rouvrez le design.",
+  "Diese Elemente überlagern sich. Wenn das beabsichtigt ist, könnt ihr euer Design so bestellen.": "Ces éléments se superposent. Si c’est voulu, vous pouvez commander votre design tel quel.",
+  "Keine Überlagerungen gefunden.": "Aucune superposition détectée.",
+  "{{first}} überlagert {{second}}": "{{first}} se superpose à {{second}}",
+  "{{element}} auswählen": "Sélectionner {{element}}",
+  "Weitere Überlagerungen werden nach dem Bearbeiten angezeigt.": "D’autres superpositions seront affichées après modification.",
   "Euer Design wird geöffnet…": "Ouverture de votre création…",
   "Euer Design wird wiederhergestellt…": "Restauration de votre création…",
   "Euer Design wird aktualisiert…": "Mise à jour de votre création…",
