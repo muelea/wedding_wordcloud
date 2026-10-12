@@ -1,9 +1,9 @@
 (function (root) {
   'use strict';
   const t = source => root.WolkenworteI18n?.t(source) || source;
-  function setText(element, source) {
-    if (root.WolkenworteI18n) root.WolkenworteI18n.setText(element, source);
-    else element.textContent = source;
+  function setText(element, source, params = {}) {
+    if (root.WolkenworteI18n) root.WolkenworteI18n.setText(element, source, params);
+    else element.textContent = source.replace(/\{\{(\w+)\}\}/g, (_, name) => params[name]);
   }
 
   class MobileCanvasWorkspace {
@@ -31,6 +31,8 @@
         editor.touchController?.finish();
         editor.clearSelection();
       });
+      document.getElementById('mobile-canvas-multi-select').addEventListener('click', () => this.chooseTool('multi'));
+      document.getElementById('mobile-canvas-multi-done').addEventListener('click', () => this.chooseTool('move'));
       document.getElementById('mobile-canvas-panel-back').addEventListener('click', () => {
         if (this.picker) this.picker.back();
         else this.chooseTool('more');
@@ -96,6 +98,11 @@
       root.addEventListener('resize', resize, { passive: true });
       root.visualViewport?.addEventListener('resize', resize, { passive: true });
       root.visualViewport?.addEventListener('scroll', resize, { passive: true });
+      root.addEventListener('orientationchange', resize, { passive: true });
+      root.screen?.orientation?.addEventListener('change', resize);
+      this.dialog.addEventListener('focusin', () => this.syncViewport());
+      this.dialog.addEventListener('focusout', () => requestAnimationFrame(() => this.syncViewport()));
+      if (root.ResizeObserver) this.viewportObserver = new root.ResizeObserver(resize);
     }
 
     mount(node, host) {
@@ -133,6 +140,7 @@
       get('editor-text').readOnly = true;
       this.document.documentElement.classList.add('mobile-canvas-open');
       this.dialog.showModal();
+      this.viewportObserver?.observe(this.dialog.querySelector('.mobile-canvas-body'));
       this.syncViewport();
       this.editor.setMobileViewport(true);
       this.editor.clearSelection();
@@ -157,6 +165,8 @@
       }
       this.document.activeElement?.blur();
       this.active = false;
+      this.viewportObserver?.disconnect();
+      this.editor.mobileMultiSelect = false;
       for (const { node, anchor } of this.mounts.reverse()) { anchor.replaceWith(node); }
       this.mounts = [];
       this.document.getElementById('editor-text').readOnly = this.textReadOnly;
@@ -174,7 +184,7 @@
     placeOverlapTrigger() {
       // Narrow phones keep the 44px history, zoom and deselect controls in one
       // row. Move the same warning button to the rail instead of shrinking taps.
-      const host = this.document.getElementById(root.innerWidth <= 360
+      const host = this.document.getElementById(root.innerWidth <= 480
         ? 'mobile-canvas-overlap-rail' : 'mobile-canvas-overlaps');
       host.append(this.document.getElementById('editor-overlap-trigger'));
     }
@@ -200,6 +210,7 @@
       this.editor.closeIconPicker();
       this.tool = tool;
       this.dialog.dataset.tool = tool;
+      this.editor.mobileMultiSelect = tool === 'multi';
       this.editor.mobileNavigation = tool === 'view';
       const panel = ['settings', 'picker'].includes(tool) || (['properties', 'add', 'elements', 'more', 'emoji'].includes(tool) && this.view === 'canvas');
       this.document.getElementById('mobile-canvas-drawer').hidden = !panel;
@@ -211,7 +222,7 @@
       setText(this.document.getElementById('mobile-canvas-panel-title'), titles[tool] || 'Anpassen');
       this.dialog.querySelectorAll('[data-canvas-tool]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.canvasTool === tool)));
       if (tool === 'elements') this.renderElements();
-      this.updateHint();
+      this.updateSelection();
     }
 
     showPicker(panel, close, back = close) {
@@ -288,6 +299,13 @@
 
     syncViewport() {
       const viewport = root.visualViewport;
+      const field = this.document.activeElement;
+      // Ordinary editing uses CSS dynamic viewport units. Safari can briefly
+      // retain the previous orientation's visualViewport values; use them only
+      // for an active keyboard field, including its scroll offset.
+      const keyboard = Boolean(this.textSession || (this.dialog.contains(field) && !field.readOnly &&
+        field.matches('textarea, input[type="text"], input[type="search"], input[type="number"]')));
+      this.dialog.toggleAttribute('data-keyboard', keyboard);
       this.dialog.style.setProperty('--mobile-viewport-top', `${viewport?.offsetTop || 0}px`);
       this.dialog.style.setProperty('--mobile-viewport-left', `${viewport?.offsetLeft || 0}px`);
       this.dialog.style.setProperty('--mobile-viewport-width', `${viewport?.width || root.innerWidth}px`);
@@ -321,22 +339,17 @@
       if (!this.active) return;
       if (this.tool === 'elements') this.renderElements();
       const objects = this.editor.selectedObjects();
-      this.document.getElementById('mobile-canvas-selection').hidden = !objects.length || this.view !== 'canvas';
-      this.updateHint();
+      const multi = this.editor.mobileMultiSelect === true;
+      this.document.getElementById('mobile-canvas-selection').hidden = (!objects.length && !multi) || this.view !== 'canvas';
+      this.document.getElementById('mobile-canvas-deselect').hidden = multi;
+      const done = this.document.getElementById('mobile-canvas-multi-done');
+      done.hidden = !multi;
+      setText(done, 'Fertig ({{count}})', { count: objects.length });
     }
 
     elementLabel(object) {
       return object.editorKind === 'image' ? t('Bild') : object.editorKind === 'icon'
         ? t(object.editorIconLabel) : this.editor.objectText(object);
-    }
-
-    updateHint() {
-      const wide = this.editor.width / this.editor.height > 1.5 && root.innerHeight > root.innerWidth;
-      setText(this.document.getElementById('mobile-canvas-hint'), this.tool === 'view'
-        ? 'Ansicht: mit einem Finger verschieben, mit zwei Fingern zoomen'
-        : this.editor.selectedObjects().length ? 'Auswahl gesperrt · Überall bewegen, vergrößern und drehen'
-        : wide ? 'Handy quer halten · Element antippen oder mit zwei Fingern zoomen'
-        : 'Element antippen · Zwei Finger zoomen die Ansicht');
     }
 
     renderElements() {

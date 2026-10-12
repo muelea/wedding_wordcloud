@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const fabric = require('fabric/node');
 const { createCanvas } = require('canvas');
 const { CanvasTouch } = require('../public/js/canvas-touch');
+const CanvasViewport = require('../public/js/canvas-viewport');
 const DesignFonts = require('../src/designFonts');
 const WordCloudCore = require('../public/js/wordcloud-core');
 const EmojiCatalog = require('../public/js/emoji-catalog');
@@ -13,9 +14,11 @@ const { PRODUCTS, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
 
 function setup(t, product, side = 'front') {
-  const root = { fabric, CanvasTouch, DesignFonts, WordCloudCore, WolkenworteEmoji: EmojiCatalog,
+  const root = { fabric, CanvasTouch, CanvasViewport, devicePixelRatio: 3, DesignFonts, WordCloudCore, WolkenworteEmoji: EmojiCatalog,
     PointerEvent: function () {}, matchMedia: () => ({ matches: true, addEventListener() {} }) };
-  vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), { window: root });
+  vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), {
+    window: root, getComputedStyle: () => ({ paddingLeft: '0', paddingRight: '0', paddingTop: '0', paddingBottom: '0' }),
+  });
   const editor = Object.create(root.MugPrintEditor.prototype);
   const { width, height } = product.printFile;
   const scale = Math.min(.5, 1536 / Math.max(width, height));
@@ -32,6 +35,82 @@ function setup(t, product, side = 'front') {
   t.after(() => editor.canvas.dispose());
   return editor;
 }
+
+test('multi-select chooses individual members and transforms the temporary group with one Undo step', t => {
+  const editor = setup(t, PRODUCTS[0]);
+  editor.mobileViewport = editor.mobileMultiSelect = true;
+  editor.setDesign([{ id: 'a', text: 'Liebe', x: 900, y: 500, fontSize: 100, color: '#2455f5' },
+    { id: 'b', text: 'Glück', x: 1400, y: 500, fontSize: 100, color: '#2455f5' },
+    { id: 'c', text: 'Freude', x: 1800, y: 500, fontSize: 100, color: '#2455f5' }], { resetHistory: true });
+  const original = JSON.stringify(editor.getDesign());
+  const touch = editor.touchController;
+  const tap = x => { touch.down(1, { x, y: 250 }); touch.up(1); };
+  tap(450); tap(700); tap(900);
+  assert.deepEqual(editor.selectedObjects().map(o => o.editorId), ['a', 'b', 'c']);
+  tap(700);
+  assert.deepEqual(editor.selectedObjects().map(o => o.editorId), ['a', 'c'], 'hit-testing must reach a child inside ActiveSelection');
+  tap(700);
+  assert.deepEqual(editor.selectedObjects().map(o => o.editorId), ['a', 'c', 'b']);
+  assert.equal(JSON.stringify(editor.getDesign()), original);
+  assert.equal(editor.history.length, 1);
+  editor.mobileMultiSelect = false;
+  touch.down(1, { x: 100, y: 100 }); touch.move(1, { x: 110, y: 105 });
+  touch.down(2, { x: 210, y: 105 }); touch.move(2, { x: 110, y: 155 });
+  touch.up(2); touch.up(1);
+  const changed = JSON.stringify(editor.getDesign());
+  assert.notEqual(changed, original);
+  assert.ok(isPrintDesignWithinBounds(editor.getDesign(), editor.width, editor.height, editor.getSafeArea()));
+  assert.equal(editor.history.length, 2);
+  editor.undo();
+  assert.equal(JSON.stringify(editor.getDesign()), original);
+  assert.equal(editor.selectedObjects().length, 3);
+  editor.redo();
+  assert.equal(JSON.stringify(editor.getDesign()), changed);
+  editor.clearSelection();
+  assert.equal(editor.selectedObjects().length, 0);
+  assert.equal(editor.history.length, 2);
+});
+
+test('mobile zoom allocates visible retina pixels and restores the original desktop renderer without changing print geometry', t => {
+  const editor = setup(t, PRODUCTS[0]);
+  const styles = new Map();
+  editor.shell.style = { setProperty: (key, value) => styles.set(key, value), removeProperty: key => styles.delete(key) };
+  editor.scroll.clientWidth = 740;
+  editor.scroll.clientHeight = 240;
+  editor.zoom = 1;
+  editor.setZoom = value => { editor.zoom = value; editor.refreshViewport(); };
+  editor.setDesign([{ id: 'a', text: 'Liebe', x: 1350, y: 525, fontSize: 100, color: '#2455f5' }], { resetHistory: true });
+  const original = JSON.stringify(editor.getDesign());
+  const desktopRetina = editor.canvas.getRetinaScaling;
+  const desktopCaching = editor.canvas.getObjects()[0].objectCaching;
+  editor.setMobileViewport(true);
+  assert.equal(editor.canvas.getObjects()[0].objectCaching, false, 'text must not enlarge a capped Fabric cache');
+  editor.setZoom(6);
+  assert.equal(editor.canvas.width, 740);
+  assert.equal(editor.canvas.height, 240);
+  assert.equal(editor.canvas.lowerCanvasEl.width, 2220);
+  assert.equal(editor.canvas.lowerCanvasEl.height, 720);
+  assert.ok(editor.canvas.getZoom() > 1, 'Fabric paints text/emoji at the actual zoom');
+  assert.equal(styles.get('--mobile-paint-width'), '740px');
+  editor.mobilePanX = 200;
+  editor.refreshViewport();
+  editor.scroll.clientWidth = 300;
+  editor.scroll.clientHeight = 650;
+  editor.setZoom(1);
+  assert.equal(editor.canvas.width, 300);
+  assert.ok(editor.canvas.height < 120, 'a mug retains its print aspect in portrait');
+  assert.equal(JSON.stringify(editor.getDesign()), original);
+  assert.equal(editor.history.length, 1);
+  editor.setMobileViewport(false);
+  assert.equal(editor.canvas.getObjects()[0].objectCaching, desktopCaching);
+  assert.equal(editor.canvas.enableRetinaScaling, false);
+  assert.equal(editor.canvas.getRetinaScaling, desktopRetina);
+  assert.deepEqual(Array.from(editor.canvas.viewportTransform), [1, 0, 0, 1, 0, 0]);
+  assert.equal(editor.canvas.width, editor.canvasWidth);
+  assert.equal(editor.canvas.height, editor.canvasHeight);
+  assert.equal(styles.has('--mobile-paint-width'), false);
+  assert.equal(JSON.stringify(editor.getDesign()), original);
+});
 
 test('touch transforms serialize safely for every product, orientation and print side', async t => {
   for (const base of PRODUCTS) {

@@ -186,3 +186,24 @@ test('tapping an active word then another word can unlock and select without wai
   assert.equal(selected(), other);
   touch.finish();
 });
+
+test('multi-select toggles individual taps but drags and pinches navigate without edits', () => {
+  const { touch, object, count } = setup();
+  const toggles = [];
+  touch.adapter.selecting = () => true;
+  touch.adapter.toggle = target => toggles.push(target);
+  touch.adapter.canDoubleTap = () => true;
+  touch.adapter.doubleTap = () => assert.fail('selection taps must not open text editing');
+  for (let i = 0; i < 2; i++) {
+    touch.down(1, { x: 100, y: 100 }); touch.up(1);
+  }
+  assert.deepEqual(toggles, [object, object]);
+  touch.down(1, { x: 100, y: 100 });
+  touch.move(1, { x: 150, y: 100 }); touch.up(1);
+  touch.down(1, { x: 100, y: 100 }); touch.down(2, { x: 200, y: 100 });
+  touch.move(2, { x: 300, y: 100 }); touch.up(2); touch.up(1);
+  touch.down(1, { x: 100, y: 100 }); touch.up(1, { cancelled: true });
+  assert.equal(toggles.length, 2);
+  assert.deepEqual(object, { x: 100, y: 100, angle: 0, scaleX: 1, scaleY: 1 });
+  assert.deepEqual(count(), { commits: 0, selections: 0, viewWrites: 2 });
+});

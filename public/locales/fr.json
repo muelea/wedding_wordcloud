@@ -1049,5 +1049,7 @@
   "Menge 0: nicht in dieser Bestellung enthalten": "Quantité 0 : non inclus dans cette commande",
   "Design {{number}}": "Design {{number}}",
   "Die Farbwelt gilt für alle Druckseiten dieses Designs.": "La palette de couleurs s’applique à toutes les faces imprimées de ce design.",
-  "Dieses Design ist im Warenkorb aktuell.": "Ce design est à jour dans votre panier."
+  "Dieses Design ist im Warenkorb aktuell.": "Ce design est à jour dans votre panier.",
+  "Mehrere auswählen": "Sélection multiple",
+  "Fertig ({{count}})": "Terminé ({{count}})"
 }

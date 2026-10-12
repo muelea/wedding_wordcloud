@@ -54,8 +54,10 @@ frozen snapshot of the word cloud.
    immutable Printful-sized file with a transparent background. Each approved
    design enters the browser-local basket only through “In den Warenkorb”. Editing a basket design
    uses “Warenkorb aktualisieren” and replaces that position without duplicating it.
-   The configurator separately shows whether the browser draft is retained and
-   whether the cart contains its current version. Cart rows mark pending edits,
+   On desktop the configurator separately shows whether the browser draft is retained and
+   whether the cart contains its current version. Mobile hides routine save/cart
+   reminders and gesture hints; actionable failures and explicit cart reviews remain.
+   Cart rows mark pending edits,
    including edits on designs that are not currently open.
    Phones open on a preview-first purchase surface: the finished product, its
    compact product/palette summary and the explicit “In den Warenkorb & zur
@@ -68,8 +70,10 @@ frozen snapshot of the word cloud.
    where supported; iPhone Safari keeps its browser chrome. Compact product,
    palette and orientation pickers replace the side panel. Choosing a product
    family immediately opens its variants instead of placing them below the list.
-   Wide print areas suggest turning the phone sideways; portrait and square
-   products keep their own proportions. With nothing selected, gestures anywhere
+   The workspace follows the dynamic viewport through portrait/landscape changes;
+   every product retains its own print proportions. Mobile zoom redraws the visible
+   region at the actual zoom and device pixel density, with a bounded backing bitmap;
+   print coordinates and the desktop renderer stay unchanged. With nothing selected, gestures anywhere
    pan/zoom the view. A deliberate tap locks one element: subsequent one-finger
    drags anywhere move it, and two-finger pinches/twists anywhere scale/rotate it
    around its centre. Other-word taps cannot replace this lock. Tap the selected
@@ -80,7 +84,11 @@ frozen snapshot of the word cloud.
    the visible viewport and keyboard scroll offset, temporarily hiding the canvas
    tools while typing. Each completed transform or confirmed text edit is one
    Undo step. Add contains text, the complete searchable emoji picker and image
-   upload; More holds Find element, Select all, Fill the area and Reset design.
+   upload; Add and More size to their content within the available viewport.
+   More holds Find element, Multi-select, Select all, Fill the area and Reset design.
+   Multi-select toggles individual members by tapping; Done locks the temporary group
+   for the same move/scale/rotate gestures and one Undo step per transform.
+   Adjustment controls prevent browser double-tap zoom while preserving canvas gestures.
    Custom colours opens its editable colours directly. Mobile mug preview drags
    rotate from anywhere in the preview; ordinary page scrolling remains available
    beside the mug outside the dedicated workspace.

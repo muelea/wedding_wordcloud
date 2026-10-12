@@ -1049,5 +1049,7 @@
   "Menge 0: nicht in dieser Bestellung enthalten": "Quantity 0: not included in this order",
   "Design {{number}}": "Design {{number}}",
   "Die Farbwelt gilt für alle Druckseiten dieses Designs.": "The colour palette applies to all print sides of this design.",
-  "Dieses Design ist im Warenkorb aktuell.": "This design is up to date in your cart."
+  "Dieses Design ist im Warenkorb aktuell.": "This design is up to date in your cart.",
+  "Mehrere auswählen": "Multi-select",
+  "Fertig ({{count}})": "Done ({{count}})"
 }

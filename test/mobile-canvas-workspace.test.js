@@ -28,6 +28,7 @@ test('mobile text entry follows the visual viewport height and keyboard scroll o
   assert.equal(document.activeElement.id, 'mobile-canvas-text');
   assert.equal(document.activeElement.value, 'Liebe');
   assert.equal(workspace.dialog.dataset.textEditing, 'true');
+  assert.equal(workspace.dialog.hasAttribute('data-keyboard'), true);
   assert.equal(workspace.dialog.style.getPropertyValue('--mobile-viewport-height'), '72px');
   assert.equal(workspace.dialog.style.getPropertyValue('--mobile-viewport-top'), '180px');
   root.visualViewport.offsetTop = 215;
@@ -40,7 +41,21 @@ test('mobile text entry follows the visual viewport height and keyboard scroll o
   assert.equal(object.text, 'Liebe');
   assert.equal(workspace.textSession, null);
   assert.equal(workspace.dialog.dataset.textEditing, undefined);
+  assert.equal(workspace.dialog.hasAttribute('data-keyboard'), false);
   assert.equal(document.getElementById('mobile-canvas-text-editor').hidden, true);
+});
+
+test('a stale landscape visual viewport never restricts ordinary portrait editing', t => {
+  const { dom, root, workspace } = fixture();
+  t.after(() => dom.window.close());
+  root.innerWidth = 390;
+  root.innerHeight = 844;
+  workspace.syncViewport();
+  assert.equal(workspace.dialog.hasAttribute('data-keyboard'), false);
+  const css = fs.readFileSync(require.resolve('../public/configurator-workspace.css'), 'utf8');
+  const normal = css.match(/\.mobile-canvas-dialog \{[\s\S]*?\n\}/)[0];
+  assert.match(normal, /height: 100dvh/);
+  assert.doesNotMatch(normal, /--mobile-viewport-height/);
 });
 
 test('quick text entry requires a single text object and keeps the existing session', t => {
@@ -66,7 +81,7 @@ test('narrow phones reuse the warning button in the rail and return it to the to
   root.innerWidth = 320;
   workspace.placeOverlapTrigger();
   assert.equal(trigger.parentElement.id, 'mobile-canvas-overlap-rail');
-  root.innerWidth = 390;
+  root.innerWidth = 621;
   workspace.placeOverlapTrigger();
   assert.equal(trigger.parentElement.id, 'mobile-canvas-overlaps');
   assert.equal(document.querySelectorAll('#editor-overlap-trigger').length, 1);

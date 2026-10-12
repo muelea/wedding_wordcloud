@@ -15,6 +15,11 @@
   const MAX_HISTORY = 60;
   const NUDGE_STEP = 8;
   const NUDGE_LARGE_STEP = 40;
+  const QUIET_MOBILE_FEEDBACK = new Set(['Änderung übernommen', 'Element ausgewählt', '{{count}} Elemente ausgewählt',
+    'Neues Wort hinzugefügt', 'Emoji hinzugefügt', '{{item}} hinzugefügt', 'Bild hinzugefügt', '{{item}} gelöscht',
+    '{{count}} Elemente dupliziert', '{{item}} dupliziert', '{{count}} Elemente kopiert', '{{item}} kopiert',
+    '{{count}} Elemente eingefügt', '{{item}} eingefügt', 'Auswahl ganz nach vorn gebracht', 'Element ganz nach vorn gebracht',
+    'Schriftgröße auf {{size}} pt gesetzt', 'Schrift auf {{font}} geändert', '{{font}} auf {{count}} Texte angewendet']);
   const SELECTION_PRESERVING_TARGETS = [
     'button', 'a', 'input', 'textarea', 'select', 'option', 'label', 'summary', 'details',
     'dialog', '[popover]', '[contenteditable="true"]', '[role="button"]', '[role="link"]',
@@ -566,6 +571,8 @@
       if (!root.CanvasTouch || !root.PointerEvent || !this.scroll) return;
       this.touchMedia = root.matchMedia('(max-width: 940px), (pointer: coarse)');
       this.touchController = new root.CanvasTouch({
+        selecting: () => this.mobileMultiSelect === true,
+        toggle: object => this.toggleMobileSelection(object),
         navigation: () => this.mobileNavigation === true,
         selected: () => this.canvas.getActiveObject(),
         hit: point => this.touchTarget(point),
@@ -691,7 +698,7 @@
       const scene = this.touchScenePoint(point);
       if (scene.x < 0 || scene.y < 0 || scene.x > this.canvasWidth || scene.y > this.canvasHeight) return null;
       const active = this.canvas.getActiveObject();
-      if (this.isActiveSelection(active) && active.containsPoint(scene)) return active;
+      if (!this.mobileMultiSelect && this.isActiveSelection(active) && active.containsPoint(scene)) return active;
       const objects = this.canvas.getObjects().filter(object => object.selectable !== false);
       const exact = this.canvas.searchPossibleTargets(objects, scene).target;
       if (exact) return exact;
@@ -713,11 +720,21 @@
       if (enabled === Boolean(this.mobileViewport)) return;
       if (enabled) {
         this.inlineZoom = this.zoom;
+        this.mobileRendering = { retina: this.canvas.enableRetinaScaling,
+          retinaMethod: this.canvas.getRetinaScaling, ownRetina: Object.hasOwn(this.canvas, 'getRetinaScaling') };
+        this.canvas.enableRetinaScaling = true;
+        this.canvas.getRetinaScaling = () => this.mobilePixelRatio || 1;
         this.mobileViewport = true;
         this.mobilePanX = this.mobilePanY = 0;
         this.setZoom(1);
       } else {
         this.mobileViewport = false;
+        this.canvas.enableRetinaScaling = this.mobileRendering.retina;
+        if (this.mobileRendering.ownRetina) this.canvas.getRetinaScaling = this.mobileRendering.retinaMethod;
+        else delete this.canvas.getRetinaScaling;
+        this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        this.canvas.setDimensions({ width: this.canvasWidth, height: this.canvasHeight });
+        for (const name of ['left', 'top', 'width', 'height']) this.shell.style.removeProperty(`--mobile-paint-${name}`);
         this.shell.style.removeProperty('transform');
         this.setZoom(this.inlineZoom || 1);
       }
@@ -1100,6 +1117,15 @@
       return selection;
     }
 
+    toggleMobileSelection(object) {
+      if (!this.mobileMultiSelect || !this.canvas.getObjects().includes(object)) return;
+      const selected = this.selectedObjects();
+      this.setActiveObjects(selected.includes(object) ? selected.filter(item => item !== object) : [...selected, object]);
+      this.updateTouchControls();
+      this.updateSelectionPanel();
+      this.canvas.requestRenderAll();
+    }
+
     selectAll() {
       const objects = this.canvas.getObjects().filter((object) => object.selectable !== false);
       if (!objects.length) return false;
@@ -1359,8 +1385,24 @@
         this.mobilePanX = Math.max(-limitX, Math.min(limitX, this.mobilePanX || 0));
         this.mobilePanY = Math.max(-limitY, Math.min(limitY, this.mobilePanY || 0));
         this.shell.style.transform = `translate(-50%, -50%) translate(${this.mobilePanX}px, ${this.mobilePanY}px)`;
+        this.renderMobileViewport({ fitWidth, viewportWidth, viewportHeight });
       }
       this.canvas?.calcOffset();
+    }
+
+    renderMobileViewport({ fitWidth, viewportWidth, viewportHeight }) {
+      if (!root.CanvasViewport || !this.canvas) return;
+      const view = root.CanvasViewport.plan({ width: this.canvasWidth, height: this.canvasHeight,
+        fitWidth, viewportWidth, viewportHeight, zoom: this.zoom, panX: this.mobilePanX, panY: this.mobilePanY,
+        pixelRatio: root.devicePixelRatio || 1 });
+      for (const [name, value] of Object.entries({ left: view.offsetX, top: view.offsetY, width: view.paintWidth, height: view.paintHeight })) {
+        this.shell.style.setProperty(`--mobile-paint-${name}`, `${value}px`);
+      }
+      const resize = this.canvas.width !== view.paintWidth || this.canvas.height !== view.paintHeight || this.mobilePixelRatio !== view.retina;
+      this.mobilePixelRatio = view.retina;
+      if (resize) this.canvas.setDimensions({ width: view.paintWidth, height: view.paintHeight });
+      this.canvas.setViewportTransform(view.transform);
+      this.canvas.requestRenderAll();
     }
 
     resizePrintArea({ printWidth, printHeight, printFileDpi, defaultX, defaultY, safeMargin, safeArea }) {
@@ -1401,7 +1443,7 @@
       this.margin = this.printMargin * this.editorScale;
       this.defaultX = Number.isFinite(defaultX) ? defaultX : nextWidth / 2;
       this.defaultY = Number.isFinite(defaultY) ? defaultY : nextHeight / 2;
-      this.canvas.setDimensions({ width: this.canvasWidth, height: this.canvasHeight });
+      if (!this.mobileViewport) this.canvas.setDimensions({ width: this.canvasWidth, height: this.canvasHeight });
       this.canvas.calcOffset();
       this.updatePrintAreaPresentation();
       this.setZoom(1);
@@ -2582,6 +2624,7 @@
     }
 
     setFeedback(message, params) {
+      if (this.mobileViewport && QUIET_MOBILE_FEEDBACK.has(message)) return;
       const translatedMessage = translate(message, params);
       this.feedback.textContent = translatedMessage;
       clearTimeout(this.feedbackTimer);

@@ -20,6 +20,10 @@
       const mobile = workspace.mobileCanvas;
       mobile.open(run);
       await frames();
+      check('routine draft, cart and gesture messages are absent on mobile',
+        !document.getElementById('mobile-canvas-hint') &&
+        getComputedStyle(document.getElementById('draft-save-state')).display === 'none' &&
+        getComputedStyle(document.getElementById('cart-save-state')).display === 'none');
       check('native full-screen workspace fills the available viewport', mobile.dialog.open &&
         Math.abs(mobile.dialog.getBoundingClientRect().height - (visualViewport?.height || innerHeight)) < 2);
       check('history, zoom and fit share the top toolbar without a bottom row',
@@ -31,6 +35,9 @@
       check('toolbar stays inside the viewport', toolbar.left >= 0 && toolbar.right <= innerWidth + 1);
       const shell = document.getElementById('editor-canvas-shell');
       const lowerCanvas = document.getElementById('wrap-canvas');
+      check('repeated adjustment taps disable browser double-tap zoom without disabling browser pinch',
+        getComputedStyle(document.getElementById('editor-larger')).touchAction === 'manipulation' &&
+        !document.querySelector('meta[name="viewport"]').content.includes('user-scalable=no'));
       const send = (type, id, p) => mugEditor.scroll.dispatchEvent(new PointerEvent(type, {
         pointerId: id, pointerType: 'touch', clientX: p.x, clientY: p.y,
         button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, cancelable: true,
@@ -44,6 +51,51 @@
       await mugEditor.loadImageSource(src);
       const word = { id: 'touch-word', text: 'Liebe', x: mugEditor.width / 2, y: mugEditor.height / 2,
         fontSize: 160, angle: 0, color: '#a40e4c', fontFamily: 'classic' };
+      mugEditor.setDesign([word], { resetHistory: true });
+      const beforeZoom = JSON.stringify(mugEditor.getDesign());
+      mugEditor.setZoom(6); await frames();
+      check('600% zoom redraws Fabric at the visible display scale with retina enabled',
+        mugEditor.canvas.enableRetinaScaling && mugEditor.canvas.getZoom() > 1 &&
+        Math.abs(mugEditor.canvas.width - mugEditor.scroll.clientWidth) < 25 &&
+        mugEditor.canvas.lowerCanvasEl.width >= mugEditor.canvas.width &&
+        mugEditor.canvas.width * mugEditor.canvas.height < 1_000_000 &&
+        JSON.stringify(mugEditor.getDesign()) === beforeZoom && mugEditor.history.length === 1);
+      mugEditor.setZoom(1); await frames();
+      const multiDesign = [word, { ...word, id: 'multi-emoji', text: '❤️', x: mugEditor.width * .7 },
+        { id: 'multi-image', type: 'image', src, x: mugEditor.width * .3, y: word.y, width: 180, height: 180, angle: 0 }];
+      mugEditor.setDesign(multiDesign, { resetHistory: true }); await frames();
+      mobile.chooseTool('more'); await frames();
+      const more = document.getElementById('mobile-canvas-drawer').getBoundingClientRect();
+      check('More sizes to its buttons and exposes multi-select', more.width < 300 &&
+        Boolean(document.getElementById('mobile-canvas-multi-select')));
+      document.getElementById('mobile-canvas-multi-select').click(); await frames();
+      check('multi-select opens the canvas with Done and no overlay', mugEditor.mobileMultiSelect &&
+        document.getElementById('mobile-canvas-drawer').hidden && !document.getElementById('mobile-canvas-multi-done').hidden);
+      const multiBox = shell.getBoundingClientRect();
+      const memberPoint = ratio => ({ x: multiBox.left + multiBox.width * ratio, y: multiBox.top + multiBox.height / 2 });
+      const groupOriginal = JSON.stringify(mugEditor.getDesign());
+      for (const ratio of [.5, .7, .3]) tap(memberPoint(ratio));
+      check('word, emoji and image are selected individually', mugEditor.selectedObjects().length === 3);
+      tap(memberPoint(.7));
+      check('tapping a selected child removes only that member', mugEditor.selectedObjects().length === 2 &&
+        !mugEditor.selectedObjects().some(object => object.editorId === 'multi-emoji'));
+      tap(memberPoint(.7));
+      check('selection alone preserves the design and Undo history', JSON.stringify(mugEditor.getDesign()) === groupOriginal && mugEditor.history.length === 1);
+      document.getElementById('mobile-canvas-multi-done').click(); await frames();
+      const groupOff = memberPoint(.1);
+      send('pointerdown', 1, groupOff);
+      send('pointermove', 1, { x: groupOff.x + 8, y: groupOff.y });
+      send('pointerdown', 2, { x: groupOff.x + 108, y: groupOff.y });
+      send('pointermove', 2, { x: groupOff.x + 8, y: groupOff.y + 50 });
+      send('pointerup', 2, groupOff); send('pointerup', 1, groupOff);
+      check('Done locks the temporary group for background move, scale and rotation', !mugEditor.mobileMultiSelect &&
+        mugEditor.selectedObjects().length === 3 && mugEditor.getDesign().every(item => item.angle === 90) && mugEditor.history.length === 2);
+      mugEditor.undo();
+      check('group Undo restores every member and keeps the selection', JSON.stringify(mugEditor.getDesign()) === groupOriginal && mugEditor.selectedObjects().length === 3);
+      mugEditor.redo();
+      check('group Redo restores every member transform', mugEditor.getDesign().every(item => item.angle === 90));
+      document.getElementById('mobile-canvas-deselect').click();
+      check('Deselect clears the whole temporary group', !mugEditor.canvas.getActiveObject());
       for (const [kind, design] of [
         ['word', word], ['emoji', { ...word, id: 'touch-emoji', text: '❤️' }],
         ['image', { id: 'touch-image', type: 'image', src, x: word.x, y: word.y, width: 180, height: 180, angle: 0 }],
@@ -230,6 +282,12 @@
           variantOptions.children.length === productsInFamily(family.key).length &&
           firstVariant.getBoundingClientRect().top >= document.querySelector('.product-dialog-body').getBoundingClientRect().top - 1 &&
           !productDialogDone.closest('[hidden]'));
+        const variantBody = productDialog.querySelector('.product-dialog-body');
+        const variantDrawer = document.getElementById('mobile-canvas-drawer').getBoundingClientRect();
+        check(`${family.key}: confirmation remains inside the bounded panel`, productDialogDone.getBoundingClientRect().bottom <= variantDrawer.bottom + 1);
+        variantBody.scrollTop = variantBody.scrollHeight; await frames();
+        check(`${family.key}: the final variant can be reached by scrolling`, variantOptions.lastElementChild.getBoundingClientRect().bottom <= variantBody.getBoundingClientRect().bottom + 1);
+        variantBody.scrollTop = 0; await frames();
         if (family.key === 'mugs' && innerWidth >= 621 && innerHeight >= 300 && innerWidth > innerHeight) {
           const body = document.querySelector('.product-dialog-body').getBoundingClientRect();
           check('all three mug sizes are visible together in landscape', [...variantOptions.children].every(option => {
@@ -271,11 +329,33 @@
         document.getElementById('product-stage').closest('.preview-card') &&
         document.querySelectorAll('#editor-text').length === 1 && document.querySelector('#design-toolbar .design-toolbar-controls') &&
         JSON.stringify(mugEditor.getDesign()) === beforeClose);
+      check('closing restores the original desktop bitmap and identity viewport', !mugEditor.canvas.enableRetinaScaling &&
+        mugEditor.canvas.width === mugEditor.canvasWidth && mugEditor.canvas.height === mugEditor.canvasHeight &&
+        JSON.stringify(mugEditor.canvas.viewportTransform) === '[1,0,0,1,0,0]' && !shell.style.getPropertyValue('--mobile-paint-width'));
       mobile.open(run); await frames(); mobile.close(); await frames();
       check('repeated entry/exit keeps the same editor state', JSON.stringify(mugEditor.getDesign()) === beforeClose && !mobile.dialog.open);
     } catch (error) { check('unexpected exception', false, error.stack); }
     document.body.append(report);
     report.textContent = JSON.stringify({ passed: results.every(result => result.pass), results }, null, 2);
     run.disabled = false;
+  });
+})();
+
+(function installSharpPreview() {
+  const button = document.createElement('button');
+  button.id = 'inspect-sharp-mobile-preview';
+  button.type = 'button';
+  button.textContent = 'Inspect 600% word and emoji';
+  button.style.cssText = 'position:fixed;right:8px;top:58px;z-index:1000;background:white;color:black;padding:8px';
+  document.body.append(button);
+  button.addEventListener('click', async () => {
+    await WolkenworteEmoji.preloadTexts(['🍸']);
+    workspace.mobileCanvas.open(button);
+    mugEditor.setDesign([
+      { id:'sharp-word', text:'Hi', x:mugEditor.width/2-100, y:mugEditor.height/2, fontSize:140, angle:0, color:'#2455f5', fontFamily:'classic' },
+      { id:'sharp-emoji', text:'🍸', x:mugEditor.width/2+140, y:mugEditor.height/2, fontSize:140, angle:0, color:'#2455f5', fontFamily:'classic' },
+    ], {resetHistory:true});
+    workspace.mobileCanvas.chooseTool('view');
+    mugEditor.setZoom(6);
   });
 })();

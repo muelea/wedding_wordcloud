@@ -26,9 +26,10 @@
       this.tapTimer = null;
       this.points.set(id, point);
       if (!this.gesture) {
+        const selecting = this.adapter.selecting?.() === true;
         const navigation = this.adapter.navigation();
-        const target = navigation ? null : this.adapter.selected();
-        this.gesture = { target, candidate: navigation || target ? null : this.adapter.hit(point),
+        const target = navigation || selecting ? null : this.adapter.selected();
+        this.gesture = { target, selecting, candidate: (navigation && !selecting) || target ? null : this.adapter.hit(point),
           onSelected: target && this.adapter.contains(target, point), navigation,
           changed: false, moved: false, multiple: false };
       }
@@ -96,6 +97,11 @@
     }
 
     tap(gesture) {
+      if (gesture.selecting) {
+        this.cancelTap();
+        if (gesture.candidate) this.adapter.toggle(gesture.candidate);
+        return;
+      }
       const object = gesture.target ? (gesture.onSelected ? gesture.target : null) : gesture.candidate;
       const point = gesture.screen[0], now = Date.now();
       const editable = object && this.adapter.canDoubleTap?.(object);

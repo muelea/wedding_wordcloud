@@ -2527,6 +2527,7 @@
   <script src="<%= asset('/js/design-layout.js') %>"></script>
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
+  <script src="<%= asset('/js/canvas-viewport.js') %>"></script>
   <script src="<%= asset('/js/mug-editor.js') %>"></script>
   <%- include('partials/mobile-canvas') %>
   <script src="<%= asset('/js/configurator-workspace.js') %>"></script>
@@ -2776,6 +2777,7 @@
         ? 'Entwurf nicht gesichert. Bitte lasst diese Seite geöffnet.'
         : hasUnpersistedDraft() ? 'Entwurf wird in diesem Browser gesichert…'
         : 'Entwurf in diesem Browser gesichert · 7 Tage verfügbar';
+      draftSaveState.dataset.error = String(draftStorageFailed);
       cartSaveState.dataset.pending = String(currentDesignNeedsSave);
       const cartMessage = editingOrderItemId
         ? currentDesignNeedsSave
@@ -4178,7 +4180,6 @@
       if (!product) return;
       if (workspace.mobileCanvas?.active) {
         mugEditor?.refreshViewport();
-        workspace.mobileCanvas.updateHint();
         refreshFlatProductPreviewFit();
         resizeMug3D();
         return;

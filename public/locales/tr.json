@@ -1049,5 +1049,7 @@
   "Menge 0: nicht in dieser Bestellung enthalten": "Adet 0: bu siparişe dahil değil",
   "Design {{number}}": "Tasarım {{number}}",
   "Die Farbwelt gilt für alle Druckseiten dieses Designs.": "Renk paleti bu tasarımın tüm baskı yüzlerine uygulanır.",
-  "Dieses Design ist im Warenkorb aktuell.": "Bu tasarım sepette güncel."
+  "Dieses Design ist im Warenkorb aktuell.": "Bu tasarım sepette güncel.",
+  "Mehrere auswählen": "Çoklu seçim",
+  "Fertig ({{count}})": "Tamam ({{count}})"
 }

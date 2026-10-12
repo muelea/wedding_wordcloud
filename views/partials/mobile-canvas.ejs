@@ -6,7 +6,10 @@
       <button type="button" data-canvas-view="product" aria-pressed="false">Produkt</button>
     </nav>
     <div class="mobile-canvas-controls" aria-label="Ansicht und Verlauf">
-      <div id="mobile-canvas-selection" hidden><button type="button" id="mobile-canvas-deselect">Auswahl aufheben</button></div>
+      <div id="mobile-canvas-selection" hidden>
+        <button type="button" id="mobile-canvas-deselect">Auswahl aufheben</button>
+        <button type="button" id="mobile-canvas-multi-done" hidden>Fertig</button>
+      </div>
       <div id="mobile-canvas-history"></div>
       <div id="mobile-canvas-overlaps"></div>
       <div id="mobile-canvas-zoom"></div>
@@ -38,7 +41,6 @@
     </nav>
     <div class="mobile-canvas-stage" id="mobile-canvas-stage"></div>
     <div class="mobile-canvas-product" id="mobile-canvas-product" hidden></div>
-    <span id="mobile-canvas-hint" role="status">Element antippen · Zwei Finger zoomen die Ansicht</span>
     <aside class="mobile-canvas-drawer" id="mobile-canvas-drawer" aria-labelledby="mobile-canvas-panel-title" hidden>
       <div class="mobile-canvas-drawer-head">
         <button type="button" id="mobile-canvas-panel-back" aria-label="Zurück" hidden>←</button>
@@ -50,6 +52,7 @@
         <div id="mobile-canvas-picker" hidden></div>
         <div id="mobile-canvas-add" hidden></div>
         <div id="mobile-canvas-more" hidden>
+          <button type="button" id="mobile-canvas-multi-select">Mehrere auswählen</button>
           <button type="button" data-canvas-tool="elements">Element suchen</button>
           <div id="mobile-canvas-design-actions"></div>
         </div>
