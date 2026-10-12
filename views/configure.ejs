@@ -4037,6 +4037,7 @@
           THREE: window.THREE,
           host: mugViewer,
           interactionElement: mugViewer,
+          rotateAnywhere: () => workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product',
           product,
           onStatus: (state) => { if (generation === mug3DGeneration) setMugPreviewState(state); },
           drawTexture: (ctx, { offsetX, offsetY }) => {
@@ -4166,6 +4167,7 @@
       if (!product) return;
       const view = productView();
       const isMug = product.previewType === 'mug';
+      const mobileProduct = workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product';
       mugViewer.classList.toggle('is-flat', !isMug);
       productStage.classList.toggle('is-flat-product', !isMug);
       flatPreview.classList.toggle('is-coaster', product.previewShape === 'coaster');
@@ -4184,7 +4186,7 @@
       requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;
       mugViewer.setAttribute('aria-label', isMug
-        ? t('Interaktive 3D-Tasse. Direkt auf der Tasse ziehen, um sie in alle Richtungen zu drehen; neben der Tasse wischen, um zu scrollen. Alternativ die Pfeiltasten verwenden.')
+        ? t(mobileProduct ? 'Interaktive 3D-Tasse. Überall in der Vorschau ziehen, um sie zu drehen.' : 'Interaktive 3D-Tasse. Direkt auf der Tasse ziehen, um sie in alle Richtungen zu drehen; neben der Tasse wischen, um zu scrollen. Alternativ die Pfeiltasten verwenden.')
         : t('Vorschau: {{product}}, {{size}}', {
           product: t(product.displayName),
           size: t(view.size.label),
@@ -4193,7 +4195,7 @@
         ? ` · ${t(productSurfaces().find((surface) => surface.key === activeSurface)?.label || '')}`
         : '';
       document.getElementById('mug-viewer-hint').textContent = isMug
-        ? t('↔↕ Tasse ziehen zum Drehen · Daneben scrollen · {{height}} cm × Ø {{diameter}} cm', {
+        ? t(mobileProduct ? 'Überall ziehen zum Drehen · {{height}} cm × Ø {{diameter}} cm' : '↔↕ Tasse ziehen zum Drehen · Daneben scrollen · {{height}} cm × Ø {{diameter}} cm', {
           height: localizedNumber(product.size.heightCm),
           diameter: localizedNumber(product.size.diameterCm),
         })
@@ -4240,7 +4242,14 @@
       const dialogProduct = dialogSelectedProduct();
       const dialogFamilyKey = dialogSelectedFamilyKey();
       productOptions.querySelectorAll('.product-option').forEach((option) => {
+        if (productDialog.dataset.presentation === 'embedded') {
+          option.setAttribute('role', 'button');
+          option.removeAttribute('aria-checked');
+          option.tabIndex = 0;
+          return;
+        }
         const selected = option.dataset.familyKey === dialogFamilyKey;
+        option.setAttribute('role', 'radio');
         option.setAttribute('aria-checked', String(selected));
         option.tabIndex = selected ? 0 : -1;
       });
@@ -4313,6 +4322,7 @@
     function showMobileProductStep(step) {
       if (productDialog.dataset.presentation !== 'embedded') return;
       productDialog.dataset.mobileStep = step;
+      productOptions.setAttribute('role', 'group');
       productOptions.hidden = step !== 'families';
       variantPanel.hidden = step !== 'variants';
       productDialog.querySelector('.product-dialog-footer').hidden = step !== 'variants';
@@ -4361,6 +4371,7 @@
     productDialog.addEventListener('close', () => {
       workspace.mobileCanvas?.restorePicker(productDialog);
       productOptions.hidden = false;
+      productOptions.setAttribute('role', 'radiogroup');
       productDialog.querySelector('.product-dialog-footer').hidden = false;
       if (productDialogCloseReason !== 'confirm') {
         resetProductDialogSelection();
@@ -4653,6 +4664,9 @@
           if (mugEditor) applyPaletteAcrossSurfaces(getPalette(selectedTheme).colors);
           renderAll();
         });
+        input.addEventListener('click', () => {
+          if (palette.key === 'custom') workspace.mobileCanvas?.openCustomColors(document.getElementById('theme-panel'));
+        });
 
         const card = document.createElement('span');
         card.className = 'option-card theme-option-card';
@@ -4754,7 +4768,7 @@
       workspace.mobileCanvas = new MobileCanvasWorkspace({ document, editor: mugEditor, workspace,
         onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
         onExit: () => { if (mobileEditorMedia.matches) setMobileEditorExpanded(false, { scroll: false }); },
-        onLayout: () => { refreshWorkspaceLayout(); renderAll(); },
+        onLayout: () => { refreshWorkspaceLayout(); updateProductPresentation(); renderAll(); },
       });
       mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
       resetSurfaceStates(mugEditor.getState());
@@ -4765,13 +4779,19 @@
           idPrefix: 'editor-emoji',
           placement: 'below-left',
           mediaQuery: configuratorEmojiPickerMedia,
+          allowMobile: () => workspace.mobileCanvas?.active === true,
           catalogUrl: EMOJI_CATALOG_URL,
           searchIndexUrls: EMOJI_SEARCH_INDEX_URLS,
           onOpen: () => {
             mugEditor.closeIconPicker();
             mugEditor.closeFontPicker();
+            workspace.mobileCanvas?.openEmojiPicker(configuratorEmojiPicker);
           },
-          onSelect: (emoji) => mugEditor.addEmoji(emoji),
+          onClose: () => workspace.mobileCanvas?.emojiClosed(),
+          onSelect: async (emoji) => {
+            await mugEditor.addEmoji(emoji);
+            if (workspace.mobileCanvas?.active) workspace.mobileCanvas.chooseTool('move');
+          },
           onError: () => mugEditor.setFeedback('Das Emoji konnte nicht geladen werden.'),
         });
       }

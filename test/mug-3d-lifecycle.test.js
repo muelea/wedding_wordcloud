@@ -144,3 +144,26 @@ test('touches on the mug exclusively rotate in both axes while transparent space
   }
   viewer.destroy();
 });
+
+test('immersive product preview rotates from transparent space and restores page scrolling on exit', () => {
+  const { root, host, THREE } = fixture();
+  let immersive = true;
+  const viewer = root.Mug3DViewer.create({ host, THREE, rotateAnywhere: () => immersive });
+  const event = (id, x) => ({ pointerId: id, clientX: x, clientY: 150, pointerType: 'touch',
+    isPrimary: true, preventDefault() { this.prevented = true; } });
+  const before = viewer.group.rotation.y;
+  const start = event(1, 8);
+  host.listeners.get('pointerdown')(start);
+  host.listeners.get('pointermove')(event(1, 50));
+  assert.equal(start.prevented, true);
+  assert.ok(viewer.group.rotation.y > before);
+  host.listeners.get('pointercancel')(event(1, 50));
+  assert.equal(host.classList.contains('dragging'), false);
+  immersive = false;
+  const after = viewer.group.rotation.y, outside = event(2, 8);
+  host.listeners.get('pointerdown')(outside);
+  host.listeners.get('pointermove')(event(2, 50));
+  assert.equal(outside.prevented, undefined);
+  assert.equal(viewer.group.rotation.y, after);
+  viewer.destroy();
+});

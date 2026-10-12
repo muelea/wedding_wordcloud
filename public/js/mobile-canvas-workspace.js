@@ -18,7 +18,8 @@
       editor.onViewChange = zoom => { document.getElementById('mobile-canvas-fit').textContent = `${Math.round(zoom * 100)} %`; };
       this.dialog.addEventListener('cancel', event => {
         event.preventDefault();
-        if (this.picker) this.closePicker();
+        if (this.textSession) this.closeTextEditor();
+        else if (this.picker) this.closePicker();
         else this.close();
       });
       this.dialog.addEventListener('close', () => { if (this.active) this.close(); });
@@ -30,7 +31,10 @@
         editor.touchController?.finish();
         editor.clearSelection();
       });
-      document.getElementById('mobile-canvas-panel-back').addEventListener('click', () => this.picker?.back());
+      document.getElementById('mobile-canvas-panel-back').addEventListener('click', () => {
+        if (this.picker) this.picker.back();
+        else this.chooseTool('more');
+      });
       const fullscreen = document.getElementById('mobile-canvas-fullscreen');
       fullscreen.hidden = !document.fullscreenEnabled || typeof document.documentElement.requestFullscreen !== 'function';
       fullscreen.addEventListener('click', async () => {
@@ -63,27 +67,34 @@
       this.dialog.querySelectorAll('[data-canvas-view]').forEach(button => button.addEventListener('click', () => this.chooseView(button.dataset.canvasView)));
       this.dialog.querySelectorAll('[data-canvas-tool]').forEach(button => button.addEventListener('click', () => this.chooseTool(button.dataset.canvasTool)));
       document.getElementById('mobile-canvas-search').addEventListener('input', () => this.renderElements());
-      this.dialog.querySelectorAll('[data-canvas-emoji]').forEach(button => button.addEventListener('click', async () => {
-        button.disabled = true;
+      document.getElementById('editor-text').addEventListener('click', () => { if (this.active) this.openTextEditor(); });
+      document.getElementById('mobile-canvas-text-cancel').addEventListener('click', () => this.closeTextEditor());
+      document.getElementById('mobile-canvas-text-editor').addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!this.textSession || this.textSession.saving) return;
+        const session = this.textSession;
+        session.saving = true;
+        const done = document.getElementById('mobile-canvas-text-done');
+        done.disabled = true;
         try {
-          await editor.addEmoji(button.dataset.canvasEmoji);
-          this.chooseTool('move');
-        } catch { editor.setFeedback('Das Emoji konnte nicht geladen werden.'); }
-        finally { button.disabled = false; }
-      }));
+          await editor.applyTextChange(session.object, document.getElementById('mobile-canvas-text').value, { finalize: true, record: true });
+          editor.updateSelectionPanel();
+          this.closeTextEditor();
+        } catch { editor.setFeedback('Das Emoji konnte nicht geladen werden.'); session.saving = false; }
+        finally { done.disabled = false; }
+      });
       this.media.addEventListener('change', () => { if (!this.media.matches) this.close(); });
       const resize = () => {
         if (!this.active) return;
+        this.syncViewport();
         // A viewport/orientation change ends the current contact sequence before
         // changing screen-to-print coordinates, keeping its single Undo entry.
         editor.touchController?.finish();
-        requestAnimationFrame(() => this.onLayout());
+        if (!this.textSession) requestAnimationFrame(() => this.onLayout());
       };
       root.addEventListener('resize', resize, { passive: true });
       root.visualViewport?.addEventListener('resize', resize, { passive: true });
-      this.dialog.addEventListener('click', event => {
-        if (event.target.closest('#editor-add')) this.chooseTool('properties');
-      });
+      root.visualViewport?.addEventListener('scroll', resize, { passive: true });
     }
 
     mount(node, host) {
@@ -111,9 +122,15 @@
       this.mount(this.document.querySelector('.editor-tools-history'), get('mobile-canvas-history'));
       this.mount(this.document.querySelector('.editor-tools-view'), get('mobile-canvas-zoom'));
       this.mount(get('surface-editor'), get('mobile-canvas-surfaces'));
-      this.mount(this.document.querySelector('.editor-toolbar'), get('mobile-canvas-add'));
+      this.mount(this.document.querySelector('.editor-tools-primary'), get('mobile-canvas-add'));
+      for (const group of ['selection', 'layout', 'reset']) {
+        this.mount(this.document.querySelector(`.editor-tools-${group}`), get('mobile-canvas-design-actions'));
+      }
+      this.textReadOnly = get('editor-text').readOnly;
+      get('editor-text').readOnly = true;
       this.document.documentElement.classList.add('mobile-canvas-open');
       this.dialog.showModal();
+      this.syncViewport();
       this.editor.setMobileViewport(true);
       this.editor.clearSelection();
       this.chooseView('canvas');
@@ -124,6 +141,8 @@
 
     close() {
       if (!this.active) return;
+      this.closeTextEditor();
+      this.closeEmojiPicker();
       this.editor.touchController?.finish();
       this.editor.closeFontPicker();
       this.editor.closeIconPicker();
@@ -137,6 +156,7 @@
       this.active = false;
       for (const { node, anchor } of this.mounts.reverse()) { anchor.replaceWith(node); }
       this.mounts = [];
+      this.document.getElementById('editor-text').readOnly = this.textReadOnly;
       this.editor.setMobileViewport(false);
       this.editor.mobileNavigation = false;
       this.document.documentElement.classList.remove('mobile-canvas-open');
@@ -162,18 +182,20 @@
 
     chooseTool(tool) {
       const previous = this.tool;
+      if (tool !== 'emoji') this.closeEmojiPicker();
       if (tool !== 'picker') this.closePicker();
       this.editor.touchController?.finish();
       this.editor.closeFontPicker();
       this.editor.closeIconPicker();
       this.tool = tool;
+      this.dialog.dataset.tool = tool;
       this.editor.mobileNavigation = tool === 'view';
-      const panel = ['settings', 'picker'].includes(tool) || (['properties', 'add', 'elements'].includes(tool) && this.view === 'canvas');
+      const panel = ['settings', 'picker'].includes(tool) || (['properties', 'add', 'elements', 'more', 'emoji'].includes(tool) && this.view === 'canvas');
       this.document.getElementById('mobile-canvas-drawer').hidden = !panel;
-      for (const name of ['properties', 'add', 'elements', 'settings', 'picker']) this.document.getElementById(`mobile-canvas-${name}`).hidden = name !== tool;
-      this.document.getElementById('mobile-canvas-panel-back').hidden = tool !== 'picker';
+      for (const name of ['properties', 'add', 'elements', 'more', 'emoji', 'settings', 'picker']) this.document.getElementById(`mobile-canvas-${name}`).hidden = name !== tool;
+      this.document.getElementById('mobile-canvas-panel-back').hidden = !['picker', 'elements'].includes(tool);
       if (previous !== tool) this.dialog.querySelector('.mobile-canvas-drawer-content').scrollTop = 0;
-      const titles = { properties: 'Anpassen', add: 'Element hinzufügen', elements: 'Element auswählen', settings: 'Produkt und Farben' };
+      const titles = { properties: 'Anpassen', add: 'Element hinzufügen', elements: 'Element suchen', more: 'Mehr', emoji: 'Emoji auswählen', settings: 'Produkt und Farben' };
       this.document.getElementById('mobile-canvas-settings-toggle').setAttribute('aria-expanded', String(tool === 'settings'));
       setText(this.document.getElementById('mobile-canvas-panel-title'), titles[tool] || 'Anpassen');
       this.dialog.querySelectorAll('[data-canvas-tool]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.canvasTool === tool)));
@@ -187,6 +209,15 @@
       const anchor = this.document.createComment('mobile picker return');
       panel.before(anchor);
       this.picker = { panel, anchor, close, back, returnTool };
+      if (panel.id === 'theme-panel') {
+        panel.dataset.mobileStep = 'palettes';
+        this.picker.back = () => {
+          if (panel.dataset.mobileStep !== 'custom') { back(); return; }
+          panel.dataset.mobileStep = 'palettes';
+          setText(this.document.getElementById('mobile-canvas-panel-title'), 'Farbwelt');
+          panel.querySelector('.config-panel-body').scrollTop = 0;
+        };
+      }
       panel.dataset.presentation = 'embedded';
       this.document.getElementById('mobile-canvas-picker').append(panel);
       const title = panel.querySelector('h2');
@@ -210,15 +241,69 @@
       this.chooseTool(returnTool);
     }
 
+    openCustomColors(panel) {
+      if (!this.active || this.picker?.panel !== panel) return;
+      panel.dataset.mobileStep = 'custom';
+      setText(this.document.getElementById('mobile-canvas-panel-title'), 'Eure Farben');
+      panel.querySelector('.config-panel-body').scrollTop = 0;
+    }
+
     openTextEditor() {
       if (!this.active) return false;
+      const objects = this.editor.selectedObjects();
+      if (objects.length !== 1 || objects[0].editorKind !== 'text') return false;
+      if (this.textSession) return true;
       this.chooseView('canvas');
-      this.chooseTool('properties');
-      const input = this.document.getElementById('editor-text');
-      if (input.disabled) return false;
+      this.textSession = { object: objects[0] };
+      this.dialog.dataset.textEditing = 'true';
+      const input = this.document.getElementById('mobile-canvas-text');
+      input.value = this.editor.objectText(objects[0]);
+      this.document.getElementById('mobile-canvas-text-editor').hidden = false;
+      this.syncViewport();
       input.focus({ preventScroll: true });
       input.select();
       return true;
+    }
+
+    closeTextEditor() {
+      if (!this.textSession) return;
+      this.document.getElementById('mobile-canvas-text').blur();
+      this.textSession = null;
+      delete this.dialog.dataset.textEditing;
+      this.document.getElementById('mobile-canvas-text-editor').hidden = true;
+      this.syncViewport();
+      requestAnimationFrame(() => { if (this.active) this.onLayout(); });
+    }
+
+    syncViewport() {
+      const viewport = root.visualViewport;
+      this.dialog.style.setProperty('--mobile-viewport-top', `${viewport?.offsetTop || 0}px`);
+      this.dialog.style.setProperty('--mobile-viewport-left', `${viewport?.offsetLeft || 0}px`);
+      this.dialog.style.setProperty('--mobile-viewport-width', `${viewport?.width || root.innerWidth}px`);
+      this.dialog.style.setProperty('--mobile-viewport-height', `${viewport?.height || root.innerHeight}px`);
+    }
+
+    openEmojiPicker(picker) {
+      if (!this.active) return;
+      this.chooseTool('emoji');
+      const anchor = this.document.createComment('mobile emoji return');
+      picker.panel.before(anchor);
+      this.emojiPicker = { picker, anchor };
+      this.document.getElementById('mobile-canvas-emoji').append(picker.panel);
+    }
+
+    closeEmojiPicker() {
+      if (!this.emojiPicker) return;
+      const { picker, anchor } = this.emojiPicker;
+      this.emojiPicker = null;
+      picker.close();
+      anchor.replaceWith(picker.panel);
+    }
+
+    emojiClosed() {
+      if (!this.emojiPicker) return;
+      this.closeEmojiPicker();
+      this.chooseTool('add');
     }
 
     updateSelection() {
@@ -226,8 +311,6 @@
       if (this.tool === 'elements') this.renderElements();
       const objects = this.editor.selectedObjects();
       this.document.getElementById('mobile-canvas-selection').hidden = !objects.length || this.view !== 'canvas';
-      this.document.getElementById('mobile-canvas-selected-name').textContent = objects.length === 1
-        ? this.elementLabel(objects[0]) : t('Mehrere Elemente');
       this.updateHint();
     }
 

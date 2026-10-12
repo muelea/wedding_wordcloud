@@ -349,7 +349,8 @@
 
     function capturePointer(event) {
       if (!interactionElement.setPointerCapture) return;
-      interactionElement.setPointerCapture(event.pointerId);
+      try { interactionElement.setPointerCapture(event.pointerId); }
+      catch { /* A cancelled or synthetic contact may already have ended. */ }
     }
 
     function resetPointer(event) {
@@ -363,7 +364,7 @@
     const handlePointerDown = (event) => {
       if (activePointer !== null || event.isPrimary === false) return;
       const isTouch = event.pointerType === 'touch';
-      if (isTouch && !pointerHitsMug(event)) return;
+      if (isTouch && !options.rotateAnywhere?.() && !pointerHitsMug(event)) return;
       if (!isTouch && event.button != null && event.button !== 0) return;
       activePointer = event.pointerId;
       lastX = event.clientX;

@@ -570,6 +570,8 @@
         selected: () => this.canvas.getActiveObject(),
         hit: point => this.touchTarget(point),
         contains: (object, point) => object.containsPoint(this.touchScenePoint(point)),
+        canDoubleTap: object => this.mobileViewport && object.editorKind === 'text',
+        doubleTap: object => this.beginTextEditing(object),
         deselect: () => this.clearSelection(),
         select: object => {
           this.canvas.getActiveObject()?.exitEditing?.();

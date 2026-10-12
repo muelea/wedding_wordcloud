@@ -60,7 +60,7 @@ test('emoji runtimes load before every interactive renderer and artwork is immut
   );
 });
 
-test('both pages mount one shared, desktop-only, accessible emoji picker', () => {
+test('both pages share an accessible emoji picker, with mobile canvas opt-in', () => {
   const trigger = displaySource.match(/<button\s+class="display-emoji-trigger"[\s\S]*?<\/button>/)?.[0] || '';
   assert.match(trigger, /type="button"/);
   assert.match(trigger, /aria-label="Emoji hinzufügen"/);
@@ -74,7 +74,8 @@ test('both pages mount one shared, desktop-only, accessible emoji picker', () =>
   assert.match(configureSource, /id: 'editor-add'[\s\S]*?id: 'editor-emoji-toggle'[\s\S]*?id: 'editor-image'/);
   assert.match(configureSource, /\.editor-emoji-picker \{ position: relative; display: none; \}/);
   assert.match(configureSource, /WolkenworteEmojiPicker\.create\(\{[\s\S]*?idPrefix: 'editor-emoji'/);
-  assert.match(configureSource, /onSelect: \(emoji\) => mugEditor\.addEmoji\(emoji\)/);
+  assert.match(configureSource, /await mugEditor\.addEmoji\(emoji\)/);
+  assert.match(configureSource, /allowMobile: \(\) => workspace\.mobileCanvas\?\.active === true/);
   for (const source of [displaySource, configureSource]) {
     assert.doesNotMatch(source, /function (?:render|load|remember|schedule)[A-Za-z]*Emoji/,
       'picker behavior must stay in the shared runtime');
@@ -239,4 +240,31 @@ test('product print SVG embeds the same artwork for emoji, modifiers and flags',
   const image = await loadImage(Buffer.from(svg));
   assert.equal(image.width, 2000);
   assert.equal(image.height, 1000);
+});
+
+test('the shared emoji picker allows mobile only by opt-in and preserves desktop focus', async () => {
+  const { EmojiPicker } = require('../public/js/emoji-picker');
+  let focus = 0, opened = 0, closed = 0;
+  const picker = Object.create(EmojiPicker.prototype);
+  Object.assign(picker, {
+    mediaQuery: { matches: false }, allowMobile: () => false,
+    onOpen: () => opened++, onClose: () => closed++, initialize() {}, renderVirtualWindow() {},
+    currentLocale: () => 'en', loadSearchIndex: () => Promise.resolve(), loadCatalog: () => Promise.resolve(),
+    renderCategory() {}, panel: { hidden: true }, trigger: { setAttribute() {}, focus() {} },
+    searchInput: { value: '', focus: () => focus++ },
+  });
+  assert.equal(picker.open(), false);
+  assert.equal(opened, 0);
+  picker.allowMobile = () => true;
+  assert.equal(picker.open(), true);
+  assert.equal(picker.panel.hidden, false);
+  assert.equal(focus, 0, 'opening a mobile catalog must not force the keyboard');
+  picker.close(); picker.close();
+  assert.equal(closed, 1, 'one close restores the mobile panel once');
+  picker.allowMobile = () => false;
+  picker.mediaQuery.matches = true;
+  assert.equal(picker.open(), true);
+  assert.equal(focus, 1, 'desktop still focuses search immediately');
+  picker.close();
+  await Promise.resolve();
 });

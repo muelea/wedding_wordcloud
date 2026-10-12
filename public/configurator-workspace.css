@@ -372,11 +372,11 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-dialog {
   position: fixed;
-  inset: 0;
+  inset: var(--mobile-viewport-top, 0px) auto auto var(--mobile-viewport-left, 0px);
   margin: 0;
-  width: 100%;
+  width: var(--mobile-viewport-width, 100%);
   max-width: none;
-  height: var(--ww-visual-viewport-height, 100dvh);
+  height: var(--mobile-viewport-height, var(--ww-visual-viewport-height, 100dvh));
   max-height: none;
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   border: 0;
@@ -432,14 +432,16 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-product .mug-viewer { flex: 1; min-height: 0; width: 100%; height: auto; }
 .mobile-canvas-product .mug-name { margin: 4px 0; font-size: 11px; }
 .mobile-canvas-product .preview-disclaimer { margin: 0; font-size: 10px; }
-.mobile-canvas-drawer { position: absolute; top: 8px; bottom: 8px; right: 8px; width: min(320px, calc(100% - 78px)); z-index: 4; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: #fffdfb; box-shadow: 0 8px 30px #400f2620; }
+.mobile-canvas-drawer { position: absolute; top: 8px; right: 8px; max-height: calc(100% - 16px); width: min(320px, calc(100% - 78px)); z-index: 4; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: #fffdfb; box-shadow: 0 8px 30px #400f2620; }
+.mobile-canvas-dialog[data-tool="picker"] .mobile-canvas-drawer,
+.mobile-canvas-dialog[data-tool="emoji"] .mobile-canvas-drawer { height: calc(100% - 16px); }
 .mobile-canvas-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: 0 0 auto; padding: 4px 8px; border-bottom: 1px solid var(--line); }
 .mobile-canvas-drawer-head strong { flex: 1; font-size: 11px; }
 .mobile-canvas-drawer-content { flex: 1; min-height: 0; padding: 8px; overflow-y: auto; overscroll-behavior: contain; }
 .mobile-canvas-dialog .editor-selection { margin: 0; padding: 0; border: 0; }
 .mobile-canvas-dialog .editor-selection-head { position: static; width: auto; height: auto; margin: 0 0 10px; clip: auto; white-space: normal; }
 .mobile-canvas-dialog .editor-selection-hint { display: none; }
-.mobile-canvas-dialog .editor-properties, .mobile-canvas-dialog .editor-selection-row { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 100%; margin: 0; }
+.mobile-canvas-dialog .editor-properties, .mobile-canvas-dialog .editor-selection-row { display: flex; flex-direction: column; flex-wrap: nowrap; flex: 0 1 auto; min-width: 0; min-height: 0; align-items: stretch; gap: 8px; width: 100%; margin: 0; }
 .mobile-canvas-dialog .editor-field-label { width: 100%; min-width: 0; }
 .mobile-canvas-dialog .editor-text-input, .mobile-canvas-dialog .editor-font-toggle { width: 100%; min-height: 44px; font-size: 16px; }
 .mobile-canvas-dialog .editor-font-controls { display: flex; flex-direction: column; gap: 10px; }
@@ -463,8 +465,6 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-dialog .editor-font-option-name { font-size: 11px; }
 .mobile-canvas-dialog .editor-font-option-description { font-size: 10px; }
 #mobile-canvas-hint { position: absolute; bottom: 2px; left: 70px; right: 8px; font-size: 10px; line-height: 1.3; pointer-events: none; text-align: center; }
-.mobile-canvas-selection { position: absolute; top: 6px; left: 70px; z-index: 2; max-width: calc(100% - 86px); display: flex; align-items: center; gap: 6px; padding-left: 8px; border: 1px solid var(--line); border-radius: 10px; background: #fffdfbee; font-size: 11px; }
-#mobile-canvas-selected-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 120px; }
 #mobile-canvas-deselect { font-size: 11px; }
 #mobile-canvas-history .editor-tools, #mobile-canvas-zoom .editor-tools { flex-wrap: nowrap; }
 .mobile-canvas-dialog .editor-zoom-label { display: none; }
@@ -475,8 +475,6 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 #mobile-canvas-element-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
 #mobile-canvas-element-list button { min-width: 0; overflow-wrap: anywhere; }
 #mobile-canvas-search { width: 100%; min-height: 44px; font-size: 16px; }
-.mobile-canvas-emojis { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.mobile-canvas-emojis button { font-size: 24px; padding: 4px; }
 #mobile-canvas-settings .design-toolbar-controls,
 #mobile-canvas-settings .design-toolbar-controls.has-orientation { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; gap: 8px; }
 #mobile-canvas-settings .toolbar-product { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 6px; width: 100%; min-width: 0; padding: 8px; }
@@ -539,4 +537,81 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
   #mobile-canvas-picker .variant-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #mobile-canvas-picker .variant-option { grid-template-columns: minmax(0, 1fr); min-height: 44px; }
   #mobile-canvas-picker .variant-option img { display: none; }
+}
+
+/* Mobile controls return to their original desktop hosts on exit. */
+.mobile-canvas-dialog .editor-emoji-picker { display: block; }
+#mobile-canvas-more { display: flex; flex-direction: column; gap: 8px; }
+#mobile-canvas-more > button { align-self: flex-start; font-size: 11px; }
+#mobile-canvas-design-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#mobile-canvas-design-actions .editor-tools { display: contents; }
+#mobile-canvas-design-actions .editor-button { width: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; }
+#mobile-canvas-design-actions .editor-button::after { content: attr(aria-label); }
+#mobile-canvas-design-actions .editor-icon { flex: 0 0 18px; width: 18px; height: 18px; }
+#mobile-canvas-add .editor-button { width: auto; display: flex; align-items: center; gap: 4px; font-size: 11px; padding: 6px; }
+#mobile-canvas-add .editor-button::after { content: attr(aria-label); }
+#mobile-canvas-add .editor-icon { width: 18px; height: 18px; flex: 0 0 18px; }
+#mobile-canvas-add .editor-tools-primary { flex-wrap: wrap; }
+#mobile-canvas-settings .toolbar-product { border: 0; padding: 0; }
+#mobile-canvas-settings .toolbar-summary { border: 0; border-radius: 0; border-top: 1px solid var(--line); background: transparent; box-shadow: none; min-height: 54px; }
+#mobile-canvas-picker .product-option { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
+#mobile-canvas-picker .product-choice { border: 0; border-radius: 0; background: transparent; box-shadow: none; grid-template-columns: 36px minmax(0, 1fr) 20px; padding: 6px 0; }
+#mobile-canvas-picker .product-choice::after { content: '›'; font-size: 22px; color: var(--berry); }
+#mobile-canvas-picker .product-choice .checkmark { display: none; }
+#mobile-canvas-picker .product-copy { padding-right: 0; }
+#mobile-canvas-picker .product-option:hover .product-choice { background: transparent; box-shadow: none; transform: none; }
+#mobile-canvas-picker .product-option:focus-visible { background: #f8f2f0; }
+#mobile-canvas-picker #theme-panel[data-mobile-step="custom"] #theme-options { display: none; }
+#mobile-canvas-picker .custom-palette-panel { border: 0; border-radius: 0; padding: 0; margin: 0; background: transparent; }
+#mobile-canvas-picker .custom-palette-head { gap: 6px; }
+#mobile-canvas-picker .custom-palette-copy strong { font-size: 11px; }
+#mobile-canvas-picker .custom-palette-copy span { font-size: 10px; }
+#mobile-canvas-picker .custom-color-list { grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 8px; }
+#mobile-canvas-picker .custom-color-item { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 6px; padding: 4px; }
+#mobile-canvas-picker .custom-color-input { width: 44px; height: 44px; }
+#mobile-canvas-picker .custom-color-remove { width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; background: transparent; }
+#mobile-canvas-picker .custom-color-value { font-size: 11px; }
+.mobile-canvas-dialog[data-tool="emoji"] .mobile-canvas-drawer-content { display: flex; overflow: hidden; }
+#mobile-canvas-emoji { width: 100%; min-height: 0; display: flex; }
+#mobile-canvas-emoji .ww-emoji-picker { position: static; inset: auto; display: flex; flex-direction: column; width: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+#mobile-canvas-emoji .ww-emoji-picker-header { display: none; }
+#mobile-canvas-emoji .ww-emoji-search-input { font-size: 16px; }
+#mobile-canvas-emoji .ww-emoji-categories { display: flex; flex: 0 0 auto; overflow-x: auto; padding-bottom: 4px; gap: 2px; }
+#mobile-canvas-emoji .ww-emoji-category { min-width: 44px; height: 44px; padding: 0; border: 0; background: transparent; }
+#mobile-canvas-emoji .ww-emoji-grid { flex: 1; min-height: 40px; height: auto; max-height: none; }
+#mobile-canvas-emoji .ww-emoji-option { min-width: 0; min-height: 40px; border: 0; padding: 0; background: transparent; }
+#mobile-canvas-emoji .ww-emoji-status { font-size: 10px; margin: 2px 0 0; }
+.mobile-canvas-dialog[data-text-editing="true"] { display: block; padding: 4px env(safe-area-inset-right, 0px) 4px env(safe-area-inset-left, 0px); overflow-y: auto; }
+.mobile-canvas-dialog[data-text-editing="true"] > .mobile-canvas-header,
+.mobile-canvas-dialog[data-text-editing="true"] > .mobile-canvas-body { display: none; }
+#mobile-canvas-text-editor { display: flex; align-items: flex-start; gap: 4px; padding: 0 6px; }
+#mobile-canvas-text { flex: 1; min-width: 0; height: 44px; padding: 8px; border: 1px solid var(--berry); border-radius: 8px; color: var(--ink); background: #fff; font: inherit; font-size: 16px; }
+#mobile-canvas-text-editor button { flex: 0 0 auto; font-size: 11px; }
+#mobile-canvas-text-done { background: var(--berry); color: #fff; }
+.mobile-canvas-product .mug-viewer { touch-action: none; }
+.mobile-canvas-product .mug-interaction-region { inset: 0 !important; width: 100% !important; height: 100% !important; }
+@media (max-width: 360px) {
+  #mobile-canvas-deselect { padding: 4px; font-size: 10px; }
+  #mobile-canvas-fit { min-width: 44px; }
+  .mobile-canvas-controls { gap: 2px; }
+}
+.mobile-canvas-product .mug-stage { padding: 0; }
+.mobile-canvas-product .mug-wrap { position: relative; }
+.mobile-canvas-product .mug-name { position: absolute; bottom: 2px; left: 8px; right: 8px; text-align: center; pointer-events: none; }
+.mobile-canvas-product .preview-disclaimer { display: none; }
+@media (max-width: 360px) {
+  #mobile-canvas-selection { flex: 0 0 52px; width: 52px; }
+  #mobile-canvas-deselect { width: 100%; padding: 2px; line-height: 1.1; white-space: normal; }
+  .mobile-canvas-header .editor-tools { gap: 2px; }
+}
+#mobile-canvas-design-actions .editor-button,
+#mobile-canvas-add .editor-button { max-width: none; min-width: 44px; flex: 0 1 auto; height: auto; white-space: normal; }
+#mobile-canvas-design-actions .editor-button::after,
+#mobile-canvas-add .editor-button::after { white-space: normal; line-height: 1.2; }
+.mobile-canvas-rail [data-canvas-tool="view"] { flex-basis: 50px; min-height: 50px; line-height: 1.05; }
+.mobile-canvas-dialog .editor-font-size-input { font-size: 16px; min-height: 44px; }
+.mobile-canvas-dialog .editor-font-toggle { font-size: 11px; }
+#mobile-canvas-elements > label { font-size: 11px; }
+@media (max-width: 360px) {
+  #mobile-canvas-deselect { overflow-wrap: anywhere; }
 }

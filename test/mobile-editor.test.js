@@ -97,7 +97,7 @@ test('large touch transforms remain printable and Undo can finish an active cont
   assert.ok(isPrintDesignWithinBounds(editor.getDesign(), editor.width, editor.height, editor.getSafeArea()));
 });
 
-test('a locked word ignores other-word taps, moves from anywhere and stays selected through mobile Undo', t => {
+test('a locked word ignores other-word taps, moves from anywhere and stays selected through mobile Undo', async t => {
   const editor = setup(t, PRODUCTS[0]);
   editor.mobileViewport = true;
   editor.setDesign([{ id: 'a', text: 'Liebe', x: 800, y: 500, fontSize: 100, color: '#2455f5' },
@@ -115,6 +115,7 @@ test('a locked word ignores other-word taps, moves from anywhere and stays selec
   editor.redo();
   assert.equal(editor.canvas.getActiveObject().editorId, 'a');
   tap({ x: 420, y: 260 });
+  await new Promise(resolve => setTimeout(resolve, 320));
   assert.equal(editor.canvas.getActiveObject(), undefined);
   tap({ x: 650, y: 250 });
   assert.equal(editor.canvas.getActiveObject().editorId, 'b');

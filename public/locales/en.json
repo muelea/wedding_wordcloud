@@ -978,5 +978,10 @@
   "Vollbild schließen": "Exit fullscreen",
   "Element antippen · Zwei Finger zoomen die Ansicht": "Tap an element · Two fingers zoom the view",
   "Handy quer halten · Element antippen oder mit zwei Fingern zoomen": "Turn your phone sideways · Tap an element or zoom with two fingers",
-  "Auswahl gesperrt · Überall bewegen, vergrößern und drehen": "Selection locked · Move, resize and rotate anywhere"
+  "Auswahl gesperrt · Überall bewegen, vergrößern und drehen": "Selection locked · Move, resize and rotate anywhere",
+  "Zoom & Ansicht": "Pan & zoom",
+  "Mehr": "More",
+  "Wort bearbeiten": "Edit word",
+  "Interaktive 3D-Tasse. Überall in der Vorschau ziehen, um sie zu drehen.": "Interactive 3D mug. Drag anywhere in the preview to rotate it.",
+  "Überall ziehen zum Drehen · {{height}} cm × Ø {{diameter}} cm": "Drag anywhere to rotate · {{height}} cm × Ø {{diameter}} cm"
 }

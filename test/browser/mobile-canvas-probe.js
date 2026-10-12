@@ -113,18 +113,84 @@
       const second = { x: box.left + box.width * .75, y: first.y };
       tap(first); tap(second);
       check('tapping another element cannot replace the lock', mugEditor.canvas.getActiveObject()?.editorId === word.id);
+      check('all selected-state top controls fit within the viewport',
+        [...document.querySelectorAll('.mobile-canvas-header button')].filter(button => button.getClientRects().length).every(button => {
+          const rect = button.getBoundingClientRect(); return rect.left >= 0 && rect.right <= innerWidth;
+        }));
       const beforeLocked = mugEditor.getDesign();
       send('pointerdown', 1, second); send('pointermove', 1, { x: second.x - 12, y: second.y }); send('pointerup', 1, second);
       check('dragging on another word moves only the locked element', mugEditor.getDesign()[0].x < beforeLocked[0].x &&
         JSON.stringify(mugEditor.getDesign()[1]) === JSON.stringify(beforeLocked[1]));
       const movedPoint = { x: first.x - 12, y: first.y };
       tap(movedPoint);
+      await new Promise(resolve => setTimeout(resolve, 320));
       check('tapping the active word deselects it', !mugEditor.canvas.getActiveObject());
       tap(second);
       check('another word can be selected after unlocking', mugEditor.canvas.getActiveObject()?.editorId === 'other');
       document.getElementById('mobile-canvas-deselect').click();
       check('explicit Deselect releases the lock without editing', !mugEditor.canvas.getActiveObject());
-      mobile.chooseTool('settings');
+      check('Deselect lives in the header and no selected-name overlay covers the canvas',
+        document.getElementById('mobile-canvas-deselect').closest('.mobile-canvas-header') &&
+        !document.getElementById('mobile-canvas-selected-name'));
+      mugEditor.setDesign([word], { resetHistory: true });
+      await frames();
+      tap(first); tap(first);
+      check('double tap opens a dedicated text field while retaining the lock', mobile.textSession &&
+        document.activeElement.id === 'mobile-canvas-text' && mugEditor.canvas.getActiveObject()?.editorId === word.id &&
+        getComputedStyle(document.querySelector('.mobile-canvas-header')).display === 'none');
+      const textRect = document.getElementById('mobile-canvas-text').getBoundingClientRect();
+      check('text entry and Done remain visible in the available viewport', textRect.top >= (visualViewport?.offsetTop || 0) &&
+        textRect.bottom <= (visualViewport?.offsetTop || 0) + (visualViewport?.height || innerHeight) &&
+        document.getElementById('mobile-canvas-text-done').getBoundingClientRect().right <= innerWidth);
+      document.getElementById('mobile-canvas-text').value = 'Changed word';
+      document.getElementById('mobile-canvas-text-editor').requestSubmit();
+      await frames();
+      check('Done saves the text in one Undo step and restores the canvas', !mobile.textSession &&
+        mugEditor.getDesign()[0].text === 'Changed word' && mugEditor.history.length === 2 &&
+        mugEditor.canvas.getActiveObject()?.editorId === word.id);
+      mugEditor.undo();
+      check('text editing Undo restores the original word and lock', mugEditor.getDesign()[0].text === word.text &&
+        mugEditor.canvas.getActiveObject()?.editorId === word.id);
+      mobile.chooseTool('properties'); await frames();
+      const row = document.querySelector('#mobile-canvas-properties .editor-selection-row').getBoundingClientRect();
+      const actions = document.querySelector('#mobile-canvas-properties .editor-actions').getBoundingClientRect();
+      check('Adjust has no desktop-sized blank gap before transforms', actions.top - row.bottom >= 0 && actions.top - row.bottom <= 12);
+      document.getElementById('editor-text').click(); await frames();
+      check('Adjust text field uses the same dedicated editing state', mobile.textSession && document.activeElement.id === 'mobile-canvas-text');
+      document.getElementById('mobile-canvas-text').value = 'Discard this';
+      document.getElementById('mobile-canvas-text-cancel').click(); await frames();
+      check('Cancel leaves text, print design and history unchanged', mugEditor.getDesign()[0].text === word.text && mugEditor.historyIndex === 0);
+      mobile.chooseTool('add'); await frames();
+      check('Add contains Text, Emoji and Image without general design actions',
+        document.querySelector('#mobile-canvas-add #editor-add') && document.querySelector('#mobile-canvas-add #editor-emoji-toggle') &&
+        document.querySelector('#mobile-canvas-add #editor-image') && !document.querySelector('#mobile-canvas-add #editor-select-all') &&
+        !document.querySelector('#mobile-canvas-add #editor-reset'));
+      document.getElementById('editor-emoji-toggle').click();
+      await Promise.all([configuratorEmojiPicker.loadCatalog(), configuratorEmojiPicker.loadSearchIndex()]); await frames();
+      check('Emoji opens the full searchable catalog without forcing the keyboard', mobile.tool === 'emoji' &&
+        !configuratorEmojiPicker.panel.hidden && configuratorEmojiPicker.panel.closest('#mobile-canvas-emoji') &&
+        document.activeElement !== configuratorEmojiPicker.searchInput && configuratorEmojiPicker.grid.querySelectorAll('button').length > 0);
+      configuratorEmojiPicker.grid.querySelector('button').click(); await frames();
+      check('choosing an emoji adds one element and returns to the canvas', mobile.tool === 'move' &&
+        configuratorEmojiPicker.panel.hidden && mugEditor.getDesign().length === 2);
+      mobile.chooseTool('more');
+      check('More contains labeled design actions and Find element',
+        document.querySelector('#mobile-canvas-more #editor-select-all') && document.querySelector('#mobile-canvas-more #editor-fit-area') &&
+        document.querySelector('#mobile-canvas-more #editor-reset') && document.querySelector('#mobile-canvas-more [data-canvas-tool="elements"]'));
+      check('More action labels do not overflow their buttons or panel',
+        [...document.querySelectorAll('#mobile-canvas-design-actions button')].every(button => button.scrollWidth <= button.clientWidth + 1 &&
+          button.getBoundingClientRect().right <= document.getElementById('mobile-canvas-drawer').getBoundingClientRect().right));
+      document.querySelector('#mobile-canvas-more [data-canvas-tool="elements"]').click();
+      check('Find element is reached from More with a working Back action', mobile.tool === 'elements' &&
+        !document.getElementById('mobile-canvas-panel-back').hidden);
+      document.getElementById('mobile-canvas-panel-back').click();
+      check('Find element Back returns to More', mobile.tool === 'more');
+      document.getElementById('mobile-canvas-deselect').click();
+      mobile.chooseTool('settings'); await frames();
+      if (innerHeight >= 390) {
+        const drawer = document.getElementById('mobile-canvas-drawer').getBoundingClientRect();
+        check('simple product settings size to their content', drawer.height < document.querySelector('.mobile-canvas-body').clientHeight - 20);
+      }
       check('product, palette and orientation selectors share the same fullscreen workspace',
         document.querySelector('#mobile-canvas-settings #change-product') &&
         document.querySelector('#mobile-canvas-settings #theme-step') &&
@@ -136,10 +202,27 @@
         !document.getElementById('theme-panel').matches(':modal') && document.getElementById('mobile-canvas-settings').hidden);
       check('picker text matches the compact tool labels', parseFloat(getComputedStyle(document.querySelector('#theme-panel .option-card strong')).fontSize) ===
         parseFloat(getComputedStyle(document.querySelector('[data-canvas-tool="move"]')).fontSize));
+      document.querySelector('#theme-options input[value="custom"]').click(); await frames();
+      const customRect = document.getElementById('custom-palette-panel').getBoundingClientRect();
+      const paletteBody = document.querySelector('#theme-panel .config-panel-body').getBoundingClientRect();
+      check('Custom colours opens Your colours immediately at the top', document.getElementById('theme-panel').dataset.mobileStep === 'custom' &&
+        getComputedStyle(themeOptions).display === 'none' && Math.abs(customRect.top - paletteBody.top) < 2);
+      check('colour remove buttons stay within their rows', [...customColorList.children].every(item => {
+        const itemRect = item.getBoundingClientRect(), remove = item.querySelector('button').getBoundingClientRect();
+        return remove.right <= itemRect.right && remove.left >= itemRect.left;
+      }));
+      document.getElementById('mobile-canvas-panel-back').click(); await frames();
+      check('custom colours Back restores palette choices', document.getElementById('theme-panel').dataset.mobileStep === 'palettes' &&
+        getComputedStyle(themeOptions).display !== 'none');
       workspace.close();
       document.getElementById('change-product').click(); await frames();
       check('product families replace settings without a stacked modal', productDialog.closest('#mobile-canvas-picker') &&
         !productDialog.matches(':modal') && !productOptions.hidden && variantPanel.hidden);
+      check('product families are navigation rows with no nested boxes or family checkmarks', [...productOptions.children].every(option => {
+        const card = option.querySelector('.product-choice');
+        return option.getAttribute('role') === 'button' && !option.hasAttribute('aria-checked') &&
+          parseFloat(getComputedStyle(card).borderTopWidth) === 0 && getComputedStyle(card.querySelector('.checkmark')).display === 'none';
+      }));
       for (const family of productFamilies) {
         document.querySelector(`[data-family-key="${family.key}"]`).click(); await frames();
         const firstVariant = variantOptions.querySelector('.variant-option');
@@ -159,13 +242,21 @@
       document.getElementById('mobile-canvas-panel-back').click(); await frames();
       check('Back restores the original settings without changing product', !productDialog.open && !document.getElementById('mobile-canvas-settings').hidden &&
         !productDialog.closest('#mobile-canvas-dialog'));
-      mobile.chooseTool('add');
+      mobile.chooseTool('more');
       document.getElementById('editor-reset').click(); await frames();
       check('reset confirmation uses the compact panel', document.getElementById('editor-reset-panel').closest('#mobile-canvas-picker') &&
         !document.getElementById('editor-reset-panel').matches(':modal'));
       workspace.close(); await frames();
-      check('cancelling a reset returns to Add without resetting the design', mobile.tool === 'add' && mugEditor.getDesign().length === 2);
-      mobile.chooseView('product');
+      check('cancelling a reset returns to More without resetting the design', mobile.tool === 'more' && mugEditor.getDesign().length === 2);
+      mobile.chooseView('product'); await frames();
+      if (mug3D) {
+        const viewer = mugViewer.getBoundingClientRect();
+        const rotation = mug3D.group.rotation.y;
+        const previewSend = (type, x) => mugViewer.dispatchEvent(new PointerEvent(type, { pointerId: 75, pointerType: 'touch',
+          isPrimary: true, clientX: x, clientY: viewer.top + 10, button: 0, bubbles: true, cancelable: true }));
+        previewSend('pointerdown', viewer.left + 10); previewSend('pointermove', viewer.left + 70); previewSend('pointerup', viewer.left + 70);
+        check('blank space in product preview rotates the real mug', mug3D.group.rotation.y > rotation && getComputedStyle(mugViewer).touchAction === 'none');
+      }
       mobile.chooseTool('settings');
       check('product settings are also reachable from the product preview', !document.getElementById('mobile-canvas-drawer').hidden);
       mobile.chooseView('canvas');

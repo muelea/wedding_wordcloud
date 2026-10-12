@@ -319,7 +319,8 @@
         const rect = button.getBoundingClientRect();
         const minimum = button.classList.contains('editor-style-button') ? 24 : 44;
         check(`${button.id}: named action with touch target`, button.getAttribute('aria-label') &&
-          (button.querySelector('svg[aria-hidden="true"] use') || button.classList.contains('editor-style-button')) &&
+          (button.querySelector('svg[aria-hidden="true"] use') || button.classList.contains('editor-style-button') ||
+            (button.classList.contains('editor-angle-reset') && button.textContent.trim() === '0°')) &&
           rect.width >= minimum && rect.height >= minimum);
       }
       const primaryActions = actions.filter(button => button.closest('.editor-toolbar'));

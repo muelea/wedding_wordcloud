@@ -137,6 +137,8 @@
         : options.mediaQuery || null;
       this.onSelect = typeof options.onSelect === 'function' ? options.onSelect : () => {};
       this.onOpen = typeof options.onOpen === 'function' ? options.onOpen : () => {};
+      this.onClose = typeof options.onClose === 'function' ? options.onClose : () => {};
+      this.allowMobile = typeof options.allowMobile === 'function' ? options.allowMobile : () => false;
       this.onError = typeof options.onError === 'function' ? options.onError : () => {};
       this.selectedCategory = CATEGORIES[0].key;
       this.renderRevision = 0;
@@ -254,7 +256,7 @@
             && !this.trigger.contains(event.target)) this.close();
       });
       this.mediaQuery?.addEventListener?.('change', (event) => {
-        if (!event.matches) this.close();
+        if (!event.matches && !this.allowMobile()) this.close();
       });
       root.addEventListener?.('wolkenworte:localechange', () => this.handleLocaleChange());
     }
@@ -583,7 +585,7 @@
     }
 
     open() {
-      if (this.mediaQuery && !this.mediaQuery.matches) return false;
+      if (this.mediaQuery && !this.mediaQuery.matches && !this.allowMobile()) return false;
       this.onOpen();
       this.initialize();
       this.panel.hidden = false;
@@ -595,7 +597,7 @@
         if (this.searchInput.value.trim()) this.renderSearch();
         else this.renderCategory(this.selectedCategory, { clearSearch: false });
       }).catch(() => {});
-      this.searchInput.focus({ preventScroll: true });
+      if (!this.allowMobile()) this.searchInput.focus({ preventScroll: true });
       return true;
     }
 
@@ -605,6 +607,7 @@
       this.trigger.setAttribute('aria-expanded', 'false');
       if (this.searchInput.value) this.renderCategory(this.selectedCategory);
       if (focusTrigger) this.trigger.focus();
+      this.onClose();
     }
 
     handleGridKeydown(event) {

@@ -130,3 +130,59 @@ test('taps, slight finger jitter and third contacts do not edit the design', () 
   assert.deepEqual(object, { x: 100, y: 100, angle: 0, scaleX: 1, scaleY: 1 });
   assert.equal(count().commits, 0);
 });
+
+test('a mobile double tap opens text editing without first releasing the selection', t => {
+  const { touch, object, selected } = setup(false, false);
+  let edited = null;
+  touch.adapter.canDoubleTap = () => true;
+  touch.adapter.doubleTap = target => { edited = target; };
+  const tap = () => { touch.down(1, { x: 100, y: 100 }); touch.up(1); };
+  tap();
+  assert.equal(selected(), object);
+  assert.equal(edited, null);
+  tap();
+  assert.equal(selected(), object);
+  assert.equal(edited, object);
+  t.after(() => touch.finish());
+});
+
+test('single text tap unlocks after recognition; subsequent drags cancel the pending unlock', async t => {
+  const { touch, object, selected } = setup();
+  touch.adapter.canDoubleTap = () => true;
+  touch.adapter.doubleTap = () => assert.fail('a drag must not edit text');
+  touch.down(1, { x: 100, y: 100 }); touch.up(1);
+  assert.equal(selected(), object);
+  touch.down(1, { x: 100, y: 100 });
+  touch.move(1, { x: 110, y: 100 }); touch.up(1);
+  await new Promise(resolve => setTimeout(resolve, 320));
+  assert.equal(selected(), object);
+  touch.down(1, { x: 110, y: 100 }); touch.up(1);
+  await new Promise(resolve => setTimeout(resolve, 320));
+  assert.equal(selected(), null);
+  t.after(() => touch.finish());
+});
+
+test('navigation, cancellation and gestures on another word never trigger the double-tap shortcut', () => {
+  const { touch, object, selected } = setup();
+  touch.adapter.canDoubleTap = () => true;
+  touch.adapter.doubleTap = () => assert.fail('the selection lock must not be bypassed');
+  for (let i = 0; i < 2; i++) { touch.down(1, { x: 300, y: 100 }); touch.up(1); }
+  touch.down(1, { x: 100, y: 100 }); touch.up(1, { cancelled: true });
+  touch.adapter.navigation = () => true;
+  for (let i = 0; i < 2; i++) { touch.down(1, { x: 100, y: 100 }); touch.up(1); }
+  assert.equal(selected(), object);
+  touch.finish();
+});
+
+test('tapping an active word then another word can unlock and select without waiting', () => {
+  const { touch, object, selected } = setup();
+  const other = { x: 300, y: 100 };
+  touch.adapter.canDoubleTap = () => true;
+  touch.adapter.doubleTap = () => assert.fail('different words are not a double tap');
+  touch.adapter.hit = p => p.x === 300 ? other : object;
+  touch.down(1, { x: 100, y: 100 }); touch.up(1);
+  assert.equal(selected(), object);
+  touch.down(1, { x: 300, y: 100 }); touch.up(1);
+  assert.equal(selected(), other);
+  touch.finish();
+});

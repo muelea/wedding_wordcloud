@@ -17,6 +17,13 @@
 
     down(id, point) {
       if (this.points.has(id) || this.points.size >= 2) return;
+      if (this.tapTimer && this.lastTap && !this.adapter.contains(this.lastTap.object, point)) {
+        const target = this.lastTap.object;
+        this.cancelTap();
+        if (this.adapter.selected() === target) this.adapter.deselect();
+      }
+      clearTimeout(this.tapTimer);
+      this.tapTimer = null;
       this.points.set(id, point);
       if (!this.gesture) {
         const navigation = this.adapter.navigation();
@@ -46,6 +53,7 @@
       if (points.length !== gesture.screen.length) return;
       if (Math.max(...points.map((p, i) => Math.hypot(p.x - gesture.screen[i].x, p.y - gesture.screen[i].y))) < 5) return;
       gesture.moved = true;
+      this.cancelTap();
       if (gesture.target) {
         const scene = points.map(p => this.adapter.toScene(p));
         const original = gesture.object;
@@ -81,15 +89,44 @@
       if (this.points.size) this.rebase();
       else {
         const gesture = this.gesture;
-        this.finish();
-        if (!gesture.navigation && !gesture.moved && !gesture.multiple) {
-          if (gesture.target && gesture.onSelected) this.adapter.deselect();
-          else if (!gesture.target && gesture.candidate) this.adapter.select(gesture.candidate);
-        }
+        const tapped = !gesture.navigation && !gesture.moved && !gesture.multiple;
+        this.finish({ preserveTap: tapped });
+        if (tapped) this.tap(gesture);
       }
     }
 
-    finish() {
+    tap(gesture) {
+      const object = gesture.target ? (gesture.onSelected ? gesture.target : null) : gesture.candidate;
+      const point = gesture.screen[0], now = Date.now();
+      const editable = object && this.adapter.canDoubleTap?.(object);
+      if (editable && this.lastTap?.object === object && now - this.lastTap.time < 300 &&
+          Math.hypot(point.x - this.lastTap.point.x, point.y - this.lastTap.point.y) < 24) {
+        this.cancelTap();
+        this.adapter.doubleTap(object);
+        return;
+      }
+      this.cancelTap();
+      if (!object) return;
+      if (!gesture.target) this.adapter.select(object);
+      else if (editable) {
+        // Keep the lock through the first tap of a double tap. A single tap
+        // still unlocks, after the short recognition window.
+        this.tapTimer = setTimeout(() => {
+          if (this.adapter.selected() === object) this.adapter.deselect();
+          this.cancelTap();
+        }, 300);
+      } else this.adapter.deselect();
+      if (editable) this.lastTap = { object, point, time: now };
+    }
+
+    cancelTap() {
+      clearTimeout(this.tapTimer);
+      this.tapTimer = null;
+      this.lastTap = null;
+    }
+
+    finish({ preserveTap = false } = {}) {
+      if (!preserveTap) this.cancelTap();
       const gesture = this.gesture;
       this.gesture = null;
       this.points.clear();

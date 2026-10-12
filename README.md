@@ -71,8 +71,16 @@ frozen snapshot of the word cloud.
    drags anywhere move it, and two-finger pinches/twists anywhere scale/rotate it
    around its centre. Other-word taps cannot replace this lock. Tap the selected
    element again or use Deselect before choosing another. Undo/Redo retain the
-   lock when that element still exists. The View tool explicitly navigates without
-   editing objects. Each completed transform is one Undo step.
+   lock when that element still exists. Pan & zoom explicitly navigates without
+   editing objects. Deselect stays in the top toolbar, outside the artwork.
+   Double-tapping a word opens a compact text field with Done/Cancel; it follows
+   the visible viewport and keyboard scroll offset, temporarily hiding the canvas
+   tools while typing. Each completed transform or confirmed text edit is one
+   Undo step. Add contains text, the complete searchable emoji picker and image
+   upload; More holds Find element, Select all, Fill the area and Reset design.
+   Custom colours opens its editable colours directly. Mobile mug preview drags
+   rotate from anywhere in the preview; ordinary page scrolling remains available
+   beside the mug outside the dedicated workspace.
    Explicit adjustment buttons remain available for single-finger operation.
    With an empty basket the primary continuation action adds the current design
    before opening shipping. With an existing basket it simply reads “Zur
@@ -912,7 +920,7 @@ src/
     webhook.js             raw-body Stripe, signed Printful and signed Resend callbacks
 public/
   assets/noto-emoji/      Pinned Noto Emoji SVG artwork used by browser previews and print files
-  emoji-search/           Pinned localized CLDR names and keyword indexes for the desktop picker
+  emoji-search/           Pinned localized CLDR names and keyword indexes for the shared emoji picker
   emoji-picker.css        Shared responsive picker presentation for display and configurator
   js/emoji-data.js        Generated Unicode Emoji 17 sequence-to-artwork catalog
   js/emoji-catalog.js     Shared mixed-text parser, canonicalizer and browser asset loader
