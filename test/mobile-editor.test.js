@@ -44,6 +44,7 @@ test('touch transforms serialize safely for every product, orientation and print
           color: '#2455f5', fontFamily: 'classic', angle: 0 }], { resetHistory: true });
         const object = editor.canvas.getObjects()[0], center = object.getCenterPoint();
         const touch = editor.touchController;
+        touch.down(99, { x: center.x, y: center.y }); touch.up(99);
         touch.down(1, { x: center.x, y: center.y });
         touch.move(1, { x: center.x + 10, y: center.y + 10 });
         touch.down(2, { x: center.x + 110, y: center.y + 10 });
@@ -67,6 +68,7 @@ test('a second finger on another element retains the original gesture target', t
   const editor = setup(t, PRODUCTS[0]);
   editor.setDesign([{ id: 'a', text: 'Liebe', x: 800, y: 500, fontSize: 100, color: '#2455f5' },
     { id: 'b', text: 'Glück', x: 1300, y: 500, fontSize: 100, color: '#2455f5' }], { resetHistory: true });
+  editor.touchController.down(99, { x: 400, y: 250 }); editor.touchController.up(99);
   editor.touchController.down(1, { x: 400, y: 250 });
   editor.touchController.down(2, { x: 650, y: 250 });
   editor.touchController.move(2, { x: 800, y: 250 });
@@ -83,6 +85,7 @@ test('large touch transforms remain printable and Undo can finish an active cont
   editor.setDesign([{ id: 'word', text: 'Gemeinsam', x: 1350, y: 525, fontSize: 140,
     color: '#2455f5', fontFamily: 'classic' }], { resetHistory: true });
   const original = JSON.stringify(editor.getDesign());
+  editor.touchController.down(99, { x: 675, y: 262.5 }); editor.touchController.up(99);
   editor.touchController.down(1, { x: 675, y: 262.5 });
   editor.touchController.down(2, { x: 725, y: 262.5 });
   editor.touchController.move(2, { x: 3000, y: 3500 });
@@ -92,4 +95,27 @@ test('large touch transforms remain printable and Undo can finish an active cont
   assert.equal(editor.touchController.points.size, 0);
   editor.redo();
   assert.ok(isPrintDesignWithinBounds(editor.getDesign(), editor.width, editor.height, editor.getSafeArea()));
+});
+
+test('a locked word ignores other-word taps, moves from anywhere and stays selected through mobile Undo', t => {
+  const editor = setup(t, PRODUCTS[0]);
+  editor.mobileViewport = true;
+  editor.setDesign([{ id: 'a', text: 'Liebe', x: 800, y: 500, fontSize: 100, color: '#2455f5' },
+    { id: 'b', text: 'Glück', x: 1300, y: 500, fontSize: 100, color: '#2455f5' }], { resetHistory: true });
+  const touch = editor.touchController;
+  const tap = point => { touch.down(1, point); touch.up(1); };
+  tap({ x: 400, y: 250 }); tap({ x: 650, y: 250 });
+  assert.equal(editor.canvas.getActiveObject().editorId, 'a');
+  touch.down(1, { x: 650, y: 250 }); touch.move(1, { x: 670, y: 260 }); touch.up(1);
+  assert.equal(editor.getDesign()[0].x, 840);
+  assert.equal(editor.getDesign()[1].x, 1300);
+  editor.undo();
+  assert.equal(editor.canvas.getActiveObject().editorId, 'a');
+  assert.equal(editor.getDesign()[0].x, 800);
+  editor.redo();
+  assert.equal(editor.canvas.getActiveObject().editorId, 'a');
+  tap({ x: 420, y: 260 });
+  assert.equal(editor.canvas.getActiveObject(), undefined);
+  tap({ x: 650, y: 250 });
+  assert.equal(editor.canvas.getActiveObject().editorId, 'b');
 });

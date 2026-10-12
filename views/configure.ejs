@@ -4206,6 +4206,7 @@
 
     function closeProductDialog() {
       if (productDialog.open) productDialog.close();
+      workspace.mobileCanvas?.restorePicker(productDialog);
     }
 
     function openProductDialog() {
@@ -4213,7 +4214,14 @@
       pendingFamilyKey = selectedFamilyKey;
       productDialogCloseReason = 'cancel';
       buildProductOptions();
-      if (!productDialog.open) productDialog.showModal();
+      if (workspace.mobileCanvas?.active) {
+        workspace.mobileCanvas.showPicker(productDialog, closeProductDialog, () => {
+          if (productDialog.dataset.mobileStep === 'variants') showMobileProductStep('families');
+          else closeProductDialog();
+        });
+        showMobileProductStep('families');
+        if (!productDialog.open) productDialog.show();
+      } else if (!productDialog.open) productDialog.showModal();
       updateProductOptionSelection();
       requestAnimationFrame(() => {
         productDialog.focus({ preventScroll: true });
@@ -4223,6 +4231,24 @@
     function resetProductDialogSelection() {
       pendingProductKey = null;
       pendingFamilyKey = null;
+    }
+
+    function showMobileProductStep(step) {
+      if (productDialog.dataset.presentation !== 'embedded') return;
+      productDialog.dataset.mobileStep = step;
+      productOptions.hidden = step !== 'families';
+      variantPanel.hidden = step !== 'variants';
+      productDialog.querySelector('.product-dialog-footer').hidden = step !== 'variants';
+      const body = productDialog.querySelector('.product-dialog-body');
+      body.scrollTop = 0;
+      const title = step === 'variants' ? '{{item}} wählen' : 'Produkt wählen';
+      setText(document.getElementById('mobile-canvas-panel-title'), title, {
+        item: t(productFamilies.find(family => family.key === pendingFamilyKey)?.label || 'Ausführung'),
+      });
+      requestAnimationFrame(() => {
+        (step === 'variants' ? variantOptions.querySelector('[aria-checked="true"]')
+          : productOptions.querySelector('[aria-checked="true"]'))?.focus({ preventScroll: true });
+      });
     }
 
     async function confirmProductDialog() {
@@ -4256,6 +4282,9 @@
       if (event.target === productDialog) closeProductDialog();
     });
     productDialog.addEventListener('close', () => {
+      workspace.mobileCanvas?.restorePicker(productDialog);
+      productOptions.hidden = false;
+      productDialog.querySelector('.product-dialog-footer').hidden = false;
       if (productDialogCloseReason !== 'confirm') {
         resetProductDialogSelection();
         buildProductOptions();
@@ -4263,7 +4292,7 @@
       }
       productDialogCloseReason = 'cancel';
       startingAnotherProduct = false;
-      changeProductButton.focus();
+      changeProductButton.focus({ preventScroll: true });
     });
 
     function selectedProductSlot() {
@@ -4386,15 +4415,17 @@
       if (nextProduct) pendingProductKey = nextProduct.key;
       buildVariantOptions();
       updateProductOptionSelection();
+      showMobileProductStep('variants');
     }
 
     function buildVariantOptions() {
       const activeFamilyKey = dialogSelectedFamilyKey();
       const family = productFamilies.find((candidate) => candidate.key === activeFamilyKey);
       const candidates = productsInFamily(activeFamilyKey);
-      variantPanel.hidden = candidates.length < 2;
+      const embedded = productDialog.dataset.presentation === 'embedded';
+      variantPanel.hidden = embedded ? productDialog.dataset.mobileStep !== 'variants' : candidates.length < 2;
       variantOptions.replaceChildren();
-      if (candidates.length < 2) return;
+      if (!embedded && candidates.length < 2) return;
       setText(document.getElementById('variant-title'), '{{item}} wählen', {
         item: t(family?.label || 'Ausführung'),
       });

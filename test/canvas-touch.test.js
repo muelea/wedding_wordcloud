@@ -3,17 +3,20 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { CanvasTouch } = require('../public/js/canvas-touch');
 
-function setup(navigation = false) {
+function setup(navigation = false, selected = true) {
   const object = { x: 100, y: 100, angle: 0, scaleX: 1, scaleY: 1 };
   let commits = 0, selections = 0, viewWrites = 0;
+  let active = selected ? object : null;
+  const contains = (_, p) => p.x >= object.x - 20 && p.x <= object.x + 20 && p.y >= object.y - 20 && p.y <= object.y + 20;
   const touch = new CanvasTouch({
     navigation: () => navigation,
+    selected: () => active, contains,
     hit: p => p.x >= 80 && p.x <= 120 && p.y >= 80 && p.y <= 120 ? object : null,
-    select: () => selections++, toScene: point => point,
+    select: target => { active = target; selections++; }, deselect: () => { active = null; }, toScene: point => point,
     readObject: () => ({ ...object }), writeObject: (_, state) => Object.assign(object, state),
     readView: () => ({ zoom: 1 }), writeView: () => viewWrites++, commit: () => commits++,
   });
-  return { touch, object, count: () => ({ commits, selections, viewWrites }) };
+  return { touch, object, selected: () => active, count: () => ({ commits, selections, viewWrites }) };
 }
 
 test('one finger moves an element without resizing or rotating it', () => {
@@ -61,7 +64,7 @@ test('adding and removing a finger rebases at the current position with one Undo
 
 test('background gestures and navigation mode never transform a selected element', () => {
   for (const navigation of [false, true]) {
-    const { touch, object, count } = setup(navigation);
+    const { touch, object, count } = setup(navigation, false);
     touch.down(1, { x: navigation ? 100 : 20, y: 100 });
     touch.down(2, { x: 200, y: 100 });
     touch.move(2, { x: 300, y: 130 });
@@ -71,6 +74,49 @@ test('background gestures and navigation mode never transform a selected element
     assert.equal(count().selections, 0);
     assert.equal(count().viewWrites, 1);
   }
+});
+
+test('selection requires a tap; a pinch starting on a word navigates without selecting it', () => {
+  const { touch, object, selected, count } = setup(false, false);
+  touch.down(1, { x: 100, y: 100 });
+  assert.equal(selected(), null, 'pointerdown alone never activates an element');
+  touch.down(2, { x: 200, y: 100 });
+  touch.move(2, { x: 300, y: 100 });
+  touch.up(2); touch.up(1);
+  assert.equal(selected(), null);
+  assert.equal(count().commits, 0);
+  assert.equal(count().viewWrites, 1);
+  touch.down(1, { x: 100, y: 100 }); touch.up(1);
+  assert.equal(selected(), object);
+  assert.equal(count().selections, 1);
+  assert.equal(count().commits, 0);
+});
+
+test('locked selection transforms from background contacts and persists between gestures', () => {
+  const { touch, object, selected, count } = setup();
+  touch.down(1, { x: 300, y: 300 });
+  touch.move(1, { x: 310, y: 315 }); touch.up(1);
+  assert.equal(object.x, 110); assert.equal(object.y, 115);
+  touch.down(1, { x: 400, y: 400 }); touch.down(2, { x: 500, y: 400 });
+  touch.move(2, { x: 400, y: 600 }); touch.up(2); touch.up(1);
+  assert.equal(object.scaleX, 2); assert.equal(object.angle, 90);
+  assert.equal(object.x, 110); assert.equal(object.y, 115, 'off-object pinches keep the object centre');
+  assert.equal(selected(), object);
+  assert.equal(count().commits, 2);
+  assert.equal(count().selections, 0);
+  assert.equal(count().viewWrites, 0);
+});
+
+test('only a tap on the selected item deselects; background taps and cancelled contacts keep the lock', () => {
+  const { touch, object, selected } = setup();
+  touch.down(1, { x: 300, y: 300 }); touch.up(1);
+  assert.equal(selected(), object);
+  touch.down(1, { x: 100, y: 100 }); touch.up(1, { cancelled: true });
+  assert.equal(selected(), object);
+  touch.down(1, { x: 100, y: 100 }); touch.finish();
+  assert.equal(selected(), object, 'viewport changes and lost contacts are not taps');
+  touch.down(1, { x: 100, y: 100 }); touch.up(1);
+  assert.equal(selected(), null);
 });
 
 test('taps, slight finger jitter and third contacts do not edit the design', () => {

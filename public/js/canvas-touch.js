@@ -10,8 +10,8 @@
       rotation: Math.atan2(Math.sin(angle(after) - angle(before)), Math.cos(angle(after) - angle(before))) };
   }
 
-  // Gesture ownership is decided by the first contact and never changes when a
-  // second finger lands on another word. The adapter owns Fabric/print bounds.
+  // Only an explicit tap changes selection. A selected element owns subsequent
+  // gestures anywhere on the canvas until it is explicitly deselected.
   class CanvasTouch {
     constructor(adapter) { this.adapter = adapter; this.points = new Map(); this.gesture = null; }
 
@@ -19,10 +19,13 @@
       if (this.points.has(id) || this.points.size >= 2) return;
       this.points.set(id, point);
       if (!this.gesture) {
-        const target = this.adapter.navigation() ? null : this.adapter.hit(point);
-        if (target) this.adapter.select(target);
-        this.gesture = { target, changed: false };
+        const navigation = this.adapter.navigation();
+        const target = navigation ? null : this.adapter.selected();
+        this.gesture = { target, candidate: navigation || target ? null : this.adapter.hit(point),
+          onSelected: target && this.adapter.contains(target, point), navigation,
+          changed: false, moved: false, multiple: false };
       }
+      if (this.points.size > 1) this.gesture.multiple = true;
       this.rebase();
     }
 
@@ -42,6 +45,7 @@
       const gesture = this.gesture, points = [...this.points.values()];
       if (points.length !== gesture.screen.length) return;
       if (Math.max(...points.map((p, i) => Math.hypot(p.x - gesture.screen[i].x, p.y - gesture.screen[i].y))) < 5) return;
+      gesture.moved = true;
       if (gesture.target) {
         const scene = points.map(p => this.adapter.toScene(p));
         const original = gesture.object;
@@ -53,12 +57,11 @@
           const pair = transformPair(gesture.scene, scene);
           const scale = Math.max(original.minimumScale || .01, Math.min(20, pair.scale));
           const rotation = Math.abs(pair.rotation) < Math.PI / 60 ? 0 : pair.rotation;
-          const cos = Math.cos(rotation), sin = Math.sin(rotation);
-          const x = original.x - pair.start.x, y = original.y - pair.start.y;
           const degrees = original.angle + rotation * 180 / Math.PI;
           const snapped = Math.round(degrees / 90) * 90;
-          next = { ...original, x: pair.end.x + scale * (x * cos - y * sin),
-            y: pair.end.y + scale * (x * sin + y * cos),
+          // Resize/twist around the element's centre. Off-element contacts must
+          // not swing the element around a distant finger pivot.
+          next = { ...original,
             scaleX: original.scaleX * scale, scaleY: original.scaleY * scale,
             angle: Math.abs(degrees - snapped) < 2 ? snapped : degrees };
         }
@@ -72,10 +75,18 @@
       }
     }
 
-    up(id) {
+    up(id, { cancelled = false } = {}) {
       if (!this.points.delete(id)) return;
+      if (cancelled) this.gesture.moved = true;
       if (this.points.size) this.rebase();
-      else this.finish();
+      else {
+        const gesture = this.gesture;
+        this.finish();
+        if (!gesture.navigation && !gesture.moved && !gesture.multiple) {
+          if (gesture.target && gesture.onSelected) this.adapter.deselect();
+          else if (!gesture.target && gesture.candidate) this.adapter.select(gesture.candidate);
+        }
+      }
     }
 
     finish() {

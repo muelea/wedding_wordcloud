@@ -60,12 +60,19 @@ frozen snapshot of the word cloud.
    opens a dedicated fullscreen canvas workspace without creating a second draft
    or editor state. A compact side toolbar leaves the print area prominent;
    Canvas/Product switches reuse the same Fabric canvas and real product preview.
-   A header button keeps product, palette and orientation choices available.
+   A compact top toolbar holds Undo/Redo, zoom/fit and product settings, leaving
+   the full remaining height for the canvas. Browser fullscreen is offered only
+   where supported; iPhone Safari keeps its browser chrome. Compact product,
+   palette and orientation pickers replace the side panel. Choosing a product
+   family immediately opens its variants instead of placing them below the list.
    Wide print areas suggest turning the phone sideways; portrait and square
-   products keep their own proportions. One finger moves an element. Adding a
-   second finger scales/rotates that same element, even if the second contact
-   lands elsewhere. Background gestures pan/zoom the view; the View tool always
-   navigates without editing objects. Each completed transform is one Undo step.
+   products keep their own proportions. With nothing selected, gestures anywhere
+   pan/zoom the view. A deliberate tap locks one element: subsequent one-finger
+   drags anywhere move it, and two-finger pinches/twists anywhere scale/rotate it
+   around its centre. Other-word taps cannot replace this lock. Tap the selected
+   element again or use Deselect before choosing another. Undo/Redo retain the
+   lock when that element still exists. The View tool explicitly navigates without
+   editing objects. Each completed transform is one Undo step.
    Explicit adjustment buttons remain available for single-finger operation.
    With an empty basket the primary continuation action adds the current design
    before opening shipping. With an existing basket it simply reads “Zur

@@ -16,12 +16,43 @@
       this.tool = 'move';
       this.active = false;
       editor.onViewChange = zoom => { document.getElementById('mobile-canvas-fit').textContent = `${Math.round(zoom * 100)} %`; };
-      this.dialog.addEventListener('cancel', event => { event.preventDefault(); this.close(); });
+      this.dialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        if (this.picker) this.closePicker();
+        else this.close();
+      });
       this.dialog.addEventListener('close', () => { if (this.active) this.close(); });
       this.dialog.addEventListener('pointerdown', event => {
         if (!event.target.closest('#mobile-canvas-stage')) editor.touchController?.finish();
       }, true);
       document.getElementById('mobile-canvas-close').addEventListener('click', () => this.close());
+      document.getElementById('mobile-canvas-deselect').addEventListener('click', () => {
+        editor.touchController?.finish();
+        editor.clearSelection();
+      });
+      document.getElementById('mobile-canvas-panel-back').addEventListener('click', () => this.picker?.back());
+      const fullscreen = document.getElementById('mobile-canvas-fullscreen');
+      fullscreen.hidden = !document.fullscreenEnabled || typeof document.documentElement.requestFullscreen !== 'function';
+      fullscreen.addEventListener('click', async () => {
+        editor.touchController?.finish();
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else {
+            await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+            this.ownsFullscreen = true;
+            if (!this.active) { await document.exitFullscreen(); this.ownsFullscreen = false; }
+          }
+        } catch { fullscreen.hidden = true; }
+      });
+      document.addEventListener('fullscreenchange', () => {
+        const enabled = Boolean(document.fullscreenElement);
+        fullscreen.setAttribute('aria-pressed', String(enabled));
+        const source = enabled ? 'Vollbild schließen' : 'Vollbild öffnen';
+        if (root.WolkenworteI18n) root.WolkenworteI18n.setAttribute(fullscreen, 'aria-label', source);
+        else fullscreen.setAttribute('aria-label', source);
+        if (!enabled) this.ownsFullscreen = false;
+        resize();
+      });
       document.getElementById('mobile-canvas-panel-close').addEventListener('click', () => this.chooseTool('move'));
       document.getElementById('mobile-canvas-settings-toggle').addEventListener('click', () => this.chooseTool(this.tool === 'settings' ? 'move' : 'settings'));
       document.getElementById('mobile-canvas-fit').addEventListener('click', () => {
@@ -84,6 +115,7 @@
       this.document.documentElement.classList.add('mobile-canvas-open');
       this.dialog.showModal();
       this.editor.setMobileViewport(true);
+      this.editor.clearSelection();
       this.chooseView('canvas');
       this.chooseTool('move');
       this.onLayout();
@@ -96,6 +128,11 @@
       this.editor.closeFontPicker();
       this.editor.closeIconPicker();
       this.workspace.close(false);
+      this.closePicker();
+      if (this.ownsFullscreen && this.document.fullscreenElement) {
+        this.document.exitFullscreen().catch(() => {});
+        this.ownsFullscreen = false;
+      }
       this.document.activeElement?.blur();
       this.active = false;
       for (const { node, anchor } of this.mounts.reverse()) { anchor.replaceWith(node); }
@@ -119,19 +156,22 @@
       this.document.getElementById('mobile-canvas-product').hidden = view !== 'product';
       this.dialog.querySelectorAll('[data-canvas-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.canvasView === view)));
       this.chooseTool('move');
+      this.updateSelection();
       requestAnimationFrame(() => this.onLayout());
     }
 
     chooseTool(tool) {
       const previous = this.tool;
+      if (tool !== 'picker') this.closePicker();
       this.editor.touchController?.finish();
       this.editor.closeFontPicker();
       this.editor.closeIconPicker();
       this.tool = tool;
       this.editor.mobileNavigation = tool === 'view';
-      const panel = tool === 'settings' || (['properties', 'add', 'elements'].includes(tool) && this.view === 'canvas');
+      const panel = ['settings', 'picker'].includes(tool) || (['properties', 'add', 'elements'].includes(tool) && this.view === 'canvas');
       this.document.getElementById('mobile-canvas-drawer').hidden = !panel;
-      for (const name of ['properties', 'add', 'elements', 'settings']) this.document.getElementById(`mobile-canvas-${name}`).hidden = name !== tool;
+      for (const name of ['properties', 'add', 'elements', 'settings', 'picker']) this.document.getElementById(`mobile-canvas-${name}`).hidden = name !== tool;
+      this.document.getElementById('mobile-canvas-panel-back').hidden = tool !== 'picker';
       if (previous !== tool) this.dialog.querySelector('.mobile-canvas-drawer-content').scrollTop = 0;
       const titles = { properties: 'Anpassen', add: 'Element hinzufügen', elements: 'Element auswählen', settings: 'Produkt und Farben' };
       this.document.getElementById('mobile-canvas-settings-toggle').setAttribute('aria-expanded', String(tool === 'settings'));
@@ -139,6 +179,35 @@
       this.dialog.querySelectorAll('[data-canvas-tool]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.canvasTool === tool)));
       if (tool === 'elements') this.renderElements();
       this.updateHint();
+    }
+
+    showPicker(panel, close, back = close) {
+      const returnTool = this.tool;
+      this.chooseTool('picker');
+      const anchor = this.document.createComment('mobile picker return');
+      panel.before(anchor);
+      this.picker = { panel, anchor, close, back, returnTool };
+      panel.dataset.presentation = 'embedded';
+      this.document.getElementById('mobile-canvas-picker').append(panel);
+      const title = panel.querySelector('h2');
+      setText(this.document.getElementById('mobile-canvas-panel-title'), title.getAttribute('data-i18n-source') || title.textContent);
+    }
+
+    closePicker() {
+      if (!this.picker) return;
+      const { panel, close } = this.picker;
+      close();
+      this.restorePicker(panel);
+    }
+
+    restorePicker(panel) {
+      if (this.picker?.panel !== panel) return;
+      const { anchor, returnTool } = this.picker;
+      this.picker = null;
+      anchor.replaceWith(panel);
+      delete panel.dataset.presentation;
+      delete panel.dataset.mobileStep;
+      this.chooseTool(returnTool);
     }
 
     openTextEditor() {
@@ -152,14 +221,28 @@
       return true;
     }
 
-    updateSelection() { if (this.active && this.tool === 'elements') this.renderElements(); }
+    updateSelection() {
+      if (!this.active) return;
+      if (this.tool === 'elements') this.renderElements();
+      const objects = this.editor.selectedObjects();
+      this.document.getElementById('mobile-canvas-selection').hidden = !objects.length || this.view !== 'canvas';
+      this.document.getElementById('mobile-canvas-selected-name').textContent = objects.length === 1
+        ? this.elementLabel(objects[0]) : t('Mehrere Elemente');
+      this.updateHint();
+    }
+
+    elementLabel(object) {
+      return object.editorKind === 'image' ? t('Bild') : object.editorKind === 'icon'
+        ? t(object.editorIconLabel) : this.editor.objectText(object);
+    }
 
     updateHint() {
       const wide = this.editor.width / this.editor.height > 1.5 && root.innerHeight > root.innerWidth;
       setText(this.document.getElementById('mobile-canvas-hint'), this.tool === 'view'
         ? 'Ansicht: mit einem Finger verschieben, mit zwei Fingern zoomen'
-        : wide ? 'Für mehr Platz das Handy quer halten · Zwei Finger vergrößern und drehen'
-        : 'Ein Finger bewegt · Zwei Finger vergrößern und drehen');
+        : this.editor.selectedObjects().length ? 'Auswahl gesperrt · Überall bewegen, vergrößern und drehen'
+        : wide ? 'Handy quer halten · Element antippen oder mit zwei Fingern zoomen'
+        : 'Element antippen · Zwei Finger zoomen die Ansicht');
     }
 
     renderElements() {
@@ -168,14 +251,16 @@
       const active = this.editor.selectedObjects();
       list.replaceChildren();
       for (const object of this.editor.canvas.getObjects()) {
-        const label = object.editorKind === 'image' ? t('Bild') : object.editorKind === 'icon'
-          ? t(object.editorIconLabel) : this.editor.objectText(object);
+        const label = this.elementLabel(object);
         if (!label.toLocaleLowerCase().includes(search)) continue;
         const button = this.document.createElement('button');
         button.type = 'button';
         button.textContent = label;
         button.setAttribute('aria-pressed', String(active.includes(object)));
+        button.disabled = active.length > 0 && !active.includes(object);
         button.addEventListener('click', () => {
+          if (active.includes(object)) { this.editor.clearSelection(); return; }
+          if (this.editor.selectedObjects().length) return;
           this.editor.canvas.setActiveObject(object);
           this.editor.updateSelectionPanel();
           this.editor.canvas.requestRenderAll();

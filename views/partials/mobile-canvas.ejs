@@ -5,10 +5,21 @@
       <button type="button" data-canvas-view="canvas" aria-pressed="true">Canvas</button>
       <button type="button" data-canvas-view="product" aria-pressed="false">Produkt</button>
     </nav>
+    <div class="mobile-canvas-controls" aria-label="Ansicht und Verlauf">
+      <div id="mobile-canvas-history"></div>
+      <div id="mobile-canvas-zoom"></div>
+      <button type="button" id="mobile-canvas-fit" aria-label="Einpassen" aria-describedby="editor-zoom-label">100 %</button>
+    </div>
+    <div class="mobile-canvas-header-actions">
+    <button type="button" id="mobile-canvas-fullscreen" aria-label="Vollbild öffnen" aria-pressed="false" hidden>
+      <svg class="editor-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#editor-icon-expand"></use></svg>
+    </button>
     <button type="button" id="mobile-canvas-settings-toggle" aria-label="Produkt und Farben" aria-controls="mobile-canvas-drawer" aria-expanded="false">
       <svg class="editor-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#editor-icon-palette"></use></svg>
     </button>
     <button type="button" id="mobile-canvas-close" aria-label="Canvas-Modus schließen">×</button>
+    </div>
+    <div id="mobile-canvas-surfaces"></div>
   </header>
   <div class="mobile-canvas-body">
     <nav class="mobile-canvas-rail" aria-label="Canvas-Werkzeuge">
@@ -23,12 +34,20 @@
     </nav>
     <div class="mobile-canvas-stage" id="mobile-canvas-stage"></div>
     <div class="mobile-canvas-product" id="mobile-canvas-product" hidden></div>
+    <div class="mobile-canvas-selection" id="mobile-canvas-selection" hidden>
+      <span id="mobile-canvas-selected-name"></span>
+      <button type="button" id="mobile-canvas-deselect">Auswahl aufheben</button>
+    </div>
+    <span id="mobile-canvas-hint" role="status">Element antippen · Zwei Finger zoomen die Ansicht</span>
     <aside class="mobile-canvas-drawer" id="mobile-canvas-drawer" aria-labelledby="mobile-canvas-panel-title" hidden>
-      <div class="mobile-canvas-drawer-head"><strong id="mobile-canvas-panel-title">Anpassen</strong>
+      <div class="mobile-canvas-drawer-head">
+        <button type="button" id="mobile-canvas-panel-back" aria-label="Zurück" hidden>←</button>
+        <strong id="mobile-canvas-panel-title">Anpassen</strong>
         <button type="button" id="mobile-canvas-panel-close" aria-label="Werkzeuge schließen">×</button></div>
       <div class="mobile-canvas-drawer-content">
         <div id="mobile-canvas-properties" hidden></div>
         <div id="mobile-canvas-settings" hidden></div>
+        <div id="mobile-canvas-picker" hidden></div>
         <div id="mobile-canvas-add" hidden>
           <div class="mobile-canvas-emojis" role="group" aria-label="Emoji hinzufügen">
             <% for (const emoji of ['❤️', '✨', '🥂', '💍', '🥰', '🎉']) { %>
@@ -44,11 +63,4 @@
       </div>
     </aside>
   </div>
-  <footer class="mobile-canvas-footer">
-    <span id="mobile-canvas-hint" role="status">Ein Finger bewegt · Zwei Finger vergrößern und drehen</span>
-    <div id="mobile-canvas-surfaces"></div>
-    <div id="mobile-canvas-history"></div>
-    <div id="mobile-canvas-zoom"></div>
-    <button type="button" id="mobile-canvas-fit" aria-label="Einpassen" aria-describedby="editor-zoom-label">100 %</button>
-  </footer>
 </dialog>

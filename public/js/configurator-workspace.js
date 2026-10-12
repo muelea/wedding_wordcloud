@@ -107,11 +107,17 @@
     }
 
     show(panel, trigger, popover = false) {
-      const mode = popover ? 'popover' : 'modal';
+      const embedded = this.mobileCanvas?.active && ['theme-panel', 'orientation-panel', 'editor-reset-panel'].includes(panel.id);
+      const mode = embedded ? 'embedded' : popover ? 'popover' : 'modal';
       this.active = { panel, trigger, mode };
       trigger.setAttribute('aria-expanded', 'true');
       panel.dataset.presentation = mode;
-      if (popover) {
+      if (embedded) {
+        panel.removeAttribute('popover');
+        panel.removeAttribute('aria-modal');
+        this.mobileCanvas.showPicker(panel, () => this.close());
+        panel.show();
+      } else if (popover) {
         panel.setAttribute('popover', 'auto');
         panel.removeAttribute('aria-modal');
         panel.showPopover();
@@ -123,7 +129,8 @@
       }
       // Do not autofocus text on simple selection or opening a chooser. This
       // keeps the mobile keyboard closed and the beginning of long lists visible.
-      (panel.querySelector('[data-panel-initial-focus]') || panel.querySelector('h2')).focus({ preventScroll: true });
+      (embedded ? this.document.getElementById('mobile-canvas-panel-back')
+        : panel.querySelector('[data-panel-initial-focus]') || panel.querySelector('h2')).focus({ preventScroll: true });
     }
 
     positionChooser() {
@@ -187,8 +194,9 @@
 
     finishClose(restoreFocus = true) {
       if (!this.active) return;
-      const { panel, trigger } = this.active;
+      const { panel, trigger, mode } = this.active;
       this.active = null;
+      if (mode === 'embedded') this.mobileCanvas.restorePicker(panel);
       trigger.setAttribute('aria-expanded', 'false');
       panel.style.removeProperty('left');
       panel.style.removeProperty('top');

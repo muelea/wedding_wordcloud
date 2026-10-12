@@ -549,7 +549,10 @@
       this.touchMedia = root.matchMedia('(max-width: 940px), (pointer: coarse)');
       this.touchController = new root.CanvasTouch({
         navigation: () => this.mobileNavigation === true,
+        selected: () => this.canvas.getActiveObject(),
         hit: point => this.touchTarget(point),
+        contains: (object, point) => object.containsPoint(this.touchScenePoint(point)),
+        deselect: () => this.clearSelection(),
         select: object => {
           this.canvas.getActiveObject()?.exitEditing?.();
           this.canvas.setActiveObject(object);
@@ -629,7 +632,7 @@
           if (!this.touchController.points.has(event.pointerId)) return;
           event.preventDefault();
           event.stopImmediatePropagation();
-          this.touchController.up(event.pointerId);
+          this.touchController.up(event.pointerId, { cancelled: name !== 'pointerup' });
         }, true);
       }
       // Fabric's default touch listener must not run alongside our Pointer Events
@@ -1004,6 +1007,7 @@
     }
 
     clearSelection() {
+      this.touchController?.finish();
       if (!this.canvas.getActiveObject()) return false;
       this.canvas.discardActiveObject();
       this.canvas.requestRenderAll();
@@ -1012,6 +1016,7 @@
     }
 
     shouldDismissSelection(target) {
+      if (this.mobileViewport) return false;
       if (!target || typeof target.closest !== 'function') return false;
       if (this.shell?.contains(target)) return false;
       if (!target.closest('body')) return false;
@@ -1558,8 +1563,18 @@
 
     restoreHistory(index) {
       if (index < 0 || index >= this.history.length) return;
+      const selectedIds = this.mobileViewport ? this.selectedObjects().map(object => object.editorId) : [];
       this.historyIndex = index;
       this.setDesign(this.designFromHistory(this.history[index]));
+      const selected = this.canvas.getObjects().filter(object => selectedIds.includes(object.editorId));
+      if (selected.length) {
+        this.canvas.setActiveObject(selected.length === 1 ? selected[0]
+          : new root.fabric.ActiveSelection(selected, { canvas: this.canvas }));
+        this.configureActiveSelection();
+        this.updateTouchControls();
+        this.updateSelectionPanel();
+        this.canvas.requestRenderAll();
+      }
       this.updateHistoryButtons();
       this.setFeedback('Änderung übernommen');
     }
