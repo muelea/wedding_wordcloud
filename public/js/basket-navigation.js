@@ -35,15 +35,20 @@
       const baskets = list(storage);
       for (const host of hosts) {
         host.replaceChildren(); host.hidden = !baskets.length;
-        const heading = document.createElement('strong');
+        const heading = document.createElement('h2'); heading.className = 'ww-site-menu-label ww-basket-heading';
         const text = (element, source, params = {}) => globalThis.WolkenworteI18n
           ? globalThis.WolkenworteI18n.setText(element, source, params)
           : element.textContent = source.replace(/\{\{(\w+)\}\}/g, (_, key) => params[key] ?? '');
         text(heading, 'Warenkörbe in diesem Browser'); host.append(heading);
         baskets.forEach((basket, index) => {
-          const link = document.createElement('a'); link.className = 'ww-header-menu-item';
+          const link = document.createElement('a'); link.className = 'ww-header-menu-item ww-basket-link';
           link.href = `/e/${encodeURIComponent(basket.slug)}/configure?cart=1`;
-          text(link, '{{name}} · {{count}} Designs', { name: basket.title || String(index + 1), count: basket.count });
+          const name = document.createElement('span'); name.className = 'ww-basket-name';
+          if (basket.title.trim()) name.textContent = basket.title;
+          else text(name, 'Warenkorb {{number}}', { number: index + 1 });
+          const count = document.createElement('span'); count.className = 'ww-basket-count';
+          text(count, basket.count === 1 ? '{{count}} Design' : '{{count}} Designs', { count: basket.count });
+          link.append(name, document.createTextNode(' '), count);
           host.append(link);
         });
       }

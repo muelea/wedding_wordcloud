@@ -1251,5 +1251,8 @@
   "Die ausgewählten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.": "I design selezionati sostituiscono le loro versioni precedenti nel carrello. Non verranno aggiunti altri articoli.",
   "Ausgewählte Änderungen übernehmen und weiter": "Applica le modifiche selezionate e continua",
   "Bleibt im Warenkorb unverändert.": "Resta invariato nel carrello.",
-  "Wird nicht hinzugefügt.": "Non verrà aggiunto."
+  "Wird nicht hinzugefügt.": "Non verrà aggiunto.",
+  "Warenkorb {{number}}": "Carrello {{number}}",
+  "In Bearbeitung": "In modifica",
+  "Erneut prüfen": "Verifica di nuovo"
 }

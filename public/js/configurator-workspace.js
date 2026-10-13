@@ -106,6 +106,13 @@
       this.show(panel, trigger, !this.media.matches && typeof panel.showPopover === 'function');
     }
 
+    toggleDesignOptions() {
+      const panel = this.document.getElementById('editor-options-panel');
+      if (this.active?.panel === panel) return this.close();
+      this.close();
+      this.show(panel, this.resetButton, !this.media.matches && typeof panel.showPopover === 'function');
+    }
+
     show(panel, trigger, popover = false) {
       const embedded = this.mobileCanvas?.active && ['theme-panel', 'orientation-panel', 'editor-reset-panel', 'editor-overlap-panel'].includes(panel.id);
       const mode = embedded ? 'embedded' : popover ? 'popover' : 'modal';
@@ -166,9 +173,9 @@
       if (this.active?.panel !== this.resetPanel) this.close();
     }
 
-    requestReset(command) {
+    requestReset(command, trigger = this.resetButton) {
       this.close();
-      this.show(this.resetPanel, this.resetButton);
+      this.show(this.resetPanel, trigger);
       this.active.resetCommand = command;
     }
 

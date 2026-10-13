@@ -131,7 +131,7 @@ test('every header menu uses the one shared premium hamburger component', () => 
   assert.doesNotMatch(landing, /landing-menu-toggle-icon/);
   assert.doesNotMatch(display, /ww-display-menu-icon/);
   assert.match(siteHeaderStyles, /\.ww-menu-trigger \{[\s\S]*?width: 44px;[\s\S]*?border-radius: 50%;/);
-  assert.match(siteHeaderStyles, /\.ww-hamburger-icon i \{[\s\S]*?width: 18px;[\s\S]*?height: 1\.8px;/);
+  assert.match(siteHeaderStyles, /\.ww-hamburger-icon i \{[\s\S]*?width: 18px;[\s\S]*?height: 1px;/);
 });
 
 test('global language stays in the shared menu while compact back navigation stays outside it', () => {

@@ -98,8 +98,10 @@ those saved words or automatically search for the original event.
 
 Check when opening, returning to the editor and regaining visibility or focus.
 Provide an explicit **Aktuelle Wörter prüfen** action for designs with a live
-source. If continuous availability updates are wanted while the editor remains
-visible, use a bounded check, at most once per minute with one request in flight;
+source in desktop **Designoptionen** and mobile **Mehr**. The normal preview
+has no permanent source-check row; retryable failures show a compact message
+with **Erneut prüfen**. If continuous availability updates are wanted while the
+editor remains visible, use a bounded check, at most once per minute with one request in flight;
 only the notice can change. The canvas must never follow incoming words during
 manual editing. Hidden pages should not poll.
 

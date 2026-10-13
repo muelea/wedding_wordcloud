@@ -144,10 +144,12 @@
       this.placeOverlapTrigger();
       this.mount(get('surface-editor'), get('mobile-canvas-surfaces'));
       this.mount(this.document.querySelector('.editor-tools-primary'), get('mobile-canvas-add'));
-      for (const group of ['selection', 'layout', 'reset']) {
+      for (const group of ['selection', 'layout']) {
         this.mount(this.document.querySelector(`.editor-tools-${group}`), get('mobile-canvas-design-actions'));
       }
-      for (const id of ['cloud-update-notice', 'cloud-source-actions']) {
+      if (get('editor-options-actions')) this.mount(get('editor-options-actions'), get('mobile-canvas-more'));
+      else this.mount(this.document.querySelector('.editor-tools-reset'), get('mobile-canvas-design-actions'));
+      for (const id of ['cloud-update-notice']) {
         if (get(id)) this.mount(get(id), get('mobile-canvas-more'));
       }
       this.keyboardFields = ['editor-text', 'editor-angle', 'editor-font-size'].map(id => ({ field: get(id), readOnly: get(id).readOnly }));

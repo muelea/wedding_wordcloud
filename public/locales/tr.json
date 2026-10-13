@@ -1251,5 +1251,8 @@
   "Die ausgewählten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.": "Seçilen tasarımlar sepetinizdeki önceki sürümlerinin yerini alır. Ek ürün eklenmez.",
   "Ausgewählte Änderungen übernehmen und weiter": "Seçilen değişiklikleri uygula ve devam et",
   "Bleibt im Warenkorb unverändert.": "Sepetinizde değişmeden kalır.",
-  "Wird nicht hinzugefügt.": "Eklenmeyecek."
+  "Wird nicht hinzugefügt.": "Eklenmeyecek.",
+  "Warenkorb {{number}}": "Sepet {{number}}",
+  "In Bearbeitung": "Düzenleniyor",
+  "Erneut prüfen": "Yeniden kontrol et"
 }

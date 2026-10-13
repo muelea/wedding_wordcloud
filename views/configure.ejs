@@ -789,6 +789,10 @@
     .cloud-source-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .cloud-source-actions[hidden], .cloud-source-actions [hidden] { display: none; }
     .cloud-source-actions p { margin: 0; flex: 1 1 240px; font-size: 13px; color: var(--muted); }
+    .cloud-source-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .cloud-source-status[hidden] { display: none; }
+    .cloud-source-status p { margin: 0; }
+    .cloud-source-status button { flex: 0 0 auto; min-height: 44px; border: 0; background: transparent; color: var(--berry); font: inherit; cursor: pointer; padding: 8px; }
     #design-state-choice-dialog { max-width: min(600px, calc(100vw - 32px)); border: 0; border-radius: 20px; padding: 24px; color: var(--ink); }
     #design-state-choice-items { display: grid; gap: 8px; margin: 16px 0; }
     #design-state-choice-items img { width: 64px; height: 64px; object-fit: contain; }
@@ -1642,6 +1646,7 @@
       color: var(--muted);
       cursor: default;
     }
+    .order-current { display: inline-flex; align-items: center; min-height: 32px; max-width: 115px; color: var(--berry); font-size: 11px; font-weight: 600; line-height: 1.3; text-align: right; }
     .order-mockup:disabled { cursor: wait; opacity: .62; }
     .order-mockup-panel {
       grid-column: 1 / -1;
@@ -2195,11 +2200,11 @@
           <button id="apply-live-words" type="button">Mit aktuellen Wörtern neu gestalten</button>
           <button id="keep-live-design" type="button">Dieses Design behalten</button>
         </div>
-        <div class="cloud-source-actions" id="cloud-source-actions" hidden>
-          <button class="secondary-button" id="check-live-words" type="button">Aktuelle Wörter prüfen</button>
-          <button class="secondary-button" id="undo-cloud-rebuild" type="button" hidden>Neu erstelltes Design rückgängig</button>
-          <button class="secondary-button" id="redo-cloud-rebuild" type="button" hidden>Design erneut neu erstellen</button>
-          <p id="cloud-source-feedback" data-cloud-feedback role="status" aria-live="polite"></p>
+        <div class="cloud-source-status" id="cloud-source-status" hidden>
+          <p id="cloud-source-feedback" data-cloud-feedback="notice" role="status" aria-live="polite" hidden></p>
+          <button id="cloud-source-retry" type="button" hidden>Erneut prüfen</button>
+        </div>
+        <div id="empty-cloud-actions" hidden>
           <form id="empty-cloud-design-start" action="/design/start" method="post" hidden><button class="secondary-button" type="submit">Eigenes Design gestalten</button></form>
         </div>
         <div class="workspace-shell">
@@ -2243,8 +2248,8 @@
                 <button type="button" class="editor-button artwork-overlap-trigger" id="editor-overlap-trigger" data-panel-trigger="editor-overlap-panel" aria-haspopup="dialog" aria-controls="editor-overlap-panel" aria-expanded="false" aria-label="Überlagerungen prüfen" hidden>
                   <span aria-hidden="true">!</span><span id="editor-overlap-count" aria-hidden="true">0</span>
                 </button>
-                <div class="editor-tools editor-tools-separated editor-tools-reset" role="group" aria-label="Design zurücksetzen">
-                  <%- include('partials/editor-action', { action: { id: 'editor-reset', icon: 'refresh-cw', label: 'Design zurücksetzen', controls: 'editor-reset-panel' } }) %>
+                <div class="editor-tools editor-tools-separated editor-tools-reset" role="group" aria-label="Designoptionen">
+                  <%- include('partials/editor-action', { action: { id: 'editor-reset', icon: 'ellipsis', label: 'Designoptionen', controls: 'editor-options-panel' } }) %>
                 </div>
               </div>
               <div id="editor-desktop-inspector">
@@ -2469,6 +2474,18 @@
     </div>
   </dialog>
 
+  <dialog class="config-panel editor-options-panel" id="editor-options-panel" aria-labelledby="editor-options-title">
+    <div class="config-panel-head"><h2 id="editor-options-title" tabindex="-1">Designoptionen</h2><button class="ww-icon-button ww-close-button" type="button" data-panel-close aria-label="Schließen"></button></div>
+    <div class="config-panel-body" id="editor-options-actions">
+      <div class="cloud-source-actions" id="cloud-source-actions" hidden>
+        <button class="secondary-button" id="check-live-words" type="button">Aktuelle Wörter prüfen</button>
+        <button class="secondary-button" id="undo-cloud-rebuild" type="button" hidden>Neu erstelltes Design rückgängig</button>
+        <button class="secondary-button" id="redo-cloud-rebuild" type="button" hidden>Design erneut neu erstellen</button>
+        <p data-cloud-feedback role="status" aria-live="polite" hidden></p>
+      </div>
+      <button class="secondary-button" id="editor-options-reset" type="button">Design zurücksetzen</button>
+    </div>
+  </dialog>
   <dialog class="config-panel editor-reset-panel" id="editor-reset-panel" aria-labelledby="editor-reset-title" aria-describedby="editor-reset-description">
     <div class="config-panel-head"><h2 id="editor-reset-title" tabindex="-1">Design zurücksetzen?</h2></div>
     <div class="config-panel-body">
@@ -3592,11 +3609,10 @@
         copy.appendChild(draftStatus);
         const actions = document.createElement('div');
         actions.className = 'order-item-actions';
-        const edit = document.createElement('button');
-        edit.type = 'button';
-        edit.className = 'order-edit';
-        setText(edit, isEditing ? 'Geöffnet' : 'Öffnen');
-        edit.disabled = isEditing;
+        const edit = document.createElement(isEditing ? 'span' : 'button');
+        if (!isEditing) edit.type = 'button';
+        edit.className = isEditing ? 'order-current' : 'order-edit';
+        setText(edit, isEditing ? 'In Bearbeitung' : 'Öffnen');
         setTranslatedAttribute(edit, 'aria-label', isEditing
           ? '{{item}} ist zur Bearbeitung geöffnet'
           : '{{item}} öffnen und bearbeiten', { item: productName });
@@ -4170,15 +4186,24 @@
       if (apply) apply.disabled = cloudCheckPending || orderActionPending || !workspaceReady || restorationFailed || cloudSourceState !== 'ready';
       const check = document.getElementById('check-live-words');
       if (check) check.disabled = cloudCheckPending || orderActionPending || !workspaceReady || restorationFailed || cloudSourceState === 'unavailable';
+      const reset = document.getElementById('editor-options-reset');
+      if (reset) reset.disabled = orderActionPending || !workspaceReady || restorationFailed;
       const empty = document.getElementById('empty-cloud-design-start');
       if (empty) empty.hidden = directDesign || words.length > 0;
+      const emptyActions = document.getElementById('empty-cloud-actions');
+      if (emptyActions) emptyActions.hidden = directDesign || words.length > 0;
+      const retry = document.getElementById('cloud-source-retry');
+      if (retry) { retry.hidden = cloudSourceState !== 'error'; retry.disabled = cloudCheckPending || orderActionPending; }
       syncCloudHistory();
     }
 
-    function setCloudFeedback(source) {
+    function setCloudFeedback(source, { notice = false } = {}) {
       for (const element of document.querySelectorAll('[data-cloud-feedback]')) {
         if (source) setText(element, source); else clearText(element);
+        element.hidden = !source || (element.dataset?.cloudFeedback === 'notice' && !notice);
       }
+      const status = document.getElementById('cloud-source-status');
+      if (status) status.hidden = !source || !notice || directDesign;
     }
 
     async function fetchCloudWords() {
@@ -4208,7 +4233,7 @@
           // A deliberate recheck lets people reconsider a kept design.
           dismissedCloud = ''; scheduleDraftSave(0);
         }
-        if (!checked.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.');
+        if (!checked.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.', { notice: true });
         else if (explicit || sourceChanged) setCloudFeedback(wordsMatch(words, checked)
           ? 'Die Wortwolke hat keine neuen Änderungen.' : 'Die Wortwolke hat sich geändert. Euer Design bleibt unverändert.');
       } catch (error) {
@@ -4216,7 +4241,7 @@
         cloudSourceState = error.message === 'source_unavailable' ? 'unavailable' : 'error';
         setCloudFeedback(error.message === 'source_unavailable'
           ? 'Die Wortwolke ist nicht mehr verfügbar. Euer Design bleibt erhalten.'
-          : 'Die aktuellen Wörter konnten nicht geprüft werden. Euer Design bleibt unverändert. Bitte versucht es erneut.');
+          : 'Die aktuellen Wörter konnten nicht geprüft werden. Euer Design bleibt unverändert. Bitte versucht es erneut.', { notice: true });
       } finally {
         cloudCheckPending = false;
         lastCloudCheck = Date.now();
@@ -4286,10 +4311,10 @@
         await restoreWorkingCheckpoint(checkpoint);
         cloudRebuildUndo = direction === 'undo' ? null : current;
         cloudRebuildRedo = direction === 'undo' ? current : null;
-        setCloudFeedback(direction === 'undo' ? 'Vorheriges Design wiederhergestellt' : 'Design neu erstellt');
+        setCloudFeedback(direction === 'undo' ? 'Vorheriges Design wiederhergestellt' : 'Design neu erstellt', { notice: true });
       } catch (error) {
         await restoreWorkingCheckpoint(current, { rollback: true });
-        setCloudFeedback('Das Design konnte nicht wiederhergestellt werden. Bitte versucht es erneut.');
+        setCloudFeedback('Das Design konnte nicht wiederhergestellt werden. Bitte versucht es erneut.', { notice: true });
       } finally { orderActionPending = false; setOrderActionsBusy(false); syncCloudHistory(); }
     }
 
@@ -5016,7 +5041,7 @@
           dismissedCloud = '';
           cloudRebuildUndo = checkpoint;
           cloudRebuildRedo = null;
-          setCloudFeedback('Design neu erstellt. Gespeicherte Designs und Warenkorb bleiben unverändert.');
+          setCloudFeedback('Design neu erstellt. Gespeicherte Designs und Warenkorb bleiben unverändert.', { notice: true });
         } else { cloudRebuildUndo = null; cloudRebuildRedo = null; }
         updateCloudNotice();
         draftSavedRevision = -1;
@@ -5043,7 +5068,7 @@
         }
         if (options.refreshCloud) setCloudFeedback(error.message === 'no_words'
           ? 'Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.'
-          : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.');
+          : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.', { notice: true });
         setText(errorText, options.refreshCloud
           ? 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.'
           : 'Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.');
@@ -5374,14 +5399,7 @@
           markDirty();
           renderAll();
         },
-        onReset: () => workspace.requestReset(() => {
-          // Capture the current canvas before replacing it. Reset adds just one
-          // history step and leaves the other print side and palette intact.
-          mugEditor.recordHistory();
-          mugEditor.setDesign(buildAutomaticDesign(), { record: true });
-          mugEditor.setFeedback(directDesign ? 'Design zurückgesetzt' : 'Automatische Wortwolke wiederhergestellt');
-          markDirty();
-        }),
+        onReset: () => workspace.toggleDesignOptions(),
       });
       workspace.mobileCanvas = new MobileCanvasWorkspace({ document, editor: mugEditor, workspace,
         onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
@@ -5672,7 +5690,7 @@
           checked = await fetchCloudWords();
           liveWords = checked;
           cloudSourceState = checked.length ? 'ready' : 'empty';
-          if (!checked.length) { setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.'); return; }
+          if (!checked.length) { setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.', { notice: true }); return; }
           if (wordsMatch(words, checked)) {
             setCloudFeedback('Die Wortwolke hat keine neuen Änderungen.'); return;
           }
@@ -5681,7 +5699,7 @@
           cloudSourceState = error.message === 'source_unavailable' ? 'unavailable' : 'error';
           setCloudFeedback(error.message === 'source_unavailable'
             ? 'Die Wortwolke ist nicht mehr verfügbar. Euer Design bleibt erhalten.'
-            : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.');
+            : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.', { notice: true });
           return;
         } finally { orderActionPending = false; setOrderActionsBusy(false); updateCloudNotice(); }
         if ((currentDesignEdited || editingOrderItemId || accountDesignReference) && !await askDesignReplacement(
@@ -5694,6 +5712,17 @@
     }
     applyLiveWordsButton.addEventListener('click', () => { void refreshDesignFromCloud(); });
     document.getElementById('check-live-words').addEventListener('click', () => { void checkLiveWords({ explicit: true }); });
+    document.getElementById('cloud-source-retry').addEventListener('click', () => { void checkLiveWords({ explicit: true }); });
+    document.getElementById('editor-options-reset').addEventListener('click', () => {
+      if (!workspaceReady || orderActionPending) return;
+      workspace.requestReset(() => {
+        // Keep the existing one-step, current-side reset and its Undo.
+        mugEditor.recordHistory();
+        mugEditor.setDesign(buildAutomaticDesign(), { record: true });
+        mugEditor.setFeedback(directDesign ? 'Design zurückgesetzt' : 'Automatische Wortwolke wiederhergestellt');
+        markDirty();
+      }, workspace.mobileCanvas?.active ? document.getElementById('editor-options-reset') : undefined);
+    });
     document.getElementById('keep-live-design').addEventListener('click', () => {
       dismissedCloud = WolkenworteConfiguratorSession.wordSignature(liveWords);
       updateCloudNotice(); scheduleDraftSave();
@@ -5849,7 +5878,7 @@
           WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(words.map(([word]) => word))), 2);
         await showReadyWorkspace();
         updateCloudNotice();
-        if (!directDesign && !data.words.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.');
+        if (!directDesign && !data.words.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.', { notice: true });
       })
       .catch((error) => {
         content.inert = false;

@@ -91,7 +91,10 @@ frozen snapshot of the word cloud.
    and Done dismisses the keyboard while retaining the filter. Each completed
    transform or confirmed text/numeric edit is one Undo step. Add contains text, the complete searchable emoji picker and image
    upload; Add and More size to their content within the available viewport.
-   More holds Find element, Multi-select, Select all, Fill the area and Reset design.
+   More holds Find element, Multi-select, Select all, Fill the area, Check current
+   words and Reset design. Word checks and rebuild Undo/Redo appear directly in
+   More; the desktop toolbar groups them in Design options. The normal preview
+   has no permanent word-check row.
    Multi-select toggles individual members by tapping; Done locks the temporary group
    for the same move/scale/rotate gestures and one Undo step per transform.
    Adjustment controls prevent browser double-tap zoom while preserving canvas gestures.
@@ -1333,7 +1336,8 @@ or desktop dropdown. Font changes remain part of the existing Undo/Redo history.
 
 Toolbar actions use a locally bundled Lucide SVG subset with consistent 44px
 hit areas and localized accessible names/hover-and-focus tooltips. The four
-compact tool categories retain short visible labels. Reset is scoped to the
+compact tool categories retain short visible labels. Design options groups the
+manual word check, rebuild Undo/Redo and Reset. Reset is scoped to the
 current print side and restores its automatic cloud using the chosen palette;
 it requires a native confirmation dialog with initial focus on “Weiter
 bearbeiten”. Cancel, Escape and backdrop dismissal make no design changes.

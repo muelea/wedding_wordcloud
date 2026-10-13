@@ -41,9 +41,7 @@
 
 :is(button, summary).ww-icon-button[hidden] { display: none !important; }
 
-.ww-close-button::before,
-.ww-menu-trigger.ww-icon-button[aria-expanded="true"]::before,
-details[open] > .ww-menu-trigger.ww-icon-button::before {
+.ww-close-button::before {
   content: '';
   display: block;
   width: 18px;
@@ -54,8 +52,6 @@ details[open] > .ww-menu-trigger.ww-icon-button::before {
   pointer-events: none;
 }
 
-.ww-menu-trigger.ww-icon-button[aria-expanded="true"] .ww-hamburger-icon,
-details[open] > .ww-menu-trigger.ww-icon-button .ww-hamburger-icon { display: none; }
 .ww-pwa-dialog-heading .ww-icon-button { margin-left: auto; }
 .print-preview button.ww-icon-button:hover { background: rgba(64, 15, 38, .06); }
 
@@ -90,9 +86,7 @@ details[open] > .ww-menu-trigger.ww-icon-button .ww-hamburger-icon { display: no
 .product-dialog-head > div { flex: 1; min-width: 0; }
 
 @media (forced-colors: active) {
-  .ww-close-button::before,
-  .ww-menu-trigger.ww-icon-button[aria-expanded="true"]::before,
-  details[open] > .ww-menu-trigger.ww-icon-button::before {
+  .ww-close-button::before {
     background: ButtonText;
     forced-color-adjust: none;
   }

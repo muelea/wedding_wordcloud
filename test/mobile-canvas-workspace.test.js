@@ -36,6 +36,31 @@ test('desktop cannot open the mobile canvas even when compact or coarse media ma
   assert.equal(document.documentElement.classList.contains('mobile-canvas-open'), false);
 });
 
+test('mobile More reuses the design-options controls and returns them to the closed desktop panel on exit', async t => {
+  const {renderPage}=require('../src/pageRenderer');let html;
+  await renderPage({query:{lang:'en'},headers:{},originalUrl:'/e/test/configure'},{cookie(){},status(){},set(){},vary(){},send:value=>{html=value;}},'configure');
+  const {dom:initial,root,workspace}=fixture();initial.window.close();
+  const dom=new JSDOM(html);t.after(()=>dom.window.close());const document=dom.window.document;
+  dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+  dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  workspace.document=document;workspace.dialog=document.getElementById('mobile-canvas-dialog');
+  workspace.active=false;workspace.media={matches:true};workspace.mounts=[];
+  workspace.workspace={close(){},mountInspector(){}};
+  workspace.editor={closeFontPicker(){},closeIconPicker(){},setMobileViewport(){},clearSelection(){}};
+  workspace.placeOverlapTrigger=()=>{};workspace.syncViewport=()=>{};workspace.chooseTool=()=>{};
+  workspace.closeKeyboardEditor=()=>{};workspace.closeEmojiPicker=()=>{};workspace.closePicker=()=>{};
+  const actions=document.getElementById('editor-options-actions'),originalParent=actions.parentNode,check=document.getElementById('check-live-words');
+  let clicks=0;check.addEventListener('click',()=>{clicks++;});
+  assert.equal(workspace.open(document.getElementById('mobile-editor-toggle')),true);
+  assert.equal(check.closest('#mobile-canvas-more')!==null,true);
+  assert.equal(document.querySelector('#mobile-canvas-more #editor-reset'),null,'no redundant desktop submenu inside More');
+  check.click();assert.equal(clicks,1);
+  workspace.close();
+  assert.equal(actions.parentNode,originalParent);
+  assert.equal(document.getElementById('editor-options-panel').open,false);
+  assert.equal(document.getElementById('check-live-words'),check,'handlers and source state keep the same DOM node');
+});
+
 test('mobile text entry follows the visual viewport height and keyboard scroll offset', t => {
   const { dom, document, root, workspace } = fixture();
   t.after(() => dom.window.close());

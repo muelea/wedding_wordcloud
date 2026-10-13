@@ -246,6 +246,15 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 }
 .editor-tooltip[hidden] { display: none; }
 .editor-reset-panel .config-panel-body p { margin: 0; font-size: 15px; line-height: 1.6; }
+.editor-options-panel { max-width: min(340px, calc(100vw - 24px)); }
+#editor-options-actions { display: grid; gap: 4px; padding: 8px; }
+#editor-options-actions .cloud-source-actions { flex-direction: column; align-items: stretch; gap: 4px; }
+#editor-options-actions .secondary-button { width: 100%; text-align: left; color: var(--ink); }
+#editor-options-actions [data-cloud-feedback] { flex: 0 0 auto; padding: 8px 14px; font-size: 12px; }
+#mobile-canvas-more #editor-options-actions { grid-column: 1 / -1; padding: 0; }
+#mobile-canvas-more #editor-options-actions .secondary-button { font-size: 11px; padding: 8px; }
+#mobile-canvas-more > .cloud-update-notice { grid-column: 1 / -1; }
+#mobile-canvas-more:has(> .cloud-update-notice:not([hidden])) #cloud-source-actions [data-cloud-feedback] { display: none; }
 .editor-reset-panel .config-panel-body .editor-reset-note { margin-top: 12px; color: var(--muted); font-size: 13px; }
 .editor-reset-actions { display: flex; gap: 10px; }
 .editor-reset-actions .editor-button { font: inherit; font-size: 14px; }

@@ -1251,5 +1251,8 @@
   "Die ausgewählten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.": "The selected designs replace their previous versions in your cart. No additional items will be added.",
   "Ausgewählte Änderungen übernehmen und weiter": "Apply selected changes and continue",
   "Bleibt im Warenkorb unverändert.": "Remains unchanged in your cart.",
-  "Wird nicht hinzugefügt.": "Will not be added."
+  "Wird nicht hinzugefügt.": "Will not be added.",
+  "Warenkorb {{number}}": "Cart {{number}}",
+  "In Bearbeitung": "Currently editing",
+  "Erneut prüfen": "Check again"
 }

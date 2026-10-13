@@ -114,6 +114,28 @@ test('confirmation can be cancelled and consumes an accepted reset exactly once'
   assert.equal(calls.filter(call => call === 'reset').length, 1);
 });
 
+test('source controls live in a dismissible design-options panel without occupying the normal workspace', async () => {
+  for(const locale of ['de','en','fr','it','es','tr']){
+    const page=await rendered(locale),byId=id=>nodes(page,node=>attr(node,'id')===id)[0];
+    const options=byId('editor-options-panel');
+    assert.equal(options.tagName,'dialog');
+    assert.equal(attr(byId('editor-reset'),'aria-controls'),'editor-options-panel');
+    assert.ok(nodes(options,node=>attr(node,'id')==='check-live-words').length);
+    assert.ok(nodes(options,node=>attr(node,'id')==='undo-cloud-rebuild').length);
+    assert.ok(nodes(options,node=>attr(node,'id')==='editor-options-reset').length);
+    assert.equal(attr(byId('cloud-source-status'),'hidden'),'');
+    assert.equal(attr(byId('cloud-source-feedback'),'hidden'),'');
+    assert.ok(nodes(options,node=>attr(node,'data-panel-close')!==undefined).length);
+  }
+  const workspace=Object.create(WolkenworteWorkspace.prototype),panel={showPopover(){}};
+  workspace.document={getElementById:()=>panel};workspace.resetButton={};workspace.media={matches:false};workspace.active=null;
+  let opened=0,closed=0;
+  workspace.close=()=>{workspace.active=null;closed++;};
+  workspace.show=(shown,trigger,popover)=>{assert.equal(shown,panel);assert.equal(trigger,workspace.resetButton);assert.equal(popover,true);workspace.active={panel};opened++;};
+  workspace.toggleDesignOptions();workspace.toggleDesignOptions();
+  assert.equal(opened,1);assert.equal(closed,2);assert.equal(workspace.active,null);
+});
+
 test('tooltip placement clamps to all viewport edges without moving the trigger', () => {
   for (const width of [320, 390, 620, 940, 1440]) {
     for (const height of [320, 844]) {

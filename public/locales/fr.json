@@ -1251,5 +1251,8 @@
   "Die ausgewählten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.": "Les designs sélectionnés remplacent leurs versions précédentes dans votre panier. Aucun article supplémentaire ne sera ajouté.",
   "Ausgewählte Änderungen übernehmen und weiter": "Appliquer les modifications sélectionnées et continuer",
   "Bleibt im Warenkorb unverändert.": "Reste inchangé dans votre panier.",
-  "Wird nicht hinzugefügt.": "Ne sera pas ajouté."
+  "Wird nicht hinzugefügt.": "Ne sera pas ajouté.",
+  "Warenkorb {{number}}": "Panier {{number}}",
+  "In Bearbeitung": "En cours de modification",
+  "Erneut prüfen": "Vérifier à nouveau"
 }

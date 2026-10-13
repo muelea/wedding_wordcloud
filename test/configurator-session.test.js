@@ -1655,3 +1655,46 @@ test('source and rebuild history actions re-enable when the workspace leaves its
   assert.equal(nodes.get('check-live-words').disabled, false);
   assert.equal(nodes.get('undo-cloud-rebuild').disabled, false);
 });
+
+test('the active cart item is a status rather than an indistinguishable Open action', async () => {
+  const {JSDOM}=require('jsdom'),{translate}=require('../src/i18n');
+  const dom=new JSDOM('<div id="list"></div><span id="count"></span>');
+  try {
+    const {context:page,cart,calls}=harness();
+    cart.write([{id:id('a'),productKey:'mug'},{id:id('b'),productKey:'mug'}]);
+    const before=JSON.stringify(cart.read());
+    page.document=dom.window.document;page.orderList=page.document.getElementById('list');page.orderCount=page.document.getElementById('count');
+    page.updateHeaderCart=()=>{};page.selectedOrientationOption=()=>null;page.createOrderItemThumbnail=()=>page.document.createElement('img');
+    page.printfulMockupStates=new Map();page.PRINTFUL_MOCKUP_TOOLS_ENABLED=false;
+    page.setText=(element,source,params)=>{element.textContent=translate(source,'en',params);};
+    page.setTranslatedAttribute=(element,name,source,params)=>element.setAttribute(name,translate(source,'en',params));
+    page.editingOrderItemId=id('a');vm.runInContext(pageFunction('renderOrderBox'),page);page.renderOrderBox();
+    const current=page.orderList.querySelector('[aria-current="true"]');
+    assert.equal(current.tagName,'SPAN');assert.equal(current.textContent,'Currently editing');
+    assert.equal(page.orderList.querySelectorAll('.order-edit').length,1);
+    assert.equal(page.orderList.querySelector('.order-edit').textContent,'Open');
+    page.orderList.querySelector('.order-edit').click();await new Promise(setImmediate);assert.deepEqual(calls.opened,[id('b')]);
+    page.editingOrderItemId=id('b');page.renderOrderBox();
+    assert.equal(page.orderList.children[1].querySelector('[aria-current="true"]').tagName,'SPAN');
+    assert.equal(page.orderList.children[0].querySelector('.order-edit').disabled,false);
+    assert.equal(JSON.stringify(cart.read()),before);
+  } finally {dom.window.close();}
+});
+
+test('ordinary source feedback stays in options while actionable feedback can occupy a compact notice', () => {
+  const {JSDOM}=require('jsdom');
+  const dom=new JSDOM('<div id="cloud-source-status" hidden><p data-cloud-feedback="notice" hidden></p></div><p id="options-feedback" data-cloud-feedback hidden></p>');
+  try {
+    const {context:page}=harness();page.document=dom.window.document;
+    vm.runInContext(pageFunction('setCloudFeedback'),page);
+    page.setCloudFeedback('No new words');
+    assert.equal(page.document.getElementById('cloud-source-status').hidden,true);
+    assert.equal(page.document.getElementById('options-feedback').hidden,false);
+    page.setCloudFeedback('Please retry',{notice:true});
+    assert.equal(page.document.getElementById('cloud-source-status').hidden,false);
+    assert.equal(page.document.querySelector('[data-cloud-feedback="notice"]').hidden,false);
+    page.setCloudFeedback('');
+    assert.equal(page.document.getElementById('cloud-source-status').hidden,true);
+    assert.ok([...page.document.querySelectorAll('[data-cloud-feedback]')].every(element=>element.hidden));
+  } finally {dom.window.close();}
+});
