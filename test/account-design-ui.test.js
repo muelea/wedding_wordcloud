@@ -13,12 +13,12 @@ const {publicAssetUrl} = require('../src/publicAssets');
 const {SITE_FONT_ASSETS, siteFontPreloads} = require('../src/siteFonts');
 const locales = ['de', 'en', 'fr', 'it', 'es', 'tr'];
 const owner = {id: '41139ef6-90f5-400d-bac5-8b7365f88428', email: 'test@example.invalid'};
-function render(view, locale = 'en', page = 'library', enabled = true) {
+function render(view, locale = 'en', page = 'library', enabled = true, {user = null, available = enabled} = {}) {
   const filename = path.join(__dirname, '..', 'views', view);
   const html = ejs.render(fs.readFileSync(filename, 'utf8'), {
     locale, localeSource: 'query', localeCatalogUrl: '', localeCatalogUrls: {},
     header: {variant: view.includes('site-header') ? 'landing' : 'back', id: 'site-header', mobileMenu: true},
-    pageData: {accountPage: page, accountAvailable: true, returnTo: '/konto'},
+    pageData: {accountPage: page, accountAvailable: available, accountUser: user, returnTo: '/konto'},
     designAccountsEnabled: enabled, analyticsMeasurementId: '',
     languages: locales.map(code => ({code, name: Renderer.LANGUAGE_NAMES[code], flag: Renderer.LANGUAGE_FLAGS[code], href: `?lang=${code}`})),
     asset: publicAssetUrl, siteFontAssets: SITE_FONT_ASSETS, siteFontPreloads,
@@ -27,8 +27,9 @@ function render(view, locale = 'en', page = 'library', enabled = true) {
   return localizeHtml(html, locale);
 }
 const settle = async () => {for (let i = 0; i < 20; i++) await new Promise(resolve => setImmediate(resolve));};
-function mount(t, {user = owner, designs = [], page = 'library', locale = 'en', deferredSession = null, failLogout = false} = {}) {
-  const dom = new JSDOM(render('account.ejs', locale, page), {url: 'https://wolkenworte.invalid/konto'});
+function mount(t, {user = owner, serverUser = user, designs = [], page = 'library', locale = 'en', deferredSession = null,
+  deferredDesigns = null, failRequest = null, failLogout = false} = {}) {
+  const dom = new JSDOM(render('account.ejs', locale, page, true, {user:serverUser}), {url: 'https://wolkenworte.invalid/konto'});
   t.after(() => dom.window.close());
   const document = dom.window.document;
   Object.defineProperty(document, 'readyState', {value: 'complete'});
@@ -46,9 +47,10 @@ function mount(t, {user = owner, designs = [], page = 'library', locale = 'en', 
     URLSearchParams, Intl, AbortSignal, setTimeout, clearTimeout,
     fetch: async (url, options) => {
       calls.push({url, options});
+      if(failRequest && url.endsWith(`/${failRequest}`))throw new TypeError('Unavailable');
       let data = {ok:true};
       if (url.endsWith('/session')) data = deferredSession ? await deferredSession : {user};
-      if (url.endsWith('/designs')) data = {designs};
+      if (url.endsWith('/designs')) data = deferredDesigns ? await deferredDesigns : {designs};
       if (url.endsWith('/open')) data = {url:'/e/new-workspace/configure?accountDesign=private'};
       return {ok: !(failLogout && url.endsWith('/logout')),json:async()=>data};
     }};
@@ -57,6 +59,78 @@ function mount(t, {user = owner, designs = [], page = 'library', locale = 'en', 
     return vm.runInNewContext(fs.readFileSync(file,'utf8'),context);
   }};
 }
+test('the first server render shows the verified account layout before JavaScript runs', t => {
+  for(const locale of locales)for(const page of ['library','signin']){
+    const h=mount(t,{locale,page}),account=h.document.getElementById('account-page');
+    assert.equal(account.classList.contains('is-signin'),false);
+    assert.equal(h.document.querySelector('[data-account-signin]').hidden,true);
+    assert.equal(h.document.querySelector('[data-account-navigation]').hidden,false);
+    assert.equal(h.document.querySelector('[data-account-email]').textContent,owner.email);
+    assert.equal(h.document.querySelector('[data-account-email]').hidden,false);
+    assert.equal(h.document.querySelector('[data-account-logout]').hidden,false);
+    const loading=h.document.querySelector('[data-account-loading]');
+    assert.equal(loading.hidden,false);
+    assert.equal(loading.textContent,I18n.translate('Deine Designs werden geladen…',locale));
+    if(locale!=='de')assert.notEqual(loading.textContent,'Deine Designs werden geladen…');
+    assert.equal(h.calls.length,0);
+  }
+});
+test('server account data is escaped and signed-out, recovery and unavailable pages retain the sign-in layout', t => {
+  const user={...owner,email:'<img src=x onerror=alert(1)>"&'};
+  const h=mount(t,{user});
+  assert.equal(h.document.querySelector('[data-account-email]').textContent,user.email);
+  assert.equal(h.document.querySelector('[data-account-email] img'),null);
+  assert.deepEqual(JSON.parse(h.document.getElementById('account-page').dataset.accountUser),user);
+  for(const {user,available} of [{user:null,available:true},{user:{...owner,recovery:true},available:true},{user:owner,available:false}]){
+    const dom=new JSDOM(render('account.ejs','en','library',true,{user,available}));
+    t.after(()=>dom.window.close());const doc=dom.window.document;
+    assert.equal(doc.getElementById('account-page').classList.contains('is-signin'),true);
+    assert.equal(doc.querySelector('[data-account-signin]').hidden,!available);
+    for(const selector of ['[data-account-navigation]','[data-account-email]','[data-account-logout]','[data-account-loading]']){
+      assert.equal(doc.querySelector(selector).hidden,true);
+    }
+  }
+});
+test('delayed session and design responses never reveal sign-in or a provisional empty library', async t => {
+  let finishSession,finishDesigns;
+  const deferredSession=new Promise(resolve=>{finishSession=resolve;});
+  const deferredDesigns=new Promise(resolve=>{finishDesigns=resolve;});
+  const h=mount(t,{deferredSession,deferredDesigns});
+  h.run('public/js/account.js');await settle();
+  const signin=h.document.querySelector('[data-account-signin]'),loading=h.document.querySelector('[data-account-loading]');
+  const library=h.document.querySelector('[data-account-library]');
+  assert.equal(signin.hidden,true);assert.equal(loading.hidden,false);assert.equal(library.hidden,true);
+  finishSession({user:owner});await settle();
+  assert.equal(signin.hidden,true);assert.equal(loading.hidden,false);assert.equal(library.hidden,true);
+  h.document.getElementById('account-settings-tab').click();
+  assert.equal(h.document.querySelector('[data-account-settings]').hidden,false);
+  assert.equal(loading.hidden,true);assert.equal(signin.hidden,true);
+  h.document.getElementById('account-designs-tab').click();assert.equal(loading.hidden,false);
+  finishDesigns({designs:[]});await settle();
+  assert.equal(signin.hidden,true);assert.equal(loading.hidden,true);assert.equal(library.hidden,false);
+  assert.equal(h.document.querySelector('[data-account-empty]').hidden,false);
+});
+test('failed initial account requests clear the loading state without flashing the login form', async t => {
+  for(const failRequest of ['session','designs']){
+    const h=mount(t,{failRequest});h.run('public/js/account.js');await settle();
+    assert.equal(h.document.querySelector('[data-account-signin]').hidden,true);
+    assert.equal(h.document.querySelector('[data-account-loading]').hidden,true);
+    assert.equal(h.document.querySelector('[data-account-library]').hidden,true);
+    assert.equal(h.document.getElementById('account-page-status').dataset.error,'true');
+    assert.match(h.document.getElementById('account-page-status').textContent,/try again/i);
+    h.document.getElementById('account-settings-tab').click();
+    h.document.getElementById('account-designs-tab').click();
+    assert.equal(h.document.querySelector('[data-account-loading]').hidden,true);
+  }
+});
+test('session revalidation still reveals sign-in when the server-rendered session has ended', async t => {
+  const h=mount(t,{user:null,serverUser:owner});h.run('public/js/account.js');await settle();
+  assert.equal(h.document.querySelector('[data-account-signin]').hidden,false);
+  assert.equal(h.document.querySelector('[data-account-navigation]').hidden,true);
+  assert.equal(h.document.querySelector('[data-account-loading]').hidden,true);
+  assert.equal(h.document.getElementById('account-page').classList.contains('is-signin'),true);
+  assert.equal(h.calls.some(call=>call.url.endsWith('/designs')),false);
+});
 test('rename titles are localized and deletion initially focuses Cancel without deleting anything', async t => {
   for (const locale of locales) {
     await t.test(locale, async t => {

@@ -299,7 +299,8 @@
       camera.aspect = rect.width / rect.height;
       const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
       const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * camera.aspect);
-      const distance = framingRadius / (Math.sin(Math.min(verticalHalfFov, horizontalHalfFov)) * .88);
+      const fill = options.framingFill?.() ?? .88;
+      const distance = framingRadius / (Math.sin(Math.min(verticalHalfFov, horizontalHalfFov)) * fill);
       camera.position.copy(cameraDirection).multiplyScalar(Math.max(defaultCameraDistance, distance));
       camera.far = Math.max(100, distance + framingRadius * 2);
       camera.updateProjectionMatrix();

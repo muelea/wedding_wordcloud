@@ -108,6 +108,49 @@ test('portrait preview fits every mug and handle, including rotation, and restor
   }
 });
 
+test('compact purchase framing enlarges the mug without cropping rotation or leaking into other views', () => {
+  for (const product of require('../src/products').getPublicProducts().filter(product => product.previewType === 'mug')) {
+    for (const size of [{ before: 247, after: 275, scale: 1.15 }, { before: 317, after: 345, scale: 1.25 }]) {
+      const { root, host, THREE } = fixture();
+      let width = size.before, height = 250, purchasePreview = false;
+      host.getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
+      const viewer = root.Mug3DViewer.create({ host, THREE, product,
+        framingFill: () => purchasePreview ? .96 : .88 });
+      const bounds = () => {
+        viewer.group.updateMatrixWorld(true); viewer.camera.updateMatrixWorld();
+        const point = new THREE.Vector3(), result = { left: 1, right: -1, top: -1, bottom: 1 };
+        viewer.group.traverse(object => {
+          const positions = object.geometry?.attributes.position;
+          for (let index = 0; index < (positions?.count || 0); index++) {
+            point.fromBufferAttribute(positions, index).applyMatrix4(object.matrixWorld).project(viewer.camera);
+            result.left = Math.min(result.left, point.x); result.right = Math.max(result.right, point.x);
+            result.top = Math.max(result.top, point.y); result.bottom = Math.min(result.bottom, point.y);
+          }
+        });
+        return result;
+      };
+      const before = bounds(), oldHeight = (before.top - before.bottom) * height;
+      width = size.after; height = 302; purchasePreview = true; viewer.resize();
+      const after = bounds(), purchaseDistance = viewer.camera.position.length();
+      assert.ok((after.top - after.bottom) * height > oldHeight * size.scale, 'the purchase preview is noticeably larger');
+      for (const pitch of [-Math.PI / 6, 0, Math.PI / 6]) {
+        for (let yaw = 0; yaw < Math.PI * 2; yaw += Math.PI / 4) {
+          viewer.group.rotation.set(pitch, yaw, 0);
+          const rotated = bounds();
+          assert.ok(Object.values(rotated).every(value => Math.abs(value) < .98), `${product.key}: rotation retains visible padding`);
+        }
+      }
+      width = 844; height = 310; purchasePreview = false; viewer.resize();
+      const ordinary = root.Mug3DViewer.create({ host, THREE, product });
+      assert.equal(viewer.camera.position.length(), ordinary.camera.position.length(), 'desktop and canvas Product views keep their existing framing');
+      ordinary.destroy();
+      width = size.after; height = 302; purchasePreview = true; viewer.resize();
+      assert.equal(viewer.camera.position.length(), purchaseDistance, 'returning to the purchase preview does not accumulate zoom');
+      viewer.destroy();
+    }
+  }
+});
+
 test('touches on the mug exclusively rotate in both axes while transparent space remains scrollable', () => {
   const { root, host, THREE } = fixture();
   const viewer = root.Mug3DViewer.create({ host, THREE });

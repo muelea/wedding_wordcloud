@@ -1989,6 +1989,14 @@
       }
       .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 10px -20px 0; padding: 4px 14px 14px; gap: 22px; }
       .mug-viewer { height: min(250px, calc(var(--workspace-stage-height) - 42px)); }
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .mug-stage:not(.is-flat-product) {
+        --mobile-mug-preview-height: clamp(300px, 84vw, 340px);
+        height: var(--mobile-mug-preview-height);
+        padding-inline: 0;
+      }
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .mug-stage:not(.is-flat-product) .mug-viewer {
+        height: calc(var(--mobile-mug-preview-height) - 18px);
+      }
       .mug-name { margin-top: 0; font-size: 11px; }
       .preview-disclaimer { max-width: 300px; margin-top: 7px; font-size: 10.5px; }
       .surface-editor { align-items: center; flex-direction: row; }
@@ -4573,6 +4581,7 @@
           host: mugViewer,
           interactionElement: mugViewer,
           rotateAnywhere: () => workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product',
+          framingFill: () => mobileDevice && mobileEditorMedia.matches && !mobileEditorExpanded && !workspace.mobileCanvas?.active ? .96 : .88,
           product,
           onStatus: (state) => { if (generation === mug3DGeneration) setMugPreviewState(state); },
           drawTexture: (ctx, { offsetX, offsetY }) => {

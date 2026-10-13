@@ -14,21 +14,24 @@
   <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
 </head>
 <body class="ww-account-body">
+  <% const accountUser = pageData.accountAvailable ? pageData.accountUser || null : null;
+     const accountSignedIn = Boolean(accountUser && !accountUser.recovery); %>
   <%- include('partials/site-header') %>
-  <main class="ww-account-main is-signin" id="account-page" data-page="<%= pageData.accountPage %>" data-return-to="<%= pageData.returnTo %>" data-available="<%= pageData.accountAvailable %>">
+  <main class="ww-account-main<%= accountSignedIn ? '' : ' is-signin' %>" id="account-page" data-page="<%= pageData.accountPage %>" data-return-to="<%= pageData.returnTo %>" data-available="<%= pageData.accountAvailable %>" data-account-user="<%= JSON.stringify(accountUser) %>">
     <div class="ww-account-heading">
-      <div class="ww-account-heading-title"><h1>Mein Konto</h1><p class="ww-account-small" data-account-email data-i18n-ignore hidden></p></div>
-      <button class="ww-account-signout" type="button" data-account-logout hidden>Abmelden</button>
+      <div class="ww-account-heading-title"><h1>Mein Konto</h1><p class="ww-account-small" data-account-email data-i18n-ignore <%= accountSignedIn ? '' : 'hidden' %>><%= accountSignedIn ? accountUser.email : '' %></p></div>
+      <button class="ww-account-signout" type="button" data-account-logout <%= accountSignedIn ? '' : 'hidden' %>>Abmelden</button>
     </div>
     <p id="account-page-status" role="status" aria-live="polite"></p>
     <% if (!pageData.accountAvailable) { %><p>Das Speichern im Konto ist gerade nicht verfügbar. Du kannst weiterhin ohne Konto gestalten und bestellen.</p><% } %>
-    <div class="ww-account-signin" data-account-signin <%= !pageData.accountAvailable ? 'hidden' : '' %>>
+    <div class="ww-account-signin" data-account-signin <%= accountSignedIn || !pageData.accountAvailable ? 'hidden' : '' %>>
       <%- include('partials/account-auth') %>
     </div>
-    <nav class="ww-account-navigation" data-account-navigation role="tablist" aria-label="Mein Konto" hidden>
+    <nav class="ww-account-navigation" data-account-navigation role="tablist" aria-label="Mein Konto" <%= accountSignedIn ? '' : 'hidden' %>>
       <button type="button" id="account-designs-tab" data-account-tab="designs" role="tab" aria-selected="true" aria-controls="account-designs-panel">Meine Designs</button>
       <button type="button" id="account-settings-tab" data-account-tab="settings" role="tab" aria-selected="false" aria-controls="account-settings-panel" tabindex="-1">Einstellungen</button>
     </nav>
+    <p class="ww-account-small" data-account-loading role="status" <%= accountSignedIn ? '' : 'hidden' %>>Deine Designs werden geladen…</p>
     <section class="ww-design-library" id="account-designs-panel" data-account-library role="tabpanel" aria-labelledby="account-designs-tab" hidden>
       <div class="ww-account-library-heading"><p class="ww-account-small" data-account-usage hidden><span data-account-count></span> · <span data-account-storage></span></p><div class="ww-account-library-toolbar" data-account-library-toolbar><%- include('partials/account-new-design') %></div></div>
       <div class="ww-account-grid" data-account-design-list></div>

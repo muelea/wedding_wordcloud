@@ -99,14 +99,17 @@
     const page=document.getElementById('account-page');if(!page||page.dataset.available!=='true')return;
     await I()?.ready?.();
     const notice=document.getElementById('account-page-status');
-    let current=null,pendingEmail=null;
+    // The server has already verified this session before rendering the page.
+    let current=JSON.parse(page.dataset.accountUser||'null'),pendingEmail=null;
+    let libraryReady=false,libraryLoading=Boolean(current&&!current.recovery);
     let section=location.hash==='#einstellungen'||page.dataset.page==='settings'?'settings':'designs';
     const sectionButtons=[...page.querySelectorAll('[data-account-tab]')];
     function showSection(next,{updateUrl=false}={}){
       section=next==='settings'?'settings':'designs';
       const loggedIn=Boolean(current&&!current.recovery);
       page.querySelector('[data-account-navigation]').hidden=!loggedIn;
-      page.querySelector('[data-account-library]').hidden=!loggedIn||section!=='designs';
+      page.querySelector('[data-account-library]').hidden=!loggedIn||section!=='designs'||!libraryReady;
+      page.querySelector('[data-account-loading]').hidden=!loggedIn||section!=='designs'||!libraryLoading;
       page.querySelector('[data-account-settings]').hidden=!loggedIn||section!=='settings';
       page.querySelector('[data-account-usage]').hidden=!loggedIn;
       page.querySelector('[data-account-email]').hidden=!loggedIn;
@@ -118,6 +121,7 @@
       });
       if(updateUrl)history.replaceState(null,'',location.pathname+(location.search||'')+(section==='settings'?'#einstellungen':''));
     }
+    showSection(section);
     sectionButtons.forEach((button,index)=>{
       button.addEventListener('click',()=>showSection(button.dataset.accountTab,{updateUrl:true}));
       button.addEventListener('keydown',event=>{
@@ -134,18 +138,26 @@
     if(new URLSearchParams(location.search).has('error'))status(notice,'Die Google-Anmeldung konnte nicht abgeschlossen werden. Bitte versuche es erneut.',true);
 
     async function refresh(){
-      const data=await api('session');current=data.user;
-      const loggedIn=Boolean(current&&!current.recovery);
-      page.classList.toggle('is-signin',!loggedIn);
-      page.querySelector('[data-account-signin]').hidden=loggedIn;
-      showSection(section);
-      root.dispatchEvent?.(new root.CustomEvent('wolkenworte:accountchange',{detail:{user:loggedIn?current:null}}));
-      if(current?.recovery){authControl.recovery();return;}
-      if(!loggedIn)return;
-      if(page.dataset.page==='signin'){location.assign(page.dataset.returnTo);return;}
-      page.querySelector('[data-account-email]').textContent=current.email;
-      if(current.newEmail)showEmailCodes(current.email,current.newEmail);
-      await loadLibrary();
+      libraryLoading=true;
+      try {
+        const data=await api('session');
+        if(current?.id!==data.user?.id)libraryReady=false;
+        current=data.user;
+        const loggedIn=Boolean(current&&!current.recovery);
+        page.classList.toggle('is-signin',!loggedIn);
+        page.querySelector('[data-account-signin]').hidden=loggedIn;
+        showSection(section);
+        root.dispatchEvent?.(new root.CustomEvent('wolkenworte:accountchange',{detail:{user:loggedIn?current:null}}));
+        if(current?.recovery){authControl.recovery();return;}
+        if(!loggedIn)return;
+        if(page.dataset.page==='signin'){location.assign(page.dataset.returnTo);return;}
+        page.querySelector('[data-account-email]').textContent=current.email;
+        if(current.newEmail)showEmailCodes(current.email,current.newEmail);
+        await loadLibrary();
+        libraryReady=true;
+      } finally {
+        libraryLoading=false;showSection(section);
+      }
     }
 
     async function confirm({title,description,action='Bestätigen',name=null}){
