@@ -129,8 +129,6 @@
     .start-dialog-form { display: grid; gap: 20px; max-height: inherit; padding: 30px; overflow-y: auto; overscroll-behavior: contain; }
     .start-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
     .start-dialog h2 { margin: 0; font: 500 clamp(1.65rem, 4vw, 2rem)/1.15 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; letter-spacing: -.02em; }
-    .start-dialog-close { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 28px/1 system-ui, sans-serif; cursor: pointer; }
-    .start-dialog-close:hover, .start-dialog-close:focus-visible { background: rgba(156,28,76,.08); color: var(--sage-deep); }
     .start-dialog-copy { margin: -9px 0 0; color: var(--muted); font-size: .94rem; line-height: 1.6; }
     .start-dialog-label { display: grid; gap: 8px; color: var(--ink); font-size: .84rem; font-weight: 600; }
     .start-dialog-input { width: 100%; height: 54px; padding: 0 16px; border: 1px solid var(--gold-line); border-radius: 14px; outline: none; background: #fff; color: var(--ink); font: 1rem 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
@@ -410,6 +408,7 @@
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
+  <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
 </head>
 <body>
   <div id="intro-overlay">
@@ -938,7 +937,7 @@
     <form class="start-dialog-form" id="start-dialog-form" action="/start" method="post">
       <div class="start-dialog-heading">
         <h2 id="start-dialog-title">Wie soll eure Wortwolke heißen?</h2>
-        <button class="start-dialog-close" id="start-dialog-close" type="button" aria-label="Startdialog schließen" data-i18n-aria-label-source="Startdialog schließen">×</button>
+        <button class="ww-icon-button ww-close-button start-dialog-close" id="start-dialog-close" type="button" aria-label="Startdialog schließen" data-i18n-aria-label-source="Startdialog schließen"></button>
       </div>
       <p class="start-dialog-copy">Wählt einen Namen, den alle sofort erkennen. Ihr könnt ihn später ändern.</p>
       <label class="start-dialog-label" for="start-cloud-name">Name der Wortwolke

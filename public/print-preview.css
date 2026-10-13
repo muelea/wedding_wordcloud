@@ -19,7 +19,7 @@
 .print-preview button { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
 .print-preview button:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-soft); }
 .print-preview button:focus-visible, .print-preview-viewport:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
-.print-preview .print-preview-close { grid-column: 3; grid-row: 1; padding: 0; font-size: 26px; }
+.print-preview .print-preview-close { grid-column: 3; grid-row: 1; }
 .print-preview-surfaces { display: flex; align-items: center; gap: 6px; }
 .print-preview-surfaces button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
 .print-preview-viewport { position: relative; box-sizing: content-box; height: 300px; min-height: 0; overflow: hidden; background: var(--surface-soft); border-top: 1px solid var(--line); }

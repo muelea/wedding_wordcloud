@@ -234,21 +234,7 @@
       transform: translateY(-50%);
       pointer-events: none;
     }
-    .search-input-clear {
-      width: 44px;
-      height: 44px;
-      position: absolute;
-      right: 0;
-      top: 0;
-      border: 0;
-      border-radius: 9px;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 24px;
-      line-height: 1;
-    }
-    .search-input-clear:hover { background: rgba(64, 15, 38, .06); color: var(--ink); }
+    .search-input-clear { position: absolute; right: 0; top: 0; }
     .search-results {
       max-height: 238px;
       margin-top: 8px;
@@ -347,6 +333,7 @@
   <link rel="stylesheet" href="<%= asset('/print-preview.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
+  <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
 </head>
 <body>
   <%- include('partials/site-header') %>
@@ -786,9 +773,8 @@
       setTranslatedAttribute(search, 'aria-label', searchPlaceholder);
       search.setAttribute('aria-controls', `${pickerId}-results`);
       const clearSearch = document.createElement('button');
-      clearSearch.className = 'search-input-clear';
+      clearSearch.className = 'search-input-clear ww-icon-button ww-close-button';
       clearSearch.type = 'button';
-      clearSearch.textContent = '×';
       setTranslatedAttribute(clearSearch, 'aria-label', 'Suche löschen');
       searchWrap.append(searchIcon, search, clearSearch);
 

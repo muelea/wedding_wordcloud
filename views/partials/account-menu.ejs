@@ -1,1 +1,8 @@
-<a class="ww-header-menu-item" href="/konto" data-account-menu data-account-library-link>Mein Konto</a>
+<div class="ww-account-menu" data-account-menu-group data-account-drafts-url="<%= asset('/js/configurator-session.js') %>">
+  <a class="ww-header-menu-item ww-account-menu-link" href="/konto" data-account-menu data-account-library-link>
+    <span data-account-menu-label>Mein Konto</span>
+    <span class="ww-account-menu-email" data-account-menu-email data-i18n-ignore hidden></span>
+  </a>
+  <button class="ww-header-menu-item" type="button" data-account-menu-logout hidden>Abmelden</button>
+  <p class="ww-account-menu-status" data-account-menu-status role="status" aria-live="polite" hidden></p>
+</div>

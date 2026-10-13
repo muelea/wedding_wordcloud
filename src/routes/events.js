@@ -1056,7 +1056,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     if (!event) return res.status(404).json({ error: 'event not found' });
     const directDesign = isDirectDesignEvent(event);
     const words = await db.getWords(event.id);
-    if (!words.length && !directDesign) return res.status(409).json({ error: 'no_words' });
+    // Restoration needs the catalog even after an organizer clears the cloud.
+    // This read flag grants no creation privilege: approval still validates the
+    // submitted snapshot and all print sides at its existing trust boundary.
+    if (!words.length && !directDesign && req.query.restore !== '1') return res.status(409).json({ error: 'no_words' });
     res.json({
       event: {
         slug: event.slug,

@@ -14,6 +14,26 @@
   const validId = (id) => /^[A-Za-z0-9_-]{16}$/.test(String(id || ''));
   const copy = (value) => value == null ? null : JSON.parse(JSON.stringify(value));
   const imageFingerprints = new Map();
+  const backendWrites = new WeakMap();
+  const validWorkingId = id => /^[A-Za-z0-9_-]{16,64}$/.test(String(id || ''));
+  const newWorkingId = () => Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
+
+  function wordSignature(words) {
+    if (!Array.isArray(words)) throw new Error('invalid_words');
+    const entries = new Map();
+    for (const entry of words) {
+      if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string' ||
+          !entry[0].trim() || !Number.isSafeInteger(entry[1]) || entry[1] < 1) throw new Error('invalid_words');
+      if (entries.has(entry[0])) throw new Error('invalid_words');
+      entries.set(entry[0], entry[1]);
+    }
+    return fingerprint(JSON.stringify([...entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)));
+  }
+
+  function accountSnapshot(snapshot) {
+    return Object.fromEntries(['productKey', 'orientation', 'theme', 'customColors', 'words', 'designs',
+      'productDesignState'].map(key => [key, snapshot[key]]));
+  }
 
   // Comparison for UI state only. Approval and print validation remain server-side.
   function fingerprint(text) {
@@ -72,6 +92,8 @@
         id: String(item.id), productKey: String(item.productKey || ''),
         orientation: String(item.orientation || 'default'), printFileUrl: String(item.printFileUrl || ''),
         createdAt: String(item.createdAt || ''),
+        ...(validId(item.lineId) ? { lineId: item.lineId } : {}),
+        ...(/^[0-9a-f-]{36}$/i.test(item.accountDesignId || '') ? { accountDesignId: item.accountDesignId } : {}),
       })).slice(0, MAX_CART_ITEMS);
   }
 
@@ -120,6 +142,7 @@
         primary.removeItem(key);
         primary.removeItem(expiryKey);
       }
+      if (typeof globalThis.dispatchEvent === 'function') globalThis.dispatchEvent(new Event('wolkenworte:cartchange'));
       return normalized;
     }
     function replace(configuration, previousId = null) {
@@ -183,13 +206,17 @@
       return null;
     }
     const editingOrderItemId = validId(draft.editingOrderItemId) ? String(draft.editingOrderItemId) : null;
-    const scope = editingOrderItemId
+    const workingDesignId = validWorkingId(draft.workingDesignId) ? draft.workingDesignId : null;
+    const scope = workingDesignId ? `design:${workingDesignId}` : editingOrderItemId
       ? `cart:${editingOrderItemId}`
       : `product:${productKey}:${orientation}`;
     return {
       key: `draft:${slug}:${scope}`,
       type: 'draft', version: 1, slug: String(slug),
       productKey, orientation, theme,
+      workingDesignId,
+      storageVersion: Math.max(0, Number(draft.storageVersion) || 0),
+      dismissedCloud: String(draft.dismissedCloud || '').slice(0, 100),
       customColors: Array.isArray(draft.customColors) ? copy(draft.customColors) : [],
       words: Array.isArray(draft.words) ? copy(draft.words) : [],
       designs: copy(draft.designs),
@@ -306,18 +333,57 @@
       if (!record) throw new Error('invalid_draft');
       const active = { key: activeKey, type: 'active', version: 1, slug: String(slug),
         draftKey: record.key, expiresAt: record.expiresAt };
+      const aliases = value => [
+        `draft:${slug}:product:${value.productKey}:${value.orientation}`,
+        ...(value.editingOrderItemId ? [`draft:${slug}:cart:${value.editingOrderItemId}`] : []),
+        ...(value.accountDesign ? [`account:${slug}:${value.accountDesign.id}`] : []),
+      ].filter(key => key !== value.key);
+      const commit = async store => {
+        const previous = copy(await store.get(record.key));
+        if (record.workingDesignId && (previous?.storageVersion || 0) !== record.storageVersion) {
+          throw new Error('draft_conflict');
+        }
+        record.storageVersion = (previous?.storageVersion || 0) + 1;
+        if (previous?.workingDesignId) {
+          for (const key of aliases(previous).filter(key => !aliases(record).includes(key))) {
+            if ((await store.get(key))?.draftKey === record.key) await store.delete(key);
+          }
+        }
+        await store.put(record);
+        await store.put(active);
+        for (const key of aliases(record)) await store.put({ ...active, key });
+      };
       if (backend) {
-        await backend.put(record);
-        await backend.put(active);
+        // In-memory test backends use the same serialized commit semantics as
+        // a real IndexedDB read/write transaction, across store instances.
+        let queue = backendWrites.get(backend);
+        if (!queue) { queue = new Map(); backendWrites.set(backend, queue); }
+        const previous = queue.get(record.key) || Promise.resolve();
+        const pending = previous.catch(() => {}).then(() => commit(backend));
+        queue.set(record.key, pending);
+        try { await pending; }
+        finally { if (queue.get(record.key) === pending) queue.delete(record.key); }
       } else {
         const database = await openDatabase();
         const transaction = database.transaction(DRAFT_STORE, 'readwrite');
+        const complete = transactionComplete(transaction);
         const store = transaction.objectStore(DRAFT_STORE);
-        store.put(record);
-        store.put(active);
-        await transactionComplete(transaction);
+        try {
+          await commit({ get: key => request(store.get(key)), put: value => request(store.put(value)),
+            delete: key => request(store.delete(key)) });
+          await complete;
+        } catch (error) {
+          try { transaction.abort(); } catch { /* Already completed or aborted. */ }
+          await complete.catch(() => {});
+          throw error;
+        }
       }
       return copy(record);
+    }
+
+    async function resolve(key) {
+      const record = await get(key);
+      return usable(record?.type === 'active' ? await get(record.draftKey) : record);
     }
 
     async function loadActive() {
@@ -331,11 +397,13 @@
       return record;
     }
 
-    async function loadFor({ productKey, orientation = 'default', editingOrderItemId = null } = {}) {
+    async function loadFor({ productKey, orientation = 'default', editingOrderItemId = null, workingDesignId = null, accountDesignId = null } = {}) {
+      if (validWorkingId(workingDesignId)) return resolve(`draft:${slug}:design:${workingDesignId}`);
+      if (accountDesignId) return resolve(`account:${slug}:${accountDesignId}`);
       const normalized = normalizeDraft(slug, {
         productKey, orientation, theme: '_lookup_', designs: {}, editingOrderItemId,
       }, now());
-      return normalized ? usable(await get(normalized.key)) : null;
+      return normalized ? resolve(normalized.key) : null;
     }
 
     async function clearActive({ removeDraft = true } = {}) {
@@ -352,7 +420,10 @@
       if (!normalized) return;
       const active = await get(activeKey);
       const keys = [normalized.key];
-      if (active?.draftKey === normalized.key) keys.push(activeKey);
+      const locator = await get(normalized.key);
+      const draftKey = locator?.type === 'active' ? locator.draftKey : normalized.key;
+      keys.push(draftKey);
+      if (active?.draftKey === draftKey) keys.push(activeKey);
       await removeKeys(keys);
     }
 
@@ -522,6 +593,7 @@
   }
 
   return { createCart, createDraftStore, createShippingDraft, normalizeCart, normalizeDraft, designFingerprint,
+    newWorkingId, validWorkingId, wordSignature, accountSnapshot,
     accountDesignFingerprint: snapshot => designFingerprint(snapshot, true), clearAccountDrafts, validId, withTimeout,
     purchasedIds, clearPurchased, prepareReorder, MAX_CART_ITEMS, DRAFT_TTL_MS, CART_TTL_MS };
 }));

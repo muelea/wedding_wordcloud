@@ -188,9 +188,8 @@
       const title = createElement(this.document, 'strong', 'ww-emoji-picker-title');
       title.id = titleId;
       this.setText(title, 'Emoji auswählen');
-      this.closeButton = createElement(this.document, 'button', 'ww-emoji-picker-close');
+      this.closeButton = createElement(this.document, 'button', 'ww-emoji-picker-close ww-icon-button ww-close-button');
       this.closeButton.type = 'button';
-      this.closeButton.textContent = '×';
       this.setAttribute(this.closeButton, 'aria-label', 'Emoji-Auswahl schließen');
       header.append(title, this.closeButton);
 
@@ -201,9 +200,8 @@
       this.searchInput.spellcheck = false;
       this.setAttribute(this.searchInput, 'placeholder', 'Emojis suchen');
       this.setAttribute(this.searchInput, 'aria-label', 'Emojis suchen');
-      this.searchClear = createElement(this.document, 'button', 'ww-emoji-search-clear');
+      this.searchClear = createElement(this.document, 'button', 'ww-emoji-search-clear ww-icon-button ww-close-button');
       this.searchClear.type = 'button';
-      this.searchClear.textContent = '×';
       this.searchClear.hidden = true;
       this.setAttribute(this.searchClear, 'aria-label', 'Suche löschen');
       searchField.append(createSearchIcon(this.document), this.searchInput, this.searchClear);

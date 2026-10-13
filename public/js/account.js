@@ -19,6 +19,7 @@
   const message=error=>ERROR[error?.code]||'Das hat leider nicht geklappt. Bitte versuche es erneut.';
   function status(element,source,error=false,params={}){ text(element,source,params); if(element) element.dataset.error=String(error); }
   async function api(path,body){
+    if(path==='session'&&body===undefined&&root.WolkenworteAccountMenu)return root.WolkenworteAccountMenu.session();
     const response=await fetch(`/api/account/${path}`,{method:body===undefined?'GET':'POST',cache:'no-store',credentials:'same-origin',
       headers:{'Accept-Language':I()?.getLocale()||'de',...(body===undefined?{}:{'Content-Type':'application/json','X-Wolkenworte-Account':'1'})},
       ...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)});
@@ -108,6 +109,9 @@
       page.querySelector('[data-account-library]').hidden=!loggedIn||section!=='designs';
       page.querySelector('[data-account-settings]').hidden=!loggedIn||section!=='settings';
       page.querySelector('[data-account-usage]').hidden=!loggedIn;
+      page.querySelector('[data-account-email]').hidden=!loggedIn;
+      page.querySelector('[data-account-logout]').hidden=!loggedIn;
+      if(!loggedIn)page.querySelector('[data-account-email]').textContent='';
       sectionButtons.forEach(button=>{
         const selected=button.dataset.accountTab===section;
         button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
@@ -152,11 +156,12 @@
       const input=label.querySelector('input');input.value=name||'';input.required=name!==null;
       dialog.returnValue='cancel';dialog.showModal();
       if(name!==null){input.focus();input.select();}
+      else dialog.querySelector('[data-confirm-cancel]').focus({preventScroll:true});
       return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'?{name:input.value}:null),{once:true}));
     }
 
     function updateUsage(designs){
-      text(page.querySelector('[data-account-usage]'),'{{count}} von 20 Designs',{count:designs.length});
+      text(page.querySelector('[data-account-count]'),'{{count}} von 20 Designs',{count:designs.length});
       text(page.querySelector('[data-account-storage]'),'{{size}} von 100 MB',{
         size:new Intl.NumberFormat(I()?.getLocale()||'de',{maximumFractionDigits:1}).format(designs.reduce((n,d)=>n+d.byteSize,0)/1024/1024)});
     }
@@ -188,9 +193,12 @@
             if(action==='open'){const data=await api(`designs/${design.id}/open`,{});location.assign(data.url);return;}
             if(action==='rename'){
               const result=await confirm({title:'Design umbenennen',description:'Wähle einen Namen für dein Design.',name:design.name,action:'Namen speichern'});
-              if(result)await api(`designs/${design.id}/rename`,{name:result.name,version:design.version});
+              if(!result){trigger.focus({preventScroll:true});return;}
+              await api(`designs/${design.id}/rename`,{name:result.name,version:design.version});
             }else{
-              if(!await confirm({title:'Design löschen?',description:'Dieses gespeicherte Design wird sofort dauerhaft gelöscht. Warenkorbkopien und Bestellungen bleiben davon unabhängig.',action:'Dauerhaft löschen'}))return;
+              if(!await confirm({title:'Design löschen?',description:'Dieses gespeicherte Design wird sofort dauerhaft gelöscht. Warenkorbkopien und Bestellungen bleiben davon unabhängig.',action:'Dauerhaft löschen'})){
+                trigger.focus({preventScroll:true});return;
+              }
               await api(`designs/${design.id}/delete`,{confirm:true});
               await root.WolkenworteConfiguratorSession?.clearAccountDrafts?.(current.id,design.id);
             }
@@ -260,6 +268,10 @@
     },notice));
     page.querySelector('[data-account-logout]').addEventListener('click',()=>void busy(page,async()=>{
       const ownerId=current?.id;if(!ownerId)return;
+      if(root.WolkenworteAccountMenu){
+        await root.WolkenworteAccountMenu.signOut(ownerId);
+        current=null;showSection(section);return;
+      }
       await api('logout',{});
       current=null;showSection(section);
       await clearOwnedDrafts(ownerId);
@@ -275,10 +287,14 @@
     const form=dialog.querySelector('form');const notice=dialog.querySelector('[data-account-save-status]');
     const saveButtons=[...document.querySelectorAll('[data-account-save]')];
     let user=null,source=null,savedFingerprint=null,metadata=null,pendingSave=null,saving=false,starting=false,feedbackTimer=null;
+    let selectedTarget=null;
+    const latestButton=dialog.querySelector('[data-account-open-latest]');
+    const existingButton=dialog.querySelector('[data-account-save-existing]');
+    const targetList=dialog.querySelector('[data-account-save-targets]');
     const feedback=[...document.querySelectorAll('[data-account-save-note]')];
     const saveFeedback=(message='',error=false)=>feedback.forEach(element=>status(element,message,error));
     function changed(){
-      const label=source?'Design aktualisieren':'Design speichern';
+      const label=source?'Gespeichertes Design aktualisieren':'Im Konto speichern';
       const disabled=saving||starting||!canSave()||Boolean(source&&savedFingerprint===getFingerprint());
       for(const button of saveButtons){
         text(button.querySelector('[data-account-save-label]')||button,label);
@@ -288,8 +304,10 @@
       }
     }
     function sourceChanged(){onSourceChange?.(source?{...source,fingerprint:savedFingerprint}:null);changed();}
-    async function session(){const data=await api('session');user=data.user;return user;}
-    function showSave(){onBeforeDialog?.();form.elements.name.value=metadata?.name||t('Mein Design');dialog.querySelector('[data-account-save-copy]').hidden=!source;dialog.showModal();form.elements.name.focus();}
+    async function session(){const data=await api('session');user=data.user;
+      root.dispatchEvent?.(new root.CustomEvent('wolkenworte:accountchange',{detail:{user:user&&!user.recovery?user:null}}));
+      return user;}
+    function showSave(){onBeforeDialog?.();selectedTarget=null;if(targetList){targetList.hidden=true;targetList.replaceChildren();}if(latestButton)latestButton.hidden=true;form.elements.name.value=metadata?.name||t('Mein Design');dialog.querySelector('[data-account-save-copy]').hidden=!source;dialog.showModal();form.elements.name.focus();}
     async function start(){
       await prepare();
       await session();
@@ -315,21 +333,38 @@
       try{return await busy(form,async()=>{
         await prepare();
         const snapshot=getSnapshot(),fingerprint=getFingerprint();
-        const signature=JSON.stringify({name,fingerprint,asNew,id:source?.id,version:source?.version,owner:user.id,locale:I()?.getLocale()});
+        const target=asNew?null:selectedTarget||source;
+        const signature=JSON.stringify({name,fingerprint,asNew,id:target?.id,version:target?.version,owner:user.id,locale:I()?.getLocale()});
         if(pendingSave?.signature!==signature) pendingSave={signature,requestId:crypto.randomUUID(),
-          designId:asNew?crypto.randomUUID():source?.id||crypto.randomUUID(),version:asNew?0:source?.version||0};
+          designId:target?.id||crypto.randomUUID(),version:target?.version||0};
         let result;
         try { result=await api('designs',{name,ownerId:user.id,requestId:pendingSave.requestId,designId:pendingSave.designId,version:pendingSave.version,snapshot}); }
-        catch(error){if(error.status && error.code!=='design_busy'&&(error.status<500||error.code==='account_storage_unavailable'))pendingSave=null;throw error;}
+        catch(error){if(error.status && error.code!=='design_busy'&&(error.status<500||error.code==='account_storage_unavailable'))pendingSave=null;if(error.code==='design_conflict'&&latestButton)latestButton.hidden=false;throw error;}
         pendingSave=null;
         metadata=result.design;source={id:metadata.id,ownerId:user.id,version:metadata.version};savedFingerprint=fingerprint;
-        sourceChanged();await preserve();dialog.close();
-        saveFeedback('In deinen Designs gespeichert.');
-        clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>saveFeedback(),3000);
+        sourceChanged();const recovered=await preserve();dialog.close();
+        saveFeedback(recovered===false?'Im Konto gespeichert. Die lokale Sicherung konnte nicht erstellt werden.':'In deinen Designs gespeichert.',recovered===false);
+        clearTimeout(feedbackTimer);feedbackTimer=recovered===false?null:setTimeout(()=>saveFeedback(),3000);
       },notice);}finally{saving=false;changed();}
     }
     form.addEventListener('submit',event=>{event.preventDefault();void performSave();});
     dialog.querySelector('[data-account-save-copy]').addEventListener('click',()=>{if(form.reportValidity())void performSave(true);});
+    existingButton?.addEventListener('click',()=>void busy(existingButton,async()=>{
+      const result=await api('designs');targetList.replaceChildren();targetList.hidden=false;
+      for(const design of result.designs||[]){
+        const button=document.createElement('button');button.type='button';button.className='ww-account-secondary';button.textContent=design.name;
+        button.addEventListener('click',()=>{
+          selectedTarget={id:design.id,version:design.version,ownerId:user.id};form.elements.name.value=design.name;
+          targetList.hidden=true;dialog.querySelector('[data-account-save-copy]').hidden=false;
+          status(notice,'Beim Speichern wird das ausgewählte Design im Konto ersetzt. Der Warenkorb bleibt unverändert.');
+        });targetList.append(button);
+      }
+    },notice));
+    latestButton?.addEventListener('click',()=>void busy(latestButton,async()=>{
+      const id=selectedTarget?.id||source?.id;if(!id)return;
+      if(!await preserve())throw{code:'draft_unavailable'};
+      location.assign(location.pathname+'?accountDesign='+encodeURIComponent(id)+'&accountLatest=1');
+    },notice));
     async function restore(id){
       await session();if(!user||user.recovery)throw{code:'account_unauthorized'};
       const result=await api(`designs/${id}/load`,{});metadata=result.design;
@@ -342,15 +377,23 @@
       if(!user||user.recovery||user.id!==ref.ownerId)return false;
       try { metadata=(await api(`designs/${ref.id}/load`,{})).design; }
       catch(error) { if(error.status===404)return false;throw error; }
+      if(metadata.version!==ref.version)return false;
       source={id:ref.id,ownerId:ref.ownerId,version:ref.version};savedFingerprint=ref.fingerprint;sourceChanged();return true;
     }
-    function detach(){source=null;metadata=null;savedFingerprint=null;sourceChanged();}
+    async function inspectLocal(ref,fingerprint){
+      await session();if(!user||user.recovery||user.id!==ref.ownerId)throw{code:'account_unauthorized'};
+      metadata=(await api(`designs/${ref.id}/load`,{})).design;
+      if(metadata.version!==ref.version)return {status:fingerprint===ref.fingerprint?'newer':'conflict',snapshot:metadata.snapshot};
+      source={id:ref.id,ownerId:ref.ownerId,version:ref.version};savedFingerprint=ref.fingerprint;sourceChanged();
+      return {status:'same',snapshot:metadata.snapshot};
+    }
+    function detach(){source=null;metadata=null;savedFingerprint=null;clearTimeout(feedbackTimer);saveFeedback();sourceChanged();}
     async function ready(){if(new URLSearchParams(location.search).has('accountSave')){
       history.replaceState(null,'',location.pathname);await start();
     }}
     root.addEventListener('wolkenworte:localechange',changed);
     changed();
-    return {changed,restore,restored,validateLocal,detach,ready,source:()=>source,authControl};
+    return {changed,restore,restored,validateLocal,inspectLocal,detach,ready,source:()=>source,authControl};
   }
 
   root.WolkenworteAccount={api,bindAuth,createConfigurator,message};

@@ -1,0 +1,99 @@
+/* Shared close artwork and hit areas, independent of text/font metrics. */
+:root {
+  --ww-close-artwork: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 5l14 14M19 5L5 19' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+:is(button, summary).ww-icon-button {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink, var(--text, #400f26));
+  box-shadow: none;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:is(button, summary).ww-icon-button:hover:not(:disabled) {
+  background: rgba(64, 15, 38, .06);
+  color: var(--ink, var(--text, #400f26));
+  box-shadow: none;
+}
+
+:is(button, summary).ww-icon-button:focus-visible {
+  outline: 2px solid var(--ink, var(--text, #400f26));
+  outline-offset: 2px;
+}
+
+:is(button, summary).ww-icon-button[hidden] { display: none !important; }
+
+.ww-close-button::before,
+.ww-menu-trigger.ww-icon-button[aria-expanded="true"]::before,
+details[open] > .ww-menu-trigger.ww-icon-button::before {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: var(--ww-close-artwork) center / contain no-repeat;
+  mask: var(--ww-close-artwork) center / contain no-repeat;
+  pointer-events: none;
+}
+
+.ww-menu-trigger.ww-icon-button[aria-expanded="true"] .ww-hamburger-icon,
+details[open] > .ww-menu-trigger.ww-icon-button .ww-hamburger-icon { display: none; }
+.ww-pwa-dialog-heading .ww-icon-button { margin-left: auto; }
+.print-preview button.ww-icon-button:hover { background: rgba(64, 15, 38, .06); }
+
+/* Explicit typography stays stable when a panel moves into the mobile editor. */
+:is(.ww-account-dialog-head, .start-dialog-heading, .dialog-heading,
+  .product-dialog-head, .config-panel-head, .ww-pwa-dialog-heading,
+  .print-preview-head) {
+  align-items: center;
+  gap: 12px;
+}
+
+:is(.ww-account-dialog-head, .start-dialog-heading, .dialog-heading,
+  .product-dialog-head, .config-panel-head, .ww-pwa-dialog-heading,
+  .print-preview-head) h2,
+.reset-dialog h2 {
+  min-width: 0;
+  margin: 0;
+  font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+
+.product-dialog .product-dialog-head,
+.config-panel .config-panel-head { padding: 16px 18px; }
+.product-dialog[data-presentation="popover"] .product-dialog-head,
+.config-panel[data-presentation="popover"] .config-panel-head { padding: 14px 16px; }
+.product-dialog[data-presentation="popover"] .product-dialog-head h2,
+.config-panel[data-presentation="popover"] .config-panel-head h2 { font-size: 19px; }
+.product-dialog-head > div { flex: 1; min-width: 0; }
+
+@media (forced-colors: active) {
+  .ww-close-button::before,
+  .ww-menu-trigger.ww-icon-button[aria-expanded="true"]::before,
+  details[open] > .ww-menu-trigger.ww-icon-button::before {
+    background: ButtonText;
+    forced-color-adjust: none;
+  }
+}

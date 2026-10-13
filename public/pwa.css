@@ -32,17 +32,3 @@
 .ww-pwa-dialog-heading h2 { margin: 0; font-family: inherit; font-size: 1.2rem; font-weight: 600; line-height: 1.35; }
 .ww-pwa-dialog p { margin: 0 0 14px; }
 .ww-pwa-dialog p:last-child { margin-bottom: 0; }
-.ww-pwa-dialog-close {
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  margin-left: auto;
-  border: 1px solid rgba(64, 15, 38, .12);
-  border-radius: 50%;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-.ww-pwa-dialog-close:focus-visible { outline: 3px solid #276e63; outline-offset: 3px; }

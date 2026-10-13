@@ -1041,6 +1041,10 @@
       });
 
       this.undoButton = options.undoButton;
+      this.canUndoBoundary = options.canUndoBoundary;
+      this.canRedoBoundary = options.canRedoBoundary;
+      this.onUndoBoundary = options.onUndoBoundary;
+      this.onRedoBoundary = options.onRedoBoundary;
       this.redoButton = options.redoButton;
       this.zoomOutButton = options.zoomOutButton;
       this.zoomInButton = options.zoomInButton;
@@ -1670,18 +1674,20 @@
 
     undo() {
       this.touchController?.finish();
+      if (this.historyIndex <= 0 && this.canUndoBoundary?.()) { this.onUndoBoundary?.(); return; }
       this.restoreHistory(this.historyIndex - 1);
     }
 
     redo() {
       this.touchController?.finish();
+      if (this.historyIndex >= this.history.length - 1 && this.canRedoBoundary?.()) { this.onRedoBoundary?.(); return; }
       this.restoreHistory(this.historyIndex + 1);
     }
 
     updateHistoryButtons() {
       if (!this.undoButton) return;
-      this.undoButton.disabled = this.historyIndex <= 0;
-      this.redoButton.disabled = this.historyIndex >= this.history.length - 1;
+      this.undoButton.disabled = this.historyIndex <= 0 && !this.canUndoBoundary?.();
+      this.redoButton.disabled = this.historyIndex >= this.history.length - 1 && !this.canRedoBoundary?.();
     }
 
     canAddElements(count = 1) {

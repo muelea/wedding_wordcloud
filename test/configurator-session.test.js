@@ -71,6 +71,10 @@ function harness(extra = {}) {
   };
   const context = vm.createContext({
     accountController:null,accountDesignReference:null,
+    workingDesignId: 'w'.repeat(32), draftStorageVersion: 0, dismissedCloud: '',
+    cloudSourceState: 'ready', cloudCheckPending: false, cloudCheckGeneration: 0, lastCloudCheck: 0,
+    cloudRebuildUndo: null, cloudRebuildRedo: null, activeSurface: 'default',
+    surfaceStates: new Map([['default', { design: [{ text: 'sonne' }], history: [], historyIndex: -1 }]]),
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, requestAnimationFrame: callback => callback(),
     console: { warn() {} },
     WolkenworteConfiguratorSession: Session, DesignTransfer: Transfer, sessionStorage: local, cart, draftStore,
@@ -90,7 +94,7 @@ function harness(extra = {}) {
     productSwitchUndo: element(),
     orderList: { querySelectorAll: () => [] }, cartRemovalNotice: element(), cartRemovalMessage: element(),
     products: [{ key: 'mug', displayName: 'Tasse' }, { key: 'poster', displayName: 'Poster' }],
-    document: { createElement: element, querySelectorAll:()=>[] },
+    document: { createElement: element, querySelectorAll:()=>[], getElementById: () => element() },
     headerCart: { hidden: true }, headerCartCount: element(),
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true }, loadingMessage: element(),
     content: { inert: false }, orderBox: { scrollIntoView() {} },
@@ -126,11 +130,19 @@ function harness(extra = {}) {
     ...extra,
   });
   vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
-    'draftSnapshot', 'wordsMatch', 'updateCartActions', 'continueToShipping', 'saveReviewedDesigns',
+    'draftSnapshot', 'wordsMatch', 'updateCloudNotice', 'setCloudFeedback', 'syncCloudHistory', 'workingCheckpoint',
+    'cloneDesign', 'cloneEditorState', 'fetchCloudWords', 'updateCartActions', 'continueToShipping', 'saveReviewedDesigns',
+    'currentAccountFingerprint', 'restoreAccountDesign',
     'currentDesignFingerprint', 'updateAccountSaveState', 'updateCartDraftMarkers', 'refreshCartDrafts', 'renderRemovalNotice',
     'hasUnpersistedDraft', 'persistCurrentDraft', 'runNavigation', 'saveBeforeLeaving',
     'openOrderItem', 'removeOrderItem', 'undoCartRemoval', 'navigateToShipping',
     'showRestorationError', 'initializeWorkspace', 'updateHeaderCart'].map(pageFunction).join('\n'), context);
+  context.prepareCloudDesigns = async nextWords => {
+    await context.ensureDesignFonts?.(['classic']);
+    await context.WolkenworteEmoji?.preloadTexts(nextWords.map(([word]) => word));
+    if (!nextWords.length) throw new Error('no_words');
+    return { default: nextWords.map(([text]) => ({ text })) };
+  };
   return { context, cart, local, drafts, calls };
 }
 
@@ -479,7 +491,7 @@ test('transient startup work retries once but permanent empty clouds do not', as
     throw new Error('no_words');
   }), /no_words/);
   assert.equal(attempts, 1);
-  assert.match(template, /fetch\(`\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/configurator`, \{\s*cache: 'no-store'/);
+  assert.match(template, /fetch\(`\/api\/events\/\$\{encodeURIComponent\(slug\)\}\/configurator\?restore=1`, \{\s*cache: 'no-store'/);
   assert.match(template, /id="loading-message"[\s\S]*?id="retry-configurator-loading"/);
 });
 
@@ -794,6 +806,7 @@ test('starting another product explicitly resolves pending edits; cancellation o
 test('live-cloud replacement requires consent for manual work and leaves the cart unchanged', async () => {
   const { context: page, cart, calls } = switchingHarness({ currentDesignEdited: true });
   page.applyLiveWordsButton = {};
+  page.fetch = async () => ({ ok: true, json: async () => ({ words: [['neu', 2]] }) });
   cart.write([{ id: id('a'), productKey: 'mug' }]);
   let accept = false;
   page.askDesignReplacement = async () => accept;
@@ -808,10 +821,85 @@ test('live-cloud replacement requires consent for manual work and leaves the car
   assert.equal(calls.posts, 0);
 });
 
+test('independent saved-design workspaces cannot request a live-cloud replacement', async () => {
+  const { context: page, calls } = switchingHarness({ directDesign: true, currentDesignEdited: true, liveWords: [] });
+  page.applyLiveWordsButton = {};
+  page.askDesignReplacement = async () => { throw new Error('independent artwork must not offer replacement'); };
+  vm.runInContext(pageFunction('refreshDesignFromCloud'), page);
+  await page.refreshDesignFromCloud();
+  assert.equal(calls.switches.length, 0);
+  page.fetch = async () => { throw new Error('independent workspaces have no live word source'); };
+  vm.runInContext(pageFunction('startProductDesign'), page);
+  assert.equal(await page.startProductDesign(page.product, 'default', { refreshCloud: true }), false);
+  assert.equal(calls.busy.length, 0);
+  assert.equal(page.errorText.textContent, '');
+});
+
+function artworkRestorationHarness(extra) {
+  const state = harness(extra);
+  const page = state.context;
+  const noop = () => {};
+  Object.assign(page, {
+    products: [{ key: 'mug', familyKey: 'mugs', themes: [{ key: 'confetti' }] }],
+    selectedOrientationOption: () => null,
+    selectedProductSlot: () => ({ x: 0, y: 0, width: 1000, height: 1000 }),
+    productView: () => ({ printFile: { width: 1000, height: 1000, dpi: 300 },
+      safeArea: { x: 0, y: 0, width: 1000, height: 1000 } }),
+    buildProductOptions: noop, buildOrientationOptions: noop, buildThemeOptions: noop,
+    renderCustomColorControls: noop, buildSurfaceControls: noop, updateSurfaceControlSelection: noop,
+    updateProductOptionSelection: noop, updateProductPresentation: noop, destroyMug3D: noop,
+    ensureDesignFonts: async () => {},
+    cloneDesign: structuredClone, cloneEditorState: value => structuredClone(value),
+    DesignFonts: { cssFamily: () => 'serif' },
+    DesignLayout: { fitDesignToSafeArea: design => ({ design, adjusted: false }) },
+    mug3D: null,
+  });
+  Object.assign(page.mugEditor, { resizePrintArea: noop, preloadImages: async () => {},
+    setState: value => { state.artwork = value.design; } });
+  vm.runInContext(['designsForProductSurfaces', 'applySavedConfiguration', 'applyLocalDraft', 'loadOrderItem'].map(pageFunction).join('\n'), page);
+  return state;
+}
+
+test('server snapshots and local drafts apply the same live-cloud notice rule without altering artwork', async t => {
+  const savedWords = [['sonne', 1]];
+  const design = [{ id: 'manual', text: 'Unser eigener Text', x: 400, y: 500 }];
+  for (const source of ['account snapshot', 'cart snapshot', 'local draft']) {
+    for (const [scenario, directDesign, currentWords, expectedHidden] of [
+      ['independent account workspace', true, [], true],
+      ['unchanged live cloud', false, savedWords, true],
+      ['added live word', false, [['sonne', 1], ['neu', 1]], false],
+      ['changed live count', false, [['sonne', 2]], false],
+      ['removed live word', false, [], false],
+    ]) {
+      await t.test(`${source}: ${scenario}`, async () => {
+        const state = artworkRestorationHarness({ directDesign, liveWords: currentWords });
+        const page = state.context;
+        page.cloudUpdateNotice.hidden = !expectedHidden;
+        const snapshot = { productKey: 'mug', theme: 'confetti', words: savedWords,
+          designs: { default: design }, currentDesignEdited: true };
+        if (directDesign) {
+          snapshot.accountDesign = { id: 'private-design', ownerId: 'fixture-owner' };
+          page.accountController = { validateLocal: async () => true, detach() {} };
+        }
+        if (source === 'local draft') await page.applyLocalDraft(snapshot);
+        else if (source === 'cart snapshot') {
+          page.fetch = async () => ({ ok: true, json: async () => ({ ...snapshot, id: id('a') }) });
+          await page.loadOrderItem(id('a'));
+        } else await page.applySavedConfiguration(snapshot);
+        assert.equal(page.cloudUpdateNotice.hidden, expectedHidden);
+        assert.deepEqual(page.words, savedWords);
+        assert.deepEqual(state.artwork, design);
+        assert.equal(state.calls.posts, 0);
+      });
+    }
+  }
+});
+
 test('only explicit cloud refresh replaces contents and failed refresh keeps the edited design', async () => {
   for (const failure of [null, 'network', 'empty', 'font']) {
     const { context: page, cart, calls } = switchingHarness({ editingOrderItemId: id('a'), currentDesignEdited: true });
     cart.replace({ id: id('a'), productKey: 'mug' });
+    page.cloudUpdateNotice.hidden = false;
     const previousWords = page.words;
     page.fetch = async () => {
       if (failure === 'network') throw new Error('offline');
@@ -835,6 +923,7 @@ test('only explicit cloud refresh replaces contents and failed refresh keeps the
     else assert.deepEqual(calls.switches[0], ['poster', 'landscape', [['neu', 2]]]);
     assert.equal(page.orderActionPending, false);
     assert.equal(page.suppressDirty, false);
+    assert.equal(page.cloudUpdateNotice.hidden, !failure);
   }
 });
 
@@ -991,7 +1080,6 @@ test('fresh entry restores the active local draft while explicit edit and cart e
     assert.equal(page.workspaceReady, true);
     assert.equal(page.content.inert, false);
   }
-  assert.match(template, /const localDraft = await loadLocalDraft\(\)/);
 });
 
 test('a direct design opens its blank mobile editor and approves custom content without live words', async () => {
@@ -1237,4 +1325,333 @@ test('a failed 3D initialization exposes retry and never introduces a flat mug',
   assert.equal(states.at(-1), 'ready');
   assert.doesNotMatch(template, /mug-fallback|mug-art|using 2D fallback/);
   assert.match(template, /id="retry-mug-preview"/);
+});
+
+test('cloud comparison ignores ordering but detects case, counts and invalid snapshots', () => {
+  assert.equal(Session.wordSignature([['Liebe', 2], ['wir', 1]]), Session.wordSignature([['wir', 1], ['Liebe', 2]]));
+  assert.notEqual(Session.wordSignature([['Liebe', 2]]), Session.wordSignature([['liebe', 2]]));
+  assert.notEqual(Session.wordSignature([['Liebe', 2]]), Session.wordSignature([['Liebe', 3]]));
+  for (const invalid of [null, [['a', 0]], [['a', '1']], [['a', 1], ['a', 2]]]) assert.throws(() => Session.wordSignature(invalid));
+});
+
+test('independent working identities survive product changes without overwriting another same-product draft', async () => {
+  const backend = draftBackend(), store = Session.createDraftStore('one', { backend });
+  const first = await store.save({ productKey: 'mug', theme: 'pastel', designs: { default: [{ text: 'first' }] },
+    workingDesignId: 'a'.repeat(32), storageVersion: 0 });
+  await store.save({ ...first, workingDesignId: 'b'.repeat(32), storageVersion: 0, designs: { default: [{ text: 'second' }] } });
+  const moved = await store.save({ ...first, productKey: 'poster' });
+  assert.equal(moved.key, first.key);
+  assert.equal((await store.loadFor({ workingDesignId: first.workingDesignId })).productKey, 'poster');
+  assert.equal((await store.loadFor({ productKey: 'mug' })).designs.default[0].text, 'second');
+  assert.equal((await store.loadFor({ workingDesignId: 'b'.repeat(32) })).designs.default[0].text, 'second');
+  assert.equal(await Session.createDraftStore('two', { backend }).loadFor({ workingDesignId: first.workingDesignId }), null);
+});
+
+test('simultaneous browser writes reject the stale revision without changing accepted artwork', async () => {
+  const backend = draftBackend(), first = Session.createDraftStore('one', { backend }), second = Session.createDraftStore('one', { backend });
+  const original = await first.save({ productKey: 'mug', theme: 'pastel', designs: { default: [{ text: 'original' }] },
+    workingDesignId: 'a'.repeat(32), storageVersion: 0 });
+  const outcomes = await Promise.allSettled([
+    first.save({ ...original, designs: { default: [{ text: 'first edit' }] } }),
+    second.save({ ...original, designs: { default: [{ text: 'second edit' }] } }),
+  ]);
+  assert.equal(outcomes.filter(result => result.status === 'fulfilled').length, 1);
+  assert.match(outcomes.find(result => result.status === 'rejected').reason.message, /draft_conflict/);
+  assert.equal((await first.loadActive()).designs.default[0].text, 'first edit');
+  const fork = await second.save({ ...original, workingDesignId: 'b'.repeat(32), storageVersion: 0 });
+  assert.equal((await first.loadFor({ workingDesignId: original.workingDesignId })).designs.default[0].text, 'first edit');
+  assert.equal(fork.designs.default[0].text, 'original');
+});
+
+test('explicit cloud checks preserve artwork and distinguish empty, failed and unavailable sources', async () => {
+  for (const result of ['changed', 'empty', 'offline', 'unavailable']) {
+    const { context: page, calls } = harness();
+    const before = page.draftSnapshot();
+    let feedback = '';
+    page.document.querySelectorAll = () => [{ set textContent(value) { feedback = value; } }];
+    page.fetch = async () => {
+      if (result === 'offline') throw new Error('offline');
+      return { ok: result !== 'unavailable', status: result === 'unavailable' ? 404 : 200,
+        json: async () => ({ words: result === 'empty' ? [] : [['neu', 2]] }) };
+    };
+    vm.runInContext(pageFunction('checkLiveWords'), page);
+    await page.checkLiveWords({ explicit: true });
+    assert.deepEqual(page.draftSnapshot(), before);
+    assert.equal(page.cloudSourceState, { changed: 'ready', empty: 'empty', offline: 'error', unavailable: 'unavailable' }[result]);
+    assert.equal(page.cloudCheckPending, false);
+    assert.equal(calls.posts, 0);
+    assert.ok(feedback.length);
+  }
+});
+
+test('a background source recovery replaces stale empty or failed feedback without editing artwork', async () => {
+  for (const state of ['empty', 'error']) {
+    const { context: page } = harness();
+    const before = JSON.stringify(page.draftSnapshot());
+    page.cloudSourceState = state;page.liveWords = [];
+    let feedback = 'Old failure';
+    page.document.querySelectorAll = () => [{ set textContent(value) { feedback = value; } }];
+    page.fetch = async () => ({ ok: true, json: async () => ({ words: page.words }) });
+    vm.runInContext(pageFunction('checkLiveWords'), page);
+    await page.checkLiveWords();
+    assert.equal(feedback, 'Die Wortwolke hat keine neuen Änderungen.');
+    assert.equal(page.cloudSourceState, 'ready');
+    assert.equal(JSON.stringify(page.draftSnapshot()), before);
+  }
+});
+
+test('keeping the current design persists only that source dismissal and leaves accepted snapshots unchanged', async () => {
+  const { context: page, cart } = harness();
+  cart.write([{ id: id('a'), productKey: 'mug' }]);
+  const before = Session.accountDesignFingerprint(Session.accountSnapshot(page.draftSnapshot()));
+  page.dismissedCloud = Session.wordSignature(page.liveWords);page.updateCloudNotice();
+  assert.equal(page.cloudUpdateNotice.hidden, true);
+  assert.equal(await page.persistCurrentDraft(), true);
+  assert.equal((await page.draftStore.loadActive()).dismissedCloud, page.dismissedCloud);
+  assert.equal(Session.accountDesignFingerprint(Session.accountSnapshot(page.draftSnapshot())), before);
+  assert.deepEqual(cart.read().map(item => item.id), [id('a')]);
+  page.liveWords = [['sonne', 1], ['neu', 2]];page.updateCloudNotice();
+  assert.equal(page.cloudUpdateNotice.hidden, false, 'a later contribution shows a new notice');
+});
+
+test('a deliberate source recheck reopens dismissed choices without replacing the design', async () => {
+  const { context: page } = harness();
+  const before = JSON.stringify(page.words);
+  page.dismissedCloud = Session.wordSignature(page.liveWords);page.updateCloudNotice();
+  page.scheduleDraftSave = () => {};
+  page.fetch = async () => ({ ok: true, json: async () => ({ words: page.liveWords }) });
+  vm.runInContext(pageFunction('checkLiveWords'), page);
+  await page.checkLiveWords({ explicit: true });
+  assert.equal(page.cloudUpdateNotice.hidden, false);
+  assert.equal(page.dismissedCloud, '');
+  assert.equal(JSON.stringify(page.words), before);
+});
+
+test('cloud replacement validates and prepares before asking; empty, unchanged and cancellation are safe no-ops', async () => {
+  for (const result of ['empty', 'unchanged', 'cancel', 'font']) {
+    const { context: page, calls } = switchingHarness({ currentDesignEdited: true });
+    const before = page.draftSnapshot();
+    let prompts = 0;
+    page.fetch = async () => ({ ok: true, json: async () => ({ words: result === 'empty' ? []
+      : result === 'unchanged' ? page.words : [['neu', 2]] }) });
+    page.prepareCloudDesigns = async () => { if (result === 'font') throw new Error('font'); return { default: [{ text: 'neu' }] }; };
+    page.askDesignReplacement = async () => { prompts++; return false; };
+    page.applyLiveWordsButton = {};
+    vm.runInContext(pageFunction('refreshDesignFromCloud'), page);
+    await page.refreshDesignFromCloud();
+    assert.equal(JSON.stringify({ ...page.draftSnapshot(), storageVersion: before.storageVersion }), JSON.stringify(before));
+    assert.equal(prompts, result === 'cancel' ? 1 : 0);
+    assert.equal(calls.switches.length, 0);
+    assert.equal(page.orderActionPending, false);
+  }
+});
+
+function rebuildHarness() {
+  const state = artworkRestorationHarness({ currentDesignEdited: true, editingOrderItemId: id('a') });
+  const page = state.context;
+  state.cart.write([{ id: id('a'), productKey: 'mug' }]);
+  page.product = page.products[0];
+  page.product.printSurfaces = [{ key: 'front' }, { key: 'back' }];
+  page.productSurfaces = () => page.product.printSurfaces;
+  page.activeSurface = 'front';
+  page.surfaceStates = new Map([
+    ['front', { design: [{ id: 'front', text: 'manual front', x: 400, y: 400 }], history: ['old front history'], historyIndex: 0 }],
+    ['back', { design: [{ id: 'back', type: 'image', src: 'data:image/png;base64,photo', width: 100, height: 100, x: 400, y: 400 }], history: ['old back history'], historyIndex: 0 }],
+  ]);
+  page.productDesignState = { version: 1, surfaces: [], layouts: [{ productKey: 'hidden', surfaces: [] }] };
+  page.storeActiveSurfaceState = () => {};
+  page.getAllSurfaceDesigns = () => Object.fromEntries([...page.surfaceStates].map(([key, value]) => [key, structuredClone(value.design)]));
+  page.productDesignSource = designs => ({ productKey: 'mug', orientation: 'default',
+    surfaces: page.productSurfaces().map(surface => ({ key: surface.key, area: page.productView().safeArea, design: designs[surface.key] })) });
+  page.mugEditor.setSafeArea = () => {};
+  page.mugEditor.getState = () => page.surfaceStates.get(page.activeSurface);
+  page.selectProduct = (product, orientation, designs) => {
+    page.product = product; page.selectedOrientation = orientation;
+    page.surfaceStates = new Map(Object.entries(designs).map(([key, design]) => [key, { design, history: ['new history'], historyIndex: 0 }]));
+  };
+  page.fetch = async () => ({ ok: true, json: async () => ({ words: [['neu', 2]] }) });
+  page.prepareCloudDesigns = async () => ({ front: [{ text: 'neu front' }], back: [{ text: 'neu back' }] });
+  vm.runInContext(['startProductDesign', 'restoreWorkingCheckpoint', 'restoreCloudHistory', 'markDirty'].map(pageFunction).join('\n'), page);
+  return state;
+}
+
+test('rebuild Undo restores all sides, image bytes, retained layouts and source words without changing the cart', async () => {
+  const { context: page, cart } = rebuildHarness();
+  const before = JSON.stringify(page.workingCheckpoint());
+  const accepted = structuredClone(cart.read());
+  assert.equal(await page.startProductDesign(page.product, 'default', { refreshCloud: true, preserveEditingItem: true }), true);
+  assert.equal(page.surfaceStates.get('back').design[0].text, 'neu back');
+  assert.equal(page.cloudUpdateNotice.hidden, true);
+  await page.restoreCloudHistory('undo');
+  assert.equal(page.surfaceStates.get('back').design[0].src, 'data:image/png;base64,photo');
+  assert.equal(page.surfaceStates.get('front').history[0], 'old front history');
+  assert.deepEqual(page.words, [['sonne', 1]]);
+  assert.equal(page.productDesignState.layouts[0].productKey, 'hidden');
+  assert.equal(page.cloudUpdateNotice.hidden, false);
+  assert.deepEqual(cart.read(), accepted);
+  assert.ok(page.cloudRebuildRedo);
+  await page.restoreCloudHistory('redo');
+  assert.equal(page.surfaceStates.get('front').design[0].text, 'neu front');
+  assert.notEqual(JSON.stringify(page.workingCheckpoint()), before);
+  assert.deepEqual(cart.read(), accepted);
+});
+
+test('design replacement retains explicit entry intent for version-aware restoration on reload', async () => {
+  const { context: page, calls } = rebuildHarness();
+  page.location.search = '?accountDesign=00000000-0000-4000-8000-000000000001&lang=en';
+  assert.equal(await page.startProductDesign(page.product, 'default', { refreshCloud: true, preserveEditingItem: true }), true);
+  const query = new URLSearchParams(calls.replaced.at(-1).split('?')[1]);
+  assert.equal(query.get('accountDesign'), '00000000-0000-4000-8000-000000000001');
+  assert.equal(query.get('draft'), page.workingDesignId);
+  assert.equal(query.get('lang'), 'en');
+});
+
+test('a mid-commit rebuild failure rolls back artwork, source words and save targets atomically', async () => {
+  const { context: page, cart } = rebuildHarness();
+  const before = page.workingCheckpoint();
+  const select = page.selectProduct;
+  page.selectProduct = (...args) => { select(...args); throw new Error('editor commit failed'); };
+  assert.equal(await page.startProductDesign(page.product, 'default', { refreshCloud: true, preserveEditingItem: true }), false);
+  assert.deepEqual(page.words, before.draft.words);
+  assert.equal(JSON.stringify([...page.surfaceStates]), JSON.stringify(before.states));
+  assert.equal(page.editingOrderItemId, before.draft.editingOrderItemId);
+  assert.equal(page.orderActionPending, false);
+  assert.equal(page.suppressDirty, false);
+  assert.deepEqual(cart.read().map(item => item.id), [id('a')]);
+  assert.equal(page.cloudRebuildUndo, null);
+});
+
+test('Undo after an accepted cart update restores only working artwork and retains the new cart target', async () => {
+  const { context: page, cart } = rebuildHarness();
+  await page.startProductDesign(page.product, 'default', { refreshCloud: true, preserveEditingItem: true });
+  cart.replace({ id: id('b'), productKey: 'mug' }, id('a'));
+  page.editingOrderItemId = id('b');
+  page.savedDesignFingerprint = page.currentDesignFingerprint();
+  await page.restoreCloudHistory('undo');
+  assert.equal(page.editingOrderItemId, id('b'));
+  assert.equal(page.currentDesignNeedsSave, true);
+  assert.deepEqual(cart.read().map(item => item.id), [id('b')]);
+});
+
+test('local and server cart restoration both detach account update targets', async () => {
+  for (const local of [false, true]) {
+    const { context: page, cart } = harness();
+    cart.write([{ id: id('a'), productKey: 'mug' }]);
+    let detached = 0;
+    page.accountController = { detach() { detached++; }, changed() {} };
+    page.loadLocalDraft = async () => local ? { editingOrderItemId: id('a'), productKey: 'mug', accountDesign: null } : null;
+    page.fetch = async () => ({ ok: true, json: async () => ({ id: id('a'), productKey: 'mug' }) });
+    page.applySavedConfiguration = async () => false;
+    vm.runInContext(pageFunction('loadOrderItem'), page);
+    await page.loadOrderItem(id('a'));
+    assert.equal(detached, 1);
+  }
+});
+
+test('cart review applies only selected parked changes and can leave the active draft outside the cart', async () => {
+  const { context: page, cart, calls } = harness({ editingOrderItemId: id('b'), currentDesignNeedsSave: true });
+  cart.write([{ id: id('a'), productKey: 'mug' }, { id: id('b'), productKey: 'mug' }]);
+  page.applyLocalDraft = async draft => { page.editingOrderItemId = draft.editingOrderItemId; page.currentDesignNeedsSave = draft.needsCartUpdate; };
+  await page.saveReviewedDesigns([{ productKey: 'mug', theme: 'confetti', designs: { default: [{ text: 'edited' }] },
+    editingOrderItemId: id('a'), needsCartUpdate: true }], { includeCurrent: false });
+  assert.equal(calls.posts, 1);
+  assert.equal(page.editingOrderItemId, id('b'));
+  assert.equal(page.currentDesignNeedsSave, true);
+  assert.deepEqual(cart.read().map(item => item.id), [id('1'), id('b')]);
+});
+
+test('purchase recovery clones an authenticated library draft and preserves its separate library lookup', async () => {
+  const { context: page } = harness();
+  const reference = { id: '00000000-0000-4000-8000-000000000001', ownerId: '00000000-0000-4000-8000-000000000002', version: 1 };
+  const original = await page.draftStore.save({ ...page.draftSnapshot(), accountDesign: reference, editingOrderItemId: id('a') });
+  page.accountController = { validateLocal: async () => true };
+  vm.runInContext(pageFunction('loadLocalDraft'), page);
+  const purchase = await page.loadLocalDraft({ editingOrderItemId: id('a'), productKey: '_cart_' });
+  assert.equal(purchase.accountDesign, null);
+  assert.notEqual(purchase.workingDesignId, original.workingDesignId);
+  assert.equal(purchase.storageVersion, 0);
+  await page.draftStore.save(purchase);
+  const library = await page.draftStore.loadFor({ accountDesignId: reference.id });
+  assert.equal(library.workingDesignId, original.workingDesignId);
+  assert.deepEqual(library.designs, original.designs);
+});
+
+test('unavailable private recovery falls back to the accepted guest cart snapshot', async () => {
+  const { context: page } = harness();
+  await page.draftStore.save({ ...page.draftSnapshot(), editingOrderItemId: id('a'),
+    accountDesign: { id: '00000000-0000-4000-8000-000000000001', ownerId: '00000000-0000-4000-8000-000000000002', version: 1 } });
+  page.accountController = { validateLocal: async () => false };
+  vm.runInContext(pageFunction('loadLocalDraft'), page);
+  assert.equal(await page.loadLocalDraft({ editingOrderItemId: id('a'), productKey: '_cart_' }), null);
+  assert.ok(await page.draftStore.loadActive(), 'private working data is preserved for its owner');
+});
+
+test('library entry clears cart targets for both resumed and newer saved artwork', async () => {
+  for (const status of ['same', 'newer', 'conflict']) {
+    const { context: page, cart } = harness();
+    const snapshot = { ...page.draftSnapshot(), editingOrderItemId: id('a'),
+      accountDesign: { id: 'private', ownerId: 'owner', version: 1, fingerprint: 'original' } };
+    cart.write([{ id: id('a'), productKey: 'mug' }]);
+    page.loadLocalDraft = async () => snapshot;
+    page.document.querySelector = () => ({ textContent: '' });
+    let local, saved, restores = 0;
+    page.applyLocalDraft = async value => { local = value; page.editingOrderItemId = value.editingOrderItemId; };
+    page.applySavedConfiguration = async value => { saved = value; };
+    page.accountController = { inspectLocal: async () => ({ status }), restore: async () => { restores++; return { ...snapshot, words: [['newer', 1]] }; },
+      restored() {}, detach() {} };
+    page.askDesignStateChoice = async () => 'copy';
+    await page.restoreAccountDesign('private');
+    assert.equal(page.editingOrderItemId, null);
+    assert.deepEqual(cart.read().map(item => item.id), [id('a')]);
+    if (status === 'newer') { assert.equal(restores, 1); assert.deepEqual(saved.words, [['newer', 1]]); }
+    else { assert.equal(local.editingOrderItemId, null); if (status === 'conflict') assert.equal(local.accountDesign, null); }
+    if (status !== 'newer') {
+      const purchaseDraft = await page.draftStore.loadFor({ editingOrderItemId: id('a'), productKey: '_cart_' });
+      assert.equal(purchaseDraft.accountDesign, null);
+      assert.notEqual(purchaseDraft.workingDesignId, snapshot.workingDesignId);
+      assert.deepEqual(purchaseDraft.designs, snapshot.designs, 'pending cart artwork survives library entry');
+    }
+  }
+});
+
+test('successful cart approval retains a failed local recovery warning and does not navigate', async () => {
+  const { context: page, cart, calls } = harness();
+  page.persistCurrentDraft = async () => { page.draftStorageFailed = true; page.errorText.textContent = 'Browser recovery failed'; return false; };
+  assert.equal(await page.approveCurrentDesign(), false);
+  assert.equal(cart.read().length, 1, 'the accepted immutable cart snapshot remains');
+  assert.equal(calls.posts, 1);
+  assert.equal(page.draftStorageFailed, true);
+  assert.equal(page.errorText.textContent, 'Browser recovery failed');
+  assert.deepEqual(calls.navigations, []);
+});
+
+test('choosing an existing purchase from the library records cart-entry intent for reload', async () => {
+  const { context: page, cart, calls } = harness();
+  const accountId = '00000000-0000-4000-8000-000000000001';
+  page.accountDesignReference = { id: accountId };
+  cart.write([{ id: id('a'), productKey: 'mug', accountDesignId: accountId }]);
+  page.askDesignStateChoice = async () => `edit:${id('a')}`;
+  page.loadOrderItem = async value => { page.editingOrderItemId = value; };
+  assert.equal(await page.approveCurrentDesign(), false);
+  assert.equal(calls.posts, 0);
+  assert.equal(calls.replaced.at(-1), `/e/event-a/configure?edit=${id('a')}`);
+  assert.equal(cart.read().length, 1);
+});
+
+test('source and rebuild history actions re-enable when the workspace leaves its busy state', () => {
+  const { context: page } = harness();
+  const nodes = new Map();
+  page.document.getElementById = id => { if (!nodes.has(id)) nodes.set(id, {}); return nodes.get(id); };
+  page.content.querySelectorAll = () => [];
+  page.checkoutPanel = { setAttribute() {} };
+  page.WolkenworteActions = { setBusy() {} };
+  vm.runInContext(pageFunction('setOrderActionsBusy'), page);
+  page.cloudRebuildUndo = {};
+  page.orderActionPending = true;
+  page.setOrderActionsBusy(true); page.updateCloudNotice();
+  assert.equal(nodes.get('check-live-words').disabled, true);
+  page.orderActionPending = false;
+  page.setOrderActionsBusy(false);
+  assert.equal(nodes.get('check-live-words').disabled, false);
+  assert.equal(nodes.get('undo-cloud-rebuild').disabled, false);
 });

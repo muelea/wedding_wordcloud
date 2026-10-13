@@ -25,6 +25,7 @@
         ...((directDesign ?? (previous?.slug === slug && previous.directDesign === true))
           ? { directDesign: true } : {}),
         expiresAt: now + TTL }));
+      storage.setItem(`wolkenworte-basket-label:${slug}`, String(title || slug).slice(0, 120));
     } catch {}
   }
   function recent() { try { return read(localStorage); } catch { return null; } }

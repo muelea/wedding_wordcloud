@@ -279,8 +279,6 @@
     .own-word-copy { display: inline-flex; align-items: baseline; gap: 7px; min-width: 0; }
     .own-word-label { overflow-wrap: anywhere; }
     .own-word-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
-    .own-word-remove { flex: 0 0 auto; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
-    .own-word-remove:hover, .own-word-remove:focus-visible { background: rgba(164,14,76,.1); color: var(--primary); }
     .own-word-remove:disabled { cursor: wait; opacity: .45; }
     .own-words-empty, .own-words-error { color: var(--muted); font-size: 13px; }
     .own-words-error { color: var(--primary); }
@@ -296,8 +294,6 @@
     .word-manager-list { display: grid; gap: 7px; max-height: 210px; margin: 11px 0 0; overflow: auto; }
     .word-manager-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 4px 4px 4px 11px; border: 1px solid var(--border); border-radius: 10px; }
     .word-manager-count { color: var(--muted); font-size: 12px; }
-    .word-manager-remove { width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 23px/1 system-ui, sans-serif; cursor: pointer; }
-    .word-manager-remove:hover { background: rgba(164,14,76,.1); color: var(--primary); }
     .word-manager-empty { margin: 11px 0 0; color: var(--muted); font-size: 13px; }
 
     #cloud-canvas {
@@ -544,8 +540,6 @@
     .draft-settings input { height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); color: var(--text); font: 16px 'Jost', 'Wolkenworte Jost Fallback', sans-serif; }
     .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
     .dialog-heading h2 { margin: 0; }
-    .dialog-close { width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font: 300 26px/1 system-ui, sans-serif; cursor: pointer; }
-    .dialog-close:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
     .share-dialog { width: min(500px, calc(100% - 32px)); }
     .share-dialog-copy { margin-top: -4px; }
     .share-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -630,6 +624,7 @@
   </style>
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
+  <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
 </head>
 <body>
 
@@ -727,7 +722,7 @@
 
 <dialog class="draft-settings own-words-dialog ww-mobile-dialog" id="display-own-words-dialog" aria-labelledby="display-own-words-title">
   <form method="dialog">
-    <div class="dialog-heading"><h2 id="display-own-words-title">Deine Wörter</h2><button class="dialog-close" type="submit" aria-label="Dialog schließen">×</button></div>
+    <div class="dialog-heading"><h2 id="display-own-words-title">Deine Wörter</h2><button class="ww-icon-button ww-close-button dialog-close" type="submit" aria-label="Dialog schließen"></button></div>
     <p class="own-words-intro">Hier kannst du deine eigenen Eingaben verwalten. Mit jedem Entfernen wird ein Beitrag gelöscht.</p>
     <div class="own-words-list" id="display-own-words-list"></div>
     <p class="own-words-empty" id="display-own-words-empty" hidden>Du hast noch keine Wörter hinzugefügt.</p>
@@ -737,7 +732,7 @@
 
 <dialog class="draft-settings share-dialog ww-mobile-dialog" id="share-dialog" aria-labelledby="share-dialog-title">
   <form method="dialog">
-    <div class="dialog-heading"><h2 id="share-dialog-title">Wortwolke teilen</h2><button class="dialog-close" type="submit" aria-label="Teilen-Dialog schließen" data-i18n-aria-label-source="Teilen-Dialog schließen">×</button></div>
+    <div class="dialog-heading"><h2 id="share-dialog-title">Wortwolke teilen</h2><button class="ww-icon-button ww-close-button dialog-close" type="submit" aria-label="Teilen-Dialog schließen" data-i18n-aria-label-source="Teilen-Dialog schließen"></button></div>
     <p class="share-dialog-copy">Ladet andere ein, ein Wort beizutragen und die Wortwolke live wachsen zu sehen.</p>
     <div class="share-options">
       <a class="share-option" id="share-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
@@ -775,7 +770,7 @@
 
 <dialog class="draft-settings ww-mobile-dialog" id="draft-settings" aria-labelledby="draft-settings-title">
   <form id="draft-settings-form">
-    <div class="dialog-heading"><h2 id="draft-settings-title">Wortwolke verwalten</h2><button class="dialog-close" type="button" aria-label="Organisatorbereich schließen" data-i18n-aria-label-source="Organisatorbereich schließen" onclick="this.closest('dialog').close()">×</button></div>
+    <div class="dialog-heading"><h2 id="draft-settings-title">Wortwolke verwalten</h2><button class="ww-icon-button ww-close-button dialog-close" type="button" aria-label="Organisatorbereich schließen" data-i18n-aria-label-source="Organisatorbereich schließen" onclick="this.closest('dialog').close()"></button></div>
     <p>Hier verwaltet ihr die Wortwolke mit eurer Organisator-PIN.</p>
     <label for="draft-name">Name der Wortwolke
       <input id="draft-name" maxlength="80" placeholder="z. B. Sommerfest 2026" required />
@@ -803,7 +798,7 @@
 
 <dialog class="draft-settings ww-mobile-dialog" id="pin-unlock-dialog" aria-labelledby="pin-unlock-title">
   <form id="pin-unlock-form">
-    <div class="dialog-heading"><h2 id="pin-unlock-title">Organisator-PIN eingeben</h2><button class="dialog-close" type="button" aria-label="Dialog schließen" onclick="this.closest('dialog').close()">×</button></div>
+    <div class="dialog-heading"><h2 id="pin-unlock-title">Organisator-PIN eingeben</h2><button class="ww-icon-button ww-close-button dialog-close" type="button" aria-label="Dialog schließen" onclick="this.closest('dialog').close()"></button></div>
     <p>Gebt die Organisator-PIN ein, um die Wortwolke zu verwalten.</p>
     <input id="pin-unlock-input" type="tel" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off" placeholder="Organisator-PIN" required />
     <p class="reset-dialog-error" id="pin-unlock-error" role="alert" aria-live="polite"></p>
@@ -813,7 +808,7 @@
 
 <dialog class="draft-settings ww-mobile-dialog" id="pin-change-dialog" aria-labelledby="pin-change-title">
   <form id="pin-change-form">
-    <div class="dialog-heading"><h2 id="pin-change-title">Organisator-PIN ändern</h2><button class="dialog-close" type="button" aria-label="Dialog schließen" onclick="this.closest('dialog').close()">×</button></div>
+    <div class="dialog-heading"><h2 id="pin-change-title">Organisator-PIN ändern</h2><button class="ww-icon-button ww-close-button dialog-close" type="button" aria-label="Dialog schließen" onclick="this.closest('dialog').close()"></button></div>
     <p>Nach dem Ändern wird der Organisatorbereich wieder gesperrt. Es gibt keine „PIN vergessen“-Funktion.</p>
     <label for="pin-change-input">Neue Organisator-PIN
       <input id="pin-change-input" type="tel" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off" placeholder="4–6 Ziffern" required />
@@ -1520,7 +1515,7 @@
       WolkenworteEmoji.renderInline(label, word);
       const count = document.createElement('span'); count.className = 'own-word-count';
       count.textContent = receipts.length > 1 ? `× ${WolkenworteI18n.formatNumber(receipts.length)}` : '';
-      const remove = document.createElement('button'); remove.className = 'own-word-remove'; remove.type = 'button'; remove.textContent = '×';
+      const remove = document.createElement('button'); remove.className = 'own-word-remove ww-icon-button ww-close-button'; remove.type = 'button';
       setI18nAttribute(remove, 'aria-label', 'Eine Eingabe von „{{word}}“ entfernen', { word });
       remove.addEventListener('click', () => removeOwnContribution(receipts[receipts.length - 1], remove));
       copy.append(label, count); item.append(copy, remove); displayOwnWordsList.appendChild(item);
@@ -1679,7 +1674,7 @@
       const label = document.createElement('span');
       WolkenworteEmoji.renderInline(label, word);
       const countLabel = document.createElement('span'); countLabel.className = 'word-manager-count'; countLabel.textContent = count > 1 ? `× ${WolkenworteI18n.formatNumber(count)}` : '';
-      const remove = document.createElement('button'); remove.className = 'word-manager-remove'; remove.type = 'button'; remove.textContent = '×';
+      const remove = document.createElement('button'); remove.className = 'word-manager-remove ww-icon-button ww-close-button'; remove.type = 'button';
       setI18nAttribute(remove, 'aria-label', '„{{word}}“ entfernen', { word });
       remove.addEventListener('click', async () => {
         remove.disabled = true;

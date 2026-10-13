@@ -785,6 +785,16 @@
       font-size: 13px;
     }
     .cloud-update-notice[hidden] { display: none; }
+    .cloud-update-notice { flex-wrap: wrap; }
+    .cloud-source-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .cloud-source-actions[hidden], .cloud-source-actions [hidden] { display: none; }
+    .cloud-source-actions p { margin: 0; flex: 1 1 240px; font-size: 13px; color: var(--muted); }
+    #design-state-choice-dialog { max-width: min(600px, calc(100vw - 32px)); border: 0; border-radius: 20px; padding: 24px; color: var(--ink); }
+    #design-state-choice-items { display: grid; gap: 8px; margin: 16px 0; }
+    #design-state-choice-items img { width: 64px; height: 64px; object-fit: contain; }
+    #design-state-choice-items button { display: flex; align-items: center; gap: 12px; }
+    #design-state-choice-dialog .design-replace-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cart-review-selection { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
     .cloud-update-notice button {
       flex: 0 0 auto;
       border: 0;
@@ -1257,20 +1267,6 @@
       font-size: 26px;
       font-weight: 500;
     }
-    .product-dialog-close {
-      width: 36px;
-      height: 36px;
-      flex: 0 0 auto;
-      border: 1px solid rgba(123, 70, 82, .14);
-      border-radius: 50%;
-      background: #fff;
-      color: var(--muted);
-      cursor: pointer;
-      font: inherit;
-      font-size: 20px;
-      line-height: 1;
-    }
-    .product-dialog-close:hover { color: var(--berry); border-color: rgba(156, 28, 76, .36); }
     .product-dialog-body {
       min-height: 0;
       padding: 18px 24px 22px;
@@ -1484,14 +1480,14 @@
     .custom-color-list {
       margin-top: 13px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(164px, 1fr));
       gap: 8px;
     }
     .custom-color-item {
       min-width: 0;
       padding: 7px;
       display: grid;
-      grid-template-columns: 36px minmax(0, 1fr) 28px;
+      grid-template-columns: 36px minmax(0, 1fr) 44px;
       align-items: center;
       gap: 8px;
       border: 1px solid rgba(62,35,45,.1);
@@ -1519,19 +1515,6 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .custom-color-remove {
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      border: 0;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 17px;
-      line-height: 1;
-    }
-    .custom-color-remove:hover { background: rgba(156,28,76,.08); color: var(--berry); }
     .custom-color-remove:disabled { cursor: not-allowed; opacity: .25; }
     .custom-palette-note { margin: 11px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 
@@ -1632,8 +1615,7 @@
     }
     .order-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: nowrap; }
     .order-edit,
-    .order-mockup,
-    .order-remove {
+    .order-mockup {
       min-height: 32px;
       padding: 0;
       border: 0;
@@ -1660,8 +1642,6 @@
       color: var(--muted);
       cursor: default;
     }
-    .order-remove { width: 32px; }
-    .order-remove:hover { background: rgba(156, 28, 76, .08); color: var(--berry); }
     .order-mockup:disabled { cursor: wait; opacity: .62; }
     .order-mockup-panel {
       grid-column: 1 / -1;
@@ -2066,12 +2046,9 @@
       .surface-copy,
       .product-dialog-close,
       .custom-color-add { min-height: var(--ww-touch-target); }
-      .product-dialog-close { min-width: var(--ww-touch-target); }
       .custom-color-item { grid-template-columns: var(--ww-touch-target) minmax(0, 1fr) var(--ww-touch-target); }
-      .custom-color-input,
-      .custom-color-remove { width: var(--ww-touch-target); height: var(--ww-touch-target); }
-      .order-edit,
-      .order-remove { min-width: var(--ww-touch-target); min-height: var(--ww-touch-target); }
+      .custom-color-input { width: var(--ww-touch-target); height: var(--ww-touch-target); }
+      .order-edit { min-width: var(--ww-touch-target); min-height: var(--ww-touch-target); }
       .product-dialog { width: min(100% - 20px, 560px); max-height: calc(100vh - 20px); border-radius: 20px; }
       .product-dialog-head,
       .product-dialog-body,
@@ -2113,6 +2090,7 @@
   <link rel="stylesheet" href="<%= asset('/configurator-workspace.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
+  <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
 </head>
 <body>
   <%- include('partials/site-header') %>
@@ -2160,7 +2138,7 @@
                 <span class="toolbar-summary-detail" id="selected-orientation-detail">Vertikal</span>
               </button>
               <dialog class="config-panel" id="orientation-panel" aria-labelledby="orientation-panel-title">
-                <div class="config-panel-head"><h2 id="orientation-panel-title" tabindex="-1">Ausrichtung</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+                <div class="config-panel-head"><h2 id="orientation-panel-title" tabindex="-1">Ausrichtung</h2><button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button></div>
                 <div class="config-panel-body">
                 <div class="option-grid orientation-grid" id="orientation-options"></div>
                 </div>
@@ -2176,7 +2154,7 @@
                 <span class="swatches toolbar-theme-swatches" id="selected-theme-swatches" aria-hidden="true"></span>
               </button>
               <dialog class="config-panel" id="theme-panel" aria-labelledby="theme-panel-title">
-                <div class="config-panel-head"><h2 id="theme-panel-title" tabindex="-1">Farbwelt</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+                <div class="config-panel-head"><h2 id="theme-panel-title" tabindex="-1">Farbwelt</h2><button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button></div>
                 <div class="config-panel-body">
                 <p class="design-save-state">Die Farbwelt gilt für alle Druckseiten dieses Designs.</p>
                 <div class="option-grid" id="theme-options"></div>
@@ -2213,8 +2191,16 @@
 
         <%- include('partials/editor-symbols') %>
         <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
-          <span>Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.</span>
-          <button id="apply-live-words" type="button">Design mit aktuellen Wörtern neu erstellen</button>
+          <span>Die Wortwolke hat sich geändert. Euer Design bleibt unverändert.</span>
+          <button id="apply-live-words" type="button">Mit aktuellen Wörtern neu gestalten</button>
+          <button id="keep-live-design" type="button">Dieses Design behalten</button>
+        </div>
+        <div class="cloud-source-actions" id="cloud-source-actions" hidden>
+          <button class="secondary-button" id="check-live-words" type="button">Aktuelle Wörter prüfen</button>
+          <button class="secondary-button" id="undo-cloud-rebuild" type="button" hidden>Neu erstelltes Design rückgängig</button>
+          <button class="secondary-button" id="redo-cloud-rebuild" type="button" hidden>Design erneut neu erstellen</button>
+          <p id="cloud-source-feedback" data-cloud-feedback role="status" aria-live="polite"></p>
+          <form id="empty-cloud-design-start" action="/design/start" method="post" hidden><button class="secondary-button" type="submit">Eigenes Design gestalten</button></form>
         </div>
         <div class="workspace-shell">
         <section class="workspace-tools" id="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
@@ -2413,6 +2399,7 @@
             <div class="order-head">
               <strong>Euer Warenkorb</strong>
               <span id="order-count"></span>
+              <span id="basket-context"></span>
             </div>
             <div class="order-list" id="order-list"></div>
           </div>
@@ -2445,7 +2432,7 @@
   <dialog class="config-panel" id="shipping-choice-dialog" aria-labelledby="shipping-choice-title" aria-describedby="shipping-choice-description">
     <div class="config-panel-head">
       <h2 id="shipping-choice-title" tabindex="-1">Designs vor dem Weitergehen prüfen</h2>
-      <button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button>
+      <button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button>
     </div>
     <div class="config-panel-body">
       <p id="shipping-choice-description">Dieses Design ist noch nicht im Warenkorb. Möchtet ihr es hinzufügen oder nur mit den bisherigen Designs fortfahren?</p>
@@ -2459,7 +2446,7 @@
   </dialog>
 
   <dialog class="cart-comparison-dialog" id="cart-comparison-dialog" aria-labelledby="cart-comparison-title">
-    <div class="config-panel-head"><h2 id="cart-comparison-title" tabindex="-1">Designvergleich</h2><button class="config-panel-close" type="button" data-cart-comparison-close aria-label="Schließen">×</button></div>
+    <div class="config-panel-head"><h2 id="cart-comparison-title" tabindex="-1">Designvergleich</h2><button class="ww-icon-button ww-close-button config-panel-close" type="button" data-cart-comparison-close aria-label="Schließen"></button></div>
     <div class="config-panel-body" data-cart-comparison-body></div>
   </dialog>
 
@@ -2498,11 +2485,11 @@
   <dialog class="product-dialog ww-mobile-dialog" id="product-dialog" aria-labelledby="product-dialog-title" aria-describedby="product-dialog-description" tabindex="-1">
     <div class="product-dialog-shell">
       <div class="product-dialog-head">
-        <button class="product-dialog-close" id="product-dialog-back" type="button" aria-label="Zurück" hidden>←</button>
+        <button class="product-dialog-back ww-icon-button" id="product-dialog-back" type="button" aria-label="Zurück" hidden>←</button>
         <div>
           <h2 id="product-dialog-title" tabindex="-1">Produkt wählen</h2>
         </div>
-        <button class="product-dialog-close" id="product-dialog-close" type="button" aria-label="Produktwahl schließen">×</button>
+        <button class="ww-icon-button ww-close-button product-dialog-close" id="product-dialog-close" type="button" aria-label="Produktwahl schließen"></button>
       </div>
       <div class="product-dialog-body">
         <p class="product-dialog-description" id="product-dialog-description"></p>
@@ -2519,7 +2506,7 @@
   </dialog>
 
   <dialog class="config-panel artwork-overlap-panel" id="editor-overlap-panel" aria-labelledby="editor-overlap-title">
-    <div class="config-panel-head"><h2 id="editor-overlap-title" tabindex="-1">Überlagerungen prüfen</h2><button type="button" class="config-panel-close" data-panel-close aria-label="Schließen">×</button></div>
+    <div class="config-panel-head"><h2 id="editor-overlap-title" tabindex="-1">Überlagerungen prüfen</h2><button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button></div>
     <div class="config-panel-body">
       <p id="editor-overlap-status" role="status" aria-live="polite"></p>
       <div id="editor-overlap-list"></div>
@@ -2527,11 +2514,16 @@
   </dialog>
 
   <%- include('partials/site-footer') %>
+  <dialog class="design-replace-dialog" id="design-state-choice-dialog" aria-labelledby="design-state-choice-title">
+    <div class="design-replace-head"><h2 id="design-state-choice-title" tabindex="-1"></h2></div>
+    <div class="design-replace-body"><p id="design-state-choice-description"></p><div id="design-state-choice-items"></div></div>
+    <div class="design-replace-actions"><button class="secondary-button" type="button" id="design-state-choice-cancel">Weiter bearbeiten</button><button class="primary-button" type="button" id="design-state-choice-copy"></button></div>
+  </dialog>
   <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
-  <dialog class="ww-account-dialog" id="account-auth-dialog"><div class="ww-account-dialog-head"><h2>Designs im Konto speichern</h2><button type="button" data-account-dialog-close aria-label="Schließen">×</button></div><%- include('partials/account-auth') %></dialog>
-  <dialog class="ww-account-dialog" id="account-save-dialog"><div class="ww-account-dialog-head"><h2>Design speichern</h2><button type="button" data-account-dialog-close aria-label="Schließen">×</button></div>
+  <dialog class="ww-account-dialog" id="account-auth-dialog" aria-labelledby="account-auth-title"><div class="ww-account-dialog-head"><h2 id="account-auth-title">Designs im Konto speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div><%- include('partials/account-auth') %></dialog>
+  <dialog class="ww-account-dialog" id="account-save-dialog" aria-labelledby="account-save-title"><div class="ww-account-dialog-head"><h2 id="account-save-title">Design speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div>
     <form><label>Designname<input name="name" maxlength="80" required /></label><p>Nur mit diesem Klick wird dein Design im Konto gespeichert. Weitere Änderungen bleiben ungespeichert, bis du erneut speicherst.</p>
-      <div class="ww-account-actions"><button class="ww-account-primary" type="submit">Im Konto speichern</button><button type="button" data-account-save-copy>Als neues Design speichern</button></div><p data-account-save-status role="status" aria-live="polite"></p></form>
+      <div class="ww-account-actions"><button class="ww-account-primary" type="submit">Im Konto speichern</button><button type="button" data-account-save-copy>Als neues Design speichern</button><button type="button" data-account-save-existing>Bestehendes Design auswählen</button><button type="button" data-account-open-latest hidden>Gespeicherte Version öffnen</button></div><div data-account-save-targets hidden></div><p data-account-save-status role="status" aria-live="polite"></p></form>
   </dialog>
   <% } %>
 
@@ -2758,6 +2750,15 @@
     let removedEditingState = null;
     let accountDesignReference = null;
     let accountController = null;
+    let workingDesignId = WolkenworteConfiguratorSession.newWorkingId();
+    let draftStorageVersion = 0;
+    let dismissedCloud = '';
+    let cloudSourceState = directDesign ? 'independent' : 'ready';
+    let cloudCheckPending = false;
+    let cloudCheckGeneration = 0;
+    let lastCloudCheck = Date.now();
+    let cloudRebuildUndo = null;
+    let cloudRebuildRedo = null;
 
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
@@ -2776,8 +2777,9 @@
 
     function updateCartActions() {
       const items = loadOrderItems();
+      const emptyLiveDesign = !directDesign && !words.length;
       saveDesignButton.hidden = Boolean(editingOrderItemId) && !currentDesignNeedsSave;
-      saveDesignButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
+      saveDesignButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave || emptyLiveDesign;
       if (!saveDesignButton.classList?.contains('ww-is-busy')) {
         setText(saveDesignButton, editingOrderItemId ? 'Warenkorb aktualisieren' : 'In den Warenkorb');
       }
@@ -2788,7 +2790,7 @@
           ? 'Warenkorb aktualisieren & zur Lieferadresse'
           : 'In den Warenkorb & zur Lieferadresse')
         : 'Zur Lieferadresse');
-      continueOrderButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
+      continueOrderButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || (!items.length && emptyLiveDesign);
       designAnotherButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       designAnotherButton.hidden = !items.length;
       updateAccountSaveState();
@@ -2915,6 +2917,9 @@
         savedDesignFingerprint,
         currentDesignEdited,
         designRevision,
+        workingDesignId,
+        storageVersion: draftStorageVersion,
+        dismissedCloud,
       };
     }
 
@@ -2940,6 +2945,10 @@
           else mugEditor.flushPendingChange();
           const snapshot = draftSnapshot();
           const record = await draftStore.save(snapshot);
+          draftStorageVersion = record.storageVersion || 0;
+          const query = new URLSearchParams(location.search);
+          query.set('draft', workingDesignId); query.delete('accountLatest');
+          history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
           draftSavedRevision = snapshot.designRevision;
           draftStorageFailed = false;
           if (record.editingOrderItemId) {
@@ -2950,6 +2959,28 @@
           updateCartDraftMarkers();
           return true;
         } catch (error) {
+          if (error.message === 'draft_conflict') {
+            // Keep this tab's edits as an independent copy. The other tab's
+            // accepted draft and cart target remain untouched.
+            workingDesignId = WolkenworteConfiguratorSession.newWorkingId();
+            draftStorageVersion = 0;
+            editingOrderItemId = null;
+            savedDesignFingerprint = null;
+            currentDesignNeedsSave = true;
+            let copy;
+            try { copy = await draftStore.save(draftSnapshot()); }
+            catch (copyError) {
+              draftStorageFailed = true;
+              setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
+              return false;
+            }
+            draftStorageVersion = copy.storageVersion;
+            draftSavedRevision = designRevision;
+            setText(errorText, 'Das Design wurde in einem anderen Tab geändert. Eure Änderungen bleiben als separater Entwurf erhalten.');
+            history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?draft=${encodeURIComponent(workingDesignId)}`);
+            renderOrderBox();
+            return false;
+          }
           console.warn('Configurator draft save failed.', error);
           draftStorageFailed = true;
           setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
@@ -2963,13 +2994,23 @@
     }
 
     async function loadLocalDraft(criteria = null, { accountDesignId = null } = {}) {
-      const read = () => criteria ? draftStore.loadFor(criteria) : draftStore.loadActive();
+      const read = () => criteria ? draftStore.loadFor(criteria) : accountDesignId
+        ? draftStore.loadFor({ accountDesignId }) : draftStore.loadActive();
       let lastError = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
-          const draft = await WolkenworteConfiguratorSession.withTimeout(read(), 2500);
+          let draft = await WolkenworteConfiguratorSession.withTimeout(read(), 2500);
+          if (criteria?.editingOrderItemId && draft?.editingOrderItemId !== criteria.editingOrderItemId) return null;
+          if (criteria?.editingOrderItemId && draft?.accountDesign) {
+            // A purchase copy cannot take over the private library draft's
+            // identity. If private recovery is unavailable, the immutable cart
+            // snapshot remains available through the guest path.
+            if (!accountController || !await accountController.validateLocal(draft.accountDesign)) return null;
+            draft = { ...draft, accountDesign: null,
+              workingDesignId: WolkenworteConfiguratorSession.newWorkingId(), storageVersion: 0 };
+          }
           if (accountDesignId && draft?.accountDesign?.id !== accountDesignId) return null;
-          if (draft?.accountDesign && (!accountController || !await accountController.validateLocal(draft.accountDesign))) return null;
+          if (!accountDesignId && draft?.accountDesign && (!accountController || !await accountController.validateLocal(draft.accountDesign))) return null;
           if (!draft || draft.currentDesignEdited !== false ||
               draft.layoutVersion === AUTOMATIC_LAYOUT_VERSION) return draft;
           // This is an untouched automatic layout from an older runtime. It is
@@ -3024,7 +3065,7 @@
       setText(shippingChoiceDescription, adding
         ? (drafts.length ? 'Die gezeigten Warenkorb-Designs werden ersetzt und das neue Design wird zusätzlich hinzugefügt.'
           : 'Dieses Design ist noch nicht im Warenkorb. Es wird als zusätzlicher Artikel hinzugefügt.')
-        : 'Die gezeigten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.');
+          : 'Die ausgewählten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.');
       setText(shippingChoiceSave, adding
         ? (drafts.length ? 'Aktualisieren, hinzufügen und weiter' : 'Hinzufügen und weiter')
         : 'Warenkorb aktualisieren und weiter');
@@ -3064,7 +3105,12 @@
     });
 
     shippingChoiceCurrentCart.addEventListener('click', () => shippingChoiceDialog.close('cart'));
-    shippingChoiceSave.addEventListener('click', () => shippingChoiceDialog.close('save'));
+    shippingChoiceSave.addEventListener('click', () => shippingChoiceDialog.close(`save:${JSON.stringify(cartReview.selection())}`));
+    shippingChoiceList.addEventListener('change', () => {
+      const selected = cartReview.selection();
+      if (!selected.ids.length && !selected.addition) setText(shippingChoiceSave, 'Mit aktuellem Warenkorb weiter');
+      else setText(shippingChoiceSave, 'Ausgewählte Änderungen übernehmen und weiter');
+    });
 
     function askAnotherProductChoice() {
       const updating = Boolean(editingOrderItemId);
@@ -3096,6 +3142,77 @@
       });
     }
     document.getElementById('design-replace-confirm').addEventListener('click', () => designReplaceDialog.close('replace'));
+
+    function askDesignStateChoice(title, description, choices, copyLabel) {
+      const dialog = document.getElementById('design-state-choice-dialog');
+      setText(document.getElementById('design-state-choice-title'), title);
+      setText(document.getElementById('design-state-choice-description'), description);
+      setText(document.getElementById('design-state-choice-copy'), copyLabel);
+      const list = document.getElementById('design-state-choice-items');
+      list.replaceChildren();
+      for (const choice of choices) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'secondary-button';
+        if (choice.item) button.append(createOrderItemThumbnail(choice.item, products.find(item => item.key === choice.item.productKey)));
+        const label = document.createElement('span'); setText(label, choice.label); button.append(label);
+        button.addEventListener('click', () => dialog.close(choice.value)); list.append(button);
+      }
+      dialog.returnValue = 'cancel';
+      return new Promise(resolve => {
+        dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true });
+        workspace.close(false); workspace.show(dialog, saveDesignButton);
+      });
+    }
+    document.getElementById('design-state-choice-cancel').addEventListener('click', () => document.getElementById('design-state-choice-dialog').close('cancel'));
+    document.getElementById('design-state-choice-copy').addEventListener('click', () => document.getElementById('design-state-choice-dialog').close('copy'));
+
+    async function restoreAccountDesign(id, { latest = false, workingId = null } = {}) {
+      const draft = latest ? null : await loadLocalDraft(workingId ? { workingDesignId: workingId } : null, { accountDesignId: id });
+      let useLocal = false, copy = false;
+      if (draft?.accountDesign?.id === id) {
+        const fingerprint = WolkenworteConfiguratorSession.accountDesignFingerprint(WolkenworteConfiguratorSession.accountSnapshot(draft));
+        const result = await accountController.inspectLocal(draft.accountDesign, fingerprint);
+        useLocal = result.status === 'same';
+        if (result.status === 'conflict') {
+          const choice = await askDesignStateChoice('Das gespeicherte Design wurde geändert',
+            'Es gibt eine neuere gespeicherte Version und lokale Änderungen. Beide bleiben erhalten. Welche Version möchtet ihr öffnen?',
+            [{ label: 'Gespeicherte Version öffnen', value: 'latest' }], 'Lokale Änderungen als Kopie öffnen');
+          if (choice === 'cancel') throw new Error('account_restore_cancelled');
+          copy = choice === 'copy'; useLocal = copy;
+        }
+      }
+      if (useLocal) {
+        if (draft.editingOrderItemId && loadOrderItems().some(item => item.id === draft.editingOrderItemId)) {
+          // The library entry resumes private work. Keep the purchase working
+          // copy under its own identity before detaching the library target.
+          const purchaseDraft = await draftStore.save({ ...draft, accountDesign: null,
+            workingDesignId: WolkenworteConfiguratorSession.newWorkingId(), storageVersion: 0 });
+          if (purchaseDraft.needsCartUpdate) cartDrafts.set(purchaseDraft.editingOrderItemId, purchaseDraft);
+        }
+        await applyLocalDraft({ ...draft, editingOrderItemId: null, savedDesignFingerprint: null,
+          ...(copy ? { accountDesign: null, workingDesignId: WolkenworteConfiguratorSession.newWorkingId(), storageVersion: 0 } : {}) },
+          { validatedAccount: !copy });
+        if (copy) {
+          accountController.detach();
+          history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?draft=${encodeURIComponent(workingDesignId)}`);
+        }
+        if (copy || currentAccountFingerprint() !== accountDesignReference?.fingerprint) {
+          setText(document.querySelector('[data-account-save-note]'), 'Ungespeicherte Änderungen wiederhergestellt');
+        }
+      } else {
+        const snapshot = await accountController.restore(id);
+        await applySavedConfiguration(snapshot);
+        productDesignState = DesignTransfer.normalizeState(snapshot.productDesignState);
+        editingOrderItemId = null; savedDesignFingerprint = null;
+        currentDesignEdited = true; currentDesignNeedsSave = true;
+        workingDesignId = WolkenworteConfiguratorSession.newWorkingId(); draftStorageVersion = 0;
+        accountController.restored();
+      }
+    }
+
+    function currentAccountFingerprint() {
+      return WolkenworteConfiguratorSession.accountDesignFingerprint(WolkenworteConfiguratorSession.accountSnapshot(draftSnapshot()));
+    }
 
     async function runNavigation(action) {
       if (leavingPage || orderActionPending) return;
@@ -3174,7 +3291,10 @@
     }
 
     function addOrderItem(configuration, { replaceId = null } = {}) {
-      return cart.replace(orderItemFromConfiguration(configuration), replaceId);
+      const previous = loadOrderItems().find(item => item.id === replaceId);
+      const sourceId = accountController?.source()?.id || previous?.accountDesignId;
+      return cart.replace({ ...orderItemFromConfiguration(configuration), lineId: previous?.lineId || previous?.id || configuration.id,
+        ...(sourceId ? { accountDesignId: sourceId } : {}) }, replaceId);
     }
 
     function setOrderActionsBusy(isBusy, activeButton = null, progressSource = '') {
@@ -3198,18 +3318,20 @@
         button.disabled = isBusy || button.getAttribute('aria-current') === 'true' ||
           button.dataset.mockupPending === 'true';
       });
-      if (!isBusy) updateCartActions();
+      if (!isBusy) { updateCartActions(); updateCloudNotice(); }
     }
 
     async function loadOrderItem(configurationId) {
       if (!WolkenworteConfiguratorSession.validId(configurationId)) throw new Error('invalid_design_link');
       orderActionPending = true;
+      cloudRebuildUndo = null; cloudRebuildRedo = null;
       setOrderActionsBusy(true, null, 'Euer Design wird geladen…');
       clearText(errorText);
       try {
         const localDraft = await loadLocalDraft({ editingOrderItemId: configurationId,
           productKey: '_cart_', orientation: 'default' });
         if (localDraft) {
+          accountController?.detach();
           await applyLocalDraft(localDraft);
           return;
         }
@@ -3226,8 +3348,9 @@
         currentDesignNeedsSave = !editingOrderItemId || Boolean(adjusted);
         savedDesignFingerprint = !adjusted ? currentDesignFingerprint() : null;
         currentDesignEdited = true;
+        workingDesignId = WolkenworteConfiguratorSession.newWorkingId();
+        draftStorageVersion = 0;
         pendingConfiguration = null;
-        cloudUpdateNotice.hidden = true;
         renderOrderBox();
       } finally {
         orderActionPending = false;
@@ -3496,9 +3619,8 @@
         }
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.className = 'order-remove';
+        remove.className = 'order-remove ww-icon-button ww-close-button';
         setTranslatedAttribute(remove, 'aria-label', '{{item}} aus dem Warenkorb entfernen', { item: productName });
-        remove.textContent = '×';
         remove.addEventListener('click', () => removeOrderItem(item.id));
         actions.append(edit);
         if (mockup) actions.append(mockup);
@@ -3532,6 +3654,7 @@
           savedDesignFingerprint = null;
           currentDesignNeedsSave = true;
           currentDesignEdited = true;
+          workingDesignId = WolkenworteConfiguratorSession.newWorkingId(); draftStorageVersion = 0;
           designRevision += 1;
           pendingConfiguration = null;
           void draftStore.removeFor({ editingOrderItemId: configurationId,
@@ -3690,8 +3813,7 @@
 
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.className = 'custom-color-remove';
-        remove.textContent = '×';
+        remove.className = 'custom-color-remove ww-icon-button ww-close-button';
         remove.disabled = customColors.length === 1;
         setTranslatedAttribute(remove, 'aria-label', 'Farbe {{count}} entfernen', { count: index + 1 });
 
@@ -3764,16 +3886,17 @@
       }
     }
 
-    function buildAutomaticDesign(surfaceKey = activeSurface) {
-      const view = productView(product, null, surfaceKey);
+    function buildAutomaticDesign(surfaceKey = activeSurface, options = {}) {
+      const view = productView(options.product || product, options.orientation || null, surfaceKey);
+      const sourceWords = options.words || words;
+      const colors = options.colors || getPalette(selectedTheme).colors;
       const measurementCanvas = document.createElement('canvas');
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
       const slots = view.layoutGeometry['fit-area'];
       // Share only the frequency curve and font measurement with the live
       // cloud. Product placement starts afresh in the print-only optimizer.
-      const measured = WordCloudCore.measureWords(words, measurementContext,
-        makePaletteAssigner(getPalette(selectedTheme).colors));
+      const measured = WordCloudCore.measureWords(sourceWords, measurementContext, makePaletteAssigner(colors));
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
@@ -3799,7 +3922,7 @@
       });
       return DesignLayout.spreadDesignColors(
         optimized,
-        getPalette(selectedTheme).colors,
+        colors,
         measurementContext,
         { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
       );
@@ -4026,16 +4149,153 @@
         mugEditor.flushPendingChange();
         suppressDirty = false;
       }
+      updateCloudNotice();
       if (adjusted) mugEditor.setFeedback('Dein Entwurf wurde an die aktuellen Druckränder angepasst. Bitte prüfen und erneut übernehmen.');
       return adjusted;
     }
 
     function wordsMatch(left, right) {
-      return JSON.stringify(Array.isArray(left) ? left : []) === JSON.stringify(Array.isArray(right) ? right : []);
+      return WolkenworteConfiguratorSession.wordSignature(Array.isArray(left) ? left : []) ===
+        WolkenworteConfiguratorSession.wordSignature(Array.isArray(right) ? right : []);
     }
 
-    async function applyLocalDraft(draft) {
-      if (draft.accountDesign && (!accountController || !await accountController.validateLocal(draft.accountDesign))) {
+    function updateCloudNotice() {
+      // Library designs reopen in independent workspaces, whose empty event
+      // words are not a live source for the restored artwork.
+      cloudUpdateNotice.hidden = directDesign || cloudSourceState !== 'ready' || wordsMatch(words, liveWords) ||
+        dismissedCloud === WolkenworteConfiguratorSession.wordSignature(liveWords);
+      const actions = document.getElementById('cloud-source-actions');
+      if (actions) actions.hidden = directDesign;
+      const apply = document.getElementById('apply-live-words');
+      if (apply) apply.disabled = cloudCheckPending || orderActionPending || !workspaceReady || restorationFailed || cloudSourceState !== 'ready';
+      const check = document.getElementById('check-live-words');
+      if (check) check.disabled = cloudCheckPending || orderActionPending || !workspaceReady || restorationFailed || cloudSourceState === 'unavailable';
+      const empty = document.getElementById('empty-cloud-design-start');
+      if (empty) empty.hidden = directDesign || words.length > 0;
+      syncCloudHistory();
+    }
+
+    function setCloudFeedback(source) {
+      for (const element of document.querySelectorAll('[data-cloud-feedback]')) {
+        if (source) setText(element, source); else clearText(element);
+      }
+    }
+
+    async function fetchCloudWords() {
+      const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator?restore=1`,
+        { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error(response.status === 404 ? 'source_unavailable' : 'load_failed');
+      const data = await response.json();
+      if (data.event?.directDesign) throw new Error('source_unavailable');
+      WolkenworteConfiguratorSession.wordSignature(data.words);
+      return data.words;
+    }
+
+    async function checkLiveWords({ explicit = false } = {}) {
+      if (directDesign || !workspaceReady || restorationFailed || cloudCheckPending || orderActionPending || leavingPage) return;
+      if (!explicit && Date.now() - lastCloudCheck < 5000) return;
+      cloudCheckPending = true;
+      const generation = ++cloudCheckGeneration;
+      if (explicit) setCloudFeedback('Die aktuellen Wörter werden geprüft…');
+      updateCloudNotice();
+      try {
+        const checked = await fetchCloudWords();
+        if (generation !== cloudCheckGeneration) return;
+        const sourceChanged = cloudSourceState !== 'ready' || !wordsMatch(liveWords, checked);
+        liveWords = checked;
+        cloudSourceState = checked.length ? 'ready' : 'empty';
+        if (explicit && dismissedCloud) {
+          // A deliberate recheck lets people reconsider a kept design.
+          dismissedCloud = ''; scheduleDraftSave(0);
+        }
+        if (!checked.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.');
+        else if (explicit || sourceChanged) setCloudFeedback(wordsMatch(words, checked)
+          ? 'Die Wortwolke hat keine neuen Änderungen.' : 'Die Wortwolke hat sich geändert. Euer Design bleibt unverändert.');
+      } catch (error) {
+        if (generation !== cloudCheckGeneration) return;
+        cloudSourceState = error.message === 'source_unavailable' ? 'unavailable' : 'error';
+        setCloudFeedback(error.message === 'source_unavailable'
+          ? 'Die Wortwolke ist nicht mehr verfügbar. Euer Design bleibt erhalten.'
+          : 'Die aktuellen Wörter konnten nicht geprüft werden. Euer Design bleibt unverändert. Bitte versucht es erneut.');
+      } finally {
+        cloudCheckPending = false;
+        lastCloudCheck = Date.now();
+        updateCloudNotice();
+      }
+    }
+
+    async function prepareCloudDesigns(nextWords, nextProduct = product, orientation = selectedOrientation) {
+      if (!nextWords.length) throw new Error('no_words');
+      await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
+      await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
+      const colors = getPalette(selectedTheme).colors;
+      const surfaces = nextProduct.printSurfaces?.length ? nextProduct.printSurfaces : [{ key: 'default' }];
+      return Object.fromEntries(surfaces.map(surface => [surface.key, buildAutomaticDesign(surface.key,
+        { words: nextWords, product: nextProduct, orientation, colors })]));
+    }
+
+    function workingCheckpoint() {
+      const draft = draftSnapshot();
+      return { draft, activeSurface, states: [...surfaceStates].map(([key, state]) => [key, cloneEditorState(state)]),
+        edited: currentDesignEdited, needsSave: currentDesignNeedsSave, savedFingerprint: savedDesignFingerprint };
+    }
+
+    async function restoreWorkingCheckpoint(checkpoint, { rollback = false } = {}) {
+      const acceptedId = editingOrderItemId;
+      const acceptedFingerprint = savedDesignFingerprint;
+      await applySavedConfiguration(checkpoint.draft);
+      suppressDirty = true;
+      try {
+        productDesignState = DesignTransfer.normalizeState(checkpoint.draft.productDesignState);
+        surfaceStates = new Map(checkpoint.states.map(([key, state]) => [key, cloneEditorState(state)]));
+        activeSurface = checkpoint.activeSurface;
+        mugEditor.setSafeArea(productView().safeArea);
+        mugEditor.setState(surfaceStates.get(activeSurface));
+        mugEditor.flushPendingChange();
+        editingOrderItemId = rollback ? checkpoint.draft.editingOrderItemId : acceptedId;
+        savedDesignFingerprint = rollback ? checkpoint.savedFingerprint : acceptedFingerprint;
+        currentDesignEdited = checkpoint.edited;
+        if (rollback) workingDesignId = checkpoint.draft.workingDesignId || workingDesignId;
+        if (rollback) draftStorageVersion = checkpoint.draft.storageVersion || 0;
+        // A checkpoint is artwork, not an old storage lease or accepted save.
+        dismissedCloud = checkpoint.draft.dismissedCloud || '';
+        pendingConfiguration = null;
+      } finally { suppressDirty = false; }
+      if (rollback) currentDesignNeedsSave = checkpoint.needsSave;
+      else { markDirty(); currentDesignEdited = checkpoint.edited; }
+      updateSurfaceControlSelection(); updateProductPresentation(); updateCloudNotice(); renderAll();
+    }
+
+    function syncCloudHistory() {
+      const undo = document.getElementById('undo-cloud-rebuild');
+      const redo = document.getElementById('redo-cloud-rebuild');
+      if (undo) { undo.hidden = !cloudRebuildUndo; undo.disabled = orderActionPending; }
+      if (redo) { redo.hidden = !cloudRebuildRedo; redo.disabled = orderActionPending; }
+      mugEditor?.updateHistoryButtons?.();
+    }
+
+    async function restoreCloudHistory(direction) {
+      if (leavingPage || orderActionPending || fitAreaPending) return;
+      const checkpoint = direction === 'undo' ? cloudRebuildUndo : cloudRebuildRedo;
+      if (!checkpoint) return;
+      await finalizeCurrentText();
+      const current = workingCheckpoint();
+      orderActionPending = true;
+      setOrderActionsBusy(true, null, 'Euer Design wird wiederhergestellt…');
+      try {
+        await restoreWorkingCheckpoint(checkpoint);
+        cloudRebuildUndo = direction === 'undo' ? null : current;
+        cloudRebuildRedo = direction === 'undo' ? current : null;
+        setCloudFeedback(direction === 'undo' ? 'Vorheriges Design wiederhergestellt' : 'Design neu erstellt');
+      } catch (error) {
+        await restoreWorkingCheckpoint(current, { rollback: true });
+        setCloudFeedback('Das Design konnte nicht wiederhergestellt werden. Bitte versucht es erneut.');
+      } finally { orderActionPending = false; setOrderActionsBusy(false); syncCloudHistory(); }
+    }
+
+    async function applyLocalDraft(draft, { validatedAccount = false } = {}) {
+      cloudRebuildUndo = null; cloudRebuildRedo = null;
+      if (!validatedAccount && draft.accountDesign && (!accountController || !await accountController.validateLocal(draft.accountDesign))) {
         throw new Error('account_unauthorized');
       }
       if (!draft.accountDesign) accountController?.detach();
@@ -4049,12 +4309,15 @@
       currentDesignNeedsSave = !editingOrderItemId || adjusted || (savedDesignFingerprint
         ? currentDesignFingerprint() !== savedDesignFingerprint : draft.needsCartUpdate !== false);
       currentDesignEdited = draft.currentDesignEdited !== false || adjusted;
+      workingDesignId = draft.workingDesignId || WolkenworteConfiguratorSession.newWorkingId();
+      draftStorageVersion = draft.workingDesignId ? draft.storageVersion || 0 : 0;
+      dismissedCloud = draft.dismissedCloud || '';
       designRevision = Math.max(0, Number(draft.designRevision) || 0);
       draftSavedRevision = designRevision;
       draftStorageFailed = false;
       pendingConfiguration = null;
-      cloudUpdateNotice.hidden = wordsMatch(draft.words, liveWords);
       renderOrderBox();
+      updateCloudNotice();
       if (adjusted) scheduleDraftSave(0);
     }
 
@@ -4367,6 +4630,8 @@
       pendingConfiguration = null;
       previousProductDraft = null;
       productSwitchUndo.hidden = true;
+      cloudRebuildRedo = null;
+      syncCloudHistory();
       if (workspaceReady) {
         updateCartActions();
         scheduleDraftSave();
@@ -4690,11 +4955,15 @@
     }
 
     async function startProductDesign(nextProduct, orientation, options = {}) {
-      if (!nextProduct || orderActionPending || !workspaceReady || restorationFailed) return false;
+      if (!nextProduct || orderActionPending || !workspaceReady || restorationFailed ||
+          (options.refreshCloud && directDesign)) return false;
       orderActionPending = true;
       setOrderActionsBusy(true, null, options.refreshCloud
         ? 'Die aktuellen Wörter werden geladen…' : 'Euer Design wird aktualisiert…');
+      let checkpoint = null;
+      let committing = false;
       try {
+        checkpoint = workingCheckpoint();
         const previousDraft = draftSnapshot();
         const nextOrientation = orientation || nextProduct.defaultOrientation || 'default';
         const previousEditingId = editingOrderItemId;
@@ -4703,13 +4972,10 @@
         let nextWords = words;
         if (options.refreshCloud) {
           // Only an explicit cloud refresh replaces the user's edited contents.
-          const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`,
-            { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-          if (!response.ok) throw new Error('load_failed');
-          nextWords = (await response.json()).words;
-          if (!Array.isArray(nextWords) || !nextWords.length) throw new Error('no_words');
-          await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts([DesignFonts.DEFAULT_FONT_KEY]));
-          await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
+          nextWords = options.preparedWords || await fetchCloudWords();
+          WolkenworteConfiguratorSession.wordSignature(nextWords);
+          if (!nextWords.length) throw new Error('no_words');
+          transferred = { designs: options.preparedDesigns || await prepareCloudDesigns(nextWords, nextProduct, nextOrientation) };
         } else {
           const source = productDesignSource(getAllSurfaceDesigns());
           const surfaces = nextProduct.printSurfaces?.length ? nextProduct.printSurfaces : [{ key: 'default' }];
@@ -4729,18 +4995,30 @@
         }
         suppressDirty = true;
         try {
+          committing = true;
           words = nextWords;
           if (options.refreshCloud) liveWords = nextWords;
           selectProduct(nextProduct, nextOrientation, transferred?.designs);
           productDesignState = transferred?.state || null;
           if (options.independent) accountController?.detach();
+          if (options.independent) {
+            workingDesignId = WolkenworteConfiguratorSession.newWorkingId();
+            draftStorageVersion = 0;
+          }
           editingOrderItemId = options.preserveEditingItem ? previousEditingId : null;
           if (!editingOrderItemId) savedDesignFingerprint = null;
           mugEditor.flushPendingChange();
         } finally { suppressDirty = false; }
         markDirty();
         currentDesignEdited = options.refreshCloud ? Boolean(options.preserveEditingItem) : wasEdited;
-        cloudUpdateNotice.hidden = wordsMatch(words, liveWords);
+        if (options.refreshCloud) {
+          cloudSourceState = 'ready';
+          dismissedCloud = '';
+          cloudRebuildUndo = checkpoint;
+          cloudRebuildRedo = null;
+          setCloudFeedback('Design neu erstellt. Gespeicherte Designs und Warenkorb bleiben unverändert.');
+        } else { cloudRebuildUndo = null; cloudRebuildRedo = null; }
+        updateCloudNotice();
         draftSavedRevision = -1;
         if (transferred?.retainedBack) {
           mugEditor.setFeedback('Die Vorderseite wurde übernommen. Die Rückseite bleibt im Entwurf erhalten.');
@@ -4752,9 +5030,20 @@
           setText(productSwitchUndo, previousDraft.productKey === product.key
             ? 'Formatwechsel rückgängig' : 'Produktwechsel rückgängig');
         }
-        history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure`);
+        const query = new URLSearchParams(location.search);
+        query.set('draft', workingDesignId); query.delete('accountLatest'); query.delete('cart');
+        if (!editingOrderItemId) query.delete('edit');
+        if (options.independent) query.delete('accountDesign');
+        history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
         return true;
-      } catch {
+      } catch (error) {
+        if (committing && checkpoint) {
+          try { await restoreWorkingCheckpoint(checkpoint, { rollback: true }); }
+          catch (rollbackError) { showRestorationError(rollbackError); }
+        }
+        if (options.refreshCloud) setCloudFeedback(error.message === 'no_words'
+          ? 'Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.'
+          : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.');
         setText(errorText, options.refreshCloud
           ? 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.'
           : 'Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.');
@@ -5075,6 +5364,10 @@
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         palette: getPalette(selectedTheme).colors,
         onSelectionChange: (capabilities) => workspace.updateSelection(capabilities),
+        canUndoBoundary: () => Boolean(cloudRebuildUndo),
+        canRedoBoundary: () => Boolean(cloudRebuildRedo),
+        onUndoBoundary: () => { void restoreCloudHistory('undo'); },
+        onRedoBoundary: () => { void restoreCloudHistory('redo'); },
         openTextEditor: () => workspace.openTextEditor(),
         onChange: () => {
           syncFitAreaButton();
@@ -5152,6 +5445,24 @@
 
     async function approveCurrentDesign() {
       if (!currentDesignNeedsSave) return true;
+      if (!editingOrderItemId && accountDesignReference) {
+        const matches = loadOrderItems().filter(item => item.accountDesignId === accountDesignReference.id);
+        if (matches.length) {
+          const choice = await askDesignStateChoice('Dieses Design ist bereits im Warenkorb',
+            'Öffnet ein vorhandenes Design zur Bearbeitung oder fügt eure aktuelle Gestaltung als weiteres Design hinzu.',
+            matches.map(item => ({ item, value: `edit:${item.id}`,
+              label: products.find(candidate => candidate.key === item.productKey)?.displayName || 'Design' })),
+            'Als weiteres Design hinzufügen');
+          if (choice.startsWith('edit:')) {
+            if (!await persistCurrentDraft()) return false;
+            const id = choice.slice(5);
+            await loadOrderItem(id);
+            history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(id)}`);
+            return false;
+          }
+          if (choice !== 'copy') return false;
+        }
+      }
       // Check browser cart storage before creating a server snapshot.
       try { cart.write(cart.read()); }
       catch {
@@ -5218,14 +5529,13 @@
         previousProductDraft = null;
         productSwitchUndo.hidden = true;
         if (!currentDesignNeedsSave) {
-          try {
-            await draftStore.removeFor(previousId
-              ? { editingOrderItemId: previousId, productKey: product.key, orientation: selectedOrientation }
-              : { productKey: product.key, orientation: selectedOrientation });
+          const recovered = await persistCurrentDraft();
+          if (!recovered) {
+            // The cart snapshot is already accepted. Preserve the recovery
+            // warning and any conflict copy instead of claiming both succeeded.
+            renderOrderBox();
+            return false;
           }
-          catch { /* The immutable cart snapshot remains authoritative. */ }
-          draftSavedRevision = designRevision;
-          draftStorageFailed = false;
         } else {
           scheduleDraftSave(0);
         }
@@ -5273,7 +5583,7 @@
       startingAnotherProduct = true;
       openProductDialog();
     });
-    async function saveReviewedDesigns(drafts) {
+    async function saveReviewedDesigns(drafts, { includeCurrent = true } = {}) {
       const original = draftSnapshot();
       const others = drafts.filter(draft => draft.editingOrderItemId !== original.editingOrderItemId);
       for (const draft of others) {
@@ -5293,7 +5603,7 @@
         try { await applyLocalDraft(original); }
         finally { orderActionPending = false; setOrderActionsBusy(false); }
       }
-      return !hasUnsavedDesign() || await saveCurrentDesign(continueOrderButton);
+      return !includeCurrent || !hasUnsavedDesign() || await saveCurrentDesign(continueOrderButton);
     }
 
     function revealReviewedDesign() {
@@ -5321,6 +5631,11 @@
           if (choice === 'cancel') return;
           if (choice === 'save') {
             if (!await saveReviewedDesigns([...cartDrafts.values()])) return;
+          } else if (choice.startsWith('save:')) {
+            const selection = JSON.parse(choice.slice(5));
+            const selectedIds = new Set(selection.ids);
+            if (!await saveReviewedDesigns([...cartDrafts.values()].filter(draft => selectedIds.has(draft.editingOrderItemId)),
+              { includeCurrent: editingOrderItemId ? selectedIds.has(editingOrderItemId) : selection.addition === true })) return;
           } else if (choice.startsWith('edit:')) {
             await loadOrderItem(choice.slice(5));
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(editingOrderItemId)}`);
@@ -5347,15 +5662,52 @@
     });
 
     async function refreshDesignFromCloud() {
-      if (leavingPage || orderActionPending) return;
-      if (currentDesignEdited && !await askDesignReplacement('Design mit aktuellen Wörtern ersetzen?',
-        'Eure Gestaltung auf allen Druckseiten wird durch die aktuelle Wortwolke ersetzt. Hinzugefügte Elemente und der bisherige Bearbeitungsverlauf werden entfernt. Der Warenkorb bleibt unverändert, bis ihr ihn aktualisiert.',
-        applyLiveWordsButton)) return;
-      await runNavigation(() => startProductDesign(product, selectedOrientation, { refreshCloud: true, preserveEditingItem: true }));
+      if (directDesign || leavingPage || orderActionPending) return;
+      await runNavigation(async () => {
+        let checked, designs;
+        orderActionPending = true;
+        setOrderActionsBusy(true, null, 'Die aktuellen Wörter werden geladen…');
+        setCloudFeedback('Die aktuellen Wörter werden geladen…');
+        try {
+          checked = await fetchCloudWords();
+          liveWords = checked;
+          cloudSourceState = checked.length ? 'ready' : 'empty';
+          if (!checked.length) { setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.'); return; }
+          if (wordsMatch(words, checked)) {
+            setCloudFeedback('Die Wortwolke hat keine neuen Änderungen.'); return;
+          }
+          designs = await prepareCloudDesigns(checked);
+        } catch (error) {
+          cloudSourceState = error.message === 'source_unavailable' ? 'unavailable' : 'error';
+          setCloudFeedback(error.message === 'source_unavailable'
+            ? 'Die Wortwolke ist nicht mehr verfügbar. Euer Design bleibt erhalten.'
+            : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.');
+          return;
+        } finally { orderActionPending = false; setOrderActionsBusy(false); updateCloudNotice(); }
+        if ((currentDesignEdited || editingOrderItemId || accountDesignReference) && !await askDesignReplacement(
+          'Aktuelle Gestaltung ersetzen?',
+          'Die Gestaltung auf allen Druckseiten wird mit den aktuellen Wörtern neu erstellt. Eigene Texte, Bilder und Anpassungen werden ersetzt. Ihr könnt die Änderung rückgängig machen. Gespeicherte Designs und Warenkorb bleiben unverändert.',
+          applyLiveWordsButton)) return;
+        await startProductDesign(product, selectedOrientation, { refreshCloud: true, preserveEditingItem: true,
+          preparedWords: checked, preparedDesigns: designs });
+      });
     }
     applyLiveWordsButton.addEventListener('click', () => { void refreshDesignFromCloud(); });
+    document.getElementById('check-live-words').addEventListener('click', () => { void checkLiveWords({ explicit: true }); });
+    document.getElementById('keep-live-design').addEventListener('click', () => {
+      dismissedCloud = WolkenworteConfiguratorSession.wordSignature(liveWords);
+      updateCloudNotice(); scheduleDraftSave();
+    });
+    document.getElementById('undo-cloud-rebuild').addEventListener('click', () => { void restoreCloudHistory('undo'); });
+    document.getElementById('redo-cloud-rebuild').addEventListener('click', () => { void restoreCloudHistory('redo'); });
+    const cloudCheckTimer = directDesign ? null : setInterval(() => {
+      if (document.visibilityState === 'visible') void checkLiveWords();
+    }, 60000);
+    window.addEventListener('focus', () => { void checkLiveWords(); });
 
     window.addEventListener('pagehide', () => {
+      clearInterval(cloudCheckTimer);
+      cloudCheckGeneration += 1;
       for (const configurationId of printfulMockupStates.keys()) {
         clearPrintfulMockupState(configurationId);
       }
@@ -5368,7 +5720,7 @@
       event.returnValue = '';
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'hidden') return;
+      if (document.visibilityState !== 'hidden') { void checkLiveWords(); return; }
       void persistCurrentDraft({ finalize: false }).finally(() => draftStore.close());
     });
     window.addEventListener('pageshow', (event) => {
@@ -5431,10 +5783,7 @@
       },
       getFingerprint: () => {
         if (!product || !mugEditor) return '';
-        const snapshot = draftSnapshot();
-        return WolkenworteConfiguratorSession.accountDesignFingerprint({ productKey: snapshot.productKey,
-          orientation: snapshot.orientation, theme: snapshot.theme, customColors: snapshot.customColors,
-          words: snapshot.words, designs: snapshot.designs, productDesignState: snapshot.productDesignState });
+        return currentAccountFingerprint();
       },
       preserve: () => persistCurrentDraft(),
       onBeforeDialog: () => { workspace.close(false); },
@@ -5445,7 +5794,7 @@
     }));
 
     retryStartupTask(async () => {
-      const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator`, {
+      const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurator?restore=1`, {
         cache: 'no-store', signal: AbortSignal.timeout(15000),
       });
       const data = await response.json();
@@ -5455,8 +5804,11 @@
       .then(async (data) => {
         await WolkenworteI18n.useEventLocale(data.event.locale);
         WolkenworteJourney.remember(slug, data.event.title, true, undefined, Date.now(), directDesign);
+        setText(document.getElementById('basket-context'), 'Warenkorb für {{name}}', { name: data.event.title });
         words = data.words;
         liveWords = data.words;
+        WolkenworteConfiguratorSession.wordSignature(data.words);
+        cloudSourceState = directDesign ? 'independent' : data.words.length ? 'ready' : 'empty';
         products = Array.isArray(data.products) && data.products.length ? data.products : [data.product];
         product = products.find((candidate) => candidate.key === data.product?.key) || products[0];
         selectedOrientation = product.defaultOrientation || 'default';
@@ -5496,6 +5848,8 @@
         await retryStartupTask(() =>
           WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(words.map(([word]) => word))), 2);
         await showReadyWorkspace();
+        updateCloudNotice();
+        if (!directDesign && !data.words.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.');
       })
       .catch((error) => {
         content.inert = false;
@@ -5511,7 +5865,11 @@
       console.warn('Configurator restoration failed.', error);
       restorationFailed = true;
       retryConfigurator.hidden = false;
-      setText(errorText, 'Das gespeicherte Design konnte nicht geladen werden. Bitte versucht es erneut.');
+      setText(errorText, error.code === 'account_unauthorized' || error.message === 'account_unauthorized'
+        ? 'Zum Öffnen des gespeicherten Designs bitte im Konto anmelden.'
+        : error.message === 'account_restore_cancelled'
+        ? 'Die Wiederherstellung wurde abgebrochen. Eure lokalen Änderungen bleiben erhalten.'
+        : 'Das gespeicherte Design konnte nicht geladen werden. Bitte versucht es erneut.');
       updateCartActions();
     }
 
@@ -5527,18 +5885,7 @@
         const requestedEdit = query.get('edit');
         if (query.get('accountDesign')) {
           if (!accountController) throw new Error('account_unauthorized');
-          const localDraft = await loadLocalDraft(null, { accountDesignId: query.get('accountDesign') });
-          if (localDraft?.accountDesign?.id === query.get('accountDesign')) {
-            await applyLocalDraft(localDraft);
-          } else {
-            const snapshot = await accountController.restore(query.get('accountDesign'));
-            await applySavedConfiguration(snapshot);
-            productDesignState = DesignTransfer.normalizeState(snapshot.productDesignState);
-            currentDesignEdited = true;
-            editingOrderItemId = null;
-            currentDesignNeedsSave = true;
-            accountController.restored();
-          }
+          await restoreAccountDesign(query.get('accountDesign'), { latest: query.get('accountLatest') === '1', workingId: query.get('draft') });
         } else if (requestedEdit) {
           setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
           await loadOrderItem(requestedEdit);
@@ -5552,7 +5899,8 @@
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(id)}`);
           }
         } else {
-          const localDraft = await loadLocalDraft();
+          const localDraft = query.get('draft')
+            ? await loadLocalDraft({ workingDesignId: query.get('draft') }) : await loadLocalDraft();
           if (localDraft) {
             setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
             await applyLocalDraft(localDraft);

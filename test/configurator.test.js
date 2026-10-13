@@ -18,6 +18,28 @@ const { publicAssetUrl } = require('../src/publicAssets');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../src/mugPrint');
 
+test('restoration bootstrap remains readable after cloud reset without granting blank-cloud approval privileges', async t => {
+  const app = await startTestServer(); t.after(() => app.close());
+  const event = await createEvent(app.baseUrl);
+  await app.query('INSERT INTO words (event_id, word, count, updated_at) VALUES ((SELECT id FROM events WHERE slug=$1), $2, 1, now())', [event.slug, 'liebe']);
+  const payload = { productKey: 'white-glossy-mug-duo-11oz', theme: 'pastel', words: [['liebe', 1]], ...productDesignPayload() };
+  const save = await fetch(`${app.baseUrl}/api/events/${event.slug}/configurations`, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  assert.equal(save.status, 201); const configuration = await save.json();
+  const editUrl = `${app.baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`;
+  const before = await fetch(editUrl).then(response => response.json());
+  await app.query('DELETE FROM words WHERE event_id=(SELECT id FROM events WHERE slug=$1)', [event.slug]);
+  const bootstrap = await fetch(`${app.baseUrl}/api/events/${event.slug}/configurator?restore=1`);
+  assert.equal(bootstrap.status, 200);
+  const data = await bootstrap.json(); assert.deepEqual(data.words, []); assert.equal(data.event.directDesign, false);
+  assert.deepEqual(await fetch(editUrl).then(response => response.json()), before);
+  const invalid = await fetch(`${app.baseUrl}/api/events/${event.slug}/configurations`, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, words: [] }) });
+  assert.equal(invalid.status, 400);
+  await app.query("UPDATE events SET created_at=now()-interval '366 days' WHERE slug=$1", [event.slug]);
+  assert.equal((await fetch(`${app.baseUrl}/api/events/${event.slug}/configurator?restore=1`)).status, 404);
+});
+
 const mugEditorBrowserRoot = {};
 vm.runInNewContext(
   fs.readFileSync(require.resolve('../public/js/mug-editor.js'), 'utf8'),

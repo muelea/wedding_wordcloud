@@ -21,6 +21,7 @@
     { href: '#erinnerung', label: 'Eure Erinnerung' },
   ];
 %>
+<script src="<%= asset('/js/basket-navigation.js') %>" defer></script>
 <header class="<%= headerClass %> ww-site-header<%= accountsEnabled ? ' ww-accounts-enabled' : '' %>"<% if (config.id) { %> id="<%= config.id %>"<% } %>>
   <div class="<%= navClass ? `${navClass} ` : '' %>ww-nav ww-language-mounted">
     <a class="brand ww-brand"<% if (brandId) { %> id="<%= brandId %>"<% } %> href="/" aria-label="Wolkenworte">

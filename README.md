@@ -136,11 +136,29 @@ frozen snapshot of the word cloud.
    explains that the existing cart position is replaced only by the explicit
    update action. Product/orientation switches offer restoring the previous
    product and artwork until the next edit or cart approval. Only the explicit current-cloud refresh replaces
-   edited contents with the live event words. One-sided products use the front;
+   edited contents with the live event words. When the editor opens or restores a
+   live-cloud design, differing words or submission counts show a rebuild notice.
+   Explicit checks, focus/visibility checks and bounded visible-page polling
+   refresh that information without changing the artwork. Independent
+   workspaces, including reopened account-library designs, have no live word
+   source and never offer this rebuild. One-sided products use the front;
    a separate back stays in the draft and returns on two-sided products. A first
    two-sided product initializes both faces from the current design. Basket
    snapshots change only through the explicit add/update action. Replacing manual
-   artwork with the current cloud requires confirmation. Copying the front over
+   artwork with the current cloud requires confirmation after all replacement
+   layouts have been prepared. Whole-design Undo/Redo restores all print sides,
+   retained product layouts and the source snapshot during the editor session;
+   it never reverses an accepted account save or cart update. A cleared cloud
+   preserves existing artwork and displays an empty-source explanation.
+   Keeping a design dismisses only that particular source change.
+   Working designs use stable browser identities and revision checks across tabs.
+   Library entry and cart entry select independent editing targets, with
+   version-aware account recovery and deliberate duplicate-add choices.
+   Checkout review can apply selected edits while retaining other pending drafts.
+   The shared menu links to other retained event-scoped baskets; checkout still
+   validates one event's basket at a time. The complete state contract is in
+   [docs/design-state-behavior.md](docs/design-state-behavior.md).
+   Copying the front over
    an existing back also confirms the overwrite and retains Undo. Removing a cart
    position offers a browser-local, ten-minute Undo, including after returning
    from shipping; restoring it retains the tab's address and quantity draft but
@@ -370,9 +388,11 @@ an asset-maintenance command; normal startup requires no extra build step.
 
 Guests can create clouds, participate, configure products and order without an
 account. `DESIGN_ACCOUNTS_ENABLED=true` adds subtle configurator save controls,
-one consistent “Mein Konto” overflow link on every page and `/konto`. This single
-account page opens on “Meine Designs”; “Einstellungen” contains account details,
-security, data export, logout and deletion. Existing `/konto/einstellungen` links
+one consistent account entry in the overflow menu on every page and `/konto`. This single
+account page opens on “Meine Designs”; the current email and sign-out action sit
+above both tabs. The global menu shows the email and sign-out action when signed
+in, or “Anmelden” when signed out. “Einstellungen” contains security, data export
+and deletion. Existing `/konto/einstellungen` links
 redirect to its Settings tab, preserving the language query. Google or verified email/password
 authentication uses Supabase Auth. Registration and recovery use six-digit,
 ten-minute codes. The account UI and Auth email hook support all six languages.

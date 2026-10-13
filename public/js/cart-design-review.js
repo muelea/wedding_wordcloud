@@ -174,6 +174,11 @@
         const saved = items.find(item => item.id === draft.editingOrderItemId);
         const row = element('li', 'cart-review-item');
         const heading = element('div', 'cart-review-item-heading');
+        const selection = element('label', 'cart-review-selection');
+        const checkbox = element('input');
+        checkbox.type = 'checkbox'; checkbox.checked = true;
+        checkbox.dataset.cartReviewTarget = saved?.id || 'addition';
+        selection.append(checkbox, element('span', null, saved ? 'Diese Änderungen übernehmen' : 'Dieses Design hinzufügen'));
         const title = element('strong', null, saved ? 'Design {{number}}' : 'Weiteres Design', {
           number: items.findIndex(item => item.id === saved?.id) + 1,
         });
@@ -187,8 +192,11 @@
         const effect = element('p', 'cart-review-effect', saved
           ? 'Ersetzt dieses Design im Warenkorb. Kein zusätzlicher Artikel.'
           : 'Wird als zusätzlicher Artikel in den Warenkorb gelegt.');
+        checkbox.addEventListener('change', () => setText(effect, checkbox.checked
+          ? saved ? 'Ersetzt dieses Design im Warenkorb. Kein zusätzlicher Artikel.' : 'Wird als zusätzlicher Artikel in den Warenkorb gelegt.'
+          : saved ? 'Bleibt im Warenkorb unverändert.' : 'Wird nicht hinzugefügt.'));
         const body = element('div');
-        row.append(heading, effect, body);
+        row.append(heading, selection, effect, body);
         container.append(row);
         const loadRow = async () => {
           body.replaceChildren(element('p', 'cart-review-preview-status', 'Vergleich wird geladen…'));
@@ -228,7 +236,12 @@
       const work = async () => { while (jobs.length && !signal.aborted) await jobs.shift()(); };
       void Promise.all([work(), work()]);
     }
-    return { show, dispose };
+    function selection() {
+      const checked = [...container.querySelectorAll('[data-cart-review-target]')].filter(input => input.checked);
+      return { ids: checked.map(input => input.dataset.cartReviewTarget).filter(id => id !== 'addition'),
+        addition: checked.some(input => input.dataset.cartReviewTarget === 'addition') };
+    }
+    return { show, dispose, selection };
   }
   return { create, changes, renderArtwork };
 });

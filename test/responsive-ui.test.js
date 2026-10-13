@@ -21,6 +21,7 @@ const legalStyles = fs.readFileSync(path.join(ROOT, 'public', 'legal.css'), 'utf
 const i18nStyles = fs.readFileSync(path.join(ROOT, 'public', 'i18n.css'), 'utf8');
 const mobileStyles = fs.readFileSync(path.join(ROOT, 'public', 'mobile-foundation.css'), 'utf8');
 const mobileRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mobile-ui.js'), 'utf8');
+const controlStyles = fs.readFileSync(path.join(ROOT, 'public', 'ui-controls.css'), 'utf8');
 const workspaceStyles = fs.readFileSync(path.join(ROOT, 'public', 'configurator-workspace.css'), 'utf8');
 const landingWorkflowStyles = fs.readFileSync(path.join(ROOT, 'public', 'landing-workflow.css'), 'utf8');
 const landingWorkflowRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'landing-workflow.js'), 'utf8');
@@ -130,7 +131,7 @@ test('every header menu uses the one shared premium hamburger component', () => 
   assert.doesNotMatch(landing, /landing-menu-toggle-icon/);
   assert.doesNotMatch(display, /ww-display-menu-icon/);
   assert.match(siteHeaderStyles, /\.ww-menu-trigger \{[\s\S]*?width: 44px;[\s\S]*?border-radius: 50%;/);
-  assert.match(siteHeaderStyles, /\.ww-hamburger-icon i \{[\s\S]*?width: 18px;[\s\S]*?height: 1px;/);
+  assert.match(siteHeaderStyles, /\.ww-hamburger-icon i \{[\s\S]*?width: 18px;[\s\S]*?height: 1\.8px;/);
 });
 
 test('global language stays in the shared menu while compact back navigation stays outside it', () => {
@@ -374,7 +375,8 @@ test('mobile naming dialog is visual-viewport aware and does not force the keybo
   assert.match(mobileRuntime, /window\.innerHeight - height - offsetTop/);
   assert.match(landing, /window\.matchMedia\('\(pointer: fine\)'\)\.matches/);
   assert.doesNotMatch(landing, /\sautofocus(?:\s|>)/);
-  assert.match(landing, /\.start-dialog-close \{[^}]*width: 44px; height: 44px/);
+  assert.match(landing, /class="ww-icon-button ww-close-button start-dialog-close"/);
+  assert.match(controlStyles, /width: 44px;[\s\S]*?height: 44px;/);
   assert.match(mobileStyles, /border-radius: 24px 24px 0 0/);
 });
 
@@ -405,10 +407,10 @@ test('mobile foundation contains horizontal gestures and respects safe areas', (
 
 test('mobile forms prevent iOS input zoom and expose full-size controls', () => {
   assert.match(display, /\.draft-settings input \{[^}]*font: 16px/);
-  assert.match(display, /\.dialog-close \{ width: 44px; height: 44px/);
+  assert.match(display, /class="ww-icon-button ww-close-button dialog-close"/);
   assert.match(configure, /\.editor-text-input,[\s\S]*?\.editor-font-toggle \{ height: var\(--ww-touch-target\); font-size: 16px; \}/);
   assert.match(configure, /\.editor-font-size-input \{ height: var\(--ww-touch-target\); font-size: 16px; \}/);
-  assert.match(configure, /\.custom-color-remove \{ width: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
+  assert.match(configure, /custom-color-remove ww-icon-button ww-close-button/);
   assert.match(shipping, /\.search-input \{[^}]*height: 44px;[^}]*font-size: 16px/);
   assert.match(shipping, /\.search-option \{[^}]*min-height: 44px/);
   assert.match(shipping, /\.quantity-control \{[^}]*height: 46px/);
