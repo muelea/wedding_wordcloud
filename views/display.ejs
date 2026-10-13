@@ -86,7 +86,7 @@
       --rad2:    rgba(209,96,126,0.08);
       --orn:     rgba(193,146,47,0.55);
       --qr-bd:   rgba(193,146,47,0.35);
-      --site-header-height: calc(85px + env(safe-area-inset-top, 0px));
+      --site-header-height: calc(69px + env(safe-area-inset-top, 0px));
       --footer-height: 100px;
     }
 
@@ -263,28 +263,7 @@
     .display-emoji-trigger svg { width: 31px; height: 31px; fill: none; stroke: currentColor; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
     .display-emoji-trigger .display-emoji-eye { fill: currentColor; stroke: none; }
     .ww-display-header-actions { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; }
-    .ww-display-menu { position: relative; z-index: 10000; flex: 0 0 auto; }
-    .ww-display-menu summary { list-style: none; }
-    .ww-display-menu summary::-webkit-details-marker { display: none; }
-    .ww-display-menu-panel {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: -54px;
-      max-height: calc(100dvh - 104px);
-      overflow-y: auto;
-      width: min(330px, calc(100vw - 32px));
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: color-mix(in srgb, var(--bg) 97%, transparent);
-      color: var(--text);
-      box-shadow: 0 22px 60px rgba(64,15,38,.18);
-      backdrop-filter: blur(18px) saturate(1.25);
-      -webkit-backdrop-filter: blur(18px) saturate(1.25);
-    }
-    .ww-cloud-settings-icon { width: 20px; height: 20px; fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
-    .ww-display-menu-title { margin: 0; padding: 4px; font: 500 15px Jost, sans-serif; }
-    .ww-display-menu-palette-row { display: grid; gap: 8px; margin-top: 10px; padding: 12px 4px 0; border-top: 1px solid var(--border); }
+    .ww-display-menu-palette-row { display: grid; gap: 8px; margin: 0; padding: 4px 12px 8px; }
     .ww-display-menu-palette-control { min-width: 0; }
     .ww-palette-picker { position: relative; width: 100%; }
     .ww-palette-picker[open] { z-index: 2; }
@@ -342,29 +321,8 @@
     .ww-palette-option.is-selected .ww-palette-check { opacity: 1; }
     .ww-display-menu-label { padding: 0 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
     .ww-display-menu-language { width: auto; flex: 0 0 auto; }
-    .ww-display-menu-actions { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .ww-display-menu-legal { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .ww-display-menu-action {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      width: 100%;
-      min-height: 44px;
-      padding: 0 11px;
-      border: 0;
-      border-radius: 11px;
-      background: transparent;
-      color: var(--text);
-      font: 600 14px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
-      text-align: left;
-      cursor: pointer;
-    }
-    .ww-display-menu-action:hover, .ww-display-menu-action:focus-visible { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
-    .ww-display-menu-action:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; }
-    .ww-display-menu-action[hidden] { display: none !important; }
-    .ww-display-menu-legal a.ww-display-menu-action { text-decoration: none; }
-    .ww-display-menu-legal .ww-analytics-settings:hover { text-decoration: none; }
+    .ww-display-menu-actions { display: grid; gap: 0; }
+    .ww-site-menu .ww-display-menu-action { justify-content: space-between; gap: 12px; }
     .ww-display-menu-action-label { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
     .ww-display-menu-action-label svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .ww-display-menu-count { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); font-size: 12px; }
@@ -678,15 +636,15 @@
 
     @media (max-width: 620px) {
       :root {
-        --site-header-height: calc(73px + env(safe-area-inset-top, 0px));
+        --site-header-height: calc(61px + env(safe-area-inset-top, 0px));
         --footer-height: 122px;
       }
 
       .word-counter .label { letter-spacing: 1.5px; }
       .ww-display-header-actions { gap: 8px; }
-      .ww-keepsake-cta { width: 44px; padding: 0; }
+      .ww-keepsake-cta { width: auto; padding: 0 14px; }
       .ww-keepsake-cta-label-full { display: none; }
-      .ww-keepsake-cta-label-compact { display: none; }
+      .ww-keepsake-cta-label-compact { display: inline; }
       #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 68px); }
       .display-word-entry-row { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); gap: 8px; }
       .display-word-entry { min-height: 48px; }
@@ -714,8 +672,9 @@
       .reset-dialog-button { width: 100%; }
     }
     @media (max-width: 360px) {
-      .ww-keepsake-cta { width: 44px; padding: 0; }
-      .ww-keepsake-cta-label-compact { display: none; }
+      .ww-keepsake-cta { padding: 0 10px; gap: 5px; font-size: 12px; }
+      .ww-nav:has(.ww-display-header-actions) .ww-brand { font-size: .96rem; gap: 5px; }
+      .ww-nav:has(.ww-display-header-actions) .ww-brand-icon { width: 24px; height: 24px; }
       .reset-dialog-actions { grid-template-columns: 1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -958,8 +917,8 @@
   const displayWordInput = document.getElementById('display-word-input');
   const displayEmojiTrigger = document.getElementById('display-emoji-trigger');
   const wordSubmissionStatus = document.getElementById('word-submission-status');
-  const displayPageMenu = document.getElementById('display-page-menu');
-  const displayMenuTrigger = document.getElementById('display-menu-trigger');
+  const displayPageMenu = document.querySelector('[data-ww-site-menu]');
+  const displayMenuTrigger = document.querySelector('[data-ww-site-menu-trigger]');
   const displayOwnWordsButton = document.getElementById('display-own-words-button');
   const displayOwnWordsShortcut = document.getElementById('display-own-words-shortcut');
   const displayOwnWordsCount = document.getElementById('display-own-words-count');
@@ -1140,7 +1099,7 @@
       const direction = event.key === 'ArrowDown' ? 1 : -1;
       nextIndex = (focusedIndex + direction + paletteOptionButtons.length) % paletteOptionButtons.length;
     }
-    paletteOptionButtons[nextIndex]?.focus();
+    requestAnimationFrame(() => paletteOptionButtons[nextIndex]?.focus());
   });
   document.addEventListener('pointerdown', (event) => {
     if (palettePicker?.open && !palettePicker.contains(event.target)) closePalettePicker();
@@ -1355,24 +1314,9 @@
     }
   }
 
-  displayPageMenu.addEventListener('toggle', () => {
-    if (displayPageMenu.open) document.querySelectorAll('[data-ww-site-menu]').forEach(menu => { menu.open = false; });
-    else closePalettePicker();
-    displayMenuTrigger.setAttribute('aria-expanded', String(displayPageMenu.open));
-    setI18nAttribute(
-      displayMenuTrigger,
-      'aria-label',
-      displayPageMenu.open ? 'Wolken-Einstellungen schließen' : 'Wolken-Einstellungen'
-    );
-  });
-  document.addEventListener('pointerdown', (event) => {
-    if (displayPageMenu.open && !displayPageMenu.contains(event.target)) closeDisplayMenu();
-  });
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-    if (displayPageMenu.open) {
-      closeDisplayMenu({ focus: true });
-    } else if (!event.defaultPrevented && !document.querySelector('[data-ww-site-menu][open]') && document.body.classList.contains('presentation-mode')) {
+    if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || displayPageMenu.open) return;
+    if (document.body.classList.contains('presentation-mode')) {
       setPresentationMode(false);
       void exitPresentationFullscreen();
       displayMenuTrigger.focus();

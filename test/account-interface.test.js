@@ -19,7 +19,7 @@ function setup(t) {
   dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new dom.window.Event('close'));};
   let user={id:crypto.randomUUID(),recovery:false},snapshot={productKey:'p',designs:{front:[{id:'one',text:'Liebe'}],back:[]}},timer;
-  const calls=[],navigation=[];let preserve=true,saved,ref=null,loseResponse=false;
+  const calls=[],navigation=[];let preserve=true,saved,ref=null,loseResponse=false,available=true,saveGate=null;
   const root={addEventListener(){},WolkenworteI18n:{t:(s,p={})=>s.replace(/\{\{(\w+)\}\}/g,(_,key)=>p[key]||''),getLocale:()=> 'de'}};
   const location={pathname:dom.window.location.pathname,search:'',assign:url=>navigation.push(url)};
   vm.runInNewContext(fs.readFileSync('public/js/account.js','utf8'),{window:root,document,location,
@@ -27,14 +27,14 @@ function setup(t) {
     setTimeout:fn=>{timer=fn;return 1;},clearTimeout(){},
     fetch:async(url,options)=>{const body=options.body?JSON.parse(options.body):null;calls.push({url,body});
       let data;if(url.endsWith('/session'))data={user};else if(url.endsWith('/google'))data={url:'https://accounts.google.com/test'};
-      else if(url.endsWith('/designs')){saved={id:body.designId,name:body.name,version:body.version+1,expiresAt:'2027-01-12T00:00:00Z'};data={design:saved};
+      else if(url.endsWith('/designs')){if(saveGate)await saveGate;saved={id:body.designId,name:body.name,version:body.version+1,expiresAt:'2027-01-12T00:00:00Z'};data={design:saved};
         if(loseResponse){loseResponse=false;throw new TypeError('Lost response');}}
       else if(url.endsWith('/load'))data={design:{...saved,snapshot}};else data={ok:true};
       return {ok:true,status:200,json:async()=>data};}});
   const controller=root.WolkenworteAccount.createConfigurator({getSnapshot:()=>snapshot,getFingerprint:()=>JSON.stringify(snapshot),
-    prepare:async()=>{},preserve:async()=>preserve,onSourceChange:value=>{ref=value;}});
+    canSave:()=>available,prepare:async()=>{},preserve:async()=>preserve,onSourceChange:value=>{ref=value;}});
   return {document,dom,calls,navigation,controller,setUser:v=>{user=v;},setPreserve:v=>{preserve=v;},
-    setSnapshot:v=>{snapshot=v;},loseNextResponse:()=>{loseResponse=true;},snapshot:()=>snapshot,flush:()=>timer?.(),source:()=>ref,user:()=>user};
+    setAvailable:v=>{available=v;},holdSave:v=>{saveGate=v;},setSnapshot:v=>{snapshot=v;},loseNextResponse:()=>{loseResponse=true;},snapshot:()=>snapshot,flush:()=>timer?.(),source:()=>ref,user:()=>user};
 }
 test('edits never autosave to the account; only an explicit submit saves the full editable snapshot',async t=>{
   const h=setup(t);h.controller.changed();h.flush();assert.equal(h.calls.length,0);
@@ -45,15 +45,17 @@ test('edits never autosave to the account; only an explicit submit saves the ful
   const save=h.calls.find(c=>c.body?.snapshot);assert.deepEqual(save.body.snapshot,h.snapshot());assert.equal(save.body.version,0);
   assert.ok(h.source().id);assert.equal(h.source().ownerId,h.user().id);
   h.setSnapshot({...h.snapshot(),theme:'changed'});h.controller.changed();h.flush();
-  assert.match(h.document.querySelector('[data-account-save-note]').textContent,/noch nicht/);
+  assert.equal(h.document.querySelector('[data-account-save]').disabled,false);
+  assert.equal(h.document.querySelector('[data-account-save-note]').textContent,'');
   assert.equal(h.calls.filter(c=>c.body?.snapshot).length,1);
 });
 test('a copy is a separate explicit save and a different account cannot save an already opened private design',async t=>{
   const h=setup(t);h.document.querySelector('[data-account-save]').click();await settled();
   const form=h.document.querySelector('#account-save-dialog form');form.dispatchEvent(new h.dom.window.Event('submit'));await settled();const first=h.source().id;
+  h.setSnapshot({...h.snapshot(),theme:'copy'});h.controller.changed();
   h.document.querySelector('[data-account-save]').click();await settled();h.document.querySelector('[data-account-save-copy]').click();await settled();
   assert.notEqual(h.source().id,first);assert.equal(h.calls.filter(c=>c.body?.snapshot)[1].body.version,0);
-  const other={id:crypto.randomUUID()};h.setUser(other);h.document.querySelector('[data-account-save]').click();await settled();
+  const other={id:crypto.randomUUID()};h.setUser(other);h.setSnapshot({...h.snapshot(),theme:'other'});h.controller.changed();h.document.querySelector('[data-account-save]').click();await settled();
   assert.equal(h.document.getElementById('account-save-dialog').open,false);
   assert.equal(h.calls.filter(c=>c.body?.snapshot).length,2);
 });
@@ -90,4 +92,30 @@ test('every account page label has a translation in each supported catalog',()=>
     const catalog=require(`../public/locales/${locale}.json`);
     for(const label of labels)assert.ok(catalog[label],`${locale}: ${label}`);
   }
+});
+
+test('save availability follows saved content, Undo, workspace readiness and restore without autosaving',async t=>{
+  const h=setup(t),button=h.document.querySelector('[data-account-save]'),original=structuredClone(h.snapshot());
+  assert.equal(button.disabled,false,'new designs can be saved');
+  button.click();await settled();
+  h.document.querySelector('#account-save-dialog form').dispatchEvent(new h.dom.window.Event('submit'));await settled();
+  assert.equal(button.disabled,true,'successful save disables update');
+  h.controller.changed();assert.equal(button.disabled,true,'view-only refreshes do not dirty the saved content');
+  h.setSnapshot({...original,theme:'changed'});h.controller.changed();assert.equal(button.disabled,false);
+  h.setAvailable(false);h.controller.changed();assert.equal(button.disabled,true,'unavailable workspace still blocks saving');
+  h.setAvailable(true);h.controller.changed();assert.equal(button.disabled,false);
+  h.setSnapshot(original);h.controller.changed();assert.equal(button.disabled,true,'Undo to the saved snapshot disables update');
+  h.controller.restored();assert.equal(button.disabled,true,'loading a saved design starts clean');
+  h.controller.detach();assert.equal(button.disabled,false,'an independent new design can be saved');
+  assert.equal(h.calls.filter(c=>c.body?.snapshot).length,1);
+});
+test('edits during an in-flight manual save remain unsaved and enable update after completion',async t=>{
+  const h=setup(t),button=h.document.querySelector('[data-account-save]');
+  button.click();await settled();
+  let release;h.holdSave(new Promise(resolve=>{release=resolve;}));
+  h.document.querySelector('#account-save-dialog form').dispatchEvent(new h.dom.window.Event('submit'));await settled();
+  assert.equal(button.disabled,true);assert.equal(button.getAttribute('aria-busy'),'true');
+  h.setSnapshot({...h.snapshot(),theme:'edited-during-request'});h.controller.changed();assert.equal(button.disabled,true);
+  release();await settled();assert.equal(button.disabled,false);assert.equal(button.getAttribute('aria-busy'),'false');
+  assert.equal(h.calls.filter(c=>c.body?.snapshot).length,1);
 });

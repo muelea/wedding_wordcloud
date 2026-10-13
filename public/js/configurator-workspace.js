@@ -129,7 +129,7 @@
       }
       // Do not autofocus text on simple selection or opening a chooser. This
       // keeps the mobile keyboard closed and the beginning of long lists visible.
-      (embedded ? this.document.getElementById('mobile-canvas-panel-back')
+      (embedded ? this.document.getElementById('mobile-canvas-panel-title')
         : panel.querySelector('[data-panel-initial-focus]') || panel.querySelector('h2')).focus({ preventScroll: true });
     }
 

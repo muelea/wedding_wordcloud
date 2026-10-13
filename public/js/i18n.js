@@ -379,6 +379,7 @@
     });
     root.document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && picker.open) {
+        event.preventDefault();
         picker.open = false;
         trigger?.focus();
       }

@@ -115,11 +115,11 @@ test('flat previews supersample screen pixels without unbounded canvas allocatio
   assert.deepEqual(dimensions, { width: 1, height: 1 }, 'hidden previews remain valid canvases');
 });
 
-test('word cloud header keeps the keepsake action compact at mobile widths', () => {
-  assert.match(siteHeader, /id="memory-cta"[\s\S]*?include\('cloud-settings'/);
+test('word cloud uses a labelled mobile keepsake action and shared overflow controls', () => {
+  assert.match(siteMenu, /variant === 'display'[\s\S]*?include\('cloud-settings'/);
   assert.match(display, /\.ww-keepsake-cta \{[\s\S]*?height: 44px;[\s\S]*?min-width: 44px;/);
   assert.match(display, /@media \(max-width: 620px\)[\s\S]*?\.ww-keepsake-cta-label-full \{ display: none; \}/);
-  assert.match(display, /@media \(max-width: 360px\)[\s\S]*?\.ww-keepsake-cta \{ width: 44px; padding: 0; \}[\s\S]*?\.ww-keepsake-cta-label-compact \{ display: none; \}/);
+  assert.match(display, /@media \(max-width: 620px\)[\s\S]*?\.ww-keepsake-cta-label-compact \{ display: inline; \}/);
 });
 
 test('every header menu uses the one shared premium hamburger component', () => {
@@ -175,7 +175,7 @@ test('customs notice stays with purchase information instead of the site footer'
 
 test('the personal display palette is handed off to the configurator', () => {
   assert.match(cloudSettings, /id="display-palette-picker"/);
-  assert.match(cloudSettings, /class="ww-palette-menu" role="radiogroup"/);
+  assert.match(cloudSettings, /class="ww-palette-menu"[^>]*role="radiogroup"/);
   assert.match(cloudSettings, /class="ww-palette-option[^\"]*"[\s\S]*?role="radio"[\s\S]*?aria-checked=/);
   assert.doesNotMatch(cloudSettings, /id="display-palette-select"|<select[^>]*aria-label="Farbwelt"/);
   assert.match(display, /\.ww-palette-menu \{[\s\S]*?position: absolute;[\s\S]*?border-radius: 14px;/);
@@ -198,7 +198,7 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.equal((configure.match(/id="wrap-canvas"/g) || []).length, 1,
     'the compact purchase surface must reuse the only editor canvas');
   assert.match(configure, /@media \(max-width: 620px\)[\s\S]*?\.config-studio\[data-mobile-editor-expanded="false"\] \.design-toolbar,[\s\S]*?\.editor-card \{[\s\S]*?display: none;/);
-  assert.match(configure, /\.config-studio\[data-mobile-editor-expanded="false"\] \.checkout-panel \{[\s\S]*?position: fixed;[\s\S]*?bottom: max\(8px, var\(--ww-safe-bottom\)\);[\s\S]*?padding: 8px;[\s\S]*?border-radius: 16px;[\s\S]*?background: var\(--paper\);/);
+  assert.match(configure, /\.config-studio\[data-mobile-editor-expanded="false"\] \.order-actions \{[\s\S]*?position: sticky;[\s\S]*?bottom: max\(8px, var\(--ww-safe-bottom\)\);[\s\S]*?padding: 8px;[\s\S]*?border-radius: 16px;[\s\S]*?background: var\(--paper\);/);
   assert.match(configure, /\.mobile-editor-caret \{[\s\S]*?width: 7px;[\s\S]*?border-right: 1\.5px solid currentColor;[\s\S]*?transform: rotate\(45deg\);/);
   assert.doesNotMatch(configure, /class="mobile-editor-caret"[^>]*>[^<]+<\/span>/,
     'mobile disclosure buttons use the aligned CSS chevron, not a font glyph');

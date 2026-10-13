@@ -269,19 +269,22 @@
     await refresh();
   }
 
-  function createConfigurator({getSnapshot,getFingerprint,prepare=async()=>{},preserve,onBeforeDialog,onSourceChange}){
+  function createConfigurator({getSnapshot,getFingerprint,canSave=()=>true,prepare=async()=>{},preserve,onBeforeDialog,onSourceChange}){
     const dialog=document.getElementById('account-save-dialog');if(!dialog)return null;
     const authDialog=document.getElementById('account-auth-dialog');
     const form=dialog.querySelector('form');const notice=dialog.querySelector('[data-account-save-status]');
     const saveButtons=[...document.querySelectorAll('[data-account-save]')];
-    let user=null,source=null,savedFingerprint=null,metadata=null,changeTimer=null,pendingSave=null;
+    let user=null,source=null,savedFingerprint=null,metadata=null,pendingSave=null,saving=false,starting=false,feedbackTimer=null;
+    const feedback=document.querySelector('[data-account-save-note]');
     function changed(){
-      clearTimeout(changeTimer);
-      for(const button of saveButtons)text(button,source?'Design aktualisieren':'Design speichern');
-      const target=document.querySelector('[data-account-save-note]');
-      if(source&&metadata)changeTimer=setTimeout(()=>text(target,savedFingerprint!==getFingerprint()
-        ?'Änderungen noch nicht im Konto gespeichert.':'Im Konto gespeichert · Löschung bei Inaktivität am {{date}}',{date:date(metadata.expiresAt)}),200);
-      else if(target)target.textContent='';
+      const label=source?'Design aktualisieren':'Design speichern';
+      const disabled=saving||starting||!canSave()||Boolean(source&&savedFingerprint===getFingerprint());
+      for(const button of saveButtons){
+        text(button.querySelector('[data-account-save-label]')||button,label);
+        button.setAttribute('aria-label',t(label));
+        button.disabled=disabled;
+        button.setAttribute('aria-busy',String(saving||starting));
+      }
     }
     function sourceChanged(){onSourceChange?.(source?{...source,fingerprint:savedFingerprint}:null);changed();}
     async function session(){const data=await api('session');user=data.user;return user;}
@@ -297,13 +300,18 @@
       if(source&&user?.id!==source.ownerId)throw{code:'account_unauthorized'};
       authDialog.close();showSave();},
       returnTo:location.pathname+'?accountSave=1',beforeRedirect:preserve});
-    for(const button of saveButtons)button.addEventListener('click',()=>void start().catch(error=>{
-      const target=document.querySelector('[data-account-save-note]');status(target,message(error),true);
-    }));
+    for(const button of saveButtons)button.addEventListener('click',async()=>{
+      if(starting||saving||!canSave())return;
+      starting=true;changed();clearTimeout(feedbackTimer);if(feedback)feedback.textContent='';
+      try{await start();}catch(error){status(feedback,message(error),true);}
+      finally{starting=false;changed();}
+    });
     for(const button of document.querySelectorAll('[data-account-dialog-close]'))button.addEventListener('click',()=>button.closest('dialog').close());
-    function performSave(asNew=false){
+    async function performSave(asNew=false){
+      if(saving)return;
+      saving=true;changed();
       const name=form.elements.name.value;
-      return busy(form,async()=>{
+      try{return await busy(form,async()=>{
         await prepare();
         const snapshot=getSnapshot(),fingerprint=getFingerprint();
         const signature=JSON.stringify({name,fingerprint,asNew,id:source?.id,version:source?.version,owner:user.id,locale:I()?.getLocale()});
@@ -315,7 +323,9 @@
         pendingSave=null;
         metadata=result.design;source={id:metadata.id,ownerId:user.id,version:metadata.version};savedFingerprint=fingerprint;
         sourceChanged();await preserve();dialog.close();
-      },notice);
+        status(feedback,'Design gespeichert.');
+        clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{if(feedback)feedback.textContent='';},3000);
+      },notice);}finally{saving=false;changed();}
     }
     form.addEventListener('submit',event=>{event.preventDefault();void performSave();});
     dialog.querySelector('[data-account-save-copy]').addEventListener('click',()=>{if(form.reportValidity())void performSave(true);});
@@ -337,6 +347,8 @@
     async function ready(){if(new URLSearchParams(location.search).has('accountSave')){
       history.replaceState(null,'',location.pathname);await start();
     }}
+    root.addEventListener('wolkenworte:localechange',changed);
+    changed();
     return {changed,restore,restored,validateLocal,detach,ready,source:()=>source,authControl};
   }
 

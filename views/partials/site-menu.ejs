@@ -7,6 +7,7 @@
       <a class="ww-header-menu-item" href="/">Startseite</a>
       <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
     </nav>
+    <% if (variant === 'display') { %><%- include('cloud-settings', { paletteOptions }) %><% } %>
     <section class="ww-site-menu-preferences" aria-label="Sprache">
       <div class="ww-site-menu-language-row">
         <span class="ww-site-menu-label">Sprache</span>

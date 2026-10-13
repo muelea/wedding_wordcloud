@@ -34,8 +34,8 @@
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: none !important;
-  height: 84px !important;
-  min-height: 84px !important;
+  height: 68px !important;
+  min-height: 68px !important;
   margin: 0 !important;
   padding: 0 40px !important;
   display: flex !important;
@@ -231,8 +231,8 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
 @media (max-width: 780px) {
   .ww-nav {
     width: 100% !important;
-    height: 72px !important;
-    min-height: 72px !important;
+    height: 60px !important;
+    min-height: 60px !important;
     padding: 0 16px !important;
     gap: 16px !important;
   }
@@ -293,20 +293,23 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
 }
 /* One global menu surface, independent of a cloud's chosen palette. */
 .ww-site-menu, .ww-site-menu * { box-sizing: border-box; }
-.ww-site-menu { position: relative; z-index: 10000; flex: 0 0 auto; --text: #400f26; --ink: #400f26; --bg: #fffdfa; --paper: #fffdfa; --primary: #9c1c4c; --muted: #8a7178; }
-.ww-site-menu-panel { position: absolute; top: calc(100% + 10px); right: 0; box-sizing: border-box; width: min(300px, calc(100vw - 32px)); max-height: calc(100dvh - 104px); overflow-y: auto; overscroll-behavior: contain; padding: 8px; border: 1px solid rgba(64,15,38,.11); border-radius: 16px; background: #fffdfa; color: #400f26; box-shadow: 0 18px 48px rgba(64,15,38,.16); font: 500 14px/1.4 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
-.ww-header-menu-item { box-sizing: border-box; display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: #400f26; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
-.ww-header-menu-item:hover, .ww-header-menu-item:focus-visible { background: #fbf2e7; color: #9c1c4c; }
+.ww-site-menu { position: relative; z-index: 10000; flex: 0 0 auto; --text: #400f26; --ink: #400f26; --bg: #fffdfa; --paper: #fffdfa; --primary: #9c1c4c; --muted: #8a7178; --border: rgba(64,15,38,.11); }
+.ww-site-menu-panel { position: absolute; top: calc(100% + 10px); right: 0; box-sizing: border-box; width: min(300px, calc(100vw - 32px)); max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; padding: 8px; border: 1px solid rgba(64,15,38,.11); border-radius: 16px; background: #fffdfa; color: #400f26; box-shadow: 0 18px 48px rgba(64,15,38,.16); font: 500 14px/1.4 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
+.ww-site-menu .ww-header-menu-item { box-sizing: border-box; display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: #400f26; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+.ww-site-menu .ww-header-menu-item:hover, .ww-site-menu .ww-header-menu-item:focus-visible { background: #fbf2e7; color: #9c1c4c; }
 .ww-header-menu-item[hidden] { display: none !important; }
-.ww-site-menu-preferences, .ww-site-menu-legal { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(64,15,38,.1); }
+.ww-site-menu .ww-site-menu-preferences, .ww-site-menu .ww-site-menu-legal, .ww-site-menu .ww-site-menu-cloud { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid rgba(64,15,38,.1); }
 .ww-site-menu-language-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(112px,136px); align-items: start; gap: 10px; padding: 3px; }
 .ww-site-menu-label { padding: 15px 0 0 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8a7178; }
 .ww-site-menu-language, .ww-site-menu-language .ww-language-trigger { width: 100%; }
 .ww-site-menu .ww-site-menu-language { display: block; }
 .ww-site-menu-language .ww-language-menu { position: static; width: 100%; margin-top: 8px; }
+/* Native popovers escape the menu's scrolling surface without resizing it. */
+.ww-site-menu [data-ww-menu-popup][popover] { position: fixed; inset: auto; margin: 0; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; }
+.ww-site-menu [data-ww-menu-popup][popover]::backdrop { background: transparent; }
 .ww-back-link-mobile { display: none; }
 @media (max-width: 780px) {
-  .ww-back-link-mobile { display: flex; width: fit-content; min-height: 44px; margin: -6px 16px 4px; padding: 8px 0; }
+  .ww-back-link-mobile { display: flex; width: fit-content; box-sizing: border-box; min-height: 44px; margin: 0 16px; padding: 4px 0; }
 }
 @media (max-width: 620px) {
   .ww-nav:has(.ww-display-header-actions) { gap: 8px !important; }

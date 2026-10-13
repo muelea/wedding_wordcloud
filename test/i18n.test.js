@@ -466,13 +466,13 @@ test('the event page keeps its content below a dedicated branded header', () => 
 
   assert.match(displayPage, /<header class="site-header ww-site-header">[\s\S]*?<div class="ww-nav ww-language-mounted">[\s\S]*?ww-brand-wordmark[\s\S]*?<\/header>/);
 
-  assert.match(displayPage, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?id="display-page-menu"/);
+  assert.match(displayPage, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?data-ww-site-menu/);
   assert.doesNotMatch(displayPage, /cloud-status/);
   assert.match(displayPage, /<footer class="footer">[\s\S]*?class="footer-event-name" id="cloud-title" data-i18n-ignore/);
   assert.doesNotMatch(displayPage, /id="qr-url"/,
     'the footer must not expose the raw event URL as visible copy');
   assert.match(displayPage, /class="line2">QR-Code scannen</);
-  assert.match(displayPage, /id="display-page-menu"[\s\S]*?id="display-own-words-button"[\s\S]*?id="draft-settings-button"[\s\S]*?id="presentation-mode-button"/);
+  assert.match(displayPage, /data-ww-site-menu[\s\S]*?id="display-own-words-button"[\s\S]*?id="draft-settings-button"[\s\S]*?id="presentation-mode-button"/);
   assert.doesNotMatch(displayPage, /display-meta/,
     'the display must not add a second header-like metadata bar');
   assert.doesNotMatch(displayPage, /<header class="header">/);

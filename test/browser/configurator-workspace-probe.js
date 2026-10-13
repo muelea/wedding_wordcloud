@@ -53,11 +53,11 @@
           !document.getElementById('design-toolbar').getClientRects().length &&
           !document.getElementById('workspace-tools').getClientRects().length &&
           !document.getElementById('editor-card').getClientRects().length);
-        const previewTitle = document.getElementById('preview-title');
+        const previewTitle = document.getElementById('design-heading');
         check('phone preview surface keeps its design heading beside the editor toggle',
           previewTitle.getClientRects().length &&
           previewTitle.textContent.trim().toLowerCase().includes('design') &&
-          Math.abs(previewTitle.getBoundingClientRect().top - toggle.getBoundingClientRect().top) < 8 &&
+          Math.abs((previewTitle.getBoundingClientRect().top + previewTitle.getBoundingClientRect().bottom) / 2 - (toggle.getBoundingClientRect().top + toggle.getBoundingClientRect().bottom) / 2) < 2 &&
           previewTitle.getBoundingClientRect().right <= toggle.getBoundingClientRect().left);
         const purchaseRect = continueButton.getBoundingClientRect();
         check('phone purchase action is immediately visible', purchaseRect.top >= 0 &&
@@ -73,6 +73,17 @@
         await frames();
         check('closing phone canvas returns to the preview and purchase surface', studio.dataset.mobileEditorExpanded === 'false' &&
           toggle.getAttribute('aria-expanded') === 'false');
+        toggle.click();
+        await frames();
+        // A phone can leave the compact breakpoint by rotating while editing.
+        // Returning to preview must not depend on its orientation at that moment.
+        Object.defineProperty(mobileEditorMedia, 'matches', { configurable: true, value: false });
+        try { workspace.mobileCanvas.close(); }
+        finally { delete mobileEditorMedia.matches; }
+        refreshWorkspaceLayout();
+        await frames();
+        check('leaving canvas outside the compact breakpoint restores preview mode',
+          studio.dataset.mobileEditorExpanded === 'false' && toggle.getAttribute('aria-expanded') === 'false');
         // Exercise the retained inline compact layout independently of the new
         // default phone flow; tablets and desktop resize still use these hosts.
         setMobileEditorExpanded(true, { scroll: false });
@@ -157,6 +168,12 @@
       ];
       for (const [name, design] of cases) {
         mugEditor.setDesign(design, { resetHistory: true });
+        await frames();
+        // Artwork changes run a debounced overlap check that can add a toolbar
+        // action. Let it finish before measuring selection-only stability.
+        const overlapDeadline = performance.now() + 5000;
+        while (overlapWarnings.state === 'checking' && performance.now() < overlapDeadline) await frames();
+        check(`${name}: overlap analysis settled`, overlapWarnings.state === 'ready');
         await frames();
         const baseline = geometry();
         for (let iteration = 0; iteration < 3; iteration++) {

@@ -54,7 +54,6 @@
         <span class="ww-keepsake-cta-label ww-keepsake-cta-label-full" data-i18n-source="Erinnerung gestalten"><%= t('Erinnerung gestalten') %></span>
         <span class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"><%= t('Andenken') %></span>
       </button>
-      <%- include('cloud-settings', { paletteOptions }) %>
       <% } %>
       <% if (cartButton) { %>
       <button
@@ -74,10 +73,10 @@
         <span class="ww-header-cart-badge" id="<%= cartBadgeId %>" aria-hidden="true"></span>
       </button>
       <% } %>
-      <%- include('site-menu', { accountsEnabled }) %>
+      <%- include('site-menu', { accountsEnabled, variant, paletteOptions }) %>
     </div>
   </div>
-  <% if (variant === 'back') { %>
-  <a class="ww-back-link ww-back-link-mobile"<% if (mobileBackId) { %> id="<%= mobileBackId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
-  <% } %>
 </header>
+<% if (variant === 'back') { %>
+  <a class="ww-back-link ww-back-link-mobile"<% if (mobileBackId) { %> id="<%= mobileBackId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
+<% } %>

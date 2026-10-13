@@ -173,3 +173,13 @@ test('responsive inspector exposes one direct copy of every editor control', () 
       'Durchgestrichen']) assert.ok(catalog[label]);
   }
 });
+
+test('an embedded palette focuses its heading without marking the back action as selected', () => {
+  const workspace = Object.create(WolkenworteWorkspace.prototype),focused=[];
+  const trigger={setAttribute(){}},panel={id:'theme-panel',dataset:{},removeAttribute(){},show(){}};
+  workspace.mobileCanvas={active:true,showPicker(){}};
+  workspace.document={getElementById:id=>({focus:()=>focused.push(id)})};
+  workspace.show(panel,trigger);
+  assert.deepEqual(focused,['mobile-canvas-panel-title']);
+  assert.equal(workspace.active.mode,'embedded');
+});

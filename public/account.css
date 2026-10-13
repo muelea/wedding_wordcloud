@@ -13,7 +13,7 @@
   width: min(100%, 1120px);
   flex: 1;
   margin: 0 auto;
-  padding: 64px 32px 88px;
+  padding: 28px 32px 56px;
 }
 .ww-account-main.is-signin { max-width: 484px; }
 .ww-account-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 32px; }
@@ -92,9 +92,10 @@
 .ww-account-main button:disabled, .ww-account-dialog button:disabled { opacity: .55; cursor: wait; }
 .ww-account-main :focus-visible, .ww-account-dialog :focus-visible, .ww-account-controls :focus-visible { outline: 3px solid #c9819e; outline-offset: 3px; }
 @media (max-width: 560px) {
-  .ww-account-main { padding: 40px 20px 56px; }
+  .ww-account-main { padding: 16px 20px 40px; }
   .ww-account-heading { margin-bottom: 28px; }
-  .ww-account-grid { grid-template-columns: 1fr; gap: 32px; }
+  .ww-account-grid { grid-template-columns: 1fr; gap: 24px; }
+  .ww-account-design + .ww-account-design { border-top: 1px solid #eadce1; padding-top: 24px; }
   .ww-account-library-toolbar { justify-content: flex-start; }
   .ww-account-empty { margin: 32px auto 48px; }
   .ww-account-dialog { padding: 22px; }

@@ -152,7 +152,7 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /id="display-word-input"/);
   assert.match(displayHtml, /id="display-word-submit"/);
   assert.doesNotMatch(displayHtml, /id="display-word-close"/);
-  assert.match(displayHtml, /id="display-page-menu"/);
+  assert.match(displayHtml, /data-ww-site-menu/);
   assert.match(displayHtml, /id="display-own-words-button"/);
   assert.match(displayHtml, /id="display-own-words-dialog"/);
   assert.match(displayHtml, /id="presentation-mode-button"/);
@@ -161,7 +161,7 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /body\.presentation-mode #memory-cta/);
   assert.match(displayHtml, /classList\.toggle\('presentation-mode', active\)/);
   assert.match(displayHtml, /presentationModeButton\.setAttribute\('aria-checked', String\(active\)\)/);
-  assert.match(displayHtml, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?data-i18n-source="Erinnerung gestalten"[\s\S]*?id="display-page-menu"/);
+  assert.match(displayHtml, /class="ww-display-header-actions"[\s\S]*?id="memory-cta"[\s\S]*?data-i18n-source="Erinnerung gestalten"[\s\S]*?data-ww-site-menu/);
   assert.match(displayHtml, /class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"/);
   assert.match(displayHtml, /id="word-submission-status" role="status" aria-live="polite" aria-atomic="true"/);
   assert.match(displayHtml, /id="share-cloud"/);

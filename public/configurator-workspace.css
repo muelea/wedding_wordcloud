@@ -471,7 +471,8 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
   cursor: pointer;
 }
 .mobile-canvas-dialog button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
-.mobile-canvas-dialog button:focus-visible { outline: 3px solid var(--rose); outline-offset: -3px; }
+.mobile-canvas-dialog button:focus-visible { outline: 2px solid var(--berry); outline-offset: 2px; }
+#mobile-canvas-panel-title:focus { outline: none; }
 .mobile-canvas-header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
 .mobile-canvas-header strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .mobile-canvas-header nav { display: flex; gap: 4px; }

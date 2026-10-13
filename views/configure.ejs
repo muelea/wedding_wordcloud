@@ -143,37 +143,29 @@
     .page {
       width: min(1280px, calc(100% - 48px));
       margin: 0 auto;
-      padding: 54px 0 80px;
+      padding: 24px 0 40px;
     }
 
-    .intro { margin-bottom: 38px; }
-    .eyebrow {
-      margin: 0 0 12px;
-      color: var(--gold);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-    }
+    .intro { margin-bottom: 20px; }
     h1 {
       margin: 0;
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
-      font-size: clamp(38px, 5vw, 62px);
+      font-size: clamp(28px, 3.4vw, 42px);
       font-weight: 500;
       line-height: 1.06;
       letter-spacing: -.045em;
     }
     .intro h1 { max-width: 720px; }
     .intro-copy {
-      margin: 18px 0 0;
+      margin: 8px 0 0;
       color: var(--muted);
-      font-size: 17px;
-      line-height: 1.7;
+      font-size: 15px;
+      line-height: 1.5;
     }
 
     .config-studio {
       display: grid;
-      gap: 24px;
+      gap: 16px;
     }
 
     .workspace-shell {
@@ -233,7 +225,7 @@
 
     @media (min-width: 941px) {
       .workspace-shell {
-        padding: 30px;
+        padding: 20px;
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-template-areas:
@@ -731,6 +723,7 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      overscroll-behavior: auto;
     }
     .editor-canvas-shell {
       width: 100%;
@@ -783,8 +776,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 14px;
-      margin: 0 0 18px;
-      padding: 12px 16px;
+      margin: 0;
+      padding: 8px 12px;
       border: 1px solid rgba(194, 145, 43, .28);
       border-radius: 14px;
       background: rgba(255, 248, 229, .7);
@@ -1092,7 +1085,7 @@
     }
 
     .design-toolbar {
-      padding: 16px 0 18px;
+      padding: 10px 0;
       display: grid;
       grid-template-columns: minmax(220px, .42fr) minmax(0, 1fr);
       align-items: center;
@@ -1119,14 +1112,14 @@
     .toolbar-menu[hidden] { display: none; }
     .toolbar-summary {
       width: 100%;
-      min-height: 82px;
-      padding: 13px 15px;
+      min-height: 68px;
+      padding: 9px 12px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) 18px;
       grid-template-rows: auto auto;
       align-items: center;
       align-content: center;
-      gap: 12px;
+      gap: 6px;
       border: 1px solid var(--line);
       border-radius: 17px;
       background: rgba(255, 255, 255, .7);
@@ -1190,16 +1183,16 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .toolbar-theme-swatches {
+    .toolbar-summary .toolbar-theme-swatches {
       grid-row: 2;
-      height: 12px;
-      margin: 2px 0 0;
+      height: 10px;
+      margin: 0;
     }
     .selected-product {
-      min-height: 82px;
-      padding: 12px;
+      min-height: 68px;
+      padding: 8px 12px;
       display: grid;
-      grid-template-columns: 58px minmax(0, 1fr) auto;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
       border: 1px solid var(--line);
@@ -1208,8 +1201,8 @@
     }
     .toolbar-product { min-width: 0; }
     .selected-product-thumb {
-      width: 58px;
-      height: 58px;
+      width: 44px;
+      height: 44px;
       padding: 4px;
       object-fit: contain;
       border-radius: 15px;
@@ -1637,7 +1630,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .order-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+    .order-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: nowrap; }
     .order-edit,
     .order-mockup,
     .order-remove {
@@ -1843,7 +1836,7 @@
         max-width: 560px;
         margin-left: max(14px, var(--ww-safe-left));
         margin-right: max(14px, var(--ww-safe-right));
-        padding: 38px 0 max(50px, calc(34px + var(--ww-safe-bottom)));
+        padding: 12px 0 max(24px, var(--ww-safe-bottom));
       }
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] {
         gap: 16px;
@@ -1856,11 +1849,11 @@
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .workbench {
         --workspace-stage-height: clamp(245px, 70vw, 310px);
       }
-      .intro { margin-bottom: 25px; }
+      .intro { margin-bottom: 16px; }
       .intro-copy { font-size: 15px; }
-      .order-item { grid-template-columns: 46px minmax(0, 1fr); align-items: start; }
-      .order-item > img { grid-row: 1 / span 2; }
-      .order-item-actions { grid-column: 2; justify-content: flex-start; }
+      .order-item { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
+      .order-item img { width: 40px; }
+      .order-copy strong, .order-copy span { white-space: normal; overflow-wrap: anywhere; }
       .workspace-tools { padding: 12px; border-radius: 16px; }
       .workbench { --workspace-stage-height: clamp(340px, 92vw, 470px); }
       .preview-card, .editor-card { padding: 20px; border-radius: 21px; }
@@ -1878,27 +1871,19 @@
       .order-actions .continue-button { grid-column: 1 / -1; }
       .order-actions button { padding-inline: 10px; overflow-wrap: anywhere; }
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .checkout-panel {
-        position: fixed;
-        z-index: 40;
-        right: max(14px, var(--ww-safe-right));
+        display: contents;
+      }
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-actions {
+        position: sticky;
         bottom: max(8px, var(--ww-safe-bottom));
-        left: max(14px, var(--ww-safe-left));
-        width: auto;
-        max-width: 560px;
-        margin: 0 auto;
+        z-index: 40;
+        display: flex;
+        flex-wrap: wrap;
         padding: 8px;
-        gap: 7px;
         border: 1px solid var(--line);
         border-radius: 16px;
         background: var(--paper);
         box-shadow: 0 8px 24px rgba(64, 15, 38, .08);
-      }
-      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-box {
-        display: none;
-      }
-      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-actions {
-        display: flex;
-        flex-wrap: wrap;
       }
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-actions .secondary-button {
         flex: 1 1 0;
@@ -1916,10 +1901,7 @@
         font-size: 12px;
         line-height: 1.4;
       }
-      html[data-ww-mobile-device="true"] .config-content[data-mobile-editor-expanded="false"] {
-        padding-bottom: calc(150px + var(--ww-safe-bottom));
-      }
-      .design-toolbar { padding: 14px 0 16px; }
+      .design-toolbar { padding: 10px 0; }
       .design-toolbar-copy {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -2106,18 +2088,26 @@
     @media (max-width: 620px) and (prefers-reduced-motion: reduce) {
       .mobile-editor-caret { transition: none; }
     }
-    .config-design-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
-    .config-design-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 30px); }
+    .config-design-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .config-design-heading h2 { margin: 0; font-size: 25px; }
+    .config-design-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
     .config-design-save { margin: 0; }
-    .config-design-heading .ww-account-save-note { flex-basis: 100%; margin: 0; text-align: right; }
-    .config-design-heading .ww-account-save-note:empty { display: none; }
+    .config-design-save button:disabled { opacity: .5; cursor: default; }
+    .account-save-label-compact { display: none; }
+    .config-save-feedback { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+    .config-save-feedback[data-error="true"] { color: #a51e42; }
+    .config-save-feedback:empty, .error-text:empty { display: none; }
+    .checkout-panel > .design-save-state { margin: 0; }
     .design-toolbar { grid-template-columns: minmax(0, 1fr); }
     .design-toolbar-copy { display: none; }
     #preview-title.workspace-section-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .preview-head .mobile-editor-toggle { grid-column: 1 / -1; justify-self: end; }
-    @media (max-width: 600px) {
-      .config-design-heading { margin-bottom: 12px; }
-      .config-design-heading .ww-account-save-note { text-align: left; }
+    @media (max-width: 620px) {
+      .config-design-heading { gap: 8px; margin-bottom: 12px; }
+      .config-design-heading h2 { font-size: 21px; white-space: nowrap; }
+      .config-design-actions { gap: 6px; }
+      .config-design-save button, .config-design-heading .mobile-editor-toggle { min-width: 44px; min-height: 44px; padding: 8px 10px; font-size: 12px; }
+      .account-save-label-full { display: none; }
+      .account-save-label-compact { display: inline; }
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -2138,25 +2128,24 @@
 
     <div class="config-content" id="config-content" data-mobile-editor-expanded="false" hidden>
       <section class="intro">
-        <p class="eyebrow" id="config-eyebrow">Eure Worte. Eure Erinnerung.</p>
         <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
-        <p class="intro-copy" id="config-intro"><%= pageData.directDesign ? 'Gestaltet eure Tasse mit eigenen Worten, Bildern und Motiven. Produkt und Farbwelt könnt ihr jederzeit ändern.' : 'Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.' %></p>
-        <p class="design-save-state">Produktpreise, Versandkosten und Lieferzeit werden im nächsten Schritt mit Menge und Lieferadresse berechnet.</p>
+        <p class="intro-copy" id="config-intro">Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
       </section>
 
       <p class="configurator-progress" data-configurator-progress role="status" aria-live="polite" hidden></p>
-      <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
-        <span>Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.</span>
-        <button id="apply-live-words" type="button">Design mit aktuellen Wörtern neu erstellen</button>
-      </div>
 
       <section class="config-design-heading" aria-labelledby="design-heading">
         <h2 id="design-heading">Euer Design</h2>
+        <div class="config-design-actions">
+          <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog" aria-label="Design anpassen" data-i18n-aria-label-source="Design anpassen">
+            <span id="mobile-editor-toggle-label">Bearbeiten</span>
+          </button>
         <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
-        <div class="ww-account-controls config-design-save"><button type="button" data-account-save>Design speichern</button></div>
-        <p class="ww-account-save-note" data-account-save-note role="status" aria-live="polite"></p>
+        <div class="ww-account-controls config-design-save"><button type="button" data-account-save disabled aria-label="Design speichern"><span class="account-save-label-full" data-account-save-label>Design speichern</span><span class="account-save-label-compact">Speichern</span></button></div>
         <% } %>
+        </div>
       </section>
+      <p class="config-save-feedback" data-account-save-note role="status" aria-live="polite"></p>
       <div class="config-studio" id="config-studio" data-mobile-editor-expanded="false">
         <section class="design-toolbar" id="design-toolbar" aria-labelledby="controls-title">
           <div class="design-toolbar-copy">
@@ -2225,6 +2214,10 @@
         </section>
 
         <%- include('partials/editor-symbols') %>
+        <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
+          <span>Die Wortwolke hat sich geändert. Euer gespeicherter Entwurf bleibt unverändert.</span>
+          <button id="apply-live-words" type="button">Design mit aktuellen Wörtern neu erstellen</button>
+        </div>
         <div class="workspace-shell">
         <section class="workspace-tools" id="workspace-tools" aria-label="Werkzeuge für die Gestaltung">
               <div class="editor-toolbar" aria-label="Werkzeuge für die Druckfläche">
@@ -2380,9 +2373,6 @@
           <section class="preview-card" aria-labelledby="preview-title">
             <div class="preview-head">
               <h2 class="workspace-section-title" id="preview-title">Euer Design</h2>
-              <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog">
-                <span id="mobile-editor-toggle-label">Design anpassen</span><span class="mobile-editor-caret" aria-hidden="true"></span>
-              </button>
               <div class="mobile-preview-summary">
                 <span class="mobile-preview-product">
                   <strong id="mobile-selected-product-name">Weiße Tasse</strong>
@@ -2432,6 +2422,7 @@
             <span id="cart-removal-message"></span>
             <button class="secondary-button" id="cart-removal-undo" type="button">Rückgängig</button>
           </div>
+          <p class="design-save-state">Produktpreise, Versandkosten und Lieferzeit werden im nächsten Schritt mit Menge und Lieferadresse berechnet.</p>
           <div class="order-actions">
             <button class="secondary-button" id="design-another" type="button">Weiteres Produkt gestalten</button>
             <button class="secondary-button" id="save-design" type="button">In den Warenkorb</button>
@@ -2794,9 +2785,6 @@
         : 'Zur Lieferadresse');
       continueOrderButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       designAnotherButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
-      document.querySelectorAll('[data-account-save]').forEach(button => {
-        button.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
-      });
       designAnotherButton.hidden = !items.length;
       updateAccountSaveState();
       updateCartDraftMarkers();
@@ -2808,7 +2796,6 @@
     }
 
     function updateAccountSaveState() {
-      if (!workspaceReady || restorationFailed) return;
       accountController?.changed();
     }
 
@@ -2844,7 +2831,7 @@
       content.dataset.mobileEditorExpanded = String(mobileEditorExpanded);
       mobileEditorToggle.setAttribute('aria-expanded', String(Boolean(workspace.mobileCanvas?.active)));
       mobileEditorCollapse.setAttribute('aria-expanded', String(mobileEditorExpanded));
-      setText(mobileEditorToggleLabel, 'Design anpassen');
+      setText(mobileEditorToggleLabel, 'Bearbeiten');
       setText(mobileEditorCollapseLabel, 'Nur Vorschau anzeigen');
       updateCartActions();
 
@@ -2881,7 +2868,6 @@
     fitAreaButton.addEventListener('click', () => { void fitCurrentDesignToArea(); });
     mobileEditorCollapse.addEventListener('click', () => setMobileEditorExpanded(false));
     headerCart?.addEventListener('click', () => {
-      setMobileEditorExpanded(true, { scroll: false });
       requestAnimationFrame(() => orderBox.scrollIntoView({
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
         block: 'center',
@@ -5061,7 +5047,7 @@
       });
       workspace.mobileCanvas = new MobileCanvasWorkspace({ document, editor: mugEditor, workspace,
         onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
-        onExit: () => { if (mobileDevice && mobileEditorMedia.matches) setMobileEditorExpanded(false, { scroll: false }); },
+        onExit: () => setMobileEditorExpanded(false, { scroll: false }),
         onLayout: () => { refreshWorkspaceLayout(); updateProductPresentation(); renderAll(); },
       });
       overlapWarnings = new ArtworkOverlapWarnings({ document, editor: mugEditor, workspace, selectSurface,
@@ -5385,6 +5371,7 @@
 
     accountController = globalThis.WolkenworteAccount?.createConfigurator({
       getSnapshot: draftSnapshot,
+      canSave: () => workspaceReady && !restorationFailed && !orderActionPending && !fitAreaPending,
       prepare: () => {
         if (!workspaceReady || restorationFailed || orderActionPending || fitAreaPending) throw new Error('workspace_unavailable');
         return finalizeCurrentText();
@@ -5528,7 +5515,6 @@
         }
         if (!requestedEdit && !query.has('cart') && draftSavedRevision < 0) scheduleDraftSave(0);
         if (query.has('cart')) {
-          if (mobileDevice && mobileEditorMedia.matches) setMobileEditorExpanded(true, { scroll: false });
           requestAnimationFrame(() => orderBox.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         }
       } catch (error) {
