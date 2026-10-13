@@ -87,7 +87,7 @@ function harness(extra = {}) {
     leavingPage: false, allowNavigation: false, suppressDirty: false,
     draftSaveTimer: null, draftSavePromise: null, draftSavedRevision: -1, draftStorageFailed: false,
     saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
-    productSwitchUndo: element(), draftSaveState: element(), cartSaveState: element(),
+    productSwitchUndo: element(),
     orderList: { querySelectorAll: () => [] }, cartRemovalNotice: element(), cartRemovalMessage: element(),
     products: [{ key: 'mug', displayName: 'Tasse' }, { key: 'poster', displayName: 'Poster' }],
     document: { createElement: element, querySelectorAll:()=>[] },
@@ -126,7 +126,7 @@ function harness(extra = {}) {
   });
   vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
     'draftSnapshot', 'wordsMatch', 'updateCartActions', 'continueToShipping', 'saveReviewedDesigns',
-    'currentDesignFingerprint', 'updateSaveState', 'updateCartDraftMarkers', 'refreshCartDrafts', 'renderRemovalNotice',
+    'currentDesignFingerprint', 'updateAccountSaveState', 'updateCartDraftMarkers', 'refreshCartDrafts', 'renderRemovalNotice',
     'hasUnpersistedDraft', 'persistCurrentDraft', 'runNavigation', 'saveBeforeLeaving',
     'openOrderItem', 'removeOrderItem', 'undoCartRemoval', 'navigateToShipping',
     'showRestorationError', 'initializeWorkspace', 'updateHeaderCart'].map(pageFunction).join('\n'), context);

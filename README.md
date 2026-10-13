@@ -54,9 +54,8 @@ frozen snapshot of the word cloud.
    immutable Printful-sized file with a transparent background. Each approved
    design enters the browser-local basket only through “In den Warenkorb”. Editing a basket design
    uses “Warenkorb aktualisieren” and replaces that position without duplicating it.
-   On desktop the configurator separately shows whether the browser draft is retained and
-   whether the cart contains its current version. Mobile hides routine save/cart
-   reminders and gesture hints; actionable failures and explicit cart reviews remain.
+   Routine draft and cart status messages are omitted; actionable failures and
+   explicit cart reviews remain. Mobile also hides gesture hints.
    Cart rows mark pending edits,
    including edits on designs that are not currently open.
    Phones open on a preview-first purchase surface: the finished product, its

@@ -736,14 +736,10 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
   html[data-ww-mobile-device="true"] #config-intro,
   html[data-ww-mobile-device="true"] .intro > .design-save-state,
   html[data-ww-mobile-device="true"] #theme-step .design-save-state,
-  html[data-ww-mobile-device="true"] #cart-save-state,
-  html[data-ww-mobile-device="true"] #draft-save-state:not([data-error="true"]),
   html[data-ww-mobile-device="true"] .order-draft-status,
   html[data-ww-mobile-device="true"] .product-dialog-description,
   html[data-ww-mobile-device="true"] .preview-disclaimer,
   html[data-ww-mobile-device="true"] #mug-viewer-hint { display: none; }
-  html[data-ww-mobile-device="true"] #checkout-panel > .design-save-state { margin: 0; }
-  html[data-ww-mobile-device="true"] #checkout-panel > .design-save-state:has(#product-switch-undo[hidden]):not(:has(#draft-save-state[data-error="true"])) { display: none; }
   html[data-ww-mobile-device="true"].mobile-canvas-open #checkout-panel { visibility: hidden; }
 }
 @media (max-width: 360px) {

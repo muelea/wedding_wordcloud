@@ -22,8 +22,8 @@
       await frames();
       check('routine draft, cart and gesture messages are absent on mobile',
         !document.getElementById('mobile-canvas-hint') &&
-        getComputedStyle(document.getElementById('draft-save-state')).display === 'none' &&
-        getComputedStyle(document.getElementById('cart-save-state')).display === 'none');
+        !document.getElementById('draft-save-state') &&
+        !document.getElementById('cart-save-state'));
       check('native full-screen workspace fills the available viewport', mobile.dialog.open &&
         Math.abs(mobile.dialog.getBoundingClientRect().height - (visualViewport?.height || innerHeight)) < 2);
       check('history, zoom and fit share the top toolbar without a bottom row',

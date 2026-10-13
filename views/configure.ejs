@@ -1731,12 +1731,11 @@
 
     .order-actions button[hidden] { display: none; }
     .design-save-state { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
-    .design-save-state p { margin: 3px 0; }
-    .design-save-state [data-pending="true"], .order-draft-status { color: var(--berry); }
-    .order-draft-status { display: block; font-size: 11px; margin-top: 4px; }
+    .order-draft-status { display: block; color: var(--berry); font-size: 11px; margin-top: 4px; }
     .cart-removal-notice { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
     .cart-removal-notice[hidden], #product-switch-undo[hidden] { display: none; }
     .cart-removal-notice button, #product-switch-undo { min-width: 0; }
+    #product-switch-undo { margin-bottom: 12px; }
     .cart-review-list { padding: 0; list-style: none; }
     .cart-review-list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
     .cart-review-list button { min-width: 0; margin-top: 5px; }
@@ -2399,11 +2398,7 @@
         <p class="print-readability" id="print-readability" role="status" aria-live="polite" hidden></p>
 
         <section class="checkout-panel" id="checkout-panel" aria-label="Bestellung fortsetzen">
-          <div class="design-save-state" aria-live="polite" aria-atomic="true">
-            <p id="draft-save-state"></p>
-            <p id="cart-save-state"></p>
-            <button class="secondary-button" id="product-switch-undo" type="button" hidden>Produktwechsel rückgängig</button>
-          </div>
+          <button class="secondary-button" id="product-switch-undo" type="button" hidden>Produktwechsel rückgängig</button>
           <div class="order-box" id="order-box" hidden>
             <div class="order-head">
               <strong>Euer Warenkorb</strong>
@@ -2669,8 +2664,6 @@
     const continueOrderButton = document.getElementById('continue-order');
     const continueOrderLabel = document.getElementById('continue-order-label');
     const saveDesignButton = document.getElementById('save-design');
-    const draftSaveState = document.getElementById('draft-save-state');
-    const cartSaveState = document.getElementById('cart-save-state');
     const productSwitchUndo = document.getElementById('product-switch-undo');
     const cartRemovalNotice = document.getElementById('cart-removal-notice');
     const cartRemovalMessage = document.getElementById('cart-removal-message');
@@ -2782,7 +2775,7 @@
         button.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed;
       });
       designAnotherButton.hidden = !items.length;
-      updateSaveState();
+      updateAccountSaveState();
       updateCartDraftMarkers();
     }
 
@@ -2791,23 +2784,9 @@
         orientation: selectedOrientation, theme: selectedTheme, designs: getAllSurfaceDesigns() });
     }
 
-    function updateSaveState() {
+    function updateAccountSaveState() {
       if (!workspaceReady || restorationFailed) return;
       accountController?.changed();
-      const draftMessage = draftStorageFailed
-        ? 'Entwurf nicht gesichert. Bitte lasst diese Seite geöffnet.'
-        : hasUnpersistedDraft() ? 'Entwurf wird in diesem Browser gesichert…'
-        : 'Entwurf in diesem Browser gesichert · 7 Tage verfügbar';
-      draftSaveState.dataset.error = String(draftStorageFailed);
-      cartSaveState.dataset.pending = String(currentDesignNeedsSave);
-      const cartMessage = editingOrderItemId
-        ? currentDesignNeedsSave
-          ? 'Änderungen noch nicht im Warenkorb. Bestellt wird die bisherige Version, bis ihr den Warenkorb aktualisiert.'
-          : 'Dieses Design ist im Warenkorb aktuell.'
-        : 'Dieses Design ist noch nicht im Warenkorb.';
-      // Announce state transitions once, rather than every frame of a drag.
-      if (draftSaveState.textContent !== t(draftMessage)) setText(draftSaveState, draftMessage);
-      if (cartSaveState.textContent !== t(cartMessage)) setText(cartSaveState, cartMessage);
     }
 
     function updateCartDraftMarkers() {
@@ -2953,14 +2932,14 @@
             if (record.needsCartUpdate) cartDrafts.set(record.editingOrderItemId, record);
             else cartDrafts.delete(record.editingOrderItemId);
           }
-          updateSaveState();
+          updateAccountSaveState();
           updateCartDraftMarkers();
           return true;
         } catch (error) {
           console.warn('Configurator draft save failed.', error);
           draftStorageFailed = true;
           setText(errorText, 'Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
-          updateSaveState();
+          updateAccountSaveState();
           return false;
         }
       };
@@ -5351,7 +5330,7 @@
       renderCustomColorControls();
       renderOrderBox();
       updateProductPresentation();
-      updateSaveState();
+      updateAccountSaveState();
       renderRemovalNotice();
       setMobileEditorExpanded(mobileEditorExpanded, { scroll: false });
     }
