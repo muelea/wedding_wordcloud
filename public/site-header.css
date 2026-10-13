@@ -214,76 +214,6 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
   font-variant-numeric: tabular-nums;
 }
 
-.ww-back-header-desktop-language { display: none !important; }
-
-.ww-mobile-header-menu {
-  position: relative;
-  z-index: 10000;
-  display: block;
-}
-
-.ww-mobile-header-menu > summary { list-style: none; }
-.ww-mobile-header-menu > summary::-webkit-details-marker { display: none; }
-
-.ww-mobile-header-menu-panel {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  width: min(300px, calc(100vw - 32px));
-  padding: 8px;
-  border: 1px solid rgba(64, 15, 38, .11);
-  border-radius: 16px;
-  background: rgba(255, 253, 250, .985);
-  box-shadow: 0 18px 48px rgba(64, 15, 38, .16);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
-}
-
-.ww-mobile-header-menu-back {
-  display: none;
-  min-height: 44px;
-  padding: 0 11px;
-  align-items: center;
-  gap: 10px;
-  border-radius: 11px;
-  color: var(--ink, #400f26);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.ww-mobile-header-menu-back:hover,
-.ww-mobile-header-menu-back:focus-visible {
-  background: rgba(156, 28, 76, .07);
-  color: var(--berry, #9c1c4c);
-}
-
-.ww-mobile-header-menu-language-row {
-  padding: 3px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(112px, 136px);
-  align-items: center;
-  gap: 10px;
-}
-
-.ww-mobile-header-menu-label {
-  padding-left: 8px;
-  color: var(--muted, #8a7178);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-
-.ww-mobile-header-menu-language,
-.ww-mobile-header-menu-language .ww-language-trigger { width: 100%; }
-
-.ww-mobile-header-menu-language .ww-language-menu {
-  right: 0;
-  left: auto;
-  width: 166px;
-}
-
 .ww-site-header a:not(.ww-language-option):focus-visible {
   outline: 2px solid var(--berry, var(--primary2, #9c1c4c));
   outline-offset: 5px;
@@ -313,15 +243,7 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
 
   .ww-back-link-desktop { display: none !important; }
 
-  .ww-mobile-header-menu-back {
-    display: flex;
-  }
 
-  .ww-mobile-header-menu-language-row {
-    margin-top: 6px;
-    padding: 10px 3px 3px;
-    border-top: 1px solid rgba(64, 15, 38, .1);
-  }
 }
 
 @media (max-width: 360px) {
@@ -334,7 +256,7 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
     display: none !important;
   }
 
-  .ww-site-header .ww-back-link span:last-child {
+  .ww-site-header .ww-back-link-desktop span:last-child {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -369,54 +291,21 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
     animation: none !important;
   }
 }
-.landing-header-menu-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: max(20px, var(--ww-safe-right, 0px));
-  width: min(300px, calc(100vw - 32px));
-  box-sizing: border-box;
-  padding: 8px;
-  border: 1px solid rgba(64, 15, 38, .11);
-  border-radius: 16px;
-  background: #fffdfa;
-  box-shadow: 0 18px 48px rgba(64, 15, 38, .16);
-  z-index: 10000;
-}
-.landing-header-menu-panel[hidden], .ww-header-account-menu [hidden] { display: none !important; }
-.landing-header-menu-panel, .ww-mobile-header-menu-panel, .ww-header-account-menu {
-  font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
-}
-.ww-header-menu-item {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #400f26;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
+/* One global menu surface, independent of a cloud's chosen palette. */
+.ww-site-menu { position: relative; z-index: 10000; flex: 0 0 auto; --text: #400f26; --ink: #400f26; --bg: #fffdfa; --paper: #fffdfa; --primary: #9c1c4c; --muted: #8a7178; }
+.ww-site-menu-panel { position: absolute; top: calc(100% + 10px); right: 0; box-sizing: border-box; width: min(300px, calc(100vw - 32px)); max-height: calc(100dvh - 104px); overflow-y: auto; overscroll-behavior: contain; padding: 8px; border: 1px solid rgba(64,15,38,.11); border-radius: 16px; background: #fffdfa; color: #400f26; box-shadow: 0 18px 48px rgba(64,15,38,.16); font: 500 14px/1.4 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
+.ww-header-menu-item { box-sizing: border-box; display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: #400f26; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
 .ww-header-menu-item:hover, .ww-header-menu-item:focus-visible { background: #fbf2e7; color: #9c1c4c; }
-.ww-header-menu-item:disabled { opacity: .55; cursor: wait; }
-.ww-header-menu-status { margin: 8px 12px; color: #9c1c4c; font-size: 12px; line-height: 1.5; }
-.ww-header-menu-status:empty { display: none; }
-.ww-header-account-menu + .ww-mobile-header-menu-language-row {
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(64, 15, 38, .08);
+.ww-header-menu-item[hidden] { display: none !important; }
+.ww-site-menu-preferences, .ww-site-menu-legal { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(64,15,38,.1); }
+.ww-site-menu-language-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(112px,136px); align-items: start; gap: 10px; padding: 3px; }
+.ww-site-menu-label { padding: 15px 0 0 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8a7178; }
+.ww-site-menu-language, .ww-site-menu-language .ww-language-trigger { width: 100%; }
+.ww-site-menu-language .ww-language-menu { position: static; width: 100%; margin-top: 8px; }
+.ww-back-link-mobile { display: none; }
+@media (max-width: 780px) {
+  .ww-back-link-mobile { display: flex; width: fit-content; min-height: 44px; margin: -6px 16px 4px; padding: 8px 0; }
 }
-.ww-display-menu-panel .ww-header-account-menu { padding: 8px 0; border-top: 1px solid rgba(64, 15, 38, .08); }
-@media (min-width: 1051px) {
-  .landing-header-menu-panel { width: 230px; }
-  .ww-accounts-enabled .landing-menu-sections,
-  .ww-accounts-enabled .landing-header-menu-panel > .ww-mobile-header-menu-language-row { display: none; }
+@media (max-width: 620px) {
+  .ww-nav:has(.ww-display-header-actions) { gap: 8px !important; }
 }

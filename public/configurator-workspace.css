@@ -455,6 +455,7 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
   background: var(--paper);
 }
 .mobile-canvas-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.mobile-canvas-dialog[open]:has(> .mobile-canvas-orientation-hint:not([hidden])) { grid-template-rows: auto auto minmax(0, 1fr); }
 .mobile-canvas-dialog::backdrop { background: var(--paper); }
 .mobile-canvas-dialog [hidden] { display: none !important; }
 .mobile-canvas-dialog button {
@@ -623,7 +624,7 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 #mobile-canvas-add .editor-icon { width: 18px; height: 18px; flex: 0 0 18px; }
 #mobile-canvas-add .editor-tools-primary { flex-wrap: wrap; }
 #mobile-canvas-settings .toolbar-product { border: 0; padding: 0; }
-#mobile-canvas-settings .toolbar-summary { border: 0; border-radius: 0; border-top: 1px solid var(--line); background: transparent; box-shadow: none; min-height: 54px; }
+#mobile-canvas-settings .toolbar-summary { border: 0; border-radius: 0; background: transparent; box-shadow: none; min-height: 54px; }
 #mobile-canvas-picker .product-option { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
 #mobile-canvas-picker .product-choice { border: 0; border-radius: 0; background: transparent; box-shadow: none; grid-template-columns: 36px minmax(0, 1fr) 20px; padding: 6px 0; }
 #mobile-canvas-picker .product-choice::after { content: '›'; font-size: 22px; color: var(--berry); }
@@ -653,6 +654,7 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 #mobile-canvas-emoji .ww-emoji-status { font-size: 10px; margin: 2px 0 0; }
 .mobile-canvas-dialog[data-entry] { display: block; padding: 4px env(safe-area-inset-right, 0px) 4px env(safe-area-inset-left, 0px); overflow-y: auto; }
 .mobile-canvas-dialog[data-entry] > .mobile-canvas-header,
+.mobile-canvas-dialog[data-entry] > .mobile-canvas-orientation-hint,
 .mobile-canvas-dialog[data-entry] > .mobile-canvas-body { display: none; }
 #mobile-canvas-text-editor { display: flex; align-items: flex-end; gap: 4px; padding: 0 6px; }
 .mobile-canvas-entry-field { flex: 1; min-width: 0; font-size: 11px; line-height: 14px; }
@@ -745,3 +747,9 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 @media (max-width: 360px) {
   #mobile-canvas-multi-done { width: 52px; padding: 2px; font-size: 10px; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; }
 }
+
+.mobile-canvas-orientation-hint { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: #fbf5ed; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.4; }
+.mobile-canvas-orientation-hint[hidden] { display: none; }
+.mobile-canvas-orientation-hint > .editor-icon { flex: 0 0 22px; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.mobile-canvas-orientation-hint > span { flex: 1; }
+.mobile-canvas-orientation-hint > button { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; font-size: 22px; }

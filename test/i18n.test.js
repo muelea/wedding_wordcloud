@@ -189,17 +189,10 @@ test('every public page loads the shared language layer', () => {
     assert.ok(rendered.includes(publicAssetUrl('/js/i18n.js')), filename);
     assert.ok(rendered.includes(publicAssetUrl('/site-header.css')), filename);
     assert.match(rendered, /<header\b[^>]*\bww-site-header\b/, filename);
-    assert.equal((rendered.match(/data-language-picker/g) || []).length, filename === 'landing.ejs' ? 2 : 1, filename);
+    assert.equal((rendered.match(/<details[^>]+data-language-picker/g) || []).length, 1, filename);
     assert.match(rendered, /<summary\s+class="ww-language-trigger"\s+data-language-trigger/, filename);
     assert.match(rendered, /<nav class="ww-language-menu" data-language-menu/, filename);
-    if (filename === 'display.ejs') {
-      assert.match(rendered, /<details class="ww-display-menu" id="display-page-menu">/, filename);
-      assert.match(rendered, /<details class="ww-language-picker ww-display-menu-language" data-language-picker/, filename);
-    } else if (filename === 'landing.ejs') {
-      assert.match(rendered, /<details class="ww-language-picker landing-menu-language" data-language-picker/, filename);
-    } else {
-      assert.match(rendered, /<details class="ww-language-picker ww-language-inline" data-language-picker/, filename);
-    }
+    assert.match(rendered, /<details class="ww-language-picker ww-site-menu-language" data-language-picker/, filename);
   }
 
   const displayPage = viewSource('display.ejs');
@@ -509,7 +502,7 @@ test('shared header pins the brand left and its final action right at every view
   assert.match(styles, /\.ww-site-header \.ww-language-inline\s*\{[^}]*margin-left:\s*auto/s);
   assert.match(styles, /\.ww-back-header-actions\s*\{[^}]*margin-left:\s*auto/s);
   assert.match(styles, /@media \(max-width:\s*780px\)[\s\S]*?\.ww-nav\s*\{[^}]*padding:\s*0 16px\s*!important/s);
-  assert.equal((headerPartial.match(/include\('language-picker'/g) || []).length, 6);
+  assert.equal((fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-menu.ejs'), 'utf8').match(/include\('language-picker'/g) || []).length, 1);
   assert.doesNotMatch(headerPartial, /<details class="ww-language-picker/);
   assert.match(pickerPartial, /<details class="ww-language-picker/);
   assert.match(pickerPartial, /<summary[\s\S]*?data-language-trigger/);
@@ -589,7 +582,8 @@ test('language switcher visuals have one owner and cannot inherit page-specific 
   const languageStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'i18n.css'), 'utf8');
   const headerStyles = fs.readFileSync(path.join(__dirname, '..', 'public', 'site-header.css'), 'utf8');
 
-  assert.equal((header.match(/include\('language-picker'/g) || []).length, 6);
+  assert.match(header, /include\('site-menu'/);
+  assert.equal((fs.readFileSync(path.join(VIEW_ROOT, 'partials', 'site-menu.ejs'), 'utf8').match(/include\('language-picker'/g) || []).length, 1);
   assert.equal((picker.match(/<details class="ww-language-picker/g) || []).length, 1);
   assert.match(landing, /\.landing-section-link::after/);
   assert.doesNotMatch(landing, /\.landing-section-links a(?::|\s|\{)/);

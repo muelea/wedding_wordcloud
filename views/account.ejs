@@ -10,20 +10,23 @@
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" /><link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <link rel="stylesheet" href="<%= asset('/account.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script><script src="<%= asset('/js/site-header.js') %>" defer></script>
-  <title><%= t(pageData.accountPage === 'settings' ? 'Mein Konto – Wolkenworte' : 'Meine Designs – Wolkenworte') %></title>
+  <title><%= t('Mein Konto – Wolkenworte') %></title>
 </head>
 <body class="ww-account-body">
   <%- include('partials/site-header') %>
   <main class="ww-account-main is-signin" id="account-page" data-page="<%= pageData.accountPage %>" data-return-to="<%= pageData.returnTo %>" data-available="<%= pageData.accountAvailable %>">
-    <div class="ww-account-heading"><h1><%= pageData.accountPage === 'settings' ? 'Mein Konto' : 'Meine Designs' %></h1>
-      <p class="ww-account-small" data-account-usage hidden></p></div>
+    <div class="ww-account-heading"><h1>Mein Konto</h1></div>
     <p id="account-page-status" role="status" aria-live="polite"></p>
     <% if (!pageData.accountAvailable) { %><p>Das Speichern im Konto ist gerade nicht verfügbar. Du kannst weiterhin ohne Konto gestalten und bestellen.</p><% } %>
     <div class="ww-account-signin" data-account-signin <%= !pageData.accountAvailable ? 'hidden' : '' %>>
       <%- include('partials/account-auth') %>
     </div>
-    <section class="ww-design-library" data-account-library hidden>
-      <div class="ww-account-library-toolbar" data-account-library-toolbar><%- include('partials/account-new-design') %></div>
+    <nav class="ww-account-navigation" data-account-navigation role="tablist" aria-label="Mein Konto" hidden>
+      <button type="button" id="account-designs-tab" data-account-tab="designs" role="tab" aria-selected="true" aria-controls="account-designs-panel">Meine Designs</button>
+      <button type="button" id="account-settings-tab" data-account-tab="settings" role="tab" aria-selected="false" aria-controls="account-settings-panel" tabindex="-1">Einstellungen</button>
+    </nav>
+    <section class="ww-design-library" id="account-designs-panel" data-account-library role="tabpanel" aria-labelledby="account-designs-tab" hidden>
+      <div class="ww-account-library-heading"><p class="ww-account-small" data-account-usage hidden></p><div class="ww-account-library-toolbar" data-account-library-toolbar><%- include('partials/account-new-design') %></div></div>
       <div class="ww-account-grid" data-account-design-list></div>
       <div class="ww-account-empty" data-account-empty hidden>
         <img src="<%= asset('/z_icons/icon.svg') %>" alt="" aria-hidden="true" width="54" height="50" />
@@ -33,7 +36,7 @@
       </div>
       <p class="ww-account-retention">Designs werden nach drei Monaten ohne Nutzung dauerhaft gelöscht. Öffnen, Speichern oder ein erfolgreicher Kauf verlängern die Frist.</p>
     </section>
-    <section data-account-settings hidden>
+    <section id="account-settings-panel" data-account-settings role="tabpanel" aria-labelledby="account-settings-tab" hidden>
       <p data-account-email></p>
       <div class="ww-account-card"><h2>Speicherplatz</h2><p class="ww-account-small" data-account-storage></p></div>
       <div class="ww-account-card">
@@ -54,6 +57,7 @@
         <a href="/api/account/export" class="ww-account-link" download>Daten herunterladen</a></div>
       <div class="ww-account-card"><h2>Konto löschen</h2><p>Dein Konto und alle gespeicherten Designs werden dauerhaft gelöscht. Bestehende Warenkorbkopien und notwendige Bestelldaten bleiben davon unabhängig.</p>
         <button class="ww-account-danger" type="button" data-account-delete>Konto dauerhaft löschen</button></div>
+      <div class="ww-account-signout"><button type="button" data-account-logout>Abmelden</button></div>
     </section>
   </main>
   <dialog class="ww-account-dialog" id="account-confirm-dialog"><form method="dialog"><div class="ww-account-dialog-head"><h2 data-confirm-title>Design löschen?</h2><button value="cancel" aria-label="Schließen">×</button></div><p data-confirm-description></p><label data-confirm-name hidden>Designname<input name="name" maxlength="80" /></label><div class="ww-account-actions"><button value="cancel">Abbrechen</button><button class="ww-account-primary" value="confirm" data-confirm-action>Bestätigen</button></div></form></dialog>

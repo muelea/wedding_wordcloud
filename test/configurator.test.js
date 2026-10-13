@@ -915,7 +915,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.ok(configurePage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="mobile-back-link"/);
-  assert.match(configurePage, /class="ww-mobile-header-menu" data-ww-mobile-header-menu/);
+  assert.match(configurePage, /class="ww-site-menu" data-ww-site-menu/);
   assert.match(configurePage, /class="ww-header-cart ww-menu-trigger"[\s\S]*?id="header-cart"[\s\S]*?hidden/);
   assert.match(configurePage, /id="header-cart-count"/);
   assert.doesNotMatch(configurePage, /mobile-cart-summary/);

@@ -615,6 +615,24 @@ test('shipping action reflects whether the cart can continue without omitting cu
   assert.equal(page.shippingAction(), 'choose-update');
 });
 
+test('cart updates are offered only for pending changes while new designs can always be added', () => {
+  const { context: page, cart } = harness();
+  page.updateCartActions();
+  assert.equal(page.saveDesignButton.hidden, false);
+  assert.equal(page.designAnotherButton.hidden, true);
+  cart.replace({ id: id('a') });
+  page.editingOrderItemId = id('a');
+  page.currentDesignNeedsSave = false;
+  page.updateCartActions();
+  assert.equal(page.saveDesignButton.hidden, true);
+  assert.equal(page.designAnotherButton.hidden, false);
+  assert.equal(page.continueOrderButton.disabled, false);
+  page.currentDesignNeedsSave = true;
+  page.updateCartActions();
+  assert.equal(page.saveDesignButton.hidden, false);
+  assert.equal(page.saveDesignButton.disabled, false);
+});
+
 test('the shipping choice explains add and update cases and resolves the explicit selection', async () => {
   for (const action of ['choose-add', 'choose-update']) {
     const { context: page, calls } = harness();

@@ -15,6 +15,7 @@
       this.view = 'canvas';
       this.tool = 'move';
       this.active = false;
+      try { this.orientationHintDismissed = root.sessionStorage?.getItem('ww-canvas-orientation-dismissed') === '1'; } catch {}
       editor.onViewChange = zoom => { document.getElementById('mobile-canvas-fit').textContent = `${Math.round(zoom * 100)} %`; };
       this.dialog.addEventListener('cancel', event => {
         event.preventDefault();
@@ -26,6 +27,7 @@
       this.dialog.addEventListener('pointerdown', event => {
         if (!event.target.closest('#mobile-canvas-stage')) editor.touchController?.finish();
       }, true);
+      document.getElementById('mobile-canvas-orientation-dismiss').addEventListener('click', () => this.dismissOrientationHint());
       document.getElementById('mobile-canvas-close').addEventListener('click', () => this.close());
       document.getElementById('mobile-canvas-deselect').addEventListener('click', () => {
         editor.touchController?.finish();
@@ -420,11 +422,31 @@
       const keyboard = Boolean(this.keyboardSession || (this.dialog.contains(field) && !field.readOnly &&
         field.matches('textarea, input[type="text"], input[type="search"], input[type="number"]')));
       this.dialog.toggleAttribute('data-keyboard', keyboard);
+      this.syncOrientationHint();
       this.dialog.style.setProperty('--mobile-viewport-top', `${viewport?.offsetTop || 0}px`);
       this.dialog.style.setProperty('--mobile-viewport-left', `${viewport?.offsetLeft || 0}px`);
       this.dialog.style.setProperty('--mobile-viewport-width', `${viewport?.width || root.innerWidth}px`);
       this.dialog.style.setProperty('--mobile-viewport-height', `${viewport?.height || root.innerHeight}px`);
       if (this.keyboardSession?.kind === 'emoji') requestAnimationFrame(() => this.emojiPicker?.picker.renderVirtualWindow({ force: true }));
+    }
+
+    syncOrientationHint() {
+      const hint = this.document.getElementById('mobile-canvas-orientation-hint');
+      if (!hint) return;
+      // Use actual print coordinates, never the 3D product or the zoomed canvas.
+      const widePrint = Number(this.editor?.width) > Number(this.editor?.height);
+      hint.hidden = !this.active || this.view !== 'canvas' || !widePrint ||
+        root.innerWidth >= root.innerHeight || this.orientationHintDismissed ||
+        this.dialog.hasAttribute('data-keyboard') || Boolean(this.keyboardSession) ||
+        !root.WolkenworteDevice?.isMobileDevice(root.navigator);
+    }
+
+    dismissOrientationHint() {
+      this.orientationHintDismissed = true;
+      try { root.sessionStorage?.setItem('ww-canvas-orientation-dismissed', '1'); } catch {}
+      this.syncOrientationHint();
+      this.document.getElementById('mobile-canvas-fit').focus({ preventScroll: true });
+      requestAnimationFrame(() => this.onLayout());
     }
 
     openEmojiPicker(picker) {
@@ -452,6 +474,7 @@
     }
 
     updateSelection() {
+      this.syncOrientationHint();
       if (!this.active) return;
       if (this.tool === 'elements') this.renderElements();
       const objects = this.editor.selectedObjects();

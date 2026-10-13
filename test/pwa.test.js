@@ -134,7 +134,7 @@ test('all public pages publish the same manifest and share one installation dial
     const links = nodes.filter(node => node.tag === 'link' && node.attrs.rel === 'manifest');
     assert.deepEqual(links.map(node => node.attrs.href), ['/manifest.webmanifest'], page);
     const buttons = nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install'));
-    assert.equal(buttons.length, page === 'landing' ? 2 : 1, page);
+    assert.equal(buttons.length, 1, page);
     assert.ok(buttons.every(node => Object.hasOwn(node.attrs, 'hidden')), 'controls start hidden before device detection');
     assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install-dialog')).length, 1, page);
     assert.ok(nodes.some(node => node.attrs.rel === 'apple-touch-icon' &&
@@ -146,7 +146,7 @@ test('all public pages publish the same manifest and share one installation dial
   }
 });
 
-test('mobile overflow menus place installation immediately after My designs without duplicating the dialog', async () => {
+test('shared overflow menus group installation with language without duplicating the dialog', async () => {
   for (const header of [{ variant: 'landing' }, { variant: 'back', mobileMenu: true, cartButton: true }]) {
     const html = await ejs.renderFile(path.join(ROOT, 'views/partials/site-header.ejs'), {
       header, designAccountsEnabled: true, asset: publicAssetUrl,
@@ -156,9 +156,9 @@ test('mobile overflow menus place installation immediately after My designs with
     const account = nodes.findIndex(node => node.tag === 'a' && node.attrs.href === '/konto');
     assert.ok(account >= 0);
     const install = nodes.findIndex(node => Object.hasOwn(node.attrs, 'data-ww-install'));
-    assert.ok(install > account, 'install follows the My designs account section in menu order');
-    assert.ok(nodes.slice(install + 1).some(node => Object.hasOwn(node.attrs, 'data-language-picker')),
-      'install stays above the language picker');
+    assert.ok(install > account, 'install follows the account section in menu order');
+    assert.ok(nodes.slice(account + 1, install).some(node => Object.hasOwn(node.attrs, 'data-language-picker')),
+      'install belongs after the language picker');
     assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install')).length, 1);
     assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install-dialog')).length, 0,
       'the menu reuses the single footer dialog');

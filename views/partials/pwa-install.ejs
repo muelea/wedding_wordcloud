@@ -1,4 +1,6 @@
+<% if (typeof installDialogOnly === 'undefined' || !installDialogOnly) { %>
 <button class="ww-pwa-install <%= installButtonClass %>" type="button" data-ww-install hidden data-i18n-source="Wolkenworte installieren"><%= t('Wolkenworte installieren') %></button>
+<% } %>
 <% if (typeof includeInstallDialog === 'undefined' || includeInstallDialog) { %>
 <dialog class="ww-pwa-dialog" data-ww-install-dialog aria-labelledby="ww-install-title">
   <div class="ww-pwa-dialog-heading">

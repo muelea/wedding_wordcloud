@@ -1,198 +1,63 @@
 'use strict';
-
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const path = require('node:path');
 const vm = require('node:vm');
-
-const runtime = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'site-header.js'), 'utf8');
-
-function listeners() {
-  const values = new Map();
-  return {
-    add(type, listener) {
-      const registered = values.get(type) || [];
-      registered.push(listener);
-      values.set(type, registered);
-    },
-    dispatch(type, event = {}) {
-      for (const listener of values.get(type) || []) listener(event);
-    },
-  };
+const ejs = require('ejs');
+const {JSDOM} = require('jsdom');
+const runtime = fs.readFileSync('public/js/site-header.js', 'utf8');
+const settle = () => new Promise(resolve => setTimeout(resolve, 5));
+function render(variant) {
+  return ejs.render(fs.readFileSync('views/partials/site-header.ejs','utf8'), {
+    header:{variant,mobileMenu:true,mobileBackId:'mobile-back-link',backHref:'/previous',paletteOptions:[]},
+    designAccountsEnabled:true,analyticsMeasurementId:'',asset:x=>x,t:x=>x,locale:'de',
+    languages:[{code:'de',name:'Deutsch',flag:'🇩🇪',href:'?lang=de'}],
+  },{filename:'views/partials/site-header.ejs'});
 }
-
-function classList() {
-  const values = new Set();
-  return {
-    contains: (name) => values.has(name),
-    remove: (name) => values.delete(name),
-    toggle(name, force) {
-      const active = force === undefined ? !values.has(name) : Boolean(force);
-      if (active) values.add(name);
-      else values.delete(name);
-      return active;
-    },
-  };
+function mount(t,variant='landing') {
+  const dom=new JSDOM(render(variant),{url:'https://wolkenworte.invalid'});
+  t.after(()=>dom.window.close());const {document}=dom.window;
+  vm.runInNewContext(runtime,{window:dom.window,document});
+  const menu=document.querySelector('[data-ww-site-menu]');
+  return {dom,document,menu,trigger:menu.querySelector('summary')};
 }
-
-function mountHeader() {
-  const documentEvents = listeners();
-  const windowEvents = listeners();
-  const toggleEvents = listeners();
-  const linkEvents = listeners();
-  const header = { classList: classList() };
-  const menuTarget = {};
-  const toggleTarget = {};
-  const sectionLink = { addEventListener: linkEvents.add };
-  const menu = {
-    contains: (target) => target === menuTarget,
-    querySelectorAll: () => [sectionLink],
-  };
-  const attributes = new Map([['aria-controls', 'landing-section-links']]);
-  const toggle = {
-    addEventListener: toggleEvents.add,
-    closest: () => header,
-    contains: (target) => target === toggleTarget,
-    getAttribute: (name) => attributes.get(name),
-    setAttribute: (name, value) => attributes.set(name, value),
-  };
-  const document = {
-    addEventListener: documentEvents.add,
-    getElementById: () => menu,
-    querySelectorAll(selector) {
-      if (selector === '.ww-site-header') return [header];
-      if (selector === '.landing-menu-toggle') return [toggle];
-      return [];
-    },
-  };
-  const window = { addEventListener: windowEvents.add, scrollY: 0 };
-  vm.runInNewContext(runtime, { document, window });
-  return {
-    attributes,
-    documentEvents,
-    header,
-    linkEvents,
-    menuTarget,
-    toggleEvents,
-    toggleTarget,
-  };
-}
-
-function mountMobileHeaderMenu() {
-  const documentEvents = listeners();
-  const menuEvents = listeners();
-  const linkEvents = listeners();
-  const attributes = new Map();
-  const header = { classList: classList() };
-  const insideTarget = {};
-  const nestedLanguagePicker = { open: false };
-  const trigger = {
-    focused: false,
-    focus() { this.focused = true; },
-    setAttribute(name, value) { attributes.set(name, value); },
-  };
-  const link = { addEventListener: linkEvents.add };
-  const menu = {
-    open: false,
-    addEventListener: menuEvents.add,
-    contains: (target) => target === insideTarget,
-    querySelector(selector) {
-      if (selector === '[data-ww-mobile-header-menu-trigger]') return trigger;
-      if (selector === '[data-language-picker][open]') {
-        return nestedLanguagePicker.open ? nestedLanguagePicker : null;
-      }
-      return null;
-    },
-    querySelectorAll(selector) {
-      if (selector === '[data-language-picker]') return [nestedLanguagePicker];
-      if (selector === 'a:not([data-language-code])') return [link];
-      return [];
-    },
-  };
-  const document = {
-    addEventListener: documentEvents.add,
-    querySelectorAll(selector) {
-      if (selector === '.ww-site-header') return [header];
-      if (selector === '.landing-menu-toggle') return [];
-      if (selector === '[data-ww-mobile-header-menu]') return [menu];
-      return [];
-    },
-  };
-  const window = { addEventListener() {}, scrollY: 0 };
-  vm.runInNewContext(runtime, { document, window });
-  return {
-    attributes,
-    documentEvents,
-    insideTarget,
-    linkEvents,
-    menu,
-    menuEvents,
-    nestedLanguagePicker,
-    trigger,
-  };
-}
-
-test('landing menu closes on an outside pointer while preserving inside interactions', () => {
-  const page = mountHeader();
-  const isOpen = () => page.header.classList.contains('landing-menu-open');
-
-  page.toggleEvents.dispatch('click');
-  assert.equal(isOpen(), true);
-  assert.equal(page.attributes.get('aria-expanded'), 'true');
-  assert.equal(page.attributes.get('aria-label'), 'Seitennavigation schließen');
-
-  page.documentEvents.dispatch('pointerdown', { target: page.menuTarget });
-  assert.equal(isOpen(), true, 'using the menu must not dismiss it before the click completes');
-  page.documentEvents.dispatch('pointerdown', { target: page.toggleTarget });
-  assert.equal(isOpen(), true, 'the toggle handles its own pointer interaction');
-
-  page.documentEvents.dispatch('pointerdown', { target: {} });
-  assert.equal(isOpen(), false);
-  assert.equal(page.attributes.get('aria-expanded'), 'false');
-  assert.equal(page.attributes.get('aria-label'), 'Seitennavigation öffnen');
+test('all page variants render exactly the same global menu and one stable account destination',t=>{
+  const panels=[];
+  for(const variant of ['landing','display','back','brand-only']){
+    const h=mount(t,variant);
+    panels.push(h.menu.querySelector('.ww-site-menu-panel').innerHTML);
+    assert.equal(h.document.querySelectorAll('[data-ww-site-menu]').length,1);
+    assert.equal(h.menu.querySelector('[data-account-menu]').getAttribute('href'),'/konto');
+    assert.equal(h.menu.querySelectorAll('[data-language-picker]').length,1);
+    assert.equal(h.menu.querySelectorAll('[data-ww-install]').length,1);
+    assert.equal(h.menu.querySelector('#display-palette-picker'),null);
+    assert.equal(h.menu.querySelector('#mobile-back-link'),null);
+    assert.equal(h.menu.querySelector('[data-account-logout]'),null);
+  }
+  assert.ok(panels.every(panel=>panel===panels[0]));
 });
-
-test('landing menu still closes through section links and Escape', () => {
-  const page = mountHeader();
-  const isOpen = () => page.header.classList.contains('landing-menu-open');
-
-  page.toggleEvents.dispatch('click');
-  page.linkEvents.dispatch('click');
-  assert.equal(isOpen(), false);
-
-  page.toggleEvents.dispatch('click');
-  page.documentEvents.dispatch('keydown', { key: 'Escape' });
-  assert.equal(isOpen(), false);
-  assert.equal(page.attributes.get('aria-expanded'), 'false');
+test('shared menu preserves inside interactions and closes on outside clicks and navigation',async t=>{
+  const h=mount(t);h.menu.open=true;await settle();
+  assert.equal(h.trigger.getAttribute('aria-expanded'),'true');
+  h.menu.dispatchEvent(new h.dom.window.Event('pointerdown',{bubbles:true}));assert.equal(h.menu.open,true);
+  h.document.body.dispatchEvent(new h.dom.window.Event('pointerdown',{bubbles:true}));assert.equal(h.menu.open,false);
+  h.menu.open=true;await settle();
+  const link=h.menu.querySelector('a');link.addEventListener('click',event=>event.preventDefault());link.click();
+  assert.equal(h.menu.open,false);
+  await settle();assert.equal(h.trigger.getAttribute('aria-expanded'),'false');
 });
-
-test('compact header menu updates its label and closes through links and outside interactions', () => {
-  const page = mountMobileHeaderMenu();
-  page.menu.open = true;
-  page.menuEvents.dispatch('toggle');
-  assert.equal(page.attributes.get('aria-label'), 'Menü schließen');
-
-  page.documentEvents.dispatch('pointerdown', { target: page.insideTarget });
-  assert.equal(page.menu.open, true);
-  page.documentEvents.dispatch('pointerdown', { target: {} });
-  assert.equal(page.menu.open, false);
-
-  page.menu.open = true;
-  page.linkEvents.dispatch('click');
-  assert.equal(page.menu.open, false);
-  assert.equal(page.nestedLanguagePicker.open, false);
+test('Escape respects nested language selection and dialogs, then returns focus to the menu trigger',async t=>{
+  const h=mount(t),picker=h.menu.querySelector('[data-language-picker]');
+  const escape=()=>h.document.dispatchEvent(new h.dom.window.KeyboardEvent('keydown',{key:'Escape',cancelable:true}));
+  h.menu.open=true;picker.open=true;escape();assert.equal(h.menu.open,true);
+  picker.open=false;const dialog=h.document.createElement('dialog');dialog.open=true;h.document.body.append(dialog);
+  escape();assert.equal(h.menu.open,true);
+  dialog.remove();escape();assert.equal(h.menu.open,false);assert.equal(h.document.activeElement,h.trigger);
+  await settle();assert.equal(h.trigger.getAttribute('aria-label'),'Menü öffnen');
 });
-
-test('compact header menu lets an open language picker consume Escape first', () => {
-  const page = mountMobileHeaderMenu();
-  page.menu.open = true;
-  page.nestedLanguagePicker.open = true;
-  page.documentEvents.dispatch('keydown', { key: 'Escape' });
-  assert.equal(page.menu.open, true);
-
-  page.nestedLanguagePicker.open = false;
-  page.documentEvents.dispatch('keydown', { key: 'Escape' });
-  assert.equal(page.menu.open, false);
-  assert.equal(page.trigger.focused, true);
+test('opening global navigation closes the separate cloud settings',async t=>{
+  const h=mount(t,'display');const settings=h.document.getElementById('display-page-menu');
+  settings.open=true;h.menu.open=true;await settle();
+  assert.equal(settings.open,false);
+  assert.ok(settings.querySelector('#presentation-mode-button'));
 });

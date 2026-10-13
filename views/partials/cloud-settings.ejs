@@ -1,0 +1,61 @@
+<details class="ww-display-menu" id="display-page-menu">
+  <summary id="display-menu-trigger" class="ww-display-menu-trigger ww-menu-trigger" aria-label="Wolken-Einstellungen" aria-controls="display-settings-panel" aria-expanded="false">
+    <svg class="ww-cloud-settings-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></svg>
+  </summary>
+  <div class="ww-display-menu-panel" id="display-settings-panel">
+    <h2 class="ww-display-menu-title">Wolken-Einstellungen</h2>
+        <% if (paletteOptions.length) { %>
+        <section class="ww-display-menu-palette-row" aria-labelledby="display-menu-palette-label">
+          <span class="ww-display-menu-label" id="display-menu-palette-label">Farbwelt</span>
+          <div class="ww-display-menu-palette-control">
+            <details class="ww-palette-picker" id="display-palette-picker">
+              <summary
+                class="ww-palette-trigger"
+                id="display-palette-trigger"
+                aria-label="<%= t('Farbwelt') %>: <%= t(paletteOptions[0].label) %>"
+              >
+                <span class="ww-palette-swatches" id="display-palette-swatches" aria-hidden="true">
+                  <% for (const color of paletteOptions[0].colors) { %><i style="background:<%= color %>"></i><% } %>
+                </span>
+                <span class="ww-palette-current" id="display-palette-current" data-i18n-source="<%= paletteOptions[0].label %>"><%= t(paletteOptions[0].label) %></span>
+                <span class="ww-palette-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="ww-palette-menu" role="radiogroup" aria-labelledby="display-menu-palette-label">
+              <% for (const palette of paletteOptions) { %>
+                <button
+                  class="ww-palette-option<%= palette.key === paletteOptions[0].key ? ' is-selected' : '' %>"
+                  type="button"
+                  role="radio"
+                  aria-checked="<%= palette.key === paletteOptions[0].key ? 'true' : 'false' %>"
+                  data-palette-key="<%= palette.key %>"
+                >
+                  <span class="ww-palette-swatches" aria-hidden="true">
+                    <% for (const color of palette.colors) { %><i style="background:<%= color %>"></i><% } %>
+                  </span>
+                  <span class="ww-palette-option-name" data-i18n-source="<%= palette.label %>"><%= t(palette.label) %></span>
+                  <span class="ww-palette-check" aria-hidden="true">✓</span>
+                </button>
+              <% } %>
+              </div>
+            </details>
+          </div>
+        </section>
+        <% } %>
+        <div class="ww-display-menu-actions">
+          <button class="ww-display-menu-action" id="display-own-words-button" type="button" aria-haspopup="dialog" aria-controls="display-own-words-dialog" hidden>
+            <span>Deine Wörter</span>
+            <span class="ww-display-menu-count" id="display-own-words-count" aria-live="polite">0</span>
+          </button>
+          <button class="ww-display-menu-action" id="draft-settings-button" type="button" hidden>
+            <span class="ww-display-menu-action-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span data-i18n-source="Organisatorbereich"><%= t('Organisatorbereich') %></span>
+            </span>
+          </button>
+          <button class="ww-display-menu-action" id="presentation-mode-button" type="button" role="switch" aria-checked="false">
+            <span>Präsentationsmodus</span>
+            <span class="ww-display-menu-switch" aria-hidden="true"><i></i></span>
+          </button>
+        </div>
+  </div>
+</details>

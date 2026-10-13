@@ -22,41 +22,8 @@
   updateHeaderState();
   window.addEventListener('scroll', updateHeaderState, { passive: true });
 
-  document.querySelectorAll('.landing-menu-toggle').forEach(function (toggle) {
-    var header = toggle.closest('.ww-site-header');
-    var menu = document.getElementById(toggle.getAttribute('aria-controls'));
-    if (!header || !menu) return;
-
-    function closeMenu() {
-      header.classList.remove('landing-menu-open');
-      menu.hidden = true;
-      menu.querySelectorAll('[data-language-picker]').forEach(function (picker) { picker.open = false; });
-      toggle.setAttribute('aria-expanded', 'false');
-      setLabel(toggle, 'Seitennavigation öffnen');
-    }
-
-    toggle.addEventListener('click', function () {
-      var isOpen = header.classList.toggle('landing-menu-open');
-      menu.hidden = !isOpen;
-      toggle.setAttribute('aria-expanded', String(isOpen));
-      setLabel(toggle, isOpen ? 'Seitennavigation schließen' : 'Seitennavigation öffnen');
-    });
-    menu.querySelectorAll('a:not([data-language-code])').forEach(function (link) {
-      link.addEventListener('click', closeMenu);
-    });
-    document.addEventListener('pointerdown', function (event) {
-      if (header.classList.contains('landing-menu-open') &&
-          !menu.contains(event.target) && !toggle.contains(event.target)) {
-        closeMenu();
-      }
-    });
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && !menu.querySelector?.('[data-language-picker][open]')) closeMenu();
-    });
-  });
-
-  document.querySelectorAll('[data-ww-mobile-header-menu]').forEach(function (menu) {
-    var trigger = menu.querySelector('[data-ww-mobile-header-menu-trigger]');
+  document.querySelectorAll('[data-ww-site-menu]').forEach(function (menu) {
+    var trigger = menu.querySelector('[data-ww-site-menu-trigger]');
     if (!trigger) return;
 
     function closeMenu(focus) {
@@ -70,6 +37,13 @@
 
     menu.addEventListener('toggle', function () {
       setLabel(trigger, menu.open ? 'Menü schließen' : 'Menü öffnen');
+      trigger.setAttribute('aria-expanded', String(menu.open));
+      if (menu.open) {
+        var cloudSettings = document.getElementById('display-page-menu');
+        if (cloudSettings) cloudSettings.open = false;
+      } else {
+        menu.querySelectorAll('[data-language-picker]').forEach(function (picker) { picker.open = false; });
+      }
     });
     menu.querySelectorAll('a:not([data-language-code])').forEach(function (link) {
       link.addEventListener('click', function () { closeMenu(false); });
@@ -78,8 +52,9 @@
       if (menu.open && !menu.contains(event.target)) closeMenu(false);
     });
     document.addEventListener('keydown', function (event) {
-      if (event.key !== 'Escape' || !menu.open) return;
+      if (event.key !== 'Escape' || !menu.open || document.querySelector('dialog[open]')) return;
       if (menu.querySelector('[data-language-picker][open]')) return;
+      event.preventDefault();
       closeMenu(true);
     });
   });

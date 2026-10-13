@@ -332,7 +332,8 @@ is optional; QR codes and ordinary website links continue to work. The shared
 `/manifest.webmanifest` keeps one app identity across all pages, starts at `/`
 and includes every Wolkenworte route in its scope.
 New public page templates should include `partials/pwa-head` inside `<head>`;
-the shared footer supplies the optional install action.
+the shared header supplies the optional install action, and the footer supplies
+its instruction dialog (the live cloud includes that dialog separately).
 That head also loads `public/js/device.js` before page styles and scripts. PWA
 controls and the configurator reuse its iOS/Android/mobile-browser detection.
 Window width still controls responsive layout, while dedicated mobile canvas
@@ -340,9 +341,8 @@ activation, touch gestures and preview-first controls require a mobile device.
 Narrow or touch-capable desktop windows retain desktop selection handles and
 mouse/keyboard editing.
 
-“Wolkenworte installieren” appears in mobile overflow menus below “Meine Designs”
-(when accounts are enabled), in the footer and in the live-cloud menu when the
-browser offers a native installation prompt. It opens that prompt only after a
+“Wolkenworte installieren” appears below the language picker in the shared mobile
+overflow menu when the browser offers a native installation prompt. It opens that prompt only after a
 click. On iPhone/iPad it instead shows localized Safari home-screen instructions.
 All application install controls stay hidden on desktop and inside the installed
 app. Mobile detection uses browser/device signals, not window width, so shrinking
@@ -365,13 +365,20 @@ an asset-maintenance command; normal startup requires no extra build step.
 
 Guests can create clouds, participate, configure products and order without an
 account. `DESIGN_ACCOUNTS_ENABLED=true` adds subtle configurator save controls,
-the homepage overflow link and `/konto`. Google or verified email/password
+one consistent “Mein Konto” overflow link on every page and `/konto`. This single
+account page opens on “Meine Designs”; “Einstellungen” contains account details,
+security, data export, logout and deletion. Existing `/konto/einstellungen` links
+redirect to its Settings tab, preserving the language query. Google or verified email/password
 authentication uses Supabase Auth. Registration and recovery use six-digit,
 ten-minute codes. The account UI and Auth email hook support all six languages.
 Apple sign-in is outside this release.
 
-Account saves are **manual**. Editing never updates a library snapshot. Existing
-seven-day IndexedDB recovery remains browser-local; account-bound records are
+Account saves are **manual**. Editing never updates a library snapshot. The
+save controls sit beside the configurator's design heading, with the same action
+under “Mehr” in mobile canvas mode. The product preview contains only preview
+controls. A dismissible mobile canvas hint suggests landscape only for a wider
+than tall print area viewed in portrait, and never while entering text.
+Existing seven-day IndexedDB recovery remains browser-local; account-bound records are
 checked against the current owner and live design before restoration. Reopening
 a library design preserves newer local unsaved work where available. Library
 access never grants event organizer privileges.

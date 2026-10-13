@@ -99,10 +99,34 @@
     await I()?.ready?.();
     const notice=document.getElementById('account-page-status');
     let current=null,pendingEmail=null;
+    let section=location.hash==='#einstellungen'||page.dataset.page==='settings'?'settings':'designs';
+    const sectionButtons=[...page.querySelectorAll('[data-account-tab]')];
+    function showSection(next,{updateUrl=false}={}){
+      section=next==='settings'?'settings':'designs';
+      const loggedIn=Boolean(current&&!current.recovery);
+      page.querySelector('[data-account-navigation]').hidden=!loggedIn;
+      page.querySelector('[data-account-library]').hidden=!loggedIn||section!=='designs';
+      page.querySelector('[data-account-settings]').hidden=!loggedIn||section!=='settings';
+      page.querySelector('[data-account-usage]').hidden=!loggedIn;
+      sectionButtons.forEach(button=>{
+        const selected=button.dataset.accountTab===section;
+        button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
+      });
+      if(updateUrl)history.replaceState(null,'',location.pathname+(location.search||'')+(section==='settings'?'#einstellungen':''));
+    }
+    sectionButtons.forEach((button,index)=>{
+      button.addEventListener('click',()=>showSection(button.dataset.accountTab,{updateUrl:true}));
+      button.addEventListener('keydown',event=>{
+        const next=event.key==='Home'?0:event.key==='End'?sectionButtons.length-1:
+          event.key==='ArrowRight'?(index+1)%sectionButtons.length:event.key==='ArrowLeft'?(index+sectionButtons.length-1)%sectionButtons.length:null;
+        if(next===null)return;event.preventDefault();sectionButtons[next].focus();sectionButtons[next].click();
+      });
+    });
+    root.addEventListener('hashchange',()=>showSection(location.hash==='#einstellungen'?'settings':'designs'));
     const authControl=bindAuth(page.querySelector('[data-account-auth]'),{onDone:async()=>{
       if(page.dataset.page==='signin'&&page.dataset.returnTo!=='/konto') location.assign(page.dataset.returnTo);
       else await refresh();
-    },returnTo:page.dataset.page==='signin'?page.dataset.returnTo:location.pathname});
+    },returnTo:page.dataset.page==='signin'?page.dataset.returnTo:section==='settings'?'/konto/einstellungen':location.pathname});
     if(new URLSearchParams(location.search).has('error'))status(notice,'Die Google-Anmeldung konnte nicht abgeschlossen werden. Bitte versuche es erneut.',true);
 
     async function refresh(){
@@ -110,18 +134,14 @@
       const loggedIn=Boolean(current&&!current.recovery);
       page.classList.toggle('is-signin',!loggedIn);
       page.querySelector('[data-account-signin]').hidden=loggedIn;
-      page.querySelector('[data-account-usage]').hidden=!loggedIn||page.dataset.page==='settings';
+      showSection(section);
       root.dispatchEvent?.(new root.CustomEvent('wolkenworte:accountchange',{detail:{user:loggedIn?current:null}}));
-      page.querySelector('[data-account-library]').hidden=!loggedIn||page.dataset.page==='settings';
-      page.querySelector('[data-account-settings]').hidden=!loggedIn||page.dataset.page!=='settings';
       if(current?.recovery){authControl.recovery();return;}
       if(!loggedIn)return;
       if(page.dataset.page==='signin'){location.assign(page.dataset.returnTo);return;}
-      if(page.dataset.page==='settings'){
-        page.querySelector('[data-account-email]').textContent=current.email;
-        if(current.newEmail)showEmailCodes(current.email,current.newEmail);
-        updateUsage((await api('designs')).designs);
-      }else await loadLibrary();
+      page.querySelector('[data-account-email]').textContent=current.email;
+      if(current.newEmail)showEmailCodes(current.email,current.newEmail);
+      await loadLibrary();
     }
 
     async function confirm({title,description,action='Bestätigen',name=null}){
@@ -157,7 +177,7 @@
         const options=document.createElement('details');options.className='ww-account-design-menu';
         const trigger=document.createElement('summary');trigger.className='ww-menu-trigger';
         if(I()?.setAttribute)I().setAttribute(trigger,'aria-label','Designoptionen');else trigger.setAttribute('aria-label',t('Designoptionen'));
-        const icon=document.createElement('span');icon.className='ww-hamburger-icon';icon.setAttribute('aria-hidden','true');
+        const icon=document.createElement('span');icon.className='ww-design-options-icon';icon.setAttribute('aria-hidden','true');
         for(let line=0;line<3;line++)icon.append(document.createElement('i'));
         trigger.append(icon);const menu=document.createElement('div');menu.className='ww-account-design-menu-panel';
         options.append(trigger,menu);
@@ -238,6 +258,13 @@
       catch(error) { if(error.code==='reauthentication_needed'){current.recent=false;reauth.showModal();}throw error; }
       await clearOwnedDrafts(id);location.assign('/');
     },notice));
+    page.querySelector('[data-account-logout]').addEventListener('click',()=>void busy(page,async()=>{
+      const ownerId=current?.id;if(!ownerId)return;
+      await api('logout',{});
+      current=null;showSection(section);
+      await clearOwnedDrafts(ownerId);
+      location.assign('/');
+    },notice));
     root.addEventListener('wolkenworte:localechange',()=>void refresh().catch(error=>status(notice,message(error),true)));
     await refresh();
   }
@@ -250,7 +277,7 @@
     let user=null,source=null,savedFingerprint=null,metadata=null,changeTimer=null,pendingSave=null;
     function changed(){
       clearTimeout(changeTimer);
-      for(const button of saveButtons)text(button,source?'Design im Konto aktualisieren':'Design im Konto speichern');
+      for(const button of saveButtons)text(button,source?'Design aktualisieren':'Design speichern');
       const target=document.querySelector('[data-account-save-note]');
       if(source&&metadata)changeTimer=setTimeout(()=>text(target,savedFingerprint!==getFingerprint()
         ?'Änderungen noch nicht im Konto gespeichert.':'Im Konto gespeichert · Löschung bei Inaktivität am {{date}}',{date:date(metadata.expiresAt)}),200);

@@ -1,0 +1,24 @@
+<details class="ww-site-menu" data-ww-site-menu>
+  <summary class="ww-menu-trigger" data-ww-site-menu-trigger aria-label="Menü öffnen" aria-controls="site-menu-panel" aria-expanded="false">
+    <%- include('hamburger-icon') %>
+  </summary>
+  <div class="ww-site-menu-panel" id="site-menu-panel">
+    <nav aria-label="Seitennavigation">
+      <a class="ww-header-menu-item" href="/">Startseite</a>
+      <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
+    </nav>
+    <section class="ww-site-menu-preferences" aria-label="Sprache">
+      <div class="ww-site-menu-language-row">
+        <span class="ww-site-menu-label">Sprache</span>
+        <%- include('language-picker', { languagePickerClass: 'ww-site-menu-language' }) %>
+      </div>
+      <%- include('pwa-install', { installButtonClass: 'ww-header-menu-item', includeInstallDialog: false }) %>
+    </section>
+    <nav class="ww-site-menu-legal" aria-label="Rechtliche Hinweise">
+      <a class="ww-header-menu-item" href="/impressum">Impressum</a>
+      <a class="ww-header-menu-item" href="/datenschutz">Datenschutz</a>
+      <%- include('analytics-settings', { analyticsSettingsClass: 'ww-header-menu-item' }) %>
+      <a class="ww-header-menu-item" href="/bestellinformationen">Bestellinformationen</a>
+    </nav>
+  </div>
+</details>

@@ -269,7 +269,9 @@
     .ww-display-menu-panel {
       position: absolute;
       top: calc(100% + 10px);
-      right: 0;
+      right: -54px;
+      max-height: calc(100dvh - 104px);
+      overflow-y: auto;
       width: min(330px, calc(100vw - 32px));
       padding: 14px;
       border: 1px solid var(--border);
@@ -280,7 +282,8 @@
       backdrop-filter: blur(18px) saturate(1.25);
       -webkit-backdrop-filter: blur(18px) saturate(1.25);
     }
-    .ww-display-menu-language-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 4px; }
+    .ww-cloud-settings-icon { width: 20px; height: 20px; fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
+    .ww-display-menu-title { margin: 0; padding: 4px; font: 500 15px Jost, sans-serif; }
     .ww-display-menu-palette-row { display: grid; gap: 8px; margin-top: 10px; padding: 12px 4px 0; border-top: 1px solid var(--border); }
     .ww-display-menu-palette-control { min-width: 0; }
     .ww-palette-picker { position: relative; width: 100%; }
@@ -318,10 +321,8 @@
     .ww-palette-chevron { width: 7px; height: 7px; flex: 0 0 7px; margin: -3px 2px 0 3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; opacity: .58; transform: rotate(45deg); transition: transform .18s ease, margin .18s ease; }
     .ww-palette-picker[open] .ww-palette-chevron { margin-top: 3px; transform: rotate(225deg); }
     .ww-palette-menu {
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      left: 0;
+      position: static;
+      margin-top: 8px;
       display: grid;
       gap: 3px;
       padding: 6px;
@@ -683,9 +684,9 @@
 
       .word-counter .label { letter-spacing: 1.5px; }
       .ww-display-header-actions { gap: 8px; }
-      .ww-keepsake-cta { padding: 0 13px; }
+      .ww-keepsake-cta { width: 44px; padding: 0; }
       .ww-keepsake-cta-label-full { display: none; }
-      .ww-keepsake-cta-label-compact { display: inline; }
+      .ww-keepsake-cta-label-compact { display: none; }
       #cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 68px); }
       .display-word-entry-row { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + 12px); gap: 8px; }
       .display-word-entry { min-height: 48px; }
@@ -732,6 +733,7 @@
 <body>
 
 <%- include('partials/site-header') %>
+<%- include('partials/pwa-install', { installButtonClass: '', installDialogOnly: true }) %>
 
 <div id="cloud-container">
   <p id="cloud-loading" role="status" aria-live="polite" hidden>Eure Wortwolke wird geladen…</p>
@@ -975,7 +977,6 @@
   const paletteCurrent = document.getElementById('display-palette-current');
   const paletteSwatches = document.getElementById('display-palette-swatches');
   const paletteOptionButtons = Array.from(document.querySelectorAll('[data-palette-key]'));
-  const displayLanguagePicker = displayPageMenu.querySelector('.ww-display-menu-language');
   const draftSettings = document.getElementById('draft-settings');
   const draftSettingsButton = document.getElementById('draft-settings-button');
   const pinUnlockDialog = document.getElementById('pin-unlock-dialog');
@@ -1118,10 +1119,7 @@
     });
   });
   palettePicker?.addEventListener('toggle', () => {
-    if (palettePicker.open && displayLanguagePicker) displayLanguagePicker.open = false;
-  });
-  displayLanguagePicker?.addEventListener('toggle', () => {
-    if (displayLanguagePicker.open) closePalettePicker();
+    if (palettePicker.open) document.querySelectorAll('[data-language-picker]').forEach(picker => { picker.open = false; });
   });
   palettePicker?.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && palettePicker.open) {
@@ -1292,7 +1290,6 @@
   function closeDisplayMenu({ focus = false } = {}) {
     if (!displayPageMenu.open) return;
     closePalettePicker();
-    if (displayLanguagePicker) displayLanguagePicker.open = false;
     displayPageMenu.open = false;
     if (focus) displayMenuTrigger.focus();
   }
@@ -1359,14 +1356,14 @@
   }
 
   displayPageMenu.addEventListener('toggle', () => {
+    if (displayPageMenu.open) document.querySelectorAll('[data-ww-site-menu]').forEach(menu => { menu.open = false; });
+    else closePalettePicker();
+    displayMenuTrigger.setAttribute('aria-expanded', String(displayPageMenu.open));
     setI18nAttribute(
       displayMenuTrigger,
       'aria-label',
-      displayPageMenu.open ? 'Menü schließen' : 'Menü öffnen'
+      displayPageMenu.open ? 'Wolken-Einstellungen schließen' : 'Wolken-Einstellungen'
     );
-  });
-  displayPageMenu.querySelectorAll('[data-language-code]').forEach((option) => {
-    option.addEventListener('click', () => closeDisplayMenu());
   });
   document.addEventListener('pointerdown', (event) => {
     if (displayPageMenu.open && !displayPageMenu.contains(event.target)) closeDisplayMenu();
@@ -1375,7 +1372,7 @@
     if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return;
     if (displayPageMenu.open) {
       closeDisplayMenu({ focus: true });
-    } else if (document.body.classList.contains('presentation-mode')) {
+    } else if (!event.defaultPrevented && !document.querySelector('[data-ww-site-menu][open]') && document.body.classList.contains('presentation-mode')) {
       setPresentationMode(false);
       void exitPresentationFullscreen();
       displayMenuTrigger.focus();

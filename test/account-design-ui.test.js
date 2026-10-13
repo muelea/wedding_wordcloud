@@ -58,10 +58,10 @@ test('one homepage hamburger contains the account entry in all six languages; di
   for (const locale of locales) {
     const dom = new JSDOM(render('partials/site-header.ejs',locale));
     const doc = dom.window.document;
-    assert.equal(doc.querySelectorAll('.landing-menu-toggle').length,1);
+    assert.equal(doc.querySelectorAll('[data-ww-site-menu-trigger]').length,1);
     assert.equal(doc.querySelectorAll('.ww-menu-trigger').length,1);
-    assert.equal(doc.querySelector('.landing-menu-toggle').getAttribute('aria-controls'),'landing-overflow-menu');
-    assert.equal(doc.querySelector('#landing-overflow-menu [data-account-library-link]').textContent,I18n.translate('Meine Designs',locale));
+    assert.equal(doc.querySelector('[data-ww-site-menu-trigger]').getAttribute('aria-controls'),'site-menu-panel');
+    assert.equal(doc.querySelector('#site-menu-panel [data-account-library-link]').textContent,I18n.translate('Mein Konto',locale));
     assert.equal(doc.querySelector('.ww-account-entry'),null);
     dom.window.close();
   }
@@ -94,18 +94,19 @@ test('new account labels translate in every catalog and retain their count and s
   }
 });
 test('signed-out visitors see the unboxed auth form and no signed-in header actions', async t => {
-  const h = mount(t,{user:null});h.run('public/js/account-menu.js');h.run('public/js/account.js');await settle();
+  const h = mount(t,{user:null});h.run('public/js/account.js');await settle();
   assert.ok(h.document.getElementById('account-page').classList.contains('is-signin'));
   assert.equal(h.document.querySelector('[data-account-signin]').hidden,false);
   assert.equal(h.document.querySelector('[data-account-library]').hidden,true);
-  assert.equal(h.document.querySelector('[data-account-menu-signed-in]').hidden,true);
+  assert.equal(h.document.querySelector('[data-account-navigation]').hidden,true);
+  assert.equal(h.document.querySelector('[data-account-menu]').getAttribute('href'),'/konto');
 });
 test('an empty signed-in collection presents its creation action and quiet count without a storage counter', async t => {
-  const h = mount(t);h.run('public/js/account-menu.js');h.run('public/js/account.js');await settle();
+  const h = mount(t);h.run('public/js/account.js');await settle();
   assert.equal(h.document.querySelector('[data-account-empty]').hidden,false);
   assert.equal(h.document.querySelector('[data-account-library-toolbar]').hidden,true);
   assert.equal(h.document.querySelector('[data-account-usage]').textContent,'0 of 20 designs');
-  assert.equal(h.document.querySelector('[data-account-menu-signed-in]').hidden,false);
+  assert.equal(h.document.querySelector('[data-account-navigation]').hidden,false);
   assert.equal(h.calls.some(call=>call.options.method==='POST'),false,'viewing an empty collection never creates or saves a design');
 });
 test('populated designs retain their private previews and open action, with secondary actions in each menu', async t => {
@@ -123,40 +124,45 @@ test('populated designs retain their private previews and open action, with seco
   assert.deepEqual(h.navigation,['/e/new-workspace/configure?accountDesign=private']);
 });
 test('settings display storage usage and the localized account title', async t => {
-  const h = mount(t,{page:'settings',designs:[{byteSize:1048576}]});h.run('public/js/account.js');await settle();
+  const h = mount(t,{page:'settings',designs:[{id:'saved',name:'Test',byteSize:1048576,savedAt:'2026-10-12',expiresAt:'2027-01-12',productName:'Tasse',previewUrl:'/preview'}]});h.run('public/js/account.js');await settle();
   assert.equal(h.document.querySelector('[data-account-settings]').hidden,false);
   assert.equal(h.document.querySelector('[data-account-storage]').textContent,'1 of 100 MB');
   assert.equal(h.document.title,'My account – Wolkenworte');
-  assert.equal(h.document.querySelector('[data-account-usage]').hidden,true);
+  assert.equal(h.document.querySelector('[data-account-library]').hidden,true);
 });
-test('a delayed initial menu read cannot override a successful sign-in', async t => {
-  let resolve;const pending = new Promise(done=>{resolve=done;});
-  const h = mount(t,{deferredSession:pending});h.run('public/js/account-menu.js');
-  h.dom.window.dispatchEvent(new h.dom.window.CustomEvent('wolkenworte:accountchange',{detail:{user:owner}}));
-  resolve({user:null});await settle();
-  assert.equal(h.document.querySelector('[data-account-menu-signed-in]').hidden,false);
+test('one account page switches sections with clicks, arrow keys and an addressable settings section', async t => {
+  const h=mount(t);h.run('public/js/account.js');await settle();
+  const designs=h.document.getElementById('account-designs-tab'),settings=h.document.getElementById('account-settings-tab');
+  settings.click();
+  assert.equal(h.document.querySelector('[data-account-settings]').hidden,false);
+  assert.equal(h.document.querySelector('[data-account-library]').hidden,true);
+  assert.equal(settings.getAttribute('aria-selected'),'true');
+  settings.dispatchEvent(new h.dom.window.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));
+  assert.equal(h.document.activeElement,designs);
+  assert.equal(h.document.querySelector('[data-account-library]').hidden,false);
+  assert.equal(settings.tabIndex,-1);
+  assert.equal(h.calls.filter(call=>call.url.endsWith('/designs')).length,1,'switching sections reuses the same loaded collection');
+  assert.equal(h.calls.some(call=>call.options.method==='POST'),false);
 });
-test('returning through browser history refreshes the account actions without changing the current page', async t => {
-  const h=mount(t,{user:null});h.run('public/js/account-menu.js');await settle();
-  assert.equal(h.document.querySelector('[data-account-menu-signed-in]').hidden,true);
-  h.setUser(owner);
-  const event=new h.dom.window.Event('pageshow');Object.defineProperty(event,'persisted',{value:true});
-  h.dom.window.dispatchEvent(event);await settle();
-  assert.equal(h.document.querySelector('[data-account-menu-signed-in]').hidden,false);
-  assert.equal(h.navigation.length,0);
+test('the global account entry does not depend on a delayed session response', async t => {
+  let finish;const pending=new Promise(resolve=>{finish=resolve;});
+  const h=mount(t,{deferredSession:pending});h.run('public/js/account.js');
+  const entry=h.document.querySelector('[data-account-menu]');
+  assert.equal(entry.hidden,false);assert.equal(entry.textContent,'My account');
+  finish({user:null});await settle();assert.equal(entry.hidden,false);
 });
-test('header sign-out sends one guarded request and clears only the current account drafts', async t => {
-  const h = mount(t);h.run('public/js/account-menu.js');await settle();
-  const button = h.document.querySelector('[data-account-menu-logout]');button.click();button.click();await settle();
+test('account sign-out sends one guarded request and clears only the current account drafts', async t => {
+  const h = mount(t);h.run('public/js/account.js');await settle();
+  const button = h.document.querySelector('[data-account-logout]');button.click();button.click();await settle();
   const writes = h.calls.filter(call=>call.url.endsWith('/logout'));
   assert.equal(writes.length,1);
   assert.equal(writes[0].options.method,'POST');
   assert.equal(writes[0].options.headers['X-Wolkenworte-Account'],'1');
   assert.deepEqual(h.cleared,[owner.id]);assert.deepEqual(h.navigation,['/']);
 });
-test('failed header sign-out remains retryable and preserves local drafts', async t => {
-  const h = mount(t,{failLogout:true});h.run('public/js/account-menu.js');await settle();
-  const button = h.document.querySelector('[data-account-menu-logout]');button.click();await settle();
+test('failed account sign-out remains retryable and preserves local drafts', async t => {
+  const h = mount(t,{failLogout:true});h.run('public/js/account.js');await settle();
+  const button = h.document.querySelector('[data-account-logout]');button.click();await settle();
   assert.equal(button.disabled,false);assert.equal(h.cleared.length,0);assert.equal(h.navigation.length,0);
-  assert.match(h.document.querySelector('[data-account-menu-status]').textContent,/try again/i);
+  assert.match(h.document.querySelector('#account-page-status').textContent,/try again/i);
 });

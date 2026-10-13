@@ -307,6 +307,7 @@
     .mobile-editor-collapse { display: none; }
     .preview-head h2,
     .editor-title,
+    .config-design-heading h2,
     .design-toolbar h2 {
       margin: 0;
       font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
@@ -1750,7 +1751,7 @@
     #design-replace-dialog .config-panel-foot button { min-width: 0; flex: 1 1 190px; }
     .secondary-button {
       width: auto;
-      min-width: 210px;
+      min-width: 0;
       min-height: 44px;
       padding: 10px 14px;
       border: 1px solid transparent;
@@ -1767,6 +1768,7 @@
     .secondary-button:focus-visible { background: rgba(123, 70, 82, .055); color: var(--ink); }
     .secondary-button:disabled { cursor: default; opacity: .6; }
     .secondary-button.ww-is-busy:disabled { cursor: wait; }
+    .order-actions #save-design { border-color: var(--line); color: var(--ink); }
     .order-actions .continue-button {
       min-width: 190px;
       background: linear-gradient(135deg, var(--berry), var(--berry-dark));
@@ -1884,19 +1886,23 @@
         width: auto;
         max-width: 560px;
         margin: 0 auto;
-        padding: 0;
+        padding: 8px;
         gap: 7px;
-        border: 0;
-        background: transparent;
-        box-shadow: none;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--paper);
+        box-shadow: 0 8px 24px rgba(64, 15, 38, .08);
       }
-      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-box,
-      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] #design-another,
-      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] #save-design {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-box {
         display: none;
       }
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-actions {
-        display: block;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-actions .secondary-button {
+        flex: 1 1 0;
+        width: auto;
       }
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .continue-button {
         width: 100%;
@@ -1911,7 +1917,7 @@
         line-height: 1.4;
       }
       html[data-ww-mobile-device="true"] .config-content[data-mobile-editor-expanded="false"] {
-        padding-bottom: calc(78px + var(--ww-safe-bottom));
+        padding-bottom: calc(150px + var(--ww-safe-bottom));
       }
       .design-toolbar { padding: 14px 0 16px; }
       .design-toolbar-copy {
@@ -2100,6 +2106,19 @@
     @media (max-width: 620px) and (prefers-reduced-motion: reduce) {
       .mobile-editor-caret { transition: none; }
     }
+    .config-design-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
+    .config-design-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 30px); }
+    .config-design-save { margin: 0; }
+    .config-design-heading .ww-account-save-note { flex-basis: 100%; margin: 0; text-align: right; }
+    .config-design-heading .ww-account-save-note:empty { display: none; }
+    .design-toolbar { grid-template-columns: minmax(0, 1fr); }
+    .design-toolbar-copy { display: none; }
+    #preview-title.workspace-section-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .preview-head .mobile-editor-toggle { grid-column: 1 / -1; justify-self: end; }
+    @media (max-width: 600px) {
+      .config-design-heading { margin-bottom: 12px; }
+      .config-design-heading .ww-account-save-note { text-align: left; }
+    }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
@@ -2131,10 +2150,17 @@
         <button id="apply-live-words" type="button">Design mit aktuellen Wörtern neu erstellen</button>
       </div>
 
+      <section class="config-design-heading" aria-labelledby="design-heading">
+        <h2 id="design-heading">Euer Design</h2>
+        <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+        <div class="ww-account-controls config-design-save"><button type="button" data-account-save>Design speichern</button></div>
+        <p class="ww-account-save-note" data-account-save-note role="status" aria-live="polite"></p>
+        <% } %>
+      </section>
       <div class="config-studio" id="config-studio" data-mobile-editor-expanded="false">
         <section class="design-toolbar" id="design-toolbar" aria-labelledby="controls-title">
           <div class="design-toolbar-copy">
-            <h2 id="controls-title">Euer Design</h2>
+            <h2 id="controls-title">Produkt und Farben</h2>
             <button class="mobile-editor-collapse" id="mobile-editor-collapse" type="button" aria-expanded="true" aria-controls="design-toolbar editor-card">
               <span id="mobile-editor-collapse-label">Nur Vorschau anzeigen</span><span class="mobile-editor-caret" aria-hidden="true"></span>
             </button>
@@ -2352,10 +2378,6 @@
           </section>
 
           <section class="preview-card" aria-labelledby="preview-title">
-            <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
-            <div class="ww-account-controls"><button type="button" data-account-save>Design im Konto speichern</button><a href="/konto" data-account-library-link>Meine Designs</a></div>
-            <p class="ww-account-save-note" data-account-save-note role="status" aria-live="polite"></p>
-            <% } %>
             <div class="preview-head">
               <h2 class="workspace-section-title" id="preview-title">Euer Design</h2>
               <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog">
@@ -2758,6 +2780,7 @@
 
     function updateCartActions() {
       const items = loadOrderItems();
+      saveDesignButton.hidden = Boolean(editingOrderItemId) && !currentDesignNeedsSave;
       saveDesignButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave;
       if (!saveDesignButton.classList?.contains('ww-is-busy')) {
         setText(saveDesignButton, editingOrderItemId ? 'Warenkorb aktualisieren' : 'In den Warenkorb');

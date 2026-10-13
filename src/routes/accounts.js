@@ -26,8 +26,12 @@ function makeAccountRouter() {
   const post=(path,handler)=>router.post(`/api/account/${path}`,auth.mutationGuard,json,asyncRoute(handler));
 
   router.get(['/anmelden','/konto','/konto/einstellungen'],asyncRoute(async(req,res)=> {
+    if(req.path==='/konto/einstellungen') {
+      const query=req.originalUrl.includes('?')?req.originalUrl.slice(req.originalUrl.indexOf('?')):'';
+      return res.redirect(303,`/konto${query}#einstellungen`);
+    }
     const context=await auth.resolveSession(req,res,{allowRecovery:true});
-    const page=req.path==='/konto/einstellungen'?'settings':req.path==='/konto'?'library':'signin';
+    const page=req.path==='/konto'?'library':'signin';
     return renderPage(req,res,'account',{cacheControl:'private, no-store',
       header:{variant:'back',mobileMenu:true},pageData:{accountPage:page,accountAvailable:auth.ready(),
         returnTo:auth.safeReturnTo(req.query.next),accountUser:context?publicUser(context):null}});

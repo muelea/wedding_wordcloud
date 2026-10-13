@@ -220,3 +220,30 @@ test('narrow phones reuse the warning button in the rail and return it to the to
   assert.equal(trigger.parentElement.id, 'mobile-canvas-overlaps');
   assert.equal(document.querySelectorAll('#editor-overlap-trigger').length, 1);
 });
+
+test('rotation guidance follows the active print area and device viewport, not the product preview or stale visual viewport',t=>{
+  const {dom,document,root,workspace}=fixture();t.after(()=>dom.window.close());
+  workspace.view='canvas';workspace.editor={width:2700,height:1050};
+  const hint=document.getElementById('mobile-canvas-orientation-hint');
+  root.innerWidth=390;root.innerHeight=844;
+  workspace.syncOrientationHint();assert.equal(hint.hidden,false,'wide mug artwork benefits from landscape');
+  workspace.editor={width:2400,height:3600};workspace.syncOrientationHint();assert.equal(hint.hidden,true,'portrait poster stays upright');
+  workspace.editor={width:2400,height:2400};workspace.syncOrientationHint();assert.equal(hint.hidden,true,'square artwork needs no preference');
+  workspace.editor={width:3600,height:2400};workspace.syncOrientationHint();assert.equal(hint.hidden,false,'landscape poster uses the same print-area rule');
+  root.innerWidth=844;root.innerHeight=390;workspace.syncOrientationHint();assert.equal(hint.hidden,true);
+  root.innerWidth=390;root.innerHeight=844;workspace.view='product';workspace.syncOrientationHint();assert.equal(hint.hidden,true);
+  workspace.view='canvas';workspace.keyboardSession={kind:'word'};workspace.syncOrientationHint();assert.equal(hint.hidden,true);
+  workspace.keyboardSession=null;workspace.syncOrientationHint();assert.equal(hint.hidden,false);
+  workspace.active=false;workspace.syncOrientationHint();assert.equal(hint.hidden,true);
+});
+test('rotation guidance can be dismissed for the session without changing the artwork or locking orientation',t=>{
+  const {dom,document,root,workspace}=fixture();t.after(()=>dom.window.close());
+  root.innerWidth=390;root.innerHeight=844;workspace.view='canvas';workspace.editor=Object.freeze({width:2700,height:1050});
+  const writes=[];root.sessionStorage={setItem:(...args)=>writes.push(args)};
+  workspace.syncOrientationHint();workspace.dismissOrientationHint();
+  assert.equal(document.getElementById('mobile-canvas-orientation-hint').hidden,true);
+  assert.deepEqual(writes,[['ww-canvas-orientation-dismissed','1']]);
+  root.innerWidth=844;root.innerHeight=390;workspace.syncOrientationHint();
+  root.innerWidth=390;root.innerHeight=844;workspace.syncOrientationHint();
+  assert.equal(document.getElementById('mobile-canvas-orientation-hint').hidden,true);
+});

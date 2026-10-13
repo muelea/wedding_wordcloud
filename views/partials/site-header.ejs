@@ -8,11 +8,9 @@
   const backHref = config.backHref || '/';
   const backLabel = config.backLabel || 'Zurück zur Startseite';
   const backAria = config.backAria || backLabel;
-  const mobileMenu = config.mobileMenu === true;
   const mobileBackId = config.mobileBackId || '';
   const cartButton = config.cartButton === true;
   const accountsEnabled = typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled;
-  const headerMenu = mobileMenu || accountsEnabled;
   const cartButtonId = config.cartButtonId || 'header-cart';
   const cartBadgeId = config.cartBadgeId || 'header-cart-count';
   const paletteOptions = Array.isArray(config.paletteOptions) ? config.paletteOptions : [];
@@ -33,35 +31,16 @@
     <% if (variant === 'landing') { %>
       <nav id="landing-section-links" class="landing-section-links" aria-label="Seitennavigation">
         <% for (const link of navLinks) { %>
-          <a class="landing-section-link" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
+        <a class="landing-section-link" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
         <% } %>
-        <%- include('language-picker', { languagePickerClass: 'landing-menu-language' }) %>
       </nav>
-      <div class="landing-header-actions">
-        <button class="button primary landing-start-button" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
-        <button class="landing-menu-toggle ww-menu-trigger" type="button" aria-label="<%= t('Seitennavigation öffnen') %>" data-i18n-aria-label-source="Seitennavigation öffnen" aria-expanded="false" aria-controls="landing-overflow-menu">
-          <%- include('hamburger-icon') %>
-        </button>
-      </div>
-      <div class="landing-header-menu-panel" id="landing-overflow-menu" hidden>
-        <nav class="landing-menu-sections" aria-label="<%= t('Seitennavigation') %>">
-          <% for (const link of navLinks) { %>
-          <a class="ww-header-menu-item" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
-          <% } %>
-        </nav>
-        <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
-        <%- include('pwa-install', { installButtonClass: 'ww-header-menu-item', includeInstallDialog: false }) %>
-        <section class="ww-mobile-header-menu-language-row" aria-label="<%= t('Sprache') %>">
-          <span class="ww-mobile-header-menu-label" data-i18n-source="Sprache"><%= t('Sprache') %></span>
-          <%- include('language-picker', { languagePickerClass: 'ww-mobile-header-menu-language' }) %>
-        </section>
-      </div>
     <% } else if (variant === 'back') { %>
-      <a class="back-link ww-back-link<%= headerMenu ? ' ww-back-link-desktop' : '' %>"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
+      <a class="back-link ww-back-link ww-back-link-desktop"<% if (backId) { %> id="<%= backId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
     <% } %>
-
-    <% if (variant === 'display') { %>
-    <div class="ww-display-header-actions">
+    <div class="<%= variant === 'landing' ? 'landing-header-actions' : variant === 'display' ? 'ww-display-header-actions' : 'ww-back-header-actions' %>">
+      <% if (variant === 'landing') { %>
+      <button class="button primary landing-start-button" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
+      <% } else if (variant === 'display') { %>
       <button
         class="ww-keepsake-cta<%= config.hasWords ? ' visible' : '' %>"
         id="memory-cta"
@@ -75,80 +54,8 @@
         <span class="ww-keepsake-cta-label ww-keepsake-cta-label-full" data-i18n-source="Erinnerung gestalten"><%= t('Erinnerung gestalten') %></span>
         <span class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"><%= t('Andenken') %></span>
       </button>
-      <details class="ww-display-menu" id="display-page-menu">
-      <summary id="display-menu-trigger" class="ww-display-menu-trigger ww-menu-trigger" aria-label="Menü öffnen">
-        <%- include('hamburger-icon') %>
-      </summary>
-      <div class="ww-display-menu-panel">
-        <section class="ww-display-menu-language-row" aria-labelledby="display-menu-language-label">
-          <span class="ww-display-menu-label" id="display-menu-language-label">Sprache</span>
-          <%- include('language-picker', { languagePickerClass: 'ww-display-menu-language' }) %>
-        </section>
-        <% if (paletteOptions.length) { %>
-        <section class="ww-display-menu-palette-row" aria-labelledby="display-menu-palette-label">
-          <span class="ww-display-menu-label" id="display-menu-palette-label">Farbwelt</span>
-          <div class="ww-display-menu-palette-control">
-            <details class="ww-palette-picker" id="display-palette-picker">
-              <summary
-                class="ww-palette-trigger"
-                id="display-palette-trigger"
-                aria-label="<%= t('Farbwelt') %>: <%= t(paletteOptions[0].label) %>"
-              >
-                <span class="ww-palette-swatches" id="display-palette-swatches" aria-hidden="true">
-                  <% for (const color of paletteOptions[0].colors) { %><i style="background:<%= color %>"></i><% } %>
-                </span>
-                <span class="ww-palette-current" id="display-palette-current" data-i18n-source="<%= paletteOptions[0].label %>"><%= t(paletteOptions[0].label) %></span>
-                <span class="ww-palette-chevron" aria-hidden="true"></span>
-              </summary>
-              <div class="ww-palette-menu" role="radiogroup" aria-labelledby="display-menu-palette-label">
-              <% for (const palette of paletteOptions) { %>
-                <button
-                  class="ww-palette-option<%= palette.key === paletteOptions[0].key ? ' is-selected' : '' %>"
-                  type="button"
-                  role="radio"
-                  aria-checked="<%= palette.key === paletteOptions[0].key ? 'true' : 'false' %>"
-                  data-palette-key="<%= palette.key %>"
-                >
-                  <span class="ww-palette-swatches" aria-hidden="true">
-                    <% for (const color of palette.colors) { %><i style="background:<%= color %>"></i><% } %>
-                  </span>
-                  <span class="ww-palette-option-name" data-i18n-source="<%= palette.label %>"><%= t(palette.label) %></span>
-                  <span class="ww-palette-check" aria-hidden="true">✓</span>
-                </button>
-              <% } %>
-              </div>
-            </details>
-          </div>
-        </section>
-        <% } %>
-        <div class="ww-display-menu-actions">
-          <%- include('pwa-install', { installButtonClass: 'ww-display-menu-action' }) %>
-          <button class="ww-display-menu-action" id="display-own-words-button" type="button" aria-haspopup="dialog" aria-controls="display-own-words-dialog" hidden>
-            <span>Deine Wörter</span>
-            <span class="ww-display-menu-count" id="display-own-words-count" aria-live="polite">0</span>
-          </button>
-          <button class="ww-display-menu-action" id="draft-settings-button" type="button" hidden>
-            <span class="ww-display-menu-action-label">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-              <span data-i18n-source="Organisatorbereich"><%= t('Organisatorbereich') %></span>
-            </span>
-          </button>
-          <button class="ww-display-menu-action" id="presentation-mode-button" type="button" role="switch" aria-checked="false">
-            <span>Präsentationsmodus</span>
-            <span class="ww-display-menu-switch" aria-hidden="true"><i></i></span>
-          </button>
-        </div>
-        <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
-        <nav class="ww-display-menu-legal" aria-label="<%= t('Rechtliche Hinweise') %>">
-          <a class="ww-display-menu-action" href="/impressum">Impressum</a>
-          <a class="ww-display-menu-action" href="/datenschutz">Datenschutz</a>
-          <%- include('analytics-settings', { analyticsSettingsClass: 'ww-display-menu-action' }) %>
-        </nav>
-      </div>
-      </details>
-    </div>
-    <% } else if (variant !== 'landing' && ((variant === 'back' && headerMenu) || accountsEnabled)) { %>
-    <div class="ww-back-header-actions">
+      <%- include('cloud-settings', { paletteOptions }) %>
+      <% } %>
       <% if (cartButton) { %>
       <button
         class="ww-header-cart ww-menu-trigger"
@@ -167,32 +74,10 @@
         <span class="ww-header-cart-badge" id="<%= cartBadgeId %>" aria-hidden="true"></span>
       </button>
       <% } %>
-      <div class="ww-back-header-desktop-language">
-        <%- include('language-picker', { languagePickerClass: 'ww-language-inline' }) %>
-      </div>
-      <details class="ww-mobile-header-menu" data-ww-mobile-header-menu>
-        <summary class="ww-menu-trigger" data-ww-mobile-header-menu-trigger aria-label="<%= t('Menü öffnen') %>" data-i18n-aria-label-source="Menü öffnen">
-          <%- include('hamburger-icon') %>
-        </summary>
-        <div class="ww-mobile-header-menu-panel">
-          <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
-          <% if (variant === 'back') { %>
-          <%- include('pwa-install', { installButtonClass: 'ww-mobile-header-menu-back', includeInstallDialog: false }) %>
-          <a class="ww-mobile-header-menu-back"<% if (mobileBackId) { %> id="<%= mobileBackId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>">
-            <span aria-hidden="true">←</span>
-            <span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span>
-          </a>
-          <% } %>
-          <section class="ww-mobile-header-menu-language-row" aria-label="<%= t('Sprache') %>">
-            <span class="ww-mobile-header-menu-label" data-i18n-source="Sprache"><%= t('Sprache') %></span>
-            <%- include('language-picker', { languagePickerClass: 'ww-mobile-header-menu-language' }) %>
-          </section>
-        </div>
-      </details>
+      <%- include('site-menu', { accountsEnabled }) %>
     </div>
-    <% } else if (variant !== 'landing') { %>
-    <%- include('language-picker', { languagePickerClass: 'ww-language-inline' }) %>
-    <% } %>
   </div>
+  <% if (variant === 'back') { %>
+  <a class="ww-back-link ww-back-link-mobile"<% if (mobileBackId) { %> id="<%= mobileBackId %>"<% } %> href="<%= backHref %>" aria-label="<%= t(backAria) %>" data-i18n-aria-label-source="<%= backAria %>"><span aria-hidden="true">←</span><span data-i18n-source="<%= backLabel %>"><%= t(backLabel) %></span></a>
+  <% } %>
 </header>
-<% if (accountsEnabled) { %><script src="<%= asset('/js/account-menu.js') %>" defer></script><% } %>

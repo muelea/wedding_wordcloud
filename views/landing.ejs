@@ -90,9 +90,6 @@
     #site-header .landing-section-link::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--sage-deep); transform: scaleX(0); transform-origin: center; transition: transform .25s ease; }
     #site-header .landing-section-link:hover { color: var(--ink); }
     #site-header .landing-section-link:hover::after { transform: scaleX(1); }
-    #site-header .landing-section-links .landing-menu-language { position: relative; display: inline-flex; }
-    #site-header .landing-header-actions .landing-menu-toggle { display: none; }
-    #site-header.ww-accounts-enabled .landing-header-actions .landing-menu-toggle { display: grid; }
     #site-header .landing-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; margin-left: auto; white-space: nowrap; }
     #site-header .landing-header-actions .button { white-space: nowrap; }
     #site-header .landing-header-actions .landing-start-button { height: 38px; padding: 0 17px; }
@@ -353,9 +350,12 @@
     html.js-reveal-ready .inspiration-card:nth-child(6) { transition-delay: .24s; }
 
     @media (max-width: 1050px) {
-      #site-header .landing-header-actions .landing-menu-toggle { display: grid; margin-left: 0; }
       #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
-      #site-header .landing-section-links { display: none; }
+      #site-header .ww-nav { height: auto !important; padding-top: 12px !important; padding-bottom: 12px !important; flex-wrap: wrap; gap: 10px 16px !important; }
+      #site-header .landing-section-links { display: flex; order: 3; flex-basis: 100%; min-width: 0; overflow-x: auto; flex-wrap: nowrap; gap: 12px; font-size: 12px; white-space: nowrap; scrollbar-width: none; }
+      #site-header .landing-section-links::-webkit-scrollbar { display: none; }
+      #site-header .landing-section-link { flex: 0 0 auto; }
+      #site-header .landing-section-link { display: inline-flex; align-items: center; min-height: 36px; }
       #site-header .landing-header-actions { margin-left: 12px; }
     }
     @media (max-width: 760px) { .heart-accent { display: none; } }
@@ -1022,8 +1022,8 @@
       if (!dialog || !form || !input || !pinInput || !pinConfirmation || !closeButton) return;
 
       function openDialog() {
-        var header = document.getElementById('site-header');
-        if (header) header.classList.remove('landing-menu-open');
+        var menu = document.querySelector('[data-ww-site-menu]');
+        if (menu) menu.open = false;
         if (!dialog.open) dialog.showModal();
         if (window.matchMedia('(pointer: fine)').matches) {
           window.requestAnimationFrame(function () { input.focus(); });

@@ -43,7 +43,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
   const shippingPageHtml = await shippingPage.text();
   assert.match(shippingPageHtml, /Wohin darf eure Erinnerung reisen\?/);
   assert.match(shippingPageHtml, /id="mobile-back-link"/);
-  assert.match(shippingPageHtml, /class="ww-mobile-header-menu" data-ww-mobile-header-menu/);
+  assert.match(shippingPageHtml, /class="ww-site-menu" data-ww-site-menu/);
 
   const printful = require('../src/printful');
   require('./support/printful-fixtures').mockShippingRates(t, printful);

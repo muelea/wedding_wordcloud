@@ -60,7 +60,8 @@
 .ww-account-card { padding: 32px 0; margin: 0; border-top: 1px solid #eadce1; }
 .ww-account-card h2 { margin: 0 0 16px; }
 .ww-account-card form { max-width: 480px; }
-.ww-account-library-toolbar { display: flex; justify-content: flex-end; margin: -8px 0 32px; }
+.ww-account-library-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
+.ww-account-library-toolbar { display: flex; justify-content: flex-end; }
 .ww-account-create { margin: 0; }
 .ww-account-empty { max-width: 480px; margin: 48px auto 64px; text-align: center; }
 .ww-account-empty > img { display: block; margin: 0 auto 24px; }
@@ -100,3 +101,10 @@
   .ww-account-design > img { height: 240px; }
   .ww-account-design-menu > summary { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 }
+
+.ww-account-navigation { display: flex; gap: 28px; margin: -8px 0 28px; border-bottom: 1px solid #eadce1; }
+.ww-account-navigation button { min-height: 48px; padding: 12px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #8a7178; }
+.ww-account-navigation button[aria-selected="true"] { border-bottom-color: #9c1c4c; color: #400f26; }
+.ww-account-signout { padding-top: 24px; border-top: 1px solid #eadce1; }
+.ww-design-options-icon { display: flex; gap: 3px; }
+.ww-design-options-icon i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }

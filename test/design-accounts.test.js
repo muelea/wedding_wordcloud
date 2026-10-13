@@ -72,6 +72,13 @@ test('optional accounts, private manual saves and deletion are independent of gu
     const verified=await request('verify',{email,code:'123456'});assert.equal(verified.response.status,200);return verified.cookie;}
   let first,second,body,design;
 
+  await t.test('legacy account settings links preserve language and open the unified settings tab',async()=>{
+    const response=await fetch(`${h.baseUrl}/konto/einstellungen?lang=en`,{redirect:'manual'});
+    assert.equal(response.status,303);
+    assert.equal(response.headers.get('location'),'/konto?lang=en#einstellungen');
+    assert.match(response.headers.get('cache-control'),/private.*no-store/);
+  });
+
   await t.test('verification is mandatory; cookie is opaque and CSRF is enforced',async()=>{
     assert.equal((await request('designs')).response.status,401);
     const blocked=await request('signup',{email:'first@account.test',password:'A good long password'},'',{Origin:'https://attacker.example'});
