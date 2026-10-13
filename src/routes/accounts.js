@@ -29,7 +29,7 @@ function makeAccountRouter() {
     const context=await auth.resolveSession(req,res,{allowRecovery:true});
     const page=req.path==='/konto/einstellungen'?'settings':req.path==='/konto'?'library':'signin';
     return renderPage(req,res,'account',{cacheControl:'private, no-store',
-      header:{variant:'back'},pageData:{accountPage:page,accountAvailable:auth.ready(),
+      header:{variant:'back',mobileMenu:true},pageData:{accountPage:page,accountAvailable:auth.ready(),
         returnTo:auth.safeReturnTo(req.query.next),accountUser:context?publicUser(context):null}});
   }));
 

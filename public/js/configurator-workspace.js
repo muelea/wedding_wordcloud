@@ -154,7 +154,7 @@
 
     openTextEditor() {
       if (this.mobileCanvas?.active) return this.mobileCanvas.openTextEditor();
-      if (!this.media.matches || !this.capabilities.text) return false;
+      if (!root.WolkenworteDevice?.isMobileDevice(root.navigator) || !this.media.matches || !this.capabilities.text) return false;
       const input = this.document.getElementById('editor-text');
       if (!input || input.disabled) return false;
       input.focus({ preventScroll: true });

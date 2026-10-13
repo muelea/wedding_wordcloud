@@ -7,6 +7,7 @@ const http = require('node:http');
 const path = require('node:path');
 const vm = require('node:vm');
 const express = require('express');
+const ejs = require('ejs');
 const { createCanvas, loadImage } = require('canvas');
 const { parse } = require('parse5');
 const { renderPage } = require('../src/pageRenderer');
@@ -33,29 +34,31 @@ function target(properties = {}) {
   };
 }
 
-function browser({ userAgent = 'Desktop browser', maxTouchPoints = 0,
+function browser({ userAgent = 'Android Chrome', maxTouchPoints = 0, userAgentData,
   secure = true, standalone = false, appleStandalone = false } = {}) {
-  const button = target({ hidden: true });
+  const buttons = [target({ hidden: true }), target({ hidden: true })];
+  const button = buttons[0];
   const close = target();
-  const dialog = {
+  const dialog = target({
     open: false, opened: 0,
     showModal() { this.open = true; this.opened++; },
     close() { this.open = false; },
     querySelector() { return close; },
-  };
+  });
   const media = target({ matches: standalone });
-  const window = target({ isSecureContext: secure, matchMedia: () => media });
-  const navigator = { userAgent, maxTouchPoints, standalone: appleStandalone };
+  const window = target({ isSecureContext: secure, matchMedia: () => media, innerWidth: 390,
+    WolkenworteDevice: require('../public/js/device') });
+  const navigator = { userAgent, maxTouchPoints, userAgentData, standalone: appleStandalone };
   Object.defineProperty(navigator, 'serviceWorker', {
     get() { throw new Error('The installation runtime must not access service workers'); },
   });
   let movedDialog;
   const document = {
-    querySelectorAll: () => [button], querySelector: () => dialog,
+    querySelectorAll: () => buttons, querySelector: () => dialog,
     body: { append: value => { movedDialog = value; } },
   };
   vm.runInNewContext(runtime, { window, document, navigator });
-  return { window, button, dialog, close, media, get movedDialog() { return movedDialog; } };
+  return { window, button, buttons, dialog, close, media, get movedDialog() { return movedDialog; } };
 }
 
 function promptEvent(outcome = 'dismissed') {
@@ -117,9 +120,9 @@ test('install icons decode at their advertised sizes, with an opaque maskable sa
   }
 });
 
-test('all public pages publish the same manifest and exactly one optional install action', async () => {
+test('all public pages publish the same manifest and share one installation dialog', async () => {
   const pages = ['landing', 'display', 'configure', 'shipping', 'order-confirmation',
-    '404', 'impressum', 'datenschutz', 'bestellinformationen'];
+    '404', 'impressum', 'datenschutz', 'bestellinformationen', 'account'];
   for (const page of pages) {
     const response = { status() {}, set() {}, vary() {}, send: html => html };
     const html = await renderPage({ query: {}, headers: {}, originalUrl: '/' }, response, page, {
@@ -130,12 +133,35 @@ test('all public pages publish the same manifest and exactly one optional instal
     const nodes = elements(html);
     const links = nodes.filter(node => node.tag === 'link' && node.attrs.rel === 'manifest');
     assert.deepEqual(links.map(node => node.attrs.href), ['/manifest.webmanifest'], page);
-    assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install')).length, 1, page);
+    const buttons = nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install'));
+    assert.equal(buttons.length, page === 'landing' ? 2 : 1, page);
+    assert.ok(buttons.every(node => Object.hasOwn(node.attrs, 'hidden')), 'controls start hidden before device detection');
     assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install-dialog')).length, 1, page);
     assert.ok(nodes.some(node => node.attrs.rel === 'apple-touch-icon' &&
       node.attrs.href === publicAssetUrl('/assets/pwa/apple-touch-icon.png')), page);
     assert.ok(nodes.some(node => node.tag === 'script' &&
       node.attrs.src === publicAssetUrl('/js/pwa-install.js') && Object.hasOwn(node.attrs, 'defer')), page);
+    assert.ok(nodes.some(node => node.tag === 'script' &&
+      node.attrs.src === publicAssetUrl('/js/device.js') && !Object.hasOwn(node.attrs, 'defer')), page);
+  }
+});
+
+test('mobile overflow menus place installation immediately after My designs without duplicating the dialog', async () => {
+  for (const header of [{ variant: 'landing' }, { variant: 'back', mobileMenu: true, cartButton: true }]) {
+    const html = await ejs.renderFile(path.join(ROOT, 'views/partials/site-header.ejs'), {
+      header, designAccountsEnabled: true, asset: publicAssetUrl,
+      languages: [{ code: 'en', name: 'English', flag: '🇺🇸', href: '/?lang=en' }], locale: 'en', t: source => source,
+    });
+    const nodes = elements(html);
+    const account = nodes.findIndex(node => node.tag === 'a' && node.attrs.href === '/konto');
+    assert.ok(account >= 0);
+    const install = nodes.findIndex(node => Object.hasOwn(node.attrs, 'data-ww-install'));
+    assert.ok(install > account, 'install follows the My designs account section in menu order');
+    assert.ok(nodes.slice(install + 1).some(node => Object.hasOwn(node.attrs, 'data-language-picker')),
+      'install stays above the language picker');
+    assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install')).length, 1);
+    assert.equal(nodes.filter(node => Object.hasOwn(node.attrs, 'data-ww-install-dialog')).length, 0,
+      'the menu reuses the single footer dialog');
   }
 });
 
@@ -176,13 +202,38 @@ test('installation is optional and native prompts run only after a click, once p
   assert.equal(prompt.prevented, true);
   assert.equal(prompt.calls, 0, 'availability does not open a prompt');
   assert.equal(page.button.hidden, false);
-  await page.button.emit('click');
+  await page.buttons[1].emit('click');
   assert.equal(prompt.calls, 1);
   assert.equal(page.button.hidden, true, 'dismissed native prompts cannot be reused');
+  assert.ok(page.buttons.every(button => button.hidden), 'menu and footer share prompt consumption');
   await page.button.emit('click');
   assert.equal(prompt.calls, 1);
   await page.window.emit('beforeinstallprompt', promptEvent());
   assert.equal(page.button.hidden, false, 'a fresh browser prompt is usable');
+});
+
+test('desktop browsers never reveal any install control, even with narrow windows and native install support', async () => {
+  for (const options of [
+    { userAgent: 'Windows Chrome', maxTouchPoints: 10, userAgentData: { mobile: false } },
+    { userAgent: 'Macintosh Safari' },
+    { userAgent: 'Linux Chrome' },
+  ]) {
+    const page = browser(options);
+    const prompt = promptEvent();
+    await page.window.emit('beforeinstallprompt', prompt);
+    await page.window.emit('pageshow');
+    await Promise.all(page.buttons.map(button => button.emit('click')));
+    assert.ok(page.buttons.every(button => button.hidden));
+    assert.equal(prompt.prevented, false, 'desktop browser install UI remains independent');
+    assert.equal(prompt.calls, 0);
+    assert.equal(page.dialog.open, false);
+  }
+});
+
+test('the browser mobile signal also enables a native prompt when the user-agent string is reduced', async () => {
+  const page = browser({ userAgent: 'Reduced browser agent', userAgentData: { mobile: true } });
+  await page.window.emit('beforeinstallprompt', promptEvent());
+  assert.ok(page.buttons.every(button => !button.hidden));
 });
 
 test('acceptance and external installation hide the action after history restoration', async () => {
@@ -193,6 +244,7 @@ test('acceptance and external installation hide the action after history restora
   await page.button.emit('click');
   await page.window.emit('pageshow');
   assert.equal(page.button.hidden, true);
+  assert.ok(page.buttons.every(button => button.hidden));
   const latePrompt = promptEvent();
   await page.window.emit('beforeinstallprompt', latePrompt);
   assert.equal(latePrompt.prevented, false);
@@ -232,6 +284,15 @@ test('iPhone and desktop-mode iPad show dismissible instructions only after a cl
   }
 });
 
+test('Escape in the installation dialog does not collapse the menu that should regain focus', async () => {
+  const page = browser({ userAgent: 'iPhone Safari' });
+  await page.button.emit('click');
+  let stopped = false;
+  await page.dialog.emit('keydown', { key: 'Escape', stopPropagation() { stopped = true; } });
+  assert.equal(stopped, true);
+  assert.equal(page.dialog.open, true, 'native default dismissal is left to the browser');
+});
+
 test('insecure pages and installed app windows never offer installation', async () => {
   for (const options of [{ secure: false }, { standalone: true }, { appleStandalone: true }]) {
     const page = browser({ userAgent: 'iPhone Safari', ...options });
@@ -241,9 +302,12 @@ test('insecure pages and installed app windows never offer installation', async 
     assert.equal(page.dialog.open, false);
   }
   const page = browser({ userAgent: 'iPhone Safari' });
+  await page.button.emit('click');
   page.media.matches = true;
   await page.media.emit('change');
   assert.equal(page.button.hidden, true);
+  assert.ok(page.buttons.every(button => button.hidden));
+  assert.equal(page.dialog.open, false);
 });
 
 test('installation labels and iPhone instructions are available in every supported language', () => {

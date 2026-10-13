@@ -1158,5 +1158,15 @@
   "Wolkenworte verwendet funktionale Cookies für Sprache und die freiwillige Kontoanmeldung. Analyse- oder Werbetracker werden nicht eingesetzt.": "Wolkenworte dil ve isteğe bağlı giriş için işlevsel çerezler kullanır. Analiz veya reklam izleyicileri kullanılmaz.",
   "Bei der freiwilligen Anmeldung wird eine zufällige, geschützte Sitzungskennung in einem HttpOnly-Cookie für höchstens 30 Tage gespeichert. Eine Anmeldung zur Passwortwiederherstellung ist auf zehn Minuten beschränkt; die Kennung für die Google-Anmeldung ebenfalls. Zugangstokens bleiben verschlüsselt auf dem Server. Kontoentwürfe in diesem Browser sind an das jeweilige Konto gebunden und werden beim Abmelden oder Löschen in diesem Browser entfernt.": "İsteğe bağlı girişte rastgele korumalı oturum tanımlayıcısı en fazla 30 gün HttpOnly çerezinde tutulur. Parola kurtarma oturumları ve Google giriş tanımlayıcıları on dakika sürer. Erişim belirteçleri sunucuda şifreli kalır. Bu tarayıcıdaki hesap taslakları hesaba bağlıdır ve çıkışta veya silmede buradan kaldırılır.",
   "Empfänger sind Fly.io für Hosting, Supabase für Datenbank, Anmeldung und privaten Dateispeicher, Printful und Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestell- und Kontonachrichten. Bei der Google-Anmeldung ist auch Google beteiligt. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.": "Alıcılar barındırma için Fly.io; veritabanı, giriş ve özel dosyalar için Supabase; üretim ve teslimat için Printful ve taşıyıcılar; ödeme ve vergi için Stripe; sipariş ve hesap mesajları için Resend’dir. Google girişinde Google da yer alır. Sipariş için gerekli teslimat ve iletişim bilgilerini sağlamalısın.",
-  "Design speichern": "Tasarımı kaydet"
+  "Design speichern": "Tasarımı kaydet",
+  "Bearbeiten": "Düzenle",
+  "Bitte gebt eine gültige Drehung ein.": "Lütfen geçerli bir dönüş açısı girin.",
+  "Deine Ideen finden hier ihren Platz.": "Fikirlerin için bir yer.",
+  "Gestalte dein erstes Erinnerungsstück und speichere es hier, um später weiterzumachen.": "İlk hatıranı tasarla ve daha sonra devam etmek için buraya kaydet.",
+  "Speicherplatz": "Depolama alanı",
+  "{{count}} von 20 Designs": "20 tasarımdan {{count}}",
+  "{{size}} von 100 MB": "100 MB üzerinden {{size}}",
+  "Designoptionen": "Tasarım seçenekleri",
+  "Abmelden…": "Çıkış yapılıyor…",
+  "Mein Konto – Wolkenworte": "Hesabım – Wolkenworte"
 }

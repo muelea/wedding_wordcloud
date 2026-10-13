@@ -1158,5 +1158,15 @@
   "Wolkenworte verwendet funktionale Cookies für Sprache und die freiwillige Kontoanmeldung. Analyse- oder Werbetracker werden nicht eingesetzt.": "Wolkenworte uses functional cookies for language and optional account sign-in. No analytics or advertising trackers are used.",
   "Bei der freiwilligen Anmeldung wird eine zufällige, geschützte Sitzungskennung in einem HttpOnly-Cookie für höchstens 30 Tage gespeichert. Eine Anmeldung zur Passwortwiederherstellung ist auf zehn Minuten beschränkt; die Kennung für die Google-Anmeldung ebenfalls. Zugangstokens bleiben verschlüsselt auf dem Server. Kontoentwürfe in diesem Browser sind an das jeweilige Konto gebunden und werden beim Abmelden oder Löschen in diesem Browser entfernt.": "Optional sign-in stores a random protected session identifier in an HttpOnly cookie for up to 30 days. Password recovery sessions and Google sign-in identifiers last ten minutes. Access tokens remain encrypted on the server. Account drafts in this browser are bound to their account and are removed here on sign-out or deletion.",
   "Empfänger sind Fly.io für Hosting, Supabase für Datenbank, Anmeldung und privaten Dateispeicher, Printful und Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestell- und Kontonachrichten. Bei der Google-Anmeldung ist auch Google beteiligt. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.": "Recipients are Fly.io for hosting, Supabase for the database, authentication and private files, Printful and delivery providers for production and shipping, Stripe for payments and taxes, and Resend for order and account messages. Google also participates in Google sign-in. You must provide the delivery and contact details needed to process your order.",
-  "Design speichern": "Save design"
+  "Design speichern": "Save design",
+  "Bearbeiten": "Edit",
+  "Bitte gebt eine gültige Drehung ein.": "Please enter a valid rotation.",
+  "Deine Ideen finden hier ihren Platz.": "A place for your ideas.",
+  "Gestalte dein erstes Erinnerungsstück und speichere es hier, um später weiterzumachen.": "Create your first keepsake and save it here to continue later.",
+  "Speicherplatz": "Storage",
+  "{{count}} von 20 Designs": "{{count}} of 20 designs",
+  "{{size}} von 100 MB": "{{size}} of 100 MB",
+  "Designoptionen": "Design options",
+  "Abmelden…": "Signing out…",
+  "Mein Konto – Wolkenworte": "My account – Wolkenworte"
 }

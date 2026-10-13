@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const vm = require('node:vm');
 const { placePanel, WolkenworteWorkspace } = require('../public/js/configurator-workspace');
 
 test('chooser placement stays inside the viewport and flips above when necessary', () => {
@@ -47,14 +48,24 @@ test('desktop text editing remains on the canvas', () => {
   assert.equal(workspace.openTextEditor(), false);
 });
 
-test('compact text editing focuses the directly visible field', () => {
+test('compact layout does not redirect desktop text editing into the mobile toolbar field', () => {
+  const workspace = Object.create(WolkenworteWorkspace.prototype);
+  workspace.media = { matches: true };
+  workspace.capabilities = { text: true };
+  workspace.document = { getElementById() { throw new Error('Desktop must edit on the canvas'); } };
+  assert.equal(workspace.openTextEditor(), false);
+});
+
+test('compact mobile text editing focuses the directly visible field', () => {
+  const root = { WolkenworteDevice: require('../public/js/device'), navigator: { userAgent: 'Android Chrome' } };
+  vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/configurator-workspace'), 'utf8'), { window: root });
   const calls = [];
   const input = {
     disabled: false,
-    focus: options => calls.push(['focus', options]),
+    focus: options => calls.push(['focus', { ...options }]),
     select: () => calls.push(['select']),
   };
-  const workspace = Object.create(WolkenworteWorkspace.prototype);
+  const workspace = Object.create(root.WolkenworteWorkspace.prototype);
   workspace.document = { getElementById: id => id === 'editor-text' ? input : null };
   workspace.media = { matches: true };
   workspace.capabilities = { text: true };

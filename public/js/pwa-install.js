@@ -3,12 +3,12 @@
 
   const buttons = Array.from(document.querySelectorAll('[data-ww-install]'));
   if (!buttons.length || !window.isSecureContext) return;
+  if (!window.WolkenworteDevice?.isMobileDevice(navigator)) return;
+  const ios = window.WolkenworteDevice.isIosDevice(navigator);
   const dialog = document.querySelector('[data-ww-install-dialog]');
   // Keep the modal outside collapsible navigation and its layout rules.
   if (dialog) document.body.append(dialog);
   const standalone = window.matchMedia('(display-mode: standalone)');
-  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   let installPrompt = null;
   let installed = false;
   let prompting = false;
@@ -20,6 +20,7 @@
   function updateButtons() {
     const available = Boolean(installPrompt) || (ios && typeof dialog?.showModal === 'function');
     for (const button of buttons) button.hidden = inAppWindow() || prompting || !available;
+    if (inAppWindow() && dialog?.open) dialog.close();
   }
 
   window.addEventListener('beforeinstallprompt', (event) => {
@@ -63,5 +64,9 @@
     });
   }
   dialog?.querySelector('[data-ww-install-close]')?.addEventListener('click', () => dialog.close());
+  dialog?.addEventListener('keydown', (event) => {
+    // Let Escape dismiss the native dialog without also collapsing its opener's menu.
+    if (event.key === 'Escape') event.stopPropagation();
+  });
   updateButtons();
 })();

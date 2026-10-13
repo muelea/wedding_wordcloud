@@ -32,7 +32,18 @@ function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
     if (['1', 'area', 'touch'].includes(req.query.probe)) {
       const send = res.send.bind(res);
       const probe = req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
-      res.send = html => send(html.replace('</body>', `<script src="/${probe}-probe.js"></script></body>`));
+      res.send = html => {
+        // A narrow desktop window is intentionally still a desktop. The touch
+        // fixture supplies mobile device signals before any application scripts.
+        if (probe === 'mobile-canvas') html = html.replace('<head>', `<head><script>
+          Object.defineProperties(navigator, {
+            userAgent: { configurable: true, value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1' },
+            platform: { configurable: true, value: 'iPhone' },
+            maxTouchPoints: { configurable: true, value: 5 }
+          });
+        </script>`);
+        return send(html.replace('</body>', `<script src="/${probe}-probe.js"></script></body>`));
+      };
     }
     renderPage(req, res, 'configure', {
       eventLocale: 'en',

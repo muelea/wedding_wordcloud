@@ -13,8 +13,11 @@ const EmojiCatalog = require('../public/js/emoji-catalog');
 const { PRODUCTS, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
 
-function setup(t, product, side = 'front') {
+function setup(t, product, side = 'front', { mobile = true } = {}) {
   const root = { fabric, CanvasTouch, CanvasViewport, devicePixelRatio: 3, DesignFonts, WordCloudCore, WolkenworteEmoji: EmojiCatalog,
+    WolkenworteDevice: require('../public/js/device'),
+    navigator: { userAgent: mobile ? 'Android Chrome' : 'Windows Chrome', maxTouchPoints: 10 },
+    innerWidth: 390,
     PointerEvent: function () {}, matchMedia: () => ({ matches: true, addEventListener() {} }) };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), {
     window: root, getComputedStyle: () => ({ paddingLeft: '0', paddingRight: '0', paddingTop: '0', paddingBottom: '0' }),
@@ -35,6 +38,23 @@ function setup(t, product, side = 'front') {
   t.after(() => editor.canvas.dispose());
   return editor;
 }
+
+test('a narrow touch-capable desktop retains selection handles and cannot enter the mobile renderer', t => {
+  const editor = setup(t, PRODUCTS[0], 'front', { mobile: false });
+  editor.setDesign([{ id: 'desktop', text: 'Liebe', x: 1350, y: 525, fontSize: 100, color: '#2455f5' }], { resetHistory: true });
+  const object = editor.canvas.getObjects()[0];
+  editor.canvas.setActiveObject(object);
+  assert.equal(editor.touchController, undefined, 'no custom mobile gesture controller is attached');
+  assert.equal(object.hasControls, true);
+  const original = JSON.stringify(editor.getDesign());
+  assert.equal(editor.setMobileViewport(true), false);
+  assert.notEqual(editor.mobileViewport, true);
+  assert.equal(editor.canvas.enableRetinaScaling, false);
+  assert.equal(JSON.stringify(editor.getDesign()), original);
+  editor.touchMedia = { matches: true };
+  editor.updateTouchControls();
+  assert.equal(object.hasControls, true, 'a compact/coarse media query cannot disable desktop handles');
+});
 
 test('multi-select chooses individual members and transforms the temporary group with one Undo step', t => {
   const editor = setup(t, PRODUCTS[0]);

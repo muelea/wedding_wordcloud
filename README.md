@@ -80,10 +80,14 @@ frozen snapshot of the word cloud.
    element again or use Deselect before choosing another. Undo/Redo retain the
    lock when that element still exists. Pan & zoom explicitly navigates without
    editing objects. Deselect stays in the top toolbar, outside the artwork.
-   Double-tapping a word opens a compact text field with Done/Cancel; it follows
-   the visible viewport and keyboard scroll offset, temporarily hiding the canvas
-   tools while typing. Each completed transform or confirmed text edit is one
-   Undo step. Add contains text, the complete searchable emoji picker and image
+   The mobile direct-gesture tool is labeled Edit (Bearbeiten). Double-tapping a
+   word, entering a rotation/font size, or focusing either search uses one shared
+   keyboard layout that follows the visible viewport and keyboard scroll offset.
+   It hides the canvas tools while typing. Numeric drafts show their units and
+   apply only through Done; Cancel leaves the artwork unchanged. Searches keep
+   their real results available below the query, or beside it in wide landscape,
+   and Done dismisses the keyboard while retaining the filter. Each completed
+   transform or confirmed text/numeric edit is one Undo step. Add contains text, the complete searchable emoji picker and image
    upload; Add and More size to their content within the available viewport.
    More holds Find element, Multi-select, Select all, Fill the area and Reset design.
    Multi-select toggles individual members by tapping; Done locks the temporary group
@@ -330,11 +334,20 @@ is optional; QR codes and ordinary website links continue to work. The shared
 and includes every Wolkenworte route in its scope.
 New public page templates should include `partials/pwa-head` inside `<head>`;
 the shared footer supplies the optional install action.
+That head also loads `public/js/device.js` before page styles and scripts. PWA
+controls and the configurator reuse its iOS/Android/mobile-browser detection.
+Window width still controls responsive layout, while dedicated mobile canvas
+activation, touch gestures and preview-first controls require a mobile device.
+Narrow or touch-capable desktop windows retain desktop selection handles and
+mouse/keyboard editing.
 
-“Wolkenworte installieren” appears in the footer and live-cloud menu when the
+“Wolkenworte installieren” appears in mobile overflow menus below “Meine Designs”
+(when accounts are enabled), in the footer and in the live-cloud menu when the
 browser offers a native installation prompt. It opens that prompt only after a
 click. On iPhone/iPad it instead shows localized Safari home-screen instructions.
-The action is hidden inside the installed app. Other browsers may offer installation
+All application install controls stay hidden on desktop and inside the installed
+app. Mobile detection uses browser/device signals, not window width, so shrinking
+a desktop window does not reveal the controls. Other browsers may offer installation
 through their own menus (for example Safari's Add to Dock). Browser installation
 criteria and prior dismissals can affect whether a native prompt is available.
 
@@ -1293,6 +1306,9 @@ source/version and upstream licenses are in `public/assets/ui-icons/`.
 Run `npm run test:configurator:browser` for an isolated, database-free instance
 of the actual configurator template, product catalog and editor. Add `&probe=1`
 to the printed URL and choose **Run layout regression** at each viewport size.
+Resizing a desktop browser tests responsive desktop layout only. Mobile canvas
+checks require a mobile device or device emulation with a mobile browser identity,
+using the same shared device check as PWA installation.
 The report checks real DOM geometry across word, emoji, image and multiple
 selection; repeated select/deselect; tool sheets; focus return; text history;
 shared font options/selection/history, chooser containment and option hit-testing, toolbar hit areas/tooltips, and

@@ -108,8 +108,10 @@
     async function refresh(){
       const data=await api('session');current=data.user;
       const loggedIn=Boolean(current&&!current.recovery);
+      page.classList.toggle('is-signin',!loggedIn);
       page.querySelector('[data-account-signin]').hidden=loggedIn;
-      page.querySelector('[data-account-nav]').hidden=!loggedIn;
+      page.querySelector('[data-account-usage]').hidden=!loggedIn||page.dataset.page==='settings';
+      root.dispatchEvent?.(new root.CustomEvent('wolkenworte:accountchange',{detail:{user:loggedIn?current:null}}));
       page.querySelector('[data-account-library]').hidden=!loggedIn||page.dataset.page==='settings';
       page.querySelector('[data-account-settings]').hidden=!loggedIn||page.dataset.page!=='settings';
       if(current?.recovery){authControl.recovery();return;}
@@ -118,6 +120,7 @@
       if(page.dataset.page==='settings'){
         page.querySelector('[data-account-email]').textContent=current.email;
         if(current.newEmail)showEmailCodes(current.email,current.newEmail);
+        updateUsage((await api('designs')).designs);
       }else await loadLibrary();
     }
 
@@ -132,22 +135,36 @@
       return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'?{name:input.value}:null),{once:true}));
     }
 
+    function updateUsage(designs){
+      text(page.querySelector('[data-account-usage]'),'{{count}} von 20 Designs',{count:designs.length});
+      text(page.querySelector('[data-account-storage]'),'{{size}} von 100 MB',{
+        size:new Intl.NumberFormat(I()?.getLocale()||'de',{maximumFractionDigits:1}).format(designs.reduce((n,d)=>n+d.byteSize,0)/1024/1024)});
+    }
     async function loadLibrary(){
       const data=await api('designs');const list=page.querySelector('[data-account-design-list]');list.replaceChildren();
       page.querySelector('[data-account-empty]').hidden=data.designs.length!==0;
-      text(page.querySelector('[data-account-usage]'),'{{count}} von 20 Designs · {{size}} von 100 MB',{
-        count:data.designs.length,size:new Intl.NumberFormat(I()?.getLocale()||'de',{maximumFractionDigits:1}).format(data.designs.reduce((n,d)=>n+d.byteSize,0)/1024/1024)});
+      page.querySelector('[data-account-library-toolbar]').hidden=data.designs.length===0;
+      updateUsage(data.designs);
       for(const design of data.designs){
         const card=document.createElement('article');card.className='ww-account-design';
         const image=document.createElement('img');image.src=design.previewUrl;image.alt='';image.loading='lazy';
+        image.width=480;image.height=320;
         const title=document.createElement('h2');title.textContent=design.name;
         const expires=document.createElement('p');expires.className='ww-account-design-date';text(expires,'Wird bei Inaktivität am {{date}} gelöscht.',{date:date(design.expiresAt)});
         const saved=document.createElement('p');saved.className='ww-account-small';text(saved,'Zuletzt gespeichert: {{date}}',{date:date(design.savedAt)});
         const product=document.createElement('p');product.className='ww-account-small';text(product,design.productName);
         const actions=document.createElement('div');actions.className='ww-account-actions';
+        const options=document.createElement('details');options.className='ww-account-design-menu';
+        const trigger=document.createElement('summary');trigger.className='ww-menu-trigger';
+        if(I()?.setAttribute)I().setAttribute(trigger,'aria-label','Designoptionen');else trigger.setAttribute('aria-label',t('Designoptionen'));
+        const icon=document.createElement('span');icon.className='ww-hamburger-icon';icon.setAttribute('aria-hidden','true');
+        for(let line=0;line<3;line++)icon.append(document.createElement('i'));
+        trigger.append(icon);const menu=document.createElement('div');menu.className='ww-account-design-menu-panel';
+        options.append(trigger,menu);
         for(const [label,action] of [['Weiter gestalten','open'],['Umbenennen','rename'],['Löschen','delete']]){
           const button=document.createElement('button');button.type='button';text(button,label);if(action==='open')button.className='ww-account-primary';
           button.addEventListener('click',()=>void busy(card,async()=>{
+            options.open=false;
             if(action==='open'){const data=await api(`designs/${design.id}/open`,{});location.assign(data.url);return;}
             if(action==='rename'){
               const result=await confirm({title:'Design umbenennen',description:'Wähle einen Namen für dein Design.',name:design.name,action:'Namen speichern'});
@@ -158,15 +175,20 @@
               await root.WolkenworteConfiguratorSession?.clearAccountDrafts?.(current.id,design.id);
             }
             await loadLibrary();
-          },notice));actions.append(button);
+          },notice));
+          if(action==='open')actions.append(button);else menu.append(button);
         }
+        actions.append(options);
         card.append(image,title,product,saved,expires,actions);list.append(card);
       }
     }
 
-    page.querySelector('[data-account-logout]').addEventListener('click',()=>void busy(page,async()=>{
-      const id=current.id;await api('logout',{});await clearOwnedDrafts(id);location.assign('/');
-    },notice));
+    document.addEventListener('pointerdown',event=>{
+      page.querySelectorAll('.ww-account-design-menu[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;});
+    });
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape')page.querySelectorAll('.ww-account-design-menu[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});
+    });
 
     function showEmailCodes(oldEmail,newEmail){pendingEmail={current:oldEmail,new:newEmail};page.querySelector('[data-account-email-codes]').hidden=false;}
     page.querySelector('[data-account-email-form]').addEventListener('submit',event=>{

@@ -10,8 +10,10 @@
     <label>E-Mail-Adresse<input type="email" name="email" autocomplete="email" inputmode="email" maxlength="254" required /></label>
     <label data-auth-password-label>Passwort<input type="password" name="password" autocomplete="current-password" maxlength="256" required /></label>
     <p data-auth-password-help hidden>Mindestens 12 Zeichen. Du kannst auch einen Satz verwenden.</p>
-    <button class="ww-account-primary" type="submit" data-auth-submit>Anmelden</button>
-    <button class="ww-account-link" type="button" data-auth-forgot>Passwort vergessen?</button>
+    <div class="ww-account-auth-actions">
+      <button class="ww-account-primary" type="submit" data-auth-submit>Anmelden</button>
+      <button class="ww-account-link" type="button" data-auth-forgot>Passwort vergessen?</button>
+    </div>
   </form>
   <form data-auth-code-form hidden>
     <p>Gib den sechsstelligen Code aus deiner E-Mail ein.</p><p data-auth-code-email></p>

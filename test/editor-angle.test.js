@@ -31,6 +31,7 @@ function setup(t) {
   let timerId = 0;
   const document = { addEventListener() {}, querySelector: () => null };
   const root = { fabric, CanvasTouch, DesignFonts, WordCloudCore, MugIcons,
+    WolkenworteDevice: require('../public/js/device'), navigator: { userAgent: 'Android Chrome' },
     WolkenworteEmoji: { ...EmojiCatalog, getLoadedImage: () => createCanvas(72, 72), async preloadTexts() {} },
     PointerEvent: function () {}, matchMedia: () => ({ matches: true, addEventListener() {} }),
   };

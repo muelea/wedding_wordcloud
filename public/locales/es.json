@@ -1158,5 +1158,15 @@
   "Wolkenworte verwendet funktionale Cookies für Sprache und die freiwillige Kontoanmeldung. Analyse- oder Werbetracker werden nicht eingesetzt.": "Wolkenworte usa cookies funcionales para el idioma y el acceso opcional. No se usan rastreadores analíticos ni publicitarios.",
   "Bei der freiwilligen Anmeldung wird eine zufällige, geschützte Sitzungskennung in einem HttpOnly-Cookie für höchstens 30 Tage gespeichert. Eine Anmeldung zur Passwortwiederherstellung ist auf zehn Minuten beschränkt; die Kennung für die Google-Anmeldung ebenfalls. Zugangstokens bleiben verschlüsselt auf dem Server. Kontoentwürfe in diesem Browser sind an das jeweilige Konto gebunden und werden beim Abmelden oder Löschen in diesem Browser entfernt.": "El acceso opcional guarda un identificador aleatorio y protegido en una cookie HttpOnly hasta 30 días. Las sesiones de recuperación e identificadores de Google duran diez minutos. Los tokens permanecen cifrados en el servidor. Los borradores de este navegador se vinculan a su cuenta y se eliminan aquí al cerrar sesión o borrarlos.",
   "Empfänger sind Fly.io für Hosting, Supabase für Datenbank, Anmeldung und privaten Dateispeicher, Printful und Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestell- und Kontonachrichten. Bei der Google-Anmeldung ist auch Google beteiligt. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.": "Los destinatarios son Fly.io para alojamiento, Supabase para base de datos, acceso y archivos privados, Printful y transportistas para producción y entrega, Stripe para pagos e impuestos y Resend para mensajes de pedidos y cuentas. Google participa en su acceso. Debes facilitar los datos de entrega y contacto necesarios para tramitar el pedido.",
-  "Design speichern": "Guardar diseño"
+  "Design speichern": "Guardar diseño",
+  "Bearbeiten": "Editar",
+  "Bitte gebt eine gültige Drehung ein.": "Introduce una rotación válida.",
+  "Deine Ideen finden hier ihren Platz.": "Un lugar para tus ideas.",
+  "Gestalte dein erstes Erinnerungsstück und speichere es hier, um später weiterzumachen.": "Crea tu primer recuerdo y guárdalo aquí para continuar más tarde.",
+  "Speicherplatz": "Almacenamiento",
+  "{{count}} von 20 Designs": "{{count}} de 20 diseños",
+  "{{size}} von 100 MB": "{{size}} de 100 MB",
+  "Designoptionen": "Opciones del diseño",
+  "Abmelden…": "Cerrando sesión…",
+  "Mein Konto – Wolkenworte": "Mi cuenta – Wolkenworte"
 }

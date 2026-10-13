@@ -106,7 +106,7 @@ function mountMobileHeaderMenu() {
     },
     querySelectorAll(selector) {
       if (selector === '[data-language-picker]') return [nestedLanguagePicker];
-      if (selector === 'a') return [link];
+      if (selector === 'a:not([data-language-code])') return [link];
       return [];
     },
   };

@@ -10,27 +10,32 @@
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" /><link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <link rel="stylesheet" href="<%= asset('/account.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script><script src="<%= asset('/js/site-header.js') %>" defer></script>
-  <title>Meine Designs – Wolkenworte</title>
+  <title><%= t(pageData.accountPage === 'settings' ? 'Mein Konto – Wolkenworte' : 'Meine Designs – Wolkenworte') %></title>
 </head>
 <body class="ww-account-body">
   <%- include('partials/site-header') %>
-  <main class="ww-account-main" id="account-page" data-page="<%= pageData.accountPage %>" data-return-to="<%= pageData.returnTo %>" data-available="<%= pageData.accountAvailable %>">
+  <main class="ww-account-main is-signin" id="account-page" data-page="<%= pageData.accountPage %>" data-return-to="<%= pageData.returnTo %>" data-available="<%= pageData.accountAvailable %>">
     <div class="ww-account-heading"><h1><%= pageData.accountPage === 'settings' ? 'Mein Konto' : 'Meine Designs' %></h1>
-      <nav data-account-nav hidden><a href="/konto">Meine Designs</a><a href="/konto/einstellungen">Mein Konto</a><button type="button" class="ww-account-link" data-account-logout>Abmelden</button></nav></div>
+      <p class="ww-account-small" data-account-usage hidden></p></div>
     <p id="account-page-status" role="status" aria-live="polite"></p>
     <% if (!pageData.accountAvailable) { %><p>Das Speichern im Konto ist gerade nicht verfügbar. Du kannst weiterhin ohne Konto gestalten und bestellen.</p><% } %>
-    <div class="ww-account-card" data-account-signin <%= !pageData.accountAvailable ? 'hidden' : '' %>>
+    <div class="ww-account-signin" data-account-signin <%= !pageData.accountAvailable ? 'hidden' : '' %>>
       <%- include('partials/account-auth') %>
     </div>
-    <section data-account-library hidden>
-      <p>Designs werden nach drei Monaten ohne Nutzung dauerhaft gelöscht. Öffnen, Speichern oder ein erfolgreicher Kauf verlängern die Frist.</p>
-      <p class="ww-account-small" data-account-usage></p>
+    <section class="ww-design-library" data-account-library hidden>
+      <div class="ww-account-library-toolbar" data-account-library-toolbar><%- include('partials/account-new-design') %></div>
       <div class="ww-account-grid" data-account-design-list></div>
-      <p data-account-empty hidden>Du hast noch keine Designs gespeichert. Im Konfigurator kannst du ein Design ausdrücklich in deinem Konto speichern.</p>
-      <a href="/" class="ww-account-link">Ein neues Design gestalten</a>
+      <div class="ww-account-empty" data-account-empty hidden>
+        <img src="<%= asset('/z_icons/icon.svg') %>" alt="" aria-hidden="true" width="54" height="50" />
+        <h2>Deine Ideen finden hier ihren Platz.</h2>
+        <p>Gestalte dein erstes Erinnerungsstück und speichere es hier, um später weiterzumachen.</p>
+        <%- include('partials/account-new-design') %>
+      </div>
+      <p class="ww-account-retention">Designs werden nach drei Monaten ohne Nutzung dauerhaft gelöscht. Öffnen, Speichern oder ein erfolgreicher Kauf verlängern die Frist.</p>
     </section>
     <section data-account-settings hidden>
       <p data-account-email></p>
+      <div class="ww-account-card"><h2>Speicherplatz</h2><p class="ww-account-small" data-account-storage></p></div>
       <div class="ww-account-card">
         <h2>E-Mail-Adresse ändern</h2>
         <form data-account-email-form><label>Neue E-Mail-Adresse<input type="email" name="email" autocomplete="email" required maxlength="254" /></label><button class="ww-account-primary" type="submit">Codes anfordern</button></form>

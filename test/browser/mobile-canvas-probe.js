@@ -187,7 +187,7 @@
       mugEditor.setDesign([word], { resetHistory: true });
       await frames();
       tap(first); tap(first);
-      check('double tap opens a dedicated text field while retaining the lock', mobile.textSession &&
+      check('double tap opens a dedicated text field while retaining the lock', mobile.keyboardSession &&
         document.activeElement.id === 'mobile-canvas-text' && mugEditor.canvas.getActiveObject()?.editorId === word.id &&
         getComputedStyle(document.querySelector('.mobile-canvas-header')).display === 'none');
       const textRect = document.getElementById('mobile-canvas-text').getBoundingClientRect();
@@ -197,7 +197,7 @@
       document.getElementById('mobile-canvas-text').value = 'Changed word';
       document.getElementById('mobile-canvas-text-editor').requestSubmit();
       await frames();
-      check('Done saves the text in one Undo step and restores the canvas', !mobile.textSession &&
+      check('Done saves the text in one Undo step and restores the canvas', !mobile.keyboardSession &&
         mugEditor.getDesign()[0].text === 'Changed word' && mugEditor.history.length === 2 &&
         mugEditor.canvas.getActiveObject()?.editorId === word.id);
       mugEditor.undo();
@@ -208,11 +208,70 @@
       const actions = document.querySelector('#mobile-canvas-properties .editor-actions').getBoundingClientRect();
       check('Adjust has no desktop-sized blank gap before transforms', actions.top - row.bottom >= 0 && actions.top - row.bottom <= 12);
       document.getElementById('editor-text').click(); await frames();
-      check('Adjust text field uses the same dedicated editing state', mobile.textSession && document.activeElement.id === 'mobile-canvas-text');
+      check('Adjust text field uses the same dedicated editing state', mobile.keyboardSession && document.activeElement.id === 'mobile-canvas-text');
       document.getElementById('mobile-canvas-text').value = 'Discard this';
       document.getElementById('mobile-canvas-text-cancel').click(); await frames();
       check('Cancel leaves text, print design and history unchanged', mugEditor.getDesign()[0].text === word.text && mugEditor.historyIndex === 0);
+      const viewportDescriptor = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+      const keyboardViewport = { width: innerWidth, height: 72, offsetTop: 0, offsetLeft: 0 };
+      const enterKeyboard = async () => {
+        Object.defineProperty(window, 'visualViewport', { configurable: true, value: keyboardViewport });
+        mobile.syncViewport(); await frames();
+      };
+      const leaveKeyboard = async () => {
+        if (viewportDescriptor) Object.defineProperty(window, 'visualViewport', viewportDescriptor);
+        else { delete window.visualViewport; }
+        mobile.syncViewport(); await frames();
+      };
+      const entryVisible = () => ['mobile-canvas-text', 'mobile-canvas-text-cancel', 'mobile-canvas-text-done'].every(id => {
+        const rect = document.getElementById(id).getBoundingClientRect();
+        return rect.top >= keyboardViewport.offsetTop && rect.bottom <= keyboardViewport.offsetTop + keyboardViewport.height &&
+          rect.left >= 0 && rect.right <= innerWidth;
+      });
+      for (const [kind, id, value] of [['rotation', 'editor-angle', '24,5'], ['font-size', 'editor-font-size', '42,5']]) {
+        mugEditor.setDesign([word], { resetHistory: true });
+        mugEditor.canvas.setActiveObject(mugEditor.canvas.getObjects()[0]);
+        mugEditor.updateSelectionPanel();
+        mobile.chooseTool('properties');
+        const initialDesign = JSON.stringify(mugEditor.getDesign()), historyLength = mugEditor.history.length;
+        document.getElementById(id).focus(); await enterKeyboard();
+        check(`${kind}: focus opens the shared decimal field with visible actions above a 72px keyboard viewport`,
+          mobile.keyboardSession?.kind === kind && document.activeElement.id === 'mobile-canvas-text' && entryVisible() &&
+          getComputedStyle(document.querySelector('.mobile-canvas-header')).display === 'none' && document.getElementById(id).readOnly);
+        document.getElementById('mobile-canvas-text').value = value;
+        keyboardViewport.offsetTop = 35; keyboardViewport.height = 64; mobile.syncViewport(); await frames();
+        check(`${kind}: keyboard scroll/resize retains the draft and visible controls`, entryVisible() && document.activeElement.value === value);
+        document.getElementById('mobile-canvas-text-cancel').click(); await leaveKeyboard();
+        check(`${kind}: Cancel retains artwork, history and the Adjust panel`, !mobile.keyboardSession && mobile.tool === 'properties' &&
+          JSON.stringify(mugEditor.getDesign()) === initialDesign && mugEditor.history.length === historyLength);
+        keyboardViewport.offsetTop = 0; keyboardViewport.height = 72;
+        document.getElementById(id).focus(); await enterKeyboard();
+        document.getElementById('mobile-canvas-text').value = value;
+        document.getElementById('mobile-canvas-text-editor').requestSubmit(); await leaveKeyboard();
+        check(`${kind}: Done changes only the intended property with one Undo step`, !mobile.keyboardSession && mobile.tool === 'properties' &&
+          mugEditor.history.length === historyLength + 1 && (kind === 'rotation' ? mugEditor.getDesign()[0].angle === 24.5 :
+            mugEditor.displayPointSize(mugEditor.objectPointSize(mugEditor.canvas.getActiveObject())) === '42.5'));
+        mugEditor.undo();
+        check(`${kind}: Undo restores the exact original design`, JSON.stringify(mugEditor.getDesign()) === initialDesign);
+        mugEditor.redo(); mugEditor.undo();
+      }
+      // Numeric commits leave their redo entries; keep the remaining probe independent.
+      mugEditor.setDesign([word], { resetHistory: true });
+      mugEditor.canvas.setActiveObject(mugEditor.canvas.getObjects()[0]); mugEditor.updateSelectionPanel();
+      for (const [kind, id, value] of [['rotation', 'editor-angle', 'Infinity'], ['font-size', 'editor-font-size', '99999']]) {
+        mobile.chooseTool('properties');
+        const design = JSON.stringify(mugEditor.getDesign()), history = mugEditor.history.length;
+        document.getElementById(id).focus(); await enterKeyboard();
+        document.getElementById('mobile-canvas-text').value = value;
+        document.getElementById('mobile-canvas-text-editor').requestSubmit(); await frames();
+        check(`${kind}: invalid values keep the field, its error and actions visible without editing artwork`, mobile.keyboardSession?.kind === kind &&
+          entryVisible() && !document.getElementById('mobile-canvas-entry-error').hidden &&
+          JSON.stringify(mugEditor.getDesign()) === design && mugEditor.history.length === history);
+        document.getElementById('mobile-canvas-text-cancel').click(); await leaveKeyboard();
+      }
       mobile.chooseTool('add'); await frames();
+      keyboardViewport.offsetTop = 0;
+      keyboardViewport.height = innerWidth > innerHeight ? 72 : 240;
       check('Add contains Text, Emoji and Image without general design actions',
         document.querySelector('#mobile-canvas-add #editor-add') && document.querySelector('#mobile-canvas-add #editor-emoji-toggle') &&
         document.querySelector('#mobile-canvas-add #editor-image') && !document.querySelector('#mobile-canvas-add #editor-select-all') &&
@@ -222,9 +281,35 @@
       check('Emoji opens the full searchable catalog without forcing the keyboard', mobile.tool === 'emoji' &&
         !configuratorEmojiPicker.panel.hidden && configuratorEmojiPicker.panel.closest('#mobile-canvas-emoji') &&
         document.activeElement !== configuratorEmojiPicker.searchInput && configuratorEmojiPicker.grid.querySelectorAll('button').length > 0);
-      configuratorEmojiPicker.grid.querySelector('button').click(); await frames();
-      check('choosing an emoji adds one element and returns to the canvas', mobile.tool === 'move' &&
-        configuratorEmojiPicker.panel.hidden && mugEditor.getDesign().length === 2);
+      configuratorEmojiPicker.searchInput.focus(); await enterKeyboard();
+      const beforeSearch = JSON.stringify(mugEditor.getDesign()), searchHistory = mugEditor.history.length;
+      const originalEmojiQuery = configuratorEmojiPicker.searchInput.value;
+      const emojiQuery = { de: 'herz', fr: 'cœur', it: 'cuore', es: 'corazón', tr: 'kalp' }[configuratorEmojiPicker.currentLocale()] || 'heart';
+      document.getElementById('mobile-canvas-text').value = emojiQuery;
+      document.getElementById('mobile-canvas-text').dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, 120)); await frames();
+      check('emoji search keeps its real picker and results alongside the keyboard row', mobile.keyboardSession?.kind === 'emoji' && entryVisible() &&
+        configuratorEmojiPicker.panel.parentElement.id === 'mobile-canvas-keyboard-results' && configuratorEmojiPicker.grid.querySelectorAll('button').length > 0);
+      check('emoji search has a visible, scrollable results area', configuratorEmojiPicker.grid.getBoundingClientRect().height >= 40);
+      if (innerWidth >= 621 && innerWidth > innerHeight) {
+        const gridRect = configuratorEmojiPicker.grid.getBoundingClientRect();
+        check('landscape emoji results have at least one usable row above the keyboard', gridRect.height >= 40 && gridRect.bottom <= 72);
+      }
+      document.getElementById('mobile-canvas-text-cancel').click(); await leaveKeyboard();
+      check('emoji search Cancel restores the prior filter without changing artwork/history', configuratorEmojiPicker.searchInput.value === originalEmojiQuery &&
+        configuratorEmojiPicker.panel.closest('#mobile-canvas-emoji') && JSON.stringify(mugEditor.getDesign()) === beforeSearch && mugEditor.history.length === searchHistory);
+      configuratorEmojiPicker.searchInput.focus(); await enterKeyboard();
+      document.getElementById('mobile-canvas-text').value = emojiQuery;
+      document.getElementById('mobile-canvas-text').dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('mobile-canvas-text-editor').requestSubmit(); await leaveKeyboard();
+      await new Promise(resolve => setTimeout(resolve, 120)); await frames();
+      check('emoji search Done retains the filter and dismisses the keyboard', !mobile.keyboardSession && configuratorEmojiPicker.searchInput.value === emojiQuery &&
+        configuratorEmojiPicker.panel.closest('#mobile-canvas-emoji') && document.activeElement !== configuratorEmojiPicker.searchInput);
+      configuratorEmojiPicker.searchInput.focus(); await enterKeyboard();
+      configuratorEmojiPicker.grid.querySelector('button').click(); await frames(); await leaveKeyboard();
+      check('choosing an emoji directly from keyboard results adds one element and returns to Edit', mobile.tool === 'move' &&
+        !mobile.keyboardSession && configuratorEmojiPicker.panel.hidden && mugEditor.getDesign().length === 2 &&
+        !document.querySelector('#mobile-canvas-keyboard-results .ww-emoji-picker'));
       mobile.chooseTool('more');
       check('More contains labeled design actions and Find element',
         document.querySelector('#mobile-canvas-more #editor-select-all') && document.querySelector('#mobile-canvas-more #editor-fit-area') &&
@@ -235,6 +320,31 @@
       document.querySelector('#mobile-canvas-more [data-canvas-tool="elements"]').click();
       check('Find element is reached from More with a working Back action', mobile.tool === 'elements' &&
         !document.getElementById('mobile-canvas-panel-back').hidden);
+      const findSource = document.getElementById('mobile-canvas-search');
+      const findInitial = JSON.stringify(mugEditor.getDesign()), findHistory = mugEditor.history.length;
+      findSource.focus(); await enterKeyboard();
+      document.getElementById('mobile-canvas-text').value = word.text;
+      document.getElementById('mobile-canvas-text').dispatchEvent(new Event('input', { bubbles: true })); await frames();
+      check('Find element keeps the shared query field and real filtered results visible', mobile.keyboardSession?.kind === 'elements' && entryVisible() &&
+        document.querySelectorAll('#mobile-canvas-keyboard-results #mobile-canvas-element-list button').length === 1);
+      const findButton = document.querySelector('#mobile-canvas-keyboard-results #mobile-canvas-element-list button').getBoundingClientRect();
+      check('Find element results stay inside the available keyboard viewport', findButton.top >= 0 && findButton.bottom <= keyboardViewport.height);
+      document.getElementById('mobile-canvas-text-cancel').click(); await leaveKeyboard();
+      check('Find element Cancel restores the original query and nodes without editing', !findSource.value &&
+        document.querySelector('#mobile-canvas-elements #mobile-canvas-element-list') && JSON.stringify(mugEditor.getDesign()) === findInitial && mugEditor.history.length === findHistory);
+      findSource.focus(); await enterKeyboard();
+      document.getElementById('mobile-canvas-text').value = word.text;
+      document.getElementById('mobile-canvas-text').dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('mobile-canvas-text-editor').requestSubmit(); await leaveKeyboard();
+      check('Find element Done retains the filter and returns to its panel', !mobile.keyboardSession && mobile.tool === 'elements' &&
+        findSource.value === word.text && document.querySelectorAll('#mobile-canvas-elements #mobile-canvas-element-list button').length === 1);
+      mugEditor.clearSelection();
+      findSource.focus(); await enterKeyboard();
+      document.querySelector('#mobile-canvas-keyboard-results #mobile-canvas-element-list button').click(); await frames(); await leaveKeyboard();
+      check('choosing a Find element keyboard result returns to Edit and locks the word without changing artwork', mobile.tool === 'move' &&
+        !mobile.keyboardSession && mugEditor.canvas.getActiveObject()?.editorId === word.id &&
+        document.querySelector('#mobile-canvas-elements #mobile-canvas-element-list') && JSON.stringify(mugEditor.getDesign()) === findInitial);
+      mobile.chooseTool('elements');
       document.getElementById('mobile-canvas-panel-back').click();
       check('Find element Back returns to More', mobile.tool === 'more');
       document.getElementById('mobile-canvas-deselect').click();
@@ -332,6 +442,8 @@
       check('closing restores the original desktop bitmap and identity viewport', !mugEditor.canvas.enableRetinaScaling &&
         mugEditor.canvas.width === mugEditor.canvasWidth && mugEditor.canvas.height === mugEditor.canvasHeight &&
         JSON.stringify(mugEditor.canvas.viewportTransform) === '[1,0,0,1,0,0]' && !shell.style.getPropertyValue('--mobile-paint-width'));
+      check('closing restores desktop numeric fields to ordinary editable inputs', !document.getElementById('editor-angle').readOnly &&
+        !document.getElementById('editor-font-size').readOnly);
       mobile.open(run); await frames(); mobile.close(); await frames();
       check('repeated entry/exit keeps the same editor state', JSON.stringify(mugEditor.getDesign()) === beforeClose && !mobile.dialog.open);
     } catch (error) { check('unexpected exception', false, error.stack); }
@@ -342,10 +454,11 @@
 })();
 
 (function installSharpPreview() {
+  const inspect = new URLSearchParams(location.search).get('inspect');
   const button = document.createElement('button');
   button.id = 'inspect-sharp-mobile-preview';
   button.type = 'button';
-  button.textContent = 'Inspect 600% word and emoji';
+  button.textContent = inspect ? 'Inspect keyboard layout' : 'Inspect 600% word and emoji';
   button.style.cssText = 'position:fixed;right:8px;top:58px;z-index:1000;background:white;color:black;padding:8px';
   document.body.append(button);
   button.addEventListener('click', async () => {
@@ -355,6 +468,25 @@
       { id:'sharp-word', text:'Hi', x:mugEditor.width/2-100, y:mugEditor.height/2, fontSize:140, angle:0, color:'#2455f5', fontFamily:'classic' },
       { id:'sharp-emoji', text:'🍸', x:mugEditor.width/2+140, y:mugEditor.height/2, fontSize:140, angle:0, color:'#2455f5', fontFamily:'classic' },
     ], {resetHistory:true});
+    if (inspect) {
+      button.remove();
+      document.getElementById('run-mobile-canvas-probe').remove();
+      const mobile = workspace.mobileCanvas;
+      if (inspect === 'rotation') {
+        mugEditor.canvas.setActiveObject(mugEditor.canvas.getObjects()[0]);
+        mugEditor.updateSelectionPanel();
+        mobile.chooseTool('properties');
+        mobile.openNumericEditor('rotation');
+      } else {
+        mobile.chooseTool('elements');
+        mobile.openSearchEditor('elements', document.getElementById('mobile-canvas-search'));
+      }
+      const height = innerWidth > innerHeight ? 72 : 240;
+      Object.defineProperty(window, 'visualViewport', { configurable: true,
+        value: { width: innerWidth, height, offsetTop: 0, offsetLeft: 0 } });
+      mobile.syncViewport();
+      return;
+    }
     workspace.mobileCanvas.chooseTool('view');
     mugEditor.setZoom(6);
   });

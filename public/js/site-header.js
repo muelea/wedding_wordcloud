@@ -29,16 +29,19 @@
 
     function closeMenu() {
       header.classList.remove('landing-menu-open');
+      menu.hidden = true;
+      menu.querySelectorAll('[data-language-picker]').forEach(function (picker) { picker.open = false; });
       toggle.setAttribute('aria-expanded', 'false');
       setLabel(toggle, 'Seitennavigation öffnen');
     }
 
     toggle.addEventListener('click', function () {
       var isOpen = header.classList.toggle('landing-menu-open');
+      menu.hidden = !isOpen;
       toggle.setAttribute('aria-expanded', String(isOpen));
       setLabel(toggle, isOpen ? 'Seitennavigation schließen' : 'Seitennavigation öffnen');
     });
-    menu.querySelectorAll('a[href^="#"]').forEach(function (link) {
+    menu.querySelectorAll('a:not([data-language-code])').forEach(function (link) {
       link.addEventListener('click', closeMenu);
     });
     document.addEventListener('pointerdown', function (event) {
@@ -48,7 +51,7 @@
       }
     });
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') closeMenu();
+      if (event.key === 'Escape' && !menu.querySelector?.('[data-language-picker][open]')) closeMenu();
     });
   });
 
@@ -68,7 +71,7 @@
     menu.addEventListener('toggle', function () {
       setLabel(trigger, menu.open ? 'Menü schließen' : 'Menü öffnen');
     });
-    menu.querySelectorAll('a').forEach(function (link) {
+    menu.querySelectorAll('a:not([data-language-code])').forEach(function (link) {
       link.addEventListener('click', function () { closeMenu(false); });
     });
     document.addEventListener('pointerdown', function (event) {

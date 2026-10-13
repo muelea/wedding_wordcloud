@@ -131,7 +131,8 @@ test('every header menu uses the one shared premium hamburger component', () => 
 });
 
 test('the configurator always keeps language in its menu and moves back navigation there when compact', () => {
-  assert.match(siteHeader, /variant === 'back' && mobileMenu/);
+  assert.match(siteHeader, /variant === 'back' && headerMenu/);
+  assert.match(siteHeader, /const headerMenu = mobileMenu \|\| accountsEnabled/);
   assert.match(siteHeader, /class="ww-mobile-header-menu-back"[\s\S]*?mobileBackId/);
   assert.match(siteHeader, /languagePickerClass: 'ww-mobile-header-menu-language'/);
   assert.match(siteHeaderStyles, /\.ww-back-header-desktop-language \{ display: none !important; \}/);
@@ -323,7 +324,7 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(landing, /\.homepage-mug-mockup \{ width: min\(380px, 100%\); aspect-ratio: 1;/);
   assert.match(landing, /class="homepage-mug-mockup"[\s\S]*?asset\('\/assets\/workflow\/05_01_' \+ locale \+ '\.png'\)/);
   assert.doesNotMatch(landing, /id="mug-canvas"|Zum Drehen ziehen|asset\('\/js\/mug-3d-viewer\.js'\)/);
-  assert.match(landing, /#site-header:not\(\.landing-menu-open\) \.landing-section-links/);
+  assert.match(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-section-links/);
   assert.doesNotMatch(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-menu-toggle/);
   assert.doesNotMatch(siteHeader, /landing-menu-start/,
     'the persistent header CTA must not be duplicated inside the compact menu');

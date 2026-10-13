@@ -1,1 +1,102 @@
-.ww-account-body{margin:0;background:#fffdfa;color:#400f26;font-family:'Gelasio',Georgia,serif}.ww-account-main{max-width:960px;margin:0 auto;padding:40px 24px 70px}.ww-account-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.ww-account-heading h1{font-size:clamp(28px,5vw,42px);font-weight:400}.ww-account-heading nav,.ww-account-actions,.ww-account-controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.ww-account-card,.ww-account-design{border:1px solid #eadce1;border-radius:20px;background:#fff;padding:24px;margin:20px 0}.ww-account-auth{max-width:420px;margin:0 auto}.ww-account-main h2,.ww-account-dialog h2{font-size:22px;font-weight:500}.ww-account-main p,.ww-account-dialog p{line-height:1.65}.ww-account-main a,.ww-account-dialog a,.ww-account-controls a{color:#9d315d}.ww-account-main button,.ww-account-dialog button,.ww-account-controls button{font:inherit;min-height:44px;padding:10px 16px;border:1px solid #d6bac5;border-radius:12px;background:#fff;color:#400f26;cursor:pointer}.ww-account-primary{background:#9d315d!important;color:#fff!important;border-color:#9d315d!important}.ww-account-danger{color:#9c284b!important}.ww-account-link{padding:8px 0!important;border:0!important;background:none!important;text-decoration:underline;text-underline-offset:3px}.ww-account-main label,.ww-account-dialog label{display:grid;gap:8px;font-size:14px;margin:16px 0}.ww-account-main input,.ww-account-dialog input{box-sizing:border-box;width:100%;min-height:46px;font:inherit;font-size:16px;padding:10px 12px;background:#fff;border:1px solid #d6bac5;border-radius:10px;color:#400f26}.ww-account-tabs{display:flex;gap:8px}.ww-account-tabs button{flex:1}.ww-account-tabs button[aria-pressed=true]{border-color:#9d315d;background:#fff0f5}.ww-account-divider{text-align:center;font-size:13px;color:#866b76}.ww-account-google{width:100%}.ww-account-small,.ww-account-status,.ww-account-design-date{font-size:13px;color:#866b76;line-height:1.6}.ww-account-status[data-error=true],#account-page-status[data-error=true]{color:#a31b43}.ww-account-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}.ww-account-design{margin:0;padding:18px;min-width:0}.ww-account-design img{width:100%;height:170px;object-fit:contain;background:#fffdfa;border-radius:12px}.ww-account-design h2{overflow-wrap:anywhere}.ww-account-design .ww-account-actions{gap:10px}.ww-account-dialog{box-sizing:border-box;width:calc(100% - 32px);max-width:480px;max-height:calc(100dvh - 32px);overflow:auto;padding:24px;border:1px solid #eadce1;border-radius:22px;background:#fffdfa;color:#400f26}.ww-account-dialog::backdrop{background:#2b10266b}.ww-account-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.ww-account-dialog-head h2{margin:0}.ww-account-dialog-head button{border:0;font-size:24px}.ww-account-controls{margin:14px 0;font-size:13px;gap:12px}.ww-account-controls button{min-height:40px;font-size:13px}.ww-account-save-note{font-size:12px;color:#866b76;line-height:1.5;margin:8px 0}.ww-account-main [hidden],.ww-account-dialog [hidden],.ww-account-controls[hidden]{display:none!important}.ww-account-main button:disabled,.ww-account-dialog button:disabled{opacity:.55;cursor:wait}.ww-account-main :focus-visible,.ww-account-dialog :focus-visible,.ww-account-controls :focus-visible{outline:3px solid #c9819e;outline-offset:3px}@media(max-width:560px){.ww-account-main{padding:24px 16px 50px}.ww-account-card{padding:20px}.ww-account-heading nav{gap:12px;font-size:14px}.ww-account-grid{grid-template-columns:1fr}.ww-account-dialog{padding:20px}.ww-account-design img{height:190px}}
+.ww-account-body {
+  margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: #fffdfa;
+  color: #400f26;
+  font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
+  font-size: 16px;
+}
+.ww-account-main {
+  box-sizing: border-box;
+  width: min(100%, 1120px);
+  flex: 1;
+  margin: 0 auto;
+  padding: 64px 32px 88px;
+}
+.ww-account-main.is-signin { max-width: 484px; }
+.ww-account-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 32px; }
+.ww-account-heading h1 { margin: 0; font-size: clamp(34px, 5vw, 48px); line-height: 1.18; font-weight: 500; letter-spacing: -.025em; }
+.ww-account-main h1, .ww-account-main h2, .ww-account-dialog h2 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
+.ww-account-main h2, .ww-account-dialog h2 { font-size: 24px; font-weight: 500; line-height: 1.3; }
+.ww-account-main p, .ww-account-dialog p { line-height: 1.65; }
+.ww-account-main a, .ww-account-dialog a, .ww-account-controls a { color: #9c1c4c; }
+.ww-account-main button, .ww-account-dialog button, .ww-account-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 11px 20px;
+  border: 1px solid rgba(64, 15, 38, .14);
+  border-radius: 999px;
+  background: #fffdfa;
+  color: #400f26;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ww-account-primary { background: #400f26 !important; color: #fff !important; border-color: #400f26 !important; }
+.ww-account-primary:hover { background: #9c1c4c !important; border-color: #9c1c4c !important; }
+.ww-account-danger { color: #a31b43 !important; }
+.ww-account-link { min-height: 44px; padding: 8px 0 !important; border: 0 !important; background: none !important; color: #9c1c4c !important; text-decoration: underline; text-underline-offset: 4px; }
+.ww-account-main label, .ww-account-dialog label { display: grid; gap: 8px; font-size: 14px; margin: 20px 0; }
+.ww-account-main input, .ww-account-dialog input { box-sizing: border-box; width: 100%; min-height: 48px; font: inherit; font-size: 16px; padding: 12px 14px; background: #fff; border: 1px solid rgba(64, 15, 38, .18); border-radius: 12px; color: #400f26; }
+.ww-account-auth { max-width: 420px; margin: 0 auto; }
+.ww-account-auth > p:first-child { margin: 0 0 26px; color: #8a7178; }
+.ww-account-google { width: 100%; min-height: 48px !important; }
+.ww-account-tabs { display: flex; gap: 24px; border-bottom: 1px solid #eadce1; margin: 0 0 24px; }
+.ww-account-tabs button { flex: 1; padding: 12px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #8a7178; }
+.ww-account-tabs button[aria-pressed=true] { border-bottom-color: #9c1c4c; color: #400f26; }
+.ww-account-divider { display: flex; align-items: center; gap: 16px; margin: 24px 0; font-size: 13px; color: #8a7178; text-align: center; }
+.ww-account-divider::before, .ww-account-divider::after { content: ''; height: 1px; background: #eadce1; flex: 1; }
+.ww-account-auth-actions, .ww-account-actions, .ww-account-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; }
+.ww-account-small, .ww-account-status, .ww-account-design-date { font-size: 13px; color: #8a7178; line-height: 1.6; }
+.ww-account-status:empty, #account-page-status:empty { display: none; }
+.ww-account-status[data-error=true], #account-page-status[data-error=true] { color: #a31b43; }
+.ww-account-card { padding: 32px 0; margin: 0; border-top: 1px solid #eadce1; }
+.ww-account-card h2 { margin: 0 0 16px; }
+.ww-account-card form { max-width: 480px; }
+.ww-account-library-toolbar { display: flex; justify-content: flex-end; margin: -8px 0 32px; }
+.ww-account-create { margin: 0; }
+.ww-account-empty { max-width: 480px; margin: 48px auto 64px; text-align: center; }
+.ww-account-empty > img { display: block; margin: 0 auto 24px; }
+.ww-account-empty h2 { font-size: clamp(25px, 4vw, 32px); margin: 0 0 16px; }
+.ww-account-empty p { color: #8a7178; margin: 0 0 28px; }
+.ww-account-retention { margin: 36px 0 0; padding-top: 20px; border-top: 1px solid #eadce1; font-size: 13px; color: #8a7178; }
+.ww-account-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 40px 28px; }
+.ww-account-design { min-width: 0; }
+.ww-account-design > img { display: block; width: 100%; height: 220px; object-fit: contain; box-sizing: border-box; padding: 16px; background: #fbf5ed; border-radius: 20px; }
+.ww-account-design h2 { margin: 20px 0 6px; overflow-wrap: anywhere; font-size: 25px; }
+.ww-account-design p { margin: 4px 0; }
+.ww-account-design-date { font-size: 12px; }
+.ww-account-design .ww-account-actions { margin-top: 18px; gap: 12px; justify-content: space-between; flex-wrap: nowrap; }
+.ww-account-design-menu { position: relative; }
+.ww-account-design-menu > summary { width: 38px; height: 38px; min-width: 38px; min-height: 38px; }
+.ww-account-design-menu-panel { position: absolute; right: 0; top: calc(100% + 8px); min-width: 160px; padding: 6px; border: 1px solid #eadce1; border-radius: 14px; background: #fffdfa; box-shadow: 0 12px 30px rgba(64,15,38,.1); z-index: 5; }
+.ww-account-design-menu-panel button { display: flex; justify-content: flex-start; width: 100%; border: 0; border-radius: 9px; background: transparent; }
+.ww-account-design-menu-panel button:hover { background: #fbf2e7; }
+.ww-account-dialog { box-sizing: border-box; width: calc(100% - 32px); max-width: 480px; max-height: calc(100dvh - 32px); overflow: auto; padding: 28px; border: 1px solid #eadce1; border-radius: 24px; background: #fffdfa; color: #400f26; font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
+.ww-account-dialog::backdrop { background: #2b10266b; }
+.ww-account-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.ww-account-dialog-head h2 { margin: 0; }
+.ww-account-dialog-head button { width: 40px; padding: 0; border: 0; font-size: 24px; }
+.ww-account-controls { margin: 14px 0; font-size: 13px; gap: 12px; }
+.ww-account-controls button { min-height: 40px; font-size: 13px; }
+.ww-account-save-note { font-size: 12px; color: #8a7178; line-height: 1.5; margin: 8px 0; }
+.ww-account-main [hidden], .ww-account-dialog [hidden], .ww-account-controls[hidden] { display: none !important; }
+.ww-account-main button:disabled, .ww-account-dialog button:disabled { opacity: .55; cursor: wait; }
+.ww-account-main :focus-visible, .ww-account-dialog :focus-visible, .ww-account-controls :focus-visible { outline: 3px solid #c9819e; outline-offset: 3px; }
+@media (max-width: 560px) {
+  .ww-account-main { padding: 40px 20px 56px; }
+  .ww-account-heading { margin-bottom: 28px; }
+  .ww-account-grid { grid-template-columns: 1fr; gap: 32px; }
+  .ww-account-library-toolbar { justify-content: flex-start; }
+  .ww-account-empty { margin: 32px auto 48px; }
+  .ww-account-dialog { padding: 22px; }
+  .ww-account-design > img { height: 240px; }
+  .ww-account-design-menu > summary { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+}

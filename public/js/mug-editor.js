@@ -568,6 +568,7 @@
     }
 
     bindTouchEvents() {
+      if (!root.WolkenworteDevice?.isMobileDevice(root.navigator)) return;
       if (!root.CanvasTouch || !root.PointerEvent || !this.scroll) return;
       this.touchMedia = root.matchMedia('(max-width: 940px), (pointer: coarse)');
       this.touchController = new root.CanvasTouch({
@@ -681,7 +682,8 @@
     }
 
     updateTouchControls() {
-      const controls = !(this.mobileViewport || this.touchMedia?.matches);
+      const controls = !root.WolkenworteDevice?.isMobileDevice(root.navigator) ||
+        !(this.mobileViewport || this.touchMedia?.matches);
       for (const object of [...this.canvas.getObjects(), this.canvas.getActiveObject()].filter(Boolean)) {
         object.set({ hasControls: controls });
       }
@@ -716,6 +718,7 @@
     }
 
     setMobileViewport(enabled) {
+      if (enabled && !root.WolkenworteDevice?.isMobileDevice(root.navigator)) return false;
       this.touchController?.finish();
       if (enabled === Boolean(this.mobileViewport)) return;
       if (enabled) {

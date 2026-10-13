@@ -1158,5 +1158,15 @@
   "Wolkenworte verwendet funktionale Cookies für Sprache und die freiwillige Kontoanmeldung. Analyse- oder Werbetracker werden nicht eingesetzt.": "Wolkenworte utilise des cookies fonctionnels pour la langue et la connexion facultative. Aucun traceur d’analyse ou de publicité n’est utilisé.",
   "Bei der freiwilligen Anmeldung wird eine zufällige, geschützte Sitzungskennung in einem HttpOnly-Cookie für höchstens 30 Tage gespeichert. Eine Anmeldung zur Passwortwiederherstellung ist auf zehn Minuten beschränkt; die Kennung für die Google-Anmeldung ebenfalls. Zugangstokens bleiben verschlüsselt auf dem Server. Kontoentwürfe in diesem Browser sind an das jeweilige Konto gebunden und werden beim Abmelden oder Löschen in diesem Browser entfernt.": "La connexion facultative conserve un identifiant de session aléatoire et protégé dans un cookie HttpOnly pendant 30 jours maximum. Les sessions de récupération et identifiants Google durent dix minutes. Les jetons restent chiffrés sur le serveur. Les brouillons de ce navigateur sont liés à leur compte et sont supprimés ici à la déconnexion ou suppression.",
   "Empfänger sind Fly.io für Hosting, Supabase für Datenbank, Anmeldung und privaten Dateispeicher, Printful und Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestell- und Kontonachrichten. Bei der Google-Anmeldung ist auch Google beteiligt. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.": "Les destinataires sont Fly.io pour l’hébergement, Supabase pour la base de données, l’authentification et les fichiers privés, Printful et transporteurs pour la production et livraison, Stripe pour les paiements et taxes et Resend pour les messages de commande et compte. Google intervient aussi lors de sa connexion. Vous devez fournir les coordonnées nécessaires au traitement de la commande.",
-  "Design speichern": "Enregistrer la création"
+  "Design speichern": "Enregistrer la création",
+  "Bearbeiten": "Modifier",
+  "Bitte gebt eine gültige Drehung ein.": "Veuillez saisir une rotation valide.",
+  "Deine Ideen finden hier ihren Platz.": "Une place pour vos idées.",
+  "Gestalte dein erstes Erinnerungsstück und speichere es hier, um später weiterzumachen.": "Créez votre premier souvenir et enregistrez-le ici pour continuer plus tard.",
+  "Speicherplatz": "Espace de stockage",
+  "{{count}} von 20 Designs": "{{count}} créations sur 20",
+  "{{size}} von 100 MB": "{{size}} sur 100 Mo",
+  "Designoptionen": "Options de la création",
+  "Abmelden…": "Déconnexion…",
+  "Mein Konto – Wolkenworte": "Mon compte – Wolkenworte"
 }

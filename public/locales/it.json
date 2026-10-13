@@ -1158,5 +1158,15 @@
   "Wolkenworte verwendet funktionale Cookies für Sprache und die freiwillige Kontoanmeldung. Analyse- oder Werbetracker werden nicht eingesetzt.": "Wolkenworte usa cookie funzionali per la lingua e l’accesso facoltativo. Non usa tracciatori analitici o pubblicitari.",
   "Bei der freiwilligen Anmeldung wird eine zufällige, geschützte Sitzungskennung in einem HttpOnly-Cookie für höchstens 30 Tage gespeichert. Eine Anmeldung zur Passwortwiederherstellung ist auf zehn Minuten beschränkt; die Kennung für die Google-Anmeldung ebenfalls. Zugangstokens bleiben verschlüsselt auf dem Server. Kontoentwürfe in diesem Browser sind an das jeweilige Konto gebunden und werden beim Abmelden oder Löschen in diesem Browser entfernt.": "L’accesso facoltativo conserva un identificatore casuale e protetto in un cookie HttpOnly per massimo 30 giorni. Le sessioni di recupero password e gli identificatori Google durano dieci minuti. I token restano cifrati sul server. Le bozze di questo browser sono legate all’account e rimosse qui all’uscita o eliminazione.",
   "Empfänger sind Fly.io für Hosting, Supabase für Datenbank, Anmeldung und privaten Dateispeicher, Printful und Versanddienstleister für Herstellung und Lieferung, Stripe für Zahlung und Steuerberechnung sowie Resend für Bestell- und Kontonachrichten. Bei der Google-Anmeldung ist auch Google beteiligt. Die für die Bestellung erforderlichen Liefer- und Kontaktdaten musst du bereitstellen, damit wir die Bestellung abwickeln können.": "I destinatari sono Fly.io per l’hosting, Supabase per database, autenticazione e file privati, Printful e corrieri per produzione e consegna, Stripe per pagamenti e imposte e Resend per messaggi di ordini e account. Google partecipa anche al suo accesso. Devi fornire i dati di consegna e contatto necessari per elaborare l’ordine.",
-  "Design speichern": "Salva design"
+  "Design speichern": "Salva design",
+  "Bearbeiten": "Modifica",
+  "Bitte gebt eine gültige Drehung ein.": "Inserite una rotazione valida.",
+  "Deine Ideen finden hier ihren Platz.": "Uno spazio per le tue idee.",
+  "Gestalte dein erstes Erinnerungsstück und speichere es hier, um später weiterzumachen.": "Crea il tuo primo ricordo e salvalo qui per continuare più tardi.",
+  "Speicherplatz": "Spazio di archiviazione",
+  "{{count}} von 20 Designs": "{{count}} design su 20",
+  "{{size}} von 100 MB": "{{size}} su 100 MB",
+  "Designoptionen": "Opzioni del design",
+  "Abmelden…": "Disconnessione…",
+  "Mein Konto – Wolkenworte": "Il mio account – Wolkenworte"
 }

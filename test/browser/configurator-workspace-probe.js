@@ -33,7 +33,18 @@
     };
     try {
       if (typeof mugEditor === 'undefined' || !mugEditor) throw new Error('Wait for the configurator to load.');
-      if (innerWidth <= 620) {
+      const mobileDevice = WolkenworteDevice.isMobileDevice(navigator);
+      if (!mobileDevice) {
+        check('desktop hides mobile canvas controls at every viewport width',
+          !document.getElementById('editor-mobile-open').getClientRects().length &&
+          !document.getElementById('mobile-editor-toggle').getClientRects().length);
+        const desktopDesign = JSON.stringify(mugEditor.getDesign());
+        check('desktop rejects mobile activation without changing the artwork',
+          workspace.mobileCanvas.open(run) === false && !workspace.mobileCanvas.active &&
+          !mugEditor.mobileViewport && !mugEditor.touchController &&
+          JSON.stringify(mugEditor.getDesign()) === desktopDesign);
+      }
+      if (mobileDevice && innerWidth <= 620) {
         const studio = document.getElementById('config-studio');
         const toggle = document.getElementById('mobile-editor-toggle');
         const continueButton = document.getElementById('continue-order');

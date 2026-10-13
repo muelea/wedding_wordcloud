@@ -1844,15 +1844,15 @@
         margin-right: max(14px, var(--ww-safe-right));
         padding: 38px 0 max(50px, calc(34px + var(--ww-safe-bottom)));
       }
-      .config-studio[data-mobile-editor-expanded="false"] {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] {
         gap: 16px;
       }
-      .config-studio[data-mobile-editor-expanded="false"] .design-toolbar,
-      .config-studio[data-mobile-editor-expanded="false"] .workspace-tools,
-      .config-studio[data-mobile-editor-expanded="false"] .editor-card {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .design-toolbar,
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .workspace-tools,
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .editor-card {
         display: none;
       }
-      .config-studio[data-mobile-editor-expanded="false"] .workbench {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .workbench {
         --workspace-stage-height: clamp(245px, 70vw, 310px);
       }
       .intro { margin-bottom: 25px; }
@@ -1876,7 +1876,7 @@
       }
       .order-actions .continue-button { grid-column: 1 / -1; }
       .order-actions button { padding-inline: 10px; overflow-wrap: anywhere; }
-      .config-studio[data-mobile-editor-expanded="false"] .checkout-panel {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .checkout-panel {
         position: fixed;
         z-index: 40;
         right: max(14px, var(--ww-safe-right));
@@ -1891,27 +1891,27 @@
         background: transparent;
         box-shadow: none;
       }
-      .config-studio[data-mobile-editor-expanded="false"] .order-box,
-      .config-studio[data-mobile-editor-expanded="false"] #design-another,
-      .config-studio[data-mobile-editor-expanded="false"] #save-design {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-box,
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] #design-another,
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] #save-design {
         display: none;
       }
-      .config-studio[data-mobile-editor-expanded="false"] .order-actions {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .order-actions {
         display: block;
       }
-      .config-studio[data-mobile-editor-expanded="false"] .continue-button {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .continue-button {
         width: 100%;
         min-height: 52px;
         padding: 12px 16px;
         font-size: 14px;
         line-height: 1.3;
       }
-      .config-studio[data-mobile-editor-expanded="false"] .error-text:not(:empty) {
+      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .error-text:not(:empty) {
         padding: 2px 8px 4px;
         font-size: 12px;
         line-height: 1.4;
       }
-      .config-content[data-mobile-editor-expanded="false"] {
+      html[data-ww-mobile-device="true"] .config-content[data-mobile-editor-expanded="false"] {
         padding-bottom: calc(78px + var(--ww-safe-bottom));
       }
       .design-toolbar { padding: 14px 0 16px; }
@@ -1937,8 +1937,8 @@
         font-size: 12px;
         font-weight: 600;
       }
-      .mobile-editor-toggle { display: inline-flex; }
-      .mobile-editor-collapse { display: inline-flex; }
+      html[data-ww-mobile-device="true"] .mobile-editor-toggle { display: inline-flex; }
+      html[data-ww-mobile-device="true"] .mobile-editor-collapse { display: inline-flex; }
       .mobile-editor-toggle:focus-visible,
       .mobile-editor-collapse:focus-visible {
         outline: 3px solid rgba(156, 28, 76, .2);
@@ -1975,7 +1975,7 @@
         clip-path: none;
         white-space: normal;
       }
-      .mobile-preview-summary {
+      html[data-ww-mobile-device="true"] .mobile-preview-summary {
         min-width: 0;
         grid-column: 1 / -1;
         padding: 11px 12px;
@@ -2564,6 +2564,7 @@
     const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}`) %>;
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
     const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
+    const mobileDevice = WolkenworteDevice.isMobileDevice(navigator);
     const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
       de: <%- JSON.stringify(asset('/emoji-search/48.2/de.json')) %>,
       en: <%- JSON.stringify(asset('/emoji-search/48.2/en.json')) %>,
@@ -2845,7 +2846,7 @@
       setText(mobileEditorCollapseLabel, 'Nur Vorschau anzeigen');
       updateCartActions();
 
-      if (!mobileEditorMedia.matches) return;
+      if (!mobileDevice || !mobileEditorMedia.matches) return;
       if (!mobileEditorExpanded) {
         workspace.close(false);
         configuratorEmojiPicker?.close();
@@ -2870,6 +2871,7 @@
     }
 
     mobileEditorToggle.addEventListener('click', () => {
+      if (!mobileDevice) return;
       if (workspace.mobileCanvas?.open(mobileEditorToggle)) return;
       setMobileEditorExpanded(!mobileEditorExpanded);
     });
@@ -5057,7 +5059,7 @@
       });
       workspace.mobileCanvas = new MobileCanvasWorkspace({ document, editor: mugEditor, workspace,
         onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
-        onExit: () => { if (mobileEditorMedia.matches) setMobileEditorExpanded(false, { scroll: false }); },
+        onExit: () => { if (mobileDevice && mobileEditorMedia.matches) setMobileEditorExpanded(false, { scroll: false }); },
         onLayout: () => { refreshWorkspaceLayout(); updateProductPresentation(); renderAll(); },
       });
       overlapWarnings = new ArtworkOverlapWarnings({ document, editor: mugEditor, workspace, selectSurface,
@@ -5519,12 +5521,12 @@
         void refreshCartDrafts().catch(error => {
           console.warn('Configurator draft markers unavailable.', error);
         });
-        if (directDesign && mobileEditorMedia.matches && !query.has('cart')) {
+        if (directDesign && mobileDevice && mobileEditorMedia.matches && !query.has('cart')) {
           setMobileEditorExpanded(true, { scroll: false });
         }
         if (!requestedEdit && !query.has('cart') && draftSavedRevision < 0) scheduleDraftSave(0);
         if (query.has('cart')) {
-          if (mobileEditorMedia.matches) setMobileEditorExpanded(true, { scroll: false });
+          if (mobileDevice && mobileEditorMedia.matches) setMobileEditorExpanded(true, { scroll: false });
           requestAnimationFrame(() => orderBox.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         }
       } catch (error) {

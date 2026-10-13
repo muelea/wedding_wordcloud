@@ -98,7 +98,7 @@ function harness(extra = {}) {
     shippingChoiceDialog, shippingChoiceTitle: element(),
     shippingChoiceDescription: element(), shippingChoiceSave: element(), shippingChoiceList: element(),
     workspace: { close() {}, show: (panel) => calls.panels.push(panel) },
-    mobileEditorMedia: { matches: false }, setMobileEditorExpanded() {},
+    mobileEditorMedia: { matches: false }, mobileDevice: false, setMobileEditorExpanded() {},
     getAllSurfaceDesigns: () => ({ default: [{ text: 'sonne' }] }),
     productDesignSource: designs => ({ productKey: 'mug', orientation: 'default',
       surfaces: [{ key: 'default', area: { x: 0, y: 0, width: 1000, height: 1000 }, design: designs.default }] }),
@@ -979,7 +979,7 @@ test('a direct design opens its blank mobile editor and approves custom content 
   const expanded = [];
   const { context: page, calls } = harness({
     directDesign: true, workspaceReady: false, words: [], liveWords: [],
-    mobileEditorMedia: { matches: true },
+    mobileEditorMedia: { matches: true }, mobileDevice: true,
     setMobileEditorExpanded: value => expanded.push(value),
   });
   await page.initializeWorkspace();
@@ -989,6 +989,20 @@ test('a direct design opens its blank mobile editor and approves custom content 
   assert.equal(await page.saveCurrentDesign(page.saveDesignButton), true);
   assert.deepEqual(calls.bodies[0].words, []);
   assert.equal(calls.bodies[0].designs.default[0].text, 'sonne');
+});
+
+test('a direct design in a narrow desktop window does not auto-open mobile canvas mode', async () => {
+  let opened = 0, expanded = 0;
+  const { context: page } = harness({
+    directDesign: true, workspaceReady: false, words: [], liveWords: [],
+    mobileEditorMedia: { matches: true }, mobileDevice: false,
+    workspace: { mobileCanvas: { open() { opened++; } } },
+    setMobileEditorExpanded: () => { expanded++; },
+  });
+  await page.initializeWorkspace();
+  assert.equal(page.workspaceReady, true);
+  assert.equal(opened, 0);
+  assert.equal(expanded, 0);
 });
 
 test('loading a saved design uses a matching local working copy before its immutable server snapshot', async () => {

@@ -18,7 +18,7 @@
       editor.onViewChange = zoom => { document.getElementById('mobile-canvas-fit').textContent = `${Math.round(zoom * 100)} %`; };
       this.dialog.addEventListener('cancel', event => {
         event.preventDefault();
-        if (this.textSession) this.closeTextEditor();
+        if (this.keyboardSession) this.closeKeyboardEditor({ cancel: true });
         else if (this.picker) this.closePicker();
         else this.close();
       });
@@ -70,20 +70,23 @@
       this.dialog.querySelectorAll('[data-canvas-tool]').forEach(button => button.addEventListener('click', () => this.chooseTool(button.dataset.canvasTool)));
       document.getElementById('mobile-canvas-search').addEventListener('input', () => this.renderElements());
       document.getElementById('editor-text').addEventListener('click', () => { if (this.active) this.openTextEditor(); });
-      document.getElementById('mobile-canvas-text-cancel').addEventListener('click', () => this.closeTextEditor());
-      document.getElementById('mobile-canvas-text-editor').addEventListener('submit', async event => {
+      for (const [id, kind] of [['editor-angle', 'rotation'], ['editor-font-size', 'font-size']]) {
+        const field = document.getElementById(id);
+        for (const event of ['focus', 'click']) field.addEventListener(event, () => this.openNumericEditor(kind));
+      }
+      document.getElementById('mobile-canvas-text-cancel').addEventListener('click', () => this.closeKeyboardEditor({ cancel: true }));
+      document.getElementById('mobile-canvas-text-editor').addEventListener('submit', event => {
         event.preventDefault();
-        if (!this.textSession || this.textSession.saving) return;
-        const session = this.textSession;
-        session.saving = true;
-        const done = document.getElementById('mobile-canvas-text-done');
-        done.disabled = true;
-        try {
-          await editor.applyTextChange(session.object, document.getElementById('mobile-canvas-text').value, { finalize: true, record: true });
-          editor.updateSelectionPanel();
-          this.closeTextEditor();
-        } catch { editor.setFeedback('Das Emoji konnte nicht geladen werden.'); session.saving = false; }
-        finally { done.disabled = false; }
+        this.saveKeyboardEditor();
+      });
+      document.getElementById('mobile-canvas-text').addEventListener('input', () => {
+        this.setKeyboardError();
+        this.updateKeyboardSearch();
+      });
+      document.getElementById('mobile-canvas-text').addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault(); event.stopPropagation();
+        this.closeKeyboardEditor({ cancel: true });
       });
       this.media.addEventListener('change', () => { if (!this.media.matches) this.close(); });
       const resize = () => {
@@ -93,14 +96,20 @@
         // A viewport/orientation change ends the current contact sequence before
         // changing screen-to-print coordinates, keeping its single Undo entry.
         editor.touchController?.finish();
-        if (!this.textSession) requestAnimationFrame(() => this.onLayout());
+        if (!this.keyboardSession) requestAnimationFrame(() => this.onLayout());
       };
       root.addEventListener('resize', resize, { passive: true });
       root.visualViewport?.addEventListener('resize', resize, { passive: true });
       root.visualViewport?.addEventListener('scroll', resize, { passive: true });
       root.addEventListener('orientationchange', resize, { passive: true });
       root.screen?.orientation?.addEventListener('change', resize);
-      this.dialog.addEventListener('focusin', () => this.syncViewport());
+      this.dialog.addEventListener('focusin', event => {
+        if (this.active && !this.keyboardSession) {
+          if (event.target.id === 'mobile-canvas-search') this.openSearchEditor('elements', event.target);
+          else if (event.target === this.emojiPicker?.picker.searchInput) this.openSearchEditor('emoji', event.target);
+        }
+        this.syncViewport();
+      });
       this.dialog.addEventListener('focusout', () => requestAnimationFrame(() => this.syncViewport()));
       if (root.ResizeObserver) this.viewportObserver = new root.ResizeObserver(resize);
     }
@@ -113,7 +122,7 @@
     }
 
     open(invoker) {
-      if (!this.media.matches || this.active) return false;
+      if (!root.WolkenworteDevice?.isMobileDevice(root.navigator) || !this.media.matches || this.active) return false;
       this.workspace.close(false);
       this.editor.closeFontPicker();
       this.editor.closeIconPicker();
@@ -136,8 +145,8 @@
       for (const group of ['selection', 'layout', 'reset']) {
         this.mount(this.document.querySelector(`.editor-tools-${group}`), get('mobile-canvas-design-actions'));
       }
-      this.textReadOnly = get('editor-text').readOnly;
-      get('editor-text').readOnly = true;
+      this.keyboardFields = ['editor-text', 'editor-angle', 'editor-font-size'].map(id => ({ field: get(id), readOnly: get(id).readOnly }));
+      for (const { field } of this.keyboardFields) field.readOnly = true;
       this.document.documentElement.classList.add('mobile-canvas-open');
       this.dialog.showModal();
       this.viewportObserver?.observe(this.dialog.querySelector('.mobile-canvas-body'));
@@ -152,7 +161,7 @@
 
     close() {
       if (!this.active) return;
-      this.closeTextEditor();
+      this.closeKeyboardEditor();
       this.closeEmojiPicker();
       this.editor.touchController?.finish();
       this.editor.closeFontPicker();
@@ -169,7 +178,7 @@
       this.editor.mobileMultiSelect = false;
       for (const { node, anchor } of this.mounts.reverse()) { anchor.replaceWith(node); }
       this.mounts = [];
-      this.document.getElementById('editor-text').readOnly = this.textReadOnly;
+      for (const { field, readOnly } of this.keyboardFields) field.readOnly = readOnly;
       this.editor.setMobileViewport(false);
       this.editor.mobileNavigation = false;
       this.document.documentElement.classList.remove('mobile-canvas-open');
@@ -202,6 +211,7 @@
     }
 
     chooseTool(tool) {
+      this.closeKeyboardEditor();
       const previous = this.tool;
       if (tool !== 'emoji') this.closeEmojiPicker();
       if (tool !== 'picker') this.closePicker();
@@ -274,12 +284,57 @@
       if (!this.active) return false;
       const objects = this.editor.selectedObjects();
       if (objects.length !== 1 || objects[0].editorKind !== 'text') return false;
-      if (this.textSession) return true;
-      this.chooseView('canvas');
-      this.textSession = { object: objects[0] };
-      this.dialog.dataset.textEditing = 'true';
+      return this.openKeyboardEditor({ kind: 'word', object: objects[0], label: 'Wort bearbeiten',
+        value: this.editor.objectText(objects[0]) });
+    }
+
+    openNumericEditor(kind) {
+      if (!this.active) return false;
+      const source = this.document.getElementById(kind === 'rotation' ? 'editor-angle' : 'editor-font-size');
+      if (source.disabled || !this.editor.selectedObjects().length) return false;
+      return this.openKeyboardEditor({ kind, source, value: source.value,
+        label: kind === 'rotation' ? 'Drehung' : 'Schriftgröße', unit: kind === 'rotation' ? '°' : 'pt' });
+    }
+
+    openSearchEditor(kind, source) {
+      const results = kind === 'emoji' ? this.emojiPicker?.picker.panel : this.document.getElementById('mobile-canvas-element-list');
+      return this.openKeyboardEditor({ kind, source, results, value: source.value,
+        label: kind === 'emoji' ? 'Emojis suchen' : 'Element suchen', search: true });
+    }
+
+    openKeyboardEditor(session) {
+      if (!this.active) return false;
+      if (this.keyboardSession) return this.keyboardSession.kind === session.kind;
+      this.editor.touchController?.finish();
+      session.selectedIds = this.editor.selectedObjects().map(object => object.editorId);
+      session.originalValue = session.value;
+      this.keyboardSession = session;
+      this.dialog.dataset.entry = session.kind;
+      this.dialog.toggleAttribute('data-entry-search', Boolean(session.search));
       const input = this.document.getElementById('mobile-canvas-text');
-      input.value = this.editor.objectText(objects[0]);
+      input.type = session.search ? 'search' : 'text';
+      input.inputMode = session.unit ? 'decimal' : 'text';
+      input.spellcheck = session.kind === 'word';
+      input.autocapitalize = session.kind === 'word' ? 'sentences' : 'none';
+      input.maxLength = session.unit ? 32 : 1024;
+      input.value = session.value;
+      const form = this.document.getElementById('mobile-canvas-text-editor');
+      if (root.WolkenworteI18n) root.WolkenworteI18n.setAttribute(form, 'aria-label', session.label);
+      else form.setAttribute('aria-label', session.label);
+      setText(this.document.getElementById('mobile-canvas-entry-label'), session.label);
+      const unit = this.document.getElementById('mobile-canvas-entry-unit');
+      unit.textContent = session.unit || '';
+      unit.hidden = !session.unit;
+      this.setKeyboardError();
+      this.document.getElementById('mobile-canvas-text-done').disabled = false;
+      this.document.getElementById('mobile-canvas-text-cancel').disabled = false;
+      const host = this.document.getElementById('mobile-canvas-keyboard-results');
+      host.hidden = !session.search;
+      if (session.results) {
+        session.anchor = this.document.createComment('keyboard results return');
+        session.results.before(session.anchor);
+        host.append(session.results);
+      }
       this.document.getElementById('mobile-canvas-text-editor').hidden = false;
       this.syncViewport();
       input.focus({ preventScroll: true });
@@ -287,11 +342,70 @@
       return true;
     }
 
-    closeTextEditor() {
-      if (!this.textSession) return;
+    setKeyboardError(message = '') {
+      const error = this.document.getElementById('mobile-canvas-entry-error');
+      error.textContent = message;
+      error.hidden = !message;
+      this.document.getElementById('mobile-canvas-entry-label').hidden = Boolean(message);
+      this.document.getElementById('mobile-canvas-text').setAttribute('aria-invalid', String(Boolean(message)));
+    }
+
+    updateKeyboardSearch(value = this.document.getElementById('mobile-canvas-text').value) {
+      const session = this.keyboardSession;
+      if (!session?.search) return;
+      session.source.value = value;
+      session.source.dispatchEvent(new this.document.defaultView.Event('input', { bubbles: true }));
+    }
+
+    async saveKeyboardEditor() {
+      const session = this.keyboardSession;
+      if (!session || session.saving) return false;
+      if (session.search) { this.closeKeyboardEditor(); return true; }
+      const value = this.document.getElementById('mobile-canvas-text').value;
+      const number = value.trim() ? Number(value.replace(',', '.')) : NaN;
+      if (session.unit && (!Number.isFinite(number) || (session.kind === 'font-size' && number < 1))) {
+        this.setKeyboardError(t(session.kind === 'rotation' ? 'Bitte gebt eine gültige Drehung ein.' : 'Bitte gebt eine gültige Schriftgröße ein.'));
+        return false;
+      }
+      // Apply only to the selection that opened the field, including mixed groups.
+      if (JSON.stringify(session.selectedIds) !== JSON.stringify(this.editor.selectedObjects().map(object => object.editorId))) {
+        this.closeKeyboardEditor(); return false;
+      }
+      session.saving = true;
+      const done = this.document.getElementById('mobile-canvas-text-done');
+      const cancel = this.document.getElementById('mobile-canvas-text-cancel');
+      done.disabled = cancel.disabled = true;
+      try {
+        if (session.kind === 'word') await this.editor.applyTextChange(session.object, value, { finalize: true, record: true });
+        else if (session.kind === 'rotation') this.editor.setActiveAngle(number);
+        else if (!this.editor.setActiveFontSize(number) &&
+          session.source.value !== this.editor.displayPointSize(number)) {
+          this.setKeyboardError(this.editor.feedback.textContent || t('Diese Schriftgröße passt nicht auf die aktuelle Druckfläche.'));
+          return false;
+        }
+        if (this.keyboardSession !== session) return true;
+        this.editor.updateSelectionPanel();
+        this.closeKeyboardEditor();
+        return true;
+      } catch {
+        if (this.keyboardSession === session) this.setKeyboardError(t('Das Emoji konnte nicht geladen werden.'));
+        return false;
+      } finally {
+        session.saving = false;
+        if (!this.keyboardSession || this.keyboardSession === session) done.disabled = cancel.disabled = false;
+      }
+    }
+
+    closeKeyboardEditor({ cancel = false } = {}) {
+      const session = this.keyboardSession;
+      if (!session || (cancel && session.saving)) return;
+      if (cancel && session.search) this.updateKeyboardSearch(session.originalValue);
       this.document.getElementById('mobile-canvas-text').blur();
-      this.textSession = null;
-      delete this.dialog.dataset.textEditing;
+      if (session.anchor) session.anchor.replaceWith(session.results);
+      this.keyboardSession = null;
+      delete this.dialog.dataset.entry;
+      this.dialog.removeAttribute('data-entry-search');
+      this.document.getElementById('mobile-canvas-keyboard-results').hidden = true;
       this.document.getElementById('mobile-canvas-text-editor').hidden = true;
       this.syncViewport();
       requestAnimationFrame(() => { if (this.active) this.onLayout(); });
@@ -303,13 +417,14 @@
       // Ordinary editing uses CSS dynamic viewport units. Safari can briefly
       // retain the previous orientation's visualViewport values; use them only
       // for an active keyboard field, including its scroll offset.
-      const keyboard = Boolean(this.textSession || (this.dialog.contains(field) && !field.readOnly &&
+      const keyboard = Boolean(this.keyboardSession || (this.dialog.contains(field) && !field.readOnly &&
         field.matches('textarea, input[type="text"], input[type="search"], input[type="number"]')));
       this.dialog.toggleAttribute('data-keyboard', keyboard);
       this.dialog.style.setProperty('--mobile-viewport-top', `${viewport?.offsetTop || 0}px`);
       this.dialog.style.setProperty('--mobile-viewport-left', `${viewport?.offsetLeft || 0}px`);
       this.dialog.style.setProperty('--mobile-viewport-width', `${viewport?.width || root.innerWidth}px`);
       this.dialog.style.setProperty('--mobile-viewport-height', `${viewport?.height || root.innerHeight}px`);
+      if (this.keyboardSession?.kind === 'emoji') requestAnimationFrame(() => this.emojiPicker?.picker.renderVirtualWindow({ force: true }));
     }
 
     openEmojiPicker(picker) {
@@ -323,6 +438,7 @@
 
     closeEmojiPicker() {
       if (!this.emojiPicker) return;
+      this.closeKeyboardEditor();
       const { picker, anchor } = this.emojiPicker;
       this.emojiPicker = null;
       picker.close();

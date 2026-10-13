@@ -1,0 +1,8 @@
+<nav class="ww-header-account-menu" data-account-menu data-account-session-url="<%= asset('/js/configurator-session.js') %>" aria-label="<%= t('Meine Designs') %>">
+  <a class="ww-header-menu-item" href="/konto" data-account-library-link>Meine Designs</a>
+  <div data-account-menu-signed-in hidden>
+    <a class="ww-header-menu-item" href="/konto/einstellungen">Mein Konto</a>
+    <button class="ww-header-menu-item" type="button" data-account-menu-logout>Abmelden</button>
+  </div>
+  <p class="ww-header-menu-status" data-account-menu-status role="status" aria-live="polite"></p>
+</nav>

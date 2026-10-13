@@ -30,7 +30,7 @@
   <div class="mobile-canvas-body">
     <nav class="mobile-canvas-rail" aria-label="Canvas-Werkzeuge">
       <div id="mobile-canvas-overlap-rail"></div>
-      <% for (const tool of [{ key:'move', label:'Bewegen', icon:'arrow-right' },
+      <% for (const tool of [{ key:'move', label:'Bearbeiten', icon:'arrow-right' },
         { key:'view', label:'Zoom & Ansicht', icon:'zoom-in' }, { key:'properties', label:'Anpassen', icon:'sliders-horizontal' },
         { key:'add', label:'Neu', icon:'plus' }, { key:'more', label:'Mehr', icon:'ellipsis' }]) { %>
       <button type="button" data-canvas-tool="<%= tool.key %>" aria-pressed="<%= tool.key === 'move' %>">
@@ -69,9 +69,16 @@
     </aside>
   </div>
   <form id="mobile-canvas-text-editor" aria-label="Wort bearbeiten" hidden>
-    <label class="editor-field-label-text" for="mobile-canvas-text">Wort bearbeiten</label>
-    <input id="mobile-canvas-text" type="text" maxlength="1024" autocomplete="off" enterkeyhint="done" />
+    <label class="mobile-canvas-entry-field" for="mobile-canvas-text">
+      <span id="mobile-canvas-entry-label">Wort bearbeiten</span>
+      <span id="mobile-canvas-entry-error" role="alert" hidden></span>
+      <span class="mobile-canvas-entry-control">
+        <input id="mobile-canvas-text" type="text" maxlength="1024" autocomplete="off" enterkeyhint="done" aria-describedby="mobile-canvas-entry-unit mobile-canvas-entry-error" />
+        <span id="mobile-canvas-entry-unit" hidden></span>
+      </span>
+    </label>
     <button type="button" id="mobile-canvas-text-cancel">Abbrechen</button>
     <button type="submit" id="mobile-canvas-text-done">Fertig</button>
   </form>
+  <div id="mobile-canvas-keyboard-results" aria-label="Suchergebnisse" hidden></div>
 </dialog>
