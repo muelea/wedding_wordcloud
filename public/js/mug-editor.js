@@ -2351,7 +2351,6 @@
       };
 
       (Array.isArray(this.palette) ? this.palette : []).forEach(addColor);
-      this.canvas.getObjects().forEach((object) => addColor(this.getObjectColor(object)));
       return colors;
     }
 

@@ -122,6 +122,10 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   assert.equal(customerCalls[0][1].idempotencyKey, 'wolkenworte-test-quote-quote1-customer');
   assert.deepEqual(sessionCalls[0], sessionCalls[1], 'recovered Session uses the original idempotent payload');
   const [params, options] = sessionCalls[1];
+  assert.deepEqual(params.allowed_payment_method_types, ['card', 'paypal']);
+  assert.equal(params.payment_method_types, undefined, 'Stripe filters to active eligible methods');
+  assert.equal(params.payment_intent_data.shipping, undefined,
+    'Checkout automatic tax cannot be combined with PaymentIntent shipping');
   assert.equal(params.customer, 'cus_testtax');
   assert.deepEqual(params.automatic_tax, { enabled: true });
   assert.deepEqual(params.adaptive_pricing, { enabled: false }, 'preserve the trusted EUR quote currency');
@@ -143,6 +147,21 @@ test('hosted Checkout pins shipping, separates net products and shipping, and re
   );
   assert.equal(options.idempotencyKey, order.stripe_idempotency_key);
   assert.equal(params.payment_intent_data.metadata.orderId, '42');
+  const { allowedPaymentMethodTypes, ...legacyRequest } = request;
+  await integration.createCheckoutSession({
+    order: { ...order, stripe_idempotency_key: 'legacy-card-key' },
+    ...legacyRequest, customerId: persistedCustomer, persistCustomer,
+  });
+  const [legacyParams] = sessionCalls[2];
+  assert.deepEqual(legacyParams.payment_method_types, ['card']);
+  assert.equal(legacyParams.allowed_payment_method_types, undefined);
+  assert.deepEqual(legacyParams.payment_intent_data, { metadata: params.metadata },
+    'an older persisted order retains its original card-only idempotent payload');
+  await assert.rejects(integration.createCheckoutSession({
+    order, ...request, allowedPaymentMethodTypes: ['card', 'paypal', 'klarna'],
+    customerId: persistedCustomer, persistCustomer,
+  }), (error) => error.code === 'STRIPE_INVALID_CHECKOUT_REQUEST');
+  assert.equal(sessionCalls.length, 3, 'unreviewed payment methods never reach Stripe');
   returnIncompleteTax = true;
   await assert.rejects(
     integration.createCheckoutSession({

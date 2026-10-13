@@ -2142,7 +2142,7 @@
           </div>
 
           <div class="design-toolbar-controls">
-            <button class="selected-product toolbar-product" id="change-product" type="button" aria-label="Produkt ändern" aria-haspopup="dialog" aria-controls="product-dialog">
+            <button class="selected-product toolbar-product" id="change-product" type="button" aria-label="Produkt ändern" aria-haspopup="dialog" aria-expanded="false" aria-controls="product-dialog">
               <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
               <span class="selected-product-copy">
                 <strong id="selected-product-name">Weiße Tasse</strong>
@@ -2498,8 +2498,9 @@
   <dialog class="product-dialog ww-mobile-dialog" id="product-dialog" aria-labelledby="product-dialog-title" aria-describedby="product-dialog-description" tabindex="-1">
     <div class="product-dialog-shell">
       <div class="product-dialog-head">
+        <button class="product-dialog-close" id="product-dialog-back" type="button" aria-label="Zurück" hidden>←</button>
         <div>
-          <h2 id="product-dialog-title">Produkt wählen</h2>
+          <h2 id="product-dialog-title" tabindex="-1">Produkt wählen</h2>
         </div>
         <button class="product-dialog-close" id="product-dialog-close" type="button" aria-label="Produktwahl schließen">×</button>
       </div>
@@ -3619,6 +3620,10 @@
       }
       const palette = selectedThemeOption();
       if (palette) {
+        if (mugEditor) {
+          mugEditor.palette = getPalette(palette.key).colors;
+          mugEditor.updateSelectionPanel();
+        }
         setText(selectedThemeName, palette.label);
         setText(mobileSelectedThemeName, palette.label);
         renderPaletteStrip(selectedThemeSwatches, getPalette(palette.key).colors);
@@ -4488,7 +4493,7 @@
       const dialogProduct = dialogSelectedProduct();
       const dialogFamilyKey = dialogSelectedFamilyKey();
       productOptions.querySelectorAll('.product-option').forEach((option) => {
-        if (productDialog.dataset.presentation === 'embedded') {
+        if (productPickerIsStepped()) {
           option.setAttribute('role', 'button');
           option.removeAttribute('aria-checked');
           option.tabIndex = 0;
@@ -4537,11 +4542,15 @@
     }
 
     function closeProductDialog() {
-      if (productDialog.open) productDialog.close();
+      if (workspace.active?.panel === productDialog) workspace.close();
+      else if (productDialog.open) productDialog.close();
       workspace.mobileCanvas?.restorePicker(productDialog);
     }
 
     function openProductDialog() {
+      workspace.close(false);
+      const popover = !mobileDevice && typeof productDialog.showPopover === 'function';
+      productDialog.dataset.presentation = workspace.mobileCanvas?.active ? 'embedded' : popover ? 'popover' : 'modal';
       setText(document.getElementById('product-dialog-title'), startingAnotherProduct
         ? 'Weiteres Produkt mit diesem Design gestalten' : 'Produkt für dieses Design ändern');
       setText(document.getElementById('product-dialog-description'), startingAnotherProduct
@@ -4556,11 +4565,14 @@
       buildProductOptions();
       if (workspace.mobileCanvas?.active) {
         workspace.mobileCanvas.showPicker(productDialog, closeProductDialog, () => {
-          if (productDialog.dataset.mobileStep === 'variants') showMobileProductStep('families');
+          if (productDialog.dataset.mobileStep === 'variants') showProductStep('families');
           else closeProductDialog();
         });
-        showMobileProductStep('families');
+        showProductStep('families');
         if (!productDialog.open) productDialog.show();
+      } else if (popover) {
+        showProductStep('families');
+        workspace.show(productDialog, startingAnotherProduct ? designAnotherButton : changeProductButton, true);
       } else if (!productDialog.open) productDialog.showModal();
       updateProductOptionSelection();
       requestAnimationFrame(() => {
@@ -4573,23 +4585,30 @@
       pendingFamilyKey = null;
     }
 
-    function showMobileProductStep(step) {
-      if (productDialog.dataset.presentation !== 'embedded') return;
+    function productPickerIsStepped() {
+      return ['embedded', 'popover'].includes(productDialog.dataset.presentation);
+    }
+
+    function showProductStep(step) {
+      if (!productPickerIsStepped()) return;
+      const popover = productDialog.dataset.presentation === 'popover';
       productDialog.dataset.mobileStep = step;
       productOptions.setAttribute('role', 'group');
       productOptions.hidden = step !== 'families';
       variantPanel.hidden = step !== 'variants';
-      productDialog.querySelector('.product-dialog-footer').hidden = step !== 'variants';
+      productDialog.querySelector('.product-dialog-footer').hidden = popover || step !== 'variants';
+      document.getElementById('product-dialog-back').hidden = !popover || step !== 'variants';
       const body = productDialog.querySelector('.product-dialog-body');
       body.scrollTop = 0;
       const title = step === 'variants' ? '{{item}} wählen' : startingAnotherProduct
         ? 'Weiteres Produkt gestalten' : 'Produkt für dieses Design ändern';
-      setText(document.getElementById('mobile-canvas-panel-title'), title, {
+      setText(document.getElementById(popover ? 'product-dialog-title' : 'mobile-canvas-panel-title'), title, {
         item: t(productFamilies.find(family => family.key === pendingFamilyKey)?.label || 'Ausführung'),
       });
       requestAnimationFrame(() => {
+        if (popover) workspace.positionChooser();
         (step === 'variants' ? variantOptions.querySelector('[aria-checked="true"]')
-          : productOptions.querySelector('[aria-checked="true"]'))?.focus({ preventScroll: true });
+          : productOptions.querySelector(`[data-family-key="${dialogSelectedFamilyKey()}"]`))?.focus({ preventScroll: true });
       });
     }
 
@@ -4624,16 +4643,34 @@
     }
 
     changeProductButton.addEventListener('click', () => {
+      if (productDialog.dataset.presentation === 'popover' && productDialog.matches(':popover-open')) {
+        closeProductDialog(); return;
+      }
       startingAnotherProduct = false;
       openProductDialog();
     });
     productDialogClose.addEventListener('click', closeProductDialog);
+    document.getElementById('product-dialog-back').addEventListener('click', () => showProductStep('families'));
     productDialogDone.addEventListener('click', confirmProductDialog);
     productDialog.addEventListener('click', (event) => {
-      if (event.target === productDialog) closeProductDialog();
+      if (event.target === productDialog && productDialog.dataset.presentation === 'modal') closeProductDialog();
     });
-    productDialog.addEventListener('close', () => {
+    productDialog.addEventListener('cancel', event => { event.preventDefault(); closeProductDialog(); });
+    productDialog.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && productDialog.dataset.presentation === 'popover') {
+        event.preventDefault(); closeProductDialog();
+      }
+    });
+    productDialog.addEventListener('toggle', event => {
+      if (event.newState === 'closed' && productDialog.dataset.presentation === 'popover' && !productDialog.matches(':popover-open')) {
+        if (workspace.active?.panel === productDialog) workspace.finishClose(false);
+        finishProductDialogClose(false);
+      }
+    });
+    productDialog.addEventListener('close', () => finishProductDialogClose());
+    function finishProductDialogClose(restoreFocus = true) {
       workspace.mobileCanvas?.restorePicker(productDialog);
+      document.getElementById('product-dialog-back').hidden = true;
       productOptions.hidden = false;
       productOptions.setAttribute('role', 'radiogroup');
       productDialog.querySelector('.product-dialog-footer').hidden = false;
@@ -4644,8 +4681,8 @@
       }
       productDialogCloseReason = 'cancel';
       startingAnotherProduct = false;
-      changeProductButton.focus({ preventScroll: true });
-    });
+      if (restoreFocus) changeProductButton.focus({ preventScroll: true });
+    }
 
     function selectedProductSlot() {
       const view = productView();
@@ -4789,17 +4826,17 @@
       if (nextProduct) pendingProductKey = nextProduct.key;
       buildVariantOptions();
       updateProductOptionSelection();
-      showMobileProductStep('variants');
+      showProductStep('variants');
     }
 
     function buildVariantOptions() {
       const activeFamilyKey = dialogSelectedFamilyKey();
       const family = productFamilies.find((candidate) => candidate.key === activeFamilyKey);
       const candidates = productsInFamily(activeFamilyKey);
-      const embedded = productDialog.dataset.presentation === 'embedded';
-      variantPanel.hidden = embedded ? productDialog.dataset.mobileStep !== 'variants' : candidates.length < 2;
+      const stepped = productPickerIsStepped();
+      variantPanel.hidden = stepped ? productDialog.dataset.mobileStep !== 'variants' : candidates.length < 2;
       variantOptions.replaceChildren();
-      if (!embedded && candidates.length < 2) return;
+      if (!stepped && candidates.length < 2) return;
       setText(document.getElementById('variant-title'), '{{item}} wählen', {
         item: t(family?.label || 'Ausführung'),
       });
@@ -4810,7 +4847,10 @@
         option.dataset.productKey = candidate.key;
         option.setAttribute('role', 'radio');
         option.setAttribute('aria-label', `${t(candidate.displayName)}, ${t(candidate.size.label)}`);
-        option.addEventListener('click', () => selectDialogProduct(candidate));
+        option.addEventListener('click', () => {
+          selectDialogProduct(candidate);
+          if (productDialog.dataset.presentation === 'popover') void confirmProductDialog();
+        });
         option.addEventListener('keydown', (event) => {
           if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
           const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
@@ -4850,7 +4890,7 @@
           const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
           const nextIndex = (familyIndex + direction + productFamilies.length) % productFamilies.length;
           const nextOption = productOptions.querySelectorAll('.product-option')[nextIndex];
-          selectDialogFamily(productFamilies[nextIndex]);
+          if (!productPickerIsStepped()) selectDialogFamily(productFamilies[nextIndex]);
           nextOption?.focus();
           event.preventDefault();
         });

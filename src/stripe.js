@@ -130,6 +130,9 @@ function freezeCheckoutRequest({
     throw new Error('Stripe Tax checkout quantity mismatch');
   }
   return {
+    // Persist the integration policy with the order. Older recoverable orders
+    // retain their original card-only payload and Stripe idempotency key.
+    allowedPaymentMethodTypes: ['card', 'paypal'],
     shipping,
     basket,
     products: frozenProducts,
@@ -159,9 +162,20 @@ async function createCheckoutSession({
   basket = null,
   customerId = null,
   persistCustomer = null,
+  allowedPaymentMethodTypes = null,
 }) {
   const client = getClient();
   if (!client) throw notConfiguredError();
+
+  if (allowedPaymentMethodTypes !== null && (
+    !Array.isArray(allowedPaymentMethodTypes) ||
+    allowedPaymentMethodTypes.length !== 2 ||
+    allowedPaymentMethodTypes[0] !== 'card' || allowedPaymentMethodTypes[1] !== 'paypal'
+  )) {
+    const error = new Error('Die gespeicherten Zahlungsmethoden sind ungültig.');
+    error.code = 'STRIPE_INVALID_CHECKOUT_REQUEST';
+    throw error;
+  }
 
   const totalCents = Number(order?.total_cents);
   const currency = String(order?.currency || '').toLowerCase();
@@ -231,7 +245,12 @@ async function createCheckoutSession({
     session = await client.checkout.sessions.create({
       mode: 'payment',
       locale: checkoutLocale,
-      payment_method_types: ['card'],
+      // Filter Dashboard-managed methods to the supported card/PayPal flow.
+      // Inactive or ineligible PayPal must not break card Checkout. Absence of
+      // the frozen policy identifies an older order whose retry stays exact.
+      ...(allowedPaymentMethodTypes
+        ? { allowed_payment_method_types: allowedPaymentMethodTypes }
+        : { payment_method_types: ['card'] }),
       client_reference_id: String(order.id),
       customer: customerId,
       automatic_tax: { enabled: true },

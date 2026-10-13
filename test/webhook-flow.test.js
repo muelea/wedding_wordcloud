@@ -21,7 +21,7 @@ async function saveConfiguration(baseUrl, slug) {
   return response.json();
 }
 
-test('Stripe Tax payment stores the final gross amount atomically in the order and confirmation email', async (t) => {
+async function verifyTaxPayment(t, paymentMethod) {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
   process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_tax_webhook';
@@ -74,12 +74,16 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
   const db = require('../src/db');
   const order = await db.getOrderBySessionId('cs_test_tax_webhook');
   assert.equal(JSON.parse(order.checkout_request_json).customerId, 'cus_taxwebhook');
+  assert.deepEqual(JSON.parse(order.checkout_request_json).allowedPaymentMethodTypes, ['card', 'paypal']);
+  assert.deepEqual(sessionParams.allowed_payment_method_types, ['card', 'paypal']);
+  assert.equal(sessionParams.payment_intent_data.shipping, undefined);
   const taxCents = Math.round(quote.itemsCents * 0.19) + Math.round(quote.shippingCents * 0.19);
   assert.equal(JSON.parse(order.checkout_request_json).expectedTaxCents, taxCents);
   assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents + taxCents);
   const session = {
     id: 'cs_test_tax_webhook', customer: 'cus_taxwebhook',
-    currency: 'eur', payment_status: 'paid', payment_intent: 'pi_test_tax_webhook',
+    currency: 'eur', payment_status: 'paid', payment_intent: `pi_test_tax_webhook_${paymentMethod}`,
+    payment_method_types: ['card', 'paypal'],
     amount_subtotal: quote.itemsCents, amount_total: quote.totalCents + taxCents,
     total_details: { amount_tax: taxCents, amount_discount: 0 },
     shipping_cost: {
@@ -89,8 +93,8 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
     customer_details: { email: 'buyer@example.test', address: { country: 'US' } },
     metadata: sessionParams.metadata,
   };
-  const send = async (object, id) => {
-    const payload = JSON.stringify({ id, type: 'checkout.session.completed', livemode: false, data: { object } });
+  const send = async (object, id, type = 'checkout.session.completed') => {
+    const payload = JSON.stringify({ id, type, livemode: false, data: { object } });
     const signature = sdk.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_TEST_LOCAL_WEBHOOK_SECRET });
     const response = await fetch(`${baseUrl}/webhook/stripe`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'stripe-signature': signature }, body: payload,
@@ -98,6 +102,9 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
     assert.equal(response.status, 200);
     return response.json();
   };
+  assert.equal((await send({ ...session, payment_status: 'unpaid' }, 'evt_tax_pending')).ignored, 'order_mismatch');
+  assert.equal((await db.getOrderById(order.id)).status, 'checkout_pending');
+  assert.equal((await db.getEmailJobsForOrder(order.id)).length, 0);
   const wrongSession = { ...session, amount_subtotal: quote.itemsCents - 1, amount_total: session.amount_total - 1 };
   assert.equal((await send(wrongSession, 'evt_tax_invalid')).ignored, 'order_mismatch');
   assert.equal((await db.getOrderById(order.id)).status, 'checkout_pending');
@@ -107,9 +114,12 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
     stripeSessionId: session.id, paymentIntentId: session.payment_intent, livemode: false,
     amountTotal: wrongSession.amount_total, currency: 'eur', checkoutSession: wrongSession,
   }), /does not match trusted/);
-  assert.equal((await send(session, 'evt_tax_valid')).duplicate, false);
+  const paidEventType = paymentMethod === 'paypal'
+    ? 'checkout.session.async_payment_succeeded' : 'checkout.session.completed';
+  assert.equal((await send(session, 'evt_tax_valid', paidEventType)).duplicate, false);
   assert.equal((await send(session, 'evt_tax_valid')).duplicate, true);
   assert.equal((await send(session, 'evt_tax_valid_later')).duplicate, true);
+  assert.equal((await send(session, 'evt_tax_delayed', 'checkout.session.async_payment_succeeded')).duplicate, true);
   const paid = await db.getOrderById(order.id);
   assert.equal(paid.status, 'paid_test');
   assert.equal(paid.fulfillment_mode, 'mock');
@@ -128,7 +138,23 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
   },
     'evt_tax_changed_after_payment')).ignored, 'order_mismatch');
   assert.equal((await db.getOrderById(order.id)).total_cents, quote.totalCents + taxCents);
-});
+  if (paymentMethod === 'paypal') {
+    const charge = {
+      id: 'ch_test_paypal_refund', payment_intent: session.payment_intent,
+      currency: 'eur', amount: session.amount_total, amount_refunded: 500,
+      payment_method_details: { type: 'paypal', paypal: { payer_email: 'buyer@example.test' } },
+    };
+    await send(charge, 'evt_paypal_refund', 'charge.refunded');
+    await send(charge, 'evt_paypal_refund_replay', 'charge.refunded');
+    const refundJobs = (await db.getEmailJobsForOrder(order.id)).filter(job => job.kind === 'refund_confirmation');
+    assert.equal(refundJobs.length, 1, 'PayPal refunds reuse the cumulative Stripe refund dedupe');
+    assert.match(refundJobs[0].text_body, /5,00\s*€/);
+  }
+}
+for (const paymentMethod of ['card', 'paypal']) {
+  test(`${paymentMethod} Stripe Tax payment stores the final gross amount atomically in the order and confirmation email`,
+    (t) => verifyTaxPayment(t, paymentMethod));
+}
 
 test('signed Stripe test webhook marks one trusted order paid exactly once and never calls Printful', async (t) => {
   process.env.APP_ENVIRONMENT = 'local';

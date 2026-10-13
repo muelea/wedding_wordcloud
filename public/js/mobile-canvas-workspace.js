@@ -151,6 +151,9 @@
       for (const { field } of this.keyboardFields) field.readOnly = true;
       this.document.documentElement.classList.add('mobile-canvas-open');
       this.dialog.showModal();
+      // Announce the workspace without giving the first view button an
+      // automatic focus ring. Tab still moves to Canvas for keyboard users.
+      get('mobile-canvas-title').focus({ preventScroll: true });
       this.viewportObserver?.observe(this.dialog.querySelector('.mobile-canvas-body'));
       this.syncViewport();
       this.editor.setMobileViewport(true);

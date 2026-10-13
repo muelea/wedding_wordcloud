@@ -199,6 +199,23 @@
     baseRim.position.y = -shellHeight / 2;
     group.add(baseRim);
 
+    // Enclose the body and handle around their rotation origin. Framing stays
+    // stable while turning the mug, and narrow portrait hosts cannot crop it.
+    group.updateMatrixWorld(true);
+    const framingPoint = new THREE.Vector3();
+    let rotationRadius = 0;
+    group.traverse(mesh => {
+      const vertices = mesh.geometry?.getAttribute('position');
+      if (!vertices) return;
+      for (let index = 0; index < vertices.count; index++) {
+        framingPoint.fromBufferAttribute(vertices, index).applyMatrix4(mesh.matrixWorld).sub(group.position);
+        rotationRadius = Math.max(rotationRadius, framingPoint.length());
+      }
+    });
+    const framingRadius = rotationRadius + group.position.length();
+    const cameraDirection = camera.position.clone().normalize();
+    const defaultCameraDistance = camera.position.length();
+
     scene.add(new THREE.AmbientLight(0xffffff, 1.9));
     const keyLight = new THREE.DirectionalLight(0xfffaf5, 1.15);
     keyLight.position.set(2.2, 1.8, 2.5);
@@ -280,6 +297,11 @@
       renderer.setPixelRatio(Math.min(root.devicePixelRatio || 1, 2));
       renderer.setSize(rect.width, rect.height, false);
       camera.aspect = rect.width / rect.height;
+      const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+      const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * camera.aspect);
+      const distance = framingRadius / (Math.sin(Math.min(verticalHalfFov, horizontalHalfFov)) * .88);
+      camera.position.copy(cameraDirection).multiplyScalar(Math.max(defaultCameraDistance, distance));
+      camera.far = Math.max(100, distance + framingRadius * 2);
       camera.updateProjectionMatrix();
       render();
     }

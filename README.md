@@ -1028,7 +1028,8 @@ separate card/payment surcharge. By default it budgets `3.69% + 0,49 €` per
 purchase: standard EEA PayPal Checkout (`2.99% + 0,39 €`), Stripe's PayPal
 handling (`0.20% + 0,10 €`) and native Stripe Tax (`0.50%`). These are fee
 assumptions, not a guarantee for international payments, currency conversion
-or disputes. PayPal remains disabled in Checkout until its separate integration.
+or disputes. New Checkout Sessions allow cards and PayPal; Stripe offers PayPal
+only when it is active and eligible for that purchase.
 Its own calculation always assumes 20% customer tax on the product amount
 (including `F`), shipping and
 reserve. It iterates until the reserve covers the estimated fees or returns the
@@ -1545,6 +1546,50 @@ pool had no waiter, tenant/receipt isolation had no violation, and the
 interrupted mock fulfillment recovered after the restart. The complete
 sanitized measurements are retained in
 `reports/socket-capacity-latest.json`.
+
+## PayPal through Stripe
+
+New purchases use Stripe's dynamic payment methods with an explicit
+`allowed_payment_method_types: ['card', 'paypal']` filter. Other methods enabled
+in the Dashboard are excluded. Stripe controls PayPal availability, so an
+inactive PayPal account does not prevent card checkout. The policy is frozen
+with each order; older recoverable orders retain their original card-only
+request and idempotency key. Existing open Sessions keep their original methods.
+
+The validated delivery address remains pinned as `customer.shipping`, which
+Stripe Tax uses for the calculation. Do not also set `payment_intent_data.shipping`:
+Checkout rejects that field when automatic tax is enabled. PayPal billing/account
+details do not replace the application's frozen Printful
+delivery address or Stripe Tax preview. Successful payments, cancellation,
+duplicate callbacks, fulfillment, email and cumulative refunds use the existing
+signed Stripe webhook flow. No direct PayPal SDK, API credentials, browser key,
+additional webhook or runtime flag is needed.
+
+To activate real PayPal payments for the Wolkenworte Stripe account:
+
+1. In the **live** Stripe Dashboard, open **Settings → Payments → Payment
+   methods → PayPal** and choose **Turn on**.
+2. Select **Settle PayPal revenue to Stripe balance** to keep payouts and
+   reconciliation together. Stripe requires support to change this preference
+   later, so review it before connecting.
+3. Follow **Connect to PayPal**, sign in to the seller's PayPal business account
+   (or create/upgrade it), and authorize the connection. Confirm the PayPal email
+   and complete any requested business/identity verification.
+4. Return to Stripe and confirm PayPal is **Enabled**, rather than pending or
+   requiring action. Once this application version is deployed, new eligible
+   Checkouts offer PayPal automatically.
+
+Sandbox testing does not require connecting a real PayPal business account.
+Select PayPal in a test Checkout and complete the simulated flow. If Stripe
+renders a standalone PayPal button, the redirect instead requires a personal
+PayPal Sandbox account. Test payments remain mock fulfillment and automated
+tests remain mock email. Verify one successful payment, cancellation/decline,
+replay and refund before treating external payment acceptance as complete.
+
+Official references: [activation](https://docs.stripe.com/payments/paypal/activate),
+[settlement](https://docs.stripe.com/payments/paypal/choose-settlement-preference),
+[Checkout integration and sandbox testing](https://docs.stripe.com/payments/paypal/accept-a-payment?payment-ui=checkout),
+and [Checkout method filtering](https://docs.stripe.com/api/checkout/sessions/create).
 
 ## Test checkout setup
 

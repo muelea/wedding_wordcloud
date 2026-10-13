@@ -80,6 +80,34 @@ test('failed initial texture rendering releases the partial viewer instead of le
   assert.equal(host.canvas.removed, true);
 });
 
+test('portrait preview fits every mug and handle, including rotation, and restores landscape framing', () => {
+  for (const product of require('../src/products').getPublicProducts().filter(product => product.previewType === 'mug')) {
+    const { root, host, THREE } = fixture();
+    let width = 844, height = 310;
+    host.getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
+    const viewer = root.Mug3DViewer.create({ host, THREE, product });
+    const landscapeDistance = viewer.camera.position.length();
+    width = 350; height = 650; viewer.resize();
+    assert.ok(viewer.camera.position.length() > landscapeDistance);
+    for (const yaw of [0, Math.PI / 2, Math.PI]) {
+      viewer.group.rotation.set(Math.PI / 6, yaw, 0);
+      viewer.group.updateMatrixWorld(true);
+      viewer.camera.updateMatrixWorld();
+      const point = new THREE.Vector3();
+      viewer.group.traverse(object => {
+        const positions = object.geometry?.attributes.position;
+        for (let index = 0; index < (positions?.count || 0); index++) {
+          point.fromBufferAttribute(positions, index).applyMatrix4(object.matrixWorld).project(viewer.camera);
+          assert.ok(Math.abs(point.x) < .9 && Math.abs(point.y) < .9, `${product.key}: the entire mug retains padding`);
+        }
+      });
+    }
+    width = 844; height = 310; viewer.resize();
+    assert.equal(viewer.camera.position.length(), landscapeDistance);
+    viewer.destroy();
+  }
+});
+
 test('touches on the mug exclusively rotate in both axes while transparent space remains scrollable', () => {
   const { root, host, THREE } = fixture();
   const viewer = root.Mug3DViewer.create({ host, THREE });

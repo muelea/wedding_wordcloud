@@ -4,7 +4,7 @@ const I18n = require('./i18n');
 const { getProduct, resolveProductOrientation } = require('./products');
 
 const PurchaseTerms = require('./purchaseTerms');
-const TEMPLATE_VERSION = 'transactional-2026-09-25-v7';
+const TEMPLATE_VERSION = 'transactional-2026-10-13-v8';
 const CONTRACT_VERSION = PurchaseTerms.VERSION;
 const GENERAL_CUSTOMS_NOTICE = PurchaseTerms.SECTIONS.find((section) => section.id === 'customs').text;
 const SELLER = Object.freeze({

@@ -137,7 +137,7 @@ test('premium transactional snapshots stay customer-facing, responsive and compl
   assert.match(englishOrder.textBody, /Registered office: Heilbronn/);
   assert.match(englishOrder.textBody, /We have accepted your order and received your payment/);
   assert.doesNotMatch(englishOrder.textBody, /Printful|Stripe/);
-  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-09-25-v4"/);
+  assert.match(englishOrder.htmlBody, /data-contract-version="contract-2026-10-13-v5"/);
 
   const germanDelivery = {
     ...shipment,
@@ -232,7 +232,7 @@ test('buyer contact, durable email jobs and provider reconciliation', async (t) 
     assert.match(paid.emailJob.text_body, /zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren/);
     assert.match(paid.emailJob.html_body, /cid:wolkenworte-mark-v1/);
     assert.match(paid.emailJob.html_body, /Bestellung bestätigt/);
-    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-09-25-v4"/);
+    assert.match(paid.emailJob.html_body, /data-contract-version="contract-2026-10-13-v5"/);
 
     const duplicate = await payPreparedOrder(db, prepared, 'atomic', {
       buyerEmail: 'buyer@example.test',

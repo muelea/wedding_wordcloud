@@ -167,7 +167,7 @@ test('nudge controls move a selected element in print coordinates and respect th
   assert.deepEqual(calls, ['coords', 'bounds', 'coords', 'render', 'history', 'change', 'selection']);
 });
 
-test('editor swatches include every unique color used by printable canvas elements', () => {
+test('editor swatches follow the active palette without accumulating artwork colours', () => {
   const editor = Object.create(MugPrintEditor.prototype);
   editor.palette = ['#2455F5', '#ed2446'];
   editor.canvas = {
@@ -182,8 +182,12 @@ test('editor swatches include every unique color used by printable canvas elemen
 
   assert.deepEqual(
     [...editor.availableSwatchColors()],
-    ['#2455f5', '#ed2446', '#123456', '#abcdef']
+    ['#2455f5', '#ed2446']
   );
+  const artwork = JSON.stringify(editor.canvas.getObjects());
+  editor.palette = ['#00334a', '#00a3ad', '#00334A'];
+  assert.deepEqual([...editor.availableSwatchColors()], ['#00334a', '#00a3ad']);
+  assert.equal(JSON.stringify(editor.canvas.getObjects()), artwork, 'refreshing swatches leaves custom artwork colours intact');
 });
 
 test('double-clicking emoji text focuses the dedicated editor field', () => {
