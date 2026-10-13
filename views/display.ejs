@@ -263,64 +263,6 @@
     .display-emoji-trigger svg { width: 31px; height: 31px; fill: none; stroke: currentColor; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
     .display-emoji-trigger .display-emoji-eye { fill: currentColor; stroke: none; }
     .ww-display-header-actions { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; }
-    .ww-display-menu-palette-row { display: grid; gap: 8px; margin: 0; padding: 4px 12px 8px; }
-    .ww-display-menu-palette-control { min-width: 0; }
-    .ww-palette-picker { position: relative; width: 100%; }
-    .ww-palette-picker[open] { z-index: 2; }
-    .ww-palette-picker summary { list-style: none; }
-    .ww-palette-picker summary::-webkit-details-marker { display: none; }
-    .ww-palette-trigger,
-    .ww-palette-option {
-      appearance: none;
-      -webkit-appearance: none;
-      color: var(--text);
-      font: 600 13px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif;
-      cursor: pointer;
-    }
-    .ww-palette-trigger {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      height: 44px;
-      padding: 0 11px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: color-mix(in srgb, var(--bg) 96%, transparent);
-      box-shadow: 0 4px 14px rgba(64,15,38,.05);
-      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
-    }
-    .ww-palette-trigger:hover,
-    .ww-palette-picker[open] .ww-palette-trigger { border-color: color-mix(in srgb, var(--primary) 38%, var(--border)); background: var(--bg); box-shadow: 0 6px 18px rgba(64,15,38,.09); }
-    .ww-palette-trigger:focus-visible,
-    .ww-palette-option:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 50%, transparent); outline-offset: 2px; }
-    .ww-palette-swatches { display: flex; width: 58px; height: 20px; flex: 0 0 58px; overflow: hidden; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent); }
-    .ww-palette-swatches i { min-width: 0; flex: 1 1 0; }
-    .ww-palette-current { min-width: 0; flex: 1 1 auto; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-    .ww-palette-chevron { width: 7px; height: 7px; flex: 0 0 7px; margin: -3px 2px 0 3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; opacity: .58; transform: rotate(45deg); transition: transform .18s ease, margin .18s ease; }
-    .ww-palette-picker[open] .ww-palette-chevron { margin-top: 3px; transform: rotate(225deg); }
-    .ww-palette-menu {
-      position: static;
-      margin-top: 8px;
-      display: grid;
-      gap: 3px;
-      padding: 6px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: color-mix(in srgb, var(--bg) 98%, transparent);
-      box-shadow: 0 18px 42px rgba(64,15,38,.16);
-      backdrop-filter: blur(18px) saturate(1.25);
-      -webkit-backdrop-filter: blur(18px) saturate(1.25);
-    }
-    .ww-palette-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 7px 9px; border: 0; border-radius: 10px; background: transparent; text-align: left; transition: color .14s ease, background .14s ease; }
-    .ww-palette-option:hover,
-    .ww-palette-option:focus-visible { background: color-mix(in srgb, var(--primary) 7%, transparent); }
-    .ww-palette-option.is-selected { background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); }
-    .ww-palette-option-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ww-palette-check { flex: 0 0 14px; color: var(--primary); opacity: 0; text-align: center; }
-    .ww-palette-option.is-selected .ww-palette-check { opacity: 1; }
-    .ww-display-menu-label { padding: 0 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
-    .ww-display-menu-language { width: auto; flex: 0 0 auto; }
     .ww-display-menu-actions { display: grid; gap: 0; }
     .ww-site-menu .ww-display-menu-action { justify-content: space-between; gap: 12px; }
     .ww-display-menu-action-label { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }

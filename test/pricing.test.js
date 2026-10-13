@@ -2,13 +2,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildCustomerQuote, buildCustomerQuoteForShipments, paymentReservePercent } = require('../src/pricing');
+const { buildCustomerQuote, buildCustomerQuoteForShipments, paymentReservePercent, paymentReserveFixedCents } = require('../src/pricing');
 
 test.beforeEach((t) => {
   const settings = {
     SHOP_PRODUCT_MARKUP_PERCENT: '50',
-    SHOP_PAYMENT_RESERVE_PERCENT: '3.65',
-    SHOP_PAYMENT_RESERVE_FIXED_CENTS: '25',
+    SHOP_PAYMENT_RESERVE_PERCENT: '3.69',
+    SHOP_PAYMENT_RESERVE_FIXED_CENTS: '49',
   };
   for (const [name, value] of Object.entries(settings)) {
     const previous = process.env[name];
@@ -25,8 +25,8 @@ test('catalog-wide pricing marks up products, adds supplier tax once and reserve
     currency: 'EUR', subtotal: 10, shipping: 4, tax: 0, vat: 2.8, total: 16.8,
   }, 2);
   assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
-    currency: 'EUR', quantity: 2, itemsCents: 1906, paymentReserveCents: 126,
-    shippingCents: 400, taxCents: 0, totalCents: 2306, shipmentQuotes: undefined,
+    currency: 'EUR', quantity: 2, itemsCents: 1933, paymentReserveCents: 153,
+    shippingCents: 400, taxCents: 0, totalCents: 2333, shipmentQuotes: undefined,
   });
 });
 
@@ -34,10 +34,10 @@ test('inexpensive products use the same markup rule', () => {
   const quote = buildCustomerQuote({
     currency: 'EUR', subtotal: 2, shipping: 4, tax: 0, vat: 1.2, total: 7.2,
   }, 1);
-  assert.equal(quote.itemsCents, 484);
-  assert.equal(quote.paymentReserveCents, 64);
+  assert.equal(quote.itemsCents, 510);
+  assert.equal(quote.paymentReserveCents, 90);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 884);
+  assert.equal(quote.totalCents, 910);
 });
 
 test('split shipments apply the markup to the combined product subtotal', () => {
@@ -48,11 +48,11 @@ test('split shipments apply the markup to the combined product subtotal', () => 
   assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
     currency: 'EUR',
     quantity: 3,
-    itemsCents: 789,
-    paymentReserveCents: 99,
+    itemsCents: 815,
+    paymentReserveCents: 125,
     shippingCents: 900,
     taxCents: 0,
-    totalCents: 1689,
+    totalCents: 1715,
     shipmentQuotes: undefined,
   });
   assert.deepEqual(quote.shipmentQuotes.map((shipment) => shipment.taxCents), [0, 0]);
@@ -64,19 +64,19 @@ test('supplier VAT is included in products but never becomes customer tax', () =
   const quote = buildCustomerQuote({
     currency: 'EUR', shipping: 6.24, tax: 0, vat: 3.28, total: 20.50,
   }, 2);
-  assert.equal(quote.itemsCents, 2121);
+  assert.equal(quote.itemsCents, 2147);
   assert.equal(quote.itemsCents - quote.paymentReserveCents, 1975, 'supplier VAT is added after the product markup');
-  assert.equal(quote.paymentReserveCents, 146);
+  assert.equal(quote.paymentReserveCents, 172);
   assert.equal(quote.shippingCents, 624);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 2745);
+  assert.equal(quote.totalCents, 2771);
 });
 
 test('a lower quantity-discounted Printful subtotal automatically lowers the customer unit price', () => {
   const regular = buildCustomerQuote({ currency: 'EUR', shipping: 0, tax: 0, vat: 0, total: 50 }, 10);
   const discounted = buildCustomerQuote({ currency: 'EUR', shipping: 0, tax: 0, vat: 0, total: 40 }, 10);
-  assert.equal(regular.itemsCents, 7870);
-  assert.equal(discounted.itemsCents, 6301);
+  assert.equal(regular.itemsCents, 7899);
+  assert.equal(discounted.itemsCents, 6330);
   assert.ok(discounted.itemsCents / 10 < regular.itemsCents / 10);
 });
 
@@ -100,20 +100,40 @@ test('supplier VAT or sales tax is added without markup before the 20% reserve e
 
 test('reserve covers fees on its own amount, shipping and the assumed tax after cent rounding', () => {
   const quote = buildCustomerQuote({ currency: 'EUR', shipping: 5, total: 15 }, 1);
-  // 15.00 product + 5.00 shipping + 1.18 reserve, with 20% assumed tax:
-  // 25.42 gross * 3.65% + 0.25 = 1.17783, rounded up to 1.18.
-  assert.equal(quote.paymentReserveCents, 118);
-  const assumedGrossCents = 2542;
-  assert.ok(quote.paymentReserveCents >= Math.ceil(assumedGrossCents * 0.0365 + 25));
+  // 15.00 product + 5.00 shipping + 1.44 reserve, with 20% assumed tax:
+  // 25.73 gross * 3.69% + 0.49 = 1.439437, rounded up to 1.44.
+  assert.equal(quote.paymentReserveCents, 144);
+  const assumedGrossCents = 2573;
+  assert.ok(quote.paymentReserveCents >= Math.ceil(assumedGrossCents * 0.0369 + 49));
 });
 
-test('missing or invalid reserve configuration defaults to 3.65% plus 25 cents', () => {
+test('a German mug quote reserves the separate PayPal, Stripe and Tax fees on the gross payment', () => {
+  const quote = buildCustomerQuote({ currency: 'EUR', shipping: 4.69, tax: 0, vat: 0, total: 10.29 }, 1);
+  const customerTaxCents = Math.round(quote.itemsCents * 0.19) + Math.round(quote.shippingCents * 0.19);
+  const grossCents = quote.totalCents + customerTaxCents;
+  const paypalFeeCents = Math.round(grossCents * 0.0299 + 39);
+  const stripeFeeCents = Math.round(grossCents * 0.002 + 10);
+  const stripeTaxFeeCents = Math.round(grossCents * 0.005);
+  assert.equal(quote.paymentReserveCents, 112);
+  assert.equal(grossCents, 1691);
+  assert.ok(quote.paymentReserveCents >= paypalFeeCents + stripeFeeCents + stripeTaxFeeCents);
+  assert.equal(quote.taxCents, 0, 'customer VAT remains pending until Stripe confirms it');
+});
+
+test('missing or invalid reserve configuration defaults to 3.69% plus 49 cents', () => {
   delete process.env.SHOP_PAYMENT_RESERVE_PERCENT;
   delete process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS;
-  assert.equal(paymentReservePercent(), 3.65);
-  assert.equal(buildCustomerQuote({ currency: 'EUR', shipping: 5, total: 15 }, 1).paymentReserveCents, 118);
-  process.env.SHOP_PAYMENT_RESERVE_PERCENT = 'invalid';
-  assert.equal(paymentReservePercent(), 3.65);
+  assert.equal(paymentReservePercent(), 3.69);
+  assert.equal(paymentReserveFixedCents(), 49);
+  assert.equal(buildCustomerQuote({ currency: 'EUR', shipping: 5, total: 15 }, 1).paymentReserveCents, 144);
+  for (const value of ['invalid', '-1', '21', 'Infinity']) {
+    process.env.SHOP_PAYMENT_RESERVE_PERCENT = value;
+    assert.equal(paymentReservePercent(), 3.69);
+  }
+  for (const value of ['invalid', '-1', '501', '0.5']) {
+    process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = value;
+    assert.equal(paymentReserveFixedCents(), 49);
+  }
 });
 
 test('reserve fallback returns the twentieth estimate if it has not converged', () => {

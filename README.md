@@ -64,7 +64,10 @@ frozen snapshot of the word cloud.
    opens a dedicated fullscreen canvas workspace without creating a second draft
    or editor state. A compact side toolbar leaves the print area prominent;
    Canvas/Product switches reuse the same Fabric canvas and real product preview.
-   A compact top toolbar holds Undo/Redo, zoom/fit and product settings, leaving
+   A compact top toolbar holds Undo/Redo, zoom/fit, product settings and manual
+   account Save. Saving or cancelling keeps the canvas, selection, zoom and Undo
+   history in place. Desktop product and colour selectors share the “Your design”
+   heading and wrap into a compact second row on narrower screens, leaving
    the full remaining height for the canvas. Browser fullscreen is offered only
    where supported; iPhone Safari keeps its browser chrome. Compact product,
    palette and orientation pickers replace the side panel. Choosing a product
@@ -99,9 +102,11 @@ frozen snapshot of the word cloud.
    With an empty basket the primary continuation action adds the current design
    before opening shipping. With an existing basket it simply reads “Zur
    Lieferadresse”; it checks the local working copies of every cart position before
-   proceeding. A focused review lists pending designs, offers opening each one,
-   and explicitly chooses between applying the listed changes (and adding the
-   current new design, where applicable) or using the previous cart versions.
+   proceeding. A focused review shows the cart artwork beside each changed
+   version, with print-side switching and an enlarged comparison. Each entry
+   explicitly says whether it replaces a cart position or adds a new one;
+   other pending designs can be opened directly for editing. Continuing with
+   the current cart preserves its previous versions and retains the local edits.
    Unchanged retained drafts do not prompt. Failed draft checks or cart saves
    never navigate; after a partly successful batch, remaining edits stay pending
    and already approved positions remain in the cart. Ordinary product,
@@ -955,8 +960,8 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `PRINTFUL_ALLOW_ORDER_WRITES` | shared safety setting | Independent gate required before creating any Printful draft. |
 | `PRINTFUL_CONFIRM_LIVE_ORDERS` | shared safety setting | Final gate before confirming/charging/submitting a Printful order. |
 | `SHOP_PRODUCT_MARKUP_PERCENT` | shared setting | Product-cost markup used in server-side retail quotes. |
-| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Estimated Stripe processing + Tax percentage, default 3.65; reserve uses a fixed internal 20% tax assumption. |
-| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed payment-cost reserve in euro cents folded into product prices. |
+| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Estimated payment processing + Stripe Tax percentage, default 3.69; reserve uses a fixed internal 20% tax assumption. |
+| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed payment-cost reserve in euro cents, default 49, folded into product prices. |
 
 `DATABASE_APPLICATION_NAME` is set by `fly.toml`/test helpers for Postgres
 observability, and `DATABASE_SCHEMA` is generated only by isolated tests.
@@ -982,12 +987,13 @@ approved PII-retention rules and their activation requirements are recorded in
 cutover work, plus deferred monitoring and recovery decisions, is tracked in
 the single [launch-readiness checklist](docs/launch-readiness.md).
 
-## Approved initial pricing
+## Approved pricing
 
-The maintainer approved the existing price rule for the initial launch on
-2026-09-24. No calculation change is required. Actual payment costs and margins
-will be reviewed after the first real orders; the payment reserve is an
-estimate and the product markup is not net profit.
+The maintainer approved the product markup and supplier-cost treatment for the
+initial launch on 2026-09-24. On 2026-10-13 the payment reserve was increased to
+3.69% plus EUR 0.49 in preparation for PayPal through Stripe. Actual payment
+costs and margins will be reviewed after the first real orders; the payment
+reserve is an estimate and the product markup is not net profit.
 
 The current checkout does not use a fixed price per product. It calculates one
 customer price from Printful's live EUR estimate(s) and the catalog-wide markup
@@ -1018,9 +1024,13 @@ customer total = pre-Stripe total + Stripe's confirmed tax
 The shipping page displays that tax and the gross total from the final Checkout
 Session; the payment button later opens the same Session. The payment reserve is
 folded into the product subtotal, not displayed as a
-separate card/payment surcharge. By default it budgets `3.65% + 0,25 €` per
-purchase for Stripe processing and Stripe Tax. Its own calculation always
-assumes 20% customer tax on the product amount (including `F`), shipping and
+separate card/payment surcharge. By default it budgets `3.69% + 0,49 €` per
+purchase: standard EEA PayPal Checkout (`2.99% + 0,39 €`), Stripe's PayPal
+handling (`0.20% + 0,10 €`) and native Stripe Tax (`0.50%`). These are fee
+assumptions, not a guarantee for international payments, currency conversion
+or disputes. PayPal remains disabled in Checkout until its separate integration.
+Its own calculation always assumes 20% customer tax on the product amount
+(including `F`), shipping and
 reserve. It iterates until the reserve covers the estimated fees or returns the
 last estimate after 20 iterations. Differences from actual Stripe tax and
 payment fees affect the shop's margin. This internal assumption never sets the
@@ -1028,8 +1038,8 @@ customer tax line.
 
 Example with 10,98 € Printful product costs, 3,28 € Printful VAT and 6,24 €
 shipping: the 50% rule produces 16,47 €, Printful VAT is added without markup,
-and the internal payment reserve is 1,46 €. The product amount shown to Stripe
-is therefore 21,21 € and the pre-tax total is 27,45 €. Stripe determines the
+and the internal payment reserve is 1,72 €. The product amount shown to Stripe
+is therefore 21,47 € and the pre-tax total is 27,71 €. Stripe determines the
 final customer tax and gross total, which are shown on the shipping page and
 again in the same Checkout Session.
 

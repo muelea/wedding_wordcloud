@@ -25,8 +25,8 @@ async function saveConfiguration(baseUrl, slug, quantityOrOptions = 3) {
 
 test('shipping page uses the immutable configuration and returns a server-side Printful quote', async (t) => {
   process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
-  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.65';
-  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '25';
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.69';
+  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '49';
   t.after(() => {
     delete process.env.SHOP_PRODUCT_MARKUP_PERCENT;
     delete process.env.SHOP_PAYMENT_RESERVE_PERCENT;
@@ -139,11 +139,11 @@ test('shipping page uses the immutable configuration and returns a server-side P
     configurationCount: 1,
     shipmentCount: 1,
     shippingDetails: undefined,
-    itemsCents: 1904,
-    paymentReserveCents: 129,
+    itemsCents: 1930,
+    paymentReserveCents: 155,
     shippingCents: 449,
     taxCents: 0,
-    totalCents: 2353,
+    totalCents: 2379,
     checkoutPrepared: false,
     expiresAt: undefined,
   });
@@ -196,8 +196,8 @@ test('shipping page uses the immutable configuration and returns a server-side P
 
 test('cart quote estimates mixed products for one address as one Printful shipment', async (t) => {
   process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
-  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.65';
-  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '25';
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.69';
+  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '49';
   t.after(() => {
     delete process.env.SHOP_PRODUCT_MARKUP_PERCENT;
     delete process.env.SHOP_PAYMENT_RESERVE_PERCENT;
@@ -263,11 +263,11 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   assert.equal(quote.shipmentCount, 1);
   assert.equal(quote.configurationCount, 2);
   assert.equal(quote.productCount, 2);
-  assert.equal(quote.itemsCents, 3708);
-  assert.equal(quote.paymentReserveCents, 214);
+  assert.equal(quote.itemsCents, 3735);
+  assert.equal(quote.paymentReserveCents, 241);
   assert.equal(quote.shippingCents, 600);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 4308);
+  assert.equal(quote.totalCents, 4335);
   assert.equal(captured.length, 1, 'mixed items for one address must use one Printful estimate');
   assert.deepEqual(captured[0].items, [
     { configurationId: mug.id, variantId: 1320, quantity: 2 },

@@ -91,9 +91,10 @@ project sign-off is required for these topics.
   beneath its address. The recipient bears external import charges.
 - [x] Initial pricing approved by the maintainer on 2026-09-24: 50% markup on
   Printful product costs, Printful tax/VAT and shipping passed through without
-  markup, and an embedded payment-cost reserve of 3.65% plus EUR 0.25 per
-  purchase. Stripe calculates customer tax separately. The reserve remains an
-  estimate; the markup is a contribution toward operating costs and profit,
+  markup. The embedded payment-cost reserve was increased on 2026-10-13 to
+  3.69% plus EUR 0.49 per purchase in preparation for PayPal through Stripe;
+  PayPal activation is separate. Stripe calculates customer tax separately.
+  The reserve remains an estimate; the markup is a contribution toward operating costs and profit,
   not net profit. Review actual costs after the first real orders; no further
   pricing approval or implementation is required before the initial launch.
 - [x] Prepare the live-sales legal copy (2026-09-24): public ordering

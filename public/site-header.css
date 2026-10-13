@@ -299,14 +299,22 @@ details[open] > .ww-menu-trigger .ww-hamburger-icon i:last-child {
 .ww-site-menu .ww-header-menu-item:hover, .ww-site-menu .ww-header-menu-item:focus-visible { background: #fbf2e7; color: #9c1c4c; }
 .ww-header-menu-item[hidden] { display: none !important; }
 .ww-site-menu .ww-site-menu-preferences, .ww-site-menu .ww-site-menu-legal, .ww-site-menu .ww-site-menu-cloud { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid rgba(64,15,38,.1); }
-.ww-site-menu-language-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(112px,136px); align-items: start; gap: 10px; padding: 3px; }
-.ww-site-menu-label { padding: 15px 0 0 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8a7178; }
+.ww-site-menu-language-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,174px); align-items: start; gap: 8px; margin: 0; padding: 3px; }
+.ww-site-menu-label { display: flex; align-items: center; min-height: 38px; padding-left: 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8a7178; }
 .ww-site-menu-language, .ww-site-menu-language .ww-language-trigger { width: 100%; }
 .ww-site-menu .ww-site-menu-language { display: block; }
 .ww-site-menu-language .ww-language-menu { position: static; width: 100%; margin-top: 8px; }
 /* Native popovers escape the menu's scrolling surface without resizing it. */
-.ww-site-menu [data-ww-menu-popup][popover] { position: fixed; inset: auto; margin: 0; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; }
+.ww-site-menu [data-ww-menu-popup][popover] { position: fixed; inset: auto; margin: 0; width: auto; height: auto; min-height: 0; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; }
+.ww-site-menu [data-ww-menu-popup][popover]:not(:popover-open) { display: none; }
 .ww-site-menu [data-ww-menu-popup][popover]::backdrop { background: transparent; }
+.ww-display-menu-palette-control { min-width: 0; }
+.ww-palette-swatches { display: flex; width: 32px; height: 16px; flex: 0 0 32px; overflow: hidden; border-radius: 999px; box-shadow: 0 0 0 1px rgba(64,15,38,.1); }
+.ww-palette-swatches i { min-width: 0; flex: 1 1 0; }
+.ww-palette-current, .ww-palette-option-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 620px), (pointer: coarse) {
+  .ww-site-menu-label { min-height: 44px; }
+}
 .ww-back-link-mobile { display: none; }
 @media (max-width: 780px) {
   .ww-back-link-mobile { display: flex; width: fit-content; box-sizing: border-box; min-height: 44px; margin: 0 16px; padding: 4px 0; }

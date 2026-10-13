@@ -78,6 +78,10 @@ function machine(posture, overrides = {}) {
 
 test('reviewed Fly configs encode each one-way cutover posture', () => {
   const configs = cutover.validateConfigFamily();
+  for (const config of Object.values(configs)) {
+    assert.equal(config.env.SHOP_PAYMENT_RESERVE_PERCENT, '3.69');
+    assert.equal(config.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS, '49');
+  }
   assert.equal(configs.hosted.env.MAINTENANCE_MODE, 'false');
   assert.equal(configs.locked.env.MAINTENANCE_MODE, 'true');
   assert.equal(configs.armed.env.APP_ENVIRONMENT, 'production');

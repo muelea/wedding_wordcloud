@@ -22,9 +22,13 @@
     <button type="button" id="mobile-canvas-settings-toggle" aria-label="Produkt und Farben" aria-controls="mobile-canvas-drawer" aria-expanded="false">
       <svg class="editor-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#editor-icon-palette"></use></svg>
     </button>
+    <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+    <button type="button" id="mobile-canvas-save" data-account-save disabled aria-label="Design speichern"><span class="account-save-label-full" data-account-save-label>Design speichern</span><span class="account-save-label-compact">Speichern</span></button>
+    <% } %>
     <button type="button" id="mobile-canvas-close" aria-label="Zur Vorschau">Zur Vorschau</button>
     </div>
     <div id="mobile-canvas-surfaces"></div>
+    <p class="config-save-feedback" data-account-save-note role="status" aria-live="polite"></p>
     <p class="configurator-progress" data-configurator-progress role="status" aria-live="polite" hidden></p>
   </header>
   <div class="mobile-canvas-orientation-hint" id="mobile-canvas-orientation-hint" role="status" hidden>
@@ -57,9 +61,6 @@
         <div id="mobile-canvas-picker" hidden></div>
         <div id="mobile-canvas-add" hidden></div>
         <div id="mobile-canvas-more" hidden>
-          <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
-          <button type="button" data-account-save>Design speichern</button>
-          <% } %>
           <button type="button" id="mobile-canvas-multi-select">Mehrere auswählen</button>
           <button type="button" data-canvas-tool="elements">Element suchen</button>
           <div id="mobile-canvas-design-actions"></div>

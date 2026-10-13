@@ -175,10 +175,11 @@ test('customs notice stays with purchase information instead of the site footer'
 
 test('the personal display palette is handed off to the configurator', () => {
   assert.match(cloudSettings, /id="display-palette-picker"/);
-  assert.match(cloudSettings, /class="ww-palette-menu"[^>]*role="radiogroup"/);
+  assert.match(cloudSettings, /class="ww-palette-menu ww-language-menu"[^>]*role="radiogroup"/);
   assert.match(cloudSettings, /class="ww-palette-option[^\"]*"[\s\S]*?role="radio"[\s\S]*?aria-checked=/);
   assert.doesNotMatch(cloudSettings, /id="display-palette-select"|<select[^>]*aria-label="Farbwelt"/);
-  assert.match(display, /\.ww-palette-menu \{[\s\S]*?position: absolute;[\s\S]*?border-radius: 14px;/);
+  assert.match(cloudSettings, /class="ww-palette-trigger ww-language-trigger"/);
+  assert.match(siteHeaderStyles, /\[data-ww-menu-popup\]\[popover\] \{[^}]*height: auto;[^}]*min-height: 0;/);
   assert.match(display, /palettePicker\?\.addEventListener\('keydown'/);
   assert.match(display, /\['ArrowDown', 'ArrowUp', 'Home', 'End'\]/);
   assert.match(display, /paletteStorageKey = `wordcloud-palette:\$\{slug\}`/);
@@ -206,7 +207,7 @@ test('the phone configurator starts with one preview-first purchase path', () =>
   assert.match(configure, /setText\(continueOrderLabel, items\.length\s*\? 'Zur Lieferadresse'/);
   assert.match(configure, /!await saveCurrentDesign\(continueOrderButton\)/,
     'the explicit compact CTA approves the current design before navigation');
-  assert.match(configure, /id="shipping-choice-dialog"[\s\S]*?id="shipping-choice-current-cart"[\s\S]*?id="shipping-choice-save"/);
+  assert.match(configure, /id="shipping-choice-dialog"[\s\S]*?id="shipping-choice-save"[\s\S]*?id="shipping-choice-current-cart"/);
   assert.match(workspaceStyles,
     /grid-template-areas: 'create create selection layout reset' 'view view view history history'/,
     'Select all and Fill the area stay adjacent in the compact editor toolbar');

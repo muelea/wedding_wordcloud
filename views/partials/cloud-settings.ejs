@@ -1,11 +1,11 @@
 <section class="ww-site-menu-cloud" aria-label="Wolken-Einstellungen">
   <% if (paletteOptions.length) { %>
-  <section class="ww-display-menu-palette-row" aria-labelledby="display-menu-palette-label">
-    <span class="ww-display-menu-label" id="display-menu-palette-label">Farbwelt</span>
+  <section class="ww-site-menu-language-row" aria-labelledby="display-menu-palette-label">
+    <span class="ww-site-menu-label" id="display-menu-palette-label">Farbe</span>
     <div class="ww-display-menu-palette-control">
-      <details class="ww-palette-picker" id="display-palette-picker" data-ww-menu-picker>
+      <details class="ww-palette-picker ww-language-picker ww-site-menu-language" id="display-palette-picker" data-ww-menu-picker>
         <summary
-          class="ww-palette-trigger"
+          class="ww-palette-trigger ww-language-trigger"
           id="display-palette-trigger"
           aria-label="<%= t('Farbwelt') %>: <%= t(paletteOptions[0].label) %>"
         >
@@ -13,12 +13,12 @@
             <% for (const color of paletteOptions[0].colors) { %><i style="background:<%= color %>"></i><% } %>
           </span>
           <span class="ww-palette-current" id="display-palette-current" data-i18n-source="<%= paletteOptions[0].label %>"><%= t(paletteOptions[0].label) %></span>
-          <span class="ww-palette-chevron" aria-hidden="true"></span>
+          <span class="ww-language-chevron" aria-hidden="true"></span>
         </summary>
-        <div class="ww-palette-menu" data-ww-menu-popup role="radiogroup" aria-labelledby="display-menu-palette-label">
+        <div class="ww-palette-menu ww-language-menu" data-ww-menu-popup data-popup-width="224" role="radiogroup" aria-labelledby="display-menu-palette-label">
         <% for (const palette of paletteOptions) { %>
           <button
-            class="ww-palette-option<%= palette.key === paletteOptions[0].key ? ' is-selected' : '' %>"
+            class="ww-palette-option ww-language-option<%= palette.key === paletteOptions[0].key ? ' is-selected' : '' %>"
             type="button"
             role="radio"
             aria-checked="<%= palette.key === paletteOptions[0].key ? 'true' : 'false' %>"
@@ -28,7 +28,7 @@
               <% for (const color of palette.colors) { %><i style="background:<%= color %>"></i><% } %>
             </span>
             <span class="ww-palette-option-name" data-i18n-source="<%= palette.label %>"><%= t(palette.label) %></span>
-            <span class="ww-palette-check" aria-hidden="true">✓</span>
+            <span class="ww-language-check" aria-hidden="true">✓</span>
           </button>
         <% } %>
         </div>

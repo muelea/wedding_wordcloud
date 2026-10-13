@@ -14,13 +14,13 @@ function productMarkupPercent() {
 }
 
 function paymentReservePercent() {
-  const value = Number(process.env.SHOP_PAYMENT_RESERVE_PERCENT || 3.65);
-  return Number.isFinite(value) && value >= 0 && value <= 20 ? value : 3.65;
+  const value = Number(process.env.SHOP_PAYMENT_RESERVE_PERCENT || 3.69);
+  return Number.isFinite(value) && value >= 0 && value <= 20 ? value : 3.69;
 }
 
 function paymentReserveFixedCents() {
-  const value = Number(process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS || 25);
-  return Number.isSafeInteger(value) && value >= 0 && value <= 500 ? value : 25;
+  const value = Number(process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS || 49);
+  return Number.isSafeInteger(value) && value >= 0 && value <= 500 ? value : 49;
 }
 
 function printfulSupplierTaxCents(costs) {

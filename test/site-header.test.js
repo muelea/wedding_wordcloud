@@ -86,7 +86,7 @@ test('language and palette float independently, close with their menu and stay w
   assert.equal(list.style.top,'232px');assert.equal(list.style.left,'770px');assert.equal(list.style.width,'166px');
   palette.open=true;await settle();await settle();
   assert.equal(language.open,false);assert.equal(list.matches(':popover-open'),false);
-  assert.equal(colours.matches(':popover-open'),true);assert.equal(colours.style.width,'136px');
+  assert.equal(colours.matches(':popover-open'),true);assert.equal(colours.style.width,'224px');
   palette.querySelector('summary').getBoundingClientRect=()=>({left:800,right:936,top:650,bottom:694,width:136});
   h.dom.window.dispatchEvent(new h.dom.window.Event('resize'));
   assert.equal(colours.style.top,'402px','a picker near the bottom opens above its trigger');

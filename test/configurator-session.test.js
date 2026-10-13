@@ -95,6 +95,7 @@ function harness(extra = {}) {
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true }, loadingMessage: element(),
     content: { inert: false }, orderBox: { scrollIntoView() {} },
     cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
+    cartReview: { show() {}, dispose() {} }, revealReviewedDesign() { calls.opened.push('revealed'); },
     shippingChoiceDialog, shippingChoiceTitle: element(),
     shippingChoiceDescription: element(), shippingChoiceSave: element(), shippingChoiceList: element(),
     workspace: { close() {}, show: (panel) => calls.panels.push(panel) },
@@ -214,7 +215,7 @@ test('shipping reviews parked edits and updates only approved choices while rest
       assert.equal(page.editingOrderItemId, id('b'));
       assert.equal(currentDesign[0].text, 'B');
     }
-    if (choice.startsWith('edit:')) assert.deepEqual(calls.opened, [id('a')]);
+    if (choice.startsWith('edit:')) assert.deepEqual(calls.opened, [id('a'), 'revealed']);
   }
 });
 
@@ -639,9 +640,9 @@ test('the shipping choice explains add and update cases and resolves the explici
     const choice = page.askShippingChoice(action);
     assert.equal(calls.panels.length, 1);
     assert.match(page.shippingChoiceDescription.textContent, action === 'choose-update'
-      ? /Änderungen.*bisherigen Version/ : /noch nicht im Warenkorb/);
+      ? /Designs ersetzen.*bisherigen Version/ : /noch nicht im Warenkorb/);
     assert.equal(page.shippingChoiceSave.textContent, action === 'choose-update'
-      ? 'Warenkorb aktualisieren und weiter' : 'In den Warenkorb und weiter');
+      ? 'Warenkorb aktualisieren und weiter' : 'Hinzufügen und weiter');
     page.shippingChoiceDialog.close('cart');
     assert.equal(await choice, 'cart');
   }
@@ -1157,14 +1158,18 @@ test('final text is awaited before capture and unchanged text does not dirty a r
   const context = vm.createContext({ WolkenworteConfiguratorSession: Session, suppressDirty: false, markDirty() { dirty += 1; },
     mugEditor: {
       flushPendingChange() {}, getDesign: () => design,
-      commitFontSizeInput() {},
-      commitAngleInput() {},
-      async commitTextInput() { await new Promise((resolve) => setTimeout(resolve, 1)); },
+      hasPendingFontSizeChange: () => false,
+      hasPendingAngleChange: () => false,
+      hasPendingTextChange: () => false,
+      commitFontSizeInput() { throw new Error('An unchanged rounded display value must not resize the selected artwork'); },
+      commitAngleInput() { throw new Error('An unchanged rounded display angle must not rotate the selected artwork'); },
+      commitTextInput() { throw new Error('An unchanged text/emoji selection must not be rebuilt'); },
     },
   });
   vm.runInContext(pageFunction('finalizeCurrentText'), context);
   await context.finalizeCurrentText();
   assert.equal(dirty, 0);
+  context.mugEditor.hasPendingTextChange = () => true;
   context.mugEditor.commitTextInput = async () => {
     await new Promise((resolve) => setTimeout(resolve, 1));
     design = [{ text: 'letzte Eingabe' }];
@@ -1182,6 +1187,13 @@ test('final text is awaited before capture and unchanged text does not dirty a r
   finishFont();
   await finalizing;
   assert.equal(committed, true);
+  const commits = [];
+  context.mugEditor.hasPendingFontSizeChange = () => true;
+  context.mugEditor.hasPendingAngleChange = () => true;
+  context.mugEditor.commitFontSizeInput = () => commits.push('size');
+  context.mugEditor.commitAngleInput = () => commits.push('angle');
+  await context.finalizeCurrentText();
+  assert.deepEqual(commits, ['size', 'angle'], 'Save still commits explicitly edited numeric controls');
 });
 
 test('restoration flushes its scheduled editor change while dirty tracking is suppressed', () => {

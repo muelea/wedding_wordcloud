@@ -119,8 +119,8 @@ test('Stripe Tax payment stores the final gross amount atomically in the order a
   assert.equal((await db.getOrderShipments(order.id))[0].tax_cents, taxCents);
   const jobs = await db.getEmailJobsForOrder(order.id);
   assert.equal(jobs.length, 1);
-  assert.match(jobs[0].text_body, /30,06\s*€/);
-  assert.match(jobs[0].text_body, /4,80\s*€/);
+  assert.match(jobs[0].text_body, /30,37\s*€/);
+  assert.match(jobs[0].text_body, /4,85\s*€/);
   assert.equal((await send({
     ...session,
     amount_total: session.amount_total + 1,

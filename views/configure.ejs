@@ -1730,9 +1730,6 @@
     .cart-removal-notice[hidden], #product-switch-undo[hidden] { display: none; }
     .cart-removal-notice button, #product-switch-undo { min-width: 0; }
     #product-switch-undo { margin-bottom: 12px; }
-    .cart-review-list { padding: 0; list-style: none; }
-    .cart-review-list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
-    .cart-review-list button { min-width: 0; margin-top: 5px; }
     .product-dialog-description { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
     #draft-loss-dialog .config-panel-foot,
     #shipping-choice-dialog .config-panel-foot,
@@ -2136,17 +2133,6 @@
 
       <section class="config-design-heading" aria-labelledby="design-heading">
         <h2 id="design-heading">Euer Design</h2>
-        <div class="config-design-actions">
-          <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog" aria-label="Design anpassen" data-i18n-aria-label-source="Design anpassen">
-            <span id="mobile-editor-toggle-label">Bearbeiten</span>
-          </button>
-        <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
-        <div class="ww-account-controls config-design-save"><button type="button" data-account-save disabled aria-label="Design speichern"><span class="account-save-label-full" data-account-save-label>Design speichern</span><span class="account-save-label-compact">Speichern</span></button></div>
-        <% } %>
-        </div>
-      </section>
-      <p class="config-save-feedback" data-account-save-note role="status" aria-live="polite"></p>
-      <div class="config-studio" id="config-studio" data-mobile-editor-expanded="false">
         <section class="design-toolbar" id="design-toolbar" aria-labelledby="controls-title">
           <div class="design-toolbar-copy">
             <h2 id="controls-title">Produkt und Farben</h2>
@@ -2156,14 +2142,14 @@
           </div>
 
           <div class="design-toolbar-controls">
-            <div class="selected-product toolbar-product" id="selected-product">
+            <button class="selected-product toolbar-product" id="change-product" type="button" aria-label="Produkt ändern" aria-haspopup="dialog" aria-controls="product-dialog">
               <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
               <span class="selected-product-copy">
                 <strong id="selected-product-name">Weiße Tasse</strong>
                 <span id="selected-product-detail">11 oz · 325 ml</span>
               </span>
-              <button class="product-change" id="change-product" type="button">Produkt ändern</button>
-            </div>
+              <span class="compact-picker-chevron" aria-hidden="true">⌄</span>
+            </button>
 
             <div class="toolbar-menu" id="orientation-step" hidden>
               <button class="toolbar-summary" type="button" data-panel-trigger="orientation-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="orientation-panel">
@@ -2184,7 +2170,7 @@
             <div class="toolbar-menu" id="theme-step">
               <button class="toolbar-summary" type="button" data-panel-trigger="theme-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="theme-panel">
                 <span>
-                  <span class="toolbar-kicker">Farbwelt</span>
+                  <span class="toolbar-kicker">Farbe</span>
                   <strong id="selected-theme-name">Farbwelt wählen</strong>
                 </span>
                 <span class="swatches toolbar-theme-swatches" id="selected-theme-swatches" aria-hidden="true"></span>
@@ -2212,6 +2198,18 @@
 
           </div>
         </section>
+        <div class="config-design-actions">
+          <button class="mobile-editor-toggle" id="mobile-editor-toggle" type="button" aria-expanded="false" aria-controls="mobile-canvas-dialog" aria-haspopup="dialog" aria-label="Design anpassen" data-i18n-aria-label-source="Design anpassen">
+            <span id="mobile-editor-toggle-label">Bearbeiten</span>
+          </button>
+        <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+        <div class="ww-account-controls config-design-save"><button type="button" data-account-save disabled aria-label="Design speichern"><span class="account-save-label-full" data-account-save-label>Design speichern</span><span class="account-save-label-compact">Speichern</span></button></div>
+        <% } %>
+        </div>
+      </section>
+      <p class="config-save-feedback" data-account-save-note role="status" aria-live="polite"></p>
+      <div class="config-studio" id="config-studio" data-mobile-editor-expanded="false">
+
 
         <%- include('partials/editor-symbols') %>
         <div class="cloud-update-notice" id="cloud-update-notice" role="status" hidden>
@@ -2454,10 +2452,15 @@
       <ul class="cart-review-list" id="shipping-choice-list"></ul>
     </div>
     <div class="config-panel-foot">
-      <button class="secondary-button" type="button" data-panel-close>Weiter bearbeiten</button>
-      <button class="secondary-button" id="shipping-choice-current-cart" type="button">Mit bisherigen Designs weiter</button>
-      <button class="primary-button" id="shipping-choice-save" type="button">Designs übernehmen und weiter</button>
+      <button class="primary-button" id="shipping-choice-save" type="button">Warenkorb aktualisieren und weiter</button>
+      <button class="secondary-button" id="shipping-choice-current-cart" type="button">Mit aktuellem Warenkorb weiter</button>
+      <button class="secondary-button" type="button" data-panel-close>Zurück zum Bearbeiten</button>
     </div>
+  </dialog>
+
+  <dialog class="cart-comparison-dialog" id="cart-comparison-dialog" aria-labelledby="cart-comparison-title">
+    <div class="config-panel-head"><h2 id="cart-comparison-title" tabindex="-1">Designvergleich</h2><button class="config-panel-close" type="button" data-cart-comparison-close aria-label="Schließen">×</button></div>
+    <div class="config-panel-body" data-cart-comparison-body></div>
   </dialog>
 
   <dialog class="config-panel" id="another-choice-dialog" aria-labelledby="another-choice-title" aria-describedby="another-choice-description">
@@ -2556,6 +2559,7 @@
   <script src="<%= asset('/js/mobile-canvas-workspace.js') %>"></script>
   <script src="<%= asset('/js/artwork-overlap-warnings.js') %>"></script>
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
+  <script src="<%= asset('/js/cart-design-review.js') %>"></script>
   <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %><script src="<%= asset('/js/account.js') %>"></script><% } %>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
   <script src="<%= asset('/js/configurator-toolbar.js') %>"></script>
@@ -3012,52 +3016,51 @@
     draftLossLeave.addEventListener('click', () => draftLossDialog.close('leave'));
 
     function askShippingChoice(action, drafts = []) {
-      const isUpdate = action === 'choose-update';
-      const multiple = drafts.some(draft => draft.editingOrderItemId !== editingOrderItemId);
-      setText(shippingChoiceTitle, multiple ? 'Designs vor dem Weitergehen prüfen'
-        : isUpdate ? 'Änderungen vor dem Weitergehen übernehmen?' : 'Aktuelles Design hinzufügen?');
-      setText(shippingChoiceDescription, multiple
-        ? 'Bei diesen Designs gibt es Änderungen, die noch nicht im Warenkorb übernommen sind. Übernehmt sie für die Bestellung oder fahrt mit den bisherigen Designs fort. Eure Entwürfe bleiben in diesem Browser erhalten.'
-        : isUpdate
-        ? 'Die Änderungen sind noch nicht im Warenkorb. Übernehmt sie für die Bestellung oder fahrt mit der bisherigen Version fort. Euer Entwurf bleibt in diesem Browser erhalten.'
-        : 'Dieses Design ist noch nicht im Warenkorb. Fügt es hinzu oder fahrt ohne dieses Design fort.');
-      setText(shippingChoiceSave, multiple ? 'Designs übernehmen und weiter'
-        : isUpdate ? 'Warenkorb aktualisieren und weiter' : 'In den Warenkorb und weiter');
-      shippingChoiceList.replaceChildren();
-      for (const draft of drafts) {
-        const row = document.createElement('li');
-        const saved = loadOrderItems().find(item => item.id === draft.editingOrderItemId);
-        const oldProduct = products.find(candidate => candidate.key === saved?.productKey);
-        const newProduct = products.find(candidate => candidate.key === draft.productKey);
-        const oldName = oldProduct ? `${t(oldProduct.displayName)} · ${productSizeText(oldProduct, saved.orientation)}` : t('Design');
-        const newName = newProduct ? `${t(newProduct.displayName)} · ${productSizeText(newProduct, draft.orientation)}` : oldName;
-        const position = document.createElement('strong');
-        setText(position, 'Design {{number}}', {
-          number: loadOrderItems().findIndex(item => item.id === draft.editingOrderItemId) + 1,
-        });
-        const label = document.createElement('div');
-        setText(label, saved?.productKey === draft.productKey ? '{{item}}: Änderungen übernehmen'
-          : '{{previous}} durch {{item}} ersetzen', { previous: t(oldName), item: t(newName) });
-        const edit = document.createElement('button');
-        edit.type = 'button';
-        edit.className = 'secondary-button';
-        setText(edit, 'Design prüfen');
-        edit.addEventListener('click', () => shippingChoiceDialog.close(`edit:${draft.editingOrderItemId}`));
-        row.append(position, label, edit);
-        shippingChoiceList.appendChild(row);
-      }
-      if (action === 'choose-add') {
-        const row = document.createElement('li');
-        setText(row, '{{item}}: neues Design hinzufügen', { item: t(product.displayName) });
-        shippingChoiceList.appendChild(row);
-      }
+      const adding = action === 'choose-add';
+      const multiple = drafts.length > 1 || (adding && drafts.length > 0);
+      setText(shippingChoiceTitle, multiple ? 'Änderungen im Warenkorb prüfen'
+        : adding ? 'Dieses Design hinzufügen?' : 'Aktualisiertes Design verwenden?');
+      setText(shippingChoiceDescription, adding
+        ? (drafts.length ? 'Die gezeigten Warenkorb-Designs werden ersetzt und das neue Design wird zusätzlich hinzugefügt.'
+          : 'Dieses Design ist noch nicht im Warenkorb. Es wird als zusätzlicher Artikel hinzugefügt.')
+        : 'Die gezeigten Designs ersetzen ihre bisherigen Versionen im Warenkorb. Es kommen keine zusätzlichen Artikel hinzu.');
+      setText(shippingChoiceSave, adding
+        ? (drafts.length ? 'Aktualisieren, hinzufügen und weiter' : 'Hinzufügen und weiter')
+        : 'Warenkorb aktualisieren und weiter');
+      cartReview.show({ items: loadOrderItems(), drafts, currentId: editingOrderItemId,
+        addition: adding ? draftSnapshot() : null });
       shippingChoiceDialog.returnValue = 'cancel';
       return new Promise((resolve) => {
-        shippingChoiceDialog.addEventListener('close', () => resolve(shippingChoiceDialog.returnValue), { once: true });
+        shippingChoiceDialog.addEventListener('close', () => {
+          cartReview.dispose();
+          resolve(shippingChoiceDialog.returnValue);
+        }, { once: true });
         workspace.close(false);
         workspace.show(shippingChoiceDialog, continueOrderButton);
       });
     }
+
+    const cartReview = WolkenworteCartReview.create({
+      document, container: shippingChoiceList,
+      detailDialog: document.getElementById('cart-comparison-dialog'), setText,
+      load: async (id, signal) => {
+        const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(id)}/edit`, {
+          cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+        });
+        if (!response.ok) throw new Error('preview_unavailable');
+        return response.json();
+      },
+      describe: snapshot => {
+        const candidate = products.find(item => item.key === snapshot.productKey);
+        return candidate ? `${t(candidate.displayName)} · ${productSizeText(candidate, snapshot.orientation)}` : t('Design');
+      },
+      surfaces: snapshot => products.find(item => item.key === snapshot.productKey)?.printSurfaces || [],
+      render: (snapshot, surface, signal) => WolkenworteConfiguratorSession.withTimeout(WolkenworteCartReview.renderArtwork({
+        document, runtime: window, snapshot, surface, signal,
+        view: productView(products.find(item => item.key === snapshot.productKey), snapshot.orientation, surface.key),
+      })),
+      onEdit: id => shippingChoiceDialog.close(`edit:${id}`),
+    });
 
     shippingChoiceCurrentCart.addEventListener('click', () => shippingChoiceDialog.close('cart'));
     shippingChoiceSave.addEventListener('click', () => shippingChoiceDialog.close('save'));
@@ -3108,9 +3111,11 @@
       suppressDirty = true;
       try {
         await WolkenworteConfiguratorSession.withTimeout(mugEditor.pendingFontChange);
-        mugEditor.commitFontSizeInput();
-        mugEditor.commitAngleInput();
-        await WolkenworteConfiguratorSession.withTimeout(mugEditor.commitTextInput());
+        if (mugEditor.hasPendingFontSizeChange()) mugEditor.commitFontSizeInput();
+        if (mugEditor.hasPendingAngleChange()) mugEditor.commitAngleInput();
+        if (mugEditor.hasPendingTextChange()) {
+          await WolkenworteConfiguratorSession.withTimeout(mugEditor.commitTextInput());
+        }
         mugEditor.flushPendingChange();
       } finally { suppressDirty = wasSuppressed; }
       if (before !== JSON.stringify(mugEditor.getDesign())) markDirty();
@@ -5251,6 +5256,13 @@
       return !hasUnsavedDesign() || await saveCurrentDesign(continueOrderButton);
     }
 
+    function revealReviewedDesign() {
+      if (mobileDevice && workspace.mobileCanvas?.open(mobileEditorToggle)) return;
+      const editor = document.querySelector('.wrap-preview');
+      editor.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      document.getElementById('editor-add').focus({ preventScroll: true });
+    }
+
     async function continueToShipping() {
       if (leavingPage || orderActionPending) return;
       leavingPage = true;
@@ -5272,6 +5284,7 @@
           } else if (choice.startsWith('edit:')) {
             await loadOrderItem(choice.slice(5));
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(editingOrderItemId)}`);
+            revealReviewedDesign();
             return;
           } else if (choice === 'cart') {
             const saved = await persistCurrentDraft();
@@ -5384,7 +5397,7 @@
           words: snapshot.words, designs: snapshot.designs, productDesignState: snapshot.productDesignState });
       },
       preserve: () => persistCurrentDraft(),
-      onBeforeDialog: () => { workspace.mobileCanvas?.close(); workspace.close(false); },
+      onBeforeDialog: () => { workspace.close(false); },
       onSourceChange: reference => { accountDesignReference = reference; },
     });
     document.querySelectorAll('[data-account-library-link]').forEach(link => link.addEventListener('click', event => {

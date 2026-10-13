@@ -13,6 +13,7 @@ async function settled(){for(let i=0;i<12;i++)await tick();}
 function setup(t) {
   const markup=ejs.render(fs.readFileSync('views/partials/account-auth.ejs','utf8'));
   const dom=new JSDOM(`<button data-account-save>Save</button><p data-account-save-note></p>
+    <dialog id="mobile-canvas-dialog"><button data-account-save>Save</button><p data-account-save-note></p></dialog>
     <dialog id="account-auth-dialog">${markup}</dialog><dialog id="account-save-dialog"><form>
     <input name="name" required maxlength="80"><button type="submit">Save</button><button type="button" data-account-save-copy>Copy</button><p data-account-save-status></p></form></dialog>`,{url:'https://wolkenworte.io/e/abcdefghijklmnopqrstuv/configure'});
   t.after(()=>dom.window.close());const document=dom.window.document;
@@ -48,6 +49,22 @@ test('edits never autosave to the account; only an explicit submit saves the ful
   assert.equal(h.document.querySelector('[data-account-save]').disabled,false);
   assert.equal(h.document.querySelector('[data-account-save-note]').textContent,'');
   assert.equal(h.calls.filter(c=>c.body?.snapshot).length,1);
+});
+test('canvas save shares availability and feedback while its workspace stays open', async t=>{
+  const h=setup(t),canvas=h.document.getElementById('mobile-canvas-dialog');canvas.showModal();
+  const buttons=[...h.document.querySelectorAll('[data-account-save]')];
+  buttons[1].click();await settled();
+  assert.equal(canvas.open,true);assert.equal(h.document.getElementById('account-save-dialog').open,true);
+  h.document.getElementById('account-save-dialog').close();await settled();
+  assert.equal(canvas.open,true);assert.equal(h.calls.filter(c=>c.body?.snapshot).length,0);
+  buttons[1].click();await settled();
+  h.document.querySelector('#account-save-dialog form').dispatchEvent(new h.dom.window.Event('submit'));await settled();
+  assert.equal(canvas.open,true);assert.ok(buttons.every(button=>button.disabled));
+  assert.ok([...h.document.querySelectorAll('[data-account-save-note]')].every(note=>note.textContent==='In deinen Designs gespeichert.'));
+  h.setSnapshot({...h.snapshot(),theme:'changed'});h.controller.changed();
+  assert.ok(buttons.every(button=>!button.disabled));
+  h.flush();
+  assert.ok([...h.document.querySelectorAll('[data-account-save-note]')].every(note=>!note.textContent));
 });
 test('a copy is a separate explicit save and a different account cannot save an already opened private design',async t=>{
   const h=setup(t);h.document.querySelector('[data-account-save]').click();await settled();

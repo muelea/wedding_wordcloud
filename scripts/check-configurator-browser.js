@@ -10,12 +10,28 @@ const { ASSET_BASE } = require('../public/js/emoji-catalog');
 const { makeEmojiArtworkRouter } = require('../src/routes/emojiArtwork');
 const FIXTURE_SLUG = '-_AbCdEf0123456789xyZQ';
 
-function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
+function createFixture({ words = [['test', 1]], directDesign = false, review = false } = {}) {
   const app = express();
   const root = path.join(__dirname, '..');
   const configurations = new Map();
   app.use(express.json({ limit: '2mb' }));
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  if (review) {
+    const user = { id: '41139ef6-90f5-400d-bac5-8b7365f88428', email: 'fixture@example.invalid' };
+    app.get('/api/account/session', (req, res) => res.json({ user }));
+    app.post('/api/account/designs', (req, res) => res.json({ design: {
+      id: req.body.designId, name: req.body.name, version: (req.body.version || 0) + 1,
+    } }));
+    app.get('/review-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/cart-review-probe.js')));
+    app.get('/menu', (req, res, next) => {
+      const palettes = getPublicProduct(DEFAULT_PRODUCT).themes.filter(theme => theme.key !== 'custom');
+      renderPage(req, res, 'display', {
+        header: { variant: 'display', hasWords: true, paletteOptions: palettes },
+        pageData: { cloudTitle: 'Menu preview', eventUrl: `${req.protocol}://${req.get('host')}/menu`,
+          initialWords: [], qrSvg: '', paletteOptions: palettes },
+      }).catch(next);
+    });
+  }
   if (directDesign) {
     app.get('/', (req, res, next) => renderPage(req, res, 'landing', {
       header: { variant: 'landing', headerClass: 'site-header', navClass: 'shell nav', id: 'site-header',
@@ -29,13 +45,13 @@ function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
     <html lang="en"><head><meta charset="utf-8"><title>Responsive test word cloud</title></head>
     <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en">Keepsake</a></body></html>`));
   app.get(`/e/${FIXTURE_SLUG}/configure`, (req, res, next) => {
-    if (['1', 'area', 'touch'].includes(req.query.probe)) {
+    if (['1', 'area', 'touch', 'review'].includes(req.query.probe)) {
       const send = res.send.bind(res);
-      const probe = req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
+      const probe = req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
       res.send = html => {
         // A narrow desktop window is intentionally still a desktop. The touch
         // fixture supplies mobile device signals before any application scripts.
-        if (probe === 'mobile-canvas') html = html.replace('<head>', `<head><script>
+        if (probe === 'mobile-canvas' || req.query.device === 'mobile') html = html.replace('<head>', `<head><script>
           Object.defineProperties(navigator, {
             userAgent: { configurable: true, value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1' },
             platform: { configurable: true, value: 'iPhone' },
@@ -91,7 +107,8 @@ function createFixture({ words = [['test', 1]], directDesign = false } = {}) {
 }
 
 if (require.main === module) {
-  const options = process.argv.includes('--direct-design') ? { words: [], directDesign: true }
+  const options = process.argv.includes('--review') ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS, review: true }
+    : process.argv.includes('--direct-design') ? { words: [], directDesign: true }
     : process.argv.includes('--layout')
       ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS } : {};
   const server = createFixture(options).listen(0, '127.0.0.1', () => {

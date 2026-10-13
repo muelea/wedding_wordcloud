@@ -275,7 +275,8 @@
     const form=dialog.querySelector('form');const notice=dialog.querySelector('[data-account-save-status]');
     const saveButtons=[...document.querySelectorAll('[data-account-save]')];
     let user=null,source=null,savedFingerprint=null,metadata=null,pendingSave=null,saving=false,starting=false,feedbackTimer=null;
-    const feedback=document.querySelector('[data-account-save-note]');
+    const feedback=[...document.querySelectorAll('[data-account-save-note]')];
+    const saveFeedback=(message='',error=false)=>feedback.forEach(element=>status(element,message,error));
     function changed(){
       const label=source?'Design aktualisieren':'Design speichern';
       const disabled=saving||starting||!canSave()||Boolean(source&&savedFingerprint===getFingerprint());
@@ -302,8 +303,8 @@
       returnTo:location.pathname+'?accountSave=1',beforeRedirect:preserve});
     for(const button of saveButtons)button.addEventListener('click',async()=>{
       if(starting||saving||!canSave())return;
-      starting=true;changed();clearTimeout(feedbackTimer);if(feedback)feedback.textContent='';
-      try{await start();}catch(error){status(feedback,message(error),true);}
+      starting=true;changed();clearTimeout(feedbackTimer);saveFeedback();
+      try{await start();}catch(error){saveFeedback(message(error),true);}
       finally{starting=false;changed();}
     });
     for(const button of document.querySelectorAll('[data-account-dialog-close]'))button.addEventListener('click',()=>button.closest('dialog').close());
@@ -323,8 +324,8 @@
         pendingSave=null;
         metadata=result.design;source={id:metadata.id,ownerId:user.id,version:metadata.version};savedFingerprint=fingerprint;
         sourceChanged();await preserve();dialog.close();
-        status(feedback,'Design gespeichert.');
-        clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{if(feedback)feedback.textContent='';},3000);
+        saveFeedback('In deinen Designs gespeichert.');
+        clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>saveFeedback(),3000);
       },notice);}finally{saving=false;changed();}
     }
     form.addEventListener('submit',event=>{event.preventDefault();void performSave();});
