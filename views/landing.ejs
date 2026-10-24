@@ -10,9 +10,6 @@
   <%- include('partials/pwa-head') %>
   <%- include('partials/site-fonts', { preloadPlayfairItalic: true, preloadCormorantItalic: true }) %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" />
-  <link rel="stylesheet" href="<%= asset('/landing-workflow.css') %>" />
-  <link rel="stylesheet" href="<%= asset('/hero-preview.css') %>" />
-  <link rel="stylesheet" href="<%= asset('/live-cloud-transition.css') %>" />
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
@@ -36,10 +33,6 @@
     }
 
     * { box-sizing: border-box; }
-    /* Safari 26 derives its top-bar tint from the page/header background and
-       can otherwise keep the full-screen intro video's brown first-frame tint
-       after the overlay has gone. Keep the root canvas explicit, then make the
-       finished header an opaque owner of the top edge. */
     html { max-width: 100%; scroll-behavior: smooth; overflow-x: clip; background-color: var(--paper); color-scheme: light; }
     body { max-width: 100%; margin: 0; overflow-x: clip; background: var(--paper); color: var(--ink); font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
     a { color: inherit; text-decoration: none; }
@@ -67,23 +60,7 @@
 
     /* ── Nav ── */
     .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,253,250,.82); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid transparent; box-shadow: 0 0 0 rgba(64,15,38,0); transition: background .35s ease, border-color .35s ease, box-shadow .35s ease; }
-    html:not(.intro-fade) #site-header.ww-site-header { background: var(--paper) !important; }
-    /* Header stays fully transparent over the intro video; legibility comes
-       from lightening the logo/text themselves instead of a backing wash. */
-    html.intro-fade .brand,
-    html.intro-fade .nav-links a,
-    html.intro-fade .button.outline {
-      color: #fff;
-    }
-    html.intro-fade .brand-icon { filter: brightness(0) invert(1); }
-    html.intro-fade .nav-links a::after { background: #fff; }
-    html.intro-fade .button.outline { border-color: rgba(255,255,255,.7); }
-    html.intro-fade .button.outline:hover { border-color: #fff; }
-    /* Keep the complete header present over the teaser, but remove only the
-       section-link words until the video is dismissed. */
-    /* These are deliberately literal landing-page links: they must stay
-       inspectable and visible once the teaser has finished, even at narrow
-       viewport widths. */
+    #site-header.ww-site-header { background: var(--paper) !important; }
     #site-header .ww-nav { display: grid !important; grid-template-columns: 1fr auto 1fr; }
     #site-header .landing-section-links { display: flex; align-items: center; gap: 30px; opacity: 1; visibility: visible; pointer-events: auto; color: var(--muted); font-size: .85rem; letter-spacing: .01em; white-space: nowrap; transition: opacity .25s ease, visibility .25s ease; }
     #site-header .landing-section-link { position: relative; padding-bottom: 3px; color: var(--muted); white-space: nowrap; transition: color .2s ease; }
@@ -93,9 +70,6 @@
     #site-header .landing-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; margin-left: auto; white-space: nowrap; }
     #site-header .landing-header-actions .button { white-space: nowrap; }
     #site-header .landing-header-actions .landing-start-button { height: 38px; padding: 0 17px; }
-    /* The overlay is the source of truth. A stale document class can never
-       keep the links hidden after the teaser has been dismissed. */
-    #intro-overlay:not(.fade-out) ~ #site-header .landing-section-links { opacity: 0; visibility: hidden; pointer-events: none; }
     .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(64,15,38,.06); }
     .nav { height: 84px; display: flex; align-items: center; justify-content: space-between; }
     #so-gehts, #erinnerungsstuecke, #inspiration, #testimonials { scroll-margin-top: 84px; }
@@ -215,40 +189,6 @@
     .trust + .trust { margin-top: 10px; }
     .trust-heart { width: 18px; height: auto; color: var(--coral); transform: rotate(-6deg); }
     .trust span.copy { color: var(--muted); font-size: .8rem; }
-
-    /* ── Full-screen intro ── */
-    /* intro-lock blocks scrolling for the intro's *entire* life, including
-       the fade-out: it's only lifted once the crossfade fully finishes, not
-       the instant it starts. Otherwise leftover wheel/touch momentum from
-       the gesture that triggered dismissal keeps scrolling the page while
-       the fade is still playing, and visitors land past the hero instead of
-       on it. intro-fade is the separate, shorter-lived class that drives the
-       visuals (header colors, main opacity) and is removed immediately on
-       dismissal, in parallel with the video's own opacity fade. */
-    html.intro-lock { overflow: hidden; }
-    main { transition: opacity 1.2s ease; }
-    html.intro-fade main { opacity: 0; }
-    /* Sits below the sticky header's z-index (50) on purpose, so the nav
-       (and its language switcher / CTA) stay usable while the intro plays.
-       The overlay's own background is already the page's paper color, so
-       dismissal is a direct video opacity fade: the last frame (the
-       "Wolkenworte – for the people you love" title card) simply grows
-       more and more transparent, dissolving straight into the site's real
-       background instead of onto an intermediate color that itself shifts. */
-    #intro-overlay { position: fixed; inset: 0; z-index: 40; background-color: var(--paper); background-image: url('<%= asset('/assets/video/teaser-poster.jpg') %>'); background-position: center; background-size: cover; display: flex; align-items: center; justify-content: center; }
-    #intro-overlay.fade-out { pointer-events: none; }
-    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; transition: opacity 1.2s ease; }
-    #intro-overlay.fade-out #intro-video { opacity: 0; }
-    #intro-scroll-cue { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #fff; cursor: pointer; transition: opacity .3s ease; }
-    #intro-overlay.fade-out #intro-scroll-cue { opacity: 0; }
-    #intro-scroll-cue svg { width: 22px; height: 22px; animation: scroll-cue-bounce 1.8s ease-in-out infinite; }
-    #intro-scroll-cue span { font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
-    @keyframes scroll-cue-bounce { 0%,100% { transform: translateY(0); opacity: .7; } 50% { transform: translateY(8px); opacity: 1; } }
-    @media (max-width: 760px) and (orientation: portrait) {
-      #intro-overlay { background-image: url('<%= asset('/assets/video/teaser-poster-mobile.jpg') %>'); }
-      #intro-scroll-cue { bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 18px)); }
-    }
-    @media (prefers-reduced-motion: reduce) { #intro-overlay { display: none; } #intro-scroll-cue svg { animation: none; } }
 
     /* ── Sections shared ── */
     main > section { padding: 100px 0; }
@@ -409,43 +349,10 @@
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/landing-demo.css') %>" />
+  <script src="<%= asset('/js/landing-demo.js') %>" defer></script>
 </head>
 <body>
-  <div id="intro-overlay">
-    <video id="intro-video" autoplay muted playsinline preload="none" aria-label="Wolkenworte Teaser-Video"
-      data-mobile-src="<%= asset('/assets/video/teaser-mobile.mp4') %>"
-      data-desktop-src="<%= asset('/assets/video/teaser.mp4') %>"
-      data-mobile-poster="<%= asset('/assets/video/teaser-poster-mobile.jpg') %>"
-      data-desktop-poster="<%= asset('/assets/video/teaser-poster.jpg') %>"></video>
-    <div id="intro-scroll-cue" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-      <span>Scrollen zum Fortfahren</span>
-    </div>
-  </div>
-  <script>
-    (function () {
-      var overlay = document.getElementById('intro-overlay');
-      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (reduceMotion || WolkenworteJourney.recent()) {
-        if (overlay) overlay.remove();
-      } else {
-        document.documentElement.classList.add('intro-lock', 'intro-fade');
-        // Choose one URL before loading media, including on reload, so the
-        // video and poster stay paired without a native desktop fallback.
-        var video = document.getElementById('intro-video');
-        var portraitPhone = window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
-        var variant = portraitPhone ? 'mobile' : 'desktop';
-        var poster = video.dataset[variant + 'Poster'];
-        video.muted = true;
-        video.poster = poster;
-        overlay.style.backgroundImage = 'url("' + poster + '")';
-        video.preload = 'auto';
-        video.src = video.dataset[variant + 'Src'];
-        video.load();
-      }
-    })();
-  </script>
-
   <%- include('partials/site-header') %>
 
   <main>
@@ -453,11 +360,18 @@
       <div class="shell hero-grid">
         <div class="hero-copy">
           <p class="eyebrow">Wünsche &amp; Erinnerungen sammeln</p>
-          <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
-          <p class="lead">Ihr sammelt Wünsche und Erinnerungen für Menschen die euch wichtig sind. Wolkenworte macht daraus eine lebendige Wortwolke. Ob auf großen Feiern oder in kleiner Runde – mit Wolkenworte entsteht eine Erinnerung, die für immer bleibt.</p>
+          <h1>Eure Worte.<br><em>Eine gemeinsame Erinnerung.</em></h1>
+          <p class="lead">Sammelt Worte per Link oder QR-Code. Seht eure Wortwolke live wachsen – und gestaltet daraus auf Wunsch ein persönliches Geschenk.</p>
+
+        </div>
+
+        <%- include('partials/landing-demo') %>
+        <div class="hero-followup">
           <div class="hero-actions">
-            <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
+            <button class="button primary" type="button" data-open-start-dialog>Wortwolke erstellen <span aria-hidden="true">→</span></button>
+            <a class="button outline" href="#word-demo" data-try-demo>Animation ansehen</a>
           </div>
+          <p class="demo-reassurance">Ohne App. Ohne Anmeldung.</p>
           <form class="direct-design-form hero-direct-design" action="/design/start" method="post">
             <button class="direct-design-link" type="submit">Direkt ein Erinnerungsstück gestalten <span aria-hidden="true">→</span></button>
           </form>
@@ -472,66 +386,19 @@
               <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
             </div>
           </aside>
-          <div class="trust">
-            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-            <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
-          </div>
-          <div class="trust">
-            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-            <span class="copy">Jeder kann mitmachen – ganz einfach per Smartphone.</span>
-          </div>
-          <div class="trust">
-            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-            <span class="copy">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</span>
-          </div>
+          <p class="demo-price">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</p>
         </div>
-
-        <figure class="hero-preview" data-hero-preview
-          data-core-url="<%= asset('/js/wordcloud-core.js') %>"
-          data-worker-url="<%= asset('/js/cloud-layout-worker.js') %>"
-          <% for (const demoLocale of ['de', 'en', 'fr', 'it', 'es', 'tr']) { %>
-          data-cloud-<%= demoLocale %>="<%= asset('/assets/hero-clouds/' + demoLocale + '.json') %>"
-          data-fallback-<%= demoLocale %>="<%= asset('/assets/hero-clouds/' + demoLocale + '.png') %>"
-          <% } %>
-        >
-          <div class="hero-preview-toolbar">
-            <span class="hero-preview-label"><span class="hero-preview-dot" aria-hidden="true"></span>Live-Vorschau</span>
-            <button class="hero-preview-toggle" type="button" data-preview-toggle hidden
-              aria-label="Vorschau pausieren" data-i18n-aria-label-source="Vorschau pausieren">
-              <svg class="hero-preview-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4zM10 2h3v12h-3z"/></svg>
-              <svg class="hero-preview-play" viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 9 6-9 6z"/></svg>
-            </button>
-          </div>
-          <div class="hero-preview-frame">
-            <div class="hero-preview-screen" data-preview-screen>
-              <div class="hero-preview-header" aria-hidden="true">
-                <span class="hero-preview-brand" data-i18n-ignore><img src="<%= asset('/z_icons/icon.svg') %>" alt="" width="23" height="23" />Wolkenworte</span>
-                <span class="hero-preview-menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span>
-              </div>
-              <div class="hero-preview-stage" data-preview-stage>
-                <img class="hero-preview-fallback" data-preview-fallback
-                  src="<%= asset('/assets/hero-clouds/' + locale + '.png') %>" alt="" width="800" height="860" aria-hidden="true" />
-                <div class="cloud-word-highlights" data-preview-highlights aria-hidden="true"></div>
-                <canvas class="hero-preview-canvas" aria-label="Animierte Vorschau einer Wortwolke"
-                  data-i18n-aria-label-source="Animierte Vorschau einer Wortwolke" role="img"></canvas>
-              </div>
-              <div class="hero-preview-footer">
-                <span class="hero-preview-title" data-preview-title data-i18n-ignore>Lea &amp; Julian</span>
-                <div class="hero-preview-join">
-                  <div class="hero-preview-qr-label">
-                    <span class="hero-preview-join-label">Auf dem Handy mitmachen</span>
-                    <span class="hero-preview-scan-label">QR-Code scannen</span>
-                  </div>
-                  <a class="hero-preview-qr" href="https://wolkenworte.io" aria-label="wolkenworte.io" data-i18n-ignore>
-                    <img src="<%= asset('/assets/hero-clouds/home-qr.svg') %>" alt="" width="64" height="64" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-          <figcaption class="hero-preview-caption">Beispiel Hochzeit – eure Wortwolke wächst live auf dem großen Bildschirm – Wort für Wort, während eure Gäste feiern.</figcaption>
-        </figure>
       </div>
+    </section>
+
+    <section class="landing-how shell" id="so-gehts" aria-labelledby="workflow-title">
+      <p class="eyebrow">Von euch allen. Für immer.</p>
+      <h2 id="workflow-title">Drei Schritte. Viele persönliche Worte.</h2>
+      <ol class="landing-how-steps">
+        <li><span aria-hidden="true">01 ↗</span><h3>Wolke starten &amp; teilen</h3><p>Gebt eurer Wolke einen Namen. Ladet alle per Link oder QR-Code ein.</p></li>
+        <li><span aria-hidden="true">02 ＋</span><h3>Gemeinsam Worte sammeln</h3><p>Alle schreiben auf ihrem Handy. Eure Wolke wächst live – auch auf dem großen Bildschirm.</p></li>
+        <li><span aria-hidden="true">03 ♡</span><h3>Eine Erinnerung gestalten</h3><p>Wenn ihr möchtet: Bringt eure gesammelten Worte auf eine Tasse, ein Poster oder ein anderes Lieblingsstück.</p></li>
+      </ol>
     </section>
 
     <section class="print" id="erinnerungsstuecke" aria-labelledby="keepsakes-title">
@@ -566,289 +433,6 @@
               />
             </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="so-gehts" aria-labelledby="workflow-title">
-      <div class="shell">
-        <div class="workflow-story" data-workflow>
-          <div class="workflow-sticky" data-workflow-sticky>
-            <header class="workflow-intro">
-              <p class="eyebrow">Ganz unkompliziert</p>
-              <h2 id="workflow-title">Ein Moment, den alle mitgestalten.</h2>
-              <p>Kein Download, keine Accounts und keine komplizierte Technik. Nur ein QR-Code – und am Ende wird daraus mehr, als ihr euch vorstellen könnt.</p>
-            </header>
-
-            <div class="workflow-scene">
-              <ol class="workflow-steps">
-                <li class="workflow-step">
-                  <button class="workflow-step-copy" id="workflow-step-0" type="button" aria-controls="workflow-panel-0" aria-current="step" data-workflow-trigger="0" data-active="true">
-                    <span class="workflow-step-number" data-i18n-ignore>01</span>
-                    <span class="workflow-step-text"><strong>Wolke anlegen</strong><span>Erstellt in wenigen Sekunden eure eigene Wortwolke – ganz ohne Anmeldung.</span></span>
-                  </button>
-                </li>
-                <li class="workflow-step">
-                  <button class="workflow-step-copy" id="workflow-step-1" type="button" aria-controls="workflow-panel-1" data-workflow-trigger="1" data-active="false">
-                    <span class="workflow-step-number" data-i18n-ignore>02</span>
-                    <span class="workflow-step-text"><strong>Wolke teilen</strong><span>Teilt den QR-Code oder Link mit allen, die mitmachen sollen – ganz gleich, wo sie sind.</span></span>
-                  </button>
-                </li>
-                <li class="workflow-step">
-                  <button class="workflow-step-copy" id="workflow-step-2" type="button" aria-controls="workflow-panel-2" data-workflow-trigger="2" data-active="false">
-                    <span class="workflow-step-number" data-i18n-ignore>03</span>
-                    <span class="workflow-step-text"><strong>Wünsche sammeln</strong><span>Jede und jeder gibt ihr persönliches Wort direkt auf dem eigenen Handy ein. Ganz einfach, jeder kann mitmachen.</span></span>
-                  </button>
-                </li>
-                <li class="workflow-step">
-                  <button class="workflow-step-copy" id="workflow-step-3" type="button" aria-controls="workflow-panel-3" data-workflow-trigger="3" data-active="false">
-                    <span class="workflow-step-number" data-i18n-ignore>04</span>
-                    <span class="workflow-step-text"><strong>Staunen</strong><span>Auf dem großen Screen wächst eure Wortwolke in Echtzeit – Wort für Wort.</span></span>
-                  </button>
-                </li>
-                <li class="workflow-step">
-                  <button class="workflow-step-copy" id="workflow-step-4" type="button" aria-controls="workflow-panel-4" data-workflow-trigger="4" data-active="false">
-                    <span class="workflow-step-number" data-i18n-ignore>05</span>
-                    <span class="workflow-step-text"><strong>Bewahren</strong><span>Lasst eure Wortwolke als Tasse, Poster oder anderes Erinnerungsstück weiterleben.</span></span>
-                  </button>
-                </li>
-              </ol>
-
-              <div class="workflow-stage" data-workflow-stage>
-                <figure class="workflow-panel workflow-panel--capture workflow-panel--create" id="workflow-panel-0" aria-labelledby="workflow-step-0" aria-hidden="false" data-workflow-panel="0" data-active="true">
-                  <figcaption><b data-i18n-ignore>01</b><span>Wolke anlegen</span></figcaption>
-                  <div class="workflow-panel-art" aria-hidden="true">
-                    <img
-                      class="workflow-locale-screenshot workflow-create-screenshot"
-                      data-workflow-locale-screenshot
-                      src="<%= asset('/assets/workflow/01_' + locale + '.png') %>"
-                      data-workflow-src-de="<%= asset('/assets/workflow/01_de.png') %>"
-                      data-workflow-src-en="<%= asset('/assets/workflow/01_en.png') %>"
-                      data-workflow-src-es="<%= asset('/assets/workflow/01_es.png') %>"
-                      data-workflow-src-fr="<%= asset('/assets/workflow/01_fr.png') %>"
-                      data-workflow-src-it="<%= asset('/assets/workflow/01_it.png') %>"
-                      data-workflow-src-tr="<%= asset('/assets/workflow/01_tr.png') %>"
-                      alt=""
-                      width="867"
-                      height="1034"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div class="workflow-browser">
-                      <div class="workflow-browser-bar"><i></i><i></i><i></i><span class="workflow-browser-address" data-i18n-ignore>wolkenworte.io</span></div>
-                      <div class="workflow-create-body">
-                        <div class="workflow-create-card">
-                          <span class="workflow-create-kicker">Eure Wortwolke</span>
-                          <h4>Wie soll eure Wortwolke heißen?</h4>
-                          <div class="workflow-create-fields">
-                            <span class="workflow-create-field">Name der Wortwolke<span class="workflow-create-input" data-i18n-ignore>Lea &amp; Julian</span></span>
-                            <span class="workflow-create-field">Organisator-PIN<span class="workflow-create-input" data-i18n-ignore>••••</span></span>
-                          </div>
-                          <span class="workflow-create-button">Wortwolke erstellen&nbsp; →</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </figure>
-
-                <figure class="workflow-panel workflow-panel--capture workflow-panel--share" id="workflow-panel-1" aria-labelledby="workflow-step-1" aria-hidden="false" data-workflow-panel="1" data-active="false">
-                  <figcaption><b data-i18n-ignore>02</b><span>Wolke teilen</span></figcaption>
-                  <div class="workflow-panel-art" aria-hidden="true">
-                    <img
-                      class="workflow-locale-screenshot workflow-share-screenshot"
-                      data-workflow-locale-screenshot
-                      src="<%= asset('/assets/workflow/02_' + locale + '.png') %>"
-                      data-workflow-src-de="<%= asset('/assets/workflow/02_de.png') %>"
-                      data-workflow-src-en="<%= asset('/assets/workflow/02_en.png') %>"
-                      data-workflow-src-es="<%= asset('/assets/workflow/02_es.png') %>"
-                      data-workflow-src-fr="<%= asset('/assets/workflow/02_fr.png') %>"
-                      data-workflow-src-it="<%= asset('/assets/workflow/02_it.png') %>"
-                      data-workflow-src-tr="<%= asset('/assets/workflow/02_tr.png') %>"
-                      alt=""
-                      width="867"
-                      height="1034"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div class="workflow-invitation">
-                      <svg class="workflow-invitation-mark" viewBox="0 0 80 70"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-                      <small>Wolke teilen</small>
-                      <h4 data-i18n-ignore>Lea &amp; Julian</h4>
-                      <p data-i18n-ignore>wolkenworte.io/e/lea-und-julian</p>
-                      <svg class="workflow-qr" viewBox="0 0 40 40" fill="currentColor">
-                        <rect x="2" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="5.5" y="5.5" width="3" height="3"/>
-                        <rect x="28" y="2" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="31.5" y="5.5" width="3" height="3"/>
-                        <rect x="2" y="28" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="5.5" y="31.5" width="3" height="3"/>
-                        <rect x="17" y="4" width="3" height="3"/><rect x="23" y="9" width="3" height="3"/><rect x="17" y="14" width="3" height="3"/>
-                        <rect x="4" y="17" width="3" height="3"/><rect x="11" y="17" width="3" height="3"/><rect x="23" y="17" width="3" height="3"/>
-                        <rect x="29" y="17" width="3" height="3"/><rect x="35" y="17" width="3" height="3"/><rect x="17" y="23" width="3" height="3"/>
-                        <rect x="29" y="23" width="3" height="3"/><rect x="23" y="29" width="3" height="3"/><rect x="35" y="29" width="3" height="3"/><rect x="17" y="35" width="3" height="3"/>
-                      </svg>
-                    </div>
-                    <div class="workflow-share-phone">
-                      <div class="workflow-phone-top"></div>
-                      <div class="workflow-share-screen">
-                        <span class="workflow-mini-eyebrow">Eure Wortwolke</span>
-                        <h4 data-i18n-ignore>Lea &amp; Julian</h4>
-                        <p>Dein Wort für<br />diesen Moment</p>
-                        <div class="workflow-phone-field">Liebe, Glück, Freude</div>
-                        <div class="workflow-phone-action">Wünsche sammeln</div>
-                      </div>
-                    </div>
-                  </div>
-                </figure>
-
-                <figure class="workflow-panel workflow-panel--collect" id="workflow-panel-2" aria-labelledby="workflow-step-2" aria-hidden="false" data-workflow-panel="2" data-active="false">
-                  <figcaption><b data-i18n-ignore>03</b><span>Wünsche sammeln</span></figcaption>
-                  <div class="workflow-panel-art" aria-hidden="true">
-                    <div class="workflow-guest-phone">
-                      <div class="workflow-phone-top"></div>
-                      <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Liebe</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
-                    </div>
-                    <div class="workflow-guest-phone">
-                      <div class="workflow-phone-top"></div>
-                      <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Freude</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
-                    </div>
-                    <div class="workflow-guest-phone">
-                      <div class="workflow-phone-top"></div>
-                      <div class="workflow-guest-screen"><small>Wünsche sammeln</small><h4>Dein Wort für<br />diesen Moment</h4><div class="workflow-word-entry">Zusammen</div><span class="workflow-sent" data-i18n-ignore>Wolkenworte</span></div>
-                    </div>
-                    <div
-                      class="workflow-contributor-crowd"
-                      data-i18n-ignore
-                      data-workflow-locale-screenshot-group
-                      data-workflow-src-de="<%= asset('/assets/workflow/03_de.png') %>"
-                      data-workflow-src-en="<%= asset('/assets/workflow/03_en.png') %>"
-                      data-workflow-src-es="<%= asset('/assets/workflow/03_es.png') %>"
-                      data-workflow-src-fr="<%= asset('/assets/workflow/03_fr.png') %>"
-                      data-workflow-src-it="<%= asset('/assets/workflow/03_it.png') %>"
-                      data-workflow-src-tr="<%= asset('/assets/workflow/03_tr.png') %>"
-                    >
-                      <div class="workflow-contributor-phone workflow-contributor-phone--far-left">
-                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
-                      </div>
-                      <div class="workflow-contributor-phone workflow-contributor-phone--left">
-                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
-                      </div>
-                      <div class="workflow-contributor-phone workflow-contributor-phone--far-right">
-                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
-                      </div>
-                      <div class="workflow-contributor-phone workflow-contributor-phone--right">
-                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
-                      </div>
-                      <div class="workflow-contributor-phone workflow-contributor-phone--focus">
-                        <img src="<%= asset('/assets/workflow/03_' + locale + '.png') %>" alt="" loading="lazy" decoding="async" />
-                      </div>
-                    </div>
-                  </div>
-                </figure>
-
-                <figure class="workflow-panel workflow-panel--capture workflow-panel--live" id="workflow-panel-3" aria-labelledby="workflow-step-3" aria-hidden="false" data-workflow-panel="3" data-active="false">
-                  <figcaption><b data-i18n-ignore>04</b><span>Staunen</span></figcaption>
-                  <div class="workflow-panel-art" aria-hidden="true">
-                    <img
-                      class="workflow-locale-screenshot workflow-live-screenshot"
-                      data-workflow-locale-screenshot
-                      src="<%= asset('/assets/workflow/04_' + locale + '.png') %>"
-                      data-workflow-src-de="<%= asset('/assets/workflow/04_de.png') %>"
-                      data-workflow-src-en="<%= asset('/assets/workflow/04_en.png') %>"
-                      data-workflow-src-es="<%= asset('/assets/workflow/04_es.png') %>"
-                      data-workflow-src-fr="<%= asset('/assets/workflow/04_fr.png') %>"
-                      data-workflow-src-it="<%= asset('/assets/workflow/04_it.png') %>"
-                      data-workflow-src-tr="<%= asset('/assets/workflow/04_tr.png') %>"
-                      alt=""
-                      width="840"
-                      height="1038"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div class="workflow-display">
-                      <div class="workflow-display-frame">
-                        <span class="workflow-display-live">Live-Vorschau</span>
-                        <div class="workflow-cloud"><span>Liebe</span><span>Glück</span><span>Freude</span><span>Zusammen</span><span>Herzklopfen</span><span>für immer</span><span>Sommerabend</span><span>Geborgenheit</span><span>Lachen</span></div>
-                        <div class="workflow-new-word"><span data-i18n-ignore>+1</span><b>Hand in Hand</b></div>
-                      </div>
-                    </div>
-                  </div>
-                </figure>
-
-                <figure class="workflow-panel workflow-panel--keepsake" id="workflow-panel-4" aria-labelledby="workflow-step-4" aria-hidden="false" data-workflow-panel="4" data-active="false">
-                  <figcaption><b data-i18n-ignore>05</b><span>Bewahren</span></figcaption>
-                  <div class="workflow-panel-art workflow-keepsake-art" aria-hidden="true">
-                    <div class="workflow-keepsake-default">
-                      <div class="workflow-keepsake-copy"><small>Bewahren</small><h4>Gemeinsam gestaltet · für immer bewahrt</h4></div>
-                      <div class="workflow-product workflow-product--poster">
-                        <img src="<%= asset('/assets/product-mockups/framed-poster-black-30x40.png') %>" alt="" loading="lazy" decoding="async" />
-                        <div class="workflow-product-design"><span>Liebe</span><span>Glück</span><span>Zusammen</span><span>für immer</span></div>
-                      </div>
-                      <div class="workflow-product workflow-product--tote">
-                        <img src="<%= asset('/assets/product-mockups/tote-front.jpg') %>" alt="" loading="lazy" decoding="async" />
-                        <div class="workflow-product-design"><span>Liebe</span><span>Freude</span><span>Zusammen</span><span>für immer</span></div>
-                      </div>
-                      <div class="workflow-product workflow-product--mug"><img src="<%= asset('/assets/product-thumbnails/mug.svg') %>" alt="" loading="lazy" decoding="async" /></div>
-                    </div>
-                    <div class="workflow-keepsake-gallery workflow-keepsake-gallery--localized" data-i18n-ignore>
-                      <div class="workflow-keepsake-asset workflow-keepsake-asset--poster">
-                        <img
-                          data-workflow-locale-screenshot
-                          src="<%= asset('/assets/workflow/05_02_' + locale + '.png') %>"
-                          data-workflow-src-de="<%= asset('/assets/workflow/05_02_de.png') %>"
-                          data-workflow-src-en="<%= asset('/assets/workflow/05_02_en.png') %>"
-                          data-workflow-src-es="<%= asset('/assets/workflow/05_02_es.png') %>"
-                          data-workflow-src-fr="<%= asset('/assets/workflow/05_02_fr.png') %>"
-                          data-workflow-src-it="<%= asset('/assets/workflow/05_02_it.png') %>"
-                          data-workflow-src-tr="<%= asset('/assets/workflow/05_02_tr.png') %>"
-                          alt=""
-                          width="1000"
-                          height="1000"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                      <div class="workflow-keepsake-asset workflow-keepsake-asset--tote">
-                        <img
-                          data-workflow-locale-screenshot
-                          src="<%= asset('/assets/workflow/05_03_' + locale + '.png') %>"
-                          data-workflow-src-de="<%= asset('/assets/workflow/05_03_de.png') %>"
-                          data-workflow-src-en="<%= asset('/assets/workflow/05_03_en.png') %>"
-                          data-workflow-src-es="<%= asset('/assets/workflow/05_03_es.png') %>"
-                          data-workflow-src-fr="<%= asset('/assets/workflow/05_03_fr.png') %>"
-                          data-workflow-src-it="<%= asset('/assets/workflow/05_03_it.png') %>"
-                          data-workflow-src-tr="<%= asset('/assets/workflow/05_03_tr.png') %>"
-                          alt=""
-                          width="1000"
-                          height="1000"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                      <div class="workflow-keepsake-asset workflow-keepsake-asset--mug">
-                        <img
-                          data-workflow-locale-screenshot
-                          src="<%= asset('/assets/workflow/05_01_' + locale + '.png') %>"
-                          data-workflow-src-de="<%= asset('/assets/workflow/05_01_de.png') %>"
-                          data-workflow-src-en="<%= asset('/assets/workflow/05_01_en.png') %>"
-                          data-workflow-src-es="<%= asset('/assets/workflow/05_01_es.png') %>"
-                          data-workflow-src-fr="<%= asset('/assets/workflow/05_01_fr.png') %>"
-                          data-workflow-src-it="<%= asset('/assets/workflow/05_01_it.png') %>"
-                          data-workflow-src-tr="<%= asset('/assets/workflow/05_01_tr.png') %>"
-                          alt=""
-                          width="1000"
-                          height="1000"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="steps-cta">
-          <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
         </div>
       </div>
     </section>
@@ -1003,13 +587,8 @@
     void WolkenworteJourney.mountHome(document);
     window.addEventListener('pageshow', () => { void WolkenworteJourney.mountHome(document); });
   </script>
-  <script src="<%= asset('/js/landing-workflow.js') %>"></script>
   <script src="<%= asset('/js/emoji-data.js') %>" defer></script>
   <script src="<%= asset('/js/emoji-catalog.js') %>" defer></script>
-  <script src="<%= asset('/js/wordcloud-core.js') %>" defer></script>
-  <script src="<%= asset('/js/live-cloud-layout.js') %>" defer></script>
-  <script src="<%= asset('/js/live-cloud-transition.js') %>" defer></script>
-  <script src="<%= asset('/js/hero-cloud-preview.js') %>" defer></script>
   <script>
     (function () {
       var dialog = document.getElementById('start-dialog');
@@ -1073,46 +652,7 @@
       }
     })();
   </script>
-  <script>
-    (function () {
-      var overlay = document.getElementById('intro-overlay');
-      if (!overlay) return;
 
-      var introVideo = document.getElementById('intro-video');
-      var scrollCue = document.getElementById('intro-scroll-cue');
-
-      function finishIntro() {
-        if (overlay.classList.contains('fade-out')) return;
-        overlay.classList.add('fade-out');
-        document.documentElement.classList.remove('intro-fade');
-        var header = document.getElementById('site-header');
-        if (header) header.classList.add('intro-finished');
-        window.removeEventListener('wheel', finishIntro);
-        window.removeEventListener('touchmove', finishIntro);
-        window.removeEventListener('keydown', onIntroKeydown);
-        window.setTimeout(function () {
-          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-          document.documentElement.classList.remove('intro-lock');
-        }, 1250);
-      }
-
-      function onIntroKeydown(event) {
-        if (['ArrowDown', 'PageDown', ' ', 'End'].indexOf(event.key) !== -1) {
-          event.preventDefault();
-          finishIntro();
-        }
-      }
-
-      if (introVideo) {
-        introVideo.addEventListener('ended', finishIntro);
-        introVideo.addEventListener('error', finishIntro);
-      }
-      if (scrollCue) scrollCue.addEventListener('click', finishIntro);
-      window.addEventListener('wheel', finishIntro, { passive: true });
-      window.addEventListener('touchmove', finishIntro, { passive: true });
-      window.addEventListener('keydown', onIntroKeydown);
-    })();
-  </script>
   <script>
     (function () {
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

@@ -1,0 +1,40 @@
+        <section class="word-demo" id="word-demo" aria-label="So funktioniert Wolkenworte">
+          <div class="demo-topline"><span><i aria-hidden="true"></i> Viele Menschen. Eine gemeinsame Wolke.</span></div>
+          <div class="demo-scene" data-demo-scene>
+            <div class="demo-cloud-halo" aria-hidden="true"></div>
+            <div class="demo-cloud" data-demo-cloud role="img" aria-label="Worte von verschiedenen Handys kommen in einer gemeinsamen Wortwolke zusammen">
+              <span class="cloud-love">Liebe</span><span class="cloud-together">Gemeinsam</span><span class="cloud-happiness">Glück</span><span class="cloud-forever">Familie</span>
+              <span class="cloud-arrival cloud-adventure" data-arrival="0">Abenteuer</span>
+              <span class="cloud-arrival cloud-laughter" data-arrival="1">Lachen</span>
+              <span class="cloud-arrival cloud-friendship" data-arrival="2">Freundschaft</span>
+              <span class="cloud-arrival cloud-memories" data-arrival="3" data-i18n-ignore>🥂</span>
+              <span class="cloud-arrival cloud-health" data-arrival="4">Gesundheit</span>
+              <span class="cloud-arrival cloud-love-emoji" data-arrival="5" data-i18n-ignore>❤️</span>
+              <span class="cloud-us">Treue</span><span class="cloud-joy">Freude</span>
+              <span class="cloud-trust">Vertrauen</span>
+              <span class="cloud-dreams">Zukunft</span>
+              <span class="cloud-warmth">Wärme</span><span class="cloud-happiness-small">Geborgenheit</span>
+            </div>
+            <% for (const [index, name] of ['Anna', 'Ben', 'Mia', 'Tom', 'Lena', 'Paul'].entries()) { %>
+            <div class="demo-phone demo-phone--<%= index %>" data-phone="<%= index %>" aria-hidden="true">
+              <img class="demo-device-render" src="<%= asset('/assets/landing/phone-titanium.png') %>" alt="" width="860" height="1720" decoding="async" />
+              <div class="demo-phone-screen">
+              <div class="demo-speaker"></div>
+              <div class="demo-phone-brand" data-i18n-ignore><img src="<%= asset('/z_icons/icon.svg') %>" alt="" /><span>Wolkenworte</span></div>
+              <div class="demo-phone-title"><span>Wortwolke für</span><strong>Lea &amp; Julian</strong></div>
+              <div class="demo-phone-prompt" data-i18n-ignore><strong><%= name %></strong><span>tippt</span><i aria-hidden="true">…</i></div>
+              <div class="demo-phone-input"><span data-typing="<%= index %>" data-i18n-ignore></span><i></i></div>
+              <div class="demo-send" data-send="<%= index %>"><span>Wort senden</span> <b>↗</b></div>
+              </div>
+              
+            </div>
+            <% } %>
+            <div class="demo-participants" aria-label="Mitwirkende">
+              <% for (const [index, name] of ['Anna', 'Ben', 'Mia', 'Tom', 'Lena', 'Paul'].entries()) { %>
+              <div class="demo-participant demo-participant--<%= index %>" data-participant="<%= index %>" data-i18n-ignore><i><%= name[0] %></i><span><%= name %></span></div>
+              <% } %>
+            </div>
+            <svg class="demo-flight-layer" data-flights aria-hidden="true" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <noscript><p>Alle schreiben auf ihrem Handy. Die Worte erscheinen gemeinsam in eurer Wolke.</p></noscript>
+        </section>
