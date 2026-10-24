@@ -49,7 +49,7 @@ main > .hero { padding: 34px 0 35px; }
 .demo-person { position: absolute; left: 50%; bottom: -25px; transform: translateX(-50%); display: flex; align-items: center; gap: 5px; font-size: 10px; color: #77545e; white-space: nowrap; }
 .demo-person i { display: grid; place-items: center; width: 20px; height: 20px; background: #f2dfe5; border-radius: 50%; font-size: 9px; font-style: normal; color: #9c1c4c; }
 .demo-flight-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 4; }
-.demo-flight-word { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; fill: #9c1c4c; paint-order: stroke; stroke: #fffdfa; stroke-width: 4px; stroke-linejoin: round; }
+.demo-flight-word { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; fill: #9c1c4c; stroke: none; }
 .demo-cloud-label { position: absolute; bottom: 5%; left: 30%; right: 30%; text-align: center; font-size: .72rem; color: #937080; letter-spacing: .06em; }
 .word-demo :focus-visible { outline: 2px solid #9c1c4c; outline-offset: 4px; }
 .landing-how { padding-top: 36px; padding-bottom: 62px; }
