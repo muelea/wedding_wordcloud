@@ -295,13 +295,15 @@
 
 /* Rich, balanced demo hues coordinated around the fixed logo rose. */
 .word-demo { --demo-orange: #ec6e13; --demo-pink: #bd2055; --demo-blue: #3973d8; --demo-green: #37a257; --demo-yellow: #e3b51b; --demo-magenta: #914bc4; }
-.cloud-love, .cloud-adventure { color: var(--demo-orange); }
-.cloud-happiness, .cloud-trust { color: var(--demo-pink); }
+.cloud-love { color: var(--demo-pink); }
+.cloud-adventure { color: var(--demo-orange); }
+.cloud-happiness { color: var(--demo-yellow); }
+.cloud-trust { color: var(--demo-pink); }
 .cloud-forever, .cloud-friendship { color: var(--demo-blue); }
 .cloud-together, .cloud-laughter, .cloud-warmth { color: var(--demo-green); }
 .cloud-us, .cloud-home { color: var(--demo-yellow); }
 .cloud-joy, .cloud-dreams, .cloud-happiness-small { color: var(--demo-magenta); }
-.cloud-health { left: 42%; top: 86%; font-size: 3.4cqw; color: var(--demo-yellow); }
+.cloud-health { left: 42%; top: 86%; font-size: 3.4cqw; color: var(--demo-orange); }
 .cloud-love-emoji { left: 66%; top: 58%; font-family: 'Apple Color Emoji','Segoe UI Emoji',sans-serif !important; font-style: normal !important; font-size: 5.8cqw; color: initial; }
 .demo-phone-cloud > span { color: var(--demo-orange); }
 .demo-phone-cloud > small { color: var(--demo-blue); }
