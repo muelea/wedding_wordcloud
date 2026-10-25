@@ -1,17 +1,17 @@
-        <section class="word-demo" id="word-demo" aria-label="So funktioniert Wolkenworte">
-          <div class="demo-topline"><span><i aria-hidden="true"></i> Viele Menschen. Eine gemeinsame Wolke.</span></div>
+        <section class="word-demo" id="word-demo" data-demo-motion="ribbon-airy" data-demo-speed="1.8" aria-label="So funktioniert Wolkenworte">
           <div class="demo-scene" data-demo-scene>
             <div class="demo-cloud-halo" aria-hidden="true"></div>
             <div class="demo-cloud" data-demo-cloud role="img" aria-label="Worte von verschiedenen Handys kommen in einer gemeinsamen Wortwolke zusammen">
-              <span class="cloud-love">Liebe</span><span class="cloud-together">Gemeinsam</span><span class="cloud-happiness">Glück</span><span class="cloud-forever">Familie</span>
+              <span class="cloud-love">Liebe</span><span class="cloud-together">Gemeinsam</span><span class="cloud-arrival cloud-happiness" data-arrival="4">Glück</span><span class="cloud-forever">Familie</span>
               <span class="cloud-arrival cloud-adventure" data-arrival="0">Abenteuer</span>
               <span class="cloud-arrival cloud-laughter" data-arrival="1">Lachen</span>
               <span class="cloud-arrival cloud-friendship" data-arrival="2">Freundschaft</span>
               <span class="cloud-arrival cloud-memories" data-arrival="3" data-i18n-ignore>🥂</span>
-              <span class="cloud-arrival cloud-health" data-arrival="4">Gesundheit</span>
+              <span class="cloud-health">Gesundheit</span>
               <span class="cloud-arrival cloud-love-emoji" data-arrival="5" data-i18n-ignore>❤️</span>
               <span class="cloud-us">Treue</span><span class="cloud-joy">Freude</span>
               <span class="cloud-trust">Vertrauen</span>
+              <span class="cloud-confidence">Zuversicht</span>
               <span class="cloud-dreams">Zukunft</span>
               <span class="cloud-warmth">Wärme</span><span class="cloud-happiness-small">Geborgenheit</span>
             </div>
@@ -34,7 +34,14 @@
               <div class="demo-participant demo-participant--<%= index %>" data-participant="<%= index %>" data-i18n-ignore><i><%= name[0] %></i><span><%= name %></span></div>
               <% } %>
             </div>
+            <div class="demo-mug" data-demo-mug aria-hidden="true">
+              <div class="demo-mug-viewer" data-demo-mug-viewer></div>
+            </div>
             <svg class="demo-flight-layer" data-flights aria-hidden="true" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <div class="demo-story-footer">
+            <span data-demo-story-caption aria-live="polite">Viele Menschen. Eine gemeinsame Wolke.</span>
+            <button type="button" data-demo-replay hidden>Erneut ansehen <span aria-hidden="true">↻</span></button>
           </div>
           <noscript><p>Alle schreiben auf ihrem Handy. Die Worte erscheinen gemeinsam in eurer Wolke.</p></noscript>
         </section>

@@ -937,7 +937,8 @@ test('configurator exposes every curated product with verified Printful geometry
     landingResponse.text(), configureResponse.text(),
   ]);
   assert.ok(landingPage.includes(publicAssetUrl('/assets/workflow/05_01_de.png')));
-  assert.doesNotMatch(landingPage, /mug-3d-viewer\.js|id="mug-canvas"|Mug3DViewer\.create/);
+  assert.match(landingPage, /mug-3d-viewer\.js/);
+  assert.doesNotMatch(landingPage, /id="mug-canvas"/);
   assert.ok(configurePage.includes(publicAssetUrl('/js/mug-3d-viewer.js')));
   assert.match(configurePage, /id="product-options"/);
   assert.match(configurePage, /id="mobile-back-link"/);

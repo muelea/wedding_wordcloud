@@ -285,16 +285,19 @@
       interactionRegion.style.height = `${Math.max(0, Math.min(hostRect.height, bottom) - boundedTop)}px`;
     }
 
-    function render() {
+    function render(renderOptions) {
       if (destroyed || renderer.getContext().isContextLost()) return;
-      updateInteractionRegion();
+      if (renderOptions?.updateInteractionRegion !== false) updateInteractionRegion();
       renderer.render(scene, camera);
     }
 
     function resize() {
       const rect = host.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
-      renderer.setPixelRatio(Math.min(root.devicePixelRatio || 1, 2));
+      const densityLimit = options.maxPixelRatio || 2;
+      const areaLimit = options.maxRenderPixels > 0
+        ? Math.sqrt(options.maxRenderPixels / (rect.width * rect.height)) : Infinity;
+      renderer.setPixelRatio(Math.min(root.devicePixelRatio || 1, densityLimit, areaLimit));
       renderer.setSize(rect.width, rect.height, false);
       camera.aspect = rect.width / rect.height;
       const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);

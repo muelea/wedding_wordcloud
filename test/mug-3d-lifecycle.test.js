@@ -26,7 +26,7 @@ function fixture() {
   });
   class Renderer {
     constructor() { this.lost = false; this.renders = 0; this.capabilities = { getMaxAnisotropy: () => 4 }; renderers.push(this); }
-    setClearColor() {} setPixelRatio() {} setSize() {}
+    setClearColor() {} setPixelRatio(value) { this.pixelRatio = value; } setSize() {}
     getContext() { return { isContextLost: () => this.lost }; }
     render() { this.renders += 1; }
     dispose() { this.disposed = true; }
@@ -236,5 +236,43 @@ test('immersive product preview rotates from transparent space and restores page
   host.listeners.get('pointermove')(event(2, 50));
   assert.equal(outside.prevented, undefined);
   assert.equal(viewer.group.rotation.y, after);
+  viewer.destroy();
+});
+
+
+test('animated demos can bound pixel density and defer pointer bounds until interaction', () => {
+  const { root, host, THREE, renderers } = fixture();
+  root.devicePixelRatio = 3;
+  const viewer = root.Mug3DViewer.create({ host, THREE, maxPixelRatio: 1.5 });
+  assert.equal(renderers[0].pixelRatio, 1.5);
+  let reads = 0;
+  viewer.canvas.getBoundingClientRect = () => { reads++; return { left: 0, top: 0, width: 400, height: 300 }; };
+  const before = renderers[0].renders;
+  viewer.render({ updateInteractionRegion: false });
+  assert.equal(reads, 0);
+  assert.equal(renderers[0].renders, before + 1);
+  viewer.render();
+  assert.equal(reads, 1, 'normal rendering still refreshes pointer bounds');
+  viewer.destroy();
+  const defaultViewer = root.Mug3DViewer.create({ host, THREE });
+  assert.equal(renderers[1].pixelRatio, 2, 'configurator keeps its existing resolution');
+  defaultViewer.destroy();
+});
+
+
+test('full-window demo rendering stays within its pixel budget through resize', () => {
+  const { root, host, THREE, renderers } = fixture();
+  root.devicePixelRatio = 2;
+  let width = 1920, height = 1080;
+  host.getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
+  const viewer = root.Mug3DViewer.create({ host, THREE, maxPixelRatio: 1.5, maxRenderPixels: 1200000 });
+  for (const size of [[1920, 1080], [3840, 2160], [400, 300], [1080, 1920]]) {
+    [width, height] = size; viewer.resize();
+    const ratio = renderers[0].pixelRatio;
+    assert.ok(Math.floor(width * ratio) * Math.floor(height * ratio) <= 1200000);
+    assert.ok(ratio <= 1.5);
+    if (width === 400) assert.equal(ratio, 1.5, 'small previews retain their existing sharpness');
+    assert.equal(viewer.camera.aspect, width / height, 'render budget preserves framing proportions');
+  }
   viewer.destroy();
 });

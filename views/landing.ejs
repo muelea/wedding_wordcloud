@@ -350,6 +350,11 @@
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
   <link rel="stylesheet" href="<%= asset('/landing-demo.css') %>" />
+  <script src="/vendor/three.min.js?v=0.160.1" defer></script>
+  <script src="<%= asset('/js/wordcloud-core.js') %>" defer></script>
+  <script src="<%= asset('/js/cloud-limits.js') %>" defer></script>
+  <script src="<%= asset('/js/design-layout.js') %>" defer></script>
+  <script src="<%= asset('/js/mug-3d-viewer.js') %>" defer></script>
   <script src="<%= asset('/js/landing-demo.js') %>" defer></script>
 </head>
 <body>
@@ -360,18 +365,11 @@
       <div class="shell hero-grid">
         <div class="hero-copy">
           <p class="eyebrow">Wünsche &amp; Erinnerungen sammeln</p>
-          <h1>Eure Worte.<br><em>Eine gemeinsame Erinnerung.</em></h1>
-          <p class="lead">Sammelt Worte per Link oder QR-Code. Seht eure Wortwolke live wachsen – und gestaltet daraus auf Wunsch ein persönliches Geschenk.</p>
-
-        </div>
-
-        <%- include('partials/landing-demo') %>
-        <div class="hero-followup">
+          <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
+          <p class="lead">Ihr sammelt Wünsche und Erinnerungen für Menschen die euch wichtig sind. Wolkenworte macht daraus eine lebendige Wortwolke. Ob auf großen Feiern oder in kleiner Runde – mit Wolkenworte entsteht eine Erinnerung, die für immer bleibt.</p>
           <div class="hero-actions">
-            <button class="button primary" type="button" data-open-start-dialog>Wortwolke erstellen <span aria-hidden="true">→</span></button>
-            <a class="button outline" href="#word-demo" data-try-demo>Animation ansehen</a>
+            <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
           </div>
-          <p class="demo-reassurance">Ohne App. Ohne Anmeldung.</p>
           <form class="direct-design-form hero-direct-design" action="/design/start" method="post">
             <button class="direct-design-link" type="submit">Direkt ein Erinnerungsstück gestalten <span aria-hidden="true">→</span></button>
           </form>
@@ -386,8 +384,21 @@
               <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
             </div>
           </aside>
-          <p class="demo-price">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</p>
+          <div class="trust">
+            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+            <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
+          </div>
+          <div class="trust">
+            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+            <span class="copy">Jeder kann mitmachen – ganz einfach per Smartphone.</span>
+          </div>
+          <div class="trust">
+            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+            <span class="copy">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</span>
+          </div>
         </div>
+
+        <%- include('partials/landing-demo') %>
       </div>
     </section>
 

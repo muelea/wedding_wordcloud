@@ -1,33 +1,27 @@
 /* A shared scene: phones type at the edges, words travel into the central cloud. */
-main > .hero { padding: 34px 0 35px; }
-.hero-grid { display: flex; flex-direction: column; gap: 28px; align-items: center; }
-.hero-copy { max-width: 900px; text-align: center; }
-.hero-copy .eyebrow, .hero-actions { justify-content: center; }
-.hero-copy h1 { font-size: clamp(2.3rem, 3.9vw, 3.5rem); margin-bottom: 16px; }
-.hero-followup { text-align: center; }
-.hero-copy .lead { max-width: 580px; margin: 0 auto 18px; font-size: .95rem; line-height: 1.6; }
+.demo-cup-only .ww-site-header, .demo-cup-only .hero-copy, .demo-cup-only .hero-followup,
+.demo-cup-only main > section:not(.hero), .demo-cup-only footer { display: none !important; }
+.demo-cup-only .hero { padding: 20px 0; }
+.demo-cup-only .word-demo { border: 0; box-shadow: none; }
+.demo-cup-only .demo-phone { display: none !important; }
 .demo-reassurance { margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
 .demo-price { margin: 8px auto 0; font-size: .73rem; color: var(--muted); }
-.hero-direct-design { margin-top: 0; }
 .word-demo { width: 100%; min-width: 0; position: relative; scroll-margin-top: 110px; }
-.demo-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .76rem; color: #77545e; padding: 0 24px; }
-.demo-topline > span { display: flex; align-items: center; gap: 8px; }
-.demo-topline i { width: 6px; height: 6px; background: #9c1c4c; border-radius: 50%; }
-.demo-topline button { border: 1px solid #ddc7cb; border-radius: 30px; min-width: 92px; min-height: 44px; background: #fffdfa; color: var(--ink); font: inherit; cursor: pointer; }
 .demo-scene { position: relative; width: 100%; aspect-ratio: 1.95; isolation: isolate; }
 .demo-cloud-halo { position: absolute; inset: 2% 10%; z-index: -1; background: radial-gradient(ellipse, #f3dae58c 0%, #faeee67a 44%, transparent 70%); border-radius: 50%; }
 .demo-cloud { position: absolute; width: 49%; height: 42%; left: 25.5%; top: 29%; }
+.word-demo .demo-cloud { z-index: 10; isolation: isolate; pointer-events: none; }
 .demo-cloud > span { position: absolute; font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; line-height: 1.12; white-space: nowrap; transform: translate(-50%, -50%); }
-.cloud-love { left: 44%; top: 44%; font-size: clamp(32px, 6.8vw, 82px); color: #9c1c4c; }
-.cloud-together { left: 49%; top: 73%; font-size: clamp(17px, 3.1vw, 38px); color: #aa7a35; }
-.cloud-happiness { left: 77%; top: 44%; font-size: clamp(18px, 3.2vw, 39px); color: #718b7b; }
-.cloud-forever { left: 49%; top: 96%; font-size: clamp(12px, 2vw, 24px); color: #8f6575; }
-.cloud-adventure { left: 50%; top: 9%; font-size: clamp(17px, 3.4vw, 41px); color: #9c1c4c; }
-.cloud-laughter { left: 11%; top: 66%; font-size: clamp(12px, 2.15vw, 26px); color: #718b7b; }
-.cloud-friendship { left: 83%; top: 73%; font-size: clamp(11px, 1.8vw, 22px); color: #b0763f; }
-.cloud-memories { left: 20%; top: 96%; font-size: clamp(10px, 1.7vw, 21px); color: #a05a74; }
-.cloud-us { left: 10%; top: 31%; font-size: clamp(14px, 2.4vw, 29px); color: #c18b36; }
-.cloud-joy { left: 81%; top: 16%; font-size: clamp(11px, 1.8vw, 22px); color: #a05a74; }
+.cloud-love { left: 44%; top: 44%; font-size: clamp(32px, 6.8cqw, 82px); color: #9c1c4c; }
+.cloud-together { left: 49%; top: 73%; font-size: clamp(17px, 3.1cqw, 38px); color: #aa7a35; }
+.cloud-happiness { left: 77%; top: 44%; font-size: clamp(18px, 3.2cqw, 39px); color: #718b7b; }
+.cloud-forever { left: 49%; top: 96%; font-size: clamp(12px, 2cqw, 24px); color: #8f6575; }
+.cloud-adventure { left: 50%; top: 9%; font-size: clamp(17px, 3.4cqw, 41px); color: #9c1c4c; }
+.cloud-laughter { left: 11%; top: 66%; font-size: clamp(12px, 2.15cqw, 26px); color: #718b7b; }
+.cloud-friendship { left: 83%; top: 73%; font-size: clamp(11px, 1.8cqw, 22px); color: #b0763f; }
+.cloud-memories { left: 20%; top: 96%; font-size: clamp(10px, 1.7cqw, 21px); color: #a05a74; }
+.cloud-us { left: 10%; top: 31%; font-size: clamp(14px, 2.4cqw, 29px); color: #c18b36; }
+.cloud-joy { left: 81%; top: 16%; font-size: clamp(11px, 1.8cqw, 22px); color: #a05a74; }
 .word-demo.is-animated .cloud-arrival { opacity: 0; }
 .demo-phone { position: absolute; width: 14.8%; padding: 11px 10px 10px; background: #fffdfa; border: 4px solid #542c3b; border-radius: 25px; box-shadow: 0 14px 25px #56283b15, inset 0 0 0 2px #f3e9e6; }
 .demo-phone--0 { left: 5%; top: 5%; transform: rotate(-11deg); }
@@ -38,8 +32,8 @@ main > .hero { padding: 34px 0 35px; }
 .demo-phone-brand { text-align: center; font: 600 clamp(7px, .9vw, 11px) Georgia, serif; }
 .demo-phone-cloud { display: grid; text-align: center; gap: 2px; padding: 12px 0; color: #9c1c4c; font: italic clamp(15px, 2vw, 23px) Georgia, serif; }
 .demo-phone-cloud small { font-size: .46em; color: #9a7a43; }
-.demo-phone-prompt { font-size: clamp(6px, .65vw, 9px); margin-bottom: 4px; color: #77545e; }
-.demo-phone-input { display: flex; align-items: center; min-height: 29px; padding: 4px 6px; border: 1px solid #ddc5cd; border-radius: 6px; font-size: clamp(8px, .95vw, 12px); color: #9c1c4c; overflow: hidden; }
+.demo-phone-prompt { font-size: clamp(6px, .65cqw, 9px); margin-bottom: 4px; color: #77545e; }
+.demo-phone-input { display: flex; align-items: center; min-height: 29px; padding: 4px 6px; border: 1px solid #ddc5cd; border-radius: 6px; font-size: clamp(8px, .95cqw, 12px); color: #9c1c4c; overflow: hidden; }
 .demo-phone-input i { width: 1px; height: 12px; background: #9c1c4c; margin-left: 2px; flex-shrink: 0; }
 .demo-send { display: flex; justify-content: space-between; align-items: center; background: #9c1c4c; border-radius: 6px; color: #fff; padding: 6px; margin-top: 5px; font-size: clamp(6px, .7vw, 9px); transition: background .2s; }
 .demo-send.is-sending { background: #b77e38; }
@@ -48,10 +42,18 @@ main > .hero { padding: 34px 0 35px; }
 .demo-space { width: 45%; height: 5px; background: #e8dfe1; border-radius: 3px; justify-self: center; }
 .demo-person { position: absolute; left: 50%; bottom: -25px; transform: translateX(-50%); display: flex; align-items: center; gap: 5px; font-size: 10px; color: #77545e; white-space: nowrap; }
 .demo-person i { display: grid; place-items: center; width: 20px; height: 20px; background: #f2dfe5; border-radius: 50%; font-size: 9px; font-style: normal; color: #9c1c4c; }
-.demo-flight-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 4; }
+.demo-flight-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 11; }
 .demo-flight-word { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-style: italic; fill: #9c1c4c; stroke: none; }
 .demo-cloud-label { position: absolute; bottom: 5%; left: 30%; right: 30%; text-align: center; font-size: .72rem; color: #937080; letter-spacing: .06em; }
 .word-demo :focus-visible { outline: 2px solid #9c1c4c; outline-offset: 4px; }
+.demo-mug { position: absolute; z-index: 3; left: 32%; top: 8%; width: 36%; height: 84%; opacity: 0; pointer-events: none; transform: translateY(12px) scale(.92); transform-origin: 50% 55%; }
+.demo-mug::before { content: ''; position: absolute; z-index: -1; inset: 13% 2% 12%; border-radius: 50%; background: radial-gradient(ellipse,#fff 0,#f8e9efb8 42%,#e8efff66 61%,transparent 75%); filter: blur(8px); }
+.demo-mug-viewer { width: 100%; height: 100%; }
+.demo-mug-viewer canvas { display: block; width: 100%; height: 100%; }
+.demo-mug-viewer .mug-interaction-region { display: none; }
+.demo-mug > span { position: absolute; right: 0; bottom: 7%; left: 0; color: #765866; font: 500 11px/1.3 'Jost','Wolkenworte Jost Fallback',system-ui,sans-serif; letter-spacing: .04em; text-align: center; }
+.demo-mug-flight .demo-flight-word { filter: drop-shadow(0 0 5px #fff8); }
+.demo-mug-spark { filter: drop-shadow(0 0 2px #efc47790); }
 .landing-how { padding-top: 36px; padding-bottom: 62px; }
 .landing-how h2 { font: 500 clamp(1.9rem, 3vw, 2.6rem)/1.2 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
 .landing-how-steps { list-style: none; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 36px; padding: 0; margin: 30px 0 0; }
@@ -60,10 +62,6 @@ main > .hero { padding: 34px 0 35px; }
 .landing-how-steps h3 { margin: 15px 0 8px; font-size: 1.05rem; font-weight: 500; }
 .landing-how-steps p { font-size: .9rem; color: #77545e; line-height: 1.65; margin: 0; }
 @media (max-width: 760px) {
-  main > .hero { padding-top: 25px; }
-  .hero-grid { gap: 20px; }
-  .hero-copy h1 { font-size: clamp(2.3rem, 7vw, 3.3rem); }
-  .demo-topline { padding: 0; font-size: .65rem; }
   .demo-scene { aspect-ratio: 1.05; margin-top: 16px; }
   .demo-cloud { left: 13%; width: 74%; height: 30%; top: 34%; }
   .demo-phone { width: 24%; border-width: 3px; border-radius: 16px; padding: 7px 6px; }
@@ -161,29 +159,15 @@ main > .hero { padding: 34px 0 35px; }
 }
 
 /* Luminous editorial direction: warm glass, atmospheric depth, quiet typography. */
-body { background: #fcfaf8; }
-main > .hero { position: relative; padding-top: 58px; overflow: hidden; background: radial-gradient(ellipse at 12% 18%,#e8e1f480,transparent 38%),radial-gradient(ellipse at 92% 48%,#f7d8df70,transparent 40%),linear-gradient(180deg,#fcfaf8,#fffdfa); }
-main > .hero::before { content: ''; position: absolute; width: 640px; height: 640px; top: -320px; right: -200px; border: 1px solid #bfa8bf26; border-radius: 50%; box-shadow: 0 0 0 70px #cdb4c00a,0 0 0 140px #cdb4c008; pointer-events: none; }
-.hero-copy .eyebrow { letter-spacing: .24em; font-size: .62rem; margin-bottom: 25px; }
-.hero-copy h1 { font-size: clamp(2.7rem,5.2vw,4.8rem); line-height: 1.03; letter-spacing: -.055em; margin-bottom: 24px; font-weight: 400; }
-.hero-copy h1 em { background: linear-gradient(115deg,#671735 10%,#aa315f 54%,#aa784e 95%); background-clip: text; -webkit-background-clip: text; color: transparent; }
-.hero-copy .lead { max-width: 550px; color: #796775; font-size: .95rem; line-height: 1.8; }
-.hero-grid { gap: 32px; }
 .word-demo { padding: 22px 18px 28px; border: 1px solid #ffffffed; border-radius: 42px; background: linear-gradient(125deg,#ffffffa6,#fffdf84d 45%,#f8eaf080); box-shadow: 0 0 0 1px #e2d6df60,0 35px 80px -50px #652c5e70,inset 0 1px 1px #fff; backdrop-filter: blur(16px); }
 .word-demo::before { content: ''; position: absolute; inset: 8px; border: 1px solid #ffffff73; border-radius: 35px; pointer-events: none; }
-.demo-topline { padding: 0 13px; font-size: .7rem; letter-spacing: .025em; }
-.demo-topline i { box-shadow: 0 0 0 4px #9c1c4c0b,0 0 12px #bf668b42; }
-.demo-topline button { min-width: 80px; min-height: 38px; background: #ffffff7d; border-color: #fff; box-shadow: 0 2px 10px #45273805; }
 .demo-scene { margin-top: 20px; }
 .demo-scene::before { content: ''; position: absolute; inset: 8% 17%; border: 1px solid #bb91ac24; border-radius: 50%; transform: rotate(-18deg); box-shadow: 0 0 0 25px #fff7fb26; pointer-events: none; }
 .demo-scene::after { content: ''; position: absolute; inset: 17% 10%; border: 1px solid #c5a77020; border-radius: 50%; transform: rotate(22deg); pointer-events: none; z-index: -1; }
 .demo-cloud-halo { inset: 4% 13%; filter: blur(24px); background: radial-gradient(ellipse at 30% 35%,#e8d8f0b3,transparent 55%),radial-gradient(ellipse at 70% 70%,#f8ddc5a8,transparent 50%),radial-gradient(ellipse,#ffffffed 15%,#fffaf7b3 50%,transparent 72%); }
-.demo-cloud::before { inset: -12% -8%; background: radial-gradient(ellipse,#ffffffe0,#fffaf86b 50%,transparent 72%); border-radius: 50%; filter: blur(8px); }
-.demo-cloud > span { text-shadow: 0 2px 15px #fff,0 10px 24px #6d355b0a; }
+.demo-cloud::before { display: none; }
+.demo-cloud > span { text-shadow: none; }
 .demo-cloud-label { width: max-content; max-width: 50%; left: 50%; right: auto; transform: translateX(-50%); bottom: 3%; background: #ffffff85; border: 1px solid #ffffffd9; border-radius: 30px; padding: 9px 16px; font-size: .63rem; letter-spacing: .08em; box-shadow: 0 4px 14px #7c426009; }
-.hero-followup { padding-top: 8px; }
-.hero-actions .button.primary { background: linear-gradient(125deg,#45112a,#802347); border: 1px solid #771b4052; box-shadow: 0 8px 24px #751d4826,inset 0 1px 0 #ffffff2e; min-height: 50px; padding-inline: 28px; }
-.hero-actions .button.outline { background: #ffffff80; border-color: #e7dbe1; min-height: 50px; }
 .landing-how { position: relative; padding-top: 75px; padding-bottom: 75px; }
 .landing-how h2 { max-width: 650px; font-weight: 400; letter-spacing: -.035em; font-size: clamp(2rem,3.4vw,3rem); }
 .landing-how-steps { gap: 18px; }
@@ -197,15 +181,8 @@ main > .hero::before { content: ''; position: absolute; width: 640px; height: 64
 .homepage-mug-mockup { position: relative; filter: drop-shadow(0 24px 22px #602a4320); }
 .inspiration-card { border-radius: 24px; overflow: hidden; }
 @media (max-width: 760px) {
-  main > .hero { padding-top: 35px; }
-  .hero-copy h1 { font-size: clamp(2.5rem,8.6vw,3.8rem); }
-  .hero-copy .eyebrow { font-size: .56rem; letter-spacing: .19em; }
-  .hero-copy .lead { font-size: .87rem; line-height: 1.7; }
   .word-demo { width: calc(100% + 16px); padding: 16px 8px 22px; border-radius: 28px; }
   .word-demo::before { inset: 5px; border-radius: 23px; }
-  .demo-topline { font-size: .56rem; padding: 0 5px; gap: 4px; }
-  .demo-topline button { min-width: 62px; min-height: 38px; }
-  .demo-topline > span { gap: 6px; }
   .demo-scene { margin-top: 22px; }
   .demo-scene::before { inset: 19% 13%; }
   .demo-scene::after { inset: 28% 5%; }
@@ -499,7 +476,8 @@ main > .hero::before { content: ''; position: absolute; width: 640px; height: 64
   position: relative; inset: auto; display: block; min-height: 0; padding: 7px 36px 7px 10px;
   overflow: visible; border: 1px solid #eadce2; border-left: 3px solid var(--person-color); border-radius: 14px;
   background: #fffdfbe8; box-shadow: 0 10px 28px #55213b18, inset 0 1px 0 #fff;
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  /* Avoid resampling the moving cloud behind each composer on every frame. */
+  background: #fffdfb;
 }
 .word-demo .demo-phone-screen::before {
   content: ''; position: absolute; left: -6px; top: 50%; width: 11px; height: 11px;
@@ -546,8 +524,157 @@ main > .hero::before { content: ''; position: absolute; width: 640px; height: 64
   .word-demo .demo-phone--0, .word-demo .demo-phone--5 { top: 16%; }
   .word-demo .demo-phone--1, .word-demo .demo-phone--4 { top: 48%; }
   .word-demo .demo-phone--2, .word-demo .demo-phone--3 { top: 79%; }
+  .demo-mug { left: 21%; top: 17%; width: 58%; height: 66%; }
+  .demo-mug > span { bottom: 0; font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .word-demo .demo-phone-prompt i,
   .word-demo .demo-phone-input i { animation: none; }
+}
+
+/* A restrained warm glint during the ceramic reveal. */
+.demo-reveal-spark { filter: drop-shadow(0 0 3px #f6d69aaa); }
+
+/* Full-story preview shares the isolated stage but retains typing composers. */
+.demo-full-sequence .word-demo .demo-phone { display: block !important; }
+
+/* Hand control to the existing Three.js viewer only after the reveal finishes. */
+.demo-mug.is-interactive { pointer-events: auto; }
+.demo-mug.is-interactive .demo-mug-viewer { cursor: grab; touch-action: none; }
+.demo-mug.is-interactive .demo-mug-viewer.dragging { cursor: grabbing; }
+.demo-mug.is-interactive .demo-mug-viewer:focus-visible { outline: 2px solid #9c1c4c; outline-offset: 4px; border-radius: 16px; }
+
+
+/* The original hero copy stays left; the new story replaces only its demo. */
+.hero-grid > .word-demo { container-type: inline-size; align-self: center; }
+.hero-grid > .word-demo .demo-scene { aspect-ratio: 1.08; margin-top: 8px; }
+.hero-grid > .word-demo .demo-cloud { left: 10%; width: 80%; top: 18%; height: 60%; }
+.hero-grid > .word-demo .demo-mug { left: 15%; width: 70%; top: 8%; height: 80%; }
+.hero-grid > .word-demo .demo-mug > span { bottom: 0; }
+.hero-grid > .word-demo .demo-phone { width: 23%; }
+.hero-grid > .word-demo .demo-phone--0,
+.hero-grid > .word-demo .demo-phone--5 { top: 5%; }
+.hero-grid > .word-demo .demo-phone--1,
+.hero-grid > .word-demo .demo-phone--4 { top: 43%; }
+.hero-grid > .word-demo .demo-phone--2,
+.hero-grid > .word-demo .demo-phone--3 { top: 82%; }
+@media (min-width: 761px) {
+  .hero-grid { display: grid; grid-template-columns: var(--landing-split-columns); gap: var(--landing-split-gap); align-items: center; }
+}
+@media (max-width: 760px) {
+  .hero-grid { display: grid; grid-template-columns: 1fr; gap: 36px; }
+}
+.demo-cup-only .hero-grid { grid-template-columns: 1fr; }
+
+/* Anna opens immediately; later composers retain their gentle entrance. */
+.word-demo .demo-phone.is-first-composer { transition: none; }
+
+/* Leave a small pocket in the cloud beside Lena's original composer. */
+.hero-grid > .word-demo .cloud-happiness { top: 48%; }
+.hero-grid > .word-demo .cloud-warmth { top: 79%; }
+
+.hero-grid > .word-demo .cloud-confidence { left: 73%; top: 4%; font-size: 3.8cqw; color: var(--demo-blue, #547eae); }
+
+/* Let the homepage story sit directly on the page rather than inside a card. */
+.hero-grid > .word-demo {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+}
+.hero-grid > .word-demo::before { display: none; }
+
+/* Reserve readable space for a whole word, even in a narrow hero column. */
+.hero-grid > .word-demo .demo-phone {
+  width: max(23%, 158px);
+  max-width: calc(100% - 12px);
+}
+.hero-grid > .word-demo .demo-phone-screen {
+  padding: 7px 36px 7px 9px;
+}
+.hero-grid > .word-demo .demo-phone-input {
+  min-height: 30px;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.hero-grid > .word-demo .demo-phone-prompt {
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+.hero-grid > .word-demo .demo-phone-prompt strong { font-size: 11px; }
+.hero-grid > .word-demo .demo-phone-input i { height: 12px; }
+.hero-grid > .word-demo .demo-send {
+  right: 6px;
+  bottom: 10px;
+  width: 25px;
+  min-height: 25px;
+}
+.hero-grid > .word-demo .demo-send b { font-size: 12px; }
+
+/* Use the viewport for the hero rather than squeezing the story into half
+   of the general-purpose 1120px content shell. Keep other sections unchanged. */
+main > .hero > .hero-grid {
+  width: min(1540px, calc(100% - clamp(32px, 5vw, 80px)));
+}
+.hero-grid > .word-demo {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding-inline: 0;
+  justify-self: stretch;
+}
+.hero-grid > .word-demo .demo-scene { max-height: 640px; }
+@media (min-width: 761px) {
+  main > .hero > .hero-grid {
+    grid-template-columns: minmax(280px, min(38vw, 440px)) minmax(0, 1fr);
+    gap: clamp(24px, 3vw, 48px);
+  }
+}
+@media (max-width: 760px) {
+  main > .hero > .hero-grid {
+    width: calc(100% - 32px);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hero-grid > .hero-copy { width: 100%; }
+}
+/* Isolated animation previews have no left-hand copy column. */
+.demo-cup-only main > .hero > .hero-grid { grid-template-columns: minmax(0, 1fr); }
+
+/* Keep the caption/replay below the demo on the cloud's horizontal centre. */
+.demo-story-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  min-height: 44px;
+  margin-top: 12px;
+  text-align: center;
+  color: var(--muted, #8a7178);
+  font-size: .76rem;
+  letter-spacing: .025em;
+}
+.demo-story-footer > * { grid-area: 1 / 1; }
+.demo-story-footer > [hidden] { display: none; }
+.demo-story-footer button {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.demo-story-footer > [data-demo-story-caption]::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #9c1c4c;
+  box-shadow: 0 0 0 4px #9c1c4c0b, 0 0 12px #bf668b42;
+  vertical-align: middle;
 }
