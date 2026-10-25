@@ -369,7 +369,7 @@
   justify-content: center;
   margin-top: 14px;
   border-radius: 999px;
-  background: var(--ink);
+  background: var(--button-primary, var(--ink));
   padding: 0 18px;
   color: #fff;
   font-size: .65rem;
@@ -508,7 +508,7 @@
   width: 100%;
   margin-top: 14px;
   border-radius: 999px;
-  background: var(--ink);
+  background: var(--button-primary, var(--ink));
   padding: 9px;
   color: #fff;
   font-size: .57rem;

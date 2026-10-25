@@ -53,7 +53,7 @@
 .demo-mug-viewer .mug-interaction-region { display: none; }
 .demo-mug > span { position: absolute; right: 0; bottom: 7%; left: 0; color: #765866; font: 500 11px/1.3 'Jost','Wolkenworte Jost Fallback',system-ui,sans-serif; letter-spacing: .04em; text-align: center; }
 .demo-mug-flight .demo-flight-word { filter: drop-shadow(0 0 5px #fff8); }
-.demo-mug-spark { filter: drop-shadow(0 0 2px #efc47790); }
+.demo-mug-spark { filter: drop-shadow(0 0 2px #e3b51b90); }
 @media (max-width: 760px) {
   .demo-scene { aspect-ratio: 1.05; margin-top: 16px; }
   .demo-cloud { left: 13%; width: 74%; height: 30%; top: 34%; }
@@ -156,7 +156,7 @@
 .demo-scene { margin-top: 20px; }
 .demo-scene::before { content: ''; position: absolute; inset: 8% 17%; border: 1px solid #bb91ac24; border-radius: 50%; transform: rotate(-18deg); box-shadow: 0 0 0 25px #fff7fb26; pointer-events: none; }
 .demo-scene::after { content: ''; position: absolute; inset: 17% 10%; border: 1px solid #c5a77020; border-radius: 50%; transform: rotate(22deg); pointer-events: none; z-index: -1; }
-.demo-cloud-halo { inset: 4% 13%; filter: blur(24px); background: radial-gradient(ellipse at 30% 35%,#e8d8f0b3,transparent 55%),radial-gradient(ellipse at 70% 70%,#f8ddc5a8,transparent 50%),radial-gradient(ellipse,#ffffffed 15%,#fffaf7b3 50%,transparent 72%); }
+.demo-cloud-halo { inset: 4% 13%; filter: blur(24px); background: radial-gradient(ellipse at 30% 35%,rgba(189,32,85,.04),transparent 55%),radial-gradient(ellipse at 70% 70%,rgba(248,221,197,.20),transparent 50%),radial-gradient(ellipse,#ffffffed 15%,#fffaf7b3 50%,transparent 72%); }
 .demo-cloud::before { display: none; }
 .demo-cloud > span { text-shadow: none; }
 .demo-cloud-label { width: max-content; max-width: 50%; left: 50%; right: auto; transform: translateX(-50%); bottom: 3%; background: #ffffff85; border: 1px solid #ffffffd9; border-radius: 30px; padding: 9px 16px; font-size: .63rem; letter-spacing: .08em; box-shadow: 0 4px 14px #7c426009; }
@@ -293,8 +293,8 @@
   .demo-cloud-label { bottom: 5%; }
 }
 
-/* Original wedding-demo palette, from assets/hero-clouds/de.json. */
-.word-demo { --demo-orange: #f77500; --demo-pink: #ed2446; --demo-blue: #2455f5; --demo-green: #18a84b; --demo-yellow: #efbf00; --demo-magenta: #e600b8; }
+/* Rich, balanced demo hues coordinated around the fixed logo rose. */
+.word-demo { --demo-orange: #ec6e13; --demo-pink: #bd2055; --demo-blue: #3973d8; --demo-green: #37a257; --demo-yellow: #e3b51b; --demo-magenta: #914bc4; }
 .cloud-love, .cloud-adventure { color: var(--demo-orange); }
 .cloud-happiness, .cloud-trust { color: var(--demo-pink); }
 .cloud-forever, .cloud-friendship { color: var(--demo-blue); }
@@ -314,7 +314,7 @@
 
 /* Phones explain contribution only; the cloud carries the shared words. */
 .demo-phone-context { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 7px 0 20px; color: #897783; font: 7px system-ui,sans-serif; }
-.demo-context-dot { width: 5px; height: 5px; border-radius: 50%; background: #ed2446; }
+.demo-context-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--demo-pink); }
 .demo-phone-cloud, .demo-phone-shared { display: none !important; }
 .demo-phone-prompt { margin-top: 25px; }
 .demo-participant b { display: none; }
@@ -445,7 +445,7 @@
 
 /* In the overview animation, a familiar floating composer conveys mobile input
    without six visually heavy device frames. The full phone remains in the mockup. */
-.word-demo .demo-phone { z-index: 12; --person-color: #9c1c4c; width: 16.5%; aspect-ratio: auto; filter: none; }
+.word-demo .demo-phone { z-index: 12; --person-color: #914bc4; width: 16.5%; aspect-ratio: auto; filter: none; }
 .word-demo .demo-device-render,
 .word-demo .demo-phone-brand,
 .word-demo .demo-phone-title { display: none; }
@@ -462,7 +462,7 @@
   border: 1px solid #eadce2; border-width: 0 0 1px 1px; background: #fffdfbe8;
   transform: translateY(-50%) rotate(45deg);
 }
-.word-demo .demo-phone-input { min-height: 29px; padding: 4px 7px; overflow: hidden; border: 1px solid #e7d8df; border-radius: 8px; background: #fff; box-shadow: inset 0 1px 3px #55213b0a, 0 1px 0 #fff; font-size: 11px; }
+.word-demo .demo-phone-input { color: var(--ink, #400f26); min-height: 29px; padding: 4px 7px; overflow: hidden; border: 1px solid #e7d8df; border-radius: 8px; background: #fff; box-shadow: inset 0 1px 3px #55213b0a, 0 1px 0 #fff; font-size: 11px; }
 .word-demo .demo-phone-prompt { display: flex; align-items: baseline; gap: 4px; margin: 0 0 5px; color: #8d7180; font: 400 10px/1.2 'Jost','Wolkenworte Jost Fallback',system-ui,sans-serif; }
 .word-demo .demo-phone-prompt strong { color: var(--person-color); font-size: 11px; font-weight: 600; }
 .word-demo .demo-phone-prompt span { color: #826b77; }
@@ -470,10 +470,10 @@
 .word-demo .demo-phone-input i { animation: demo-caret-blink .8s steps(1,end) infinite; }
 @keyframes demo-typing-pulse { 0%,100% { opacity: .3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-1px); } }
 @keyframes demo-caret-blink { 0%,45% { opacity: 1; } 46%,100% { opacity: 0; } }
-.word-demo .demo-phone-input i { height: 12px; }
+.word-demo .demo-phone-input i { height: 12px; background: var(--demo-pink); }
 .word-demo .demo-send {
   position: absolute; z-index: 1; right: 6px; top: auto; bottom: 9px; width: 25px; min-height: 25px; margin: 0; padding: 0;
-  justify-content: center; border-radius: 50%; transform: none;
+  justify-content: center; border-radius: 50%; transform: none; background: var(--button-primary, #61001f);
 }
 .word-demo .demo-send span { display: none; }
 .word-demo .demo-send b { font-size: 11px; }
@@ -511,7 +511,7 @@
 }
 
 /* A restrained warm glint during the ceramic reveal. */
-.demo-reveal-spark { filter: drop-shadow(0 0 3px #f6d69aaa); }
+.demo-reveal-spark { filter: drop-shadow(0 0 3px #e3b51baa); }
 
 /* Full-story preview shares the isolated stage but retains typing composers. */
 .demo-full-sequence .word-demo .demo-phone { display: block !important; }
@@ -574,7 +574,7 @@
   font-size: 10px;
 }
 .hero-grid > .word-demo .demo-phone-prompt strong { font-size: 11px; }
-.hero-grid > .word-demo .demo-phone-input i { height: 12px; }
+.hero-grid > .word-demo .demo-phone-input i { height: 12px; background: var(--demo-pink); }
 .hero-grid > .word-demo .demo-send {
   right: 6px;
   bottom: 10px;
@@ -616,4 +616,4 @@
 .demo-replay[hidden] { display: none; }
 .demo-replay svg { width: 100%; height: 100%; }
 .demo-replay:hover { color: var(--ink, #400f26); }
-.demo-replay:focus-visible { outline: 2px solid #9c1c4c; outline-offset: 4px; }
+.demo-replay:focus-visible { outline: 2px solid var(--demo-pink); outline-offset: 4px; }

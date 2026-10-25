@@ -168,9 +168,9 @@
   }
   var phones = words.map(function (word, index) {
     var group = element('g', { opacity: 0 }, svg);
-    var trail = element('path', { fill: 'none', stroke: '#c1922f', 'stroke-width': 1.2, 'stroke-linecap': 'round', opacity: .35 }, group);
+    var trail = element('path', { fill: 'none', stroke: '#e3b51b', 'stroke-width': 1.2, 'stroke-linecap': 'round', opacity: .35 }, group);
     var sparks = Array.from({ length: 12 }, function (_, i) {
-      return element('path', { d: 'M-3 0H3M0-3V3', stroke: i % 2 ? '#c1922f' : '#d1607e', 'stroke-width': 1.4, 'stroke-linecap': 'round', fill: 'none' }, group);
+      return element('path', { d: 'M-3 0H3M0-3V3', stroke: i % 2 ? '#e3b51b' : '#bd2055', 'stroke-width': 1.4, 'stroke-linecap': 'round', fill: 'none' }, group);
     });
     var flying = element('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', class: 'demo-flight-word' }, group);
     return { word: word, index: index, phone: root.querySelector('[data-phone="' + index + '"]'),
@@ -183,12 +183,12 @@
   var printSources = cloudNodes;
   var mugFlights = printSources.map(function (node, index) {
     var group = element('g', { opacity: 0, class: 'demo-mug-flight' }, svg);
-    var trail = element('path', { fill: 'none', stroke: '#d8ad70', 'stroke-width': 1.3, 'stroke-linecap': 'round', opacity: .25 }, group);
+    var trail = element('path', { fill: 'none', stroke: '#e3b51b', 'stroke-width': 1.3, 'stroke-linecap': 'round', opacity: .25 }, group);
     var sparks = Array.from({ length: 8 }, function (_, sparkIndex) {
       var star = sparkIndex % 3 === 0;
       return element('path', {
         d: star ? 'M0-4C.45-1 .9-.45 3 0 .9.45 .45 1 0 4-.45 1-.9.45-3 0-.9-.45-.45-1 0-4Z' : 'M1 0A1 1 0 1 1-1 0A1 1 0 1 1 1 0Z',
-        fill: star ? '#edca8c' : '#dba8ad', stroke: star ? '#fff4d8' : 'none',
+        fill: star ? '#e3b51b' : '#bd2055', stroke: star ? '#fff4d8' : 'none',
         'stroke-width': .35, class: 'demo-mug-spark'
       }, group);
     });
@@ -196,10 +196,10 @@
     return { node: node, index: index, group: group, trail: trail, sparks: sparks, flying: flying, geometry: null };
   });
   var revealMagic = element('g', { opacity: 0, 'pointer-events': 'none' }, svg);
-  var revealHalo = element('ellipse', { fill: 'none', stroke: '#efd5a3', 'stroke-width': 2, opacity: 0 }, revealMagic);
+  var revealHalo = element('ellipse', { fill: 'none', stroke: '#e3b51b', 'stroke-width': 2, opacity: 0 }, revealMagic);
   var revealSparks = Array.from({ length: 24 }, function (_, index) {
     return element('path', { d: index % 3 ? 'M1.2 0A1.2 1.2 0 1 1-1.2 0A1.2 1.2 0 1 1 1.2 0Z' : 'M0-5Q.7-.7 4 0Q.7.7 0 5Q-.7.7-4 0Q-.7-.7 0-5Z',
-      fill: index % 2 ? '#e4b96b' : '#dba8bd', class: 'demo-reveal-spark' }, revealMagic);
+      fill: index % 2 ? '#37a257' : '#914bc4', class: 'demo-reveal-spark' }, revealMagic);
   });
   function drawRevealMagic(age) {
     var progress = Math.max(0, Math.min(1, age / 3000));
@@ -236,7 +236,7 @@
     cloudNodes.forEach(function (node, index) {
       var placement = placements[index % placements.length];
       var style = window.getComputedStyle(node);
-      ctx.fillStyle = style.color || '#9c1c4c';
+      ctx.fillStyle = style.color || '#914bc4';
       ctx.font = 'italic 600 ' + Math.round(area.printHeight * placement[2]) + 'px Georgia, serif';
       ctx.fillText(t(node.textContent.trim()), area.offsetX + area.printWidth * placement[0], area.offsetY + area.printHeight * placement[1]);
     });
@@ -549,7 +549,7 @@
       var start = { x: input.left + input.width / 2 - bounds.left, y: input.top + input.height / 2 - bounds.top };
       var end = { x: target.left + target.width / 2 - bounds.left, y: target.top + target.height / 2 - bounds.top };
       var control = { x: start.x + (end.x - start.x) * .35, y: Math.min(start.y, end.y) - bounds.height * (phone.index < 2 ? .10 : .19) };
-      phone.geometry = { start: start, end: end, control: control, font: parseFloat(window.getComputedStyle(phone.target).fontSize), color: window.getComputedStyle(phone.target).color || '#f77500' };
+      phone.geometry = { start: start, end: end, control: control, font: parseFloat(window.getComputedStyle(phone.target).fontSize), color: window.getComputedStyle(phone.target).color || '#e3b51b' };
       phone.trail.setAttribute('d', 'M' + start.x + ',' + start.y + ' Q' + control.x + ',' + control.y + ' ' + end.x + ',' + end.y);
       phone.trail.setAttribute('pathLength', '1');
     });
@@ -562,7 +562,7 @@
         var start = { x: startBounds.left + startBounds.width / 2 - bounds.left, y: startBounds.top + startBounds.height / 2 - bounds.top };
         var end = { x: mugBounds.left - bounds.left + mugBounds.width * (.5 + Math.sin(angle) * ring), y: mugBounds.top - bounds.top + mugBounds.height * (.48 + Math.cos(angle) * ring * .48) };
         var control = { x: start.x + (end.x - start.x) * .55 + Math.sin(index * 1.7) * bounds.width * .05, y: Math.min(start.y, end.y) - bounds.height * (.08 + (index % 3) * .025) };
-        flight.geometry = { start: start, end: end, control: control, font: parseFloat(window.getComputedStyle(flight.node).fontSize), color: window.getComputedStyle(flight.node).color || '#9c1c4c' };
+        flight.geometry = { start: start, end: end, control: control, font: parseFloat(window.getComputedStyle(flight.node).fontSize), color: window.getComputedStyle(flight.node).color || '#914bc4' };
         flight.trail.setAttribute('d', 'M' + start.x + ',' + start.y + ' Q' + control.x + ',' + control.y + ' ' + end.x + ',' + end.y);
         flight.trail.setAttribute('pathLength', '1');
       });
@@ -618,7 +618,7 @@
       phone.target.style.opacity = arrivedNow ? '1' : '0';
       // Brief arrival emphasis while retaining the shared layout and word positions.
       var pulse = arrivedNow ? Math.max(0, 1 - (flightAge - 1850) / 650) : 0;
-      phone.target.style.filter = pulse ? 'drop-shadow(0 0 ' + (pulse * 9) + 'px #dba8bd)' : '';
+      phone.target.style.filter = pulse ? 'drop-shadow(0 0 ' + (pulse * 9) + 'px #914bc4)' : '';
       if (!flying || !phone.geometry) return;
       var geometry = phone.geometry;
       var position = point(geometry, progress);
