@@ -248,6 +248,14 @@ function normalizeCartShipments(rawBody, countries, configurations) {
 }
 
 function sendPrintfulError(res, error) {
+  if (error?.code === 'PRINTFUL_PRODUCT_RESTRICTED') {
+    return res.status(422).json({
+      error: 'product_shipping_restricted',
+      message: 'Ein Produkt kann nicht in das ausgewählte Land geliefert werden. Bitte passt eure Auswahl an.',
+      products: error.products,
+      country: error.country,
+    });
+  }
   if (error?.code === 'PRINTFUL_SHIPPING_UNAVAILABLE') {
     return res.status(422).json({
       error: 'shipping_unavailable',
@@ -327,9 +335,12 @@ function checkoutQuoteResponse(quote, order = null, session = null) {
     ? session.totalCents
     : request.expectedTotalCents;
   const checkoutExpiresAt = session?.expiresAt || order?.checkout_session_expires_at;
+  const pricing = shipments[0]?.customerCosts?.pricing || null;
+  const inclusive = pricing?.taxBehavior === 'inclusive';
+  const shippingTaxCents = session?.shippingTaxCents ?? request.expectedShippingTaxCents ?? 0;
   const checkoutPrepared = Number.isSafeInteger(taxCents) && taxCents >= 0 &&
     Number.isSafeInteger(totalCents) &&
-    totalCents === Number(quote.items_cents) + Number(quote.shipping_cents) + taxCents &&
+    totalCents === Number(quote.items_cents) + Number(quote.shipping_cents) + (inclusive ? 0 : taxCents) &&
     Number.isFinite(Date.parse(checkoutExpiresAt || '')) && Date.parse(checkoutExpiresAt) > Date.now() &&
     (Boolean(session?.url) || (order?.status === 'checkout_pending' && Boolean(order.stripe_checkout_url)));
   return {
@@ -340,6 +351,13 @@ function checkoutQuoteResponse(quote, order = null, session = null) {
     shipmentCount: shipments.length || 1,
     itemsCents: Number(quote.items_cents),
     paymentReserveCents: Number(quote.payment_reserve_cents || 0),
+    taxBehavior: pricing?.taxBehavior || 'exclusive',
+    pricingVersion: pricing?.version || 1,
+    pricedItems: session?.pricedItems || request.expectedPricedItems || pricing?.items || [],
+    ...(checkoutPrepared && pricing ? {
+      grossItemsCents: Number(quote.items_cents) + (inclusive ? 0 : taxCents - shippingTaxCents),
+      grossShippingCents: Number(quote.shipping_cents) + (inclusive ? 0 : shippingTaxCents),
+    } : {}),
     shippingCents: Number(quote.shipping_cents),
     taxCents: checkoutPrepared ? taxCents : Number(quote.tax_cents),
     totalCents: checkoutPrepared ? totalCents : Number(quote.total_cents),
@@ -382,6 +400,8 @@ function storedCheckoutResult(order, extra = {}) {
   return {
     url: order.stripe_checkout_url,
     taxCents: request.expectedTaxCents,
+    shippingTaxCents: request.expectedShippingTaxCents,
+    pricedItems: request.expectedPricedItems,
     totalCents: request.expectedTotalCents,
     expiresAt: order.checkout_session_expires_at,
     ...extra,
@@ -563,7 +583,14 @@ function sendCheckoutReplacementError(res, error, order) {
 }
 
 function quoteAmountsDiffer(stored, fresh) {
-  return stored.currency !== fresh.currency ||
+  const storedPricing = db.getCheckoutQuoteShipments(stored)[0]?.customerCosts?.pricing || null;
+  // Postgres JSONB reorders object keys. Compare ordered values, not object
+  // serialization, or every unchanged recheck would spuriously require consent.
+  const signature = value => value ? JSON.stringify([value.version, value.catalogVersion, value.country,
+    value.taxBehavior, value.items.map(item => [item.configurationId, item.productKey, item.variantId,
+      item.quantity, item.unitNetCents, item.unitGrossCents, item.unitAmountCents])]) : null;
+  return signature(storedPricing) !== signature(fresh.pricing) ||
+    stored.currency !== fresh.currency ||
     Number(stored.quantity) !== fresh.quantity ||
     Number(stored.items_cents) !== fresh.itemsCents ||
     Number(stored.payment_reserve_cents || 0) !== (fresh.paymentReserveCents || 0) ||
@@ -849,7 +876,9 @@ async function estimateCartShipments({ body, countries, configurations }) {
     };
   }));
   const calculatedQuote = buildCustomerQuoteForShipments(
-    pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
+    pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts,
+      recipient: shipment.recipient, items: printfulEstimateItemsForShipment(shipment, configurationById)
+        .map(item => ({ ...item, productKey: configurationById.get(item.configurationId).product_key })) }))
   );
   return {
     pricedShipments: pricedShipments.map((shipment, index) => ({
@@ -1351,7 +1380,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           return { ...shipment, ...estimate };
         }));
         const calculatedQuote = buildCustomerQuoteForShipments(
-          pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
+          pricedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts,
+            recipient: shipment.recipient, items: [{ configurationId: configuration.id,
+              productKey: configuration.product_key, variantId: Number(configuration.printful_variant_id),
+              quantity: shipment.quantity }] }))
         );
         const quotedShipments = pricedShipments.map((shipment, index) => ({
           ...shipment,
@@ -1575,6 +1607,18 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
     const checkoutIntent = req.body?.intent === 'prepare' ? 'prepare' : 'pay';
 
+    try {
+      for (const shipment of db.getCheckoutQuoteShipments(storedQuote)) {
+        const included = new Set((shipment.items || []).filter(item => Number(item.quantity) > 0)
+          .map(item => item.configurationId || item.configuration_id));
+        printful.assertProductDelivery(configurations.filter(configuration => !shipment.items || included.has(configuration.id))
+          .map(configuration => ({ variantId: configuration.printful_variant_id })), shipment.recipient);
+      }
+    } catch (error) {
+      if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
+      throw error;
+    }
+
     let order = await db.getOrderByQuoteId(storedQuote.id);
     if (order) {
       try {
@@ -1743,6 +1787,15 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       const requestedLocale = requestedCheckoutLocale(req.body?.locale, event.locale);
       const checkoutIntent = req.body?.intent === 'prepare' ? 'prepare' : 'pay';
 
+      try {
+        for (const shipment of db.getCheckoutQuoteShipments(storedQuote)) {
+          printful.assertProductDelivery([{ variantId: configuration.printful_variant_id }], shipment.recipient);
+        }
+      } catch (error) {
+        if (error instanceof printful.PrintfulApiError) return sendPrintfulError(res, error);
+        throw error;
+      }
+
       // A repeated click returns the same Stripe Session. No re-estimate is
       // necessary because this exact quote was already revalidated before
       // that Session was created.
@@ -1782,7 +1835,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           };
         }));
         const freshQuote = buildCustomerQuoteForShipments(
-          refreshedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts }))
+          refreshedShipments.map((shipment) => ({ quantity: shipment.quantity, costs: shipment.printfulCosts,
+            recipient: shipment.recipient, items: [{ configurationId: configuration.id,
+              productKey: configuration.product_key, variantId: Number(configuration.printful_variant_id),
+              quantity: shipment.quantity }] }))
         );
         const quotedShipments = refreshedShipments.map((shipment, index) => ({
           ...shipment,
@@ -1812,12 +1868,12 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
         const checkoutRequest = stripe.freezeCheckoutRequest({
           product,
-          shipments: refreshedShipments,
+          shipments: quotedShipments,
           slug: event.slug,
           configurationId: configuration.id,
           quoteId: refreshedQuote.id,
           quantity: freshQuote.quantity,
-          shipmentCount: refreshedShipments.length,
+          shipmentCount: quotedShipments.length,
           baseUrl: getBaseUrl(req, port),
           locale: requestedLocale,
         });
@@ -1918,6 +1974,9 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const products = configurations.map((entry) => getProduct(entry.product_key)).filter(Boolean);
     const product = products.length === 1 ? products[0] : null;
     const paymentConfirmed = ['paid_test', 'paid'].includes(order.status);
+    const request = parseStoredCheckoutRequest(order);
+    const includedShippingTax = request.pricing?.taxBehavior === 'inclusive'
+      ? Number(request.expectedShippingTaxCents || 0) : 0;
     const fulfillmentCreated = ['draft', 'submitted'].includes(order.fulfillment_status);
     const orderShipments = await db.getOrderShipments(order.id);
     res.json({
@@ -1931,6 +1990,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       currency: order.currency,
       totalCents: Number(order.total_cents),
       shippingCents: paymentConfirmed ? Number(order.shipping_cents) : null,
+      netShippingCents: paymentConfirmed ? Number(order.shipping_cents) - includedShippingTax : null,
       taxCents: paymentConfirmed ? Number(order.tax_cents) : null,
       quantity: orderShipments.length
         ? orderShipments.reduce((sum, shipment) => sum + Number(shipment.quantity || 0), 0)

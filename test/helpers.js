@@ -202,7 +202,10 @@ function stripeTaxPaymentSession({
   const itemsCents = Number(order.items_cents);
   const shippingCents = Number(order.shipping_cents);
   const finalTaxCents = Number(taxCents);
-  const finalTotalCents = itemsCents + shippingCents + finalTaxCents;
+  const request = typeof order.checkout_request_json === 'string'
+    ? JSON.parse(order.checkout_request_json) : order.checkout_request_json || {};
+  const inclusive = request.pricing?.taxBehavior === 'inclusive';
+  const finalTotalCents = itemsCents + shippingCents + (inclusive ? 0 : finalTaxCents);
   return {
     amountTotal: finalTotalCents,
     currency: String(order.currency || '').toLowerCase(),
@@ -219,7 +222,7 @@ function stripeTaxPaymentSession({
       shipping_cost: {
         amount_subtotal: shippingCents,
         amount_tax: shippingTaxCents,
-        amount_total: shippingCents + shippingTaxCents,
+        amount_total: shippingCents + (inclusive ? 0 : shippingTaxCents),
       },
     },
   };

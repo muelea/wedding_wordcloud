@@ -71,6 +71,84 @@ test('payment keeps the tax and gross total preview pinned until the signed paym
   assert.equal(paymentAmounts(partial.order, partial.session), null);
 });
 
+test('inclusive payments extract tax without adding it again and reject changed shipping tax', () => {
+  const { order, session } = fixture();
+  order.checkout_request_json = JSON.stringify({ customerId: 'cus_testtax',
+    pricing: { version: 2, country: 'DE', taxBehavior: 'inclusive', itemsCents: 1770, shippingCents: 449 },
+    expectedTaxCents: 354, expectedTotalCents: 2219, expectedShippingTaxCents: 72,
+  });
+  session.amount_total = 2219;
+  session.total_details.amount_tax = 354;
+  session.shipping_cost = { amount_subtotal: 449, amount_tax: 72, amount_total: 449 };
+  assert.deepEqual(paymentAmounts(order, session), { taxCents: 354, totalCents: 2219 });
+  session.amount_total += 354;
+  assert.equal(paymentAmounts(order, session), null, 'included VAT cannot be charged twice');
+  session.amount_total = 2219;
+  session.shipping_cost.amount_tax++;
+  assert.equal(paymentAmounts(order, session), null, 'shipping tax stays pinned with the preview');
+});
+
+test('catalog Checkout preserves unit prices, paginates large carts and rejects incomplete line amounts', async t => {
+  process.env.STRIPE_PAYMENT_MODE = 'test';
+  process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_catalog_unit';
+  delete require.cache[require.resolve('../src/stripe')];
+  const integration = require('../src/stripe');
+  const { buildCustomerQuoteForShipments } = require('../src/pricing');
+  const { getProduct } = require('../src/products');
+  const sdk = new Stripe('sk_test_sdk_mock');
+  let returnedLines, mutation = null, listCalls = 0, submitted;
+  t.mock.method(Object.getPrototypeOf(sdk.checkout.sessions), 'create', async params => {
+    submitted = params;
+    const inclusive = params.line_items[0].price_data.tax_behavior === 'inclusive';
+    const subtotal = params.line_items.reduce((sum, item) => sum + item.quantity * item.price_data.unit_amount, 0);
+    const shipping = params.shipping_options[0].shipping_rate_data.fixed_amount.amount;
+    const factor = inclusive ? .19 / 1.19 : .20;
+    const shippingTax = Math.round(shipping * factor);
+    returnedLines = params.line_items.map(item => {
+      const amount_subtotal = item.quantity * item.price_data.unit_amount;
+      return { quantity: item.quantity, amount_subtotal,
+        amount_total: amount_subtotal + (inclusive ? 0 : Math.round(amount_subtotal * factor)) };
+    });
+    const tax = shippingTax + returnedLines.reduce((sum, line) => sum + Math.round(line.amount_subtotal * factor), 0);
+    const result = { id: 'cs_test_catalog', url: 'https://checkout.stripe.test/catalog', customer: 'cus_testtax', currency: 'eur',
+      amount_subtotal: subtotal, amount_total: subtotal + shipping + (inclusive ? 0 : tax),
+      total_details: { amount_tax: tax, amount_discount: 0 }, automatic_tax: { enabled: true, status: 'complete' },
+      shipping_cost: { amount_subtotal: shipping, amount_tax: shippingTax, amount_total: shipping + (inclusive ? 0 : shippingTax) },
+      line_items: { has_more: returnedLines.length > 10, data: returnedLines.slice(0, 10) },
+    };
+    if (mutation) mutation(result);
+    return result;
+  });
+  t.mock.method(Object.getPrototypeOf(sdk.checkout.sessions), 'listLineItems', async (id, params) => {
+    assert.equal(id, 'cs_test_catalog'); assert.equal(params.limit, 100); listCalls++;
+    return { has_more: false, data: returnedLines };
+  });
+  for (const [country, count] of [['DE', 2], ['FR', 20]]) {
+    const items = Array.from({ length: count }, (_, index) => ({ configurationId: 'design' + index,
+      productKey: 'white-glossy-mug-duo-11oz', variantId: 1320, quantity: index === 0 ? 2 : 1 }));
+    const recipient = { name: 'Tax Test', address1: 'Musterweg 1', city: 'Berlin', zip: '10115', country_code: country };
+    const quote = buildCustomerQuoteForShipments([{ recipient, items, costs: { currency: 'EUR', total: 32.78, shipping: 11.43 } }]);
+    const request = integration.freezeCheckoutRequest({ products: items.map(item => getProduct(item.productKey)),
+      configurationIds: items.map(item => item.configurationId), quantity: count + 1, slug: 'tax-test', quoteId: 'catalog',
+      baseUrl: 'https://example.test', shipments: [{ recipient, items, customerCosts: { pricing: quote.pricing } }],
+    });
+    const order = { ...fixture().order, items_cents: quote.itemsCents, shipping_cents: quote.shippingCents,
+      total_cents: quote.totalCents, checkout_request_json: JSON.stringify({ ...request, customerId: 'cus_testtax' }) };
+    const create = () => integration.createCheckoutSession({ order, ...request, customerId: 'cus_testtax' });
+    const result = await create();
+    assert.equal(submitted.line_items[0].quantity, 2);
+    assert.equal(submitted.line_items[0].price_data.unit_amount, country === 'DE' ? 1107 : 930);
+    assert.equal(submitted.line_items[0].price_data.tax_behavior, country === 'DE' ? 'inclusive' : 'exclusive');
+    assert.equal(result.pricedItems.length, count);
+    assert.equal(result.pricedItems.reduce((sum, item) => sum + item.grossTotalCents, 0) + quote.shippingCents +
+      (country === 'DE' ? 0 : result.shippingTaxCents), result.totalCents);
+    mutation = session => { session.line_items.data[0].quantity++; };
+    await assert.rejects(create(), error => error.code === 'STRIPE_TAX_CALCULATION_INCOMPLETE');
+    mutation = null;
+  }
+  assert.equal(listCalls, 2, 'both large-cart responses fetch all designs before validating totals');
+});
+
 test('hosted Checkout pins shipping, separates net products and shipping, and retries identical Stripe inputs', async (t) => {
   process.env.STRIPE_PAYMENT_MODE = 'test';
   process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_tax_unit';

@@ -1,0 +1,23 @@
+{
+  "verifiedOn": "2026-10-25",
+  "unitAndMeshTests": {
+    "passed": 19,
+    "failed": 0
+  },
+  "configuratorTests": {
+    "passed": 29,
+    "failed": 0
+  },
+  "browserChecks": {
+    "passed": 25,
+    "failed": 0
+  },
+  "checks": [
+    "Edge pixels are not shifted or cropped in the provider PNG",
+    "Old accepted artwork renders identically",
+    "Five variants save and reopen exact edge coordinates",
+    "Server rejects horizontal and vertical out-of-bounds placement",
+    "Editor movement and visual guides use the same per-product safe rectangles",
+    "Print file sizes, DPI, provider identities, mesh UVs and the 56 other variants remain unchanged"
+  ]
+}

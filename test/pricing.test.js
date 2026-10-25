@@ -1,156 +1,85 @@
 'use strict';
-
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildCustomerQuote, buildCustomerQuoteForShipments, paymentReservePercent, paymentReserveFixedCents } = require('../src/pricing');
-
-test.beforeEach((t) => {
-  const settings = {
-    SHOP_PRODUCT_MARKUP_PERCENT: '50',
-    SHOP_PAYMENT_RESERVE_PERCENT: '3.69',
-    SHOP_PAYMENT_RESERVE_FIXED_CENTS: '49',
-  };
-  for (const [name, value] of Object.entries(settings)) {
-    const previous = process.env[name];
-    process.env[name] = value;
-    t.after(() => {
-      if (previous === undefined) delete process.env[name];
-      else process.env[name] = previous;
-    });
+const { catalogPrice, componentPrice, buildCustomerQuoteForShipments, paymentReservePercent,
+  paymentReserveFixedCents, estimatePaymentFeeCents } = require('../src/pricing');
+const { PRODUCTS } = require('../src/products');
+test.beforeEach(t => {
+  for (const [key,value] of Object.entries({SHOP_PRODUCT_MARKUP_PERCENT:'50',SHOP_PAYMENT_RESERVE_PERCENT:'3.69',SHOP_PAYMENT_RESERVE_FIXED_CENTS:'49'})) {
+    const previous=process.env[key]; process.env[key]=value;
+    t.after(()=>{if(previous===undefined)delete process.env[key];else process.env[key]=previous;});
   }
 });
-
-test('catalog-wide pricing marks up products, adds supplier tax once and reserves payment fees', () => {
-  const quote = buildCustomerQuote({
-    currency: 'EUR', subtotal: 10, shipping: 4, tax: 0, vat: 2.8, total: 16.8,
-  }, 2);
-  assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
-    currency: 'EUR', quantity: 2, itemsCents: 1933, paymentReserveCents: 153,
-    shippingCents: 400, taxCents: 0, totalCents: 2333, shipmentQuotes: undefined,
-  });
-});
-
-test('inexpensive products use the same markup rule', () => {
-  const quote = buildCustomerQuote({
-    currency: 'EUR', subtotal: 2, shipping: 4, tax: 0, vat: 1.2, total: 7.2,
-  }, 1);
-  assert.equal(quote.itemsCents, 510);
-  assert.equal(quote.paymentReserveCents, 90);
-  assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 910);
-});
-
-test('split shipments apply the markup to the combined product subtotal', () => {
-  const quote = buildCustomerQuoteForShipments([
-    { quantity: 2, costs: { currency: 'EUR', shipping: 4, tax: 0, vat: 1, total: 6 } },
-    { quantity: 1, costs: { currency: 'EUR', shipping: 5, tax: 0, vat: 1.4, total: 8.4 } },
-  ]);
-  assert.deepEqual({ ...quote, shipmentQuotes: undefined }, {
-    currency: 'EUR',
-    quantity: 3,
-    itemsCents: 815,
-    paymentReserveCents: 125,
-    shippingCents: 900,
-    taxCents: 0,
-    totalCents: 1715,
-    shipmentQuotes: undefined,
-  });
-  assert.deepEqual(quote.shipmentQuotes.map((shipment) => shipment.taxCents), [0, 0]);
-  const combined = buildCustomerQuote({ currency: 'EUR', shipping: 9, vat: 2.4, total: 14.4 }, 3);
-  assert.equal(quote.paymentReserveCents, combined.paymentReserveCents, 'charge the fixed fee once per purchase');
-});
-
-test('supplier VAT is included in products but never becomes customer tax', () => {
-  const quote = buildCustomerQuote({
-    currency: 'EUR', shipping: 6.24, tax: 0, vat: 3.28, total: 20.50,
-  }, 2);
-  assert.equal(quote.itemsCents, 2147);
-  assert.equal(quote.itemsCents - quote.paymentReserveCents, 1975, 'supplier VAT is added after the product markup');
-  assert.equal(quote.paymentReserveCents, 172);
-  assert.equal(quote.shippingCents, 624);
-  assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 2771);
-});
-
-test('a lower quantity-discounted Printful subtotal automatically lowers the customer unit price', () => {
-  const regular = buildCustomerQuote({ currency: 'EUR', shipping: 0, tax: 0, vat: 0, total: 50 }, 10);
-  const discounted = buildCustomerQuote({ currency: 'EUR', shipping: 0, tax: 0, vat: 0, total: 40 }, 10);
-  assert.equal(regular.itemsCents, 7899);
-  assert.equal(discounted.itemsCents, 6330);
-  assert.ok(discounted.itemsCents / 10 < regular.itemsCents / 10);
-});
-
-test('supplier VAT or sales tax is added without markup before the 20% reserve estimate', () => {
-  const variants = [{}, { tax: 0, vat: 0 }, { vat: 2.85 }, { tax: 1.2 }, { tax: 2, vat: 3 }];
-  for (const taxes of variants) {
-    const supplierTax = (taxes.tax || 0) + (taxes.vat || 0);
-    const quote = buildCustomerQuote({
-      currency: 'EUR', subtotal: 10, shipping: 5, ...taxes, total: 15 + supplierTax,
-    }, 2);
-    assert.equal(
-      quote.itemsCents - quote.paymentReserveCents,
-      1500 + Math.round(supplierTax * 100),
-      `supplier tax is added exactly once without markup: ${JSON.stringify(taxes)}`
-    );
-    assert.equal(quote.shippingCents, 500);
-    assert.equal(quote.shipmentQuotes[0].supplierTaxCents, Math.round(supplierTax * 100));
-    assert.equal(quote.taxCents, 0, 'the internal 20% must not become customer tax');
+function quote(country='DE',quantity=2, costs={currency:'EUR',shipping:11.43,total:32.78,tax:0,vat:0}) {
+  return buildCustomerQuoteForShipments([{recipient:{country_code:country},costs,items:[
+    {configurationId:'mug',productKey:'white-glossy-mug-duo-11oz',variantId:1320,quantity},
+    {configurationId:'poster',productKey:'matte-poster-30x40cm',variantId:8948,quantity:1},
+  ]}]);
+}
+test('every catalog variant has one validated, quantity-independent price',()=>{
+  for (const product of PRODUCTS) {
+    const p=catalogPrice(product.printful.variantId);
+    assert.equal(p.currency,'EUR');
+    assert.ok(Number.isSafeInteger(p.unitGrossCents)&&p.unitGrossCents>0);
+    assert.ok(Number.isSafeInteger(p.unitNetCents)&&p.unitNetCents>0);
   }
+  assert.equal(catalogPrice(1320).unitGrossCents,1107);
+  assert.equal(catalogPrice(8948).unitGrossCents,1957);
+  assert.deepEqual(Object.keys(require('../src/productCostSnapshot.json').variants).map(Number).sort((a,b)=>a-b),
+    PRODUCTS.map(product=>product.printful.variantId).sort((a,b)=>a-b));
 });
-
-test('reserve covers fees on its own amount, shipping and the assumed tax after cent rounding', () => {
-  const quote = buildCustomerQuote({ currency: 'EUR', shipping: 5, total: 15 }, 1);
-  // 15.00 product + 5.00 shipping + 1.44 reserve, with 20% assumed tax:
-  // 25.73 gross * 3.69% + 0.49 = 1.439437, rounded up to 1.44.
-  assert.equal(quote.paymentReserveCents, 144);
-  const assumedGrossCents = 2573;
-  assert.ok(quote.paymentReserveCents >= Math.ceil(assumedGrossCents * 0.0369 + 49));
+test('Germany charges exact gross unit prices plus separately calculated gross shipping',()=>{
+  const q=quote();
+  assert.equal(q.itemsCents,4171);
+  assert.equal(q.shippingCents,1484);
+  assert.equal(q.totalCents,5655);
+  assert.equal(q.taxCents,0,'only Stripe confirms included VAT');
+  assert.equal(q.pricing.taxBehavior,'inclusive');
+  assert.equal(q.pricing.items[0].unitAmountCents,1107);
 });
-
-test('a German mug quote reserves the separate PayPal, Stripe and Tax fees on the gross payment', () => {
-  const quote = buildCustomerQuote({ currency: 'EUR', shipping: 4.69, tax: 0, vat: 0, total: 10.29 }, 1);
-  const customerTaxCents = Math.round(quote.itemsCents * 0.19) + Math.round(quote.shippingCents * 0.19);
-  const grossCents = quote.totalCents + customerTaxCents;
-  const paypalFeeCents = Math.round(grossCents * 0.0299 + 39);
-  const stripeFeeCents = Math.round(grossCents * 0.002 + 10);
-  const stripeTaxFeeCents = Math.round(grossCents * 0.005);
-  assert.equal(quote.paymentReserveCents, 112);
-  assert.equal(grossCents, 1691);
-  assert.ok(quote.paymentReserveCents >= paypalFeeCents + stripeFeeCents + stripeTaxFeeCents);
-  assert.equal(quote.taxCents, 0, 'customer VAT remains pending until Stripe confirms it');
+test('international checkout uses stored net prices, never reverse-rounded German labels',()=>{
+  const q=quote('FR');
+  assert.equal(q.itemsCents,3505);
+  assert.equal(q.shippingCents,1247);
+  assert.equal(q.pricing.taxBehavior,'exclusive');
+  assert.equal(q.pricing.items[1].unitAmountCents,1645);
+  assert.notEqual(Math.round(q.pricing.items[1].unitNetCents*1.19),1957,
+    'DE gross labels and foreign net prices are independently rounded from the exact formula');
 });
-
-test('missing or invalid reserve configuration defaults to 3.69% plus 49 cents', () => {
-  delete process.env.SHOP_PAYMENT_RESERVE_PERCENT;
-  delete process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS;
-  assert.equal(paymentReservePercent(), 3.69);
-  assert.equal(paymentReserveFixedCents(), 49);
-  assert.equal(buildCustomerQuote({ currency: 'EUR', shipping: 5, total: 15 }, 1).paymentReserveCents, 144);
-  for (const value of ['invalid', '-1', '21', 'Infinity']) {
-    process.env.SHOP_PAYMENT_RESERVE_PERCENT = value;
-    assert.equal(paymentReservePercent(), 3.69);
+test('discounts and changes to supplier procurement taxes do not silently change published unit prices',()=>{
+  const normal=quote();
+  const reduced=quote('DE',2,{currency:'EUR',shipping:11.43,total:27.43,tax:1,vat:2});
+  assert.equal(normal.itemsCents,reduced.itemsCents);
+  assert.equal(normal.shippingCents,reduced.shippingCents);
+  assert.equal(reduced.shipmentQuotes[0].supplierTaxCents,300);
+  assert.equal(quote('DE',10).pricing.items[0].unitAmountCents,normal.pricing.items[0].unitAmountCents);
+});
+test('shipping changes only the shipping price and contains its own fixed fee',()=>{
+  const first=quote();
+  const other=quote('DE',2,{currency:'EUR',shipping:20,total:41.35});
+  assert.equal(first.itemsCents,other.itemsCents);
+  assert.ok(other.shippingCents>first.shippingCents);
+  assert.deepEqual(componentPrice(1143),{netCents:1247,grossCents:1484,reserveCents:104});
+});
+test('closed formula covers tax and fees on its own surcharge',()=>{
+  for(const base of [0,1,100,840,1523,1143,10000,1000000]) {
+    const price=componentPrice(base);
+    const theoreticalGross=(base+49)*1.19/(1-.0369*1.19);
+    assert.ok(price.grossCents>=theoreticalGross);
+    assert.ok(price.grossCents-theoreticalGross<1.000001);
+    assert.ok(price.netCents*1.19>=theoreticalGross);
   }
-  for (const value of ['invalid', '-1', '501', '0.5']) {
-    process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = value;
-    assert.equal(paymentReserveFixedCents(), 49);
-  }
+  assert.equal(estimatePaymentFeeCents(5655),258);
 });
-
-test('reserve fallback returns the twentieth estimate if it has not converged', () => {
-  process.env.SHOP_PAYMENT_RESERVE_PERCENT = '20';
-  process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '500';
-  // An artificially large but safe-integer amount keeps the reserve growing
-  // after 20 iterations, exercising the fallback without a supplier tax input.
-  const quote = buildCustomerQuote({
-    currency: 'EUR',
-    shipping: 0,
-    tax: 0,
-    vat: 0,
-    total: 1_000_000_000_000,
-  }, 1);
-  assert.ok(Number.isSafeInteger(quote.paymentReserveCents));
-  assert.equal(quote.paymentReserveCents, 47_368_421_053_271);
-  const assumedGrossCents = quote.itemsCents + Math.round(quote.itemsCents * 0.2);
-  assert.ok(Math.ceil(assumedGrossCents * 0.2 + 500) > quote.paymentReserveCents);
-  assert.ok(Number.isSafeInteger(quote.totalCents));
+test('zero configuration is supported and invalid fee settings fall back',()=>{
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT='0';process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS='0';
+  assert.deepEqual(componentPrice(100),{netCents:100,grossCents:119,reserveCents:0});
+  process.env.SHOP_PAYMENT_RESERVE_PERCENT='invalid';process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS='501';
+  assert.equal(paymentReservePercent(),3.69);assert.equal(paymentReserveFixedCents(),49);
+});
+test('malformed supplier amounts, currencies, variants and quantities fail closed',()=>{
+  for(const costs of [{currency:'EUR',shipping:-1,total:1},{currency:'USD',shipping:1,total:2},{currency:'EUR',shipping:3,total:2}])assert.throws(()=>quote('DE',2,costs));
+  assert.throws(()=>quote('DE',0));
+  assert.throws(()=>catalogPrice(999999));
+  assert.throws(()=>componentPrice(Number.MAX_SAFE_INTEGER));
 });

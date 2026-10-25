@@ -54,7 +54,7 @@ project sign-off is required for these topics.
   configuration work is complete for the initial launch. B2C sales by the
   German JUSA Engineering UG (haftungsbeschränkt) continue through native
   Stripe Checkout with `automatic_tax`, the validated delivery address,
-  exclusive prices, goods code `txcd_99999999` and shipping code
+  inclusive gross prices for Germany and exclusive net prices elsewhere, goods code `txcd_99999999` and shipping code
   `txcd_92010001`. Buyer VAT IDs are not requested.
 - [x] Replace the earlier `small_seller` baseline with the tested Stripe Tax
   configuration: Germany `oss_union` plus Great Britain `standard`. The OSS
@@ -89,14 +89,15 @@ project sign-off is required for these topics.
   Shipment-specific risk and unknown-state warnings appear beneath affected
   deliveries in transactional emails; a known no-risk delivery has no warning
   beneath its address. The recipient bears external import charges.
-- [x] Initial pricing approved by the maintainer on 2026-09-24: 50% markup on
-  Printful product costs, Printful tax/VAT and shipping passed through without
-  markup. The embedded payment-cost reserve was increased on 2026-10-13 to
-  3.69% plus EUR 0.49 per purchase in preparation for PayPal through Stripe;
-  PayPal activation is separate. Stripe calculates customer tax separately.
-  The reserve remains an estimate; the markup is a contribution toward operating costs and profit,
-  not net profit. Review actual costs after the first real orders; no further
-  pricing approval or implementation is required before the initial launch.
+- [x] Pricing updated by the maintainer on 2026-10-24: fixed per-variant prices
+  from tracked one-item supplier costs, with 50% product markup and reference
+  supplier tax added without markup. Apply the closed-form 3.69% + EUR 0.49
+  allowance to every product unit AND once to dynamic shipping, using 19% German
+  reference VAT. DE uses gross inclusive Checkout prices; other destinations use
+  net exclusive prices. Native Stripe Tax remains authoritative. Supplier discounts
+  and differences from reference costs affect margin. Review actual payment and
+  procurement costs after real orders; the allowance is not a worldwide fee cap.
+
 - [x] Prepare the live-sales legal copy (2026-09-24): public ordering
   information at `/bestellinformationen`, linked from the landing page,
   configurator and legal pages, explains contract formation, corrections,
@@ -113,7 +114,7 @@ project sign-off is required for these topics.
   "Weiter zur Zahlung" opens that exact Session. This uses native Stripe Checkout
   automatic tax only—not the separately billed Tax Calculation API and not a
   disposable preview Session. The signed paid Session must still match the frozen
-  net amounts, pinned customer, displayed tax and displayed gross total.
+  prices and tax mode, pinned customer, displayed tax and displayed gross total.
 - [x] Qualified German counsel reviewed the legal notice and privacy policy
   together with the ordering information, price presentation and final live
   provider contracts/data-processing agreements. The maintainer confirmed this

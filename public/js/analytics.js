@@ -158,7 +158,7 @@
   function trackPurchase(order) {
     if (order?.paymentConfirmed !== true || !/^WW-\d{8,}$/.test(String(order.orderNumber || ''))) return false;
     const total = Number(order.totalCents);
-    const shipping = Number(order.shippingCents);
+    const shipping = Number(order.netShippingCents ?? order.shippingCents);
     const tax = Number(order.taxCents);
     if (![total, shipping, tax].every((amount) => Number.isSafeInteger(amount) && amount >= 0) ||
         total < shipping + tax || order.currency !== 'EUR') return false;

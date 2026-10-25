@@ -78,6 +78,8 @@ function harness(extra = {}) {
     AbortSignal, URLSearchParams, setTimeout, clearTimeout, requestAnimationFrame: callback => callback(),
     console: { warn() {} },
     WolkenworteConfiguratorSession: Session, DesignTransfer: Transfer, sessionStorage: local, cart, draftStore,
+    WolkenworteProductGallery: require('../public/js/product-gallery'),
+    printLayoutJobs: () => ({ pack: require('../public/js/wordcloud-core').layoutBoxesInArea }),
     productDesignState: null,
     savedDesignFingerprint: null, previousProductDraft: null, productTransitionPending: false, cartDrafts: new Map(),
     removedEditingState: null,
@@ -97,7 +99,10 @@ function harness(extra = {}) {
     document: { createElement: element, querySelectorAll:()=>[], getElementById: () => element() },
     headerCart: { hidden: true }, headerCartCount: element(),
     errorText: element(), saveStatus: element(), retryConfigurator: { hidden: true }, loadingMessage: element(),
-    content: { inert: false }, orderBox: { scrollIntoView() {} },
+    content: { inert: false }, loading: { hidden: false }, editorElement: { hidden: false }, orderBox: { scrollIntoView() {} },
+    galleryPendingConfigurations: new Map(),
+    productGallery: null, galleryElement: { hidden: true },
+    cartPanel: { open() {}, close() {}, refresh() {}, message() {} },
     cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
     cartReview: { show() {}, dispose() {} }, revealReviewedDesign() { calls.opened.push('revealed'); },
     shippingChoiceDialog, shippingChoiceTitle: element(),
@@ -129,7 +134,9 @@ function harness(extra = {}) {
     },
     ...extra,
   });
-  vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
+  vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'createConfiguration', 'addGalleryDesign', 'orderItemFromConfiguration',
+    'returnToGallery', 'updateGalleryEditorLocation', 'updateGalleryLocation', 'showReadyWorkspace', 'continueFromCartPanel', 'openCartPanelDesign',
+    'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
     'draftSnapshot', 'wordsMatch', 'updateCloudNotice', 'setCloudFeedback', 'syncCloudHistory', 'workingCheckpoint',
     'cloneDesign', 'cloneEditorState', 'fetchCloudWords', 'updateCartActions', 'continueToShipping', 'saveReviewedDesigns',
     'currentAccountFingerprint', 'restoreAccountDesign',
@@ -573,6 +580,266 @@ test('explicit Add saves once; unchanged repeats do not duplicate; edits replace
   assert.equal(await page.saveCurrentDesign(page.saveDesignButton), true);
   assert.equal(calls.posts, 2);
   assert.deepEqual(cart.read().map(item => item.id), [id('2')]);
+});
+
+test('gallery approval freezes every previewed side without changing the current editor target', async () => {
+  const { context: page, cart, calls } = harness({ workspaceReady: false });
+  const preview = { productKey: 'poster', orientation: 'landscape', theme: 'confetti', words: [['sonne', 1]],
+    designs: { front: [{ text: 'sonne', x: 321.4 }], back: [{ text: 'Back', color: '#123456' }] } };
+  const saved = await page.addGalleryDesign(preview);
+  assert.equal(calls.posts, 1);
+  assert.deepEqual(calls.bodies[0], preview);
+  assert.equal(cart.read().length, 1);
+  assert.equal(page.editingOrderItemId, null);
+  assert.equal(saved.editingOrderItemId, cart.read()[0].id);
+  assert.equal(saved.needsCartUpdate, false);
+  assert.deepEqual(JSON.parse(JSON.stringify((await page.draftStore.loadActive()).designs)), preview.designs);
+  await page.addGalleryDesign(saved);
+  assert.equal(calls.posts, 1);
+  assert.equal(cart.read().length, 1);
+});
+
+test('gallery cart retries reuse the immutable snapshot after a local storage failure', async () => {
+  const { context: page, cart, calls } = harness({ workspaceReady: false });
+  const preview = { productKey: 'mug', theme: 'confetti', words: [['sonne', 1]],
+    designs: { default: [{ text: 'sonne' }] } };
+  const replace = cart.replace;
+  cart.replace = () => { throw new Error('storage'); };
+  await assert.rejects(page.addGalleryDesign(preview));
+  assert.equal(calls.posts, 1);
+  assert.equal(cart.read().length, 0);
+  cart.replace = replace;
+  await page.addGalleryDesign(preview);
+  assert.equal(calls.posts, 1);
+  assert.equal(cart.read().length, 1);
+});
+
+test('gallery limits and failed storage are checked before creating print snapshots', async () => {
+  const { context: page, cart, calls } = harness();
+  cart.write(Array.from({ length: Session.MAX_CART_ITEMS }, (_, index) => ({
+    id: `gallery${String(index).padStart(9, '0')}`, productKey: 'mug',
+  })));
+  const preview = { productKey: 'mug', designs: { default: [{ text: 'sonne' }] } };
+  await assert.rejects(page.addGalleryDesign(preview), error => /20 Designs/.test(error.userMessage));
+  assert.equal(calls.posts, 0);
+  cart.read = () => { throw new Error('storage'); };
+  await assert.rejects(page.addGalleryDesign(preview), error => /Warenkorb/.test(error.userMessage));
+  assert.equal(calls.posts, 0);
+});
+
+test('gallery return persists the current edits and never asks for ordinary cart approval', async () => {
+  const { context: page, calls } = harness();
+  let shown, destroyed = false;
+  page.showProductGallery = snapshot => { shown = snapshot; };
+  page.destroyMug3D = () => { destroyed = true; };
+  page.document.getElementById = () => ({ focus() {}, scrollIntoView() {} });
+  await page.returnToGallery();
+  assert.equal(destroyed, true);
+  assert.equal(shown.workingDesignId, page.workingDesignId);
+  assert.equal((await page.draftStore.loadActive()).workingDesignId, page.workingDesignId);
+  assert.equal(calls.posts, 0);
+  assert.equal(calls.warnings.length, 0);
+  page.persistCurrentDraft = async () => false;
+  shown = null;
+  await page.returnToGallery();
+  assert.equal(shown, null, 'failed recovery keeps the editor open unless leaving is explicitly chosen');
+  assert.equal(calls.warnings.length, 1);
+});
+
+test('gallery selection replaces stale cart and library entry intent while retaining the chosen draft', () => {
+  const { context: page, calls } = harness();
+  page.location.search = '?lang=de&view=products&edit=old&cart=1&draft=old&accountDesign=old&accountLatest=1';
+  page.updateGalleryEditorLocation();
+  let query = new URL(calls.replaced.at(-1), 'http://example.test').searchParams;
+  assert.equal(query.get('draft'), page.workingDesignId);
+  assert.equal(query.get('lang'), 'de');
+  for (const key of ['view', 'edit', 'cart', 'accountDesign', 'accountLatest']) assert.equal(query.has(key), false);
+  page.editingOrderItemId = id('b');
+  page.updateGalleryEditorLocation();
+  query = new URL(calls.replaced.at(-1), 'http://example.test').searchParams;
+  assert.equal(query.get('edit'), id('b'));
+});
+
+test('reloading a gallery restores its exact retained draft without initializing the editor', async () => {
+  const { context: page, calls } = harness();
+  let shown = null;
+  page.location.search = '?lang=en&edit=accepted&draft=old&accountDesign=old&accountLatest=1';
+  page.showProductGallery = snapshot => { shown = snapshot; page.updateGalleryLocation(snapshot); };
+  page.destroyMug3D = () => {};
+  page.document.getElementById = () => ({ focus() {}, scrollIntoView() {} });
+  await page.returnToGallery();
+  const saved = await page.draftStore.loadActive();
+  let query = new URL(calls.replaced.at(-1), 'http://example.test').searchParams;
+  assert.equal(query.get('view'), 'products');
+  assert.equal(query.get('draft'), saved.workingDesignId);
+  assert.equal(query.get('lang'), 'en');
+  for (const key of ['edit', 'cart', 'accountDesign', 'accountLatest']) assert.equal(query.has(key), false);
+
+  // A visibility/background save must retain the gallery location too.
+  page.location.search = `?${query}`;
+  await page.persistCurrentDraft({ finalize: false });
+  query = new URL(calls.replaced.at(-1), 'http://example.test').searchParams;
+  assert.equal(query.get('view'), 'products');
+  const { context: reloaded, calls: reloadCalls } = harness({ location: { search: `?${query}` } });
+  let openedEditor = false, recovered;
+  reloaded.initializeWorkspace = async () => { openedEditor = true; };
+  reloaded.loadLocalDraft = async criteria => {
+    assert.equal(criteria.workingDesignId, saved.workingDesignId);
+    return saved;
+  };
+  reloaded.showProductGallery = snapshot => { recovered = snapshot; };
+  await reloaded.showReadyWorkspace();
+  assert.equal(openedEditor, false);
+  assert.deepEqual(recovered, saved);
+
+  reloaded.updateGalleryEditorLocation();
+  const editorLocation = new URL(reloadCalls.replaced.at(-1), 'http://example.test');
+  assert.equal(editorLocation.searchParams.has('view'), false);
+  reloaded.location.search = editorLocation.search;
+  recovered = null;
+  await reloaded.showReadyWorkspace();
+  assert.equal(openedEditor, true, 'reloading an editor still restores the editor');
+  assert.equal(recovered, null);
+});
+
+test('a gallery reload after adding a product stays in the gallery and recovers its cart draft', async () => {
+  const { context: page } = harness({ workspaceReady: false });
+  const accepted = await page.addGalleryDesign({ productKey: 'mug', orientation: 'default', theme: 'confetti',
+    words: [['sonne', 1]], designs: { default: [{ text: 'sonne' }] } });
+  page.location.search = '?view=products';
+  page.loadLocalDraft = () => page.draftStore.loadActive();
+  let recovered;
+  page.showProductGallery = snapshot => { recovered = snapshot; };
+  page.initializeWorkspace = () => { throw new Error('gallery reload must not open an editor'); };
+  await page.showReadyWorkspace();
+  assert.equal(recovered.editingOrderItemId, accepted.editingOrderItemId);
+  assert.deepEqual(recovered.designs, accepted.designs);
+});
+
+test('Create a keepsake opens the gallery before a retained editor draft on desktop and mobile', async () => {
+  const display = fs.readFileSync(path.join(__dirname, '../views/display.ejs'), 'utf8');
+  const listener = display.match(/memoryCta\.addEventListener\('click', \(\) => \{[\s\S]*?\n  \}\);/)[0];
+  let click;
+  const source = vm.createContext({
+    slug: 'event-a', currentWords: [['sonne', 1]], encodeURIComponent,
+    memoryCta: { disabled: false, addEventListener: (_name, callback) => { click = callback; } },
+    location: { href: '', search: '?edit=old&cart=1' },
+  });
+  vm.runInContext(listener, source);
+  source.memoryCta.disabled = true; click();
+  assert.equal(source.location.href, '');
+  source.memoryCta.disabled = false; source.currentWords = []; click();
+  assert.equal(source.location.href, '', 'the empty-cloud guard remains in place');
+  source.currentWords = [['sonne', 1]]; click();
+  const destination = new URL(source.location.href, 'http://example.test');
+  assert.equal(destination.pathname, '/e/event-a/configure');
+  assert.equal(destination.searchParams.get('view'), 'products');
+  for (const key of ['draft', 'edit', 'cart', 'accountDesign']) assert.equal(destination.searchParams.has(key), false);
+
+  for (const mobileDevice of [false, true]) {
+    const { context: page, cart, calls } = harness({ workspaceReady: false, mobileDevice,
+      location: { search: destination.search } });
+    await page.draftStore.save({ workingDesignId: 'f'.repeat(32), productKey: 'mug',
+      orientation: 'default', theme: 'confetti', words: [['sonne', 1]],
+      designs: { default: [{ text: 'Edited', x: 321.4, fontSize: 68 }] }, currentDesignEdited: true });
+    const before = await page.draftStore.loadActive();
+    cart.replace({ id: id('a'), productKey: 'mug' });
+    page.loadLocalDraft = () => page.draftStore.loadActive();
+    let shown;
+    page.showProductGallery = snapshot => { shown = snapshot; };
+    page.initializeWorkspace = () => { throw new Error('the keepsake entry must not open the editor'); };
+    await page.showReadyWorkspace();
+    assert.deepEqual(shown, before, 'the gallery recovers the exact edited draft');
+    assert.deepEqual(await page.draftStore.loadActive(), before);
+    assert.deepEqual(cart.read().map(item => item.id), [id('a')]);
+    assert.equal(calls.posts, 0, 'entering the gallery approves no new configuration');
+    assert.equal(page.workspaceReady, false);
+  }
+});
+
+test('gallery approval cannot silently restore a position removed during the save', async () => {
+  const { context: page, cart } = harness({ workspaceReady: false });
+  cart.write([{ id: id('a'), productKey: 'mug' }]);
+  page.fetch = async () => {
+    cart.remove(id('a'));
+    return { ok: true, json: async () => ({ id: id('b'), productKey: 'mug' }) };
+  };
+  await assert.rejects(page.addGalleryDesign({ productKey: 'mug', editingOrderItemId: id('a'),
+    needsCartUpdate: true, designs: { default: [{ text: 'sonne' }] } }),
+  error => /Warenkorb hat sich geändert/.test(error.userMessage));
+  assert.equal(cart.read().length, 0);
+});
+
+test('the cart panel can continue from a fresh gallery without initializing or approving an editor', async () => {
+  const { context: page, cart, calls } = harness({ workspaceReady: false });
+  cart.write([{ id: id('a'), productKey: 'mug' }]);
+  await page.continueFromCartPanel();
+  assert.equal(calls.posts, 0);
+  assert.equal(page.workspaceReady, false);
+  assert.equal(calls.navigations.length, 1);
+  assert.match(calls.navigations[0], /shipping\?configuration=aaaaaaaaaaaaaaaa/);
+});
+
+test('cart-panel shipping retains pending drafts and purchases only the accepted cart', async () => {
+  for (const workspaceReady of [false, true]) {
+    const { context: page, cart, calls } = harness({ workspaceReady, galleryElement: { hidden: false } });
+    cart.write([{ id: id('a'), productKey: 'mug' }]);
+    await page.draftStore.save({ productKey: 'mug', orientation: 'default', theme: 'confetti',
+      words: [['sonne', 1]], designs: { default: [{ text: 'Edited' }] },
+      editingOrderItemId: id('a'), needsCartUpdate: true });
+    page.askShippingChoice = async () => { throw new Error('browsing must not prompt to add a design'); };
+    await page.continueFromCartPanel();
+    assert.equal(calls.posts, 0);
+    assert.equal(calls.navigations.length, 1);
+    assert.equal(page.workspaceReady, workspaceReady);
+    assert.equal(cart.read()[0].id, id('a'));
+    assert.equal((await page.draftStore.loadCartDrafts([id('a')]))[0].designs.default[0].text, 'Edited');
+  }
+});
+
+test('cart shipping cannot lose a draft when local persistence fails', async () => {
+  const { context: page, cart, calls } = harness({ workspaceReady: true });
+  cart.write([{ id: id('a'), productKey: 'mug' }]);
+  page.persistCurrentDraft = async () => false;
+  let error = '';
+  page.cartPanel.message = message => { error = message; };
+  await page.continueFromCartPanel();
+  assert.equal(calls.navigations.length, 0);
+  assert.equal(calls.posts, 0);
+  assert.equal(cart.read()[0].id, id('a'));
+  assert.match(error, /Entwurf/);
+});
+
+test('cart continuation ignores the currently viewed unsubmitted size after returning from an editor', async () => {
+  const { context: page, cart, calls } = harness({ workspaceReady: true, galleryElement: { hidden: false } });
+  cart.write([{ id: id('a'), productKey: 'mug' }, { id: id('b'), productKey: 'poster' }]);
+  page.product = { key: 'white-glossy-mug-20oz' };
+  page.askShippingChoice = async () => { throw Error('unexpected addition'); };
+  await page.continueFromCartPanel();
+  assert.equal(calls.posts, 0);
+  assert.match(calls.navigations[0], /configurations=aaaaaaaaaaaaaaaa%2Cbbbbbbbbbbbbbbbb/);
+  assert.equal((await page.draftStore.loadActive()).productKey, 'white-glossy-mug-20oz');
+  assert.deepEqual(cart.read().map(item => item.id), [id('a'), id('b')]);
+});
+
+test('choosing Customize in the panel opens the exact cart target and clears unrelated entry intent', async () => {
+  const { context: page, calls } = harness({ workspaceReady: false });
+  page.location.search = '?lang=de&draft=old&accountDesign=old&cart=1';
+  let initialized = 0;
+  page.initializeWorkspace = async () => {
+    initialized++;
+    const query = new URL(calls.replaced.at(-1), 'http://example.test').searchParams;
+    assert.equal(query.get('edit'), id('a'));
+    for (const key of ['draft', 'cart', 'accountDesign']) assert.equal(query.has(key), false);
+    page.workspaceReady = true;
+    page.editingOrderItemId = id('a');
+  };
+  await page.openCartPanelDesign(id('a'));
+  assert.equal(initialized, 1);
+  assert.equal(page.galleryElement.hidden, true);
+  assert.equal(page.editorElement.hidden, false);
+  assert.deepEqual(calls.opened, ['revealed']);
+  assert.equal(calls.posts, 0);
 });
 
 test('approving manual work retains its edited provenance so layout releases cannot regenerate it', async () => {
@@ -1082,6 +1349,47 @@ test('fresh entry restores the active local draft while explicit edit and cart e
   }
 });
 
+test('recovering a manual draft never generates temporary automatic artwork from a dense live cloud', async () => {
+  const draft = { productKey: 'mug', designs: { default: [{ id: 'manual', text: 'Klein', fontSize: 20 }] } };
+  let initialized, restored;
+  const { context: page } = harness({ workspaceReady: false,
+    words: Array.from({ length: 500 }, (_, i) => [`Wort ${i}`, 1]),
+    loadLocalDraft: async () => draft,
+    initEditor: async designs => { initialized = designs; assert.ok(designs, 'recovery must not request automatic placement'); },
+    applyLocalDraft: async value => { restored = value; },
+  });
+  await page.initializeWorkspace();
+  assert.deepEqual(Object.keys(initialized), ['default']);
+  assert.equal(initialized.default.length, 0, 'the explicit empty side must bypass initEditor’s automatic fallback');
+  assert.equal(restored, draft);
+  assert.equal(page.restorationFailed, false);
+  assert.equal(page.workspaceReady, true);
+});
+
+test('an explicit smaller-text gallery choice starts with edited provenance', async () => {
+  const { context: page } = harness({ workspaceReady: false, selectedFamilyKey: 'mugs',
+    buildOrientationOptions() {}, updateProductOptionSelection() {}, updateProductPresentation() {},
+  });
+  const designs = { default: [{ id: 'manual', text: 'Klein', fontSize: 20 }] };
+  await page.initializeWorkspace({ productKey: 'mug', orientation: 'default', theme: 'confetti',
+    words: [['Klein', 1]], customColors: ['#123456'], designs, currentDesignEdited: true });
+  assert.equal(page.workspaceReady, true);
+  assert.equal(page.currentDesignEdited, true, 'automatic recovery and product transfer must preserve the deliberate choice');
+});
+
+test('initial print capacity failure opens the product gallery without labelling saved artwork as broken', async () => {
+  let gallery = 0;
+  const { context: page } = harness({ workspaceReady: false,
+    initEditor: async () => { throw new Error('print_capacity'); },
+    showProductGallery: () => gallery++,
+  });
+  await page.initializeWorkspace();
+  assert.equal(gallery, 1);
+  assert.equal(page.workspaceReady, false);
+  assert.equal(page.restorationFailed, false);
+  assert.equal(page.content.inert, false);
+});
+
 test('a direct design opens its blank mobile editor and approves custom content without live words', async () => {
   const expanded = [];
   const { context: page, calls } = harness({
@@ -1308,9 +1616,29 @@ test('restoration flushes its scheduled editor change while dirty tracking is su
 });
 
 
+test('editing a notebook or pillow back keeps its stored front on the front of the preview', () => {
+  const { getProduct, getPublicProduct } = require('../src/products');
+  for (const key of ['spiral-notebook-dotted', 'all-over-basic-pillow-18in', 'all-over-basic-pillow-49853']) {
+    const front = [{ text: 'Vorne' }], back = [{ text: 'Hinten bearbeitet' }], seen = [];
+    const page = vm.createContext({ product: getPublicProduct(getProduct(key)), activeSurface: 'back',
+      surfaceStates: new Map([['front', { design: front }]]), getCurrentDesign: () => back,
+      drawDesign: (_ctx, _x, _y, _scale, design) => seen.push(design),
+      mug3D: { updateTexture: draw => draw({}, { offsetX: 0, offsetY: 0 }) },
+      setMugPreviewState: () => assert.fail('preview update must succeed'),
+    });
+    vm.runInContext(pageFunction('updateMug3DTexture'), page);
+    page.updateMug3DTexture();
+    assert.equal(seen.at(-1), front, key);
+    page.activeSurface = 'front'; page.getCurrentDesign = () => front;
+    page.updateMug3DTexture();
+    assert.equal(seen.at(-1), front, key);
+  }
+});
+
 test('a failed 3D initialization exposes retry and never introduces a flat mug', async () => {
   const states = [];
   const page = vm.createContext({ product: { previewType: 'mug', key: 'mug' },
+    editorElement: { hidden: false }, selectedOrientation: 'default', productView() { return page.product; },
     mug3D: null, mug3DLoadPromise: null, mug3DGeneration: 0, mugViewer: {},
     window: { THREE: {} }, console: { warn() {} },
     Mug3DViewer: { create() { throw new Error('WebGL unavailable'); } },
@@ -1668,7 +1996,7 @@ test('the active cart item is a status rather than an indistinguishable Open act
     page.printfulMockupStates=new Map();page.PRINTFUL_MOCKUP_TOOLS_ENABLED=false;
     page.setText=(element,source,params)=>{element.textContent=translate(source,'en',params);};
     page.setTranslatedAttribute=(element,name,source,params)=>element.setAttribute(name,translate(source,'en',params));
-    page.editingOrderItemId=id('a');vm.runInContext(pageFunction('renderOrderBox'),page);page.renderOrderBox();
+    page.editingOrderItemId=id('a');vm.runInContext(pageFunction('productPriceText')+'\n'+pageFunction('renderOrderBox'),page);page.renderOrderBox();
     const current=page.orderList.querySelector('[aria-current="true"]');
     assert.equal(current.tagName,'SPAN');assert.equal(current.textContent,'Currently editing');
     assert.equal(page.orderList.querySelectorAll('.order-edit').length,1);

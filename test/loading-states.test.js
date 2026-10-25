@@ -24,6 +24,12 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
+function restoredEntry() {
+  return { URLSearchParams, location: { search: '?edit=existing-design' },
+    directDesign: false, words: [['Liebe', 1]],
+    WolkenworteProductGallery: require('../public/js/product-gallery') };
+}
+
 const messages = [
   'Euer Design wird geöffnet…', 'Euer Design wird wiederhergestellt…', 'Euer Design wird aktualisiert…',
   'Euer Design wird geladen…', 'Euer Design wird in den Warenkorb gelegt…', 'Eure Änderungen werden gespeichert…',
@@ -64,6 +70,7 @@ test('the configurator remains hidden until restoration finishes and paints befo
   const pending = deferred();
   const events = [];
   const scope = vm.createContext({
+    ...restoredEntry(),
     content: { hidden: true }, loading: { hidden: false },
     initializeWorkspace: () => pending.promise,
     refreshWorkspaceLayout() { assert.equal(scope.content.hidden, false); events.push('measure'); },
@@ -84,6 +91,7 @@ test('the configurator remains hidden until restoration finishes and paints befo
 
 test('an unexpected initialization failure leaves the loader visible for startup error handling', async () => {
   const scope = vm.createContext({
+    ...restoredEntry(),
     content: { hidden: true }, loading: { hidden: false },
     initializeWorkspace: async () => { throw new Error('initialization_failed'); },
     refreshWorkspaceLayout() { assert.fail('must not reveal a partial workspace'); }, renderAll() {},
@@ -127,7 +135,7 @@ test('configurator progress survives cart refreshes and resets both button and w
   }
   const statuses = [element(), element()];
   const scope = vm.createContext({
-    document: { querySelectorAll: () => statuses },
+    document: { querySelectorAll: selector => selector === '[data-configurator-progress]' ? statuses : [] },
     saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
     checkoutPanel: { setAttribute() {} }, content: { querySelectorAll: () => [] }, orderList: { querySelectorAll: () => [] },
     loadOrderItems: () => [{ id: 'a'.repeat(16) }], editingOrderItemId: null,

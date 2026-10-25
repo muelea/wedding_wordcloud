@@ -6,7 +6,28 @@
     printFile: Object.freeze({ width: 2700, height: 1050, dpi: 300 }),
   });
 
+  // Only the outer profile can determine the framing of a full horizontal
+  // turn. Its convex hull keeps the exact outer shape without scanning every
+  // mesh vertex again on each viewport resize.
+  function turnProfile(points) {
+    points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    const half = values => {
+      const result = [];
+      for (const point of values) {
+        while (result.length > 1 && cross(result.at(-2), result.at(-1), point) <= 0) result.pop();
+        result.push(point);
+      }
+      result.pop(); return result;
+    };
+    return [...half(points), ...half([...points].reverse())];
+  }
+
   function textureSizeFor(product) {
+    if (product.previewMesh) return { width: product.printFile.width, height: product.printFile.height };
+    if (product.previewModel && ['case', 'canvas', 'panel', 'mousepad', 'sleeve', 'tote', 'pillow', 'blanket'].includes(product.previewModel.kind)) {
+      return { width: product.printFile.width, height: product.printFile.height };
+    }
     const printWidthCm = (product.printFile.width / product.printFile.dpi) * 2.54;
     const printHeightCm = (product.printFile.height / product.printFile.dpi) * 2.54;
     return {
@@ -23,6 +44,13 @@
     const THREE = options.THREE || root.THREE;
     const host = options.host;
     const product = options.product || DEFAULT_PRODUCT;
+    const providerModel = product.previewMesh || null;
+    const bagPreview = product.previewModel?.kind === 'tote';
+    const studioPreview = Boolean(providerModel || product.previewModel);
+    let modelView = null;
+    let clothView = null;
+    let modelPending = Boolean(providerModel);
+    let modelFailed = false;
     if (!THREE) throw new Error('Three.js failed to load');
     if (!host) throw new Error('A mug viewer host is required');
 
@@ -36,6 +64,7 @@
     });
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    if (studioPreview) { renderer.toneMapping = THREE.LinearToneMapping; renderer.toneMappingExposure = 1; }
     if (!options.canvas) host.prepend(canvas);
 
     const ownsInteractionRegion = !options.interactionRegion;
@@ -51,20 +80,35 @@
 
     const group = new THREE.Group();
     group.position.y = options.positionY == null ? .5 : options.positionY;
-    group.rotation.y = options.initialRotationY == null ? .14 : options.initialRotationY;
+    group.rotation.y = options.initialRotationY == null ? (bagPreview ? .38 : .14) : options.initialRotationY;
+    if (bagPreview) group.rotation.x = .08;
     scene.add(group);
 
     const dimensions = textureSizeFor(product);
+    const textureScale = product.previewModel || providerModel ? Math.min(1, 2048 / Math.max(dimensions.width, dimensions.height)) : 1;
     const textureCanvas = document.createElement('canvas');
-    textureCanvas.width = dimensions.width;
-    textureCanvas.height = dimensions.height;
+    textureCanvas.width = Math.ceil(dimensions.width * textureScale);
+    textureCanvas.height = Math.ceil(dimensions.height * textureScale);
     const textureContext = textureCanvas.getContext('2d');
-    textureContext.fillStyle = '#ffffff';
+    textureContext.fillStyle = product.previewModel?.color || '#ffffff';
     textureContext.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
     const texture = new THREE.CanvasTexture(textureCanvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
+    const backCanvas = product.previewModel?.kind === 'pillow' || providerModel?.back ? document.createElement('canvas') : null;
+    let backTexture = null;
+    if (backCanvas) {
+      backCanvas.width = textureCanvas.width; backCanvas.height = textureCanvas.height;
+      backTexture = new THREE.CanvasTexture(backCanvas); backTexture.colorSpace = THREE.SRGBColorSpace;
+    }
+    if (providerModel) {
+      // Original meshes attach only after their local GLB and print atlas are
+      // ready. Loading failures keep the existing explicit retry state.
+    } else if (product.previewModel) {
+      const proceduralView = root.Product3DGeometry.build(THREE, group, texture, product, backTexture);
+      if (product.previewModel.kind === 'blanket') clothView = proceduralView;
+    } else {
     const height = product.size.heightCm;
     const radius = product.size.diameterCm / 2;
     const bottomRadius = radius * .985;
@@ -199,34 +243,66 @@
     baseRim.position.y = -shellHeight / 2;
     group.add(baseRim);
 
-    // Enclose the body and handle around their rotation origin. Framing stays
-    // stable while turning the mug, and narrow portrait hosts cannot crop it.
-    group.updateMatrixWorld(true);
+    }
+
+    // Measure around the product's rotation origin without changing its mesh.
+    // The editor reserves a complete turn and tilt; the gallery uses its sphere.
     const framingPoint = new THREE.Vector3();
-    let rotationRadius = 0;
-    group.traverse(mesh => {
-      const vertices = mesh.geometry?.getAttribute('position');
-      if (!vertices) return;
-      for (let index = 0; index < vertices.count; index++) {
-        framingPoint.fromBufferAttribute(vertices, index).applyMatrix4(mesh.matrixWorld).sub(group.position);
-        rotationRadius = Math.max(rotationRadius, framingPoint.length());
-      }
-    });
-    const framingRadius = rotationRadius + group.position.length();
+    const rotationEnvelope = { profile: [], distance: null };
+    let framingRadius = 1;
+    function measureModel() {
+      group.updateMatrixWorld(true);
+      const inverseGroup = group.matrixWorld.clone().invert();
+      let rotationRadius = 0;
+      const profile = [];
+      rotationEnvelope.distance = null;
+      group.traverse(mesh => {
+        const vertices = mesh.geometry?.getAttribute('position');
+        if (!vertices) return;
+        for (let index = 0; index < vertices.count; index++) {
+          framingPoint.fromBufferAttribute(vertices, index).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseGroup);
+          rotationRadius = Math.max(rotationRadius, framingPoint.length());
+          if (options.fitToView) {
+            profile.push([Math.hypot(framingPoint.x, framingPoint.z), framingPoint.y]);
+          }
+        }
+      });
+      rotationEnvelope.profile = turnProfile(profile);
+      framingRadius = rotationRadius + group.position.length();
+    }
+    if (!modelPending) measureModel();
     const cameraDirection = camera.position.clone().normalize();
     const defaultCameraDistance = camera.position.length();
 
-    scene.add(new THREE.AmbientLight(0xffffff, 1.9));
-    const keyLight = new THREE.DirectionalLight(0xfffaf5, 1.15);
+    let studioTexture = null;
+    if (product.previewModel || providerModel) {
+      const studioCanvas = document.createElement('canvas'); studioCanvas.width = 512; studioCanvas.height = 256;
+      const studio = studioCanvas.getContext('2d');
+      if (studio.createLinearGradient) {
+        const gradient = studio.createLinearGradient(0, 0, 512, 0);
+        const reflections = [[0, '#aaaaaa'], [.12, '#eeeeee'], [.22, '#ffffff'], [.28, '#aaaaaa'], [.48, '#dddddd'], [.58, '#ffffff'], [.67, '#ffffff'], [.76, '#999999'], [1, '#aaaaaa']];
+        for (const [position, color] of reflections) gradient.addColorStop(position, color);
+        studio.fillStyle = gradient; studio.fillRect(0, 0, 512, 256);
+        studioTexture = new THREE.CanvasTexture(studioCanvas); studioTexture.mapping = THREE.EquirectangularReflectionMapping;
+        studioTexture.colorSpace = THREE.SRGBColorSpace; scene.environment = studioTexture;
+      }
+    }
+    const lightScale = bagPreview ? 1.05 : clothView ? 1 : studioPreview ? .9 : 1;
+    const lightColor = studioPreview ? 0xffffff : 0xfffaf5;
+    if (product.previewModel) group.traverse(mesh => {
+      for (const surface of Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : []) surface.envMapIntensity = surface.metalness >= .5 ? .7 : .05;
+    });
+    scene.add(new THREE.AmbientLight(0xffffff, (bagPreview ? 1.35 : 1.9) * lightScale));
+    const keyLight = new THREE.DirectionalLight(lightColor, (bagPreview ? 1.6 : 1.15) * lightScale);
     keyLight.position.set(2.2, 1.8, 2.5);
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(0xfffaf5, .85);
+    const fillLight = new THREE.DirectionalLight(lightColor, (bagPreview ? .7 : .85) * lightScale);
     fillLight.position.set(-2.4, 1, -2.2);
     scene.add(fillLight);
-    const rimLight = new THREE.DirectionalLight(0xffffff, .45);
+    const rimLight = new THREE.DirectionalLight(0xffffff, .45 * lightScale);
     rimLight.position.set(0, 2.2, -3);
     scene.add(rimLight);
-    const underLight = new THREE.DirectionalLight(0xfffaf5, .55);
+    const underLight = new THREE.DirectionalLight(lightColor, (bagPreview ? .3 : .55) * lightScale);
     underLight.position.set(.5, -2.2, 1.8);
     scene.add(underLight);
 
@@ -236,6 +312,8 @@
     let lastY = 0;
     let autoFrame = null;
     let autoStart = null;
+    let clothFrame = null, clothLast = null, clothVisible = true, clothGrabbed = false;
+    const clothDragPlane = new THREE.Plane(), clothDragPoint = new THREE.Vector3();
     const autoStartRotation = group.rotation.y;
     const interactionElement = options.interactionElement || host;
     const raycaster = new THREE.Raycaster();
@@ -245,6 +323,40 @@
     const maxVerticalRotation = Math.PI / 6;
     let destroyed = false;
     const reportStatus = (status) => options.onStatus?.(status);
+
+    function stopClothMotion() {
+      if (clothFrame !== null) root.cancelAnimationFrame(clothFrame);
+      clothFrame = null; clothLast = null;
+    }
+    function animateCloth(now) {
+      if (clothFrame === null) return;
+      clothFrame = null;
+      if (destroyed || !clothVisible || document.hidden || renderer.getContext().isContextLost()) return;
+      const elapsed = clothLast === null ? 1 / 90 : Math.max(0, (now - clothLast) / 1000);
+      clothLast = now;
+      clothView.advance(elapsed);
+      render({ updateInteractionRegion: !clothView.active });
+      startClothMotion();
+    }
+    function startClothMotion() {
+      if (!clothView?.active || destroyed || !clothVisible || document.hidden || renderer.getContext().isContextLost() || clothFrame !== null) return;
+      clothFrame = root.requestAnimationFrame(animateCloth);
+    }
+    function releaseCloth() {
+      if (!clothView) return;
+      clothGrabbed = false; clothView.release(); startClothMotion();
+    }
+    function visibilityChanged() {
+      if (destroyed) return;
+      if (!clothVisible || document.hidden) {
+        if (activePointer !== null) resetPointer({ pointerId: activePointer });
+        releaseCloth(); stopClothMotion();
+      } else { clothLast = null; startClothMotion(); }
+    }
+    const clothObserver = clothView && root.IntersectionObserver ? new root.IntersectionObserver(entries => {
+      clothVisible = entries.some(entry => entry.isIntersecting); visibilityChanged();
+    }) : null;
+    if (clothView) { document.addEventListener?.('visibilitychange', visibilityChanged); clothObserver?.observe(host); }
 
     function updateInteractionRegion() {
       const canvasRect = canvas.getBoundingClientRect();
@@ -286,9 +398,47 @@
     }
 
     function render(renderOptions) {
-      if (destroyed || renderer.getContext().isContextLost()) return;
+      if (destroyed || modelPending || modelFailed || renderer.getContext().isContextLost()) return;
+      if (options.fitToView) fitCameraToView();
       if (renderOptions?.updateInteractionRegion !== false) updateInteractionRegion();
       renderer.render(scene, camera);
+    }
+
+    // Fit the complete rotation once per viewport/fill, rather than following
+    // the changing outline during a drag. Flat products otherwise zoom as they
+    // turn edge-on. The cached distance also keeps the framing center fixed.
+    const cameraRight = new THREE.Vector3(), cameraUp = new THREE.Vector3();
+    function rotationCameraDistance(horizontal, vertical, fill) {
+      if (rotationEnvelope.distance !== null && rotationEnvelope.aspect === camera.aspect && rotationEnvelope.fill === fill) return rotationEnvelope.distance;
+      let distance = 1;
+      for (const [axis, slope] of [[cameraRight, horizontal], [cameraUp, vertical]]) for (const sign of [-1, 1]) {
+        const plane = cameraDirection.clone().addScaledVector(axis, sign / slope);
+        // Bound a full yaw turn at every supported pitch. A 0.5% allowance
+        // covers extrema between the one-degree samples and floating point.
+        for (let step = 0; step <= 60; step++) {
+          const pitch = maxVerticalRotation * (step / 30 - 1), sin = Math.sin(pitch), cos = Math.cos(pitch);
+          const yCoefficient = plane.y * cos + plane.z * sin;
+          const radial = Math.hypot(plane.x, -plane.y * sin + plane.z * cos);
+          for (const [radius, y] of rotationEnvelope.profile) distance = Math.max(distance, y * yCoefficient + radius * radial);
+        }
+      }
+      rotationEnvelope.aspect = camera.aspect; rotationEnvelope.fill = fill;
+      return (rotationEnvelope.distance = distance * 1.005);
+    }
+    function fitCameraToView() {
+      group.updateMatrixWorld(true);
+      camera.updateMatrixWorld();
+      cameraRight.setFromMatrixColumn(camera.matrixWorld, 0);
+      cameraUp.setFromMatrixColumn(camera.matrixWorld, 1);
+      const fill = Math.min(.96, Math.max(.5, options.framingFill?.() ?? .92));
+      const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * fill;
+      const horizontal = vertical * camera.aspect;
+      const distance = rotationCameraDistance(horizontal, vertical, fill);
+      camera.position.copy(cameraDirection).multiplyScalar(distance).add(group.position);
+      camera.lookAt(group.position);
+      camera.far = Math.max(100, distance + framingRadius * 2);
+      camera.near = Math.max(.1, (distance - framingRadius) * .5);
+      camera.updateProjectionMatrix();
     }
 
     function resize() {
@@ -306,29 +456,54 @@
       const distance = framingRadius / (Math.sin(Math.min(verticalHalfFov, horizontalHalfFov)) * fill);
       camera.position.copy(cameraDirection).multiplyScalar(Math.max(defaultCameraDistance, distance));
       camera.far = Math.max(100, distance + framingRadius * 2);
+      camera.near = Math.max(.1, (Math.max(defaultCameraDistance, distance) - framingRadius) * .5);
       camera.updateProjectionMatrix();
       render();
     }
 
+    function printDrawingOptions() {
+      // A provider mesh already locates the complete file in its UV atlas.
+      // Physical offsets belong only to the full-body procedural textures.
+      return {
+        offsetX: providerModel ? 0 : (dimensions.width - product.printFile.width) / 2,
+        offsetY: providerModel ? 0 : (dimensions.height - product.printFile.height) / 2 -
+          (product.previewModel?.printCenterY || 0) * product.printFile.dpi / 2.54,
+        printWidth: product.printFile.width, printHeight: product.printFile.height,
+        textureWidth: dimensions.width, textureHeight: dimensions.height,
+      };
+    }
+
+    function drawPrint(ctx) {
+      textureDrawer?.(ctx, printDrawingOptions());
+    }
+
+    function drawBackPrint(ctx) {
+      options.drawBackTexture?.(ctx, printDrawingOptions());
+    }
+
     function updateTexture(nextDrawer) {
+      if (destroyed) return;
       if (nextDrawer) textureDrawer = nextDrawer;
       const ctx = textureCanvas.getContext('2d');
       ctx.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = product.previewModel?.color || '#ffffff';
       ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
-      const offsetX = (textureCanvas.width - product.printFile.width) / 2;
-      const offsetY = (textureCanvas.height - product.printFile.height) / 2;
       if (textureDrawer) {
-        textureDrawer(ctx, {
-          offsetX,
-          offsetY,
-          printWidth: product.printFile.width,
-          printHeight: product.printFile.height,
-          textureWidth: textureCanvas.width,
-          textureHeight: textureCanvas.height,
-        });
+        ctx.save?.(); ctx.scale?.(textureScale, textureScale);
+        drawPrint(ctx);
+        ctx.restore?.();
       }
       texture.needsUpdate = true;
+      if (backCanvas) {
+        const backContext = backCanvas.getContext('2d');
+        backContext.clearRect(0, 0, backCanvas.width, backCanvas.height);
+        backContext.fillStyle = '#ffffff'; backContext.fillRect(0, 0, backCanvas.width, backCanvas.height);
+        backContext.save?.(); backContext.scale?.(textureScale, textureScale);
+        drawBackPrint(backContext);
+        backContext.restore?.();
+        backTexture.needsUpdate = true;
+      }
+      modelView?.update();
       render();
     }
 
@@ -360,7 +535,7 @@
       autoFrame = root.requestAnimationFrame(animateAutoRotate);
     }
 
-    function pointerHitsMug(event) {
+    function updatePointerRay(event) {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return false;
       rayPointer.set(
@@ -370,7 +545,11 @@
       camera.updateMatrixWorld();
       scene.updateMatrixWorld(true);
       raycaster.setFromCamera(rayPointer, camera);
-      return raycaster.intersectObject(group, true).length > 0;
+      return true;
+    }
+    function pointerHit(event) {
+      if (!updatePointerRay(event)) return null;
+      return raycaster.intersectObject(group, true)[0] || null;
     }
 
     function capturePointer(event) {
@@ -390,12 +569,20 @@
     const handlePointerDown = (event) => {
       if (activePointer !== null || event.isPrimary === false) return;
       const isTouch = event.pointerType === 'touch';
-      if (isTouch && !options.rotateAnywhere?.() && !pointerHitsMug(event)) return;
+      const hit = clothView || isTouch ? pointerHit(event) : null;
+      if (isTouch && !options.rotateAnywhere?.() && !hit) return;
       if (!isTouch && event.button != null && event.button !== 0) return;
       activePointer = event.pointerId;
       lastX = event.clientX;
       lastY = event.clientY;
       stopAutoRotate();
+      if (clothView && hit) {
+        clothGrabbed = clothView.beginGrab(hit);
+        if (clothGrabbed) {
+          clothDragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()), hit.point);
+          startClothMotion();
+        }
+      }
       capturePointer(event);
       interactionElement.classList.add('dragging');
       event.preventDefault();
@@ -406,6 +593,10 @@
       const deltaY = event.clientY - lastY;
       lastX = event.clientX;
       lastY = event.clientY;
+      if (clothGrabbed) {
+        if (updatePointerRay(event) && raycaster.ray.intersectPlane(clothDragPlane, clothDragPoint)) clothView.moveGrab(clothDragPoint);
+        startClothMotion(); event.preventDefault(); return;
+      }
       group.rotation.y += deltaX * .012;
       group.rotation.x = Math.max(
         -maxVerticalRotation,
@@ -417,8 +608,17 @@
     const finishPointer = (event) => {
       if (event.pointerId !== activePointer) return;
       resetPointer(event);
+      releaseCloth();
     };
     const handleKeydown = (event) => {
+      if (clothView && (event.key === ' ' || event.code === 'Space')) {
+        if (event.repeat || activePointer !== null) { event.preventDefault(); return; }
+        stopAutoRotate(); clothView.demonstrate(); startClothMotion(); event.preventDefault(); return;
+      }
+      if (clothView && event.key === 'Escape') {
+        if (activePointer !== null) resetPointer({ pointerId: activePointer });
+        releaseCloth(); event.preventDefault(); return;
+      }
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
       stopAutoRotate();
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -434,6 +634,7 @@
     interactionElement.addEventListener('pointermove', handlePointerMove);
     interactionElement.addEventListener('pointerup', finishPointer);
     interactionElement.addEventListener('pointercancel', finishPointer);
+    interactionElement.addEventListener('lostpointercapture', finishPointer);
     interactionElement.addEventListener('keydown', handleKeydown);
     const preventNativeInteraction = (event) => event.preventDefault();
     interactionRegion.addEventListener('contextmenu', preventNativeInteraction);
@@ -443,11 +644,13 @@
     const onContextLost = (event) => {
       event.preventDefault();
       stopAutoRotate();
+      if (clothView && activePointer !== null) resetPointer({ pointerId: activePointer });
+      releaseCloth(); stopClothMotion();
       reportStatus('error');
     };
     const onContextRestored = () => {
       if (destroyed) return;
-      try { resize(); updateTexture(); reportStatus('ready'); }
+      try { resize(); updateTexture(); startClothMotion(); reportStatus(modelFailed ? 'error' : modelPending ? 'loading' : 'ready'); }
       catch { reportStatus('error'); }
     };
     canvas.addEventListener('webglcontextlost', onContextLost);
@@ -456,24 +659,33 @@
     function destroy() {
       if (destroyed) return;
       destroyed = true;
+      if (activePointer !== null) resetPointer({ pointerId: activePointer });
       stopAutoRotate();
+      stopClothMotion(); clothObserver?.disconnect();
+      if (clothView) document.removeEventListener?.('visibilitychange', visibilityChanged);
       canvas.removeEventListener('webglcontextlost', onContextLost);
       canvas.removeEventListener('webglcontextrestored', onContextRestored);
       interactionElement.removeEventListener('pointerdown', handlePointerDown);
       interactionElement.removeEventListener('pointermove', handlePointerMove);
       interactionElement.removeEventListener('pointerup', finishPointer);
       interactionElement.removeEventListener('pointercancel', finishPointer);
+      interactionElement.removeEventListener('lostpointercapture', finishPointer);
       interactionElement.removeEventListener('keydown', handleKeydown);
       interactionRegion.removeEventListener('contextmenu', preventNativeInteraction);
       interactionRegion.removeEventListener('dragstart', preventNativeInteraction);
       interactionRegion.removeEventListener('selectstart', preventNativeInteraction);
       interactionElement.classList.remove('dragging');
+      modelView?.dispose();
+      modelView = null;
+      clothView?.dispose();
       group.traverse((object) => {
         object.geometry?.dispose?.();
         if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
         else object.material?.dispose?.();
       });
       texture.dispose();
+      backTexture?.dispose();
+      studioTexture?.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       if (ownsInteractionRegion) interactionRegion.remove();
@@ -484,8 +696,41 @@
       resize();
       updateTexture();
       if (renderer.getContext().isContextLost()) throw new Error('webgl_context_lost');
-      if (options.autoRotate) startAutoRotate();
+      if (options.autoRotate && !modelPending) startAutoRotate();
     } catch (error) { destroy(); throw error; }
+
+    const ready = providerModel ? Promise.resolve().then(() => {
+      if (destroyed) return null;
+      reportStatus('loading');
+      return root.PrintfulProductModel.load(THREE, product, textureCanvas, backCanvas, {
+        anisotropy: Math.min(8, renderer.capabilities.getMaxAnisotropy()),
+        maxTextureSize: renderer.capabilities.maxTextureSize,
+        drawPrint,
+        drawBackPrint,
+        ...(options.modelOptions || {}),
+      });
+    }).then(loaded => {
+      if (!loaded) return false;
+      if (destroyed) { loaded.dispose(); return false; }
+      modelView = loaded;
+      group.add(loaded.model);
+      modelPending = false;
+      measureModel();
+      canvas.setAttribute('data-product-mesh', providerModel.id);
+      resize();
+      updateTexture();
+      if (renderer.getContext().isContextLost()) reportStatus('error');
+      else { reportStatus('ready'); if (options.autoRotate) startAutoRotate(); }
+      return true;
+    }).catch(() => {
+      if (!destroyed) {
+        modelPending = false;
+        modelFailed = true;
+        modelView?.dispose(); modelView = null;
+        reportStatus('error');
+      }
+      return false;
+    }) : Promise.resolve(true);
 
     return {
       THREE,
@@ -497,6 +742,9 @@
       interactionRegion,
       textureCanvas,
       texture,
+      cloth: clothView,
+      ready,
+      get loading() { return modelPending; },
       render,
       resize,
       updateTexture,

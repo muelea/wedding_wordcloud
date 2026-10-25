@@ -1,0 +1,54 @@
+{
+  "verifiedOn": "2026-10-25",
+  "focusedTests": {
+    "passed": 68,
+    "failed": 0,
+    "files": [
+      "printful-product-model",
+      "mug-3d-lifecycle",
+      "product-3d-geometry",
+      "product-print-area-audit",
+      "product-gallery",
+      "product-picker"
+    ]
+  },
+  "browserChecks": {
+    "passed": 15,
+    "failed": 0
+  },
+  "galleryMesh": "mug-444",
+  "variants": [
+    {
+      "key": "colored-mug-17196",
+      "accent": "#050505",
+      "model": "/assets/product-models/mug-444-b41cebc61eda9f27.glb"
+    },
+    {
+      "key": "colored-mug-17197",
+      "accent": "#1e9fcd",
+      "model": "/assets/product-models/mug-444-b41cebc61eda9f27.glb"
+    },
+    {
+      "key": "colored-mug-22373",
+      "accent": "#1b1b51",
+      "model": "/assets/product-models/mug-444-b41cebc61eda9f27.glb"
+    },
+    {
+      "key": "colored-mug-17200",
+      "accent": "#e32a2d",
+      "model": "/assets/product-models/mug-444-b41cebc61eda9f27.glb"
+    },
+    {
+      "key": "colored-mug-17199",
+      "accent": "#f6a1b1",
+      "model": "/assets/product-models/mug-444-b41cebc61eda9f27.glb"
+    }
+  ],
+  "checks": [
+    "Printful reference photos compared for all five colors",
+    "Original positions, normals, UVs and triangle indices remain byte-identical",
+    "Fulfillment PNG bytes remain identical",
+    "White exterior and underside stay white; rim, interior and handle receive the variant color",
+    "Gallery and custom-design viewers use the Printful white 444 ml geometry"
+  ]
+}

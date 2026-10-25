@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-25",
+  "minimumAutomaticTextPt": 10,
+  "automaticLayout": "Complete measured layouts only; progressively compress size differences; capacity failure preserves the current design.",
+  "manualEditing": "Small text is allowed and reported alongside overlaps in Design check.",
+  "verification": {
+    "fullSuiteInitial": {
+      "tests": 982,
+      "passed": 973,
+      "failed": 9,
+      "notes": "Database contention, a transient syntax error in concurrently edited 3D geometry, and an invalid PNG in the new image fixture."
+    },
+    "serialRechecks": {
+      "tests": 219,
+      "passed": 219,
+      "failed": 0
+    },
+    "finalFocused": {
+      "tests": 235,
+      "passed": 235,
+      "failed": 0
+    },
+    "browser": [
+      "Automatic iPhone 16 Pro artwork passes the physical 10 pt check.",
+      "Manual 7.2 pt text produces a named, selectable finding.",
+      "Selecting a finding closes the dialog, selects the exact word and zooms to 200%.",
+      "Small text and painted-artwork overlaps appear together in the same dialog.",
+      "Fill repairs a manually edited 41-element layout and clears both finding types.",
+      "Reload retains the manual artwork and restores the 3D product preview."
+    ]
+  },
+  "screenshot": "design-check.png"
+}

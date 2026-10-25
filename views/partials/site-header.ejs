@@ -43,9 +43,10 @@
       <button class="button primary landing-start-button" type="button" data-open-start-dialog data-i18n-source="Hier starten"><%= t('Hier starten') %></button>
       <% } else if (variant === 'display') { %>
       <button
-        class="ww-keepsake-cta<%= config.hasWords ? ' visible' : '' %>"
+        class="ww-keepsake-cta"
         id="memory-cta"
         type="button"
+        <% if (!config.hasWords) { %>disabled<% } %>
         aria-label="<%= t('Erinnerung gestalten') %>"
         data-i18n-aria-label-source="Erinnerung gestalten"
       >

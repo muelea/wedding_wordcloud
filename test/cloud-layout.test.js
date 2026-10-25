@@ -105,8 +105,8 @@ test('print guidance measures physical text size and excludes images, icons and 
   const design = [{ text: 'gut', fontSize: 100 / 3 }, { text: 'klein', fontSize: 30 },
     { text: 'sehr klein', fontSize: 20 }, { text: '❤️', fontSize: 1 },
     { type: 'icon', size: 48 }, { type: 'image', width: 24, height: 24 }];
-  assert.deepEqual(Quality.evaluate(design, 300), { minPt: 4.8, small: 2, tiny: 1, level: 'low' });
-  assert.equal(Quality.evaluate(design, 150).level, 'good', 'DPI changes physical size, not element count');
+  assert.deepEqual(Quality.evaluate(design, 300), { minPt: 4.8, small: 3, tiny: 2, level: 'low' });
+  assert.equal(Quality.evaluate(design, 150).level, 'small', '9.6 pt remains below the 10 pt recommendation');
   assert.equal(Quality.evaluate([{ text: 'Liebe ❤️', fontSize: 20 }], 300).tiny, 1);
   assert.equal(Quality.evaluate([{ text: '❤️', fontSize: 1 }], 300), null);
   assert.equal(Quality.evaluate(design, 0), null);

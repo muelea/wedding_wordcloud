@@ -68,11 +68,12 @@
     });
   }
 
-  function prepare(state, source, target, measurementContext, options = {}) {
+  function* prepareSteps(state, source, target, measurementContext, options = {}) {
     const next = capture(state, source);
     if (options.independent) next.layouts = [];
     const saved = next.layouts.find(layout => key(layout) === key(target));
-    const designs = Object.fromEntries(target.surfaces.map((surface, index) => {
+    const designs = {};
+    for (const [index, surface] of target.surfaces.entries()) {
       // Single-sided products use the front. A hidden back stays in the draft;
       // the first visit to a two-sided product initializes its back from front.
       const contents = next.surfaces[index] || next.surfaces[0];
@@ -88,15 +89,33 @@
           });
           return restored;
         });
-      } else if (options.automatic) {
-        design = Layout.optimizeDesign(design, [{ ...surface.area, optimize: true }],
-          measurementContext, options);
+      }
+      if (options.automatic && (!saved?.surfaces[index] || options.printDpi)) {
+        design = yield { design, slots: [{ ...surface.area, optimize: true }] };
       }
       design = Layout.fitDesignToSafeArea(design, surface.area, measurementContext, options).design;
-      return [surface.key, design];
-    }));
+      designs[surface.key] = design;
+    }
     return { state: next, designs, retainedBack: next.surfaces.length > target.surfaces.length };
   }
 
-  return { capture, prepare, normalizeState, MAX_LAYOUTS };
+  function prepare(state, source, target, measurementContext, options = {}) {
+    const steps = prepareSteps(state, source, target, measurementContext, options);
+    let step = steps.next();
+    while (!step.done) step = steps.next(Layout.optimizeDesign(step.value.design,
+      step.value.slots, measurementContext, options));
+    return step.value;
+  }
+
+  async function prepareAsync(state, source, target, measurementContext, options = {}) {
+    const steps = prepareSteps(state, source, target, measurementContext, options);
+    try {
+      let step = steps.next();
+      while (!step.done) step = steps.next(await Layout.optimizeDesignAsync(step.value.design,
+        step.value.slots, measurementContext, options));
+      return step.value;
+    } finally { steps.return(); }
+  }
+
+  return { capture, prepare, prepareAsync, normalizeState, MAX_LAYOUTS };
 }));

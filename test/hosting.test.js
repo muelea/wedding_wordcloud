@@ -248,6 +248,7 @@ test('a fresh collaborator checkout has one deterministic local startup path', (
   }
   const repositoryAssets = validateRepositoryAssets(ROOT);
   assert.ok(repositoryAssets.includes(path.join('public', 'js', 'mug-3d-viewer.js')));
+  assert.ok(repositoryAssets.includes(path.join('public', 'js', 'blanket-cloth.js')));
   assert.ok(repositoryAssets.some((filename) => filename.endsWith('mug.svg')));
   assert.ok(repositoryAssets.some((filename) => filename.endsWith('coaster-flat.png')));
   assert.ok(repositoryAssets.some((filename) => filename.endsWith('jost-latin.woff2')));

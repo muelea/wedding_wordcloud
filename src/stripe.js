@@ -107,6 +107,7 @@ function freezeCheckoutRequest({
     throw new Error('Stripe Tax checkout requires one delivery address');
   }
   const shipment = shipments[0];
+  const pricing = shipment.customerCosts?.pricing || null;
   const recipient = shipment.recipient;
   if (!recipient?.name || !recipient.address1 || !recipient.city || !recipient.country_code) {
     throw new Error('Stripe Tax checkout requires a validated delivery address');
@@ -133,6 +134,7 @@ function freezeCheckoutRequest({
     // Persist the integration policy with the order. Older recoverable orders
     // retain their original card-only payload and Stripe idempotency key.
     allowedPaymentMethodTypes: ['card', 'paypal'],
+    ...(pricing ? { pricing } : {}),
     shipping,
     basket,
     products: frozenProducts,
@@ -163,6 +165,7 @@ async function createCheckoutSession({
   customerId = null,
   persistCustomer = null,
   allowedPaymentMethodTypes = null,
+  pricing = null,
 }) {
   const client = getClient();
   if (!client) throw notConfiguredError();
@@ -178,6 +181,20 @@ async function createCheckoutSession({
   }
 
   const totalCents = Number(order?.total_cents);
+  const taxBehavior = pricing?.version === 2 ? pricing.taxBehavior : 'exclusive';
+  if (pricing && (pricing.version !== 2 || !['inclusive', 'exclusive'].includes(taxBehavior) ||
+      pricing.country !== shipping?.address?.country ||
+      (taxBehavior === 'inclusive') !== (pricing.country === 'DE') ||
+      pricing.itemsCents !== order.items_cents || pricing.shippingCents !== order.shipping_cents ||
+      !Array.isArray(pricing.items) || pricing.items.length !== basket?.length ||
+      pricing.items.some((item, index) => item.configurationId !== basket[index].configurationId ||
+        item.productKey !== basket[index].product.key || item.quantity !== basket[index].quantity ||
+        !Number.isSafeInteger(item.unitAmountCents) || item.unitAmountCents <= 0) ||
+      pricing.items.reduce((sum, item) => sum + item.quantity * item.unitAmountCents, 0) !== order.items_cents)) {
+    const error = new Error('Die gespeicherten Produktpreise sind ungültig.');
+    error.code = 'STRIPE_INVALID_CHECKOUT_REQUEST';
+    throw error;
+  }
   const currency = String(order?.currency || '').toLowerCase();
   if (!Number.isSafeInteger(totalCents) || totalCents < 50 || currency !== 'eur') {
     const error = new Error('Der gespeicherte Checkout-Preis ist ungültig.');
@@ -226,7 +243,7 @@ async function createCheckoutSession({
         !Number.isSafeInteger(order.items_cents) || order.items_cents <= 0 ||
         !Number.isSafeInteger(order.shipping_cents) || order.shipping_cents < 0 ||
         totalCents !== order.items_cents + order.shipping_cents || order.tax_cents !== 0) {
-      throw new Error('Der gespeicherte Nettopreis oder die Lieferadresse ist ungültig.');
+      throw new Error('Der gespeicherte Preis oder die Lieferadresse ist ungültig.');
     }
     if (!customerId) {
       if (typeof persistCustomer !== 'function') throw new Error('Customer persistence is required');
@@ -255,10 +272,17 @@ async function createCheckoutSession({
       customer: customerId,
       automatic_tax: { enabled: true },
       adaptive_pricing: { enabled: false },
-      // Printful supplies an aggregate product estimate, not reliable per-item
-      // retail prices. Keep that exact net basket amount, describe each design,
-      // and charge shipping separately without invented unit-price allocation.
-      line_items: [{ quantity: 1, price_data: {
+      ...(pricing ? { expand: ['line_items'] } : {}),
+      // New orders retain exact catalog unit prices and quantities. Recoverable
+      // legacy orders retain their original aggregate, tax-exclusive payload.
+      line_items: pricing ? pricing.items.map((item, index) => ({ quantity: item.quantity, price_data: {
+        currency, unit_amount: item.unitAmountCents, tax_behavior: taxBehavior,
+        product_data: {
+          name: I18n.translate(basket[index].product.name, checkoutLocale),
+          description: I18n.translate(basket[index].product.size.label, checkoutLocale),
+          tax_code: 'txcd_99999999', metadata: { configurationId: item.configurationId },
+        },
+      } })) : [{ quantity: 1, price_data: {
         currency, unit_amount: order.items_cents, tax_behavior: 'exclusive',
         product_data: {
           name: basket.length === 1
@@ -273,7 +297,7 @@ async function createCheckoutSession({
         type: 'fixed_amount',
         fixed_amount: { amount: order.shipping_cents, currency },
         display_name: I18n.translate('Versand', checkoutLocale),
-        tax_behavior: 'exclusive', tax_code: 'txcd_92010001',
+        tax_behavior: taxBehavior, tax_code: 'txcd_92010001',
       } }],
       metadata,
       payment_intent_data: { metadata },
@@ -301,7 +325,7 @@ async function createCheckoutSession({
 
   const validationOrder = {
     ...order,
-    checkout_request_json: JSON.stringify({ ...checkoutRequest(order), customerId }),
+    checkout_request_json: JSON.stringify({ ...checkoutRequest(order), customerId, ...(pricing ? { pricing } : {}) }),
   };
   const amounts = paymentAmounts(validationOrder, session);
   if (!session?.id || !session.url || !amounts) {
@@ -310,11 +334,39 @@ async function createCheckoutSession({
     throw error;
   }
 
+  let pricedItems;
+  if (pricing) {
+    // Expanded Sessions contain only the first page. A cart can contain up to
+    // 20 designs, so fetch the complete list before displaying per-item totals.
+    const lines = session.line_items?.has_more
+      ? await client.checkout.sessions.listLineItems(session.id, { limit: 100 })
+      : session.line_items;
+    const valid = lines && !lines.has_more && lines.data?.length === pricing.items.length &&
+      lines.data.every((line, index) => {
+        const item = pricing.items[index];
+        return line.quantity === item.quantity &&
+          line.amount_subtotal === item.quantity * item.unitAmountCents &&
+          Number.isSafeInteger(line.amount_total) && line.amount_total >= line.amount_subtotal &&
+          (taxBehavior !== 'inclusive' || line.amount_total === line.amount_subtotal);
+      }) && lines.data.reduce((sum, line) => sum + line.amount_total, 0) +
+        session.shipping_cost.amount_total === amounts.totalCents;
+    if (!valid) {
+      const error = new Error('Stripe konnte die endgültigen Produktbeträge nicht bestätigen.');
+      error.code = 'STRIPE_TAX_CALCULATION_INCOMPLETE';
+      throw error;
+    }
+    pricedItems = pricing.items.map((item, index) => ({ ...item, grossTotalCents: lines.data[index].amount_total }));
+  }
+
   return {
     url: session.url,
     id: session.id,
     taxCents: amounts.taxCents,
     totalCents: amounts.totalCents,
+    ...(pricing ? {
+      shippingTaxCents: session.shipping_cost.amount_tax,
+      pricedItems,
+    } : {}),
     expiresAt: order.checkout_session_expires_at,
   };
 }

@@ -1,0 +1,47 @@
+{
+  "checkedOn": "2026-10-25",
+  "sourcePage": "https://www.printful.com/custom/drinkware/tumblers/wine-tumbler#guidelines",
+  "sourceTemplate": "https://printful.s3-accelerate.amazonaws.com/upload/guideline/Wine%20tumbler%20guidelines.zip",
+  "productKey": "wine-tumbler",
+  "printFile": {
+    "width": 3175,
+    "height": 950,
+    "dpi": 300,
+    "fillMode": "fit",
+    "canRotate": false,
+    "placement": "default"
+  },
+  "applicationSafeArea": {
+    "x": 50,
+    "y": 50,
+    "width": 3075,
+    "height": 850
+  },
+  "applicationSideMargins": {
+    "leftPixels": 50,
+    "rightPixels": 50,
+    "combinedBlankArtworkWidthMillimeters": 8.466666666666665
+  },
+  "providerTemplate": "No separate inset safe rectangle is marked in the official wine-tumbler template; the entire 3175x950 canvas is the print rectangle.",
+  "providerLiveDesigner": "A blue Fill covers the entire printable band in the live Printful 3D designer, including after rotation.",
+  "meshReadOnlyRaycast": {
+    "method": "3600 radial samples at the midpoint of the UV-mapped print band; original Printful mesh; no modified UVs",
+    "wineTumbler": {
+      "fullWidthGapDegrees": 0,
+      "withCurrentSideInsetsGapDegrees": 9.9
+    },
+    "waterBottle": {
+      "fullWidthGapDegrees": 0,
+      "withCurrentSideInsetsGapDegrees": 14.6,
+      "sideInsetPixels": 50
+    },
+    "strawTumbler": {
+      "fullWidthGapDegrees": 0,
+      "withCurrentSideInsetsGapDegrees": 17.9,
+      "sideInsetPixels": 70
+    }
+  },
+  "recommendation": "Remove the extra horizontal inset for the wine tumbler; keep vertical product limits. A continuous word cloud also needs wrap-aware placement/export if words are to cross the seam. Evaluate the water bottle and straw tumbler independently rather than changing all product margins.",
+  "limitations": "Digital template, designer and mesh analysis; physical printing may show registration differences. Printful warns that patterns cannot be perfectly aligned.",
+  "applicationChanges": false
+}

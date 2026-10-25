@@ -22,7 +22,7 @@ test('random IDs preserve case and URL-safe symbols across the event journey', a
     body: new URLSearchParams({ cloudName: '🎉', organizerPin: '5678', organizerPinConfirmation: '5678' }),
   });
   assert.equal(started.status, 303);
-  assert.equal(started.headers.get('location'), `/e/${ids[1]}`);
+  assert.equal(started.headers.get('location'), `/e/${ids[1]}#willkommen`);
 
   for (const slug of ids) {
     const api = `${baseUrl}/api/events/${slug}`;
@@ -32,6 +32,7 @@ test('random IDs preserve case and URL-safe symbols across the event journey', a
     assert.ok(shareUrl);
     assert.equal(new URL(shareUrl).pathname, `/e/${slug}`);
     assert.equal(new URL(shareUrl).search, '?lang=de');
+    assert.equal(new URL(shareUrl).hash, '', 'invitations never carry the creator welcome hint');
     const qr = await fetch(`${api}/qr`).then((response) => response.json());
     const canonicalShareUrl = new URL(shareUrl);
     canonicalShareUrl.search = '';
@@ -93,7 +94,7 @@ test('both creation endpoints retry permanent ID collisions and stop after 20 at
     const response = await fetch(`${baseUrl}${path}`, options);
     assert.equal(response.status, status);
     if (status === 201) assert.equal((await response.json()).slug, fresh);
-    else assert.equal(response.headers.get('location'), `/e/${fresh}`);
+    else assert.equal(response.headers.get('location'), `/e/${fresh}#willkommen`);
     assert.equal(candidates.length, 0, 'the reserved ID must cause a retry');
 
     generator.mock.mockImplementation(() => reserved);
@@ -132,7 +133,7 @@ test('event creation uses one canonical event URL', async (t) => {
   });
   assert.equal(startResponse.status, 303);
   const startLocation = startResponse.headers.get('location') || '';
-  const startLocationMatch = /^\/e\/([A-Za-z0-9_-]{22})$/.exec(startLocation);
+  const startLocationMatch = /^\/e\/([A-Za-z0-9_-]{22})#willkommen$/.exec(startLocation);
   assert.ok(startLocationMatch, `unexpected display location: ${startLocation}`);
   const startedSlug = startLocationMatch[1];
   assert.doesNotMatch(startResponse.headers.get('set-cookie') || '', /ww-draft-/);
@@ -151,6 +152,7 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /id="display-word-entry"/);
   assert.match(displayHtml, /id="display-word-input"/);
   assert.match(displayHtml, /id="display-word-submit"/);
+  assert.match(displayHtml, /<button\b[^>]*\bid="memory-cta"[^>]*\bdisabled\b/);
   assert.doesNotMatch(displayHtml, /id="display-word-close"/);
   assert.match(displayHtml, /data-ww-site-menu/);
   assert.match(displayHtml, /id="display-own-words-button"/);
@@ -198,7 +200,8 @@ test('event creation uses one canonical event URL', async (t) => {
   const eventRecord = await database.getEventBySlug(event.slug);
   await database.addWordContribution(eventRecord.id, 'reload-ready', 'f'.repeat(32));
   const populatedHtml = await fetch(`${baseUrl}${event.eventUrl}`).then((response) => response.text());
-  assert.match(populatedHtml, /class="ww-keepsake-cta visible"/);
+  assert.match(populatedHtml, /<button\b[^>]*\bid="memory-cta"/);
+  assert.doesNotMatch(populatedHtml, /<button\b[^>]*\bid="memory-cta"[^>]*\bdisabled\b/);
   assert.match(populatedHtml, /id="empty-state" class="hidden"/);
   assert.match(populatedHtml, /let currentWords = \[\["reload-ready",1\]\]/);
   assert.match(populatedHtml, /if \(currentWords\.length\) scheduleRender\(currentWords, 0\)/);

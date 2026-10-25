@@ -422,7 +422,7 @@
 
     /* ── Keepsake configurator CTA ── */
     .ww-keepsake-cta {
-      display: none;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
@@ -439,8 +439,8 @@
       box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent);
       transition: transform .18s ease, background .6s, border-color .6s, box-shadow .18s ease;
     }
-    .ww-keepsake-cta.visible { display: inline-flex; }
-    .ww-keepsake-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 28%, transparent); }
+    .ww-keepsake-cta:disabled { border-color: var(--border); background: color-mix(in srgb, var(--muted) 12%, var(--bg)); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+    .ww-keepsake-cta:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 28%, transparent); }
     .ww-keepsake-cta:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 3px; }
     .ww-keepsake-cta-icon { width: 14px; height: 14px; flex: 0 0 auto; fill: currentColor; }
     .ww-keepsake-cta-label-compact { display: none; }
@@ -625,6 +625,7 @@
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/cloud-help.css') %>" />
 </head>
 <body>
 
@@ -637,8 +638,8 @@
   <canvas id="cloud-canvas"></canvas>
   <div id="empty-state"<% if ((pageData.initialWords || []).length) { %> class="hidden"<% } %>>
     <div class="empty-ornament">♡</div>
-    <p class="empty-text">Wir warten auf eure Wörter&hellip;</p>
-    <p class="empty-sub">QR-Code scannen &amp; mitmachen</p>
+    <p class="empty-text">Hier wächst eure Wortwolke.</p>
+    <p class="empty-sub">Fügt das erste Wort hinzu oder ladet andere ein.</p>
   </div>
 </div>
 
@@ -653,8 +654,15 @@
 </div>
 
 <div class="display-word-entry-row">
+  <div class="display-word-entry-stack">
+  <div class="display-guest-guidance">
+    <p id="display-guest-guidance">Füge ein Wort hinzu. Es erscheint sofort bei allen.</p>
+    <div class="display-guidance-actions">
+      <button class="cloud-help-link" id="cloud-help-button" type="button" data-cloud-tour-start aria-haspopup="dialog" aria-controls="cloud-tour-tip">So geht’s</button>
+    </div>
+  </div>
   <form class="display-word-entry" id="display-word-entry">
-    <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" />
+    <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" aria-describedby="display-guest-guidance" />
     <button
       class="display-emoji-trigger"
       id="display-emoji-trigger"
@@ -674,6 +682,7 @@
     </button>
     <button id="display-word-submit" type="submit">Hinzufügen</button>
   </form>
+  </div>
   <button
     class="display-own-words-shortcut"
     id="display-own-words-shortcut"
@@ -694,7 +703,7 @@
     <div class="footer-actions" aria-label="Wortwolke teilen" data-i18n-aria-label-source="Wortwolke teilen">
       <button class="footer-action" id="share-cloud" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
-        <span>Teilen</span>
+        <span>Gäste einladen</span>
       </button>
       <button class="footer-action" id="copy-cloud-link" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 14.5 14.5 9"/><path d="m7.2 17.8-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0" transform="translate(3)"/><path d="m16.8 6.2 1-1a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0" transform="translate(-3)"/></svg>
@@ -719,10 +728,11 @@
 </footer>
 
 <div class="toast-container" id="toast-container"></div>
+<%- include('partials/cloud-help') %>
 
 <dialog class="draft-settings own-words-dialog ww-mobile-dialog" id="display-own-words-dialog" aria-labelledby="display-own-words-title">
   <form method="dialog">
-    <div class="dialog-heading"><h2 id="display-own-words-title">Deine Wörter</h2><button class="ww-icon-button ww-close-button dialog-close" type="submit" aria-label="Dialog schließen"></button></div>
+    <div class="dialog-heading"><h2 id="display-own-words-title" tabindex="-1" autofocus>Deine Wörter</h2><button class="ww-icon-button ww-close-button dialog-close" type="submit" aria-label="Dialog schließen"></button></div>
     <p class="own-words-intro">Hier kannst du deine eigenen Eingaben verwalten. Mit jedem Entfernen wird ein Beitrag gelöscht.</p>
     <div class="own-words-list" id="display-own-words-list"></div>
     <p class="own-words-empty" id="display-own-words-empty" hidden>Du hast noch keine Wörter hinzugefügt.</p>
@@ -732,7 +742,7 @@
 
 <dialog class="draft-settings share-dialog ww-mobile-dialog" id="share-dialog" aria-labelledby="share-dialog-title">
   <form method="dialog">
-    <div class="dialog-heading"><h2 id="share-dialog-title">Wortwolke teilen</h2><button class="ww-icon-button ww-close-button dialog-close" type="submit" aria-label="Teilen-Dialog schließen" data-i18n-aria-label-source="Teilen-Dialog schließen"></button></div>
+    <div class="dialog-heading"><h2 id="share-dialog-title" tabindex="-1" autofocus>Wortwolke teilen</h2><button class="ww-icon-button ww-close-button dialog-close" type="submit" aria-label="Teilen-Dialog schließen" data-i18n-aria-label-source="Teilen-Dialog schließen"></button></div>
     <p class="share-dialog-copy">Ladet andere ein, ein Wort beizutragen und die Wortwolke live wachsen zu sehen.</p>
     <div class="share-options">
       <a class="share-option" id="share-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
@@ -834,6 +844,7 @@
 <script src="<%= asset('/js/live-cloud-transition.js') %>"></script>
 <script src="<%= asset('/js/cloud-word-actions.js') %>"></script>
 <script src="<%= asset('/js/own-word-groups.js') %>"></script>
+<script src="<%= asset('/js/cloud-help.js') %>"></script>
 <script>
   // Slug comes from the canonical event URL: /e/<slug>
   const slug = location.pathname.split('/').filter(Boolean)[1];
@@ -1599,6 +1610,7 @@
     addOwnContribution(word, receipt);
     globalThis.WolkenworteAnalytics?.track('word_submitted');
     announceWordAccepted();
+    document.dispatchEvent(new CustomEvent('wolkenworte:wordaccepted'));
     if (wasCloudAction) closeCloudWordActions();
   });
   socket.on('word-error', ({ error } = {}) => {
@@ -1766,7 +1778,7 @@
     }
     if (ownContributionsChanged) renderOwnContributions();
     if (draftSettings.open) renderWordManager();
-    memoryCta.classList.toggle('visible', words.length > 0);
+    memoryCta.disabled = words.length === 0;
 
     if (words.length === 0) {
       hideCloudLoading();
@@ -1845,7 +1857,8 @@
 
   // ── Product configurator ──────────────────────────────────────────────────
   memoryCta.addEventListener('click', () => {
-    location.href = `/e/${encodeURIComponent(slug)}/configure`;
+    if (memoryCta.disabled || !currentWords.length) return;
+    location.href = `/e/${encodeURIComponent(slug)}/configure?view=products`;
   });
 
   (function handleCheckoutRedirect() {
@@ -1856,6 +1869,8 @@
       showToast(t('Bestellung abgebrochen.'));
     }
   })();
+
+  WolkenworteCloudHelp.create();
 
   // Observe the actual available rectangle, including presentation-mode and
   // mobile viewport changes. Throttle, rather than continually postponing work.

@@ -1,0 +1,150 @@
+{
+  "source": "reports/print-area-audit-2026-10-24/full/coverage.json",
+  "description": "Independent pixel measurements from Printful-generated synthetic proofs. Bounds are inclusive pixel coordinates; tolerances allow raster antialiasing.",
+  "mousePad": {
+    "productKey": "mouse-pad",
+    "input": "full/inputs/abdf1a347a0b52b157b5.png",
+    "inputSha256": "abdf1a347a0b52b157b5b1f1e003a96062a78e3cbdde8ed17365fee94cbc55ea",
+    "proof": "full/provider/mouse-pad--default-0.png",
+    "proofSha256": "06fc5852d5661f00a98d8535c6b2f93e85c28a035fa068f859ef2a2dcdc0750d",
+    "inputMarker": [156, 156, 2543, 2093],
+    "providerMarker": [75, 155, 923, 843],
+    "providerBody": [48, 130, 952, 869]
+  },
+  "sleeves": [
+    {
+      "productKey": "laptop-sleeve-10984",
+      "inputMarker": [
+        329,
+        329,
+        1920,
+        1395
+      ],
+      "providerMarker": [
+        230,
+        318,
+        771,
+        681
+      ],
+      "providerBody": [
+        136,
+        222,
+        867,
+        782
+      ],
+      "proof": "laptop-sleeve-10984-provider-0.png"
+    },
+    {
+      "productKey": "laptop-sleeve-10985",
+      "inputMarker": [
+        329,
+        329,
+        1995,
+        1470
+      ],
+      "providerMarker": [
+        182,
+        285,
+        812,
+        716
+      ],
+      "providerBody": [
+        60,
+        166,
+        935,
+        837
+      ],
+      "proof": "full/provider/laptop-sleeve-10985--default-0.png"
+    }
+  ],
+  "blackHandleTote": {
+    "productKey": "all-over-tote-black-handles",
+    "inputMarker": [
+      337,
+      522,
+      2207,
+      2097
+    ],
+    "providerMarker": [
+      232,
+      459,
+      758,
+      902
+    ],
+    "photoTranslation": [
+      150,
+      0
+    ],
+    "proof": "all-over-tote-black-handles-provider-0.png"
+  },
+  "organicToteColors": [
+    {
+      "productKey": "eco-tote-10458",
+      "proof": "full/provider/eco-tote-10458--default-0.png",
+      "sha256": "ca1a4da9788e7d5f56b3c1a3c70ff5de09dfc0573d4c6caabf6fc95b79dc7414",
+      "samples": [
+        {
+          "x": 250,
+          "y": 600,
+          "rgb": [
+            212,
+            187,
+            155
+          ]
+        },
+        {
+          "x": 350,
+          "y": 200,
+          "rgb": [
+            215,
+            190,
+            157
+          ]
+        },
+        {
+          "x": 500,
+          "y": 900,
+          "rgb": [
+            214,
+            189,
+            156
+          ]
+        }
+      ]
+    },
+    {
+      "productKey": "eco-tote-10457",
+      "proof": "full/provider/eco-tote-10457--default-0.png",
+      "sha256": "76fbdbeff70b52833692d3a4cbdf7cc42443e2da5c301de20c3675be21760229",
+      "samples": [
+        {
+          "x": 250,
+          "y": 600,
+          "rgb": [
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "x": 350,
+          "y": 200,
+          "rgb": [
+            37,
+            37,
+            37
+          ]
+        },
+        {
+          "x": 500,
+          "y": 900,
+          "rgb": [
+            37,
+            37,
+            37
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -206,6 +206,18 @@ test('journey markers appear only on their successful destination page', () => {
   assert.equal(eventCommands(revisit, 'cloud_created').length, 0);
 });
 
+test('inclusive shipping tax is removed once when calculating purchase revenue', () => {
+  const state = browser({ cookie: 'wolkenworte-analytics=1-yes' });
+  assert.equal(state.root.WolkenworteAnalytics.trackPurchase({
+    paymentConfirmed: true, orderNumber: 'WW-00000032', currency: 'EUR',
+    totalCents: 5655, shippingCents: 1484, netShippingCents: 1247, taxCents: 902,
+  }), true);
+  const purchase = eventCommands(state, 'purchase')[0][2];
+  assert.equal(purchase.value, 35.06);
+  assert.equal(purchase.shipping, 12.47);
+  assert.equal(purchase.tax, 9.02);
+});
+
 test('withdrawal denies tracking, removes GA cookies, and reloads', () => {
   const state = browser({ cookie: 'wolkenworte-analytics=1-yes; _ga=visitor; _ga_TEST=visitor' });
   state.elements['ww-analytics-reject'].click();

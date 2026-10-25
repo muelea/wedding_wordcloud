@@ -70,7 +70,8 @@ async function createEditor(t) {
       images.set(run.asset, await loadImage(Buffer.from(await loadBrowserSvg(run.asset))));
     }
   }
-  const root = { fabric, DesignFonts, WordCloudCore, MugIcons, WolkenworteEmoji: {
+  const root = { fabric, DesignFonts, WordCloudCore, MugIcons,
+    TextPrintQuality: require('../public/js/text-print-quality'), WolkenworteEmoji: {
     ...EmojiCatalog,
     getLoadedImage: run => images.get(run.asset),
     async preloadTexts() {},
@@ -176,6 +177,22 @@ test('exact point sizing updates selected text and emoji, leaves motifs unchange
   editor.undo();
   assert.deepEqual(editor.getDesign().map(item => item.type === 'icon' ? item.size : item.fontSize),
     [120, 160, 140]);
+});
+
+test('typing 10 pt at 150 DPI clears the size advisory while deliberate smaller text remains undoable', async t => {
+  const editor = await createEditor(t);
+  const quality = require('../public/js/text-print-quality');
+  editor.printFileDpi = 150;
+  editor.setDesign([{ id: 'word', text: 'Liebe', x: 650, y: 525, fontSize: 120,
+    angle: 0, color: '#2455f5', fontFamily: 'classic' }], { resetHistory: true });
+  editor.canvas.setActiveObject(editor.canvas.getObjects()[0]);
+  assert.equal(editor.setActiveFontSize(10), true);
+  assert.equal(quality.findings(editor.getDesign(), 150).length, 0);
+  assert.ok(editor.getDesign()[0].fontSize * 72 / 150 >= 10);
+  assert.equal(editor.setActiveFontSize(7.2), true);
+  assert.equal(quality.findings(editor.getDesign(), 150).length, 1);
+  editor.undo();
+  assert.equal(quality.findings(editor.getDesign(), 150).length, 0);
 });
 
 test('exact point sizing rejects a value that cannot fit without changing the design', async t => {

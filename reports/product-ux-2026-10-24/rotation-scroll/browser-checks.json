@@ -1,0 +1,80 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "white-glossy-mug-duo-11oz: no camera drift or zoom through a full turn and tilt",
+      "pass": true,
+      "details": {
+        "movement": 0
+      }
+    },
+    {
+      "name": "white-glossy-mug-duo-11oz: artwork stays unchanged",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-11051: no camera drift or zoom through a full turn and tilt",
+      "pass": true,
+      "details": {
+        "movement": 0
+      }
+    },
+    {
+      "name": "colored-mug-11051: artwork stays unchanged",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17196: no camera drift or zoom through a full turn and tilt",
+      "pass": true,
+      "details": {
+        "movement": 0
+      }
+    },
+    {
+      "name": "colored-mug-17196: artwork stays unchanged",
+      "pass": true
+    },
+    {
+      "name": "enamel-mug: no camera drift or zoom through a full turn and tilt",
+      "pass": true,
+      "details": {
+        "movement": 0
+      }
+    },
+    {
+      "name": "enamel-mug: artwork stays unchanged",
+      "pass": true
+    },
+    {
+      "name": "a long dropdown scrolls internally and locks the page",
+      "pass": true
+    },
+    {
+      "name": "opening and reaching the bottom preserves the page position",
+      "pass": true,
+      "details": {
+        "pageY": 1782
+      }
+    },
+    {
+      "name": "closing a nested photo keeps the dropdown scroll lock",
+      "pass": true
+    },
+    {
+      "name": "wheel scrolling at the dropdown boundary never moves the background",
+      "pass": true,
+      "details": {
+        "before": 1782,
+        "after": 1782
+      }
+    },
+    {
+      "name": "nested product photo was exercised",
+      "pass": true
+    },
+    {
+      "name": "closing the dropdown releases the lock without moving the page",
+      "pass": true
+    }
+  ]
+}

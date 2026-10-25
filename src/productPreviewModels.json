@@ -1,0 +1,367 @@
+{
+  "retrievedOn": "2026-10-24",
+  "sourceBase": "https://static.cdn.printful.com/static/v880/generator/3d-objects/",
+  "mappingSource": "https://static.cdn.printful.com/dist-pf/62351.c6912764bc6932dba2b3.js",
+  "models": [
+    {
+      "id": "mug-325",
+      "productId": 19,
+      "printfileIds": [
+        43
+      ],
+      "file": "/assets/product-models/mug-325-81e650a258e0aa7c.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "rotateY": 135,
+      "originalFile": "19-11oz-mug.glb",
+      "originalSha256": "177873f21ab2e27f5ff738728b6bd3ef1a03fb258aa822efc8e6d36fa22ce05b",
+      "sha256": "81e650a258e0aa7c8c576a52d48c21f23da3777376f704db5edf354513c6cddd",
+      "originalBytes": 317756,
+      "bytes": 301396
+    },
+    {
+      "id": "mug-444",
+      "productId": 19,
+      "printfileIds": [
+        44
+      ],
+      "file": "/assets/product-models/mug-444-b41cebc61eda9f27.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "rotateY": 135,
+      "originalFile": "19-15oz-mug.glb",
+      "originalSha256": "a4668d1316a73a68b6a8c444c0a13907a9336d2c022c3092258367f96bd7d3c7",
+      "sha256": "b41cebc61eda9f2717fc8a50d0529de013fb5faafbbfbc0ea17db32153212c41",
+      "originalBytes": 210808,
+      "bytes": 210916
+    },
+    {
+      "id": "mug-591",
+      "productId": 19,
+      "printfileIds": [
+        426
+      ],
+      "file": "/assets/product-models/mug-591-df7ecd2dcf3a4475.glb",
+      "front": [
+        0.004333333333333333,
+        0.01,
+        0.9913333333333333,
+        0.389
+      ],
+      "rotateY": -45,
+      "originalFile": "20oz_mug.glb",
+      "originalSha256": "7e03ccd8441751a9b1e24243a5581c9b960711dd4550bbf40fa6fcd1c0151351",
+      "sha256": "df7ecd2dcf3a4475672973fe29ef73d5b2cbd32b066b64418b8d2eb2f4a922b1",
+      "originalBytes": 303816,
+      "bytes": 294020
+    },
+    {
+      "id": "colored-mug-325",
+      "productId": 403,
+      "printfileIds": [
+        43
+      ],
+      "file": "/assets/product-models/colored-mug-325-ed52140654634c70.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "rotateY": 135,
+      "accentCell": 2,
+      "originalFile": "403-11oz-color-mug.glb",
+      "originalSha256": "43ea42a86500325c4c687840e34318f90be711576a63389da52a23862a27bdda",
+      "sha256": "ed52140654634c7031d9fb0adf7abbcb55a9dd5755f2745ad463569532c55c76",
+      "originalBytes": 665924,
+      "bytes": 649560
+    },
+    {
+      "id": "canvas-12x16",
+      "productId": 3,
+      "printfileIds": [
+        46
+      ],
+      "file": "/assets/product-models/canvas-12x16-5045f2df7fac3b42.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "canvas": true,
+      "staticCells": {
+        "2": "#c2aa80",
+        "3": "#b2b5b8"
+      },
+      "originalFile": "3-12x16-canvas.glb",
+      "originalSha256": "cc9815c00e766671b7e9674781040d9ddfa5e70d6ebecbd491f0977e12bebccc",
+      "sha256": "5045f2df7fac3b4257672b7a1e38827d85143f91b908f69f0edc6281eb361431",
+      "originalBytes": 1135912,
+      "bytes": 1136008
+    },
+    {
+      "id": "water-bottle",
+      "productId": 382,
+      "printfileIds": [
+        192
+      ],
+      "file": "/assets/product-models/water-bottle-4a5beb3a7ba6cd8e.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "printMaterials": [
+        "material_for_print_file_+_bottle.001"
+      ],
+      "originalFile": "382-water-bottle-with-material-v4.glb",
+      "originalSha256": "618271244b044bb79d2bf4b66d3d74757263998ebd225e7e4ca6e5ba67650614",
+      "sha256": "4a5beb3a7ba6cd8eb400206dc0a3da2b4c3e2083aefc1176bbac7eeb037696ce",
+      "originalBytes": 324384,
+      "bytes": 133928
+    },
+    {
+      "id": "enamel-mug",
+      "productId": 407,
+      "printfileIds": [
+        215
+      ],
+      "file": "/assets/product-models/enamel-mug-d74c56d06a76ae7d.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "rotateY": 225,
+      "metallicCell": 1,
+      "staticCells": {
+        "3": "#ffffff"
+      },
+      "originalFile": "407-12oz-enamel-mug.glb",
+      "originalSha256": "38557cc36b4f38987435eeaa6659866d1e14c8f4b8ee3d5df0d55bcdaf0bed56",
+      "sha256": "d74c56d06a76ae7dd2612706c7e7c88b60036bbced8ad0825477dd8d55c943f5",
+      "originalBytes": 480460,
+      "bytes": 252576
+    },
+    {
+      "id": "steel-tumbler",
+      "productId": 585,
+      "printfileIds": [
+        309
+      ],
+      "file": "/assets/product-models/steel-tumbler-e1c2f8e2beaab139.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "printMaterials": [
+        "print file+white"
+      ],
+      "heightMaterial": "print file+white",
+      "originalFile": "tumbler_withstraw2.glb",
+      "originalSha256": "b8c411ca8760f6e89f48161ed4f815aea038de28d5191b5f73a8739416cb1699",
+      "sha256": "e1c2f8e2beaab1394836d43f0c01e0bdf5cdfced162e52447c52f49f6e4b71fc",
+      "originalBytes": 184920,
+      "bytes": 92424
+    },
+    {
+      "id": "wine-tumbler",
+      "productId": 632,
+      "printfileIds": [
+        383
+      ],
+      "file": "/assets/product-models/wine-tumbler-c7bdaa9dde876eb7.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "printMaterials": [
+        "printfile un kruze"
+      ],
+      "originalFile": "wine_tumbler_with_lid.glb",
+      "originalSha256": "f3ae1baeb613e3b661584cb769d07fe7525a7894a1f207f2d808c1335259c5db",
+      "sha256": "c7bdaa9dde876eb7e6f75a873326d4cdb33e25d24c61ea073ba702ca54f98e1f",
+      "originalBytes": 1079528,
+      "bytes": 217856
+    },
+    {
+      "id": "square-pillow",
+      "productId": 83,
+      "printfileIds": [
+        32,
+        214
+      ],
+      "file": "/assets/product-models/square-pillow-a722bb31d0f977ca.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "back": [
+        0.5,
+        0,
+        0.5,
+        0.5
+      ],
+      "textile": true,
+      "heights": {
+        "32": 45.72,
+        "214": 55.88
+      },
+      "originalFile": "square-pillow.glb",
+      "originalSha256": "95715e41c19ec66f44829663b0e95231042346209334c0f30624f2bbee73dff8",
+      "sha256": "a722bb31d0f977ca015415e3fa084e4dd3c36fad7ddaf6d07b3c335a4a5f5c20",
+      "originalBytes": 863352,
+      "bytes": 846988
+    },
+    {
+      "id": "rectangular-pillow",
+      "productId": 83,
+      "printfileIds": [
+        72
+      ],
+      "file": "/assets/product-models/rectangular-pillow-38b1cbec8aa87af2.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "back": [
+        0.5,
+        0,
+        0.5,
+        0.5
+      ],
+      "textile": true,
+      "height": 30.48,
+      "originalFile": "rectangular-pillow.glb",
+      "originalSha256": "4122700863e729d0684acd35ee87c82bbbe6959f0bd3b9dd80efba9145dcfc43",
+      "sha256": "38b1cbec8aa87af222ed285aa3ef8341b664ede6454769afc32d37d89d2512aa",
+      "originalBytes": 1184020,
+      "bytes": 1184136
+    },
+    {
+      "id": "mousepad",
+      "productId": 518,
+      "printfileIds": [
+        265
+      ],
+      "file": "/assets/product-models/mousepad-ad0d4820f3067228.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "rotateX": 90,
+      "frontProjection": {
+        "scaleY": 0.9835861110214438,
+        "offsetY": 0.010439469930481764
+      },
+      "height": 18,
+      "textile": true,
+      "originalFile": "mousepad_3D.glb",
+      "originalSha256": "2b4a0da6ce03d3b8a4d1ee1a677a8d73e1551f60fa45b2dbc1888f6109b5d333",
+      "sha256": "ad0d4820f3067228f3b6b4ebe8e9c0aee30f5ddaa5e5b9370115866021682eba",
+      "originalBytes": 3644992,
+      "bytes": 12400
+    },
+    {
+      "id": "coaster",
+      "productId": 611,
+      "printfileIds": [
+        358
+      ],
+      "file": "/assets/product-models/coaster-8bb588664ffd95c6.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "rotateX": 90,
+      "height": 9.5,
+      "originalFile": "COASTER_3D.glb",
+      "originalSha256": "95b94085328245f1744efaae80eb18f5b829aa051e1ac8be70012cad00dd13ad",
+      "sha256": "8bb588664ffd95c6a8d4153d273c82e4b4f9183743fc053193ff0604dfd2a99c",
+      "originalBytes": 534584,
+      "bytes": 18328,
+      "baseAtlas": "/assets/product-models/coaster-atlas-ca025d1a4160a995.jpg",
+      "baseAtlasSha256": "ca025d1a4160a9951e125c98d247ac80a0496cfb5218abb4dae3969864cb8655"
+    },
+    {
+      "id": "notebook",
+      "productId": 474,
+      "printfileIds": [
+        242
+      ],
+      "file": "/assets/product-models/notebook-8522b757348321df.glb",
+      "front": [
+        0,
+        0,
+        0.5,
+        0.5
+      ],
+      "back": [
+        0.5,
+        0,
+        0.5,
+        0.5
+      ],
+      "height": 21,
+      "originalFile": "notebook.glb",
+      "originalSha256": "44e51becdc4845732f16ce6c7f0719821da9e1dbc25a4f91fe26f199f6cc1c66",
+      "sha256": "8522b757348321dfc327edd3cc678a024c89b841d27bd5517b837acde875423b",
+      "originalBytes": 3235556,
+      "bytes": 2153784,
+      "baseAtlas": "/assets/product-models/notebook-atlas-c1b88a2fe4d2dd19.jpg",
+      "baseAtlasSha256": "c1b88a2fe4d2dd19c810e663cd767bd30f87d17ed8807391ac543458c5ca4ef0"
+    }
+  ],
+  "adaptations": [
+    {
+      "id": "square-pillow-small",
+      "productId": 83,
+      "printfileIds": [1701, 1702],
+      "sourceId": "square-pillow",
+      "sourceSha256": "a722bb31d0f977ca015415e3fa084e4dd3c36fad7ddaf6d07b3c335a4a5f5c20",
+      "heights": {
+        "1701": 35.56,
+        "1702": 40.64
+      }
+    },
+    {
+      "id": "colored-interior-444",
+      "productId": 403,
+      "printfileIds": [44],
+      "sourceId": "mug-444",
+      "sourceSha256": "b41cebc61eda9f2717fc8a50d0529de013fb5faafbbfbc0ea17db32153212c41",
+      "accentIslands": {
+        "vertexCount": 3893,
+        "parts": [
+          { "name": "inside-and-rim", "seed": 0, "vertices": 1107 },
+          { "name": "inside-bottom", "seed": 2672, "vertices": 441 },
+          { "name": "handle-front", "seed": 1091, "vertices": 231 },
+          { "name": "handle-back", "seed": 1156, "vertices": 231 }
+        ]
+      }
+    }
+  ]
+}

@@ -1,12 +1,19 @@
 'use strict';
 
+const { models: PREVIEW_MODELS, adaptations: PREVIEW_ADAPTATIONS = [] } = require('./productPreviewModels.json');
+
+const { shippingRestrictions } = require('./productShipping');
+
 /**
  * Curated products offered by Wolkenworte.
  *
  * Keep this deliberately small. Printful's full catalog is large and changes
  * frequently; the storefront only exposes products whose print geometry and
- * preview have been verified here. The variants below were re-verified
- * against Printful's Catalog + Mockup Generator APIs on 2026-08-21.
+ * preview have been verified here. Existing product identities remain stable.
+ * The 2026-10-24 expansion is pinned in productCatalogManifest.json; see
+ * docs/print-geometry.md for source evidence and preview limitations.
+ * The 2026-10-25 EU fulfillment audit excludes the AU/NZ-only black 50 × 70 cm
+ * frame and five US-only colored mugs from every catalog entry point.
  */
 
 const THEMES = Object.freeze([
@@ -60,13 +67,13 @@ const PRODUCT_FAMILIES = Object.freeze([
   Object.freeze({
     key: 'mugs',
     label: 'Tassen',
-    description: 'Weiße Keramiktassen in drei Größen',
+    description: 'Weiße Keramiktassen und farbige Innenseiten',
     thumbnail: '/assets/product-thumbnails/mug.svg',
   }),
   Object.freeze({
     key: 'posters',
     label: 'Poster',
-    description: 'Matt oder schwarz gerahmt',
+    description: 'Matt, mit Rahmen oder auf Leinwand',
     thumbnail: '/assets/product-thumbnails/poster.svg',
   }),
   Object.freeze({
@@ -81,6 +88,8 @@ const PRODUCT_FAMILIES = Object.freeze([
     description: 'Allover bedruckte Tragetasche',
     thumbnail: '/assets/product-thumbnails/tote.svg',
   }),
+  Object.freeze({ key: 'tech', label: 'Technik & Zubehör', description: 'Handyhüllen, Laptophüllen und Mauspads', thumbnail: '/assets/product-thumbnails/phone-case.svg' }),
+  Object.freeze({ key: 'drinkware', label: 'Trinkflaschen & Becher', description: 'Edelstahl und Emaille', thumbnail: '/assets/product-thumbnails/drinkware.svg' }),
   Object.freeze({
     key: 'notebooks',
     label: 'Notizbücher',
@@ -175,11 +184,34 @@ function makeProduct({
   printSurfaces,
   familyKey,
   thumbnail,
+  catalogGroup = null,
+  variantLabel = null,
+  previewModel = null,
+  productPhoto = null,
+  productPhotoFit = 'cover',
+  productPhotoPosition = 'center',
   previewMockup,
   orientationOptions,
   defaultOrientation,
 }) {
   const printPlacement = printFile.placement || 'default';
+  const exactMesh = PREVIEW_MODELS.find(model => model.productId === productId && model.printfileIds.includes(printfileId));
+  // Explicit, reviewed preview adaptations never change the fulfillment identity.
+  const adaptation = !exactMesh && ['colored-mug', 'pillow'].includes(previewModel?.kind)
+    ? PREVIEW_ADAPTATIONS.find(model => model.productId === productId && model.printfileIds.includes(printfileId)) : null;
+  const sourceMesh = exactMesh || (adaptation && PREVIEW_MODELS.find(model => model.id === adaptation.sourceId && model.sha256 === adaptation.sourceSha256));
+  if (adaptation && !sourceMesh) throw new Error(`Invalid preview adaptation for ${key}`);
+  const previewMesh = sourceMesh ? Object.freeze({
+    id: sourceMesh.id, file: sourceMesh.file, front: sourceMesh.front,
+    frontProjection: sourceMesh.frontProjection,
+    back: sourceMesh.back, baseAtlas: sourceMesh.baseAtlas,
+    rotateX: sourceMesh.rotateX, rotateY: sourceMesh.rotateY, canvas: sourceMesh.canvas,
+    printMaterials: sourceMesh.printMaterials, accentCell: sourceMesh.accentCell,
+    metallicCell: sourceMesh.metallicCell, staticCells: sourceMesh.staticCells,
+    textile: sourceMesh.textile, heightMaterial: sourceMesh.heightMaterial,
+    ...(adaptation ? { adaptation: adaptation.id, accentIslands: adaptation.accentIslands } : {}),
+    height: adaptation?.heights?.[printfileId] || sourceMesh.heights?.[printfileId] || sourceMesh.height || size.heightCm,
+  }) : null;
   const resolvedFulfillmentPlacements = fulfillmentPlacements?.length
     ? [...new Set(fulfillmentPlacements)]
     : [printPlacement];
@@ -227,11 +259,18 @@ function makeProduct({
     key,
     familyKey,
     thumbnail,
+    productPhoto,
+    catalogGroup,
+    variantLabel: variantLabel || (['framed-poster', 'tote'].includes(previewShape) ? `${size.label} · Schwarz` : null),
+    previewModel: previewModel ? Object.freeze(previewModel) : null,
+    previewMesh,
+    productPhotoFit,
+    productPhotoPosition,
     name,
     displayName,
     description,
     icon,
-    previewType,
+    previewType: previewMesh && previewType === 'flat' ? '3d' : previewType,
     previewShape,
     previewMockup: previewMockup
       ? Object.freeze({
@@ -239,6 +278,7 @@ function makeProduct({
           height: previewMockup.height,
           scale: previewMockup.scale || 1,
           blendMode: previewMockup.blendMode || 'normal',
+          backgroundColor: previewMockup.backgroundColor || null,
           rotation: previewMockup.rotation || 0,
           canvas: Object.freeze({
             left: previewMockup.canvas?.left ?? 0,
@@ -262,6 +302,7 @@ function makeProduct({
     unit: Object.freeze(unit),
     designSafeMargin,
     designSafeAreas: Object.freeze(safeAreas),
+    shippingRestrictions: shippingRestrictions(productId),
     printful: Object.freeze({
       productId,
       variantId,
@@ -303,8 +344,8 @@ function transposeLayoutGeometry(layoutGeometry) {
 }
 
 function landscapeSizeLabel(label) {
-  const match = /^(.*?)\s+×\s+(.*?)\s+(cm|mm)$/.exec(String(label || ''));
-  return match ? `${match[2]} × ${match[1]} ${match[3]}` : String(label || '');
+  const match = /^(.*?)(\d+(?:[.,]\d+)?)\s+×\s+(\d+(?:[.,]\d+)?)\s+(cm|mm)(.*)$/.exec(String(label || ''));
+  return match ? `${match[1]}${match[3]} × ${match[2]} ${match[4]}${match[5]}` : String(label || '');
 }
 
 function rotateMockupCanvasClockwise(canvas) {
@@ -347,6 +388,8 @@ function resolveProductOrientation(product, rawOrientation) {
       height: product.printFile.width,
     },
     layoutGeometry: transposeLayoutGeometry(product.layoutGeometry),
+    previewModel: product.previewModel && product.printFile.canRotate ? { ...product.previewModel, width: product.previewModel.height, height: product.previewModel.width,
+      ...(product.previewModel.face ? { face: { x: product.previewModel.face.y, y: product.previewModel.face.x, width: product.previewModel.face.height, height: product.previewModel.face.width } } : {}) } : product.previewModel,
     designSafeAreas: Object.fromEntries(Object.entries(product.designSafeAreas).map(([key, area]) => [
       key, { x: area.y, y: area.x, width: area.height, height: area.width },
     ])),
@@ -384,10 +427,11 @@ const MUG_11 = makeMugProduct({
   // Keep the original key so existing immutable configurations remain valid.
   key: 'white-glossy-mug-duo-11oz',
   variantId: 1320,
+  productPhoto: '/assets/product-mockups/white-mug-325ml.jpg',
   printfileId: 43,
   templateId: 919,
   size: {
-    label: '11 oz',
+    label: '325 ml',
     volumeMl: 325,
     heightCm: 9.6,
     diameterCm: 8.2,
@@ -419,10 +463,13 @@ const MUG_11 = makeMugProduct({
 const MUG_15 = makeMugProduct({
   key: 'white-glossy-mug-15oz',
   variantId: 4830,
+  productPhoto: '/assets/product-mockups/white-mug-444ml.jpg',
+  // The catalog photo has extra white space below the mug.
+  productPhotoPosition: 'center 20%',
   printfileId: 44,
   templateId: 920,
   size: {
-    label: '15 oz',
+    label: '444 ml',
     volumeMl: 444,
     heightCm: 11.9,
     diameterCm: 8.5,
@@ -450,10 +497,12 @@ const MUG_15 = makeMugProduct({
 const MUG_20 = makeMugProduct({
   key: 'white-glossy-mug-20oz',
   variantId: 16586,
+  productPhoto: '/assets/product-mockups/white-mug-591ml.jpg',
+  productPhotoFit: 'contain',
   printfileId: 426,
   templateId: 181779,
   size: {
-    label: '20 oz',
+    label: '591 ml',
     volumeMl: 591,
     heightCm: 10.9,
     diameterCm: 9.3,
@@ -540,8 +589,9 @@ function makePosterProduct({
     displayName: 'Mattes Poster',
     description: 'Museumspapier mit matter Oberfläche und eurer persönlichen Gestaltung.',
     icon: '▤',
-    previewType: 'flat',
+    previewType: '3d',
     previewShape: 'poster',
+    previewModel: { kind: 'panel', width: width / 300 * 2.54, height: height / 300 * 2.54, depth: .03 },
     previewMockup,
     productId: 268,
     variantId,
@@ -593,8 +643,10 @@ function makeFramedPosterProduct({
     displayName: 'Gerahmtes Poster',
     description: 'Mattes Museumspapier im klassischen schwarzen Holzrahmen.',
     icon: '▣',
-    previewType: 'flat',
+    previewType: '3d',
     previewShape: 'framed-poster',
+    previewModel: { kind: 'panel', width: width / 300 * 2.54, height: height / 300 * 2.54,
+      depth: 1.9, frameColor: '#202124' },
     previewMockup,
     productId: 304,
     variantId,
@@ -706,31 +758,6 @@ const FRAMED_POSTER_30X40 = makeFramedPosterProduct({
   },
 });
 
-const FRAMED_POSTER_50X70 = makeFramedPosterProduct({
-  key: 'framed-matte-poster-black-50x70cm',
-  variantId: 9358,
-  printfileId: 113,
-  templateId: 273908,
-  label: '50 × 70 cm',
-  width: 5906,
-  height: 8268,
-  previewMockup: {
-    width: 1000,
-    height: 1000,
-    scale: 1.1,
-    canvas: { left: 22.8, top: 11.3, width: 54.5, height: 77.4, fit: 'cover' },
-    assets: { default: '/assets/product-mockups/framed-poster-black-50x70.png' },
-  },
-  template: {
-    width: 728,
-    height: 728,
-    printAreaWidth: 477,
-    printAreaHeight: 668,
-    printAreaTop: 31,
-    printAreaLeft: 110,
-  },
-});
-
 const TOTE_BAG = makeProduct({
   key: 'all-over-tote-black-handles',
   familyKey: 'bags',
@@ -739,20 +766,24 @@ const TOTE_BAG = makeProduct({
   displayName: 'Tragetasche',
   description: 'Geräumige Tragetasche mit vollflächigem Druck und schwarzen Baumwollträgern.',
   icon: '▱',
-  previewType: 'flat',
+  previewType: '3d',
   previewShape: 'tote',
+  previewModel: { kind: 'tote', width: 39, height: 39, depth: 7, handleColor: '#202124' },
+  productPhotoFit: 'contain',
   previewMockup: {
     width: 700,
     height: 1000,
     scale: 1,
     blendMode: 'multiply',
     canvas: {
-      left: 5,
-      top: 35.5,
-      width: 90,
-      height: 58.5,
+      // Full file projection calibrated to the provider's flat mockup. The
+      // previous fitted rectangle shrank the printed design by about 12%.
+      left: -1.83,
+      top: 31.218,
+      width: 102.47,
+      height: 69.615,
       fit: 'cover',
-      clipPath: 'polygon(0 0, 100% 0, 96% 100%, 3% 100%)',
+      clipPath: 'polygon(6.7% 6.2%, 94.5% 6.2%, 91% 90.2%, 9.3% 90.2%)',
     },
     assets: { default: '/assets/product-mockups/tote-front.jpg' },
   },
@@ -795,8 +826,10 @@ const THROW_BLANKET_50X60 = makeProduct({
   displayName: 'Kuscheldecke',
   description: 'Weiche Decke mit vollflächigem Druck und weißer Rückseite.',
   icon: '▰',
-  previewType: 'flat',
+  previewType: '3d',
   previewShape: 'blanket',
+  previewModel: { kind: 'blanket', width: 152.4, height: 127, depth: .6, color: '#ffffff',
+    face: { x: 225 / 9450, y: 225 / 7950, width: 9000 / 9450, height: 7500 / 7950 } },
   previewMockup: {
     width: 1000,
     height: 1000,
@@ -966,7 +999,7 @@ const BASIC_PILLOW_18 = makeProduct({
   layouts: FLAT_LAYOUTS,
 });
 
-const PRODUCTS = Object.freeze([
+const BASE_PRODUCTS = Object.freeze([
   MUG_11,
   MUG_15,
   MUG_20,
@@ -974,12 +1007,14 @@ const PRODUCTS = Object.freeze([
   POSTER_30X40,
   POSTER_50X70,
   FRAMED_POSTER_30X40,
-  FRAMED_POSTER_50X70,
   TOTE_BAG,
   THROW_BLANKET_50X60,
   BASIC_PILLOW_18,
   SPIRAL_NOTEBOOK,
 ]);
+const PRODUCTS = Object.freeze([...BASE_PRODUCTS, ...require('./productCatalogExtensions')({
+  makeProduct, products: BASE_PRODUCTS, flatLayouts: FLAT_LAYOUTS, mugLayouts: MUG_LAYOUTS, orientations: POSTER_ORIENTATIONS,
+})]);
 const DEFAULT_PRODUCT = MUG_11;
 
 function getProduct(key) {
@@ -993,6 +1028,13 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
     key: resolvedProduct.key,
     familyKey: resolvedProduct.familyKey,
     thumbnail: resolvedProduct.thumbnail,
+    productPhoto: resolvedProduct.productPhoto,
+    catalogGroup: resolvedProduct.catalogGroup,
+    variantLabel: resolvedProduct.variantLabel,
+    previewModel: resolvedProduct.previewModel,
+    previewMesh: resolvedProduct.previewMesh,
+    productPhotoFit: resolvedProduct.productPhotoFit,
+    productPhotoPosition: resolvedProduct.productPhotoPosition,
     name: resolvedProduct.name,
     displayName: resolvedProduct.displayName,
     description: resolvedProduct.description,
@@ -1004,9 +1046,11 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
     minQuantity: resolvedProduct.minQuantity,
     maxQuantity: resolvedProduct.maxQuantity,
     currency: resolvedProduct.currency,
+    price: require('./pricing').catalogPrice(resolvedProduct.printful.variantId),
     unit: resolvedProduct.unit,
     designSafeMargin: resolvedProduct.designSafeMargin,
     designSafeAreas: resolvedProduct.designSafeAreas,
+    shippingRestrictions: resolvedProduct.shippingRestrictions,
     printSurfaces: resolvedProduct.printSurfaces,
     size: resolvedProduct.size,
     printFile: resolvedProduct.printFile,
@@ -1024,6 +1068,7 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
         layoutGeometry: oriented.layoutGeometry,
         designSafeAreas: oriented.designSafeAreas,
         previewMockup: oriented.previewMockup,
+        previewModel: oriented.previewModel,
       };
     }),
   };
@@ -1045,7 +1090,6 @@ module.exports = {
   POSTER_30X40,
   POSTER_50X70,
   FRAMED_POSTER_30X40,
-  FRAMED_POSTER_50X70,
   TOTE_BAG,
   THROW_BLANKET_50X60,
   BASIC_PILLOW_18,

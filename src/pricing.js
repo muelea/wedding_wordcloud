@@ -1,177 +1,97 @@
 'use strict';
 
-// Internal fee budgeting only; never use this assumption as customer tax.
-const PAYMENT_RESERVE_ASSUMED_TAX_RATE = 0.20;
+const crypto = require('crypto');
+const snapshot = require('./productCostSnapshot.json');
+const GERMAN_TAX_RATE = 0.19;
+const PRICING_VERSION = 2;
 
 function eurosToCents(value) {
   const number = Number(value || 0);
-  return Number.isFinite(number) ? Math.round(number * 100) : 0;
-}
-
-function productMarkupPercent() {
-  const value = Number(process.env.SHOP_PRODUCT_MARKUP_PERCENT || 50);
-  return Number.isFinite(value) && value >= 0 && value <= 500 ? value : 50;
-}
-
-function paymentReservePercent() {
-  const value = Number(process.env.SHOP_PAYMENT_RESERVE_PERCENT || 3.69);
-  return Number.isFinite(value) && value >= 0 && value <= 20 ? value : 3.69;
-}
-
-function paymentReserveFixedCents() {
-  const value = Number(process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS || 49);
-  return Number.isSafeInteger(value) && value >= 0 && value <= 500 ? value : 49;
-}
-
-function printfulSupplierTaxCents(costs) {
-  return eurosToCents(costs.tax) + eurosToCents(costs.vat);
-}
-
-function printfulItemCostCents(costs) {
-  const shippingCents = eurosToCents(costs.shipping);
-  return eurosToCents(costs.total) - shippingCents - printfulSupplierTaxCents(costs);
-}
-
-function estimatePaymentFeeCents(totalCents) {
-  const percent = paymentReservePercent() / 100;
-  return Math.ceil(totalCents * percent + paymentReserveFixedCents());
-}
-
-function allocateCents(totalCents, weights) {
-  const totalWeight = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
-  if (totalCents === 0 || totalWeight === 0) return weights.map(() => 0);
-
-  const allocations = weights.map((weight, index) => {
-    const exact = totalCents * Math.max(0, weight) / totalWeight;
-    const cents = Math.floor(exact);
-    return { index, cents, remainder: exact - cents };
-  });
-  let remaining = totalCents - allocations.reduce((sum, entry) => sum + entry.cents, 0);
-  allocations
-    .slice()
-    .sort((a, b) => b.remainder - a.remainder || a.index - b.index)
-    .forEach((entry) => {
-      if (remaining > 0) {
-        allocations[entry.index].cents += 1;
-        remaining -= 1;
-      }
-    });
-  return allocations.map((entry) => entry.cents);
-}
-
-function shipmentNetQuotes(preparedShipments, itemsCents) {
-  const allocatedItemsCents = allocateCents(
-    itemsCents,
-    preparedShipments.map((shipment) => shipment.printfulItemsCents)
-  );
-  return preparedShipments.map((shipment, index) => {
-    const shipmentItemsCents = allocatedItemsCents[index];
-    return {
-      itemsCents: shipmentItemsCents,
-      shippingCents: shipment.shippingCents,
-      taxCents: 0,
-      supplierTaxCents: shipment.supplierTaxCents,
-    };
-  });
-}
-
-function paymentReserveCents({ baseItemsCents, shippingCents }) {
-  let reserveCents = 0;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const netCents = baseItemsCents + reserveCents + shippingCents;
-    const estimatedTaxCents = Math.round(netCents * PAYMENT_RESERVE_ASSUMED_TAX_RATE);
-    const totalCents = netCents + estimatedTaxCents;
-    const estimatedFeeCents = estimatePaymentFeeCents(totalCents);
-    if (estimatedFeeCents <= reserveCents) return reserveCents;
-    reserveCents = estimatedFeeCents;
+  if (!Number.isFinite(number) || number < 0 || !Number.isSafeInteger(Math.round(number * 100))) {
+    throw new Error('invalid Printful money');
   }
-  // If the iteration limit is reached, use the last estimate rather than
-  // failing checkout. Any remaining shortfall comes out of the shop's margin.
-  return reserveCents;
+  return Math.round(number * 100);
 }
-
-/**
- * Convert Printful's decimal response into integer cents and apply one
- * catalog-wide retail rule. The actual, quantity-discounted Printful product
- * cost is the basis, so future curated products need no individual pricing.
- *
- * This is a net quote. Zero customer tax here means not yet calculated, not tax
- * exempt. Printful tax/VAT is a procurement cost: add it to the product price
- * without applying the catalog markup. Only Stripe's confirmed Checkout
- * calculates and exposes customer tax.
- */
-function buildCustomerQuote(costs, quantity) {
-  return buildCustomerQuoteForShipments([{ quantity, costs }]);
+function setting(name, fallback, maximum, integer = false) {
+  const raw = process.env[name];
+  const value = raw == null || raw === '' ? fallback : Number(raw);
+  return Number.isFinite(value) && value >= 0 && value <= maximum && (!integer || Number.isInteger(value))
+    ? value : fallback;
 }
+const productMarkupPercent = () => setting('SHOP_PRODUCT_MARKUP_PERCENT', 50, 500);
+const paymentReservePercent = () => setting('SHOP_PAYMENT_RESERVE_PERCENT', 3.69, 20);
+const paymentReserveFixedCents = () => setting('SHOP_PAYMENT_RESERVE_FIXED_CENTS', 49, 500, true);
+const estimatePaymentFeeCents = total => Math.ceil(total * paymentReservePercent() / 100 + paymentReserveFixedCents());
 
-function buildCustomerQuoteForShipments(shipments) {
-  if (!Array.isArray(shipments) || shipments.length === 0) {
-    throw new Error('invalid shipments');
-  }
-
-  let currency = null;
-  let quantity = 0;
-  let printfulItemsCents = 0;
-  let supplierTaxCents = 0;
-  let shippingCents = 0;
-  const preparedShipments = [];
-
-  for (const shipment of shipments) {
-    const shipmentCurrency = String(shipment?.costs?.currency || '').toUpperCase();
-    if (!/^[A-Z]{3}$/.test(shipmentCurrency)) throw new Error('invalid Printful currency');
-    if (currency && shipmentCurrency !== currency) throw new Error('mixed Printful currencies');
-    currency = shipmentCurrency;
-
-    const shipmentQuantity = Number(shipment.quantity);
-    if (!Number.isSafeInteger(shipmentQuantity) || shipmentQuantity < 1) {
-      throw new Error('invalid shipment quantity');
-    }
-    const shipmentPrintfulItemsCents = printfulItemCostCents(shipment.costs);
-    const shipmentShippingCents = eurosToCents(shipment.costs.shipping);
-    const shipmentSupplierTaxCents = printfulSupplierTaxCents(shipment.costs);
-    quantity += shipmentQuantity;
-    printfulItemsCents += shipmentPrintfulItemsCents;
-    supplierTaxCents += shipmentSupplierTaxCents;
-    shippingCents += shipmentShippingCents;
-    preparedShipments.push({
-      printfulItemsCents: shipmentPrintfulItemsCents,
-      shippingCents: shipmentShippingCents,
-      supplierTaxCents: shipmentSupplierTaxCents,
-    });
-  }
-
-  const markup = productMarkupPercent() / 100;
-  const markedUpItemsCents = Math.ceil(printfulItemsCents * (1 + markup));
-  const baseItemsCents = markedUpItemsCents + supplierTaxCents;
-  const reserveCents = paymentReserveCents({ baseItemsCents, shippingCents });
-  const itemsCents = baseItemsCents + reserveCents;
-  const shipmentQuotes = shipmentNetQuotes(preparedShipments, itemsCents);
-  const taxCents = 0;
-  const totalCents = itemsCents + shippingCents + taxCents;
-
-  if ([printfulItemsCents, supplierTaxCents, markedUpItemsCents, baseItemsCents,
-    reserveCents, itemsCents, shippingCents, taxCents, totalCents].some((value) => value < 0)) {
-    throw new Error('invalid negative Printful costs');
-  }
-
+// Retail price planning, never a replacement for Stripe Tax. Keep both prices:
+// a published DE gross cent cannot always be reversed to an exact net cent.
+function componentPrice(baseCents) {
+  if (!Number.isSafeInteger(baseCents) || baseCents < 0) throw new Error('invalid price basis');
+  const denominator = 1 - paymentReservePercent() / 100 * (1 + GERMAN_TAX_RATE);
+  const exactNet = (baseCents + paymentReserveFixedCents()) / denominator;
+  const netCents = Math.ceil(exactNet - 1e-9);
+  const grossCents = Math.ceil(exactNet * (1 + GERMAN_TAX_RATE) - 1e-9);
+  if (![netCents, grossCents].every(Number.isSafeInteger)) throw new Error('price exceeds safe cents');
+  return { netCents, grossCents, reserveCents: netCents - baseCents };
+}
+function catalogVersion() {
+  return crypto.createHash('sha256').update(JSON.stringify([
+    snapshot, productMarkupPercent(), paymentReservePercent(), paymentReserveFixedCents(),
+  ])).digest('hex').slice(0, 16);
+}
+function catalogPrice(variantId) {
+  const cost = snapshot.variants[String(variantId)];
+  if (!cost) throw new Error('missing catalog price for variant ' + variantId);
+  const baseCents = Math.ceil(cost.productCents * (1 + productMarkupPercent() / 100)) + cost.supplierTaxCents;
+  const price = componentPrice(baseCents);
   return {
-    currency,
-    quantity,
-    itemsCents,
-    shippingCents,
-    taxCents,
-    totalCents,
-    paymentReserveCents: reserveCents,
-    shipmentQuotes,
+    version: PRICING_VERSION, catalogVersion: catalogVersion(), currency: 'EUR', referenceCountry: 'DE',
+    unitNetCents: price.netCents, unitGrossCents: price.grossCents,
+    reserveCents: price.reserveCents, germanDeliveryAvailable: cost.referenceCountry !== 'AU',
   };
 }
 
-module.exports = {
-  eurosToCents,
-  productMarkupPercent,
-  paymentReservePercent,
-  paymentReserveFixedCents,
-  estimatePaymentFeeCents,
-  buildCustomerQuote,
-  buildCustomerQuoteForShipments,
-};
+function buildCustomerQuoteForShipments(shipments) {
+  if (!Array.isArray(shipments) || shipments.length !== 1) throw new Error('one delivery address required');
+  const shipment = shipments[0];
+  const costs = shipment.costs;
+  if (String(costs?.currency).toUpperCase() !== 'EUR') throw new Error('invalid Printful currency');
+  const supplierTaxCents = eurosToCents(costs.tax) + eurosToCents(costs.vat);
+  if (eurosToCents(costs.total) <= eurosToCents(costs.shipping) + supplierTaxCents) {
+    throw new Error('invalid Printful product costs');
+  }
+  const country = String(shipment.recipient?.country_code || '').toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) throw new Error('invalid pricing country');
+  if (!Array.isArray(shipment.items) || !shipment.items.length) throw new Error('missing priced items');
+  const taxBehavior = country === 'DE' ? 'inclusive' : 'exclusive';
+  const items = shipment.items.map(item => {
+    const quantity = Number(item.quantity);
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99) throw new Error('invalid quantity');
+    const price = catalogPrice(item.variantId);
+    return { configurationId: String(item.configurationId), productKey: item.productKey,
+      variantId: Number(item.variantId), quantity, unitNetCents: price.unitNetCents,
+      unitGrossCents: price.unitGrossCents,
+      unitAmountCents: taxBehavior === 'inclusive' ? price.unitGrossCents : price.unitNetCents,
+      reserveCents: price.reserveCents };
+  });
+  const shipping = componentPrice(eurosToCents(costs.shipping));
+  const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemsCents = items.reduce((sum, item) => sum + item.quantity * item.unitAmountCents, 0);
+  const shippingCents = taxBehavior === 'inclusive' ? shipping.grossCents : shipping.netCents;
+  const paymentReserveCents = items.reduce((sum, item) => sum + item.quantity * item.reserveCents, shipping.reserveCents);
+  const totalCents = itemsCents + shippingCents;
+  if (![itemsCents, shippingCents, totalCents, paymentReserveCents].every(Number.isSafeInteger)) {
+    throw new Error('price exceeds safe cents');
+  }
+  const pricing = { version: PRICING_VERSION, catalogVersion: catalogVersion(), country,
+    taxBehavior, currency: 'EUR', items, itemsCents, shippingCents,
+    shippingNetCents: shipping.netCents, shippingGrossCents: shipping.grossCents };
+  return { currency: 'EUR', quantity, itemsCents, shippingCents, taxCents: 0,
+    totalCents, paymentReserveCents, pricing,
+    shipmentQuotes: [{ itemsCents, shippingCents, taxCents: 0,
+      supplierTaxCents, pricing }] };
+}
+
+module.exports = { GERMAN_TAX_RATE, PRICING_VERSION, eurosToCents, productMarkupPercent,
+  paymentReservePercent, paymentReserveFixedCents, estimatePaymentFeeCents,
+  componentPrice, catalogPrice, buildCustomerQuoteForShipments };

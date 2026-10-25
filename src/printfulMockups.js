@@ -108,7 +108,7 @@ function parseConfiguration(configuration) {
 
 function compatibleStyle(rows, product, placement) {
   const technique = String(product.printful.technique).toLowerCase();
-  const candidates = (rows || []).flatMap((row) => {
+  let candidates = (rows || []).flatMap((row) => {
     if (String(row?.placement) !== placement ||
         String(row?.technique || '').toLowerCase() !== technique) return [];
     return (row.mockup_styles || []).filter((style) => {
@@ -117,8 +117,23 @@ function compatibleStyle(rows, product, placement) {
         restricted.map(Number).includes(product.printful.variantId));
     }).map((style) => ({ row, style }));
   });
-  const selected = candidates.find(({ style }) =>
-    String(style.category_name || '').toLowerCase() !== 'placeholder') || candidates[0];
+  if (product.printFile.canRotate) {
+    const width = product.printFile.width / product.printFile.dpi;
+    const height = product.printFile.height / product.printFile.dpi;
+    const exact = candidates.filter(({ row }) =>
+      Math.abs(Number(row.print_area_width) - width) < .04 &&
+      Math.abs(Number(row.print_area_height) - height) < .04);
+    // Rotatable products have different style IDs for each orientation. A
+    // transposed match is rejected by Printful when the orientation is sent.
+    if (exact.length) candidates = exact;
+  }
+  // Phone catalogs can retain generic styles for older devices alongside
+  // explicit styles for new variants. Prefer the exact variant restriction;
+  // a null restriction is not reliable evidence that an old style supports it.
+  const realStyle = ({ style }) => String(style.category_name || '').toLowerCase() !== 'placeholder';
+  const selected = candidates.find(candidate =>
+    Array.isArray(candidate.style.restricted_to_variants) && realStyle(candidate)) ||
+    candidates.find(realStyle) || candidates[0];
   if (!selected || !Number.isSafeInteger(Number(selected.style.id))) {
     throw new PrintfulMockupError(
       'mockup_style_unavailable',
@@ -533,6 +548,7 @@ module.exports = {
   SOURCE_TTL_SECONDS,
   createService,
   createCreationBudget,
+  compatibleStyle,
   isOperatorEnabled,
   isLoopbackAddress,
   isLocalHost,

@@ -1,0 +1,2 @@
+# Keep supplier documents byte-for-byte intact and out of text diffs.
+*.pdf binary

@@ -965,9 +965,19 @@
   <script src="<%= asset('/js/wordcloud-core.js') %>" defer></script>
   <script src="<%= asset('/js/live-cloud-layout.js') %>" defer></script>
   <script src="<%= asset('/js/live-cloud-transition.js') %>" defer></script>
-  <script src="/vendor/three.min.js?v=0.160.1" defer></script>
+  <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js?v=0.160.1"}}</script>
+  <script>
+    window.wolkenworteThreeReady = import('/vendor/three/build/three.module.js?v=0.160.1').then(THREE => { window.THREE = THREE; });
+    window.wolkenworteLandingMugProduct = <%- JSON.stringify({
+      previewType: landingMugProduct.previewType,
+      previewMesh: landingMugProduct.previewMesh,
+      size: landingMugProduct.size,
+      printFile: landingMugProduct.printFile,
+    }).replace(/</g, '\\u003c') %>;
+  </script>
   <script src="<%= asset('/js/cloud-limits.js') %>" defer></script>
   <script src="<%= asset('/js/design-layout.js') %>" defer></script>
+  <script src="<%= asset('/js/printful-product-model.js') %>" defer></script>
   <script src="<%= asset('/js/mug-3d-viewer.js') %>" defer></script>
   <script src="<%= asset('/js/landing-demo.js') %>" defer></script>
   <script>

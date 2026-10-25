@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-24T21:10:47.334Z",
+  "currency": "EUR",
+  "referenceCountry": "DE",
+  "source": "Printful /orders/estimate-costs; one item; synthetic Berlin address",
+  "variants": {
+    "5": {
+      "productCents": 2134,
+      "supplierTaxCents": 0
+    },
+    "1320": {
+      "productCents": 560,
+      "supplierTaxCents": 0
+    },
+    "4532": {
+      "productCents": 1549,
+      "supplierTaxCents": 0
+    },
+    "4533": {
+      "productCents": 1448,
+      "supplierTaxCents": 0
+    },
+    "4830": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "8904": {
+      "productCents": 1448,
+      "supplierTaxCents": 0
+    },
+    "8905": {
+      "productCents": 1448,
+      "supplierTaxCents": 0
+    },
+    "8947": {
+      "productCents": 709,
+      "supplierTaxCents": 0
+    },
+    "8948": {
+      "productCents": 1015,
+      "supplierTaxCents": 0
+    },
+    "8952": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "9357": {
+      "productCents": 2759,
+      "supplierTaxCents": 0
+    },
+    "9513": {
+      "productCents": 1447,
+      "supplierTaxCents": 0
+    },
+    "10297": {
+      "productCents": 2759,
+      "supplierTaxCents": 0
+    },
+    "10298": {
+      "productCents": 5201,
+      "supplierTaxCents": 0
+    },
+    "10457": {
+      "productCents": 1300,
+      "supplierTaxCents": 0
+    },
+    "10458": {
+      "productCents": 1300,
+      "supplierTaxCents": 0
+    },
+    "10798": {
+      "productCents": 1729,
+      "supplierTaxCents": 0
+    },
+    "10984": {
+      "productCents": 1683,
+      "supplierTaxCents": 0
+    },
+    "10985": {
+      "productCents": 1887,
+      "supplierTaxCents": 0
+    },
+    "10986": {
+      "productCents": 2257,
+      "supplierTaxCents": 0
+    },
+    "11048": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "11049": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "11050": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "11051": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "11075": {
+      "productCents": 1753,
+      "supplierTaxCents": 0
+    },
+    "11189": {
+      "productCents": 1071,
+      "supplierTaxCents": 0
+    },
+    "11791": {
+      "productCents": 3014,
+      "supplierTaxCents": 0
+    },
+    "11792": {
+      "productCents": 5619,
+      "supplierTaxCents": 0
+    },
+    "12141": {
+      "productCents": 1148,
+      "supplierTaxCents": 0
+    },
+    "12578": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "12579": {
+      "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "13097": {
+      "productCents": 821,
+      "supplierTaxCents": 0
+    },
+    "15004": {
+      "productCents": 1989,
+      "supplierTaxCents": 0
+    },
+    "15005": {
+      "productCents": 1989,
+      "supplierTaxCents": 0
+    },
+    "15662": {
+      "productCents": 459,
+      "supplierTaxCents": 0
+    },
+    "16030": {
+      "productCents": 1729,
+      "supplierTaxCents": 0
+    },
+    "16046": {
+      "productCents": 1525,
+      "supplierTaxCents": 0
+    },
+    "16440": {
+      "productCents": 1831,
+      "supplierTaxCents": 0
+    },
+    "16586": {
+      "productCents": 968,
+      "supplierTaxCents": 0
+    },
+    "17196": {
+      "productCents": 866,
+      "supplierTaxCents": 0
+    },
+    "17197": {
+      "productCents": 866,
+      "supplierTaxCents": 0
+    },
+    "17199": {
+      "productCents": 866,
+      "supplierTaxCents": 0
+    },
+    "17200": {
+      "productCents": 866,
+      "supplierTaxCents": 0
+    },
+    "19514": {
+      "productCents": 1933,
+      "supplierTaxCents": 0
+    },
+    "19516": {
+      "productCents": 1148,
+      "supplierTaxCents": 0
+    },
+    "20304": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20308": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20328": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20329": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "21473": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "21474": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "22373": {
+      "productCents": 866,
+      "supplierTaxCents": 0
+    },
+    "22609": {
+      "productCents": 2183,
+      "supplierTaxCents": 0
+    },
+    "33987": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "33991": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "34005": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "34006": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "49329": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "49331": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "49853": {
+      "productCents": 1185,
+      "supplierTaxCents": 0
+    },
+    "49854": {
+      "productCents": 1275,
+      "supplierTaxCents": 0
+    }
+  }
+}

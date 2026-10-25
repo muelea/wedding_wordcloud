@@ -5,6 +5,7 @@ const log = require('./structuredLog');
 const performanceProbe = require('./performanceProbe');
 const { PRODUCTS } = require('./products');
 const { normalizeShippingRate } = require('./printfulShipping');
+const { unavailableProducts } = require('./productShipping');
 
 /**
  * Printful catalog, pricing and safely gated order creation.
@@ -42,10 +43,21 @@ class PrintfulApiError extends Error {
 }
 
 function moneyCents(value) {
-  if ((typeof value !== 'number' && typeof value !== 'string') ||
-      !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(String(value))) return null;
-  const cents = Math.round(Number(value) * 100);
+  if (typeof value === 'string') {
+    if (!/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value)) return null;
+  } else if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+  const scaled = Number(value) * 100;
+  const cents = Math.round(scaled);
+  // Printful sometimes serializes a sum as 6.779999999999999. Accept only
+  // binary floating-point noise around an exact cent, never fractional cents.
+  const tolerance = Math.min(1e-6, Number.EPSILON * Math.max(1, Math.abs(scaled)) * 8);
+  if (Math.abs(scaled - cents) > tolerance) return null;
   return Number.isSafeInteger(cents) && cents >= 0 ? cents : null;
+}
+
+function normalizedMoney(value) {
+  const cents = moneyCents(value);
+  return cents == null ? null : `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, '0')}`;
 }
 
 function normalizeOrderCosts(costs) {
@@ -54,7 +66,7 @@ function normalizeOrderCosts(costs) {
   if (!/^[A-Z]{3}$/.test(currency) || totalCents == null || totalCents <= 0) return null;
   return {
     currency,
-    total: String(costs.total),
+    total: normalizedMoney(costs.total),
     totalCents,
     ...(costs.subtotal != null ? { subtotal: String(costs.subtotal) } : {}),
     ...(costs.discount != null ? { discount: String(costs.discount) } : {}),
@@ -91,6 +103,18 @@ function getPrintfulHeaders() {
     'Content-Type': 'application/json',
     ...(process.env.PRINTFUL_STORE_ID ? { 'X-PF-Store-Id': process.env.PRINTFUL_STORE_ID } : {}),
   };
+}
+
+function assertProductDelivery(items, recipient) {
+  const products = items.map((item) => PRODUCTS.find((product) =>
+    product.printful.variantId === Number(item.variantId || item.variant_id || item.catalog_variant_id)
+  )).filter(Boolean);
+  const unavailable = unavailableProducts(products, recipient?.country_code);
+  if (unavailable.length) throw new PrintfulApiError('PRINTFUL_PRODUCT_RESTRICTED',
+    'Ein Produkt kann nicht in das ausgewählte Land geliefert werden. Bitte passt eure Auswahl an.', 422, {
+      products: unavailable.map((product) => ({ key: product.key, name: product.displayName })),
+      country: String(recipient.country_code).toUpperCase(),
+    });
 }
 
 async function printfulRequest(path, options = {}) {
@@ -232,6 +256,7 @@ async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
     const product = PRODUCTS.find((entry) => entry.printful.variantId === item.variant_id);
     if (product?.printful.options.length) item.options = product.printful.options;
   }
+  assertProductDelivery(orderItems, recipient);
   const result = await printfulRequest('/orders/estimate-costs', {
     method: 'POST',
     body: JSON.stringify({
@@ -240,21 +265,30 @@ async function estimateOrderCosts({ variantId, quantity, recipient, items }) {
       items: orderItems,
     }),
   });
-  const costs = result?.costs;
-  const validAmount = (value) => (typeof value === 'number' || typeof value === 'string') &&
-    /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(String(value)) && Number.isSafeInteger(Math.round(Number(value) * 100));
+  const rawCosts = result?.costs;
+  const moneyFields = ['subtotal', 'discount', 'shipping', 'tax', 'vat', 'total',
+    'digitization', 'additional_fee', 'fulfillment_fee', 'retail_delivery_fee'];
+  const costs = rawCosts && { ...rawCosts };
+  const validAmount = (value) => moneyCents(value) != null;
+  if (costs) for (const field of moneyFields) {
+    if (costs[field] != null && typeof costs[field] === 'number' && validAmount(costs[field])) {
+      costs[field] = moneyCents(costs[field]) / 100;
+    }
+  }
   if (!costs || typeof costs.currency !== 'string' ||
       !validAmount(costs.total) || Number(costs.total) <= 0 || !validAmount(costs.shipping) ||
+      moneyFields.some((field) => costs[field] != null && !validAmount(costs[field])) ||
       [costs.tax, costs.vat].some((value) => value != null && !validAmount(value)) ||
       Math.round(Number(costs.total) * 100) <= Math.round(Number(costs.shipping) * 100) +
         Math.round(Number(costs.tax || 0) * 100) + Math.round(Number(costs.vat || 0) * 100)) {
     throw new PrintfulApiError('PRINTFUL_INVALID_RESPONSE', 'Printful hat keinen gültigen Preis geliefert.', 502);
   }
-  return result.costs;
+  return costs;
 }
 
 async function getShippingRates({ variantId, quantity, recipient, items }) {
   const sourceItems = Array.isArray(items) && items.length ? items : [{ variantId, quantity }];
+  assertProductDelivery(sourceItems, recipient);
   const orderItems = sourceItems.map((item) => {
     const id = Number(item.variantId || item.variant_id);
     const product = PRODUCTS.find((entry) => entry.printful.variantId === id);
@@ -366,6 +400,7 @@ async function createPrintfulOrder({ payload, confirm = false, timeoutMs = 10_00
   if (!payload || typeof payload.external_id !== 'string' || !Array.isArray(payload.items)) {
     throw new PrintfulApiError('PRINTFUL_INVALID_ORDER', 'Die Printful-Bestelldaten sind ungültig.', 500);
   }
+  assertProductDelivery(payload.items, payload.recipient);
   const draft = await printfulRequest('/orders?confirm=false&update_existing=true', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -432,6 +467,7 @@ async function confirmPrintfulOrder(printfulOrderId, options = {}) {
 
 async function reconcilePrintfulOrder({ payload, expectedCosts, confirm = false, providerSmoke = false, timeoutMs = 10_000 }) {
   if (providerSmoke && confirm) throw new Error('provider smoke must never confirm a Printful order');
+  assertProductDelivery(payload.items, payload.recipient);
   const checkedCosts = (costs) => providerSmoke ? normalizeOrderCosts(costs) : assertOrderCostsMatch(expectedCosts, costs);
   let existing = await getPrintfulOrderByExternalId(payload.external_id, { timeoutMs });
   if (!existing) {
@@ -553,6 +589,7 @@ module.exports = {
   getCatalogProductMockupStyles,
   createMockupTasks,
   getMockupTasks,
+  assertProductDelivery,
   createPrintfulOrder,
   getPrintfulOrderByExternalId,
   confirmPrintfulOrder,

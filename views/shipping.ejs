@@ -112,7 +112,7 @@
     .shipment-product-copy { min-width: 0; }
     .shipment-product-preview, button.shipment-product-copy { padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
     .shipment-product-preview { position: relative; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
-    .shipment-product-preview::after { content: ''; position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--berry) url('<%= asset('/z_icons/expand.svg') %>') center / 13px 13px no-repeat; }
+    .shipment-preview-eye { position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--berry); color: #fff; }
     button.shipment-product-copy { min-height: 44px; font: inherit; }
     button.shipment-product-copy:hover strong { color: var(--berry); text-decoration: underline; text-underline-offset: 3px; }
     .shipment-product-preview:focus-visible, button.shipment-product-copy:focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; border-radius: 8px; }
@@ -372,7 +372,7 @@
         <div class="quote" id="quote-result" hidden aria-live="polite">
           <div class="quote-row"><span id="items-label" data-i18n-ignore>Produkte</span><strong id="items-price" data-i18n-ignore></strong></div>
           <div class="quote-row"><span>Versand</span><strong id="shipping-price" data-i18n-ignore></strong></div>
-          <div class="quote-row" id="tax-row" hidden><span>Steuern</span><strong id="tax-price" data-i18n-ignore></strong></div>
+          <div class="quote-row" id="tax-row" hidden><span id="tax-label">Steuern</span><strong id="tax-price" data-i18n-ignore></strong></div>
           <div class="quote-total"><span id="total-label">Gesamtbetrag</span><strong id="total-price" data-i18n-ignore></strong></div>
           <div class="delivery-information" id="delivery-information" aria-live="polite" hidden></div>
           <button class="submit-button checkout-button" id="checkout-button" type="button">Weiter zur Zahlung <span aria-hidden="true">→</span></button>
@@ -440,6 +440,7 @@
       single_address_required: 'Pro Bestellung ist eine Lieferadresse möglich. Bitte gebt eine einzelne Lieferadresse ein.',
       invalid_address: 'Bitte füllt alle benötigten Adressfelder vollständig aus.',
       pricing_not_configured: 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.',
+      product_shipping_restricted: 'Ein Produkt kann nicht in das ausgewählte Land geliefert werden. Bitte passt eure Auswahl an.',
       selection_not_available: 'Für diese Produktauswahl konnte keine Lieferung bestätigt werden. Bitte prüft eure Adresse oder passt die Auswahl an.',
       pricing_unavailable: 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.',
       pricing_currency_mismatch: 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.',
@@ -961,7 +962,7 @@
     function configurationSizeText(itemConfiguration) {
       const size = itemConfiguration?.product?.size || {};
       const label = t(size.label || '');
-      if (size.volumeMl) return `${label} · ${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
+      if (size.volumeMl) return `${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
       if (size.detail) return `${label} · ${t(size.detail)}`;
       return label;
     }
@@ -1086,6 +1087,10 @@
       preview.type = 'button';
       preview.className = 'shipment-product-preview';
       preview.appendChild(image);
+      const eye = document.createElement('span');
+      eye.className = 'shipment-preview-eye ww-preview-eye';
+      eye.setAttribute('aria-hidden', 'true');
+      preview.appendChild(eye);
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'shipment-product-copy';
@@ -1105,11 +1110,26 @@
       quantityCopy.dataset.quantityCopy = '';
       quantityCopy.setAttribute('data-i18n-ignore', '');
       copy.append(title, size, quantityCopy);
+      const unitPrice = document.createElement('span');
+      unitPrice.dataset.itemPrice = itemConfiguration.id;
+      unitPrice.setAttribute('data-i18n-ignore', '');
+      const price = itemConfiguration.product.price;
+      if (price) unitPrice.textContent = t('{{price}} pro Stück · inkl. 19 % MwSt. für Deutschland', {
+        price: formatMoney(price.unitGrossCents, price.currency),
+      });
+      unitPrice.dataset.referencePrice = unitPrice.textContent;
+      copy.appendChild(unitPrice);
       const excluded = document.createElement('span');
       excluded.className = 'quantity-excluded';
       excluded.dataset.quantityExcluded = '';
       setText(excluded, 'Menge 0: nicht in dieser Bestellung enthalten');
       copy.appendChild(excluded);
+      const restriction = document.createElement('span');
+      restriction.dataset.deliveryRestriction = '';
+      restriction.className = 'quantity-excluded';
+      restriction.setAttribute('role', 'status');
+      restriction.hidden = true;
+      copy.appendChild(restriction);
 
       const actions = document.createElement('div');
       actions.className = 'shipment-product-actions';
@@ -1302,6 +1322,7 @@
     function renderShipments(shipments) {
       const shipment = Array.isArray(shipments) && shipments.length === 1 ? shipments[0] : defaultShipment();
       shipmentList.replaceChildren(createShipmentCard(shipment, 0));
+      updateDeliveryRestrictions();
     }
 
     function findShipmentField(card, field) {
@@ -1354,7 +1375,29 @@
       clearText(formError);
     }
 
+    function updateDeliveryRestrictions() {
+      let restricted = false;
+      shipmentList.querySelectorAll('.shipment-card').forEach(card => {
+        const country = card.querySelector('[data-field-path$="country_code"]')?.value?.toUpperCase();
+        card.querySelectorAll('[data-item-quantity]').forEach(input => {
+          const product = findConfiguration(input.dataset.configurationId)?.product;
+          const blocked = Number(input.value) > 0 && product?.shippingRestrictions?.includes(country);
+          const notice = input.closest('.shipment-product')?.querySelector('[data-delivery-restriction]');
+          if (notice) {
+            notice.hidden = !blocked;
+            if (blocked) setText(notice, 'Dieses Produkt kann nicht in das ausgewählte Land geliefert werden.');
+          }
+          restricted ||= blocked;
+        });
+      });
+      return restricted;
+    }
+
     function clearQuote() {
+      updateDeliveryRestrictions();
+      shipmentList.querySelectorAll('[data-item-price]').forEach(element => {
+        element.textContent = element.dataset.referencePrice;
+      });
       shippingRevision += 1;
       currentQuote = null;
       quoteResult.hidden = true;
@@ -1384,6 +1427,7 @@
     }
 
     function cancelShippingRequest() {
+      updateDeliveryRestrictions();
       shippingRevision += 1;
       if (!activeShippingRequest) return;
       const request = activeShippingRequest;
@@ -1456,16 +1500,26 @@
       }
       const prepared = quote.checkoutPrepared === true;
       if (prepared && (!Number.isSafeInteger(quote.taxCents) || quote.taxCents < 0 ||
-          !Number.isSafeInteger(quote.totalCents) || quote.totalCents !== subtotalCents + quote.taxCents)) {
+          !Number.isSafeInteger(quote.totalCents) || quote.totalCents !== subtotalCents + (quote.taxBehavior === 'inclusive' ? 0 : quote.taxCents))) {
         throw customerError('Der endgültige Steuer- und Gesamtbetrag konnte gerade nicht berechnet werden. Bitte versucht es erneut.');
       }
       currentQuote = quote;
       const productLabel = totalProductLabel(Number(quote.quantity || 0));
       document.getElementById('items-label').textContent = productLabel;
-      document.getElementById('items-price').textContent = formatMoney(quote.itemsCents, quote.currency);
-      document.getElementById('shipping-price').textContent = formatMoney(quote.shippingCents, quote.currency);
+      document.getElementById('items-price').textContent = formatMoney(quote.grossItemsCents ?? quote.itemsCents, quote.currency);
+      document.getElementById('shipping-price').textContent = formatMoney(quote.grossShippingCents ?? quote.shippingCents, quote.currency);
       const taxRow = document.getElementById('tax-row');
       taxRow.hidden = !prepared;
+      if (quote.pricingVersion === 2) setText(document.getElementById('tax-label'), 'Davon MwSt.');
+      if (prepared && quote.pricingVersion === 2) {
+        for (const item of quote.pricedItems || []) {
+          const priceElement = shipmentList.querySelector(`[data-item-price="${item.configurationId}"]`);
+          if (priceElement && Number.isSafeInteger(item.grossTotalCents)) priceElement.textContent =
+            t('{{quantity}} Stück: {{price}} inkl. Steuern', {
+              quantity: WolkenworteI18n.formatNumber(item.quantity), price: formatMoney(item.grossTotalCents, quote.currency),
+            });
+        }
+      }
       if (prepared) document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
       setText(document.getElementById('total-label'), prepared ? 'Gesamtbetrag' : 'Zwischensumme');
       document.getElementById('total-price').textContent = formatMoney(
@@ -1473,7 +1527,7 @@
         quote.currency
       );
       renderDeliveryInformation(quote.shippingDetails);
-      quoteResult.hidden = false;
+      quoteResult.hidden = quote.pricingVersion === 2 && !prepared;
       if (resetAction) clearText(checkoutError);
       if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = !prepared;
       if (resetAction) setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
@@ -1734,7 +1788,7 @@
         if (result.quote) showQuote(result.quote);
         if (!response.ok) {
           if (['quote_expired', 'quote_not_found', 'invalid_address', 'shipping_unavailable',
-            'selection_not_available', 'pricing_unavailable', 'pricing_currency_mismatch', 'pricing_not_configured'].includes(result.error)) {
+            'selection_not_available', 'product_shipping_restricted', 'pricing_unavailable', 'pricing_currency_mismatch', 'pricing_not_configured'].includes(result.error)) {
             clearQuote();
             setButtonLabel(submitButton, 'Preise und Lieferung erneut prüfen');
             setText(formError, customerErrorSource(result, 'Bitte prüft Preise und Lieferung erneut.'));

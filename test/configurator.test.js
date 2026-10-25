@@ -15,7 +15,7 @@ const ImagePrintQuality = require('../public/js/image-quality.js');
 const EmojiCatalog = require('../public/js/emoji-catalog.js');
 const WordCloudCore = require('../public/js/wordcloud-core.js');
 const { publicAssetUrl } = require('../src/publicAssets');
-const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
+const { PRODUCTS, getProduct, getPublicProduct, resolveProductOrientation } = require('../src/products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../src/mugPrint');
 
 test('restoration bootstrap remains readable after cloud reset without granting blank-cloud approval privileges', async t => {
@@ -609,6 +609,21 @@ test('area optimization measures every text with its selected design font', () =
   assert.deepEqual(optimized.map((item) => item.fontFamily), ['classic', 'caveat']);
 });
 
+test('retired non-EU products cannot create configurations', async (t) => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl);
+  for (const variant of require('./fixtures/catalog-eu-fulfillment.json').variants
+    .filter(variant => variant.germanyAvailability !== 'in stock')) {
+    const rejected = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productKey: variant.productKey }),
+    });
+    assert.equal(rejected.status, 400, variant.productKey);
+    assert.equal((await rejected.json()).error, 'invalid_product');
+  }
+});
+
 test('configurator exposes every curated product with verified Printful geometry', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
@@ -626,29 +641,34 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');
   const data = await res.json();
+  const expansion = require('../src/productCatalogManifest.json').products;
+  assert.equal(data.products.length, 11 + expansion.length);
+  assert.deepEqual(data.products.slice(11).map(product => product.key), expansion.map(product => product.key));
   assert.equal(data.product.key, 'white-glossy-mug-duo-11oz');
   assert.deepEqual(data.product.printFile, { width: 2700, height: 1050, dpi: 300, placement: 'default' });
   assert.equal(data.product.size.volumeMl, 325);
   assert.equal(data.product.defaultQuantity, 1);
   assert.equal(data.product.minQuantity, 1);
   assert.equal(data.product.maxQuantity, 99);
-  assert.equal(data.product.unitPriceCents, undefined, 'the configurator must not expose a stale fixed retail price');
+  assert.equal(data.product.unitPriceCents, undefined, 'the legacy price field is replaced by a versioned catalog price');
+  assert.equal(data.product.price.version, 2);
+  assert.equal(data.product.price.unitGrossCents, 1107);
   assert.deepEqual(
-    data.products.map((product) => ({ key: product.key, label: product.size.label, printFile: product.printFile })),
+    data.products.slice(0, 11).map((product) => ({ key: product.key, label: product.size.label, printFile: product.printFile })),
     [
       {
         key: 'white-glossy-mug-duo-11oz',
-        label: '11 oz',
+        label: '325 ml',
         printFile: { width: 2700, height: 1050, dpi: 300, placement: 'default' },
       },
       {
         key: 'white-glossy-mug-15oz',
-        label: '15 oz',
+        label: '444 ml',
         printFile: { width: 2700, height: 1140, dpi: 300, placement: 'default' },
       },
       {
         key: 'white-glossy-mug-20oz',
-        label: '20 oz',
+        label: '591 ml',
         printFile: { width: 3071, height: 1205, dpi: 300, placement: 'default' },
       },
       {
@@ -677,13 +697,6 @@ test('configurator exposes every curated product with verified Printful geometry
         label: '30 × 40 cm',
         printFile: {
           width: 3600, height: 4800, dpi: 300, fillMode: 'cover', canRotate: true, placement: 'default',
-        },
-      },
-      {
-        key: 'framed-matte-poster-black-50x70cm',
-        label: '50 × 70 cm',
-        printFile: {
-          width: 5906, height: 8268, dpi: 300, fillMode: 'cover', canRotate: true, placement: 'default',
         },
       },
       {
@@ -718,7 +731,7 @@ test('configurator exposes every curated product with verified Printful geometry
   );
   assert.deepEqual(
     data.productFamilies.map((family) => family.key),
-    ['mugs', 'posters', 'home', 'bags', 'notebooks']
+    ['mugs', 'posters', 'home', 'bags', 'tech', 'drinkware', 'notebooks']
   );
   assert.ok(data.productFamilies.every((family) => family.thumbnail.startsWith('/assets/product-thumbnails/')));
   const pillow = data.products.find((candidate) => candidate.key === 'all-over-basic-pillow-18in');
@@ -726,7 +739,7 @@ test('configurator exposes every curated product with verified Printful geometry
     { key: 'front', label: 'Vorderseite' },
     { key: 'back', label: 'Rückseite' },
   ]);
-  const mockupAssets = Object.fromEntries(data.products
+  const mockupAssets = Object.fromEntries(data.products.slice(0, 11)
     .filter((candidate) => candidate.previewMockup)
     .map((candidate) => [candidate.key, candidate.previewMockup.assets]));
   assert.deepEqual(mockupAssets, {
@@ -735,9 +748,6 @@ test('configurator exposes every curated product with verified Printful geometry
     'matte-poster-50x70cm': { default: '/assets/product-mockups/matte-poster-50x70.png' },
     'framed-matte-poster-black-30x40cm': {
       default: '/assets/product-mockups/framed-poster-black-30x40.png',
-    },
-    'framed-matte-poster-black-50x70cm': {
-      default: '/assets/product-mockups/framed-poster-black-50x70.png',
     },
     'all-over-tote-black-handles': { default: '/assets/product-mockups/tote-front.jpg' },
     'throw-blanket-50x60in': {
@@ -752,7 +762,7 @@ test('configurator exposes every curated product with verified Printful geometry
       back: '/assets/product-mockups/basic-pillow-flat.png',
     },
   });
-  const mockupCanvases = Object.fromEntries(data.products
+  const mockupCanvases = Object.fromEntries(data.products.slice(0, 11)
     .filter((candidate) => candidate.previewMockup)
     .map((candidate) => [candidate.key, candidate.previewMockup.canvas]));
   assert.deepEqual(mockupCanvases, {
@@ -768,16 +778,13 @@ test('configurator exposes every curated product with verified Printful geometry
     'framed-matte-poster-black-30x40cm': {
       left: 24.1, top: 15.1, width: 51.9, height: 69.7, fit: 'cover', clipPath: 'none',
     },
-    'framed-matte-poster-black-50x70cm': {
-      left: 22.8, top: 11.3, width: 54.5, height: 77.4, fit: 'cover', clipPath: 'none',
-    },
     'all-over-tote-black-handles': {
-      left: 5,
-      top: 35.5,
-      width: 90,
-      height: 58.5,
+      left: -1.83,
+      top: 31.218,
+      width: 102.47,
+      height: 69.615,
       fit: 'cover',
-      clipPath: 'polygon(0 0, 100% 0, 96% 100%, 3% 100%)',
+      clipPath: 'polygon(6.7% 6.2%, 94.5% 6.2%, 91% 90.2%, 9.3% 90.2%)',
     },
     'throw-blanket-50x60in': {
       left: 131 / 30, top: 353 / 30, width: 2714 / 30, height: 2282 / 30, fit: 'cover', clipPath: 'none',
@@ -817,7 +824,7 @@ test('configurator exposes every curated product with verified Printful geometry
     [['30 × 40 cm', 3544, 4724], ['40 × 30 cm', 4724, 3544]]
   );
   const posterProducts = data.products.filter((candidate) => candidate.familyKey === 'posters');
-  assert.equal(posterProducts.length, 4);
+  assert.equal(posterProducts.length, 10);
   assert.ok(posterProducts.every((candidate) =>
     candidate.orientations.map((orientation) => orientation.key).join(',') === 'portrait,landscape'
   ));
@@ -838,11 +845,23 @@ test('configurator exposes every curated product with verified Printful geometry
     { key: 'matte-poster-30x40cm', variantId: 8948, width: 3544, height: 4724 },
     { key: 'matte-poster-50x70cm', variantId: 8952, width: 5906, height: 8268 },
     { key: 'framed-matte-poster-black-30x40cm', variantId: 9357, width: 3600, height: 4800 },
-    { key: 'framed-matte-poster-black-50x70cm', variantId: 9358, width: 5906, height: 8268 },
+    { key: 'framed-poster-10298', variantId: 10298, width: 5906, height: 8268 },
     { key: 'all-over-tote-black-handles', variantId: 4533, width: 2550, height: 2475 },
     { key: 'throw-blanket-50x60in', variantId: 10986, width: 9450, height: 7950 },
     { key: 'all-over-basic-pillow-18in', variantId: 4532, width: 2850, height: 2850 },
     { key: 'spiral-notebook-dotted', variantId: 12141, width: 1725, height: 2625 },
+    { key: 'colored-mug-11050', variantId: 11050, width: 2700, height: 1050 },
+    { key: 'mouse-pad', variantId: 13097, width: 2700, height: 2250 },
+    { key: 'laptop-sleeve-10984', variantId: 10984, width: 2250, height: 1725 },
+    { key: 'canvas-12x16in', variantId: 5, width: 5400, height: 6600 },
+    { key: 'water-bottle-10798', variantId: 10798, width: 2557, height: 1582 },
+    { key: 'steel-tumbler-15005', variantId: 15005, width: 2776, height: 2374 },
+    { key: 'enamel-mug', variantId: 11189, width: 2400, height: 720 },
+    { key: 'travel-mug-16440', variantId: 16440, width: 2700, height: 1140 },
+    { key: 'wine-tumbler', variantId: 16046, width: 3175, height: 950 },
+    { key: 'eco-tote-10458', variantId: 10458, width: 1500, height: 1500 },
+    { key: 'tough-case-20308', variantId: 20308, width: 1392, height: 2220 },
+    { key: 'tough-case-21474', variantId: 21474, width: 1396, height: 2304 },
   ]) {
     const saveResponse = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
       method: 'POST',
@@ -910,6 +929,19 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.equal(threeBrowserBuild.status, 200);
   assert.match(threeBrowserBuild.headers.get('cache-control') || '', /immutable/);
   assert.ok((await threeBrowserBuild.text()).length > 600000, 'the local Three.js build should be served in full');
+
+  for (const modulePath of ['build/three.module.js', 'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js']) {
+    const moduleResponse = await fetch(`${baseUrl}/vendor/three/${modulePath}?v=0.160.1`);
+    assert.equal(moduleResponse.status, 200, modulePath);
+    assert.match(moduleResponse.headers.get('cache-control') || '', /immutable/);
+    assert.ok((await moduleResponse.text()).length > 10000, modulePath);
+  }
+  const coasterModel = getPublicProduct(getProduct('cork-back-coaster')).previewMesh.file;
+  const meshResponse = await fetch(`${baseUrl}${coasterModel}`);
+  assert.equal(meshResponse.status, 200);
+  assert.match(meshResponse.headers.get('cache-control') || '', /immutable/);
+  const meshBytes = Buffer.from(await meshResponse.arrayBuffer());
+  assert.equal(meshBytes.subarray(0, 4).toString(), 'glTF');
 
   const sharedMugViewer = await fetch(`${baseUrl}${publicAssetUrl('/js/mug-3d-viewer.js')}`);
   assert.equal(sharedMugViewer.status, 200);
@@ -1016,7 +1048,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="editor-select-all"[^>]*aria-label="Alles auswählen"[^>]*data-editor-tooltip/);
   assert.match(configurePage, /class="editor-tools editor-tools-separated editor-tools-layout"[^>]*aria-label="Anordnung"[^>]*>[\s\S]*?id="editor-fit-area"[^>]*aria-label="Fläche optimal nutzen"[^>]*data-editor-tooltip[\s\S]*?disabled/);
   assert.match(configurePage, /fitAreaButton\.addEventListener\('click',[\s\S]*?fitCurrentDesignToArea\(\)/);
-  assert.match(configurePage, /async function fitCurrentDesignToArea\(\)[\s\S]*?layoutGeometry\['fit-area'\][\s\S]*?DesignLayout\.applyLayoutAction\([\s\S]*?currentDesign,[\s\S]*?DesignFonts\.cssFamily\(item\.fontFamily\)/);
+  assert.match(configurePage, /async function fitCurrentDesignToArea\(\)[\s\S]*?layoutGeometry\['fit-area'\][\s\S]*?await DesignLayout\.applyLayoutActionAsync\([\s\S]*?currentDesign,[\s\S]*?DesignFonts\.cssFamily\(item\.fontFamily\)/);
   assert.match(configurePage, /mugEditor\.setDesign\(optimizedDesign, \{ record: true \}\)[\s\S]*?mugEditor\.clearSelection\(\)/);
   assert.doesNotMatch(configurePage, /Gestaltet eure persönliche Erinnerung/);
   assert.doesNotMatch(configurePage, /getElementById\('placement-step'\)\.hidden = true/);
@@ -1746,6 +1778,37 @@ test('custom editor design is frozen exactly and cannot leave the printable area
   assert.equal((await distortedImage.json()).error, 'invalid_design');
 });
 
+test('full-wrap drinkware saves and reopens three-pixel edge designs while rejecting unsafe horizontal or vertical placement', async t => {
+  const { baseUrl, close } = await startTestServer(); t.after(close);
+  const event = await createEvent(baseUrl);
+  for (const key of ['wine-tumbler', 'water-bottle-10798', 'water-bottle-16030', 'steel-tumbler-15005', 'steel-tumbler-15004']) {
+    const product = getProduct(key), { width, height } = product.printFile, area = product.designSafeAreas.default;
+    const design = [27, width - 27].map((x, index) => ({ id: `edge-${index}`, type: 'icon',
+      icon: 'heart', size: 48, x, y: area.y + 24, angle: 0, color: '#0055ff' }));
+    const save = async items => fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productKey: key, quantity: 1, theme: 'pastel', words: [['liebe', 1]], ...oneSurfaceDesign(items) }),
+    });
+    const response = await save(design), body = await response.text();
+    assert.equal(response.status, 201, key + ': ' + body);
+    const saved = JSON.parse(body);
+    const restored = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${saved.id}/edit`).then(res => res.json());
+    assert.deepEqual(restored.designs.default, design, key + ': saved coordinates are exact');
+    const print = await fetch(baseUrl + saved.printFileUrl);
+    assert.equal(print.status, 200);
+    assert.equal(await print.text(), buildProductPrintSvg(product, design));
+    for (const [index, changes] of [[0, { x: 26.9 }], [1, { x: width - 26.9 }],
+      [0, { y: area.y + 23.9 }], [0, { y: height - area.y - 23.9 }]]) {
+      const invalid = design.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item);
+      const rejected = await save(invalid);
+      assert.equal(rejected.status, 400, key + ': ' + JSON.stringify(changes));
+      assert.equal((await rejected.json()).error, 'invalid_design');
+    }
+    const immutable = await fetch(baseUrl + saved.printFileUrl);
+    assert.equal(await immutable.text(), buildProductPrintSvg(product, design));
+  }
+});
+
 test('new saves reject unsafe artwork on every product, orientation and print side', async t => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
@@ -1759,7 +1822,8 @@ test('new saves reject unsafe artwork on every product, orientation and print si
         payload.designs[surface.key] = [{id:'unsafe',type:'icon',icon:'heart',size:48,
           x:area.x+23,y:area.y+area.height/2,angle:0,color:'#0055ff'}];
         const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
-          method:'POST', headers:{'Content-Type':'application/json'},
+          method:'POST', headers:{'Content-Type':'application/json',
+            'X-Wolkenworte-Guest-Id': require('node:crypto').createHash('sha256').update(`${product.key}/${orientation.key}/${surface.key}`).digest('hex').slice(0,32)},
           body:JSON.stringify({productKey:product.key,orientation:orientation.key,
             quantity:1,theme:'pastel',words:[['liebe',1]],...payload}),
         });

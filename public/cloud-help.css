@@ -1,0 +1,49 @@
+/* Live-page help shares the active word palette and the existing dialog chrome. */
+:root { --cloud-help-entry-reserve: 124px; }
+#cloud-container { bottom: calc(var(--footer-height) + env(safe-area-inset-bottom, 0px) + var(--cloud-help-entry-reserve)); }
+.display-word-entry-row { align-items: flex-end; }
+.display-word-entry-stack { flex: 1; min-width: 0; }
+.display-guest-guidance { display: flex; align-items: center; gap: 8px; margin: 0 6px 5px; }
+.display-guest-guidance p { flex: 1; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.display-guest-guidance button { flex: 0 0 auto; }
+.display-guidance-actions { display: flex; flex: 0 0 auto; gap: 10px; }
+.ww-display-organizer-tools { display: grid; gap: 3px; }
+.empty-sub { max-width: calc(100% - 48px); text-align: center; line-height: 1.6; }
+.cloud-help-link { min-height: 44px; padding: 8px 4px; border: 0; background: transparent; color: var(--primary); font: 500 13px/1.4 'Jost', 'Wolkenworte Jost Fallback', sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.cloud-help-button { min-height: 46px; padding: 11px 18px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--primary); font: 600 14px/1.4 'Jost', 'Wolkenworte Jost Fallback', sans-serif; cursor: pointer; }
+.cloud-help-button.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+:is(.cloud-tour-tip, .cloud-tour-ring, .cloud-tour-shade)[hidden] { display: none !important; }
+body.presentation-mode :is(.display-guest-guidance, .cloud-tour-tip, .cloud-tour-ring, .cloud-tour-shade) { display: none !important; }
+:is(.cloud-help-button, .cloud-help-link):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.cloud-tour-shade { position: fixed; z-index: 10040; pointer-events: none; }
+.cloud-tour-shade svg { display: block; width: 100%; height: 100%; }
+.cloud-tour-shade path { fill: rgba(24, 12, 20, .52); pointer-events: visiblePainted; }
+.cloud-tour-ring { position: fixed; z-index: 10041; border: 2px solid var(--primary); border-radius: 14px; pointer-events: none; }
+.cloud-tour-tip { position: fixed; z-index: 10042; display: flex; flex-direction: column; width: min(360px, calc(100% - 24px)); padding: 14px 18px 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 14px 50px rgba(24,12,20,.2); }
+.cloud-tour-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -6px -8px 0 0; }
+.cloud-tour-heading p { color: var(--muted); font-size: 12px; }
+.cloud-tour-tip h2 { margin: 0 0 9px; font: 500 23px/1.2 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; color: var(--primary); }
+.cloud-tour-tip > p { min-height: 0; overflow-y: auto; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.cloud-tour-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.cloud-tour-actions #cloud-tour-next { margin-left: auto; }
+.cloud-tour-actions #cloud-tour-back[hidden] { display: none; }
+body.cloud-keyboard-open .display-word-entry-row { bottom: calc(var(--ww-keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px) + 8px); }
+body.cloud-keyboard-open .footer { visibility: hidden; }
+body.cloud-keyboard-open #cloud-container { bottom: calc(var(--ww-keyboard-inset, 0px) + var(--cloud-help-entry-reserve)); }
+@media (max-width: 620px) {
+  .display-guest-guidance { margin-left: 4px; margin-right: 0; gap: 6px; }
+  .display-guest-guidance p { font-size: 12px; }
+}
+@media (max-height: 650px) {
+  .cloud-tour-tip { padding: 12px 16px; }
+  .cloud-tour-actions { margin-top: 8px; }
+}
+@media (max-height: 450px) {
+  body:not(.presentation-mode) { --footer-height: 58px; }
+  .footer { min-height: 58px; padding-top: 4px; padding-bottom: 4px; }
+  .footer-event-name { display: none; }
+  .cloud-tour-tip { padding: 8px 14px; }
+  .cloud-tour-tip h2 { font-size: 20px; margin-bottom: 5px; }
+  .cloud-tour-heading { margin-top: -4px; }
+  .cloud-tour-actions { margin-top: 4px; }
+}

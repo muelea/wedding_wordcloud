@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "changes": {
+    "mugPivot": "The 325, 444 and 591 ml white meshes and 325 ml colored-interior mesh use the circular upper-rim axis; existing enamel and procedural colored mugs keep their pivots.",
+    "camera": "Fixed full-turn framing derived from the actual radial/vertical outer profile, including the full supported tilt range.",
+    "scroll": "Root scrolling is locked while either gallery dialog is open; overscroll is contained in both dropdown and photo dialogs."
+  },
+  "regressions": {
+    "passed": 62,
+    "files": [
+      "mug-3d-lifecycle",
+      "printful-product-model",
+      "product-print-area-audit",
+      "product-gallery",
+      "configurator-responsive",
+      "configurator-workspace"
+    ],
+    "cupVariants": 20,
+    "viewports": [
+      [
+        500,
+        440
+      ],
+      [
+        310,
+        500
+      ]
+    ],
+    "yaw": "full turn",
+    "pitchDegrees": [
+      -30,
+      0,
+      30
+    ],
+    "geometryAndUVBuffersUnchanged": true,
+    "largerEditorFramingRetained": true
+  },
+  "browser": {
+    "passed": true,
+    "checks": 14,
+    "maxCameraMovement": 0,
+    "pageScrollBefore": 1782,
+    "pageScrollAfter": 1782,
+    "topAndBottomBoundaryTested": true,
+    "backdropWheelTested": true,
+    "nestedPhotoTested": true,
+    "pagePositionRestored": true
+  },
+  "capture": {
+    "file": "white-mug-rotation.gif",
+    "frames": 36,
+    "intervalMs": 120,
+    "size": [
+      520,
+      238
+    ],
+    "upperRimCenterDriftPx": 0.5
+  },
+  "sources": {
+    "public/js/printful-product-model.js": "ffe75fb98af2969d291ca66139e4857463a56a5dc58921f9396d9587562bd89b",
+    "public/js/mug-3d-viewer.js": "3dc96dc23d9a106d781b2cbfebfd0382160edcdf51bc6e8f03809596f63bc2e4",
+    "public/product-gallery.css": "068f839c239567f917c72fcda08eb8a5244cedba5cc2fe1b1123276acca1150b"
+  }
+}

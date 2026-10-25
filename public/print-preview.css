@@ -16,8 +16,8 @@
 .print-preview-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
 .print-preview-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 12px 16px; }
 .print-preview-head h2 { margin: 0; font: 500 clamp(20px, 3vw, 26px) 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
-.print-preview button { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
-.print-preview button:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-soft); }
+.print-preview button:not(.ww-icon-button) { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
+.print-preview button:not(.ww-icon-button):hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-soft); }
 .print-preview button:focus-visible, .print-preview-viewport:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
 .print-preview .print-preview-close { grid-column: 3; grid-row: 1; }
 .print-preview-surfaces { display: flex; align-items: center; gap: 6px; }

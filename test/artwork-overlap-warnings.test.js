@@ -14,6 +14,7 @@ function setup(t) {
   const listeners = {}, calls = [];
   const checker = { key: item => JSON.stringify(item), check: async () => ({ findings: [{ ids: ['a', 'b'] }], truncated: false }) };
   const root = { ArtworkOverlap: { create: () => checker }, WolkenworteEmoji: {},
+    TextPrintQuality: require('../public/js/text-print-quality'),
     addEventListener: (name, fn) => listeners[name] = fn };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/artwork-overlap-warnings'), 'utf8'), {
     window: root, setTimeout: fn => { timer = fn; return 1; }, clearTimeout: () => {},
@@ -74,7 +75,7 @@ test('superseded asynchronous results and stale navigation cannot target another
   assert.deepEqual(f.calls, []);
   f.checker.check = async () => ({ findings: [], truncated: false });
   await f.run();
-  assert.equal(f.document.getElementById('editor-overlap-trigger').hidden, true);
+  assert.equal(f.document.getElementById('editor-overlap-trigger').hidden, false);
 });
 
 test('resolved findings disappear and viewport-only refreshes reuse the completed check', async t => {
@@ -83,8 +84,45 @@ test('resolved findings disappear and viewport-only refreshes reuse the complete
   f.checker.check = async () => { count++; return { findings: [], truncated: false }; };
   f.warnings.schedule(); await f.run(); f.warnings.schedule();
   assert.equal(count, 1);
-  assert.equal(f.document.getElementById('editor-overlap-trigger').hidden, true);
-  assert.equal(f.document.getElementById('editor-overlap-status').textContent, 'Keine Überlagerungen gefunden.');
+  assert.equal(f.document.getElementById('editor-overlap-trigger').hidden, false);
+  assert.equal(f.document.getElementById('editor-overlap-count').hidden, true);
+  assert.match(f.document.getElementById('editor-overlap-status').textContent, /Keine kleinen Texte oder Überlagerungen/);
+});
+
+test('small text is sorted by physical size across print sides and selects just that word', async t => {
+  const f = setup(t);
+  f.setSurfaces([{ key: 'front', label: 'Vorderseite', dpi: 300,
+    design: [{ id: 'a', text: 'Klein', fontSize: 37.5 }, { id: 'emoji', text: '❤️', fontSize: 1 }] },
+  { key: 'back', label: 'Rückseite', dpi: 150,
+    design: [{ id: 'b', text: '<Sehr klein>', fontSize: 10 }, { id: 'c', text: 'Groß', fontSize: 30 }] }]);
+  f.checker.check = async () => ({ findings: [], truncated: false });
+  f.warnings.schedule(); await f.run();
+  const rows = f.document.querySelectorAll('.artwork-overlap-finding');
+  assert.equal(rows.length, 2);
+  assert.match(rows[0].textContent, /<Sehr klein> · 4.8 pt/);
+  assert.equal(rows[0].dataset.level, 'tiny');
+  assert.equal(rows[0].querySelector('script'), null);
+  assert.equal(f.document.getElementById('editor-overlap-count').textContent, '2');
+  rows[0].querySelector('button').click();
+  assert.deepEqual(f.calls.at(-1), ['focus', 'b', ['b']]);
+  assert.ok(f.calls.some(call => call[0] === 'surface' && call[1] === 'back'));
+  f.setSurfaces([{ key: 'front', dpi: 300, design: [{ id: 'a', text: 'Klein', fontSize: 50 }] }]);
+  f.warnings.schedule(); await f.run();
+  assert.equal(f.document.querySelectorAll('.artwork-overlap-finding').length, 0);
+});
+
+test('a product DPI change invalidates findings and a failed overlap check retains small-text findings', async t => {
+  const f = setup(t);
+  const design = [{ id: 'a', text: 'Text', fontSize: 30 }];
+  f.setSurfaces([{ key: 'front', dpi: 150, design }]);
+  f.checker.check = async () => ({ findings: [], truncated: false });
+  f.warnings.schedule(); await f.run();
+  assert.equal(f.document.querySelectorAll('.artwork-overlap-finding').length, 0);
+  f.setSurfaces([{ key: 'front', dpi: 300, design }]);
+  f.checker.check = async () => { throw new Error('assets'); };
+  f.warnings.schedule(); await f.run();
+  assert.equal(f.document.querySelectorAll('.artwork-overlap-finding').length, 1);
+  assert.equal(f.document.getElementById('editor-overlap-count').textContent, '?');
 });
 
 test('a failed artwork check remains advisory and does not report a clean design', async t => {

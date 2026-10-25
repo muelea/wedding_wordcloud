@@ -33,7 +33,18 @@ frozen snapshot of the word cloud.
    These workspaces have a null organizer-PIN pair and no organizer actions;
    their Home return link resumes the design rather than opening a live cloud.
 2. The event page works on phones and on a big screen; there is no separate
-   setup, guest or display route. The organizer PIN authorizes renaming the
+   setup, guest or display route. Successful creation adds a one-use
+   `#willkommen` fragment that the page immediately removes from the address.
+   It automatically starts the four-step spotlight tour for the creator on
+   that first arrival; canonical share links and QR codes never include the
+   fragment. Guests start without a tour. Everyone can start or replay the
+   same tour directly through “So geht’s” beside the word input or in the menu.
+   It highlights the real word input, invitation action, presentation/organizer
+   controls and Keepsake button, with Back, Continue and Close controls.
+   Keepsake remains visible but disabled and grey while the cloud is empty;
+   live word updates enable it as soon as words exist and disable it after reset.
+   The tour stores no PIN and grants no organizer permissions.
+   The organizer PIN authorizes renaming the
    cloud, removing any submitted word, resetting the cloud and replacing the
    PIN. It is checked per action, never stored in the browser, and cannot be
    recovered if forgotten.
@@ -58,7 +69,55 @@ frozen snapshot of the word cloud.
    explicit cart reviews remain. Mobile also hides gesture hints.
    Cart rows mark pending edits,
    including edits on designs that are not currently open.
-   Phones open on a preview-first purchase surface: the finished product, its
+   The word cloud's Create a keepsake action always opens the product gallery,
+   including when an editor draft already exists. The draft is retained on its
+   product card; explicit cart-edit, library and draft links still open the editor.
+   A first visit from a populated live cloud opens a product gallery showing
+   that word cloud on the curated product range, with variant choices for every
+   curated variant. The gallery reuses the local Printful image compositions
+   and local 3D previews. The catalog has 61 variants across 21 product groups,
+   all with EU fulfillment available for German delivery, including colored mugs,
+   drinkware, canvas, tech accessories and tough iPhone/Samsung cases. Source
+   metadata and safe-area rules are documented in `docs/print-geometry.md`.
+   Each product gets its own automatic filled layout;
+   the dedicated Customize action opens the existing editor with that exact artwork,
+   including both print sides. Clicking a preview does nothing; dragging rotates
+   3D products. Size/color dropdowns show the exact variant, price and real product
+   photo, with separate photo enlargement. Single-variant products use the same
+   thumbnail-and-details row without a selection arrow. Each card keeps its price
+   and compact VAT/shipping note on one line; the adjacent information button
+   explains the German reference price and possible destination differences.
+   Dropdowns and enlarged photos contain
+   scrolling and keep the background page fixed until the last gallery dialog
+   closes. Mug previews rotate around the cup axis. Every 3D editor preview
+   reserves a full turn and supported tilt, keeping the camera fixed during
+   rotation. Framing adapts to the viewport and preview padding without changing
+   mesh geometry, print coordinates or artwork.
+   Colored-interior 444 ml mugs reuse the white 444 ml Printful mesh with a
+   selective interior/rim/handle color mask; their own fulfillment variants and
+   original print geometry remain intact.
+   Handle-free wine tumblers, water bottles and straw tumblers use 3-pixel side
+   margins at the wrap join while retaining their original vertical limits.
+   “Zur Produktübersicht” returns to the gallery with the
+   edited artwork retained on its product card. Reloading that gallery keeps
+   the gallery open and recovers its retained draft without opening the editor.
+   Each card also offers an explicit
+   “In den Warenkorb” action that freezes its exact preview without opening the
+   editor or leaving the gallery. Add/cart status and Customize share a paired
+   button row. Category filters start with All, group both poster styles together
+   and retain the selected category when returning from the editor. Customer-facing
+   capacities and dimensions use ml, cm and mm throughout the catalog and shipping.
+   The header cart opens a separate desktop dialog/mobile bottom sheet with
+   thumbnails, exact variants, Customize, Remove, removal Undo and a deliberate
+   shipping action. It does not initialize or navigate to an editor merely to
+   browse the basket. Its shipping action uses only accepted cart snapshots and
+   retains unsubmitted edits locally, without offering to add a browsed variant.
+   Explicit editor add/update actions retain their comparison and approval review. The editor also
+   retains its lower basket section. Browsing alone creates no working draft or cart item. Existing
+   drafts, cart links and account-library links open directly in the editor;
+   independent custom designs retain their blank-editor entry.
+   Phones selecting a gallery product open the existing fullscreen canvas.
+   Restored designs open on a preview-first purchase surface: the finished product, its
    compact product/palette summary and the explicit “In den Warenkorb & zur
    Lieferadresse” action stay ahead of the collapsed editor. “Design anpassen”
    opens a dedicated fullscreen canvas workspace without creating a second draft
@@ -171,7 +230,7 @@ frozen snapshot of the word cloud.
    24 hours, survive design round trips, and never restore a trusted price:
    the existing server-side quote and checkout checks remain authoritative.
    Local illustrated thumbnails make the catalog scannable. A locally served
-   Three.js preview maps mug artwork onto a rotatable model; flat products use
+   Three.js preview maps artwork onto rotatable product models; flat products use
    the same design in a proportional print preview. Posters can be designed in
    portrait or landscape format; switching orientation adapts the current edited
    design, swaps the immutable print-file dimensions
@@ -179,11 +238,15 @@ frozen snapshot of the word cloud.
    faces expose separate front/back editors plus a copy-to-back shortcut and
    store one immutable print file per side. The print area itself is a small
    Fabric.js editor: every word
-   and every curated editorial motif can be moved, resized, rotated, recolored,
-   duplicated or removed. An advisory overlap badge checks the painted artwork,
-   ignoring selection boxes, spaces and transparent margins. Its findings let
-   customers select either affected element and jump to that print side, including
-   in the mobile canvas workspace. Intentional layering never blocks ordering.
+  and every curated editorial motif can be moved, resized, rotated, recolored,
+  duplicated or removed. “Design prüfen” combines small-text findings with
+  painted-artwork overlaps, ignoring selection boxes, spaces and transparent
+  margins. Findings select and zoom to the affected element on its print side,
+  including in the mobile canvas workspace. Automatic print layouts require at
+  least 10 pt and may flatten word-size differences to fit. If no complete layout
+  meets that minimum, the existing artwork remains intact; the gallery offers
+  an explicit smaller-text choice. Manual small text and intentional layering
+  remain advisory and never block ordering.
    Customers can also upload PNG or JPEG images; uploads
    are safely resized, embedded in the immutable design and can be moved, resized,
    rotated, duplicated or removed like other elements. A selection rectangle, Shift/Command/Control-click and
@@ -197,6 +260,11 @@ frozen snapshot of the word cloud.
    is no layout chooser. The immutable canvas design is the only source for
    preview and Printful output. Words can also be edited directly. Hard bounds keep
    the entire design printable.
+   Both throw-blanket sizes use a white silk-touch cloth preview with a 6 mm
+   edge and an unprinted white reverse. Dragging the fabric pulls a point;
+   dragging beside it or using the arrow keys rotates the view. Space plays
+   a sample pull. Motion settles to an idle render and pauses offscreen or in
+   a hidden tab. The 3D drape never changes the editable artwork or print file.
    Mug previews never substitute a CSS/2D mug: unavailable graphics show an
    explicit retry state. Page-history restoration recreates the viewer, and
    loading failures cannot leave the workspace permanently inert. Direct
@@ -255,11 +323,11 @@ frozen snapshot of the word cloud.
    the basis of the existing price calculation. "Preise und Lieferung prüfen"
    revalidates the quote, creates the final short-lived Stripe Checkout Session
    without navigating away, and then shows products, shipping, Stripe's tax and
-   the gross total on the address page. The underlying Printful quote contains
-   net amounts; its zero customer-tax field means pending calculation, not tax
-   exemption. Any tax or VAT charged by Printful is
-   an internal procurement cost: it is added once to the customer-facing product
-   amount without the catalog markup and is never presented as customer tax.
+   the gross total on the address page. The internal quote's zero customer-tax
+   field means pending Stripe calculation, not tax exemption. Printful tax or
+   VAT is a procurement cost, never customer tax. Product prices use the fixed
+   one-item reference costs, including reference supplier tax without markup;
+   live supplier discounts or tax differences affect the margin.
    The normalized address and exact cent
    amounts are stored in an opaque, expiring quote; abandoned address quotes
    are automatically removed.
@@ -273,10 +341,10 @@ frozen snapshot of the word cloud.
    payment timeouts retain their idempotency key for safe retries.
    Customs flags currently inform the buyer and do not impose a new
    country-blocking policy. New Checkout Sessions enable Stripe Tax with explicit
-   exclusive prices: the net product basket (including the fee reserve) is one
-   position describing all selected designs and quantities, with shipping as a
-   separate shipping rate. Printful returns aggregate product costs, so no
-   per-product retail prices are invented. The current catalog uses Stripe's
+   per-item fixed prices with exact quantities and a separate shipping rate.
+   German deliveries use inclusive gross prices; other destinations use exclusive
+   net prices. Printful's aggregate product estimate remains procurement data;
+   the fixed retail unit prices come from the tracked one-item reference costs. The current catalog uses Stripe's
    general tangible-goods category. A technical Stripe Customer per purchase
    stores the validated shipping address; Checkout cannot change it. Customer
    creation and Session creation use independent persisted idempotency inputs.
@@ -616,6 +684,26 @@ presentation-mode changes. A worker packs measured boxes while keeping one
 active request and one latest pending snapshot; removal/reset fences stale
 results. Product layouts start independently from the submission-weight size
 curve and measured fonts, preserving every word within the product's safe area.
+The packer uses exact bit masks of forbidden candidate centers while retaining
+the same search order, rotations and quality criteria. The product gallery,
+explicit area filling and automatic product transfers send measured rectangles
+through a bounded pool sized at half the browser's reported processor count,
+rounded down, with at least one and at most four workers; unknown devices use one.
+Font measurements remain on the page. Shared
+deterministic steps also support synchronous Node/export callers. Browser
+refinement yields through posted tasks with an eight-millisecond work budget.
+Independent packing candidates overlap, but selection consumes results in the
+original order. Text-box metrics and completed candidate scores are reused within
+one fill; fonts, sizes, exact collision comparisons and scoring stay unchanged.
+The first gallery product prepares alone; remaining products use the same bounded
+parallelism. This avoids making the first usable card wait for the full gallery.
+Visible gallery cards and deliberate variant choices take priority over
+offscreen products, and opening the editor pauses queued gallery preparation.
+An automatic-only, page-local geometry cache shares matching print sides and
+palette changes, returning independent designs. It is capped at 24 completed
+entries and 2 MiB, with at most 16 in-flight geometry entries; no gallery cache
+is persisted as a draft or basket item. Missing/failed workers retain the same
+complete layout through the page fallback.
 The print-only optimizer scores the whole safe area at every word count,
 compares packing and sparse row arrangements, and chooses rotations for the
 product's shape. Text may vary by up to ±20% relative to its
@@ -716,9 +804,11 @@ installation with `npm ci` whenever the lockfile, Node ABI or platform has
 changed, validates the local environment, checks every product preview/font
 asset and then starts the application. Three.js and Fabric.js are pinned npm
 dependencies served locally by the application; the complete print fonts are
-tracked assets verified by the same preflight. The mug itself is
-generated by the tracked `public/js/mug-3d-viewer.js`; there is no untracked 3D
-model, CDN download or manual asset-copy step. A stale `node_modules` directory
+tracked assets verified by the same preflight. Product previews use tracked
+Printful GLBs for exact catalog matches and tracked procedural geometry for
+the remaining 3D variants. Model provenance and texture preparation are documented
+in `public/assets/product-models/README.md`; there is no untracked 3D
+model, runtime CDN download or manual asset-copy step. A stale `node_modules` directory
 therefore cannot silently disable the 3D preview.
 
 ### Local Printful mockups
@@ -983,8 +1073,8 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `PRINTFUL_ALLOW_ORDER_WRITES` | shared safety setting | Independent gate required before creating any Printful draft. |
 | `PRINTFUL_CONFIRM_LIVE_ORDERS` | shared safety setting | Final gate before confirming/charging/submitting a Printful order. |
 | `SHOP_PRODUCT_MARKUP_PERCENT` | shared setting | Product-cost markup used in server-side retail quotes. |
-| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Estimated payment processing + Stripe Tax percentage, default 3.69; reserve uses a fixed internal 20% tax assumption. |
-| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed payment-cost reserve in euro cents, default 49, folded into product prices. |
+| `SHOP_PAYMENT_RESERVE_PERCENT` | shared setting | Estimated payment processing + Stripe Tax percentage, default 3.69; closed-form product/shipping allowance budgets 19% German reference VAT. |
+| `SHOP_PAYMENT_RESERVE_FIXED_CENTS` | shared setting | Fixed pricing allowance in euro cents, default 49 per product unit and once in shipping. |
 
 `DATABASE_APPLICATION_NAME` is set by `fly.toml`/test helpers for Postgres
 observability, and `DATABASE_SCHEMA` is generated only by isolated tests.
@@ -1012,76 +1102,66 @@ the single [launch-readiness checklist](docs/launch-readiness.md).
 
 ## Approved pricing
 
-The maintainer approved the product markup and supplier-cost treatment for the
-initial launch on 2026-09-24. On 2026-10-13 the payment reserve was increased to
-3.69% plus EUR 0.49 in preparation for PayPal through Stripe. Actual payment
-costs and margins will be reviewed after the first real orders; the payment
-reserve is an estimate and the product markup is not net profit.
+On 2026-10-24 the maintainer approved fixed product prices independent of order
+quantity, plus a separately calculated dynamic shipping price. The catalog uses
+tracked one-item EUR supplier estimates in `src/productCostSnapshot.json`, not
+an aggregate live basket cost divided by quantity. The reference destination
+is Germany for every offered variant. The gallery, product picker, editor and
+basket expose the same server-calculated German gross unit prices. The notice
+says prices include 19% VAT, exclude shipping and may differ for other destinations. “Versand” has
+no hyperlink and remains the name in checkout and confirmations.
 
-The current checkout does not use a fixed price per product. It calculates one
-customer price from Printful's live EUR estimate(s) and the catalog-wide markup
-setting above. The single delivery address is estimated as one Printful order
-containing all selected products. All
-calculations use integer cents.
-
-Let `C` be Printful's product cost excluding shipping and Printful tax/VAT for
-the complete order after any Printful quantity or mixed-order discount, `F` the
-sum of Printful tax and VAT, `u` the markup (default `0.50`) and `R` the internal
-payment-cost reserve. The customer-facing product amount is:
+For a product, `B` is its one-item supplier cost marked up by 50% (rounded up
+in cents), plus any supplier tax in that reference quote without markup. For
+shipping, `B` is the complete live Printful order's shipping cost with no product
+markup. Both components independently include the same fee budget `p = 0.0369`
+and fixed allowance `f = 49` cents. With German reference VAT `t = 0.19`:
 
 ```text
-ceil(C * (1 + u)) + F + R
+exact net retail cents = (B + f) / (1 - p * (1 + t))
+foreign net cents     = ceil(exact net retail cents)
+German gross cents    = ceil(exact net retail cents * (1 + t))
 ```
 
-`F` is added exactly once and receives no catalog markup. Printful's standard
-shipping is added separately. The locally frozen Printful quote therefore still
-contains zero customer tax. When the customer checks prices, Stripe Tax calculates
-the final tax from the validated delivery address, the general tangible
-goods tax code (`txcd_99999999`) and the shipping tax code (`txcd_92010001`):
+Round each published unit price once, then multiply by quantity. The exact net
+basis and German gross are independently rounded; never reverse a rounded
+German price by dividing by 1.19. The fixed 49-cent allowance is deliberately
+included for EVERY product unit and once in shipping, although providers charge
+their fixed fee once per purchase. Supplier product discounts improve the
+shop's margin. Actual supplier taxes remain procurement costs in the frozen
+Printful estimate, never customer VAT; differences from the catalog reference
+also affect margin rather than silently repricing a published product.
 
-```text
-pre-Stripe total = customer product amount + shipping
-customer total = pre-Stripe total + Stripe's confirmed tax
-```
+The 3.69% + EUR 0.49 budget reflects EEA PayPal (2.99% + EUR 0.39), Stripe PayPal
+handling (0.20% + EUR 0.10) and Stripe Tax (0.50%). It is a pricing assumption,
+not a guaranteed worldwide maximum. Actual fees and margins require review.
+There is no iterative reserve and no internal 20% VAT assumption.
 
-The shipping page displays that tax and the gross total from the final Checkout
-Session; the payment button later opens the same Session. The payment reserve is
-folded into the product subtotal, not displayed as a
-separate card/payment surcharge. By default it budgets `3.69% + 0,49 €` per
-purchase: standard EEA PayPal Checkout (`2.99% + 0,39 €`), Stripe's PayPal
-handling (`0.20% + 0,10 €`) and native Stripe Tax (`0.50%`). These are fee
-assumptions, not a guarantee for international payments, currency conversion
-or disputes. New Checkout Sessions allow cards and PayPal; Stripe offers PayPal
-only when it is active and eligible for that purchase.
-Its own calculation always assumes 20% customer tax on the product amount
-(including `F`), shipping and
-reserve. It iterates until the reserve covers the estimated fees or returns the
-last estimate after 20 iterations. Differences from actual Stripe tax and
-payment fees affect the shop's margin. This internal assumption never sets the
-customer tax line.
+Printful still revalidates the entire immutable basket/address and supplies
+shipping, delivery details and the frozen procurement/fulfillment cost. New
+quotes persist a versioned per-item pricing snapshot in their shipment JSON.
+Germany passes those exact gross unit prices and gross shipping to native
+Stripe Checkout with `automatic_tax` and `tax_behavior: inclusive`. Other
+countries pass the stored net prices and net shipping with `exclusive`;
+Stripe determines actual taxes using the validated delivery address and the
+account's active registrations. The existing tangible-goods and shipping tax
+codes remain. No IP location or separate Tax Calculation API is used.
 
-Example with 10,98 € Printful product costs, 3,28 € Printful VAT and 6,24 €
-shipping: the 50% rule produces 16,47 €, Printful VAT is added without markup,
-and the internal payment reserve is 1,72 €. The product amount shown to Stripe
-is therefore 21,47 € and the pre-tax total is 27,71 €. Stripe determines the
-final customer tax and gross total, which are shown on the shipping page and
-again in the same Checkout Session.
+Preparing checkout displays gross products, gross shipping, included tax and
+the final total from the SAME completed Stripe Session that the payment action
+opens. Its confirmed shipping-tax and line-item amounts are persisted with the
+expected tax/total. Signed payments validate currency, pinned Customer, amounts,
+tax behavior and expected tax before the payment/fulfillment/email transaction.
+Older persisted requests retain their original exclusive policy and exact retry
+inputs. Order and email amounts are interpreted using that frozen policy, so
+inclusive tax is never added twice.
 
-Because `C` is the actual product cost for the requested quantity, Printful
-quantity discounts automatically lower the customer unit price; there are no
-separate, manually maintained discount tiers. The server repeats the Printful
-estimate before preparing Stripe Checkout, and a changed total must be confirmed
-again before a final gross amount is displayed.
-
-The shop is B2C and does not request a buyer VAT ID. On 2026-09-24 the maintainer
-accepted the tested configuration for the initial launch: native Stripe Tax
-with Germany `oss_union` and Great Britain `standard`, replacing the earlier
-`small_seller` setting. Printful's per-order shipping origin is not passed to
-Checkout; extending that integration is deferred. These are calculation
-settings, not proof of actual tax registrations or OSS eligibility. Verification
-is sandbox-only; the [audit](docs/stripe-printful-test-audit-2026-09-24.md)
-records the results and limitations. The accepted decision and remaining
-launch work live in [docs/launch-readiness.md](docs/launch-readiness.md).
+To deliberately refresh supplier costs, run `node scripts/refresh-product-costs.js`
+with the existing local Printful credential. It only requests one-item estimates,
+creates no orders and replaces the snapshot atomically only after all variants
+succeed. Review the diff before release. Startup and page requests never need
+provider access to calculate catalog prices; missing provider configuration
+continues to return a clear error for an actual shipping quote.
 
 ## Project layout
 
@@ -1346,7 +1426,7 @@ source/version and upstream licenses are in `public/assets/ui-icons/`.
 
 Run `npm run test:configurator:browser` for an isolated, database-free instance
 of the actual configurator template, product catalog and editor. Add `&probe=1`
-to the printed URL and choose **Run layout regression** at each viewport size.
+to the printed URL, choose a product, and choose **Run layout regression** at each viewport size.
 Resizing a desktop browser tests responsive desktop layout only. Mobile canvas
 checks require a mobile device or device emulation with a mobile browser identity,
 using the same shared device check as PWA installation.
@@ -1368,6 +1448,21 @@ restoration, and independently filled front/back surfaces
 in the real editor.
 `test/area-layout.test.js` also covers every product/orientation, mixed content,
 rounding edge cases and a 500-word capacity case with real font metrics.
+
+For the product gallery, start the same fixture with `--gallery` (sample wedding
+words and emoji) or `--layout` (the reported layout regression) and add
+`&probe=gallery` to a fresh URL. **Check gallery and exact editor handoff**
+checks every variant, Printful image selection, all print-side geometry,
+the handoff to the real Fabric editor and exact browser-draft persistence.
+Use `--gallery` with `&probe=performance` to record worker jobs, automatic
+calculation counts, browser long tasks and complete design hashes. After the
+gallery finishes, **Verify exact layouts and cached reuse** compares every side
+against the synchronous engine and checks that unchanged reuse starts no worker
+job. Run it in Chromium and Safari; this fixture never loads provider credentials.
+`&device=mobile` enables the fixture's mobile identity; use a phone-sized
+viewport to check entry into the existing canvas workspace. `&pick=<product-key>`
+selects another handoff target (the default is the two-sided notebook).
+**Reset gallery fixture** clears the fixture's active draft and reopens the gallery.
 
 ### Automated suite
 
@@ -1823,11 +1918,8 @@ keys in Fly for activation by `npm run deploy:hosted`.
   unreachable while `STRIPE_PAYMENT_MODE=test` and
   `STRIPE_LIVE_PAYMENTS_ENABLED=false`.
 - **Real Printful fulfillment after test payments** — live countries and
-  estimates are connected for the curated mug variants 1320, 4830 and 16586,
-  coaster variant 15662, unframed poster variants 8948 and 8952, framed
-  poster variants 9357 and 9358, tote variant 4533, throw blanket variant
-  10986, spiral notebook variant 12141 and decorative pillow variant 4532,
-  but a
+  estimates are connected for the 61 curated variants in `src/products.js`
+  and `src/productCatalogManifest.json`, but a
   successful test payment can only produce a local `mocked` fulfillment
   record. Draft/live writes require a live Stripe payment plus the explicit
   safety switches described above.

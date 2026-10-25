@@ -5,7 +5,7 @@
 const path = require('node:path');
 const express = require('express');
 const { renderPage } = require('../src/pageRenderer');
-const { DEFAULT_PRODUCT, getPublicProduct, getPublicProducts, getPublicProductFamilies } = require('../src/products');
+const { DEFAULT_PRODUCT, getProduct, getPublicProduct, getPublicProducts, getPublicProductFamilies } = require('../src/products');
 const { ASSET_BASE } = require('../public/js/emoji-catalog');
 const { makeEmojiArtworkRouter } = require('../src/routes/emojiArtwork');
 const FIXTURE_SLUG = '-_AbCdEf0123456789xyZQ';
@@ -14,6 +14,12 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
   const app = express();
   const root = path.join(__dirname, '..');
   const configurations = new Map();
+  const publicConfiguration = saved => {
+    const product = getPublicProduct(getProduct(saved.productKey), saved.orientation);
+    const printPreviewUrls = Object.fromEntries(product.printSurfaces.map(surface => [surface.key,
+      `/api/events/${FIXTURE_SLUG}/configurations/${saved.id}/print.svg?surface=${surface.key}`]));
+    return { ...saved, product, printPreviewUrls, printFileUrl: Object.values(printPreviewUrls)[0] };
+  };
   app.use(express.json({ limit: '2mb' }));
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   if (review) {
@@ -43,12 +49,16 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
   }
   app.get(`/e/${FIXTURE_SLUG}`, (req, res) => res.type('html').send(`<!doctype html>
     <html lang="en"><head><meta charset="utf-8"><title>Responsive test word cloud</title></head>
-    <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en">Keepsake</a></body></html>`));
+    <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en&view=products">Create a keepsake</a></body></html>`));
   app.get(`/e/${FIXTURE_SLUG}/configure`, (req, res, next) => {
-    if (['1', 'area', 'touch', 'review'].includes(req.query.probe)) {
+    if (['1', 'area', 'touch', 'review', 'gallery', 'product-ux', 'performance'].includes(req.query.probe)) {
       const send = res.send.bind(res);
-      const probe = req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
+      const probe = req.query.probe === 'product-ux' ? 'product-ux' : req.query.probe === 'gallery' ? 'product-gallery' : req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
       res.send = html => {
+        if (req.query.probe === 'performance') {
+          return send(html.replace(/(<script src="[^\"]*\/js\/print-layout-client\.js[^\"]*"><\/script>)/,
+            '$1<script src="/print-layout-performance-probe.js"></script>'));
+        }
         // A narrow desktop window is intentionally still a desktop. The touch
         // fixture supplies mobile device signals before any application scripts.
         if (probe === 'mobile-canvas' || req.query.device === 'mobile') html = html.replace('<head>', `<head><script>
@@ -94,11 +104,39 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
     if (!configuration) return res.status(404).json({ error: 'not_found' });
     res.json(configuration);
   });
+  app.get(`/e/${FIXTURE_SLUG}/shipping`, (req, res, next) => renderPage(req, res, 'shipping', {
+    eventLocale: 'en', header: { variant: 'back', backHref: `/e/${FIXTURE_SLUG}/configure`,
+      backLabel: 'Zurück zum Design', mobileMenu: true },
+  }).catch(next));
+  app.get('/api/shipping/countries', (req, res) => res.json({ countries: [
+    { code: 'DE', name: 'Germany', states: [] },
+  ] }));
+  app.get(`/api/events/${FIXTURE_SLUG}/configurations/:id`, (req, res) => {
+    const saved = configurations.get(req.params.id);
+    if (!saved) return res.status(404).json({ error: 'not_found' });
+    res.json(publicConfiguration(saved));
+  });
+  app.get(`/api/events/${FIXTURE_SLUG}/configurations`, (req, res) => {
+    const saved = String(req.query.ids || '').split(',').map(id => configurations.get(id));
+    if (saved.some(item => !item)) return res.status(404).json({ error: 'not_found' });
+    res.json({ configurations: saved.map(publicConfiguration) });
+  });
+  app.get(`/api/events/${FIXTURE_SLUG}/configurations/:id/print.svg`, (req, res) => {
+    const saved = configurations.get(req.params.id);
+    if (!saved) return res.sendStatus(404);
+    const product = getPublicProduct(getProduct(saved.productKey), saved.orientation);
+    const surface = req.query.surface || product.printSurfaces[0].key;
+    res.type('image/svg+xml').send(require('../src/mugPrint').buildProductPrintSvg(product, saved.designs[surface]));
+  });
   app.get('/responsive-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/configurator-workspace-probe.js')));
   app.get('/area-layout-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/area-layout-probe.js')));
   app.get('/mobile-canvas-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/mobile-canvas-probe.js')));
+  app.get('/product-gallery-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/product-gallery-probe.js')));
+  app.get('/product-ux-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/product-ux-probe.js')));
+  app.get('/print-layout-performance-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/print-layout-performance-probe.js')));
   app.use(ASSET_BASE, makeEmojiArtworkRouter());
   app.get('/vendor/three.min.js', (req, res) => res.sendFile(path.join(root, 'node_modules/three/build/three.min.js')));
+  app.use('/vendor/three', express.static(path.join(root, 'node_modules/three'), { index: false, dotfiles: 'deny' }));
   app.get('/vendor/fabric.min.js', (req, res) => res.sendFile(path.join(root, 'node_modules/fabric/dist/index.min.js')));
   app.get('/vendor/fonts/gelasio-latin-ext-400-normal.woff', (req, res) =>
     res.sendFile(require.resolve('@fontsource/gelasio/files/gelasio-latin-ext-400-normal.woff')));
@@ -109,6 +147,8 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
 if (require.main === module) {
   const options = process.argv.includes('--review') ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS, review: true }
     : process.argv.includes('--direct-design') ? { words: [], directDesign: true }
+    : process.argv.includes('--gallery')
+      ? { words: require('../marketing/clouds/classic-wedding.json').words.map(({ word, count }) => [word, count]) }
     : process.argv.includes('--layout')
       ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS } : {};
   const server = createFixture(options).listen(0, '127.0.0.1', () => {

@@ -1,0 +1,4067 @@
+{
+  "verifiedAt": "2026-10-24",
+  "scope": "Catalog identities, complete upload files, selected template rectangles, renderer coordinates and representative provider mockups; no physical sample sign-off.",
+  "catalogProductCount": 21,
+  "variantCount": 67,
+  "sources": [
+    "https://api.printful.com/products/{productId}",
+    "https://api.printful.com/mockup-generator/printfiles/{productId}",
+    "https://api.printful.com/v2/catalog-products/{productId}/mockup-templates"
+  ],
+  "meshMappingSource": {
+    "url": "https://static.cdn.printful.com/dist-pf/62351.c6912764bc6932dba2b3.js",
+    "sha256": "3e4ad02d07406b63de92c3e6dd3e1e3d3861e34522f86ae62e30a8fb4f5016e9"
+  },
+  "providerProofCount": 9,
+  "physicalSamplesChecked": false,
+  "temporarySourcesRemoved": true,
+  "results": [
+    {
+      "productKey": "white-glossy-mug-duo-11oz",
+      "productId": 19,
+      "variantId": 1320,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "white-glossy-mug-15oz",
+      "productId": 19,
+      "variantId": 4830,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "mug-444",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "white-glossy-mug-20oz",
+      "productId": 19,
+      "variantId": 16586,
+      "printfile": {
+        "printfile_id": 426,
+        "width": 3071,
+        "height": 1205,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "mug-591",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 3071,
+          "height": 1205,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "cork-back-coaster",
+      "productId": 611,
+      "variantId": 15662,
+      "printfile": {
+        "printfile_id": 358,
+        "width": 1181,
+        "height": 1181,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "coaster",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1181,
+          "height": 1181,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            15662
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/cork_back_coaster/medium/flat/05_coaster_flat_base_white.png?v=1685084559",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 358,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2087,
+          "print_area_height": 2087,
+          "print_area_top": 457,
+          "print_area_left": 457,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "matte-poster-30x40cm",
+      "productId": 268,
+      "variantId": 8948,
+      "printfile": {
+        "printfile_id": 153,
+        "width": 4724,
+        "height": 3544,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 3544,
+          "height": 4724,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 4724,
+          "height": 3544,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            8948
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/flat/30x40CM/30x40_vertical/01-30x40-ver-cover.png?v=1747134274",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 152,
+          "template_width": 1000,
+          "template_height": 1000,
+          "print_area_width": 492,
+          "print_area_height": 655,
+          "print_area_top": 177,
+          "print_area_left": 250,
+          "template_positioning": "overlay",
+          "orientation": "vertical",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "matte-poster-50x70cm",
+      "productId": 268,
+      "variantId": 8952,
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 5906,
+          "height": 8268,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 8268,
+          "height": 5906,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            8952
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/flat/50x70CM/50x70_vertical/01-50x70-ver-cover.png?v=1747134274",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 112,
+          "template_width": 1000,
+          "template_height": 1000,
+          "print_area_width": 574,
+          "print_area_height": 802,
+          "print_area_top": 99,
+          "print_area_left": 213,
+          "template_positioning": "overlay",
+          "orientation": "vertical",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "framed-matte-poster-black-30x40cm",
+      "productId": 304,
+      "variantId": 9357,
+      "printfile": {
+        "printfile_id": 15,
+        "width": 4800,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 3600,
+          "height": 4800,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 4800,
+          "height": 3600,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "framed-matte-poster-black-50x70cm",
+      "productId": 304,
+      "variantId": 9358,
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 5906,
+          "height": 8268,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 8268,
+          "height": 5906,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-tote-black-handles",
+      "productId": 84,
+      "variantId": 4533,
+      "printfile": {
+        "printfile_id": 6,
+        "width": 2550,
+        "height": 2475,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2550,
+          "height": 2475,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "throw-blanket-50x60in",
+      "productId": 395,
+      "variantId": 10986,
+      "printfile": {
+        "printfile_id": 208,
+        "width": 9450,
+        "height": 7950,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 9450,
+          "height": 7950,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10986
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/blanket/medium/flat/horizontal/05_blanket_flat_front_base_whitebg.png?v=1774009120",
+          "background_url": "https://files.cdn.printful.com/m/blanket/medium/flat/horizontal/01_blanket_flat_front_white.png?v=1774009120",
+          "background_color": null,
+          "printfile_id": 208,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2714,
+          "print_area_height": 2282,
+          "print_area_top": 353,
+          "print_area_left": 131,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-basic-pillow-18in",
+      "productId": 83,
+      "variantId": 4532,
+      "printfile": {
+        "printfile_id": 32,
+        "width": 2850,
+        "height": 2850,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "front",
+        "back"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "square-pillow",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2850,
+          "height": 2850,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "spiral-notebook-dotted",
+      "productId": 474,
+      "variantId": 12141,
+      "printfile": {
+        "printfile_id": 242,
+        "width": 1725,
+        "height": 2625,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "front",
+        "back"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "notebook",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1725,
+          "height": 2625,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            12141
+          ],
+          "placement": "front",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/spiral_notebook/medium/flat/front/05_Notebook_mockup_flat_front_base_whitebg.png?v=1765776340",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 242,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1838,
+          "print_area_height": 2796,
+          "print_area_top": 99,
+          "print_area_left": 543,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            12141
+          ],
+          "placement": "back",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/spiral_notebook/medium/flat/back/05_Notebook_mockup_flat_back_base_whitebg.png?v=1765776340",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 242,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1838,
+          "print_area_height": 2796,
+          "print_area_top": 101,
+          "print_area_left": 542,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "matte-poster-8947",
+      "productId": 268,
+      "variantId": 8947,
+      "printfile": {
+        "printfile_id": 106,
+        "width": 3544,
+        "height": 2480,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 2480,
+          "height": 3544,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 3544,
+          "height": 2480,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            8947
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/cm/30x21cm_poster_notext_hor.png?v=1747134274",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 106,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 669,
+          "print_area_height": 469,
+          "print_area_top": 114,
+          "print_area_left": 30,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            8947
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/flat/21x30CM/21x30_horizontal/01-21x30-ver-cover.png?v=1747134274",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 106,
+          "template_width": 1000,
+          "template_height": 1000,
+          "print_area_width": 600,
+          "print_area_height": 421,
+          "print_area_top": 290,
+          "print_area_left": 200,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "matte-poster-19516",
+      "productId": 268,
+      "variantId": 19516,
+      "printfile": {
+        "printfile_id": 624,
+        "width": 7016,
+        "height": 4961,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 4961,
+          "height": 7016,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 7016,
+          "height": 4961,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            19516
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/164-posters-cm/medium/cm/a2_hor.png?v=1747134274",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 624,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2889,
+          "print_area_height": 2044,
+          "print_area_top": 478,
+          "print_area_left": 55,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "framed-poster-11791",
+      "productId": 304,
+      "variantId": 11791,
+      "printfile": {
+        "printfile_id": 15,
+        "width": 4800,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 3600,
+          "height": 4800,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 4800,
+          "height": 3600,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11791
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/188-posters-framed-cm/medium/template/hor/40x30cm_poster_notext_hor.png?v=1735804936",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 15,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 670,
+          "print_area_height": 502,
+          "print_area_top": 97,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "framed-poster-10297",
+      "productId": 304,
+      "variantId": 10297,
+      "printfile": {
+        "printfile_id": 15,
+        "width": 4800,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 3600,
+          "height": 4800,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 4800,
+          "height": 3600,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10297
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/188-posters-framed-cm/medium/template/hor/40x30cm_poster_notext_hor.png?v=1735804936",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 15,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 670,
+          "print_area_height": 502,
+          "print_area_top": 97,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "framed-poster-11792",
+      "productId": 304,
+      "variantId": 11792,
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 5906,
+          "height": 8268,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 8268,
+          "height": 5906,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11792
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/188-posters-framed-cm/medium/template/hor/70x50cm_poster_notext_hor.png?v=1735804936",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 113,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 668,
+          "print_area_height": 477,
+          "print_area_top": 110,
+          "print_area_left": 31,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "framed-poster-10298",
+      "productId": 304,
+      "variantId": 10298,
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 5906,
+          "height": 8268,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 8268,
+          "height": 5906,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10298
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/188-posters-framed-cm/medium/template/hor/70x50cm_poster_notext_hor.png?v=1735804936",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 113,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 668,
+          "print_area_height": 477,
+          "print_area_top": 110,
+          "print_area_left": 31,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-tote-8904",
+      "productId": 84,
+      "variantId": 8904,
+      "printfile": {
+        "printfile_id": 6,
+        "width": 2550,
+        "height": 2475,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2550,
+          "height": 2475,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            8904
+          ],
+          "placement": "default",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-tote/medium/template1/No_text_allovertote-template-simple.png?v=1734605690",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 6,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2942,
+          "print_area_height": 2851,
+          "print_area_top": 8,
+          "print_area_left": 28,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-tote-8905",
+      "productId": 84,
+      "variantId": 8905,
+      "printfile": {
+        "printfile_id": 6,
+        "width": 2550,
+        "height": 2475,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2550,
+          "height": 2475,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            8905
+          ],
+          "placement": "default",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-tote/medium/template1/No_text_allovertote-template-simple.png?v=1734605690",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 6,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2942,
+          "print_area_height": 2851,
+          "print_area_top": 8,
+          "print_area_left": 28,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-basic-pillow-49853",
+      "productId": 83,
+      "variantId": 49853,
+      "printfile": {
+        "printfile_id": 1701,
+        "width": 2250,
+        "height": 2250,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "front",
+        "back"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2250,
+          "height": 2250,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            49853
+          ],
+          "placement": "back",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/templates/14x14_mockup_gen.png?v=1782822247",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1701,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2772,
+          "print_area_height": 2772,
+          "print_area_top": 114,
+          "print_area_left": 114,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            49853
+          ],
+          "placement": "front",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/templates/14x14_mockup_gen.png?v=1782822247",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1701,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2772,
+          "print_area_height": 2772,
+          "print_area_top": 114,
+          "print_area_left": 114,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-basic-pillow-49854",
+      "productId": 83,
+      "variantId": 49854,
+      "printfile": {
+        "printfile_id": 1702,
+        "width": 2550,
+        "height": 2550,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "front",
+        "back"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2550,
+          "height": 2550,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            49854
+          ],
+          "placement": "back",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/templates/16x16_mockup_gen.png?v=1782822247",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1702,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2794,
+          "print_area_height": 2794,
+          "print_area_top": 103,
+          "print_area_left": 103,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            49854
+          ],
+          "placement": "front",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/templates/16x16_mockup_gen.png?v=1782822247",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1702,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2794,
+          "print_area_height": 2794,
+          "print_area_top": 103,
+          "print_area_left": 103,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-basic-pillow-9513",
+      "productId": 83,
+      "variantId": 9513,
+      "printfile": {
+        "printfile_id": 72,
+        "width": 3150,
+        "height": 1950,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "front",
+        "back"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "rectangular-pillow",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 3150,
+          "height": 1950,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            9513
+          ],
+          "placement": "front",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/template1/No_text_mockupgen_template_rectangular_pillow.png?v=1782822247",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 72,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2997,
+          "print_area_height": 1856,
+          "print_area_top": 572,
+          "print_area_left": 3,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            9513
+          ],
+          "placement": "back",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/template1/No_text_mockupgen_template_rectangular_pillow.png?v=1782822247",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 72,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2997,
+          "print_area_height": 1856,
+          "print_area_top": 572,
+          "print_area_left": 3,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "all-over-basic-pillow-11075",
+      "productId": 83,
+      "variantId": 11075,
+      "printfile": {
+        "printfile_id": 214,
+        "width": 3450,
+        "height": 3450,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "front",
+        "back"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "square-pillow",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 3450,
+          "height": 3450,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11075
+          ],
+          "placement": "front",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/template1/No_text_22x22_pillow.png?v=1782822247",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 214,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2674,
+          "print_area_height": 2674,
+          "print_area_top": 97,
+          "print_area_left": 166,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            11075
+          ],
+          "placement": "back",
+          "technique": "cut-sew",
+          "image_url": "https://files.cdn.printful.com/m/all-over-basic-pillow-w-stuffing/medium/template1/No_text_22x22_pillow.png?v=1782822247",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 214,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2674,
+          "print_area_height": 2674,
+          "print_area_top": 97,
+          "print_area_left": 166,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "throw-blanket-30x40in",
+      "productId": 395,
+      "variantId": 22609,
+      "printfile": {
+        "printfile_id": 1034,
+        "width": 6450,
+        "height": 4950,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 6450,
+          "height": 4950,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            22609
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/blanket/medium/templates/30x40/30x40_hor.png?v=1774009120",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1034,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2965,
+          "print_area_height": 2275,
+          "print_area_top": 362,
+          "print_area_left": 17,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-11051",
+      "productId": 403,
+      "variantId": 11051,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11051
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17196",
+      "productId": 403,
+      "variantId": 17196,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17196
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_15-70.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 649,
+          "print_area_height": 273,
+          "print_area_top": 117,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-11050",
+      "productId": 403,
+      "variantId": 11050,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11050
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17197",
+      "productId": 403,
+      "variantId": 17197,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17197
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_15-70.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 649,
+          "print_area_height": 273,
+          "print_area_top": 117,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-22373",
+      "productId": 403,
+      "variantId": 22373,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            22373
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_15-70.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 649,
+          "print_area_height": 273,
+          "print_area_top": 117,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-12579",
+      "productId": 403,
+      "variantId": 12579,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            12579
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-12578",
+      "productId": 403,
+      "variantId": 12578,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            12578
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-11049",
+      "productId": 403,
+      "variantId": 11049,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11049
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17200",
+      "productId": 403,
+      "variantId": 17200,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17200
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_15-70.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 649,
+          "print_area_height": 273,
+          "print_area_top": 117,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-11048",
+      "productId": 403,
+      "variantId": 11048,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11048
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17199",
+      "productId": 403,
+      "variantId": 17199,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17199
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_15-70.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 649,
+          "print_area_height": 273,
+          "print_area_top": 117,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17362",
+      "productId": 403,
+      "variantId": 17362,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17362
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17359",
+      "productId": 403,
+      "variantId": 17359,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17359
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17360",
+      "productId": 403,
+      "variantId": 17360,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17360
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_15-70.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 649,
+          "print_area_height": 273,
+          "print_area_top": 117,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17358",
+      "productId": 403,
+      "variantId": 17358,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17358
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "colored-mug-17361",
+      "productId": 403,
+      "variantId": 17361,
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "colored-mug-325",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1050,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            17361
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/color_mug/medium/mug/mug_11-159.png?v=1779800993",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 43,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 671,
+          "print_area_height": 261,
+          "print_area_top": 163,
+          "print_area_left": 29,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "mouse-pad",
+      "productId": 518,
+      "variantId": 13097,
+      "printfile": {
+        "printfile_id": 265,
+        "width": 2700,
+        "height": 2250,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "mousepad",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 2250,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            13097
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/sublimated_mousepad/medium/templates/generator-overlay_horizontal.png?v=1629720282",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 265,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 708,
+          "print_area_height": 590,
+          "print_area_top": 70,
+          "print_area_left": 11,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "laptop-sleeve-10984",
+      "productId": 394,
+      "variantId": 10984,
+      "printfile": {
+        "printfile_id": 206,
+        "width": 2250,
+        "height": 1725,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2250,
+          "height": 1725,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10984
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/laptopcase/medium/flat/13/05_laptopcase_13_front_base_whitebg.png?v=1737467977",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 206,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2298,
+          "print_area_height": 1762,
+          "print_area_top": 618,
+          "print_area_left": 354,
+          "template_positioning": "background",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            10984
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/laptopcase/medium/templates/13_notext_3000.png?v=1737467312",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 206,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2970,
+          "print_area_height": 2276,
+          "print_area_top": 362,
+          "print_area_left": 15,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "laptop-sleeve-10985",
+      "productId": 394,
+      "variantId": 10985,
+      "printfile": {
+        "printfile_id": 207,
+        "width": 2325,
+        "height": 1800,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2325,
+          "height": 1800,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10985
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/laptopcase/medium/flat/15/05_laptopcase_15_front_base_whitebg.png?v=1737467986",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 207,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2642,
+          "print_area_height": 2046,
+          "print_area_top": 480,
+          "print_area_left": 171,
+          "template_positioning": "background",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            10985
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/laptopcase/medium/templates/15_notext_3000.png?v=1737467312",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 207,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2974,
+          "print_area_height": 2302,
+          "print_area_top": 349,
+          "print_area_left": 13,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "canvas-12x16in",
+      "productId": 3,
+      "variantId": 5,
+      "printfile": {
+        "printfile_id": 46,
+        "width": 6600,
+        "height": 5400,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "canvas-12x16",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "portrait",
+          "width": 5400,
+          "height": 6600,
+          "safeRectanglesWithinFile": true
+        },
+        {
+          "orientation": "landscape",
+          "width": 6600,
+          "height": 5400,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            5
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/42-canvas-in/medium/wall_new/12x16/h/05_canvas_in_base_whitebg.png?v=1745306886",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 46,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 3295,
+          "print_area_height": 2699,
+          "print_area_top": 146,
+          "print_area_left": -148,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            5
+          ],
+          "placement": "default",
+          "technique": "digital",
+          "image_url": "https://files.cdn.printful.com/m/42-canvas-in/medium/templates/12x16/16x12.png?v=1739783121",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 46,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2476,
+          "print_area_height": 2026,
+          "print_area_top": 487,
+          "print_area_left": 262,
+          "template_positioning": "overlay",
+          "orientation": "horizontal",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "water-bottle-10798",
+      "productId": 382,
+      "variantId": 10798,
+      "printfile": {
+        "printfile_id": 192,
+        "width": 2557,
+        "height": 1582,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "water-bottle",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2557,
+          "height": 1582,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10798
+          ],
+          "placement": "default",
+          "technique": "uv",
+          "image_url": "https://files.cdn.printful.com/m/stainless-steel-water-bottle/medium/templates/bottle_template_withouttext.png?v=1696417347",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 192,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 700,
+          "print_area_height": 433,
+          "print_area_top": 155,
+          "print_area_left": 14,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "water-bottle-16030",
+      "productId": 382,
+      "variantId": 16030,
+      "printfile": {
+        "printfile_id": 192,
+        "width": 2557,
+        "height": 1582,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "water-bottle",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2557,
+          "height": 1582,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            16030
+          ],
+          "placement": "default",
+          "technique": "uv",
+          "image_url": "https://files.cdn.printful.com/m/stainless-steel-water-bottle/medium/templates/bottle_template_withouttext.png?v=1696417348",
+          "background_url": null,
+          "background_color": "#020202",
+          "printfile_id": 192,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 700,
+          "print_area_height": 433,
+          "print_area_top": 155,
+          "print_area_left": 14,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "steel-tumbler-15005",
+      "productId": 585,
+      "variantId": 15005,
+      "printfile": {
+        "printfile_id": 309,
+        "width": 2776,
+        "height": 2374,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "steel-tumbler",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2776,
+          "height": 2374,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            15005
+          ],
+          "placement": "default",
+          "technique": "uv",
+          "image_url": "https://files.cdn.printful.com/m/tumbler_uv/medium/template/tumbler_mockup_gen_no_text.png?v=1777541419",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 309,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 666,
+          "print_area_height": 570,
+          "print_area_top": 79,
+          "print_area_left": 31,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "steel-tumbler-15004",
+      "productId": 585,
+      "variantId": 15004,
+      "printfile": {
+        "printfile_id": 309,
+        "width": 2776,
+        "height": 2374,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "steel-tumbler",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2776,
+          "height": 2374,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            15004
+          ],
+          "placement": "default",
+          "technique": "uv",
+          "image_url": "https://files.cdn.printful.com/m/tumbler_uv/medium/template/tumbler_mockup_gen_no_text.png?v=1777541419",
+          "background_url": null,
+          "background_color": "#121214",
+          "printfile_id": 309,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 666,
+          "print_area_height": 570,
+          "print_area_top": 79,
+          "print_area_left": 31,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "enamel-mug",
+      "productId": 407,
+      "variantId": 11189,
+      "printfile": {
+        "printfile_id": 215,
+        "width": 2400,
+        "height": 720,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "enamel-mug",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2400,
+          "height": 720,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            11189
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/camper_mug/medium/mug/mug_12-158.png?v=1716971082",
+          "background_url": null,
+          "background_color": null,
+          "printfile_id": 215,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 698,
+          "print_area_height": 210,
+          "print_area_top": 215,
+          "print_area_left": 15,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "travel-mug-16440",
+      "productId": 663,
+      "variantId": 16440,
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": {
+        "printCenterY": 4.5,
+        "profile": [
+          [
+            3.5,
+            -10
+          ],
+          [
+            3.5,
+            -2.5
+          ],
+          [
+            4.2,
+            0
+          ],
+          [
+            4.2,
+            10
+          ]
+        ]
+      },
+      "states": [
+        {
+          "orientation": "default",
+          "width": 2700,
+          "height": 1140,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            16440
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/travel_mug/medium/template/travel_mug.png?v=1719305396",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 44,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 650,
+          "print_area_height": 274,
+          "print_area_top": 94,
+          "print_area_left": 39,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "travel-mug-19514",
+      "productId": 663,
+      "variantId": 19514,
+      "printfile": {
+        "printfile_id": 618,
+        "width": 3213,
+        "height": 1571,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": {
+        "printCenterY": 6,
+        "profile": [
+          [
+            3.7,
+            -13.25
+          ],
+          [
+            3.7,
+            -4.5
+          ],
+          [
+            4.95,
+            -1
+          ],
+          [
+            4.95,
+            13.25
+          ]
+        ]
+      },
+      "states": [
+        {
+          "orientation": "default",
+          "width": 3213,
+          "height": 1571,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            19514
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/travel_mug/medium/template/40oz_travel_mug_template.png?v=1719305396",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 618,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 2973,
+          "print_area_height": 1453,
+          "print_area_top": 386,
+          "print_area_left": 13,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            19514
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/travel_mug/medium/40oz/flat/front/05_travelmug40oz_flat_front_base_whitebg.png?v=1719305396",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 618,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 10,
+          "print_area_height": 5,
+          "print_area_top": 100,
+          "print_area_left": 100,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "wine-tumbler",
+      "productId": 632,
+      "variantId": 16046,
+      "printfile": {
+        "printfile_id": 383,
+        "width": 3175,
+        "height": 950,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "provider-mesh",
+      "mesh": "wine-tumbler",
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 3175,
+          "height": 950,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            16046
+          ],
+          "placement": "default",
+          "technique": "uv",
+          "image_url": "https://files.cdn.printful.com/m/wine_tumbler/medium/template1/mockup_generator_template1.png?v=1713246625",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 383,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 720,
+          "print_area_height": 216,
+          "print_area_top": 256,
+          "print_area_left": 4,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "eco-tote-10458",
+      "productId": 367,
+      "variantId": 10458,
+      "printfile": {
+        "printfile_id": 5,
+        "width": 1500,
+        "height": 1500,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "front"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1500,
+          "height": 1500,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10458
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ec8000/medium/flat/front/05_ec8000_flat_front_base_whitebg.png?v=1773162171",
+          "background_url": null,
+          "background_color": "#edcea5",
+          "printfile_id": 5,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1110,
+          "print_area_height": 1110,
+          "print_area_top": 1362,
+          "print_area_left": 948,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            10458
+          ],
+          "placement": "back",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ec8000/medium/flat/back/05_ec8000_flat_back_base_whitebg.png?v=1773162156",
+          "background_url": null,
+          "background_color": "#edcea5",
+          "printfile_id": 5,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1110,
+          "print_area_height": 1110,
+          "print_area_top": 1362,
+          "print_area_left": 948,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "eco-tote-10457",
+      "productId": 367,
+      "variantId": 10457,
+      "printfile": {
+        "printfile_id": 5,
+        "width": 1500,
+        "height": 1500,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "front"
+      ],
+      "preview": "flat",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1500,
+          "height": 1500,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            10457
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ec8000/medium/flat/front/05_ec8000_flat_front_base_whitebg.png?v=1773162171",
+          "background_url": null,
+          "background_color": "#101010",
+          "printfile_id": 5,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1110,
+          "print_area_height": 1110,
+          "print_area_top": 1362,
+          "print_area_left": 948,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            10457
+          ],
+          "placement": "back",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ec8000/medium/flat/back/05_ec8000_flat_back_base_whitebg.png?v=1773162156",
+          "background_url": null,
+          "background_color": "#101010",
+          "printfile_id": 5,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1110,
+          "print_area_height": 1110,
+          "print_area_top": 1362,
+          "print_area_left": 948,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-20308",
+      "productId": 601,
+      "variantId": 20308,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            20308
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/Tough_iPhone_case/medium/template2/16_pro.png?v=1788766421",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1377,
+          "print_area_height": 2200,
+          "print_area_top": 400,
+          "print_area_left": 812,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            20308
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/Tough_iPhone_case/medium/flat/16pro/05_toughcase_iphone16pro_flat_base_whitebg.png?v=1788766421",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 2500,
+          "template_height": 2500,
+          "print_area_width": 1390,
+          "print_area_height": 2183,
+          "print_area_top": 194,
+          "print_area_left": 563,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-20304",
+      "productId": 601,
+      "variantId": 20304,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            20304
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/Tough_iPhone_case/medium/template2/16_pro.png?v=1788766421",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1377,
+          "print_area_height": 2200,
+          "print_area_top": 400,
+          "print_area_left": 812,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        },
+        {
+          "catalog_variant_ids": [
+            20304
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/Tough_iPhone_case/medium/flat/16pro/05_toughcase_iphone16pro_flat_base_whitebg.png?v=1788766421",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 2500,
+          "template_height": 2500,
+          "print_area_width": 1390,
+          "print_area_height": 2183,
+          "print_area_top": 194,
+          "print_area_left": 563,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-33991",
+      "productId": 601,
+      "variantId": 33991,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            33991
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/Tough_iPhone_case/medium/template2/17_pro.png?v=1788766421",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1352,
+          "print_area_height": 2167,
+          "print_area_top": 416,
+          "print_area_left": 825,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-33987",
+      "productId": 601,
+      "variantId": 33987,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            33987
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/Tough_iPhone_case/medium/template2/17_pro.png?v=1788766421",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1352,
+          "print_area_height": 2167,
+          "print_area_top": 416,
+          "print_area_left": 825,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-20328",
+      "productId": 798,
+      "variantId": 20328,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            20328
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/magsafe_tough_case_for_iphone/medium/templates/16_pro.png?v=1757665878",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1377,
+          "print_area_height": 2200,
+          "print_area_top": 400,
+          "print_area_left": 812,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-20329",
+      "productId": 798,
+      "variantId": 20329,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            20329
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/magsafe_tough_case_for_iphone/medium/templates/16_pro.png?v=1757665878",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1377,
+          "print_area_height": 2200,
+          "print_area_top": 400,
+          "print_area_left": 812,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-34006",
+      "productId": 798,
+      "variantId": 34006,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            34006
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/magsafe_tough_case_for_iphone/medium/templates/17/17_pro.png?v=1757665878",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1358,
+          "print_area_height": 2164,
+          "print_area_top": 419,
+          "print_area_left": 821,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-34005",
+      "productId": 798,
+      "variantId": 34005,
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1392,
+          "height": 2220,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            34005
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/magsafe_tough_case_for_iphone/medium/templates/17/17_pro.png?v=1757665878",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 331,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1358,
+          "print_area_height": 2164,
+          "print_area_top": 419,
+          "print_area_left": 821,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-21474",
+      "productId": 686,
+      "variantId": 21474,
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1396,
+          "height": 2304,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            21474
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/tough_case_for_samsung/medium/template3/S25U.png?v=1776413145",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 441,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 336,
+          "print_area_height": 554,
+          "print_area_top": 87,
+          "print_area_left": 196,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-21473",
+      "productId": 686,
+      "variantId": 21473,
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1396,
+          "height": 2304,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            21473
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/tough_case_for_samsung/medium/template3/S25U.png?v=1776413145",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 441,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 336,
+          "print_area_height": 554,
+          "print_area_top": 87,
+          "print_area_left": 196,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-49331",
+      "productId": 686,
+      "variantId": 49331,
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1396,
+          "height": 2304,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            49331
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/tough_case_for_samsung/medium/mockup_gen/S26_Ultra.png?v=1776413145",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 441,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 336,
+          "print_area_height": 554,
+          "print_area_top": 87,
+          "print_area_left": 196,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    },
+    {
+      "productKey": "tough-case-49329",
+      "productId": 686,
+      "variantId": 49329,
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "placements": [
+        "default"
+      ],
+      "preview": "procedural",
+      "mesh": null,
+      "previewCalibration": null,
+      "states": [
+        {
+          "orientation": "default",
+          "width": 1396,
+          "height": 2304,
+          "safeRectanglesWithinFile": true
+        }
+      ],
+      "selectedTemplates": [
+        {
+          "catalog_variant_ids": [
+            49329
+          ],
+          "placement": "default",
+          "technique": "sublimation",
+          "image_url": "https://files.cdn.printful.com/m/tough_case_for_samsung/medium/mockup_gen/S26_Ultra.png?v=1776413145",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 441,
+          "template_width": 728,
+          "template_height": 728,
+          "print_area_width": 336,
+          "print_area_height": 554,
+          "print_area_top": 87,
+          "print_area_left": 196,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "template"
+        }
+      ],
+      "identityMatches": true,
+      "placementsMatch": true,
+      "pinnedFileMatches": true,
+      "selectedTemplateGeometryMatches": true
+    }
+  ],
+  "proofs": [
+    {
+      "productKey": "all-over-basic-pillow-49853",
+      "variantId": 49853,
+      "printfileId": 1701,
+      "printFile": "all-over-basic-pillow-49853-print.png",
+      "printSha256": "f6fa2ff85c7b27d0cfc50fa7a194cb3bca1b7aa4ddf586c1e1e456be5458b027",
+      "views": [
+        {
+          "file": "all-over-basic-pillow-49853-provider-0.png",
+          "sha256": "69973753e1f20e05aa831aabc5dce0cbde8d45d9bc385b5d40fb839c325339ef",
+          "styleId": 31042,
+          "placement": "front",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/acfbaafd34a22736b25e5f98c2f42922/all-over-print-basic-pillow-14x14-front-6add244578a0d.png"
+        },
+        {
+          "file": "all-over-basic-pillow-49853-provider-1.png",
+          "sha256": "552a3fda3daf9c6ed5dceb3dc5e7f46518393fd59fd36e71f2bfadeb3017c216",
+          "styleId": 31050,
+          "placement": "front",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/9a0d05c9f3492632e9b3eb16d7b2947c/all-over-print-basic-pillow-14x14-back-6add244578a89.png"
+        },
+        {
+          "file": "all-over-basic-pillow-49853-provider-2.png",
+          "sha256": "552a3fda3daf9c6ed5dceb3dc5e7f46518393fd59fd36e71f2bfadeb3017c216",
+          "styleId": 31050,
+          "placement": "back",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/97dd6937bb53dac199a779311ce71d79/all-over-print-basic-pillow-14x14-back-6add244578ab4.png"
+        },
+        {
+          "file": "all-over-basic-pillow-49853-provider-3.png",
+          "sha256": "69973753e1f20e05aa831aabc5dce0cbde8d45d9bc385b5d40fb839c325339ef",
+          "styleId": 31042,
+          "placement": "back",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/7665c1ec114edc8b6b4b9e507fe99bf8/all-over-print-basic-pillow-14x14-front-6add244578ad9.png"
+        }
+      ]
+    },
+    {
+      "productKey": "all-over-tote-black-handles",
+      "variantId": 4533,
+      "printfileId": 6,
+      "printFile": "all-over-tote-black-handles-print.png",
+      "printSha256": "2e0cd6429e290f7fb3da10ae2fd3f5313bb82f6d887a22f1932d4e06d34169cb",
+      "views": [
+        {
+          "file": "all-over-tote-black-handles-provider-0.png",
+          "sha256": "01e9c1762a7184b426ace169c1e9fb22184653d1f9c0f659a26e1c5b91b4b1bf",
+          "styleId": 20655,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/0ba6f8bb5b27d3fda2f57b94e0fec83c/all-over-print-tote-bag-black-15x15-mockup-6add2369c91d4.png"
+        }
+      ]
+    },
+    {
+      "productKey": "colored-mug-17196",
+      "variantId": 17196,
+      "printfileId": 44,
+      "printFile": "colored-mug-17196-print.png",
+      "printSha256": "be705d9a6de6543c4bc40f73633b1456b3c59d12db2105d35d76150693ed5c2b",
+      "views": [
+        {
+          "file": "colored-mug-17196-provider-0.png",
+          "sha256": "1489c0548d89974f2056b23f07ef5abc78720de3c362041b9df4a237220e1eb2",
+          "styleId": 3235,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/abe40058fe65acbbe48ac9a15eea52fe/white-ceramic-mug-with-color-inside-black-15-oz-right-6add22bbf083d.png"
+        }
+      ]
+    },
+    {
+      "productKey": "framed-matte-poster-black-30x40cm",
+      "variantId": 9357,
+      "printfileId": 15,
+      "printFile": "framed-matte-poster-black-30x40cm-print.png",
+      "printSha256": "8d5de33f3e978438c4b056c40f211273186b93afaa08082528de9db4f9751062",
+      "views": [
+        {
+          "file": "framed-matte-poster-black-30x40cm-provider-0.png",
+          "sha256": "33478d29bcdd3438097ba16a423a0e049ac41ee4f9fc0f41513a913355ca375b",
+          "styleId": 24662,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/43e031216dbfa37ab3e67febfef0fd43/enhanced-matte-paper-framed-poster-(cm)-black-30x40-cm-front-6add242765c56.png"
+        }
+      ]
+    },
+    {
+      "productKey": "laptop-sleeve-10984",
+      "variantId": 10984,
+      "printfileId": 206,
+      "printFile": "laptop-sleeve-10984-print.png",
+      "printSha256": "6331245aaf0f710ad3d1c71ef31e6958b32c4fff12afead8b3a8fb3b13183b08",
+      "views": [
+        {
+          "file": "laptop-sleeve-10984-provider-0.png",
+          "sha256": "961fe6b0de405e846b38cc53702363c228208c8d220f0ddaf54c3bf99d762abf",
+          "styleId": 3045,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/abc87afc588dec806ebe8c4927288206/laptop-sleeve-13-front-6add2377cc141.png"
+        }
+      ]
+    },
+    {
+      "productKey": "tough-case-20308",
+      "variantId": 20308,
+      "printfileId": 331,
+      "printFile": "tough-case-20308-print.png",
+      "printSha256": "0038e736d8ed13a7aa2b02c747ae0aeda32efeefd7e2acae13181c9be796181b",
+      "views": [
+        {
+          "file": "tough-case-20308-provider-0.png",
+          "sha256": "97944ce16aad5fceadaf1b6155728a8cab0ef3d684664ab4ed3767bc72e3f4be",
+          "styleId": 23267,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/eae0fa2fb0b1d8c0518c451b42d5a2e0/tough-case-for-iphone-matte-iphone-16-pro-front-6add2465774ed.png"
+        }
+      ]
+    },
+    {
+      "productKey": "travel-mug-16440",
+      "variantId": 16440,
+      "printfileId": 44,
+      "printFile": "travel-mug-16440-print.png",
+      "printSha256": "0a23ee8a9327679c39a8a6e5ef441a56ccb401867d002670c3feda602c050def",
+      "views": [
+        {
+          "file": "travel-mug-16440-provider-0.png",
+          "sha256": "649f1acef3ee0d91bf2d39d6924d474fc5aa9c1389cb0722e6d0702606c24a25",
+          "styleId": 5061,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/c55b0f5c044ab370dd85f98151a2b71e/travel-mug-with-a-handle-white-25-oz-right-6add219f5b774.png"
+        }
+      ]
+    },
+    {
+      "productKey": "travel-mug-19514",
+      "variantId": 19514,
+      "printfileId": 618,
+      "printFile": "travel-mug-19514-print.png",
+      "printSha256": "86d3ead2f164a115e8de714aa2c949f91c545e1fd5fea5486d1accb9c5f20e55",
+      "views": [
+        {
+          "file": "travel-mug-19514-provider-0.png",
+          "sha256": "18138eb1d8709d5bccc5519e5b4022f1f3a5005706e24c4d50fa477738c305f1",
+          "styleId": 22474,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/cee700aeecf616aa634ac8fb4f7bc79f/travel-mug-with-a-handle-white-40-oz-front-6add22b0948c2.png"
+        }
+      ]
+    },
+    {
+      "productKey": "water-bottle-10798",
+      "variantId": 10798,
+      "printfileId": 192,
+      "printFile": "water-bottle-10798-print.png",
+      "printSha256": "a1f77a17eba5c271388f1ef22af734f30b0d6f11b243534de4d58bf6ba42ffb0",
+      "views": [
+        {
+          "file": "water-bottle-10798-provider-0.png",
+          "sha256": "b7b92f6d90bf9fe053fd6edb0b882f5948a4d7076873818888fc5d7971a2bb9b",
+          "styleId": 19994,
+          "placement": "default",
+          "sourceUrl": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/c445194d5bd43acf70a59972b9d25ac2/stainless-steel-water-bottle-white-17-oz-front-6add2192668cf.png"
+        }
+      ]
+    }
+  ],
+  "incompleteProofs": [
+    {
+      "productKey": "tough-case-21474",
+      "status": "pending",
+      "printFile": "tough-case-21474-print.png",
+      "reason": "Default style 8112 was rejected for variant 21474; explicitly supported style 25018 remained pending after bounded polling. No provider-image comparison completed.",
+      "providerTaskId": 990334920,
+      "temporarySourceRemoved": true
+    }
+  ]
+}

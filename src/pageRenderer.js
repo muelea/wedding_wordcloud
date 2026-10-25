@@ -13,6 +13,7 @@ const { publicAssetUrl } = require('./publicAssets');
 const { localizeHtml } = require('./htmlLocalizer');
 const { SITE_FONT_ASSETS, siteFontPreloads } = require('./siteFonts');
 const analyticsConfig = require('./analyticsConfig');
+const { MUG_11, getPublicProduct } = require('./products');
 
 const LANGUAGE_COOKIE = 'wolkenworte-language';
 const LANGUAGE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -108,6 +109,7 @@ async function renderPage(req, res, view, options = {}) {
     localeSource: resolved.source,
     header: options.header || {},
     pageData: options.pageData || {},
+    landingMugProduct: view === 'landing' ? getPublicProduct(MUG_11) : null,
     designAccountsEnabled: process.env.DESIGN_ACCOUNTS_ENABLED === 'true',
     languages: SUPPORTED_LOCALES.map((code) => ({
       code,

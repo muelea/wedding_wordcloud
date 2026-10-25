@@ -1,0 +1,63 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "gallery preview clicks and Enter leave the editor closed",
+      "pass": true
+    },
+    {
+      "name": "all mug options show exact real photographs, sizes and prices",
+      "pass": true
+    },
+    {
+      "name": "an unselected variant photo enlarges without switching the design",
+      "pass": true
+    },
+    {
+      "name": "closing the enlarged photograph returns focus to its option thumbnail",
+      "pass": true
+    },
+    {
+      "name": "choosing 591 ml updates only its exact preview and price",
+      "pass": true
+    },
+    {
+      "name": "explicit gallery adds approve exactly two fixture items",
+      "pass": true
+    },
+    {
+      "name": "Customize opens the mouse-pad editor",
+      "pass": true
+    },
+    {
+      "name": "the mouse pad fills the editor with visible padding",
+      "pass": true,
+      "details": {
+        "left": -0.8198130313938655,
+        "right": 0.756329842327101,
+        "top": 0.9151892635824398,
+        "bottom": -0.9001030470455349
+      }
+    },
+    {
+      "name": "framing and rotation preserve all artwork and print UVs",
+      "pass": true
+    },
+    {
+      "name": "browsing an unsubmitted size after editing leaves only the two accepted cart items",
+      "pass": true
+    },
+    {
+      "name": "cart VAT/shipping note aligns with the 22px content inset",
+      "pass": true,
+      "details": {
+        "inset": 23,
+        "margin": "22px"
+      }
+    },
+    {
+      "name": "the exact active editor draft is retained locally",
+      "pass": true
+    }
+  ]
+}

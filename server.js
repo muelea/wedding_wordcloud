@@ -112,6 +112,10 @@ app.use(makeAccountRouter());
 app.get('/vendor/three.min.js', staticCacheMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'three', 'build', 'three.min.js'));
 });
+// Native browser modules for the pinned GLTFLoader and its relative imports.
+app.use('/vendor/three', staticCacheMiddleware, express.static(
+  path.join(__dirname, 'node_modules', 'three'), { index: false, dotfiles: 'deny' }
+));
 
 app.get('/vendor/fabric.min.js', staticCacheMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'fabric', 'dist', 'index.min.js'));
@@ -272,7 +276,7 @@ app.post('/start', express.urlencoded({ extended: false, limit: '2kb' }), asyncR
       status: 500,
     });
   }
-  return res.redirect(303, `/e/${encodeURIComponent(event.slug)}`);
+  return res.redirect(303, `/e/${encodeURIComponent(event.slug)}#willkommen`);
 }));
 
 app.get('/impressum', asyncRoute(async (req, res) => {

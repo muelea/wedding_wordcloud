@@ -1,0 +1,1527 @@
+{
+  "focusedTestsPassed": 50,
+  "responsiveChecks": [
+    {
+      "locale": "de",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "Weiße Tasse",
+          "price": "11,07 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Kork-Untersetzer",
+          "price": "9,19 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mattes Poster",
+          "price": "19,57 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Gerahmtes Poster",
+          "price": "118,06 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tragetasche",
+          "price": "27,65 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Kuscheldecke",
+          "price": "42,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Dekokissen",
+          "price": "29,54 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Spiral-Notizbuch",
+          "price": "22,05 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tasse mit farbiger Innenseite",
+          "price": "14,88 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mauspad",
+          "price": "15,95 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Laptophülle",
+          "price": "32,04 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Leinwand",
+          "price": "40,46 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Edelstahl-Trinkflasche",
+          "price": "32,90 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Edelstahlbecher mit Strohhalm",
+          "price": "37,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Emaille-Tasse",
+          "price": "20,62 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Reisebecher mit Henkel",
+          "price": "34,81 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Weinbecher",
+          "price": "29,09 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Bio-Baumwolltasche",
+          "price": "24,89 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "iPhone-Schutzhülle",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "MagSafe-Schutzhülle",
+          "price": "28,43 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Samsung-Schutzhülle",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    },
+    {
+      "locale": "en",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "White mug",
+          "price": "€11.07",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Cork-backed coaster",
+          "price": "€9.19",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Matte poster",
+          "price": "€19.57",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Framed poster",
+          "price": "€118.06",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tote bag",
+          "price": "€27.65",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Throw blanket",
+          "price": "€42.76",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Decorative cushion",
+          "price": "€29.54",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Spiral notebook",
+          "price": "€22.05",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mug with a colored interior",
+          "price": "€14.88",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mouse pad",
+          "price": "€15.95",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Laptop sleeve",
+          "price": "€32.04",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Canvas",
+          "price": "€40.46",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel water bottle",
+          "price": "€32.90",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel tumbler with straw",
+          "price": "€37.76",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Enamel mug",
+          "price": "€20.62",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Travel mug with a handle",
+          "price": "€34.81",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Wine tumbler",
+          "price": "€29.09",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Organic cotton tote",
+          "price": "€24.89",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "iPhone tough case",
+          "price": "€28.69",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "MagSafe tough case",
+          "price": "€28.43",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Samsung tough case",
+          "price": "€28.69",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    },
+    {
+      "locale": "fr",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "Mug blanc",
+          "price": "11,07 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Dessous de verre en liège",
+          "price": "9,19 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Affiche mate",
+          "price": "19,57 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Affiche encadrée",
+          "price": "118,06 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Cabas",
+          "price": "27,65 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Plaid",
+          "price": "42,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Coussin décoratif",
+          "price": "29,54 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Carnet à spirale",
+          "price": "22,05 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mug avec intérieur coloré",
+          "price": "14,88 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tapis de souris",
+          "price": "15,95 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Housse pour ordinateur",
+          "price": "32,04 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Toile",
+          "price": "40,46 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Gourde en acier inoxydable",
+          "price": "32,90 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Gobelet en acier inoxydable avec paille",
+          "price": "37,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mug émaillé",
+          "price": "20,62 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mug de voyage avec anse",
+          "price": "34,81 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Gobelet à vin",
+          "price": "29,09 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Sac en coton biologique",
+          "price": "24,89 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Coque résistante pour iPhone",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Coque résistante MagSafe",
+          "price": "28,43 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Coque résistante pour Samsung",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    },
+    {
+      "locale": "it",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "Tazza bianca",
+          "price": "11,07 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Sottobicchiere in sughero",
+          "price": "9,19 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Poster opaco",
+          "price": "19,57 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Poster incorniciato",
+          "price": "118,06 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Borsa",
+          "price": "27,65 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Coperta",
+          "price": "42,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Cuscino decorativo",
+          "price": "29,54 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Quaderno a spirale",
+          "price": "22,05 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tazza con interno colorato",
+          "price": "14,88 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tappetino per mouse",
+          "price": "15,95 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Custodia per laptop",
+          "price": "32,04 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tela",
+          "price": "40,46 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Borraccia in acciaio inox",
+          "price": "32,90 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Bicchiere in acciaio inox con cannuccia",
+          "price": "37,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tazza smaltata",
+          "price": "20,62 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tazza da viaggio con manico",
+          "price": "34,81 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Bicchiere da vino",
+          "price": "29,09 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Borsa in cotone biologico",
+          "price": "24,89 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Custodia resistente per iPhone",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Custodia resistente MagSafe",
+          "price": "28,43 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Custodia resistente per Samsung",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    },
+    {
+      "locale": "es",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "Taza blanca",
+          "price": "11,07 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Posavasos de corcho",
+          "price": "9,19 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Póster mate",
+          "price": "19,57 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Póster enmarcado",
+          "price": "118,06 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Bolsa",
+          "price": "27,65 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Manta",
+          "price": "42,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Cojín decorativo",
+          "price": "29,54 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Cuaderno de espiral",
+          "price": "22,05 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Taza con interior de color",
+          "price": "14,88 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Alfombrilla de ratón",
+          "price": "15,95 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Funda para portátil",
+          "price": "32,04 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Lienzo",
+          "price": "40,46 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Botella de acero inoxidable",
+          "price": "32,90 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Vaso de acero inoxidable con pajita",
+          "price": "37,76 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Taza esmaltada",
+          "price": "20,62 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Taza de viaje con asa",
+          "price": "34,81 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Vaso para vino",
+          "price": "29,09 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Bolsa de algodón orgánico",
+          "price": "24,89 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Funda resistente para iPhone",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Funda resistente MagSafe",
+          "price": "28,43 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Funda resistente para Samsung",
+          "price": "28,69 €",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    },
+    {
+      "locale": "tr",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "Beyaz kupa",
+          "price": "€11,07",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mantar tabanlı bardak altlığı",
+          "price": "€9,19",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mat poster",
+          "price": "€19,57",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Çerçeveli poster",
+          "price": "€118,06",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Çanta",
+          "price": "€27,65",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Battaniye",
+          "price": "€42,76",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Dekoratif yastık",
+          "price": "€29,54",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Spiral defter",
+          "price": "€22,05",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Renkli iç yüzeyli kupa",
+          "price": "€14,88",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mouse pad",
+          "price": "€15,95",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Laptop kılıfı",
+          "price": "€32,04",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Kanvas",
+          "price": "€40,46",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Paslanmaz çelik su şişesi",
+          "price": "€32,90",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Pipetli paslanmaz çelik bardak",
+          "price": "€37,76",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Emaye kupa",
+          "price": "€20,62",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Kulplu seyahat kupası",
+          "price": "€34,81",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Şarap bardağı",
+          "price": "€29,09",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Organik pamuk çanta",
+          "price": "€24,89",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "iPhone dayanıklı kılıf",
+          "price": "€28,69",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "MagSafe dayanıklı kılıf",
+          "price": "€28,43",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Samsung dayanıklı kılıf",
+          "price": "€28,69",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    }
+  ],
+  "breakpoints": [
+    {
+      "locale": "en",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "White mug",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Cork-backed coaster",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Matte poster",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Framed poster",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Tote bag",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Throw blanket",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Decorative cushion",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Spiral notebook",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mug with a colored interior",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Mouse pad",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Laptop sleeve",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Canvas",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel water bottle",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel tumbler with straw",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Enamel mug",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Travel mug with a handle",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Wine tumbler",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Organic cotton tote",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "iPhone tough case",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "MagSafe tough case",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        },
+        {
+          "fits": true,
+          "name": "Samsung tough case",
+          "summaryHeight": 58,
+          "used": 243,
+          "width": 243
+        }
+      ],
+      "width": 320
+    },
+    {
+      "locale": "en",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "White mug",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Cork-backed coaster",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Matte poster",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Framed poster",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Tote bag",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Throw blanket",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Decorative cushion",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Spiral notebook",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Mug with a colored interior",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Mouse pad",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Laptop sleeve",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Canvas",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel water bottle",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel tumbler with straw",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Enamel mug",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Travel mug with a handle",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Wine tumbler",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Organic cotton tote",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "iPhone tough case",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "MagSafe tough case",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Samsung tough case",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        }
+      ],
+      "width": 741
+    },
+    {
+      "locale": "en",
+      "overflow": false,
+      "rows": [
+        {
+          "fits": true,
+          "name": "White mug",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Cork-backed coaster",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Matte poster",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Framed poster",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Tote bag",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Throw blanket",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Decorative cushion",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Spiral notebook",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Mug with a colored interior",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Mouse pad",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Laptop sleeve",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Canvas",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel water bottle",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Stainless steel tumbler with straw",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Enamel mug",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Travel mug with a handle",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Wine tumbler",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Organic cotton tote",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "iPhone tough case",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "MagSafe tough case",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        },
+        {
+          "fits": true,
+          "name": "Samsung tough case",
+          "summaryHeight": 58,
+          "used": 296,
+          "width": 296
+        }
+      ],
+      "width": 1101
+    }
+  ],
+  "interactions": {
+    "infoOpens": true,
+    "infoSwitchesCard": true,
+    "escapeDismisses": true,
+    "repeatClickDismisses": true,
+    "singleVariantPhotoEnlarges": true,
+    "variantDropdownChangesPrice": true
+  }
+}

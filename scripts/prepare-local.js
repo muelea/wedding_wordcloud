@@ -10,6 +10,9 @@ const ROOT = path.join(__dirname, '..');
 const INSTALL_STAMP = path.join('node_modules', '.wolkenworte-install.json');
 const BROWSER_DEPENDENCY_FILES = Object.freeze([
   path.join('node_modules', 'three', 'build', 'three.min.js'),
+  path.join('node_modules', 'three', 'build', 'three.module.js'),
+  path.join('node_modules', 'three', 'examples', 'jsm', 'loaders', 'GLTFLoader.js'),
+  path.join('node_modules', 'three', 'examples', 'jsm', 'utils', 'BufferGeometryUtils.js'),
   path.join('node_modules', 'fabric', 'dist', 'index.min.js'),
   path.join(
     'node_modules',
@@ -175,6 +178,9 @@ function collectRepositoryAssetPaths(root = ROOT) {
   for (const product of PRODUCTS) {
     const publicProduct = getPublicProduct(product);
     if (publicProduct.thumbnail?.startsWith('/assets/')) urls.add(publicProduct.thumbnail);
+    for (const asset of [publicProduct.previewMesh?.file, publicProduct.previewMesh?.baseAtlas]) {
+      if (asset?.startsWith('/assets/')) urls.add(asset);
+    }
     const previews = [
       publicProduct.previewMockup,
       ...(publicProduct.orientations || []).map((orientation) => orientation.previewMockup),
@@ -193,6 +199,8 @@ function collectRepositoryAssetPaths(root = ROOT) {
 function validateRepositoryAssets(root = ROOT) {
   const required = [
     path.join('public', 'js', 'mug-3d-viewer.js'),
+    path.join('public', 'js', 'blanket-cloth.js'),
+    path.join('public', 'js', 'printful-product-model.js'),
     ...collectRepositoryAssetPaths(root),
   ];
   const missing = required.filter((filename) => !fs.existsSync(path.join(root, filename)));

@@ -537,10 +537,17 @@ function buildEmailModel({ kind, order, orderItems, shipments, shipment, noticeA
   });
   const financialRows = [];
   if (kind === 'order_confirmation') {
+    const request = parseJson(order.checkout_request_json, {});
+    const modernPricing = request.pricing?.version === 2;
+    const inclusive = request.pricing?.taxBehavior === 'inclusive';
+    const shippingTax = Number(request.expectedShippingTaxCents || 0);
+    const itemTotal = Number(order.items_cents) + (modernPricing && !inclusive ? Number(order.tax_cents) - shippingTax : 0);
+    const shippingTotal = Number(order.shipping_cents) + (modernPricing && !inclusive ? shippingTax : 0);
+    const includedLabels = { de: 'Davon MwSt.', en: 'Including tax', fr: 'Dont taxes', it: 'Di cui imposte', es: 'Impuestos incluidos', tr: 'Dahil olan vergi' };
     financialRows.push(
-      [labels.itemSubtotal, money(order.items_cents, order.currency, locale)],
-      [labels.shipping, money(order.shipping_cents, order.currency, locale)],
-      [labels.tax, money(order.tax_cents, order.currency, locale)],
+      [labels.itemSubtotal, money(itemTotal, order.currency, locale)],
+      [labels.shipping, money(shippingTotal, order.currency, locale)],
+      [modernPricing ? includedLabels[locale] || includedLabels.de : labels.tax, money(order.tax_cents, order.currency, locale)],
       [labels.total, money(order.total_cents, order.currency, locale), true]
     );
   } else if (kind === 'refund_confirmation') {

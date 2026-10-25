@@ -32,6 +32,7 @@ function setup({ design = [{ text: 'Liebe', x: 10 }], unchanged = false, failure
     fitAreaButton: element(), fitAreaFeedback: element(), fitAreaMessage: element(), editorScroll,
     fitAreaPending: false, orderActionPending: false, fitAreaInertStates: [], fitAreaFeedbackTimer: null,
     workspace: {},
+    overlapWarnings: { showCapacity: () => calls.push('capacity-dialog') },
     requestAnimationFrame: callback => frames.push(callback),
     setTimeout: callback => { timers.set(++timerId, callback); return timerId; },
     clearTimeout: id => timers.delete(id),
@@ -50,17 +51,20 @@ function setup({ design = [{ text: 'Liebe', x: 10 }], unchanged = false, failure
       if (failure === 'font') throw new Error('font');
     },
     WolkenworteConfiguratorSession: { withTimeout: promise => promise },
-    productView: () => ({ layoutGeometry: { 'fit-area': [{}] } }),
+    productView: () => ({ layoutGeometry: { 'fit-area': [{}] }, printFile: { dpi: 300 } }),
+    TextPrintQuality: require('../public/js/text-print-quality'),
     selectedTheme: 'classic', getPalette: () => ({ colors: ['#000'] }),
     DesignFonts: { cssFamily: key => key },
+    printLayoutJobs: () => ({ pack() {} }),
     DesignLayout: {
-      applyLayoutAction: items => {
+      applyLayoutActionAsync: async items => {
         assert.ok(paints >= 1, 'the busy state must paint before layout starts');
         assert.equal(context.fitAreaFeedback.hidden, false);
         assert.equal(context.fitAreaMessage.textContent, 'Design wird angeordnet…');
         assert.equal(editorScroll.inert, true);
         calls.push('layout');
         if (failure === 'layout') throw new Error('layout');
+        if (failure === 'capacity') throw new Error('print_capacity');
         return unchanged ? items : items.map(item => ({ ...item, x: 20 }));
       },
       spreadDesignColors: items => items,
@@ -156,4 +160,17 @@ test('an empty design leaves no spinner and keeps Fill disabled', async () => {
   assert.equal(fixture.context.fitAreaPending, false);
   assert.equal(fixture.context.fitAreaButton.disabled, true);
   assert.ok(!fixture.calls.includes('layout'));
+});
+
+test('capacity failure keeps all artwork and Undo history intact and opens the design check after unlocking', async () => {
+  const fixture = setup({ failure: 'capacity' }), original = fixture.current();
+  const pending = fixture.context.fitCurrentDesignToArea();
+  fixture.frame(); fixture.frame();
+  assert.equal(await pending, false);
+  assert.equal(fixture.current(), original);
+  assert.ok(!fixture.calls.some(call => Array.isArray(call)));
+  assert.equal(fixture.context.editorScroll.inert, false);
+  assert.match(fixture.context.fitAreaMessage.textContent, /mindestens 10 pt/);
+  fixture.frame();
+  assert.ok(fixture.calls.includes('capacity-dialog'));
 });

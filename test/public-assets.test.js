@@ -68,7 +68,7 @@ test('interactive word-cloud pages use the same content-addressed layout runtime
 
   const landing = fs.readFileSync(path.join(VIEW_ROOT, 'landing.ejs'), 'utf8');
   assert.match(landing, /asset\('\/js\/landing-workflow\.js'\)/);
-  assert.match(landing, /asset\('\/js\/hero-cloud-preview\.js'\)/);
+  assert.match(landing, /asset\('\/js\/landing-demo\.js'\)/);
 
   const display = fs.readFileSync(path.join(VIEW_ROOT, 'display.ejs'), 'utf8');
   assert.match(display, /Number\.isFinite\(WordCloudCore\.TEXT_BASELINE_OFFSET\)/);

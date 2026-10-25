@@ -32,13 +32,14 @@ function fixture(t, presentation = 'popover') {
     pendingProductKey: product.key, pendingFamilyKey: product.familyKey,
     selectedFamilyKey: product.familyKey, startingAnotherProduct: false,
     workspace: { positionChooser() {} }, requestAnimationFrame: callback => callback(),
-    renderSelectedProduct() {}, localizedNumber: String, WolkenworteI18n: { formatNumber: String },
+    renderSelectedProduct() {}, localizedNumber: String, WolkenworteI18n: { formatNumber: String,
+      formatCurrency: (cents, currency) => new Intl.NumberFormat('de', { style: 'currency', currency }).format(cents / 100) },
     t: text => text, setText: (element, text) => { element.textContent = text; },
     setTranslatedAttribute: (element, attribute, text) => element.setAttribute(attribute, text),
     confirmProductDialog: () => confirmed.push(context.dialogSelectedProduct().key),
   });
   vm.runInContext(['dialogSelectedProduct', 'dialogSelectedFamilyKey', 'updateProductOptionSelection',
-    'productsInFamily', 'productDetail', 'productPickerIsStepped', 'showProductStep',
+    'productsInFamily', 'productDetail', 'productPriceText', 'productPickerIsStepped', 'showProductStep',
     'selectDialogProduct', 'selectDialogFamily', 'buildVariantOptions', 'buildProductOptions']
     .map(pageFunction).join('\n'), context);
   context.buildProductOptions();

@@ -28,6 +28,17 @@ async function rendered(locale) {
   return parse(html);
 }
 
+test('the gallery return button sits before product and colour controls in the shared toolbar', async () => {
+  const page = await rendered('en');
+  const controls = nodes(page, node => attr(node, 'class') === 'design-toolbar-controls')[0];
+  const children = controls.childNodes.filter(node => node.tagName);
+  assert.equal(attr(children[0], 'data-gallery-back'), '');
+  assert.equal(attr(children[1], 'id'), 'change-product');
+  assert.ok(children.some(node => attr(node, 'id') === 'theme-step'));
+  const intro = nodes(page, node => attr(node, 'class') === 'intro')[0];
+  assert.equal(nodes(intro, node => attr(node, 'data-gallery-back') !== undefined).length, 0);
+});
+
 test('every toolbar action renders its intended local mark and a translated accessible name in all languages', async () => {
   for (const locale of ['de', 'en', 'fr', 'it', 'es', 'tr']) {
     const page = await rendered(locale);

@@ -60,7 +60,7 @@ test('empty cloud space is inert while both management actions share the dialog-
   assert.match(template, /function handleCloudInteraction\(event\)[\s\S]*?if \(item\)[\s\S]*?openCloudWordActions\(item\.word,[\s\S]*?closeCloudWordActions\(\);\n  }/);
   assert.doesNotMatch(pageFunction('handleCloudInteraction'), /openOwnWordsDialog/);
   assert.match(template, /displayOwnWordsShortcut\.disabled = total === 0/);
-  assert.match(template, /<\/form>\s*<button\s+class="display-own-words-shortcut"/,
+  assert.match(template, /<\/form>\s*<\/div>\s*<button\s+class="display-own-words-shortcut"/,
     'the management shortcut must be a separate circle beside the entry form');
   assert.equal((template.match(/id="display-own-words-dialog"/g) || []).length, 1);
 });

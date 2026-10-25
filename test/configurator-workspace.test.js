@@ -6,6 +6,41 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { placePanel, WolkenworteWorkspace } = require('../public/js/configurator-workspace');
 
+test('both laptop sleeves get a larger desktop 3D viewport without resizing the print canvas', () => {
+  const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
+  const start = template.indexOf('    function refreshWorkspaceLayout()');
+  const source = template.slice(start, template.indexOf('\n    }', start) + 6);
+  const { getPublicProduct, getProduct } = require('../src/products');
+  for (const key of ['laptop-sleeve-10984', 'laptop-sleeve-10985']) {
+    for (const [width, height, canvasWidth] of [[1265, 720, 528], [1789, 1300, 560], [940, 900, 780], [390, 844, 330]]) {
+      const view = getPublicProduct(getProduct(key)), properties = new Map();
+      const before = JSON.stringify(view);
+      const context = vm.createContext({ product: view, productView: () => view,
+        window: { innerWidth: width, innerHeight: height }, workspace: {},
+        editorScroll: { clientWidth: canvasWidth },
+        getComputedStyle: () => ({ paddingLeft: '0', paddingRight: '0', paddingTop: '0', paddingBottom: '0' }),
+        workbench: { style: { setProperty: (key, value) => properties.set(key, parseFloat(value)) } },
+        mugEditor: { refreshViewport() {} }, refreshFlatProductPreviewFit() {}, resizeMug3D() {},
+      });
+      vm.runInContext(source, context);
+      context.refreshWorkspaceLayout();
+      const preview = properties.get('--workspace-stage-height');
+      const editor = properties.get('--editor-stage-height');
+      if (width > 940) {
+        assert.ok(preview - 76 > (editor - 76) * 1.2, `${key}: the desktop 3D viewport is noticeably taller`);
+        assert.ok(preview <= Math.round(Math.min(620, height * .72)));
+      }
+      view.previewModel = { ...view.previewModel, kind: 'mousepad' };
+      context.refreshWorkspaceLayout();
+      assert.equal(properties.get('--editor-stage-height'), editor, 'print canvas dimensions stay independent of the larger preview');
+      if (width <= 940) assert.equal(properties.get('--workspace-stage-height'), preview, 'stacked and mobile preview sizing stays unchanged');
+      else assert.equal(properties.get('--workspace-stage-height'), editor, 'other products keep their existing preview size');
+      view.previewModel.kind = 'sleeve';
+      assert.equal(JSON.stringify(view), before, 'preview sizing preserves print geometry and artwork metadata');
+    }
+  }
+});
+
 test('chooser placement stays inside the viewport and flips above when necessary', () => {
   assert.deepEqual(placePanel({ top: 100, bottom: 180, right: 800 },
     { width: 560, height: 300 }, { width: 1000, height: 900 }),

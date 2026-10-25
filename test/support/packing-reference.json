@@ -1,0 +1,259 @@
+{
+  "source": "Original packing engine before the bit-mask optimization (56088bb)",
+  "seed": 2671,
+  "precision": 1e-8,
+  "cases": [
+    {
+      "count": 1,
+      "width": 1184.8820228129625,
+      "height": 2293.294637836516,
+      "hash": "05172c12b699651bcfb0423c76347cb289d2e1a7c88d2a5c0821c714656f94f5"
+    },
+    {
+      "count": 2,
+      "width": 2674.5565816760063,
+      "height": 2838.3861457929015,
+      "hash": "092d7b6c5c84a7f48f1aa60eda321a679fccf2109d4cfaa646b7fa3e3938aff1"
+    },
+    {
+      "count": 5,
+      "width": 3230.5355597287416,
+      "height": 3746.829375065863,
+      "hash": "0b4d599b8b5005466a59556ddfe525fd857dee3881ee329e8eee69ae21a8a95c"
+    },
+    {
+      "count": 10,
+      "width": 3011.9266495108604,
+      "height": 3750.5489563569427,
+      "hash": "a6c1afd6f72f009ef3743305778ab2c80b53e35daef0494d012cdb7c30720b5e"
+    },
+    {
+      "count": 12,
+      "width": 1729.222171381116,
+      "height": 2079.0900433436036,
+      "hash": "779cbede1c228d4c825a5a87c10faaffbd7df93748b2804ced31e542b57fd448"
+    },
+    {
+      "count": 13,
+      "width": 3372.932533174753,
+      "height": 3069.054597429931,
+      "hash": "90c49cdda36c2f8ab0df07454bfd5a5069741e8941aae0b9c0a1ab02d98edb2d"
+    },
+    {
+      "count": 40,
+      "width": 544.678271189332,
+      "height": 3143.6233142390847,
+      "hash": "d0ca70714aabc4f74fe8d0795c3f97f1f78c068c9accf660e448883d0e9496c7"
+    },
+    {
+      "count": 80,
+      "width": 3499.145420640707,
+      "height": 3575.563864223659,
+      "hash": "db625e0e1295efbf56a4fe9c2fdbc48485c202b954df9e3de651b4895bea05c0"
+    },
+    {
+      "count": 81,
+      "width": 3431.418527290225,
+      "height": 2468.4096531942487,
+      "hash": "14521398ba871347506a7482a71c7df3edae3d63592c4cd9776ce6ffead591b0"
+    },
+    {
+      "count": 120,
+      "width": 2639.8952700197697,
+      "height": 218.6015484854579,
+      "hash": "940291f40611b33da92e50232fa64b3aca20cf56f7c9653d6789645ecca08d67"
+    },
+    {
+      "count": 121,
+      "width": 940.0321211665869,
+      "height": 3510.7567043974996,
+      "hash": "eb4a59b19d3e33bc7b5e51f3aae645fbdd0fd4782042fb91f22283b00d4b1757"
+    },
+    {
+      "count": 200,
+      "width": 3952.1193973720074,
+      "height": 2084.1825319454074,
+      "hash": "273032e47f7786b2bff0c2a0b044fdfc8cb17c5e129ba35255a13a3c90d6bcfc"
+    },
+    {
+      "count": 201,
+      "width": 3834.789250418544,
+      "height": 3121.324818022549,
+      "hash": "d06d5295faa8de836cf917cc25fdb3a2f2a6284e4d1c3bacfe92bc34812e256e"
+    },
+    {
+      "count": 500,
+      "width": 3594.977045804262,
+      "height": 1711.439230851829,
+      "hash": "efa2ece173fa86844f3fe57c53da01e89dd69be7faee16a29bf8cddb6acc632b"
+    },
+    {
+      "count": 1,
+      "width": 1748.12614582479,
+      "height": 217.1508999541402,
+      "hash": "dc958977fa00ca09a2044a4335fcf862505f12020dec933831ae843f80995ca0"
+    },
+    {
+      "count": 2,
+      "width": 2704.890923947096,
+      "height": 3109.4549311324954,
+      "hash": "fe1a2b1c8eeba8d1a4da9b2f3b40ee483a84bc46019bf301a188e948de73cf49"
+    },
+    {
+      "count": 5,
+      "width": 672.2331758588552,
+      "height": 1471.3183524087071,
+      "hash": "d40740ba4da03fc08ef008d777355151c10e482145e9f760d2380d562062a533"
+    },
+    {
+      "count": 10,
+      "width": 2431.5799348056316,
+      "height": 2135.254235379398,
+      "hash": "ef801f6ed347594f6b659f99b580efbbd833b046821106d954fa7cc903c23624"
+    },
+    {
+      "count": 12,
+      "width": 3401.317011937499,
+      "height": 1743.5671569779515,
+      "hash": "29adfea51276d84088d00b75d9ea1974379dcb072c6932ca70b24381f3221470"
+    },
+    {
+      "count": 13,
+      "width": 2997.779516875744,
+      "height": 3494.5994889363647,
+      "hash": "90fa9de7c2c0de52a41617efe7e071194d141b1ca07b0fa1e3fe0e03de0b169b"
+    },
+    {
+      "count": 40,
+      "width": 3149.558265134692,
+      "height": 3015.5452148988843,
+      "hash": "d448e014ed2d8a416686da71bb2df4af05c9f6caa1b6000c66447adaa776fdb5"
+    },
+    {
+      "count": 80,
+      "width": 2336.7074340581894,
+      "height": 485.9475990757346,
+      "hash": "84f116d1c0c654754870c7072b89625ede35c33a589e1f4d34dc875bb2d528e2"
+    },
+    {
+      "count": 81,
+      "width": 3928.5917956382036,
+      "height": 3802.9065722599626,
+      "hash": "19250611f6830d6f9a7510696bc476e4be18c2b2c47965f3a303bbc2d2f537d1"
+    },
+    {
+      "count": 120,
+      "width": 1463.373063504696,
+      "height": 1592.8020453080535,
+      "hash": "f32cffdc07428902d952f43f60f9b05451001275757725a9c48da257d339d11a"
+    },
+    {
+      "count": 121,
+      "width": 121.0405383259058,
+      "height": 3546.3288197293878,
+      "hash": "9779f6dc212c86644af1f33b82979827c6e6b931bac853403d2dac563a30e7d9"
+    },
+    {
+      "count": 200,
+      "width": 2609.1739892959595,
+      "height": 3878.8047483190894,
+      "hash": "2c599a799c3d9c80a68b7c8d243df6029a601a6e0f3a77eaa2774f2f930a2f21"
+    },
+    {
+      "count": 201,
+      "width": 1854.182891920209,
+      "height": 2322.445377148688,
+      "hash": "2e9e542189d3f19585851a176be4acc53623b15165a8232198ae54c898727a06"
+    },
+    {
+      "count": 500,
+      "width": 3980.832053720951,
+      "height": 3018.4917574748397,
+      "hash": "178145cbb6c7cc58a354ce38e05df6116b7f239c3a6c0aa0bc89b003d763031f"
+    },
+    {
+      "count": 1,
+      "width": 363.0334887653589,
+      "height": 2862.1590504422784,
+      "hash": "db869d8c6c8ffee4e11d78f6a33f8eabdffb2899147f7efd81068c65ab5ffbde"
+    },
+    {
+      "count": 2,
+      "width": 821.0276424884796,
+      "height": 1580.8850279077888,
+      "hash": "23f6ce8cf3f34c90a9aa5050f251b0b9f050f55017cf3e684d6a05784e7c50c9"
+    },
+    {
+      "count": 5,
+      "width": 3039.2397943884134,
+      "height": 3163.0262652412057,
+      "hash": "9d9d12ab6e70be36c72e124be075d3eef30466da33a0f645f2d8ab85740657b4"
+    },
+    {
+      "count": 10,
+      "width": 1394.2270636558533,
+      "height": 2347.403650544584,
+      "hash": "b195c0af3ace7f7799bb23c5ca79ab938d64b48093b237bd2767708c6a8b8a29"
+    },
+    {
+      "count": 12,
+      "width": 2290.6672660261393,
+      "height": 1475.2540508285165,
+      "hash": "6bef121da14bee0b7ce77c17d9a48975c890af901ff39c8f8ac268d5329bb6ec"
+    },
+    {
+      "count": 13,
+      "width": 1282.2690181434155,
+      "height": 1381.697059981525,
+      "hash": "b8e11d5a38d4ace50f85d6b39df100e9a3f2b232d355759a5cf1ec178dd44a06"
+    },
+    {
+      "count": 40,
+      "width": 2114.9603504687548,
+      "height": 921.63589540869,
+      "hash": "7811ed320dd50e2d6798e9e5399a381de8b492ed118931d81cb1326ccc72d7b8"
+    },
+    {
+      "count": 80,
+      "width": 1021.5779043734074,
+      "height": 2505.549037270248,
+      "hash": "fb43cd35386cfc15a7db150f39b30c3b5a82cb0de3f8d85ef444d9f374a27aa7"
+    },
+    {
+      "count": 81,
+      "width": 3145.9949877113104,
+      "height": 3851.1920602992177,
+      "hash": "6f2203fa55c959e5e01d1b3cdff91afe3a3ef47902d447213f4101d0031fdf6c"
+    },
+    {
+      "count": 120,
+      "width": 3592.542874068022,
+      "height": 1971.7299653217196,
+      "hash": "5c504feb038b648bc0c3ef5d349c7a94370d6d4646678894ceaabc903bf37f03"
+    },
+    {
+      "count": 121,
+      "width": 2232.2722416371107,
+      "height": 1497.2829030826688,
+      "hash": "5b4d154fe6f7e5307e8c17a7ce7b417816edf88dbcb26a0657799eb521d73427"
+    },
+    {
+      "count": 200,
+      "width": 2419.174397736788,
+      "height": 808.6647180840373,
+      "hash": "ae05adb3142392e0ec70671dbfdcbe98aaedbd654479708c93b7127bfb52e942"
+    },
+    {
+      "count": 201,
+      "width": 162.8028865903616,
+      "height": 2019.0737130120397,
+      "hash": "4cb4ac590f2e1523ac8e14389ecc3c9aae75c163ebb4988c0a48addb1fae4ed6"
+    },
+    {
+      "count": 500,
+      "width": 768.3454178273678,
+      "height": 2700.8809907361865,
+      "hash": "f764c26e400af2f7ad8f2702b883ed0f1e4a20f3da9b7e835551c8dd6d980f7f"
+    }
+  ]
+}

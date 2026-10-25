@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-10-25T00:07:43.028Z",
+  "results": [
+    {
+      "productKey": "eco-tote-10458",
+      "color": "#edcea5",
+      "printRectangle": {
+        "x": 948,
+        "y": 1362,
+        "width": 1110,
+        "height": 1110
+      },
+      "printRectanglePixelsIdentical": true,
+      "originalProviderProofSha256": "ca1a4da9788e7d5f56b3c1a3c70ff5de09dfc0573d4c6caabf6fc95b79dc7414",
+      "updatedLocalSha256": "ec9a29f9682c87286b8f1cc0787bcaed8c5d4de23a40d481580e7fea845437ba",
+      "screenshots": [
+        "organic-tote-natural-gallery.png"
+      ]
+    },
+    {
+      "productKey": "eco-tote-10457",
+      "color": "#101010",
+      "printRectangle": {
+        "x": 948,
+        "y": 1362,
+        "width": 1110,
+        "height": 1110
+      },
+      "printRectanglePixelsIdentical": true,
+      "originalProviderProofSha256": "76fbdbeff70b52833692d3a4cbdf7cc42443e2da5c301de20c3675be21760229",
+      "updatedLocalSha256": "7755f4a626400f92b9ad26193e46a4cc185e0f6620ef96cdbc89b46f083991a2",
+      "screenshots": [
+        "organic-tote-black-gallery.png"
+      ]
+    }
+  ],
+  "browser": {
+    "gallery": "natural and black checked",
+    "editor": {
+      "naturalBackground": "rgb(237, 206, 165)",
+      "blackBackground": "rgb(16, 16, 16)",
+      "printRectangle": [
+        "31.6%",
+        "45.4%",
+        "37%",
+        "37%"
+      ],
+      "canvasPixels": [
+        319,
+        319
+      ]
+    },
+    "calibrationCaptures": {
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "tests": {
+    "passed": 38,
+    "failed": 0,
+    "files": [
+      "test/product-print-area-audit.test.js",
+      "test/configurator-workspace.test.js",
+      "test/product-gallery.test.js"
+    ]
+  },
+  "newProviderTasksCreated": 0
+}

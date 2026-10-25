@@ -210,6 +210,7 @@
         if (!dialog.open) {
           previousOverflow = document.documentElement.style.overflow;
           dialog.showModal();
+          title.focus({ preventScroll: true });
           document.documentElement.style.overflow = 'hidden';
         }
         showPrint();

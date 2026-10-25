@@ -145,3 +145,27 @@ test('Printful errors retain v2 rate-limit details for mockup fallback decisions
       error.rateLimitReset === 60
   );
 });
+
+test('cost estimates normalize binary cent noise but reject actual fractional cents and malformed money', async (t) => {
+  const oldFetch = global.fetch, oldKey = process.env.PRINTFUL_API_KEY;
+  process.env.PRINTFUL_API_KEY = 'test_only';
+  t.after(() => { global.fetch = oldFetch; if (oldKey === undefined) delete process.env.PRINTFUL_API_KEY; else process.env.PRINTFUL_API_KEY = oldKey; });
+  const printful = require('../src/printful');
+  const request = { variantId: 1320, quantity: 1, recipient: { country_code: 'US', state_code: 'CA' } };
+  const provider = { currency: 'EUR', subtotal: 40, shipping: 6.779999999999999,
+    tax: 4.83, vat: 0, total: 51.61 };
+  const respond = (costs) => { global.fetch = async () => ({ ok: true, status: 200,
+    json: async () => ({ code: 200, result: { costs } }) }); };
+  respond(provider);
+  assert.equal((await printful.estimateOrderCosts(request)).shipping, 6.78);
+  assert.equal(provider.shipping, 6.779999999999999, 'normalization never mutates provider evidence');
+  respond({ ...provider, shipping: 0.1 + 0.2 });
+  assert.equal((await printful.estimateOrderCosts(request)).shipping, 0.3);
+  for (const shipping of [6.775, 6.7799, '6.779999999999999', '6e0', ' 6.78', -1,
+    true, null, NaN, Infinity, Number.MAX_SAFE_INTEGER]) {
+    respond({ ...provider, shipping });
+    await assert.rejects(printful.estimateOrderCosts(request), { code: 'PRINTFUL_INVALID_RESPONSE' }, String(shipping));
+  }
+  respond({ ...provider, shipping: '6.78', additional_fee: 0.005 });
+  await assert.rejects(printful.estimateOrderCosts(request), { code: 'PRINTFUL_INVALID_RESPONSE' });
+});

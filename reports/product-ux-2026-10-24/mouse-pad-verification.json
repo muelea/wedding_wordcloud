@@ -1,0 +1,97 @@
+{
+  "productKey": "mouse-pad",
+  "variantId": 13097,
+  "printfileId": 265,
+  "printFile": {
+    "width": 2700,
+    "height": 2250,
+    "dpi": 300
+  },
+  "safeArea": {
+    "x": 120,
+    "y": 120,
+    "width": 2460,
+    "height": 2010
+  },
+  "projection": {
+    "scaleY": 0.9835861110214438,
+    "offsetY": 0.010439469930481764
+  },
+  "scans": {
+    "local": {
+      "file": "local/mouse-pad--default-front.png",
+      "sha256": "6cc6b1d3b08aad9a65543ba261449ac3bd190e90b9fea4126f4df4ab2bf1327c",
+      "horizontal": {
+        "body": [
+          93,
+          506
+        ],
+        "markers": [
+          105,
+          494
+        ],
+        "normalized": [
+          0.029055690072639227,
+          0.9709443099273608
+        ]
+      },
+      "vertical": {
+        "body": [
+          130,
+          469
+        ],
+        "markers": [
+          142,
+          456
+        ],
+        "normalized": [
+          0.035398230088495575,
+          0.9616519174041298
+        ]
+      }
+    },
+    "provider": {
+      "file": "provider/mouse-pad--default-0.png",
+      "sha256": "06fc5852d5661f00a98d8535c6b2f93e85c28a035fa068f859ef2a2dcdc0750d",
+      "horizontal": {
+        "body": [
+          48,
+          952
+        ],
+        "markers": [
+          75,
+          923
+        ],
+        "normalized": [
+          0.029867256637168143,
+          0.9679203539823009
+        ]
+      },
+      "vertical": {
+        "body": [
+          130,
+          869
+        ],
+        "markers": [
+          155,
+          843
+        ],
+        "normalized": [
+          0.03382949932341001,
+          0.9648173207036536
+        ]
+      }
+    }
+  },
+  "differencesInProviderPixels": {
+    "horizontal": [
+      0.7336561743341403,
+      2.733656174334137
+    ],
+    "vertical": [
+      1.1592920353982301,
+      2.3392330383480515
+    ]
+  },
+  "limits": "Rendered calibration against Printful’s saved flat proof; not a physical production-tolerance certification."
+}

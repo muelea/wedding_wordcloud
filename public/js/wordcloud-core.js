@@ -757,95 +757,164 @@
     const candidateColumns = Math.max(24, Math.round(Math.sqrt(targetPoints * width / height)));
     const candidateRows = Math.max(24, Math.round(targetPoints / candidateColumns));
     const searchRadius = Math.max(candidateColumns, candidateRows);
-    const bucketRows = clamp(Math.ceil(Math.sqrt(sized.length) * 2.5), 24, 64);
-    const bucketColumns = clamp(Math.round(bucketRows * width / height), 24, 128);
+    const wordsPerRow = Math.ceil(candidateColumns / 32);
+    const forbidden = new Uint32Array(wordsPerRow * candidateRows);
+    const wordsPerColumn = Math.ceil(candidateRows / 32);
+    const forbiddenColumns = new Uint32Array(wordsPerColumn * candidateColumns);
+    const xPositions = new Float64Array(candidateColumns);
+    const yPositions = new Float64Array(candidateRows);
+    const columnFractions = Float64Array.from({ length: candidateColumns }, (_, index) => index / Math.max(1, candidateColumns - 1));
+    const rowFractions = Float64Array.from({ length: candidateRows }, (_, index) => index / Math.max(1, candidateRows - 1));
 
     function tryScale(scale, variant) {
-      const order = orderedItems(variant);
+      const plan = variantPlans[variant];
       const placed = [];
-      const buckets = Array.from({ length: bucketRows * bucketColumns }, () => []);
-      const seen = new Int32Array(order.length);
-      let seenRevision = 0;
-      let emojiIndex = 0;
-      let textIndex = 0;
-
-      function collides(rect) {
-        const left = clamp(Math.floor(rect.x1 / width * bucketColumns), 0, bucketColumns - 1);
-        const right = clamp(Math.floor((rect.x2 - 1e-7) / width * bucketColumns), 0, bucketColumns - 1);
-        const top = clamp(Math.floor(rect.y1 / height * bucketRows), 0, bucketRows - 1);
-        const bottom = clamp(Math.floor((rect.y2 - 1e-7) / height * bucketRows), 0, bucketRows - 1);
-        seenRevision += 1;
-        for (let row = top; row <= bottom; row++) {
-          for (let col = left; col <= right; col++) {
-            for (const placedIndex of buckets[row * bucketColumns + col]) {
-              if (seen[placedIndex] === seenRevision) continue;
-              seen[placedIndex] = seenRevision;
-              const other = placed[placedIndex];
-              if (rect.x1 < other.collisionX2 && rect.x2 > other.collisionX1 &&
-                  rect.y1 < other.collisionY2 && rect.y2 > other.collisionY1) return true;
+      // A placed rectangle forbids an exact range of grid centers. Row and
+      // column masks skip occupied runs without changing the original spiral
+      // order or its ties. Build them only when the preferred anchor is blocked.
+      let halfWidth, halfHeight;
+      function firstFree(buffer, offset, start, end, direction, extent) {
+        start = Math.max(0, start); end = Math.min(extent - 1, end);
+        if (start > end) return -1;
+        const first = start >>> 5, last = end >>> 5;
+        for (let word = direction > 0 ? first : last;
+          direction > 0 ? word <= last : word >= first; word += direction) {
+          let bits = ~buffer[offset + word];
+          if (word === first) bits &= 0xffffffff << (start & 31);
+          if (word === last) bits &= 0xffffffff >>> (31 - (end & 31));
+          if (bits) return word * 32 + (direction > 0
+            ? 31 - Math.clz32(bits & -bits) : 31 - Math.clz32(bits));
+        }
+        return -1;
+      }
+      // The earliest free point on the four edges has the same (step, edge)
+      // rank as the former per-point loop, including its alternating direction.
+      function nearestFree(anchorColumn, anchorRow, variant, orderIndex) {
+        for (let radius = 1; radius <= searchRadius; radius++) {
+          const reverse = (variant + orderIndex + radius) % 2;
+          let bestKey = Infinity, bestColumn = -1, bestRow = -1;
+          function offer(column, row, step, edge) {
+            if (column < 0 || row < 0) return;
+            const key = (step + radius) * 4 + edge;
+            if (key < bestKey) { bestKey = key; bestColumn = column; bestRow = row; }
+          }
+          const left = anchorColumn - radius, right = anchorColumn + radius;
+          const top = anchorRow - radius, bottom = anchorRow + radius;
+          if (top >= 0) {
+            const c = firstFree(forbidden, top * wordsPerRow, left, right, reverse ? -1 : 1, candidateColumns);
+            if (c >= 0) offer(c, top, reverse ? anchorColumn - c : c - anchorColumn, 0);
+          }
+          if (bottom < candidateRows) {
+            const c = firstFree(forbidden, bottom * wordsPerRow, left, right, reverse ? 1 : -1, candidateColumns);
+            if (c >= 0) offer(c, bottom, reverse ? c - anchorColumn : anchorColumn - c, 1);
+          }
+          if (left >= 0) {
+            const r = firstFree(forbiddenColumns, left * wordsPerColumn, top, bottom, reverse ? 1 : -1, candidateRows);
+            if (r >= 0) offer(left, r, reverse ? r - anchorRow : anchorRow - r, 2);
+          }
+          if (right < candidateColumns) {
+            const r = firstFree(forbiddenColumns, right * wordsPerColumn, top, bottom, reverse ? -1 : 1, candidateRows);
+            if (r >= 0) offer(right, r, reverse ? anchorRow - r : r - anchorRow, 3);
+          }
+          if (bestKey < Infinity) return [bestColumn, bestRow];
+        }
+        return null;
+      }
+      function lowerBound(values, test) {
+        let low = 0, high = values.length;
+        while (low < high) {
+          const middle = (low + high) >>> 1;
+          if (test(values[middle])) high = middle; else low = middle + 1;
+        }
+        return low;
+      }
+      function blockCentres(collisionWidth, collisionHeight) {
+        halfWidth = collisionWidth / 2;
+        halfHeight = collisionHeight / 2;
+        for (let column = 0; column < candidateColumns; column++) {
+          xPositions[column] = collisionWidth / 2 + columnFractions[column] *
+            (width - collisionWidth);
+        }
+        for (let row = 0; row < candidateRows; row++) {
+          yPositions[row] = collisionHeight / 2 + rowFractions[row] *
+            (height - collisionHeight);
+        }
+        forbidden.fill(0);
+        forbiddenColumns.fill(0);
+        // Correct the analytical estimate with the original comparisons: a
+        // rounding error at a touching edge must not change a packing decision.
+        function bound(values, value, half, count, span, end) {
+          if (!(span > 0)) return lowerBound(values, x => end ? x - half >= value : x + half > value);
+          let index = Math.max(0, Math.min(count, end ? Math.ceil(value / span * (count - 1))
+            : Math.floor((value - half * 2) / span * (count - 1)) + 1));
+          if (end) {
+            while (index > 0 && values[index - 1] - half >= value) index--;
+            while (index < count && values[index] - half < value) index++;
+          } else {
+            while (index > 0 && values[index - 1] + half > value) index--;
+            while (index < count && values[index] + half <= value) index++;
+          }
+          return index;
+        }
+        for (const other of placed) {
+          const left = bound(xPositions, other.collisionX1, halfWidth, candidateColumns, width - collisionWidth, false);
+          const right = bound(xPositions, other.collisionX2, halfWidth, candidateColumns, width - collisionWidth, true);
+          const top = bound(yPositions, other.collisionY1, halfHeight, candidateRows, height - collisionHeight, false);
+          const bottom = bound(yPositions, other.collisionY2, halfHeight, candidateRows, height - collisionHeight, true);
+          if (left >= right || top >= bottom) continue;
+          function mark(buffer, wordsPerLine, start, end, lineStart, lineEnd) {
+            const first = start >>> 5, last = (end - 1) >>> 5;
+            const firstMask = (0xffffffff << (start & 31)) >>> 0;
+            const lastMask = 0xffffffff >>> (31 - ((end - 1) & 31));
+            for (let line = lineStart; line < lineEnd; line++) {
+              const offset = line * wordsPerLine;
+              if (first === last) buffer[offset + first] |= firstMask & lastMask;
+              else {
+                buffer[offset + first] |= firstMask;
+                for (let word = first + 1; word < last; word++) buffer[offset + word] = 0xffffffff;
+                buffer[offset + last] |= lastMask;
+              }
             }
           }
-        }
-        return false;
-      }
-
-      function insert(rect, placedIndex) {
-        const left = clamp(Math.floor(rect.x1 / width * bucketColumns), 0, bucketColumns - 1);
-        const right = clamp(Math.floor((rect.x2 - 1e-7) / width * bucketColumns), 0, bucketColumns - 1);
-        const top = clamp(Math.floor(rect.y1 / height * bucketRows), 0, bucketRows - 1);
-        const bottom = clamp(Math.floor((rect.y2 - 1e-7) / height * bucketRows), 0, bucketRows - 1);
-        for (let row = top; row <= bottom; row++) {
-          for (let col = left; col <= right; col++) buckets[row * bucketColumns + col].push(placedIndex);
+          mark(forbidden, wordsPerRow, left, right, top, bottom);
+          mark(forbiddenColumns, wordsPerColumn, top, bottom, left, right);
         }
       }
 
-      for (let orderIndex = 0; orderIndex < order.length; orderIndex++) {
-        const item = order[orderIndex];
+      for (let orderIndex = 0; orderIndex < plan.length; orderIndex++) {
+        const { item, anchorColumn, anchorRow } = plan[orderIndex];
         const collisionWidth = item.width * scale + padding * 2;
         const collisionHeight = item.height * scale + padding * 2;
         if (collisionWidth > width || collisionHeight > height) return null;
-        const isDominant = orderIndex === 0 && dominant;
-        const anchor = isDominant ? [.5, .5] : distributedAnchor(
-          item.emoji ? emojiIndex++ : textIndex++,
-          item.emoji ? emojiCount : sized.length - emojiCount,
-          variant,
-          item.emoji
-        );
-        const anchorColumn = Math.round(anchor[0] * (candidateColumns - 1));
-        const anchorRow = Math.round(anchor[1] * (candidateRows - 1));
         let best = null;
+        let useMask = false;
 
         function consider(column, row) {
           if (column < 0 || column >= candidateColumns || row < 0 || row >= candidateRows) return false;
-          const x = collisionWidth / 2 + column / Math.max(1, candidateColumns - 1) *
-            (width - collisionWidth);
-          const y = collisionHeight / 2 + row / Math.max(1, candidateRows - 1) *
-            (height - collisionHeight);
+          if (useMask && (forbidden[row * wordsPerRow + (column >>> 5)] & (1 << (column & 31)))) return false;
+          const x = useMask ? xPositions[column] : collisionWidth / 2 +
+            column / Math.max(1, candidateColumns - 1) * (width - collisionWidth);
+          const y = useMask ? yPositions[row] : collisionHeight / 2 +
+            row / Math.max(1, candidateRows - 1) * (height - collisionHeight);
           const rect = { x1: x - collisionWidth / 2, x2: x + collisionWidth / 2,
             y1: y - collisionHeight / 2, y2: y + collisionHeight / 2 };
-          if (collides(rect)) return false;
+          if (!useMask && placed.some(other => rect.x1 < other.collisionX2 && rect.x2 > other.collisionX1 &&
+              rect.y1 < other.collisionY2 && rect.y2 > other.collisionY1)) return false;
           best = { x, y, rect };
           return true;
         }
 
         if (!consider(anchorColumn, anchorRow)) {
-          outer: for (let radius = 1; radius <= searchRadius; radius++) {
-            const reverse = (variant + orderIndex + radius) % 2;
-            for (let step = -radius; step <= radius; step++) {
-              const along = reverse ? -step : step;
-              if (consider(anchorColumn + along, anchorRow - radius) ||
-                  consider(anchorColumn - along, anchorRow + radius) ||
-                  consider(anchorColumn - radius, anchorRow - along) ||
-                  consider(anchorColumn + radius, anchorRow + along)) break outer;
-            }
-          }
+          blockCentres(collisionWidth, collisionHeight);
+          useMask = true;
+          const location = nearestFree(anchorColumn, anchorRow, variant, orderIndex);
+          if (location) consider(location[0], location[1]);
         }
         if (!best) return null;
         const next = { ...item, x: best.x, y: best.y, scale,
           collisionX1: best.rect.x1, collisionX2: best.rect.x2,
           collisionY1: best.rect.y1, collisionY2: best.rect.y2 };
         placed.push(next);
-        insert(best.rect, placed.length - 1);
       }
       return placed.map(({ collisionX1, collisionX2, collisionY1, collisionY2, ...item }) => item);
     }
@@ -912,6 +981,16 @@
     const highLimit = Math.min(dimensionLimit, areaLimit * 1.35);
     const variantCount = sized.length <= 80 ? 8
       : sized.length <= 200 ? 5 : emojiCount > 1 ? 4 : 3;
+    const variantPlans = Array.from({ length: variantCount }, (_, variant) => {
+      let emojiIndex = 0, textIndex = 0;
+      return orderedItems(variant).map((item, index) => {
+        const anchor = index === 0 && dominant ? [.5, .5] : distributedAnchor(
+          item.emoji ? emojiIndex++ : textIndex++,
+          item.emoji ? emojiCount : sized.length - emojiCount, variant, item.emoji);
+        return { item, anchorColumn: Math.round(anchor[0] * (candidateColumns - 1)),
+          anchorRow: Math.round(anchor[1] * (candidateRows - 1)) };
+      });
+    });
     const candidates = [];
 
     // Free-rectangle splitting grows sharply on capacity-sized clouds. The

@@ -19,10 +19,11 @@ const automaticSource = template.slice(template.indexOf('    function buildAutom
   template.indexOf('    function cloneDesign('));
 const context = createCanvas(1, 1).getContext('2d');
 const apply = (design, product) => Layout.applyLayoutAction(design, product.layoutGeometry['fit-area'],
-  context, { fontFamily: item => Fonts.cssFamily(item.fontFamily) });
+  context, { fontFamily: item => Fonts.cssFamily(item.fontFamily), printDpi: Number(product.printFile.dpi) });
 
-function automatic(product, words) {
-  return JSON.parse(JSON.stringify(vm.runInNewContext(automaticSource + '\nbuildAutomaticDesign()', {
+function automatic(product, words, allowSmallText = false) {
+  return JSON.parse(JSON.stringify(vm.runInNewContext(automaticSource + '\nbuildAutomaticDesign(activeSurface, { allowSmallText })', {
+    allowSmallText,
     product, activeSurface: product.printSurfaces[0].key, productView: () => product, words, WordCloudCore: Core, DesignFonts: Fonts, DesignLayout: Layout,
     document: { createElement: () => createCanvas(1, 1) }, selectedTheme: 'konfetti',
     getPalette: () => ({ colors: ['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8'] }),
@@ -156,7 +157,17 @@ test('the actual start layout survives repeated fit-area clicks on every product
       const product = resolveProductOrientation(base, orientation.key);
       for (const [index, words] of AREA_CASES.entries()) {
         const label = `${product.key}/${orientation.key}/${index}`;
-        const initial = automatic(product, words);
+        let initial;
+        try { initial = automatic(product, words); }
+        catch (error) {
+          assert.equal(error.message, 'print_capacity');
+          const override = automatic(product, words, true);
+          assert.equal(override.length, words.length, label + ': a deliberate override retains all words');
+          assertSafe(override, product, label);
+          assert.ok(require('../public/js/text-print-quality').findings(override, product.printFile.dpi).length,
+            label + ': a capacity failure must explain a real small-text result');
+          continue;
+        }
         assert.equal(initial.length, words.length, label);
         assertSafe(initial, product, label);
         let current = initial;
@@ -226,27 +237,29 @@ test('automatic front and back designs are filled, independent copies', () => {
   }
 });
 
-test('a capacity-sized cloud remains complete, printable and repeatable', () => {
+test('a capacity-sized cloud requires an explicit small-text override and keeps every word', () => {
   const product = getProduct('white-glossy-mug-duo-11oz');
   const words = Array.from({ length: 500 }, (_, index) => ['wort' + index, 1 + index * 7 % 20]);
-  const initial = automatic(product, words);
+  assert.throws(() => automatic(product, words), /print_capacity/);
+  const initial = automatic(product, words, true);
   assert.equal(initial.length, 500);
   assert.ok(initial.every(item => item.fontSize >= 1), 'no later Fabric minimum-size clamping');
   assertSafe(initial, product, 'capacity');
-  assert.deepEqual(apply(initial, product), initial);
+  assert.throws(() => apply(initial, product), /print_capacity/);
 });
 
-test('500 long words fit a small print surface without minimum-size inflation or dropped text', () => {
+test('500 long words cannot silently shrink below 10 pt but an explicit override remains complete', () => {
   const product = getProduct('cork-back-coaster');
   const words = Array.from({ length: 500 }, (_, index) => [
     'w'.repeat(27) + String(index).padStart(3, '0'), 1 + index * 7 % 20,
   ]);
-  const initial = automatic(product, words);
+  assert.throws(() => automatic(product, words), /print_capacity/);
+  const initial = automatic(product, words, true);
   assert.equal(initial.length, words.length);
   assert.ok(initial.some(item => item.fontSize < 12), 'the old technical floor would distort this design');
   assert.ok(initial.every(item => item.fontSize >= 1));
   assertSafe(initial, product, 'long words on a coaster');
-  assert.deepEqual(apply(initial, product), initial);
+  assert.throws(() => apply(initial, product), /print_capacity/);
 });
 
 test('rounded mixed-font packing reaches a fixed point across varied aspect ratios', () => {

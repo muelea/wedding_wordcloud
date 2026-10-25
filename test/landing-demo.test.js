@@ -457,3 +457,42 @@ test('the restored intro holds the new story at its opening frame until dismissa
   assert.ok(h.node('[data-typing="0"]').textContent.length > 0);
   assert.equal(h.node('[data-arrival="0"]').style.opacity, '0');
 });
+
+test('landing attaches its unchanged word animation only after the catalog mug is ready', async () => {
+  const THREE = require('three');
+  const products = require('../src/products');
+  const product = products.getPublicProduct(products.MUG_11);
+  const start = source.indexOf('  function ensureMug(');
+  const end = source.indexOf('  function buildStickers(', start);
+  for (const success of [true, false]) {
+    let finish, createdOptions, attached = 0;
+    const ready = new Promise(resolve => { finish = resolve; });
+    const group = new THREE.Group();
+    const material = new THREE.MeshStandardMaterial();
+    const viewer = { group, ready, render() {} };
+    const context = {
+      window: { THREE, PrintfulProductModel: {}, wolkenworteLandingMugProduct: product,
+        Mug3DViewer: { create(options) { createdOptions = options; return viewer; } } },
+      document: { fonts: { status: 'loaded' } },
+      mugViewer: null, mugHost: { addEventListener() {} }, cupMaterials: [],
+      limitCupView() {}, buildStickers() { attached++; },
+    };
+    vm.createContext(context); vm.runInContext(source.slice(start, end), context);
+    context.ensureMug();
+    assert.equal(createdOptions.product.previewMesh.file, product.previewMesh.file);
+    assert.equal(createdOptions.product.previewMesh.rotateY, 180);
+    assert.equal(createdOptions.product.previewMesh.diameter, 8.2);
+    assert.equal(product.previewMesh.rotateY, 135, 'the gallery keeps its original model orientation');
+    assert.equal(group.scale.x, 1);
+    assert.equal(attached, 0, 'word geometry waits for the asynchronous mesh');
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(), [material]));
+    finish(success); await ready;
+    assert.equal(attached, success ? 1 : 0);
+    if (success) {
+      assert.equal(group.scale.x, 1.216, 'the existing animation scale is preserved');
+      assert.equal(material.opacity, 0, 'the loaded ceramic starts inside the existing reveal');
+      assert.equal(material.transparent, true);
+      assert.equal(context.cupMaterials[0], material);
+    }
+  }
+});

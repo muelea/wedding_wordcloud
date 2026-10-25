@@ -4,8 +4,8 @@
 <% if (typeof includeInstallDialog === 'undefined' || includeInstallDialog) { %>
 <dialog class="ww-pwa-dialog" data-ww-install-dialog aria-labelledby="ww-install-title">
   <div class="ww-pwa-dialog-heading">
-    <h2 id="ww-install-title" data-i18n-source="Wolkenworte installieren"><%= t('Wolkenworte installieren') %></h2>
-    <button class="ww-pwa-dialog-close ww-icon-button ww-close-button" type="button" data-ww-install-close autofocus aria-label="<%= t('Schließen') %>" data-i18n-aria-label-source="Schließen"></button>
+    <h2 id="ww-install-title" tabindex="-1" autofocus data-i18n-source="Wolkenworte installieren"><%= t('Wolkenworte installieren') %></h2>
+    <button class="ww-pwa-dialog-close ww-icon-button ww-close-button" type="button" data-ww-install-close aria-label="<%= t('Schließen') %>" data-i18n-aria-label-source="Schließen"></button>
   </div>
   <p data-i18n-source="Öffne Wolkenworte in Safari. Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“."><%= t('Öffne Wolkenworte in Safari. Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.') %></p>
   <p data-i18n-source="Aktiviere „Als Web-App öffnen“, falls diese Option angezeigt wird, und tippe auf „Hinzufügen“."><%= t('Aktiviere „Als Web-App öffnen“, falls diese Option angezeigt wird, und tippe auf „Hinzufügen“.') %></p>

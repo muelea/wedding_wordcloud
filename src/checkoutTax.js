@@ -8,7 +8,7 @@ function checkoutRequest(order) {
 
 const cents = (value) => Number.isSafeInteger(value) && value >= 0;
 
-/** Validate Stripe's signed result against the frozen net order, never a
+/** Validate Stripe's signed result against the frozen order and tax mode, never a
  * browser total. Used again under the payment transaction's row lock. */
 function paymentAmounts(order, session) {
   if (!session || String(session.currency || '').toUpperCase() !== order.currency) return null;
@@ -16,6 +16,13 @@ function paymentAmounts(order, session) {
   if (!alreadyPaid && (Number(order.tax_cents) !== 0 ||
       Number(order.total_cents) !== Number(order.items_cents) + Number(order.shipping_cents))) return null;
   const request = checkoutRequest(order);
+  const inclusive = request.pricing?.version === 2 && request.pricing.taxBehavior === 'inclusive';
+  if (request.pricing && (request.pricing.version !== 2 ||
+      !['inclusive', 'exclusive'].includes(request.pricing.taxBehavior) ||
+      (inclusive && request.pricing.country !== 'DE') ||
+      (!inclusive && request.pricing.country === 'DE') ||
+      request.pricing.itemsCents !== Number(order.items_cents) ||
+      request.pricing.shippingCents !== Number(order.shipping_cents))) return null;
   const tax = session.total_details?.amount_tax;
   const shipping = session.shipping_cost;
   const customer = typeof session.customer === 'string' ? session.customer : session.customer?.id;
@@ -26,15 +33,19 @@ function paymentAmounts(order, session) {
       !shipping || !cents(shipping.amount_subtotal) || !cents(shipping.amount_tax) ||
       !cents(shipping.amount_total) || shipping.amount_tax > tax ||
       shipping.amount_subtotal !== Number(order.shipping_cents) ||
-      shipping.amount_total !== shipping.amount_subtotal + shipping.amount_tax ||
+      (inclusive && shipping.amount_tax > shipping.amount_subtotal) ||
+      shipping.amount_total !== shipping.amount_subtotal + (inclusive ? 0 : shipping.amount_tax) ||
       !cents(session.amount_total) ||
-      session.amount_total !== Number(order.items_cents) + Number(order.shipping_cents) + tax) return null;
+      session.amount_total !== Number(order.items_cents) + Number(order.shipping_cents) + (inclusive ? 0 : tax) ||
+      (inclusive && tax > session.amount_total)) return null;
   const expectedTax = request.expectedTaxCents;
   const expectedTotal = request.expectedTotalCents;
   const hasExpectedAmounts = expectedTax !== undefined || expectedTotal !== undefined;
   if (!alreadyPaid && hasExpectedAmounts &&
       (!cents(expectedTax) || !cents(expectedTotal) ||
        tax !== expectedTax || session.amount_total !== expectedTotal)) return null;
+  if (request.expectedShippingTaxCents !== undefined &&
+      shipping.amount_tax !== request.expectedShippingTaxCents) return null;
   if (alreadyPaid &&
       (tax !== Number(order.tax_cents) || session.amount_total !== Number(order.total_cents))) return null;
   return { taxCents: tax, totalCents: session.amount_total };

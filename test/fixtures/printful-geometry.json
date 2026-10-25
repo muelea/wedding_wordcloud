@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-09-03",
+  "verifiedAt": "2026-10-24",
   "sources": [
     "https://api.printful.com/mockup-generator/printfiles/{productId}",
     "https://api.printful.com/v2/catalog-products/{productId}/mockup-templates"
@@ -211,25 +211,6 @@
       "previews": []
     },
     {
-      "productKey": "framed-matte-poster-black-50x70cm",
-      "productId": 304,
-      "variant": {
-        "variant_id": 9358,
-        "placements": {
-          "default": 113
-        }
-      },
-      "printfile": {
-        "printfile_id": 113,
-        "width": 8268,
-        "height": 5906,
-        "dpi": 300,
-        "fill_mode": "cover",
-        "can_rotate": true
-      },
-      "previews": []
-    },
-    {
       "productKey": "all-over-tote-black-handles",
       "productId": 84,
       "variant": {
@@ -377,6 +358,1008 @@
           "sha256": "4c8d95fe7c579d2ec8f5d50950626a92a2aa75853c1868f42e3dff308bf2bf89"
         }
       ]
+    },
+    {
+      "productKey": "matte-poster-8947",
+      "productId": 268,
+      "variant": {
+        "variant_id": 8947,
+        "placements": {
+          "default": 106
+        }
+      },
+      "printfile": {
+        "printfile_id": 106,
+        "width": 3544,
+        "height": 2480,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "matte-poster-19516",
+      "productId": 268,
+      "variant": {
+        "variant_id": 19516,
+        "placements": {
+          "default": 624
+        }
+      },
+      "printfile": {
+        "printfile_id": 624,
+        "width": 7016,
+        "height": 4961,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "framed-poster-11791",
+      "productId": 304,
+      "variant": {
+        "variant_id": 11791,
+        "placements": {
+          "default": 15
+        }
+      },
+      "printfile": {
+        "printfile_id": 15,
+        "width": 4800,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "framed-poster-10297",
+      "productId": 304,
+      "variant": {
+        "variant_id": 10297,
+        "placements": {
+          "default": 15
+        }
+      },
+      "printfile": {
+        "printfile_id": 15,
+        "width": 4800,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "framed-poster-11792",
+      "productId": 304,
+      "variant": {
+        "variant_id": 11792,
+        "placements": {
+          "default": 113
+        }
+      },
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "framed-poster-10298",
+      "productId": 304,
+      "variant": {
+        "variant_id": 10298,
+        "placements": {
+          "default": 113
+        }
+      },
+      "printfile": {
+        "printfile_id": 113,
+        "width": 8268,
+        "height": 5906,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-tote-8904",
+      "productId": 84,
+      "variant": {
+        "variant_id": 8904,
+        "placements": {
+          "default": 6
+        }
+      },
+      "printfile": {
+        "printfile_id": 6,
+        "width": 2550,
+        "height": 2475,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-tote-8905",
+      "productId": 84,
+      "variant": {
+        "variant_id": 8905,
+        "placements": {
+          "default": 6
+        }
+      },
+      "printfile": {
+        "printfile_id": 6,
+        "width": 2550,
+        "height": 2475,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-basic-pillow-49853",
+      "productId": 83,
+      "variant": {
+        "variant_id": 49853,
+        "placements": {
+          "front": 1701,
+          "back": 1701
+        }
+      },
+      "printfile": {
+        "printfile_id": 1701,
+        "width": 2250,
+        "height": 2250,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-basic-pillow-49854",
+      "productId": 83,
+      "variant": {
+        "variant_id": 49854,
+        "placements": {
+          "front": 1702,
+          "back": 1702
+        }
+      },
+      "printfile": {
+        "printfile_id": 1702,
+        "width": 2550,
+        "height": 2550,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-basic-pillow-9513",
+      "productId": 83,
+      "variant": {
+        "variant_id": 9513,
+        "placements": {
+          "front": 72,
+          "back": 72
+        }
+      },
+      "printfile": {
+        "printfile_id": 72,
+        "width": 3150,
+        "height": 1950,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "all-over-basic-pillow-11075",
+      "productId": 83,
+      "variant": {
+        "variant_id": 11075,
+        "placements": {
+          "front": 214,
+          "back": 214
+        }
+      },
+      "printfile": {
+        "printfile_id": 214,
+        "width": 3450,
+        "height": 3450,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "throw-blanket-30x40in",
+      "productId": 395,
+      "variant": {
+        "variant_id": 22609,
+        "placements": {
+          "default": 1034
+        }
+      },
+      "printfile": {
+        "printfile_id": 1034,
+        "width": 6450,
+        "height": 4950,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-11051",
+      "productId": 403,
+      "variant": {
+        "variant_id": 11051,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-17196",
+      "productId": 403,
+      "variant": {
+        "variant_id": 17196,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-11050",
+      "productId": 403,
+      "variant": {
+        "variant_id": 11050,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-17197",
+      "productId": 403,
+      "variant": {
+        "variant_id": 17197,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-22373",
+      "productId": 403,
+      "variant": {
+        "variant_id": 22373,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-12579",
+      "productId": 403,
+      "variant": {
+        "variant_id": 12579,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-12578",
+      "productId": 403,
+      "variant": {
+        "variant_id": 12578,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-11049",
+      "productId": 403,
+      "variant": {
+        "variant_id": 11049,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-17200",
+      "productId": 403,
+      "variant": {
+        "variant_id": 17200,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-11048",
+      "productId": 403,
+      "variant": {
+        "variant_id": 11048,
+        "placements": {
+          "default": 43
+        }
+      },
+      "printfile": {
+        "printfile_id": 43,
+        "width": 2700,
+        "height": 1050,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "colored-mug-17199",
+      "productId": 403,
+      "variant": {
+        "variant_id": 17199,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "mouse-pad",
+      "productId": 518,
+      "variant": {
+        "variant_id": 13097,
+        "placements": {
+          "default": 265
+        }
+      },
+      "printfile": {
+        "printfile_id": 265,
+        "width": 2700,
+        "height": 2250,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "laptop-sleeve-10984",
+      "productId": 394,
+      "variant": {
+        "variant_id": 10984,
+        "placements": {
+          "default": 206
+        }
+      },
+      "printfile": {
+        "printfile_id": 206,
+        "width": 2250,
+        "height": 1725,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "laptop-sleeve-10985",
+      "productId": 394,
+      "variant": {
+        "variant_id": 10985,
+        "placements": {
+          "default": 207
+        }
+      },
+      "printfile": {
+        "printfile_id": 207,
+        "width": 2325,
+        "height": 1800,
+        "dpi": 150,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "canvas-12x16in",
+      "productId": 3,
+      "variant": {
+        "variant_id": 5,
+        "placements": {
+          "default": 46
+        }
+      },
+      "printfile": {
+        "printfile_id": 46,
+        "width": 6600,
+        "height": 5400,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": []
+    },
+    {
+      "productKey": "water-bottle-10798",
+      "productId": 382,
+      "variant": {
+        "variant_id": 10798,
+        "placements": {
+          "default": 192
+        }
+      },
+      "printfile": {
+        "printfile_id": 192,
+        "width": 2557,
+        "height": 1582,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "water-bottle-16030",
+      "productId": 382,
+      "variant": {
+        "variant_id": 16030,
+        "placements": {
+          "default": 192
+        }
+      },
+      "printfile": {
+        "printfile_id": 192,
+        "width": 2557,
+        "height": 1582,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "steel-tumbler-15005",
+      "productId": 585,
+      "variant": {
+        "variant_id": 15005,
+        "placements": {
+          "default": 309
+        }
+      },
+      "printfile": {
+        "printfile_id": 309,
+        "width": 2776,
+        "height": 2374,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "steel-tumbler-15004",
+      "productId": 585,
+      "variant": {
+        "variant_id": 15004,
+        "placements": {
+          "default": 309
+        }
+      },
+      "printfile": {
+        "printfile_id": 309,
+        "width": 2776,
+        "height": 2374,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "enamel-mug",
+      "productId": 407,
+      "variant": {
+        "variant_id": 11189,
+        "placements": {
+          "default": 215
+        }
+      },
+      "printfile": {
+        "printfile_id": 215,
+        "width": 2400,
+        "height": 720,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "travel-mug-16440",
+      "productId": 663,
+      "variant": {
+        "variant_id": 16440,
+        "placements": {
+          "default": 44
+        }
+      },
+      "printfile": {
+        "printfile_id": 44,
+        "width": 2700,
+        "height": 1140,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "travel-mug-19514",
+      "productId": 663,
+      "variant": {
+        "variant_id": 19514,
+        "placements": {
+          "default": 618
+        }
+      },
+      "printfile": {
+        "printfile_id": 618,
+        "width": 3213,
+        "height": 1571,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "wine-tumbler",
+      "productId": 632,
+      "variant": {
+        "variant_id": 16046,
+        "placements": {
+          "default": 383
+        }
+      },
+      "printfile": {
+        "printfile_id": 383,
+        "width": 3175,
+        "height": 950,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "eco-tote-10458",
+      "productId": 367,
+      "variant": {
+        "variant_id": 10458,
+        "placements": {
+          "front": 5
+        }
+      },
+      "printfile": {
+        "printfile_id": 5,
+        "width": 1500,
+        "height": 1500,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            10458
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ec8000/medium/flat/front/05_ec8000_flat_front_base_whitebg.png?v=1773162171",
+          "background_url": null,
+          "background_color": "#edcea5",
+          "printfile_id": 5,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1110,
+          "print_area_height": 1110,
+          "print_area_top": 1362,
+          "print_area_left": 948,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/layer-10458.png",
+          "sha256": "c8b4fac252e091b0fc9f144c20f096a264eea38672de6285d6a5f35e64c18582"
+        }
+      ]
+    },
+    {
+      "productKey": "eco-tote-10457",
+      "productId": 367,
+      "variant": {
+        "variant_id": 10457,
+        "placements": {
+          "front": 5
+        }
+      },
+      "printfile": {
+        "printfile_id": 5,
+        "width": 1500,
+        "height": 1500,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [
+        {
+          "catalog_variant_ids": [
+            10457
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ec8000/medium/flat/front/05_ec8000_flat_front_base_whitebg.png?v=1773162171",
+          "background_url": null,
+          "background_color": "#101010",
+          "printfile_id": 5,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1110,
+          "print_area_height": 1110,
+          "print_area_top": 1362,
+          "print_area_left": 948,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary",
+          "localAsset": "/assets/product-mockups/layer-10457.png",
+          "sha256": "c8b4fac252e091b0fc9f144c20f096a264eea38672de6285d6a5f35e64c18582"
+        }
+      ]
+    },
+    {
+      "productKey": "tough-case-20308",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20308,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-20304",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20304,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-33991",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33991,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-33987",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33987,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-20328",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20328,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-20329",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20329,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-34006",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34006,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-34005",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34005,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-21474",
+      "productId": 686,
+      "variant": {
+        "variant_id": 21474,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-21473",
+      "productId": 686,
+      "variant": {
+        "variant_id": 21473,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-49331",
+      "productId": 686,
+      "variant": {
+        "variant_id": 49331,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-49329",
+      "productId": 686,
+      "variant": {
+        "variant_id": 49329,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
     }
   ]
 }

@@ -80,11 +80,12 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
   min-width: 44px;
   min-height: 44px;
   padding: 8px;
-  border: 1px solid #d6b66e;
-  color: #704708;
-  background: #fff4d8;
+  border: 1px solid var(--line);
+  color: var(--berry);
+  background: #fffdfb;
   font-weight: 700;
 }
+.editor-button.artwork-overlap-trigger.has-findings { border-color: #d6b66e; color: #704708; background: #fff4d8; }
 .artwork-overlap-trigger[hidden] { display: none; }
 .artwork-overlap-trigger > span:first-child {
   display: grid;
@@ -97,6 +98,9 @@ html:has(.config-panel[open]) { overflow-y: hidden; }
 .artwork-overlap-panel { width: min(440px, calc(100% - 24px)); }
 #editor-overlap-status { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
 #editor-overlap-list { display: grid; gap: 10px; }
+#editor-overlap-list > h3 { margin: 8px 0 0; font-size: 16px; }
+#editor-overlap-list > p { margin: 0; font-size: 13px; line-height: 1.5; }
+.artwork-overlap-finding[data-level="low"], .artwork-overlap-finding[data-level="tiny"] { background: #fff0eb; }
 .artwork-overlap-finding {
   display: flex;
   flex-wrap: wrap;
@@ -479,7 +483,7 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-dialog[open]:has(> .mobile-canvas-orientation-hint:not([hidden])) { grid-template-rows: auto auto minmax(0, 1fr); }
 .mobile-canvas-dialog::backdrop { background: var(--paper); }
 .mobile-canvas-dialog [hidden] { display: none !important; }
-.mobile-canvas-dialog button {
+.mobile-canvas-dialog button:not(.ww-icon-button) {
   min-width: 44px;
   min-height: 44px;
   padding: 6px 10px;
@@ -862,3 +866,6 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-orientation-hint[hidden] { display: none; }
 .mobile-canvas-orientation-hint > .editor-icon { flex: 0 0 22px; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; }
 .mobile-canvas-orientation-hint > span { flex: 1; }
+
+.product-price-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.cart-panel-item-price { color: var(--ink); font-weight: 600; }

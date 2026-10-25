@@ -1,0 +1,1837 @@
+{
+  "cases": {
+    "white-glossy-mug-duo-11oz--default": {
+      "views": {
+        "front": {
+          "file": "local/white-glossy-mug-duo-11oz--default-front.png",
+          "sha256": "5b93abf45991efe0a27cb10f288e7e8cfe67e57c611ea69bb4174fe2bd4be0be"
+        },
+        "left": {
+          "file": "local/white-glossy-mug-duo-11oz--default-left.png",
+          "sha256": "8c4acd78b83c63323b0dfd7a0895e83f5d39076615717e9e76fa285a0c979f91"
+        },
+        "right": {
+          "file": "local/white-glossy-mug-duo-11oz--default-right.png",
+          "sha256": "c01148f130ed05b1a8fc340f97cacced5ee6b2800432ef024850d0d5f19fc157"
+        },
+        "back": {
+          "file": "local/white-glossy-mug-duo-11oz--default-back.png",
+          "sha256": "338b35c72429abfb8d05e51106983e42e9b00ac8a2b1686387f91eea8291ef33"
+        }
+      },
+      "productSha256": "a8b3e14ce4efeacbce4bd7845c49f8498100aa9df72284f199f76e4caaba5c2b",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:46.701Z"
+    },
+    "white-glossy-mug-15oz--default": {
+      "views": {
+        "front": {
+          "file": "local/white-glossy-mug-15oz--default-front.png",
+          "sha256": "dacaa936940b57fe0c547f9f814ba031148d902a2a573b4645932ef066df3cb0"
+        },
+        "left": {
+          "file": "local/white-glossy-mug-15oz--default-left.png",
+          "sha256": "d1376ebccf6b922d93c09b7b542260094556206d4eb798338b14c1d96597a5c5"
+        },
+        "right": {
+          "file": "local/white-glossy-mug-15oz--default-right.png",
+          "sha256": "888b5faceb0838c977171c9439bdc334fb4ad52476fd89fed67e62f14a94376e"
+        },
+        "back": {
+          "file": "local/white-glossy-mug-15oz--default-back.png",
+          "sha256": "9e9c67bce63cfc9132f54c3fabaa4430360e962574e6fb59944571a10e5f7469"
+        }
+      },
+      "productSha256": "0b2712a84b32eda5f873e9d8108e2ffe945db6bfcfd5ed73a0ac87b7f1b4ad14",
+      "designSha256": "ff4942aeb80400934346890b509f49da8d01987399887446593255d34917c5f3",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:46.853Z"
+    },
+    "white-glossy-mug-20oz--default": {
+      "views": {
+        "front": {
+          "file": "local/white-glossy-mug-20oz--default-front.png",
+          "sha256": "2108c1980559c551e1f4191dfa8e28655f494e4d9dc76c2934f504d6a8cf606e"
+        },
+        "left": {
+          "file": "local/white-glossy-mug-20oz--default-left.png",
+          "sha256": "8bfcfc3c05c495c57bcd823912c13c2601c78356ab14ba2b9b196ab304c07d10"
+        },
+        "right": {
+          "file": "local/white-glossy-mug-20oz--default-right.png",
+          "sha256": "1279a036f834eecc2d66a4d09045c83bdd0358521f9ee81d5dd7f24d08fffaf1"
+        },
+        "back": {
+          "file": "local/white-glossy-mug-20oz--default-back.png",
+          "sha256": "40972b50bd1537cf6de38e7741d5d63859ad783caf49f49ea07ad5391c66d533"
+        }
+      },
+      "productSha256": "cdac268f877cbc5eda1684e05aa6cf8c6534064e5072069563e3fefe35b65602",
+      "designSha256": "e72550e1112c23881f3c5ba87a81f879acc401b17afab6797767c0e10976c594",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.018Z"
+    },
+    "cork-back-coaster--default": {
+      "views": {
+        "front": {
+          "file": "local/cork-back-coaster--default-front.png",
+          "sha256": "9b8842937b64ec7a91b8f559101fa209e2be7cb528679532868b1bccf3a061b5"
+        }
+      },
+      "productSha256": "743da9600ec4be92d3e9f840ddbcaea35378635cb8e6bae7e1652ec485338867",
+      "designSha256": "884ec0c7a184032ddc00877bdbd405374cd19253ccb172f4c49bc08cddff560a",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.149Z"
+    },
+    "matte-poster-30x40cm--portrait": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-30x40cm--portrait-front.png",
+          "sha256": "b465abd0e6201cb92378a2ba1647dbf07680cc79a0abf572b4412b058f9fa301"
+        }
+      },
+      "productSha256": "57cc4e1841b79dbaddb3e0242a51d8cc1b5511dceb67c43b242d4d00b592ffd1",
+      "designSha256": "f81d1930654445478f808e8a3ac825be4d83f611cc92e3b88c976df4ffd79873",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.274Z"
+    },
+    "matte-poster-30x40cm--landscape": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-30x40cm--landscape-front.png",
+          "sha256": "3356932000fddd31f9149fa9ceb20d34211450180a98729d9aa0e21cddd62cfd"
+        }
+      },
+      "productSha256": "da748f36db3ff044f29f398e759ff2317e4bc2b61dbf22115597c68e02b3369d",
+      "designSha256": "ab19e1c847352568a1de111bc7bb5d6579937f6065320854e54800ebdf1b493c",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.392Z"
+    },
+    "matte-poster-50x70cm--portrait": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-50x70cm--portrait-front.png",
+          "sha256": "4066618aac8093290bfd212d6229d76610a8089e44b6287170d16c85273ea8ef"
+        }
+      },
+      "productSha256": "eef07861e9916681291e17d54cb56481f99bea09c7e6d42863d7837892c90778",
+      "designSha256": "9695d8ba13a0cc0e07928ed0de52899e05755f91033c409b1f19d2643b9a06a6",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.620Z"
+    },
+    "matte-poster-50x70cm--landscape": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-50x70cm--landscape-front.png",
+          "sha256": "afb3702a323370010aabda8d8638ce5a1441b2e7a82fc4fedebae4f5fde1dab1"
+        }
+      },
+      "productSha256": "107d1774528194faa5aa80444f716ba5c1d73d3077948d1272c2a418c579ad73",
+      "designSha256": "e29fa7bb566f04bfe1ea94e93de6fd11f98bfa171226bd6db1ed7a14ef48d663",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.827Z"
+    },
+    "framed-matte-poster-black-30x40cm--portrait": {
+      "views": {
+        "front": {
+          "file": "local/framed-matte-poster-black-30x40cm--portrait-front.png",
+          "sha256": "3f1ec119a966be14e0837e042c74ef6af93b76a099755741ad8d002353d310d2"
+        }
+      },
+      "productSha256": "6e25d89d5c3f090a11847c8b5496b4134d32bccfb032152963fd2023a92d77dc",
+      "designSha256": "1fee26cf3a7737cc42f9cd817b3ac96ecc5553d8a3f79b9b9068dcbee39a12d8",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:47.946Z"
+    },
+    "framed-matte-poster-black-30x40cm--landscape": {
+      "views": {
+        "front": {
+          "file": "local/framed-matte-poster-black-30x40cm--landscape-front.png",
+          "sha256": "74a9c97d27fbddf16a82e54623278e6b673bced9b835c99709c3de09877fa24a"
+        }
+      },
+      "productSha256": "26bdb8575f3cfbe9fd426f8aa9393386829722abd843ede8a676c2c020e36902",
+      "designSha256": "fe5e4d16859091113a72965953c3a6f990c989a82b11e13b21e428f66280f307",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.064Z"
+    },
+    "framed-matte-poster-black-50x70cm--portrait": {
+      "views": {
+        "front": {
+          "file": "local/framed-matte-poster-black-50x70cm--portrait-front.png",
+          "sha256": "e30a8e18dc79c5f38d17468dc8e1dbfb754ef4b833e2c0b461906e4724980bfc"
+        }
+      },
+      "productSha256": "4ee7e4bf2e1320be7ffaf419b8d628d876b6c90a0b8100125e225c015af02d4d",
+      "designSha256": "9695d8ba13a0cc0e07928ed0de52899e05755f91033c409b1f19d2643b9a06a6",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.135Z"
+    },
+    "framed-matte-poster-black-50x70cm--landscape": {
+      "views": {
+        "front": {
+          "file": "local/framed-matte-poster-black-50x70cm--landscape-front.png",
+          "sha256": "651f94625bf1b4cd6a77dbb35785e776ba69d22b6fd5039dbd2fafb6958854bb"
+        }
+      },
+      "productSha256": "0ea4ef88f23d476275887e12a44522663f682327282a20973d3a563ec6138f66",
+      "designSha256": "e29fa7bb566f04bfe1ea94e93de6fd11f98bfa171226bd6db1ed7a14ef48d663",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.206Z"
+    },
+    "all-over-tote-black-handles--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-tote-black-handles--default-front.png",
+          "sha256": "2208c10802f690828b648209dda32cf55731b12b0307856ad908c100338511b4"
+        }
+      },
+      "productSha256": "8c07b50e5438607b68102231979f9fc63d50c9099577d6f67424f706b630e184",
+      "designSha256": "6acafb77118bc12d091e5f6ca00f04c72101a07e3cfda17c8e8ea7f5362cda78",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.311Z"
+    },
+    "throw-blanket-50x60in--default": {
+      "views": {
+        "front": {
+          "file": "local/throw-blanket-50x60in--default-front.png",
+          "sha256": "a7272959904427fb77b1d5e669e95069087d204d1630631fa87a3cef98288d53"
+        }
+      },
+      "productSha256": "6a72e6f689a2cb71502cc21a197b3b85b1e4e59673049cfbc8e414f897b15943",
+      "designSha256": "2bf5cd2d73d408ae44c551ae1924a26716e6bd58ead4e35d784a13595b6010c7",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.616Z"
+    },
+    "all-over-basic-pillow-18in--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-basic-pillow-18in--default-front.png",
+          "sha256": "941542469524b22c30f87df6481a4cfe1135f11ace6eaa7b47b18e85da6bf7b9"
+        },
+        "back": {
+          "file": "local/all-over-basic-pillow-18in--default-back.png",
+          "sha256": "7f872bac650b85f8de0f945e51c50687b7a7b64cddcbac867bc89208fddc3df6"
+        }
+      },
+      "productSha256": "8cbb1a4344fea26430878ef6737e223678186d374affc6584fc0fc1d49ae8616",
+      "designSha256": "5bc4643caa81dac813718ce771803688295962710e5f15981e093cdc969629f6",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.769Z"
+    },
+    "spiral-notebook-dotted--default": {
+      "views": {
+        "front": {
+          "file": "local/spiral-notebook-dotted--default-front.png",
+          "sha256": "f4b82d993a85d0ae95b817549a0f5e165586366ad6e0ce51fc4da9d09b2fd18f"
+        },
+        "back": {
+          "file": "local/spiral-notebook-dotted--default-back.png",
+          "sha256": "ecdd6de5270b21fd4d0d9fca33acb901bbf29506b46a104804c3f309287747bd"
+        }
+      },
+      "productSha256": "9dd5c8ca7b929c6062f905e17dd044f19bb08af2ccbac6bfb7b37f53674b369b",
+      "designSha256": "5e0a1c61702fc8df5aa66d5199d779b1a799046839a19a3b06454b8b4405c714",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:48.936Z"
+    },
+    "matte-poster-8947--portrait": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-8947--portrait-front.png",
+          "sha256": "64baf7f894f6da2a624704b913dcd369c5f4262126b9a2910acc08a31b65d3e5"
+        }
+      },
+      "productSha256": "ce18f83485dee3cfb50d103832a68fe7b29c3cff2f0673998aea593cef077f98",
+      "designSha256": "7351f62f869899f5e37703e380a97fe3ff152029a9abceadea3a8b2b3061c0f0",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.054Z"
+    },
+    "matte-poster-8947--landscape": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-8947--landscape-front.png",
+          "sha256": "b410eb799030d09d7b836a21eefb0ff8b48e260c48ed41a5006af3dd8a6888c2"
+        }
+      },
+      "productSha256": "00e0079f6629612c05bf36626cf44e289a9bd99b99038762c1800fceefef7e46",
+      "designSha256": "2c6935d08f360087dd339a80fe81cc5f9a74961ba8bce56fad1750c23010ce7b",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.170Z"
+    },
+    "matte-poster-19516--portrait": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-19516--portrait-front.png",
+          "sha256": "34ed3577c12d33cd0fdee8aa2bf1bbd958fc2a92eeffdf034b31b84447958a28"
+        }
+      },
+      "productSha256": "8e8bb0f5fe87c1232d9cf3f32d9869c72a4f8513a2372973836e7f1bc1de6beb",
+      "designSha256": "be2da88599018bbe8dbf1a58112321cb77af2b15fb3de3457dfaf9eee4156266",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.285Z"
+    },
+    "matte-poster-19516--landscape": {
+      "views": {
+        "front": {
+          "file": "local/matte-poster-19516--landscape-front.png",
+          "sha256": "900ed9e3e645d96526615a66aa74d6ba8335140e31612fcefb48a0463497ffb4"
+        }
+      },
+      "productSha256": "6d5663c545d579ffcd3b8484a9b43af9f69b653bb48406cb8f59b03bcc2e07b2",
+      "designSha256": "99ed92f6c9908a52bb6b148223968dc1e4112f2c38857c9b2ae3301ffb182964",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.394Z"
+    },
+    "framed-poster-11791--portrait": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-11791--portrait-front.png",
+          "sha256": "aa5e974d7a38dae18548006dd41f65aeca9cc98073d8d3d3d52ff6e452f0b8de"
+        }
+      },
+      "productSha256": "655c3d0d5a8eda1873fdd1f3cedd58be15100f9d63e8f08edb709dbfa83bc4c0",
+      "designSha256": "1fee26cf3a7737cc42f9cd817b3ac96ecc5553d8a3f79b9b9068dcbee39a12d8",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.510Z"
+    },
+    "framed-poster-11791--landscape": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-11791--landscape-front.png",
+          "sha256": "766997ffc6468bef8448be98206811a12f20e63cdd1988bd7190746ef667fbad"
+        }
+      },
+      "productSha256": "c9319ea8e7032c494f7c98cab5b5e6cae28bdb62c46609c17628e189cc947fbd",
+      "designSha256": "fe5e4d16859091113a72965953c3a6f990c989a82b11e13b21e428f66280f307",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.623Z"
+    },
+    "framed-poster-10297--portrait": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-10297--portrait-front.png",
+          "sha256": "c331442de706b94c5408a98d40011b254d6dd57f5b5422db86a4da391b6487eb"
+        }
+      },
+      "productSha256": "e24cb12f1e9a0942f2768488678954e2e4a2867618e409b5c62d9c25c50f3ec1",
+      "designSha256": "1fee26cf3a7737cc42f9cd817b3ac96ecc5553d8a3f79b9b9068dcbee39a12d8",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.735Z"
+    },
+    "framed-poster-10297--landscape": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-10297--landscape-front.png",
+          "sha256": "121e8af76d64880b9bec1e0bc2447df2c380121cf9259a734ec8c1e90b18db8b"
+        }
+      },
+      "productSha256": "304c9c41f2438889d1a8bef40b8bd9a88137a40d948e252be7934ecbc377f93a",
+      "designSha256": "fe5e4d16859091113a72965953c3a6f990c989a82b11e13b21e428f66280f307",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.847Z"
+    },
+    "framed-poster-11792--portrait": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-11792--portrait-front.png",
+          "sha256": "3e73c67d1e5faf4aacc5390fbc8ecddb4006383ec268e8735f9c534639f28ece"
+        }
+      },
+      "productSha256": "0ad693c93978e8f59bfd932f93aa3b15f82cdcb4643a187171b0926e27b8761c",
+      "designSha256": "9695d8ba13a0cc0e07928ed0de52899e05755f91033c409b1f19d2643b9a06a6",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:49.962Z"
+    },
+    "framed-poster-11792--landscape": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-11792--landscape-front.png",
+          "sha256": "1e903ca0eb241ecd843f701852083992e36377dd18ba634f4306d6080c7260a3"
+        }
+      },
+      "productSha256": "65a713d3b929ae85f840a5bc2b8bdcf2e0aa16c88c0136052401d28bb5355f5e",
+      "designSha256": "e29fa7bb566f04bfe1ea94e93de6fd11f98bfa171226bd6db1ed7a14ef48d663",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.075Z"
+    },
+    "framed-poster-10298--portrait": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-10298--portrait-front.png",
+          "sha256": "68e5055159399d4f8c787da513c7a5b7e914f52d000f70a8316aeaf88c58943c"
+        }
+      },
+      "productSha256": "95b4d1bcf300f34cca67736e7f68491ed500f3e1619118ffa615807232c55934",
+      "designSha256": "9695d8ba13a0cc0e07928ed0de52899e05755f91033c409b1f19d2643b9a06a6",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.183Z"
+    },
+    "framed-poster-10298--landscape": {
+      "views": {
+        "front": {
+          "file": "local/framed-poster-10298--landscape-front.png",
+          "sha256": "1d78329e69c77dad0197256e1ec238ecb4309c0c019f760da816bb66e8a1ceba"
+        }
+      },
+      "productSha256": "deb3dff3566290200b71c92bca809a179f3a07de0a671813f5e6be70aed77336",
+      "designSha256": "e29fa7bb566f04bfe1ea94e93de6fd11f98bfa171226bd6db1ed7a14ef48d663",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.295Z"
+    },
+    "all-over-tote-8904--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-tote-8904--default-front.png",
+          "sha256": "10cd36c9cae6cc6859e6a2784c61f48cf2d4d4daa423a16099cfdac4456ae92e"
+        }
+      },
+      "productSha256": "d58f7658168bf1acc31a842fe05e757a0731577bd9f6110b0b00df47451cb469",
+      "designSha256": "6acafb77118bc12d091e5f6ca00f04c72101a07e3cfda17c8e8ea7f5362cda78",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.418Z"
+    },
+    "all-over-tote-8905--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-tote-8905--default-front.png",
+          "sha256": "0cc225c5fcae3de5b04fe8d4b2d9efc466dfb4987073f36c2336c85b3fc81b6d"
+        }
+      },
+      "productSha256": "27a69ce4a4928936b0efbd8114568e04517429bd714ab0032720d94d075b7c34",
+      "designSha256": "6acafb77118bc12d091e5f6ca00f04c72101a07e3cfda17c8e8ea7f5362cda78",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.523Z"
+    },
+    "all-over-basic-pillow-49853--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-basic-pillow-49853--default-front.png",
+          "sha256": "4cd7ae505b8f027e55e9ee287626e6ad512a850f8bbe2dfc964d1da900c22960"
+        },
+        "back": {
+          "file": "local/all-over-basic-pillow-49853--default-back.png",
+          "sha256": "31471f92ab2f2cee4b7fcf02f41f48d514a23edbb13818d5df327bf732f76415"
+        }
+      },
+      "productSha256": "07bbe7256a15f6c568246ad41ba62c095901afb66671e2b0987e66723cd13e31",
+      "designSha256": "aa9f3485a0c61de9d0222e16894d30a167dfd453ef7f02a4a3dcaa44ce553091",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.720Z"
+    },
+    "all-over-basic-pillow-49854--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-basic-pillow-49854--default-front.png",
+          "sha256": "4af666e465bd7e009c093f7039b9f587dfb5bcce6a5fc1308eae0a616873a9ec"
+        },
+        "back": {
+          "file": "local/all-over-basic-pillow-49854--default-back.png",
+          "sha256": "6403479f380dcfdced7bc3ad46c0282cf466c4483bc00f262439175403825be2"
+        }
+      },
+      "productSha256": "4d9e4d19238333fa8458cf03c3e7cc40c95b696271dc2511fb0df0f41e5a7ca0",
+      "designSha256": "7be891d4d0b613947e6094337e008f8b01f051487bd110225279f468011e7088",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:50.905Z"
+    },
+    "all-over-basic-pillow-9513--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-basic-pillow-9513--default-front.png",
+          "sha256": "8a746e9bcc606d8002bf79beb78f555edfd8705f9f2de9fa827b4293bd0f5f34"
+        },
+        "back": {
+          "file": "local/all-over-basic-pillow-9513--default-back.png",
+          "sha256": "a0d7a550c9bbc1cbadcc14a348b7db25959e74fa5e2bcfb6303e03f02942fb81"
+        }
+      },
+      "productSha256": "5fe80dc57a0a35bf1f3a1d833fc8a3de9916ead850b4ca3b8fb6538a9690afb8",
+      "designSha256": "195b329853501e362a1767e91e82f07212bca2458c36cdbd7f25728de838caa9",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.049Z"
+    },
+    "all-over-basic-pillow-11075--default": {
+      "views": {
+        "front": {
+          "file": "local/all-over-basic-pillow-11075--default-front.png",
+          "sha256": "a765397f16fb67fa6310494df0a183a4036fbbcf62c8d589ae03079d5d54a034"
+        },
+        "back": {
+          "file": "local/all-over-basic-pillow-11075--default-back.png",
+          "sha256": "c2f80ef7ad86f46c9644185c2e26bd49b55ca2fc7cfaf23a442c58f3c30f5aa3"
+        }
+      },
+      "productSha256": "3af9dd644b5632979dfbb562170a6404c250803d449ad873b4c2a6cd38870890",
+      "designSha256": "b06c494761c2ca5c5eb694607cd40589cd227908bf587e3dc451c6536fb0acc2",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.206Z"
+    },
+    "throw-blanket-30x40in--default": {
+      "views": {
+        "front": {
+          "file": "local/throw-blanket-30x40in--default-front.png",
+          "sha256": "5c8d8dc5253677fd50ba07040d7f6245578efefddf0408dd773d9a100c1f94c5"
+        }
+      },
+      "productSha256": "b5f044841da0594e2c004b4f3f0fe4b39b8c180f2003ae8df320b7e06e23adab",
+      "designSha256": "1535dc75b45b92d2c21be29c9de767bf6d0796b4ef3c0ac04be4935e04d83f49",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.321Z"
+    },
+    "colored-mug-11051--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-11051--default-front.png",
+          "sha256": "a909e01ee053e83f6ea1eea167ada834cf0096cd3a42f649fff1bc19318ff4a1"
+        },
+        "left": {
+          "file": "local/colored-mug-11051--default-left.png",
+          "sha256": "0b66d172db897d343c048ff95e32414411949a8c3ede89770b4e8a2258e38a1b"
+        },
+        "right": {
+          "file": "local/colored-mug-11051--default-right.png",
+          "sha256": "b4d91128ffc83835501643f077764ffad725f4cbc704ef0b89c50a8b8fba4e85"
+        },
+        "back": {
+          "file": "local/colored-mug-11051--default-back.png",
+          "sha256": "809988f646a1f2e6cdbc0b857b6587e1786ae271f3f253cc50a798e45dda62c6"
+        }
+      },
+      "productSha256": "cd1b7e4e9dedef22d6bfb6c7f3aad11514af2387e2b9c31d59008ec75e028521",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.470Z"
+    },
+    "colored-mug-17196--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17196--default-front.png",
+          "sha256": "edbd4b60dbc5cc007a9df2b6073b5b6d950688475775659c32068d9839dbf78d"
+        },
+        "left": {
+          "file": "local/colored-mug-17196--default-left.png",
+          "sha256": "b9b99f5a6cba28b1d826f7ee3abe40f466fbb5a8d6f8e653027b5a2169c53634"
+        },
+        "right": {
+          "file": "local/colored-mug-17196--default-right.png",
+          "sha256": "e85786f09800f0735b7baef458df0de44910f5ff1becdbce44acf28d0d7cca26"
+        },
+        "back": {
+          "file": "local/colored-mug-17196--default-back.png",
+          "sha256": "5902a3c28bdd2212c6f171e4d95e3067d7feac0152297a8de4054295aa799408"
+        }
+      },
+      "productSha256": "b11f0bfdd429eb2dec0d310b34372995a55b5e9b13222f575a8582e256322975",
+      "designSha256": "3f767b40b65b9a73ce00c7697b765ca8eb93622d53157ae799fe4ca2339bedcd",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.654Z"
+    },
+    "colored-mug-11050--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-11050--default-front.png",
+          "sha256": "9da9ffe3fc563089b31f6caf8c2ff3be47e4c959e53f2dc8e7637dc8c7f6c788"
+        },
+        "left": {
+          "file": "local/colored-mug-11050--default-left.png",
+          "sha256": "3bfd4b6b4d9f8ffd345bc6b0bb990619814c93c8cc958e63829c3ff6412f3f5d"
+        },
+        "right": {
+          "file": "local/colored-mug-11050--default-right.png",
+          "sha256": "1eb3b056c830054be220ad51daf176f5090e97790970889fc5a57a817841979f"
+        },
+        "back": {
+          "file": "local/colored-mug-11050--default-back.png",
+          "sha256": "c92d93da8ad0feeb4a866919cf329f8d4a209a7e3555f38e26008d9df4199899"
+        }
+      },
+      "productSha256": "e829b84b0350846d429a5dbb67a7f241ce9b15b67b4996da4807d6c0c24217e0",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.819Z"
+    },
+    "colored-mug-17197--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17197--default-front.png",
+          "sha256": "e7cf06a4f9e803654d5dfba404e45546a3b9862d8fc42884ea853b8ada930090"
+        },
+        "left": {
+          "file": "local/colored-mug-17197--default-left.png",
+          "sha256": "25740ca2ac30dc819864f612ff3836c471d60e36ac630fda11f1767f30cbf4da"
+        },
+        "right": {
+          "file": "local/colored-mug-17197--default-right.png",
+          "sha256": "37ab5abfb8e5f8c6e88d95c592bb65ce1c6584de400cd13344969e8b1fd8f7f9"
+        },
+        "back": {
+          "file": "local/colored-mug-17197--default-back.png",
+          "sha256": "8e71651f1f9606630e8d126e0609694c728818bb5f4805576757b3561206bb01"
+        }
+      },
+      "productSha256": "8253a19dece0ad43b127f67192852e18c45ba3d3fd183a07c6919bb9a55d1a70",
+      "designSha256": "ff4942aeb80400934346890b509f49da8d01987399887446593255d34917c5f3",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:51.987Z"
+    },
+    "colored-mug-22373--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-22373--default-front.png",
+          "sha256": "47d32bf976e421a6a211155e616f3abed7a2817ee1bbc8d975f46a610d773183"
+        },
+        "left": {
+          "file": "local/colored-mug-22373--default-left.png",
+          "sha256": "51377136d330081bd39022fd93f80d5eb773cf2e0a6d33a473184b0d31f91438"
+        },
+        "right": {
+          "file": "local/colored-mug-22373--default-right.png",
+          "sha256": "23bf125ef0940281c543cee824ac20bb49223796c97701d46f87eb18fba2c2cc"
+        },
+        "back": {
+          "file": "local/colored-mug-22373--default-back.png",
+          "sha256": "8579dc91a7f0df12a3404ae103653149b4beeb687e03b14838b9018cca7c7b86"
+        }
+      },
+      "productSha256": "d32fe0d9d15fba672156c60810a1f20ddc5438b63f5714819962bee567d49c26",
+      "designSha256": "ff4942aeb80400934346890b509f49da8d01987399887446593255d34917c5f3",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:52.154Z"
+    },
+    "colored-mug-12579--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-12579--default-front.png",
+          "sha256": "9778ae257522c66f86c2321f76afb9bc14898f0f841acebbdf877bcaae0467c1"
+        },
+        "left": {
+          "file": "local/colored-mug-12579--default-left.png",
+          "sha256": "d51b4a109d810be56d840ae83bf7bc9ac34b68909b9f8b1d16910dea2a9be612"
+        },
+        "right": {
+          "file": "local/colored-mug-12579--default-right.png",
+          "sha256": "fa2d12c57b509c67da8c282b5ddb8ea5e9f37cfc5e1ecaf1c9d6751732ac702a"
+        },
+        "back": {
+          "file": "local/colored-mug-12579--default-back.png",
+          "sha256": "91cbaae9f658ee80a6b2a69b3458658f060eb8077c7b5c9f2861fed7b463b14c"
+        }
+      },
+      "productSha256": "896ec23715ec5b134fbdc37c508e704c7451d3f3e6ead18995e6dc391eeae718",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:52.320Z"
+    },
+    "colored-mug-12578--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-12578--default-front.png",
+          "sha256": "6fcb3ac9fc0d7a0b5dcfa5b525de47219e5acd466f90b68c619dc9c482be0e1c"
+        },
+        "left": {
+          "file": "local/colored-mug-12578--default-left.png",
+          "sha256": "9057e7837ef52f0fe7d43e652049a4fc0976a4cbf572d7221fc07ef74d1931a4"
+        },
+        "right": {
+          "file": "local/colored-mug-12578--default-right.png",
+          "sha256": "f4a9348ec972ca7f48a838a16bd242229d1bbf89b5f548587af8d8e0a2e9ebf5"
+        },
+        "back": {
+          "file": "local/colored-mug-12578--default-back.png",
+          "sha256": "f0953066144fe3ffe95d3bb5a47c86d817c4537402b92d0e1ecf1443e8baad2b"
+        }
+      },
+      "productSha256": "9385a9e942a90bfe06a55ee909d80ae15495ec1e2c146a3417261d779d28f4a2",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:52.487Z"
+    },
+    "colored-mug-11049--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-11049--default-front.png",
+          "sha256": "b1a7d810bd76b39859f3b75ca61bb319e40d9b5727539936ed02e92e03425119"
+        },
+        "left": {
+          "file": "local/colored-mug-11049--default-left.png",
+          "sha256": "febee9718b74a7f99482df107f8c06d522f6ecae4407cfe17a0b254ec604fff8"
+        },
+        "right": {
+          "file": "local/colored-mug-11049--default-right.png",
+          "sha256": "12bddac47a89ce89851cec8d060a7f1bc7a0950f8ca0925cc7d6c858f0a680d3"
+        },
+        "back": {
+          "file": "local/colored-mug-11049--default-back.png",
+          "sha256": "61ad2985291ff205060a7aaa57c5645634fa21496244f67a90380543fc27bac8"
+        }
+      },
+      "productSha256": "7f7d33d71a31eb7266a49654647caf2e18dc901a145869221e59db6023dc5d6e",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:52.809Z"
+    },
+    "colored-mug-17200--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17200--default-front.png",
+          "sha256": "4c34ef8774a69b346bcce913714dcbd5abab69e85f2e6e6948ae6cc9ef9a69b0"
+        },
+        "left": {
+          "file": "local/colored-mug-17200--default-left.png",
+          "sha256": "c8f4281e4c5be2825b8a8eac5533c245d042510bdeb39785f9c912a2d51167e3"
+        },
+        "right": {
+          "file": "local/colored-mug-17200--default-right.png",
+          "sha256": "be61abacbe4adf8552ce91f9cd8cbe22321093993761a759702ea58a50089596"
+        },
+        "back": {
+          "file": "local/colored-mug-17200--default-back.png",
+          "sha256": "cf0812c33e5a9439ce152f7a4a81e3747dcd486fd4b53576e4009a90d31c4908"
+        }
+      },
+      "productSha256": "cd1bffec920b37b6e37e81dfcfeb3afc2dca84b6a5e16c653fda1c6a619536d3",
+      "designSha256": "ff4942aeb80400934346890b509f49da8d01987399887446593255d34917c5f3",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:52.971Z"
+    },
+    "colored-mug-11048--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-11048--default-front.png",
+          "sha256": "4bd120568eea40cfec40e9a8503f46625b7f48e21c092fa0c3050f166842d453"
+        },
+        "left": {
+          "file": "local/colored-mug-11048--default-left.png",
+          "sha256": "5c6b83de0e9e781eeefb586f6681d7cd8d6f98170ba5ffd0db9bc54e752cf56a"
+        },
+        "right": {
+          "file": "local/colored-mug-11048--default-right.png",
+          "sha256": "3944d214036a87a1cb331824a8d44b7608b52cf9cd1f10c19026f5893df59214"
+        },
+        "back": {
+          "file": "local/colored-mug-11048--default-back.png",
+          "sha256": "01be6075e4d8b730d0055f4adba92a9c4c655f10c54363e1d039e112659629a8"
+        }
+      },
+      "productSha256": "6b365c0f85837c39c8730acc5b600467505bd9baeefc4429601b131872741c99",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:53.120Z"
+    },
+    "colored-mug-17199--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17199--default-front.png",
+          "sha256": "689ca11060d8ff91a420559183ae67353c43046533df069c99759d13766a0c06"
+        },
+        "left": {
+          "file": "local/colored-mug-17199--default-left.png",
+          "sha256": "0033c41ce70072499946026f460d8fcce69797b454f175c81ddb4fc8fcd13f13"
+        },
+        "right": {
+          "file": "local/colored-mug-17199--default-right.png",
+          "sha256": "bbbafcc49f11f690033a31548d960641de33ece7e0842e6b63e68784f486bfc6"
+        },
+        "back": {
+          "file": "local/colored-mug-17199--default-back.png",
+          "sha256": "8f31d0458a0f97fc496a15258d694ee084266e7951061df2994ea3773773ca6f"
+        }
+      },
+      "productSha256": "70b180a389d037def1838898e9588b21aaa1a33efc966769fa40f0dca6d986b8",
+      "designSha256": "ff4942aeb80400934346890b509f49da8d01987399887446593255d34917c5f3",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:53.274Z"
+    },
+    "colored-mug-17362--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17362--default-front.png",
+          "sha256": "c8d6f054cbd0167d3e934ac72126bc40d0e4beba47fc0d1b457ccf9b67633a4d"
+        },
+        "left": {
+          "file": "local/colored-mug-17362--default-left.png",
+          "sha256": "68f98baef9a51cff1d748f0bba77222e60c800305f7a0810993402d4845fe61e"
+        },
+        "right": {
+          "file": "local/colored-mug-17362--default-right.png",
+          "sha256": "3b8d53f19f605d8fd9014370e20316e488b98fabb2ebcc56b540186e6d7ef304"
+        },
+        "back": {
+          "file": "local/colored-mug-17362--default-back.png",
+          "sha256": "edb1a7c38d9061233401693160efe267a8e4f3ae867fab77233028c9da2b6a5e"
+        }
+      },
+      "productSha256": "51bfa933ca6df8293c9a9b24d1694b6f10e1e19b58a47e061879400f9273ad8d",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:53.422Z"
+    },
+    "colored-mug-17359--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17359--default-front.png",
+          "sha256": "c1c53762bbebed2c01c294b134c9a0f2d1d321307f5677bc6b097a78509a7758"
+        },
+        "left": {
+          "file": "local/colored-mug-17359--default-left.png",
+          "sha256": "132d584a87666da2ac01fccf050690e1aa6854c18308974f44d76bbdf355bc5e"
+        },
+        "right": {
+          "file": "local/colored-mug-17359--default-right.png",
+          "sha256": "ecf8905309b93ca9ef95bac4e247115e3687a76485145b81d475bb00f4da75ff"
+        },
+        "back": {
+          "file": "local/colored-mug-17359--default-back.png",
+          "sha256": "b4e81e00d10f51ffe3767c21e7253c49a14ee9f2aa9feb3f8a155487eb0320ed"
+        }
+      },
+      "productSha256": "58c1bfee84c0057ffd94b53211477b94e8d629d71d2fa5d1f97384c4d299be50",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:53.571Z"
+    },
+    "colored-mug-17360--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17360--default-front.png",
+          "sha256": "eb563ad04fa47d3634d2420d0f3a34f78d4ebbc10bf82c8b57a4616f11d907dc"
+        },
+        "left": {
+          "file": "local/colored-mug-17360--default-left.png",
+          "sha256": "1589c63728afe53b62f88b3e6dd2836fb6caf32247d3f9808b1c3b360e046036"
+        },
+        "right": {
+          "file": "local/colored-mug-17360--default-right.png",
+          "sha256": "eeb6b6929bd69fadc904859467024b3beb02c02295501f83b8694d39c6bdf3c7"
+        },
+        "back": {
+          "file": "local/colored-mug-17360--default-back.png",
+          "sha256": "7281c2567160caebf9e26d81b3825c63cd2dda233296d31a4b348bdbe36d5e2d"
+        }
+      },
+      "productSha256": "ef81c684a629717594316da7f8506d14de21009756552aa52ef571df012b0841",
+      "designSha256": "ff4942aeb80400934346890b509f49da8d01987399887446593255d34917c5f3",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:53.737Z"
+    },
+    "colored-mug-17358--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17358--default-front.png",
+          "sha256": "fdd4f1164a726ea6c25b3732dd541da3573a02a5b983b0975032513940117935"
+        },
+        "left": {
+          "file": "local/colored-mug-17358--default-left.png",
+          "sha256": "4d546816c89c6e37bf7bbabe8dd2bfa142ebf1941782e89f75c64f647d79b2b8"
+        },
+        "right": {
+          "file": "local/colored-mug-17358--default-right.png",
+          "sha256": "e7c96ceeedeb810625033ba4d060902011558aa9a09fd71d030af8ff94db1a79"
+        },
+        "back": {
+          "file": "local/colored-mug-17358--default-back.png",
+          "sha256": "50f5231ff4e24c986392f438609f269e4df78631967e010a3ce7917beec69df8"
+        }
+      },
+      "productSha256": "3f0a061478790acdf7ddf7ab440ef4e7c8ab4c0aba44fad3ae02f4c00da0fcdb",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:53.887Z"
+    },
+    "colored-mug-17361--default": {
+      "views": {
+        "front": {
+          "file": "local/colored-mug-17361--default-front.png",
+          "sha256": "e72c5528159600d21da5a35c44c6bf56befee3215f4b508945b3e987e970e4df"
+        },
+        "left": {
+          "file": "local/colored-mug-17361--default-left.png",
+          "sha256": "148b853c8d99e24f8423790a90095743110de51298eac52620095b48a58147d2"
+        },
+        "right": {
+          "file": "local/colored-mug-17361--default-right.png",
+          "sha256": "eac0893e10e6c2c801fbf8d02ec3d9a91ea86945fc5166b505e894517423d88d"
+        },
+        "back": {
+          "file": "local/colored-mug-17361--default-back.png",
+          "sha256": "142fd72880de75804ff2a2163b8a3cbe648e932c41dfa158f6a2bccb0258862a"
+        }
+      },
+      "productSha256": "4bfbbfc0cbc143ba557bdeafdad05fa9760873f9b762dbac6c8afc5ede353a67",
+      "designSha256": "2c27dd6681189c6697612ffa949bccf93e1c85c17c9e5369e51e33b59a7cc152",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.037Z"
+    },
+    "mouse-pad--default": {
+      "views": {
+        "front": {
+          "file": "local/mouse-pad--default-front.png",
+          "sha256": "6cc6b1d3b08aad9a65543ba261449ac3bd190e90b9fea4126f4df4ab2bf1327c"
+        }
+      },
+      "productSha256": "f92cbe216f20d4c616a7aa4e5fd8312bf5c65da425ed26bab674a045d5faf6b4",
+      "designSha256": "66a8fba595666d1afcb9d82f2284f772890668e7dc586187dd404b543caa1988",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "89d538742252fc8b2e543250d67cbe8d79d96e6da69b41280548d836bf1c4214",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "2550ebb22cb64cce5f37854aa324e0820a9487c303e0ee8dc6de522c49c6d06d",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "98b7cbb50ffbf04795ac0912080b4dd40ed3478a1ce160953915e9ff4b8993a0",
+        "test/browser/print-area-probe.js": "22eab00dbab0ac5b6e9464f8a5b7028f72388237bbe88e5e99c7c5ac5f625cd6",
+        "views/configure.ejs": "0ba0eb7770192e1d28d508431ee5087c67e5b4a378d30133ad8b63a6c0182861"
+      },
+      "renderedAt": "2026-10-25T00:47:17.376Z"
+    },
+    "laptop-sleeve-10984--default": {
+      "views": {
+        "front": {
+          "file": "local/laptop-sleeve-10984--default-front.png",
+          "sha256": "d8991c882fb377debe1a9f8deeda935b77a8cb6f68ed80b88cd31d8db67f489a"
+        }
+      },
+      "productSha256": "1bb917e35ca0da831b07a634bf4cb603339693ac6e13d3da3c34ad3ae499fc8d",
+      "designSha256": "43b7612be0268db6de75d7e4cd7a9a4bb504bb34709d92b3ee854dd3a0777f77",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.284Z"
+    },
+    "laptop-sleeve-10985--default": {
+      "views": {
+        "front": {
+          "file": "local/laptop-sleeve-10985--default-front.png",
+          "sha256": "3a76513dc2176f953be6e53f8dfb6c53c6e80377d7476824476515fdb86ba9f4"
+        }
+      },
+      "productSha256": "ad1f4144a4da02b4a44eb87b3dc403011f64d9cadbb1a031627ccddbe3ecbcb0",
+      "designSha256": "d816acab61ffe7355de6289e4e6f96f6ba665f80968b6b36fc1472ec92962f9b",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.394Z"
+    },
+    "canvas-12x16in--portrait": {
+      "views": {
+        "front": {
+          "file": "local/canvas-12x16in--portrait-front.png",
+          "sha256": "a7f07ec03cbbbe9e2cc0de7c6581e7ab082b66ef2074cd076f3e7806b85df33f"
+        }
+      },
+      "productSha256": "950f095377393b9344e46b92d1b82d35e656f57d29afaef4605706d898907029",
+      "designSha256": "136107ac1325228b302206fe0fa2ca477afeb913316c598255533c26c8e7592f",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.516Z"
+    },
+    "canvas-12x16in--landscape": {
+      "views": {
+        "front": {
+          "file": "local/canvas-12x16in--landscape-front.png",
+          "sha256": "ad6e4dbaeddbc4430e639d1ebbec266af58fbd1d1b655eaba03f52108acf7d7d"
+        }
+      },
+      "productSha256": "fecf98f65944e43d5a320b309f9b01a81555c32688cadfb16b47d77546c7d4c0",
+      "designSha256": "6516dd8be5bb7262b7789977fabd6dee2cc7335dc66b4c3cd36cc1d27844384f",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.646Z"
+    },
+    "water-bottle-10798--default": {
+      "views": {
+        "front": {
+          "file": "local/water-bottle-10798--default-front.png",
+          "sha256": "14c0a51ade5586ac4eac81ba1342be12f168033d9161fb0ded8881f8046dcb23"
+        },
+        "left": {
+          "file": "local/water-bottle-10798--default-left.png",
+          "sha256": "98ff7d95917ba4e0458646e9ca86b300f40d6b5480706b8e325e5d316f2316a2"
+        },
+        "right": {
+          "file": "local/water-bottle-10798--default-right.png",
+          "sha256": "338c438d11db301325cedecbc239f44d92bc083e5206179be5ffef01a1e90e40"
+        },
+        "back": {
+          "file": "local/water-bottle-10798--default-back.png",
+          "sha256": "a9b39bcd358663520086bff25f18be70369a86d6ab791bbd1ef3b1ca65f10c9c"
+        }
+      },
+      "productSha256": "e0e617ccb74c37fb1b5ba0fdc3e6e0f263a172ee84424054b1e5fbf8f7bad96b",
+      "designSha256": "f8473289cdd0eece35579fe1b2726ea7bb1ee434a0fb72e6ff41111dcc403e40",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.821Z"
+    },
+    "water-bottle-16030--default": {
+      "views": {
+        "front": {
+          "file": "local/water-bottle-16030--default-front.png",
+          "sha256": "91c72d440e218eca06496d91e60b27a2a8091f5c768e4a2d0866d9f405c3bf98"
+        },
+        "left": {
+          "file": "local/water-bottle-16030--default-left.png",
+          "sha256": "b3ada03fdf16ea99f8cfaa73edbcc4348268e62555c37f052b3e5ef2ca068f00"
+        },
+        "right": {
+          "file": "local/water-bottle-16030--default-right.png",
+          "sha256": "a79a22492bd176e4c28b133b6ab49c0673a66f6295765584169c30b8703ffc16"
+        },
+        "back": {
+          "file": "local/water-bottle-16030--default-back.png",
+          "sha256": "b9f72aac5222c34c5c60e812fb1824a5ae46a6883c7f411d2988c0652ef734a0"
+        }
+      },
+      "productSha256": "9604afb0c519220ec78c36729810a82371127a40665b52d35e48380956e3beaa",
+      "designSha256": "bbb7fbbe0ae8e87e16ed56d3e3d90c24d42ec7b8bbbd83b9a331ebf06316d248",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:54.988Z"
+    },
+    "steel-tumbler-15005--default": {
+      "views": {
+        "front": {
+          "file": "local/steel-tumbler-15005--default-front.png",
+          "sha256": "59e368d99a768acfbfde0ac8db3e095eee3dabcacb5eec3d55321048c379f7c4"
+        },
+        "left": {
+          "file": "local/steel-tumbler-15005--default-left.png",
+          "sha256": "5542473b175fa88c6d1148a5f530b41e20b6f8ae020c0f260ec81b6e9e4991c7"
+        },
+        "right": {
+          "file": "local/steel-tumbler-15005--default-right.png",
+          "sha256": "37487dfaf6398e0466ec3646c2e6baf48ec63caf3ab925f6dd68c0f934e8d238"
+        },
+        "back": {
+          "file": "local/steel-tumbler-15005--default-back.png",
+          "sha256": "90f484df6fb06a630610fd9337b2ac4bde8bc63811c5ff6243e92184048e0888"
+        }
+      },
+      "productSha256": "8cad6e7f4905ece9919a506717718f5d4633a2b1ac7197fdc6ed23e23bc37248",
+      "designSha256": "3003ae800a7d9b168b3ecdc55bc33e738e5279fd75bae48a0e800234fbc3569e",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:55.156Z"
+    },
+    "steel-tumbler-15004--default": {
+      "views": {
+        "front": {
+          "file": "local/steel-tumbler-15004--default-front.png",
+          "sha256": "816c50a10b526423843dbfc8b8fc0ec21f41205cf78b99c93f86918dd5f325cd"
+        },
+        "left": {
+          "file": "local/steel-tumbler-15004--default-left.png",
+          "sha256": "4fc0272034cfa151668b81f2ca20ecd9613524334eb4b25e31d4cf2702cd7c7d"
+        },
+        "right": {
+          "file": "local/steel-tumbler-15004--default-right.png",
+          "sha256": "9e640f5a115513cfac6448a7b2018d759828b999277d69b3c2190ddcfbd38213"
+        },
+        "back": {
+          "file": "local/steel-tumbler-15004--default-back.png",
+          "sha256": "0771ea6340ca05e1bd3bfcd07aeb430b3195f230d54ad4012661291b55167095"
+        }
+      },
+      "productSha256": "d1f38da163ca0a9fa0fff0a5f83b9b5b91c523861f74888b376b01f3d9b7546f",
+      "designSha256": "3003ae800a7d9b168b3ecdc55bc33e738e5279fd75bae48a0e800234fbc3569e",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:55.321Z"
+    },
+    "enamel-mug--default": {
+      "views": {
+        "front": {
+          "file": "local/enamel-mug--default-front.png",
+          "sha256": "f92cd0e913a5627a8d4e875728e089ce2f8913c2b8069f8119a3743da720e282"
+        },
+        "left": {
+          "file": "local/enamel-mug--default-left.png",
+          "sha256": "a8af249fabe806cdab0375866376368a3d910a7ae0e808c3b292afcd7f817ab0"
+        },
+        "right": {
+          "file": "local/enamel-mug--default-right.png",
+          "sha256": "3aae0c5162935ddd692a6cab0d84b04b17085b48f3326dab6c855c0476f82db6"
+        },
+        "back": {
+          "file": "local/enamel-mug--default-back.png",
+          "sha256": "5579b75dc36737af6f3559d2bffb44f647ec43cf0b256a822eff41e956b49e9f"
+        }
+      },
+      "productSha256": "1cda3ce13322f643c0b007475170963bf14b97f6e6f20827abd726b7caf45803",
+      "designSha256": "806c9f2f5a5310839e253f1d88ae970b985a631223809ad004f966215829979d",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:55.473Z"
+    },
+    "travel-mug-16440--default": {
+      "views": {
+        "front": {
+          "file": "local/travel-mug-16440--default-front.png",
+          "sha256": "d9341d9eebaff68859567d5e539b25cb7d453131931b687e52c297f4fa965a58"
+        },
+        "left": {
+          "file": "local/travel-mug-16440--default-left.png",
+          "sha256": "02d343162d3c24bc69900b4404810e373cef839c75e070298548e91c5215af8e"
+        },
+        "right": {
+          "file": "local/travel-mug-16440--default-right.png",
+          "sha256": "b422574d42f92aa1bf513bdd7fd388b7f32362feb674a5104addaa4783c8dc50"
+        },
+        "back": {
+          "file": "local/travel-mug-16440--default-back.png",
+          "sha256": "ae120dcd4057a0ac3fd77530e6d777530cea5617ac930c209de9d595729d17cb"
+        }
+      },
+      "productSha256": "6a6364f18441863a53ea7cf787669080ef8e94b62ee6f997efac3e5b7fd54c78",
+      "designSha256": "29287cc29bdfcff0ad5283afcafad1be9f973ae66cdf458ca3726d7debb653e8",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:55.638Z"
+    },
+    "travel-mug-19514--default": {
+      "views": {
+        "front": {
+          "file": "local/travel-mug-19514--default-front.png",
+          "sha256": "8a5c0c7702eb0717e3bdfc1e9b59c3ad787ebaa847e4a381fcfc87969872e6c5"
+        },
+        "left": {
+          "file": "local/travel-mug-19514--default-left.png",
+          "sha256": "ea6a4622bb36777bebd194657697b1ea74f09b65c6ecf7f5367ad64e62ba4f08"
+        },
+        "right": {
+          "file": "local/travel-mug-19514--default-right.png",
+          "sha256": "afd30c26084b6a658fb7864af7965a380709174ceaef1aacbb44299c2a994a45"
+        },
+        "back": {
+          "file": "local/travel-mug-19514--default-back.png",
+          "sha256": "a43fe8d60a7a155466897d0612db490df65c6e5d3b84d86000a39b1ea5f5d261"
+        }
+      },
+      "productSha256": "7f6dbbe4d24aa478ff55a7ed2210c4e825dda5abf35079bd9ac8b6db7b42010b",
+      "designSha256": "794f2175d195cf66a8c4d41672cd6f1e2dd3946f2bd6b404579f6c00751eeef8",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:55.806Z"
+    },
+    "wine-tumbler--default": {
+      "views": {
+        "front": {
+          "file": "local/wine-tumbler--default-front.png",
+          "sha256": "6dbaf36331aba79ea84389c4f7fd12188ef40c01d5438f977c38ac77b8e912ca"
+        },
+        "left": {
+          "file": "local/wine-tumbler--default-left.png",
+          "sha256": "2f21c08c33b1a10827783d445e10a773dd89d52bf8b1f89ba98c17cc9f51b1e2"
+        },
+        "right": {
+          "file": "local/wine-tumbler--default-right.png",
+          "sha256": "c4af17fed1f8c98c21c79a01fbc4bd96ff660027e5c5970fe40b997b4d6bcf67"
+        },
+        "back": {
+          "file": "local/wine-tumbler--default-back.png",
+          "sha256": "97afad6e979c3b4dc4951918ab16f76fa38690846a40e81ac72010e5a57842a2"
+        }
+      },
+      "productSha256": "3d5765f5463fe816d468acf853a886978e93583f5a2260082bb075b3cec0366f",
+      "designSha256": "c39c67252cb935a6ba7913c160f1ddbbfb6bb18d68dc255812428dcc7ecdd866",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:55.973Z"
+    },
+    "eco-tote-10458--default": {
+      "views": {
+        "front": {
+          "file": "local/eco-tote-10458--default-front.png",
+          "sha256": "ec9a29f9682c87286b8f1cc0787bcaed8c5d4de23a40d481580e7fea845437ba"
+        }
+      },
+      "productSha256": "3687db3e1c71387fbcde0db82e4cd496d491d7b219832ca7aee39ed332b93bc0",
+      "designSha256": "8e795195cdbae44f874a6120bef568752de437d4aaa742841de74a99320a65ce",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "22eab00dbab0ac5b6e9464f8a5b7028f72388237bbe88e5e99c7c5ac5f625cd6",
+        "views/configure.ejs": "176fc725ece4a4185445d3304538c90571b4e6463f96b9e3e5075d1088fc5e88"
+      },
+      "renderedAt": "2026-10-25T00:06:44.069Z"
+    },
+    "eco-tote-10457--default": {
+      "views": {
+        "front": {
+          "file": "local/eco-tote-10457--default-front.png",
+          "sha256": "7755f4a626400f92b9ad26193e46a4cc185e0f6620ef96cdbc89b46f083991a2"
+        }
+      },
+      "productSha256": "d03b84b4cb399c8fd6e4e406442ae009777694c8b5284593feaee3fd3e7a1149",
+      "designSha256": "8e795195cdbae44f874a6120bef568752de437d4aaa742841de74a99320a65ce",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "22eab00dbab0ac5b6e9464f8a5b7028f72388237bbe88e5e99c7c5ac5f625cd6",
+        "views/configure.ejs": "176fc725ece4a4185445d3304538c90571b4e6463f96b9e3e5075d1088fc5e88"
+      },
+      "renderedAt": "2026-10-25T00:06:44.220Z"
+    },
+    "tough-case-20308--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-20308--default-front.png",
+          "sha256": "a8f91e7f70c6afa2f9d5aa8adf00005eb114a1512737620927a9d3dfe8a466a6"
+        }
+      },
+      "productSha256": "9232ec275100e5ee366766dd71e8c5937384032bf216128cf1df577bc93d7dd1",
+      "designSha256": "a9cc58b80941f4533b0308019f6bc46573c89b13f04c6eb65c86320ba2dd5937",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.407Z"
+    },
+    "tough-case-20304--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-20304--default-front.png",
+          "sha256": "99e9346c4d0c68bdb74d1f322fc0ecaef3e18a4c5ea4aa099874d4e10efb7ed5"
+        }
+      },
+      "productSha256": "412ca938e2de55ec80d39f0b55b8f0044cafcee21f7d9408249c5960969fdff6",
+      "designSha256": "a9cc58b80941f4533b0308019f6bc46573c89b13f04c6eb65c86320ba2dd5937",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.516Z"
+    },
+    "tough-case-33991--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-33991--default-front.png",
+          "sha256": "b79707e3834273b007751f7b41c4e2c3e7422d1ac40da8932aedfc3bc1bc424e"
+        }
+      },
+      "productSha256": "07882aa91e34a204a6d8319cca6b22ec34c02987fdff525788faad66c6e68480",
+      "designSha256": "5a1a53c31f491bc31b8753b897ff674ae737f3afe5094252486b5564ecf32efe",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.639Z"
+    },
+    "tough-case-33987--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-33987--default-front.png",
+          "sha256": "26bddf91082c0ee0ee7394b90bd8840e72453cffceb77f67d2f6a8ae190e0748"
+        }
+      },
+      "productSha256": "35549c2cb916ea4b169495318e99e4271ab196a607f4c6955933fed36f7e58ac",
+      "designSha256": "5a1a53c31f491bc31b8753b897ff674ae737f3afe5094252486b5564ecf32efe",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.755Z"
+    },
+    "tough-case-20328--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-20328--default-front.png",
+          "sha256": "c9ab229d75d2bdb5590d0eb6fed380c2713bbb5682e5a84a100a9642b73811c5"
+        }
+      },
+      "productSha256": "16ff40db8e2d944355089503cf448f6c84d735a628d287e2deab7df043cfc346",
+      "designSha256": "a9cc58b80941f4533b0308019f6bc46573c89b13f04c6eb65c86320ba2dd5937",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.874Z"
+    },
+    "tough-case-20329--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-20329--default-front.png",
+          "sha256": "ff1a0cf6fcc02b0658e827586df2220826e1bd447b5bb4efd8f5f8e77f165df7"
+        }
+      },
+      "productSha256": "474f10e71acc97d54b572172402568decb6197583aba92b5ae5734deede923a9",
+      "designSha256": "a9cc58b80941f4533b0308019f6bc46573c89b13f04c6eb65c86320ba2dd5937",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.987Z"
+    },
+    "tough-case-34006--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-34006--default-front.png",
+          "sha256": "d2f0ee85bb6ab16bc45372b4da39b1d03c0a7a1facb63a228ac7888eb268fc6c"
+        }
+      },
+      "productSha256": "99a510c554d33289720507f6ba7006b27ef9227a0788f0572c100c9e83d87134",
+      "designSha256": "0196bc4e567144980cd376144e00cb782727c6c425beb774ac825d13daaea770",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:57.106Z"
+    },
+    "tough-case-34005--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-34005--default-front.png",
+          "sha256": "f2ef2a7642efe23420f40d287ca90356fd3f932436eed101f0fa2cfa00e0be73"
+        }
+      },
+      "productSha256": "84dc2b3e077dbcff87bb5e1f42af190c7d76e4ca072fa838cc00c59f86b8ef42",
+      "designSha256": "0196bc4e567144980cd376144e00cb782727c6c425beb774ac825d13daaea770",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:57.222Z"
+    },
+    "tough-case-21474--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-21474--default-front.png",
+          "sha256": "6efd0f1298a5899300fad5815d3d7989e0c0e37f67cd94902d05eae2a868698c"
+        }
+      },
+      "productSha256": "e92f6a8ff09227a804bc7489b61f98ea9672152bf03b913e9bae61b57fb96fdd",
+      "designSha256": "22cc519e5e8a9a3b5619581455c626481ccf3f903d936507d5926bd201af3b24",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:57.343Z"
+    },
+    "tough-case-21473--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-21473--default-front.png",
+          "sha256": "586f93c9539b1ae6d4bf80ac044604b80d8854b712d475410f12ff7278a1178d"
+        }
+      },
+      "productSha256": "6e59c0a283d7c41650f49574c3a3a32f39b86dbe7f1932ab55d18a129bf57fd1",
+      "designSha256": "22cc519e5e8a9a3b5619581455c626481ccf3f903d936507d5926bd201af3b24",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:57.459Z"
+    },
+    "tough-case-49331--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-49331--default-front.png",
+          "sha256": "9a515333039d8418775d5412615da179aa6560e7cef523d2388cdddf8efdf226"
+        }
+      },
+      "productSha256": "c4af87abd1a77e991e2515d930d5eebae0d80a634740ba96e11f2bed85234118",
+      "designSha256": "b569a1d378d8810d91398bb1cad406967d119bcaf961fb24af87b67259382229",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:57.574Z"
+    },
+    "tough-case-49329--default": {
+      "views": {
+        "front": {
+          "file": "local/tough-case-49329--default-front.png",
+          "sha256": "61adf104f2f034a29ae2c6e7a94f666de9dfdcca4aa22878aaf4044cd28cab41"
+        }
+      },
+      "productSha256": "e7b2dc93248b05fbec171e2b0668019cbd7900775ea32a1c31f571ff15b85762",
+      "designSha256": "b569a1d378d8810d91398bb1cad406967d119bcaf961fb24af87b67259382229",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:57.688Z"
+    }
+  }
+}

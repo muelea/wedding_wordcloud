@@ -1,0 +1,45 @@
+{
+  "verifiedAt": "2026-10-24T23:40:27.876Z",
+  "focusedTests": {
+    "uniquePassed": 94,
+    "failed": 0,
+    "files": [
+      "test/product-3d-geometry.test.js",
+      "test/product-gallery.test.js",
+      "test/printful-product-model.test.js",
+      "test/mug-3d-lifecycle.test.js",
+      "test/printful-mockups.test.js",
+      "test/product-print-area-audit.test.js",
+      "test/print-geometry.test.js",
+      "test/editor-print-bounds.test.js",
+      "test/product-mockup-preview.test.js",
+      "test/print-raster.test.js"
+    ]
+  },
+  "browser": {
+    "capturedStates": 78,
+    "failed": 0,
+    "localImages": 165
+  },
+  "provider": {
+    "completedStates": 78,
+    "images": 106,
+    "temporarySourceObjectsRemoved": 41
+  },
+  "integrity": {
+    "catalogStates": 78,
+    "surfaceFiles": 84,
+    "pngDimensions": "exact full provider dimensions",
+    "printGeometry": "matches current catalog; unrelated commerce pricing excluded",
+    "rendererAndSnapshotHashes": "valid"
+  },
+  "fullSuiteRun": false,
+  "physicalSamplesChecked": false,
+  "blankColorFollowup": {
+    "verifiedAt": "2026-10-25T00:09:00.352Z",
+    "passed": 38,
+    "failed": 0,
+    "verification": "organic-tote-color-verification.json",
+    "printRectanglePixelsIdentical": true
+  }
+}

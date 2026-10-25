@@ -15,10 +15,34 @@ const {
   SOURCE_PREFIX,
   createService,
   createCreationBudget,
+  compatibleStyle,
   isOperatorCreateRequest,
   isOperatorEnabled,
   isOperatorRequest,
 } = require('../src/printfulMockups');
+
+test('new phone variants prefer their explicit mockup styles over legacy generic styles', () => {
+  const product = getProduct('tough-case-21474');
+  const row = styles => ({ placement: 'default', technique: product.printful.technique,
+    print_area_type: 'simple', mockup_styles: styles });
+  const generic = { id: 8112, category_name: 'Flat 2', restricted_to_variants: null };
+  const unrelated = { id: 111, category_name: 'Flat', restricted_to_variants: [21473] };
+  const exact = { id: 25024, category_name: 'Flat 2', restricted_to_variants: [21473, 21474] };
+  assert.equal(compatibleStyle([row([generic, unrelated]), row([exact])], product, 'default').id, 25024);
+  assert.equal(compatibleStyle([row([generic, unrelated])], product, 'default').id, 8112,
+    'catalogs with only a generic style retain their fallback');
+  assert.throws(() => compatibleStyle([row([unrelated])], product, 'default'), /passenden Mockup-Stil/);
+});
+
+test('rotatable mockups select the style for the exact print-file orientation', () => {
+  const product = getProduct('framed-matte-poster-black-30x40cm');
+  const row = (id, width, height) => ({ placement: 'default', technique: product.printful.technique,
+    print_area_width: width, print_area_height: height, print_area_type: 'simple',
+    mockup_styles: [{ id, category_name: 'Flat', restricted_to_variants: [product.printful.variantId] }] });
+  const rows = [row(24671, 16, 12), row(24662, 12, 16)];
+  assert.equal(compatibleStyle(rows, resolveProductOrientation(product, 'portrait'), 'default').id, 24662);
+  assert.equal(compatibleStyle(rows, resolveProductOrientation(product, 'landscape'), 'default').id, 24671);
+});
 
 function configurationFor(productKey, orientation = 'default', word = 'Liebe') {
   const product = resolveProductOrientation(getProduct(productKey), orientation);

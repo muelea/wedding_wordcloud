@@ -132,18 +132,20 @@ test('shipping page uses the immutable configuration and returns a server-side P
   const { quote } = await estimateResponse.json();
   assert.match(quote.id, /^[A-Za-z0-9_-]{24}$/);
   assert.ok(Date.parse(quote.expiresAt) > Date.now());
-  assert.deepEqual({ ...quote, id: undefined, expiresAt: undefined, shippingDetails: undefined }, {
+  assert.deepEqual({ ...quote, id: undefined, expiresAt: undefined, shippingDetails: undefined,
+    taxBehavior: undefined, pricingVersion: undefined, pricedItems: undefined }, {
     id: undefined,
     currency: 'EUR',
     quantity: 2,
     configurationCount: 1,
     shipmentCount: 1,
     shippingDetails: undefined,
-    itemsCents: 1930,
-    paymentReserveCents: 155,
-    shippingCents: 449,
+    taxBehavior: undefined, pricingVersion: undefined, pricedItems: undefined,
+    itemsCents: 2214,
+    paymentReserveCents: 252,
+    shippingCents: 620,
     taxCents: 0,
-    totalCents: 2379,
+    totalCents: 2834,
     checkoutPrepared: false,
     expiresAt: undefined,
   });
@@ -263,11 +265,11 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   assert.equal(quote.shipmentCount, 1);
   assert.equal(quote.configurationCount, 2);
   assert.equal(quote.productCount, 2);
-  assert.equal(quote.itemsCents, 3735);
-  assert.equal(quote.paymentReserveCents, 241);
-  assert.equal(quote.shippingCents, 600);
+  assert.equal(quote.itemsCents, 4971);
+  assert.equal(quote.paymentReserveCents, 508);
+  assert.equal(quote.shippingCents, 808);
   assert.equal(quote.taxCents, 0);
-  assert.equal(quote.totalCents, 4335);
+  assert.equal(quote.totalCents, 5779);
   assert.equal(captured.length, 1, 'mixed items for one address must use one Printful estimate');
   assert.deepEqual(captured[0].items, [
     { configurationId: mug.id, variantId: 1320, quantity: 2 },

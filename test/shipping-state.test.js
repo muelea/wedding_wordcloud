@@ -44,7 +44,7 @@ function harness(fetcher) {
     slug: 'shipping-test', guestId: 'a'.repeat(32), configurationIds: ['a'.repeat(16)],
     configurations: [], currentQuote: null, shippingRevision: 0, activeShippingRequest: null,
     submitButton: element(), checkoutButton: element(), form: element(), formError: element(),
-    checkoutError: element(), quoteResult: element(),
+    checkoutError: element(), quoteResult: element(), shipmentList: element(), findConfiguration: () => null,
     setText: (node, value) => { node.textContent = value; }, clearText: node => { node.textContent = ''; },
     setButtonLabel: (node, value) => { node.label = value; node.dataset.labelSource = value; },
     customerErrorSource: (result, fallback) => result.message || fallback,
@@ -57,7 +57,7 @@ function harness(fetcher) {
     fetch: (...args) => { calls.fetches++; return fetcher(...args); },
   });
   scope.showQuote = quote => { scope.currentQuote = quote; calls.shown.push(quote); };
-  const functions = ['setShippingActionBusy', 'clearFieldErrors', 'clearQuote'];
+  const functions = ['setShippingActionBusy', 'clearFieldErrors', 'updateDeliveryRestrictions', 'clearQuote'];
   for (const name of ['fetchShippingJson', 'finishShippingRequest', 'cancelShippingRequest']) {
     if (source.includes(`function ${name}(`)) functions.push(name);
   }
@@ -331,6 +331,46 @@ test('the shipping summary shows Stripe tax and gross total only for a prepared 
   assert.equal(checkoutButton.disabled, true);
 });
 
+test('shipping displays confirmed gross lines for both tax modes and clears stale destination prices', () => {
+  const nodes = Object.fromEntries(['items-label', 'items-price', 'shipping-price', 'tax-row', 'tax-label',
+    'tax-price', 'total-label', 'total-price'].map(id => [id, {}]));
+  const row = { dataset: { referencePrice: '11,07 € pro Stück · inkl. 19 % MwSt. für Deutschland' } };
+  const page = harness(async () => response({}));
+  Object.assign(page.scope, {
+    document: { getElementById: id => nodes[id] },
+    totalProductLabel: count => String(count), formatMoney: cents => String(cents), renderDeliveryInformation() {},
+    t: (text, values) => text.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]),
+    WolkenworteI18n: { formatNumber: String },
+  });
+  page.scope.shipmentList.querySelector = () => row;
+  page.scope.shipmentList.querySelectorAll = selector => selector === '[data-item-price]' ? [row] : [];
+  vm.runInContext(pageFunction('showQuote'), page.scope);
+  for (const quote of [
+    { itemsCents: 4171, shippingCents: 1484, taxCents: 903, totalCents: 5655,
+      grossItemsCents: 4171, grossShippingCents: 1484, taxBehavior: 'inclusive', itemGross: 2214 },
+    { itemsCents: 3505, shippingCents: 1247, taxCents: 950, totalCents: 5702,
+      grossItemsCents: 4206, grossShippingCents: 1496, taxBehavior: 'exclusive', itemGross: 2232 },
+  ]) {
+    const prepared = { id: 'new-price', currency: 'EUR', pricingVersion: 2, quantity: 3,
+      checkoutPrepared: true, ...quote,
+      pricedItems: [{ configurationId: 'mug', quantity: 2, grossTotalCents: quote.itemGross }],
+    };
+    page.scope.showQuote(prepared, { scroll: false });
+    assert.equal(nodes['items-price'].textContent, String(quote.grossItemsCents));
+    assert.equal(nodes['shipping-price'].textContent, String(quote.grossShippingCents));
+    assert.equal(nodes['tax-label'].textContent, 'Davon MwSt.');
+    assert.equal(nodes['total-price'].textContent, String(quote.totalCents));
+    assert.match(row.textContent, new RegExp(String(quote.itemGross)));
+    assert.equal(page.scope.quoteResult.hidden, false);
+    assert.throws(() => page.scope.showQuote({ ...prepared, totalCents: quote.totalCents + 1 }, { scroll: false }));
+    page.scope.clearQuote();
+    assert.equal(row.textContent, row.dataset.referencePrice, 'an edited address cannot retain an old final item price');
+    assert.equal(page.scope.quoteResult.hidden, true);
+    page.scope.showQuote({ ...prepared, checkoutPrepared: false }, { scroll: false });
+    assert.equal(page.scope.quoteResult.hidden, true, 'foreign net estimates are never presented as final gross totals');
+  }
+});
+
 function deliveryLines(delivery, { shipments = [{ customsFeesPossible: false, departureCountry: 'LV', items: [] }], locale = 'de' } = {}) {
   const lines = [];
   const translate = (text, params) => require('../src/i18n').translate(text, locale, params);
@@ -371,4 +411,23 @@ test('customs warnings still identify affected products without disclosing depar
   assert.match(lines.join(' '), /2 × Produkt: Bei der Einfuhr/);
   assert.match(lines.join(' '), /3 × Produkt: Mögliche Einfuhrgebühren/);
   assert.doesNotMatch(lines.join(' '), /1 ×|Versandland|Lettland|Vereinigte/);
+});
+
+test('delivery restrictions identify the affected item and follow destination and quantity changes', () => {
+  const h = harness(async()=>response({}));
+  let country='JP', quantity='1';
+  const notice={hidden:true,textContent:''};
+  const input={get value(){return quantity;},dataset:{configurationId:'case'},closest:()=>({querySelector:()=>notice})};
+  const card={querySelector:()=>({value:country}),querySelectorAll:()=>[input]};
+  h.scope.shipmentList.querySelectorAll=()=>[card];
+  h.scope.findConfiguration=()=>({product:{shippingRestrictions:['JP','SG']}});
+  assert.equal(h.scope.updateDeliveryRestrictions(),true);
+  assert.equal(notice.hidden,false);
+  assert.match(notice.textContent,/nicht.*geliefert/);
+  country='DE';
+  assert.equal(h.scope.updateDeliveryRestrictions(),false);
+  assert.equal(notice.hidden,true);
+  country='JP';quantity='0';
+  assert.equal(h.scope.updateDeliveryRestrictions(),false);
+  assert.equal(notice.hidden,true);
 });

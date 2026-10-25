@@ -42,6 +42,7 @@ test('wide print previews fit their exact proportions without adding top or bott
   const h = harness(t);
   assert.equal(h.image(), null, 'no full-resolution image is requested before opening');
   h.api.open(h.configuration(), h.opener);
+  assert.equal(h.window.document.activeElement, h.query('[data-preview-title]'));
   assert.equal(h.image().getAttribute('src'), '/saved/print.png?surface=front');
   assert.equal(h.viewport.getAttribute('aria-busy'), 'true');
   assert.equal(h.viewport.style.height, '324px', 'saved print dimensions size the loading view');

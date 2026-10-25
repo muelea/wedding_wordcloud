@@ -338,7 +338,7 @@
     }
     .mug-viewer {
       width: 100%;
-      height: min(350px, calc(var(--workspace-stage-height) - 48px));
+      height: max(160px, calc(var(--workspace-stage-height) - 76px));
       position: relative;
       cursor: grab;
       touch-action: pan-y pinch-zoom;
@@ -516,6 +516,8 @@
       inset: 0;
       transform: scale(var(--product-mockup-scale, 1));
       transform-origin: center;
+      /* Provider layers mask the outside and shade the entire fabric blank. */
+      background-color: var(--product-mockup-background, transparent);
     }
     .flat-product-preview.has-product-mockup canvas {
       position: absolute;
@@ -765,12 +767,6 @@
       border-color: rgba(156, 28, 76, .74);
       box-shadow: inset 0 0 0 1px rgba(156, 28, 76, .08);
     }
-    .print-readability {
-      margin: 16px 0; padding: 12px 16px; border-radius: 12px;
-      background: #fff5df; color: #73500c; font-size: 14px; line-height: 1.5;
-    }
-    .print-readability[data-level="low"] { background: #fff0eb; color: #923c27; }
-    .print-readability[hidden] { display: none; }
     .cloud-update-notice {
       display: flex;
       align-items: center;
@@ -2101,6 +2097,8 @@
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <link rel="stylesheet" href="<%= asset('/configurator-workspace.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/product-gallery.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/configurator-cart-panel.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
@@ -2115,8 +2113,19 @@
     </div>
 
     <div class="config-content" id="config-content" data-mobile-editor-expanded="false" hidden>
+      <section class="product-gallery" id="product-gallery" aria-labelledby="gallery-title" hidden>
+        <div class="product-gallery-intro">
+          <p class="product-gallery-kicker">Eure Wortwolke. Eure Erinnerung.</p>
+          <h1 id="gallery-title" tabindex="-1">Eure Worte. Zum Behalten.</h1>
+          <p class="intro-copy">Entdeckt eure Wortwolke auf euren Lieblingsprodukten. Wählt ein Produkt und macht das Design zu eurem.</p>
+        </div>
+        <div class="product-gallery-filters" data-gallery-filters role="group" aria-label="Produktkategorie"></div>
+        <div class="product-gallery-grid" data-gallery-grid></div>
+        <p class="product-gallery-note">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen.</p>
+      </section>
+      <div class="config-editor" id="config-editor">
       <section class="intro">
-        <h1 id="config-title">Gestaltet eure Erinnerung.</h1>
+        <h1 id="config-title" tabindex="-1">Gestaltet eure Erinnerung.</h1>
         <p class="intro-copy" id="config-intro">Wählt Produkt und Farbwelt. Menge und Lieferadresse entscheidet ihr im nächsten Schritt.</p>
       </section>
 
@@ -2133,11 +2142,13 @@
           </div>
 
           <div class="design-toolbar-controls">
+            <button class="gallery-back-button" type="button" data-gallery-back hidden><span aria-hidden="true">←</span><span>Zur Produktübersicht</span></button>
             <button class="selected-product toolbar-product" id="change-product" type="button" aria-label="Produkt ändern" aria-haspopup="dialog" aria-expanded="false" aria-controls="product-dialog">
               <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
               <span class="selected-product-copy">
                 <strong id="selected-product-name">Weiße Tasse</strong>
-                <span id="selected-product-detail">11 oz · 325 ml</span>
+                <span id="selected-product-detail">325 ml</span>
+                <span id="selected-product-price" data-i18n-ignore></span>
               </span>
               <span class="compact-picker-chevron" aria-hidden="true">⌄</span>
             </button>
@@ -2253,7 +2264,7 @@
                   <span class="editor-zoom-label" id="editor-zoom-label">100 %</span>
                   <%- include('partials/editor-action', { action: { id: 'editor-zoom-in', icon: 'zoom-in', label: 'Ansicht vergrößern' } }) %>
                 </div>
-                <button type="button" class="editor-button artwork-overlap-trigger" id="editor-overlap-trigger" data-panel-trigger="editor-overlap-panel" aria-haspopup="dialog" aria-controls="editor-overlap-panel" aria-expanded="false" aria-label="Überlagerungen prüfen" hidden>
+                <button type="button" class="editor-button artwork-overlap-trigger" id="editor-overlap-trigger" data-panel-trigger="editor-overlap-panel" aria-haspopup="dialog" aria-controls="editor-overlap-panel" aria-expanded="false" aria-label="Design prüfen" title="Design prüfen">
                   <span aria-hidden="true">!</span><span id="editor-overlap-count" aria-hidden="true">0</span>
                 </button>
                 <div class="editor-tools editor-tools-separated editor-tools-reset" role="group" aria-label="Designoptionen">
@@ -2373,7 +2384,7 @@
               <div class="mobile-preview-summary">
                 <span class="mobile-preview-product">
                   <strong id="mobile-selected-product-name">Weiße Tasse</strong>
-                  <span id="mobile-selected-product-detail">11 oz · 325 ml</span>
+                  <span id="mobile-selected-product-detail">325 ml</span>
                 </span>
                 <span class="mobile-preview-palette" id="mobile-preview-palette">
                   <span class="mobile-preview-palette-name" id="mobile-selected-theme-name">Konfetti</span>
@@ -2404,7 +2415,6 @@
         </div>
         </div>
 
-        <p class="print-readability" id="print-readability" role="status" aria-live="polite" hidden></p>
 
         <section class="checkout-panel" id="checkout-panel" aria-label="Bestellung fortsetzen">
           <button class="secondary-button" id="product-switch-undo" type="button" hidden>Produktwechsel rückgängig</button>
@@ -2430,8 +2440,19 @@
           <button class="secondary-button" id="retry-configurator" type="button" hidden>Konfigurator erneut laden</button>
         </section>
       </div>
+      </div>
     </div>
   </main>
+
+  <dialog class="cart-panel" id="cart-panel" aria-labelledby="cart-panel-title">
+    <div class="cart-panel-head"><h2 id="cart-panel-title" tabindex="-1">Euer Warenkorb</h2><button class="ww-icon-button ww-close-button" type="button" data-cart-panel-close aria-label="Warenkorb schließen"></button></div>
+    <p class="cart-panel-empty" data-cart-panel-empty>Euer Warenkorb ist noch leer.</p>
+    <ul class="cart-panel-list" data-cart-panel-list></ul>
+    <p class="product-price-note">Inkl. 19 % MwSt., zzgl. Versand. Preis für Deutschland; andere Lieferländer können abweichen.</p>
+    <p class="cart-panel-status" data-cart-panel-status role="alert" hidden></p>
+    <div class="cart-panel-removal" data-cart-panel-removal role="status" hidden><span></span><button class="secondary-button" type="button">Rückgängig</button></div>
+    <div class="cart-panel-foot"><button class="primary-button" type="button" data-cart-panel-continue>Zur Lieferadresse</button></div>
+  </dialog>
 
   <dialog class="config-panel" id="draft-loss-dialog" aria-labelledby="draft-loss-title" aria-describedby="draft-loss-description">
     <div class="config-panel-head"><h2 id="draft-loss-title" tabindex="-1">Entwurf konnte nicht gespeichert werden</h2></div>
@@ -2485,6 +2506,7 @@
   <dialog class="config-panel editor-options-panel" id="editor-options-panel" aria-labelledby="editor-options-title">
     <div class="config-panel-head"><h2 id="editor-options-title" tabindex="-1">Designoptionen</h2><button class="ww-icon-button ww-close-button" type="button" data-panel-close aria-label="Schließen"></button></div>
     <div class="config-panel-body" id="editor-options-actions">
+      <button class="secondary-button" type="button" data-gallery-back hidden>Zur Produktübersicht</button>
       <div class="cloud-source-actions" id="cloud-source-actions" hidden>
         <button class="secondary-button" id="check-live-words" type="button">Aktuelle Wörter prüfen</button>
         <button class="secondary-button" id="undo-cloud-rebuild" type="button" hidden>Neu erstelltes Design rückgängig</button>
@@ -2531,7 +2553,7 @@
   </dialog>
 
   <dialog class="config-panel artwork-overlap-panel" id="editor-overlap-panel" aria-labelledby="editor-overlap-title">
-    <div class="config-panel-head"><h2 id="editor-overlap-title" tabindex="-1">Überlagerungen prüfen</h2><button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button></div>
+    <div class="config-panel-head"><h2 id="editor-overlap-title" tabindex="-1">Design prüfen</h2><button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button></div>
     <div class="config-panel-body">
       <p id="editor-overlap-status" role="status" aria-live="polite"></p>
       <div id="editor-overlap-list"></div>
@@ -2545,14 +2567,15 @@
     <div class="design-replace-actions"><button class="secondary-button" type="button" id="design-state-choice-cancel">Weiter bearbeiten</button><button class="primary-button" type="button" id="design-state-choice-copy"></button></div>
   </dialog>
   <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
-  <dialog class="ww-account-dialog" id="account-auth-dialog" aria-labelledby="account-auth-title"><div class="ww-account-dialog-head"><h2 id="account-auth-title">Designs im Konto speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div><%- include('partials/account-auth') %></dialog>
+  <dialog class="ww-account-dialog" id="account-auth-dialog" aria-labelledby="account-auth-title"><div class="ww-account-dialog-head"><h2 id="account-auth-title" tabindex="-1" autofocus>Designs im Konto speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div><%- include('partials/account-auth') %></dialog>
   <dialog class="ww-account-dialog" id="account-save-dialog" aria-labelledby="account-save-title"><div class="ww-account-dialog-head"><h2 id="account-save-title">Design speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div>
     <form><label>Designname<input name="name" maxlength="80" required /></label><p>Nur mit diesem Klick wird dein Design im Konto gespeichert. Weitere Änderungen bleiben ungespeichert, bis du erneut speicherst.</p>
       <div class="ww-account-actions"><button class="ww-account-primary" type="submit">Im Konto speichern</button><button type="button" data-account-save-copy>Als neues Design speichern</button><button type="button" data-account-save-existing>Bestehendes Design auswählen</button><button type="button" data-account-open-latest hidden>Gespeicherte Version öffnen</button></div><div data-account-save-targets hidden></div><p data-account-save-status role="status" aria-live="polite"></p></form>
   </dialog>
   <% } %>
 
-  <script src="/vendor/three.min.js?v=0.160.1"></script>
+  <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js?v=0.160.1"}}</script>
+  <script>window.wolkenworteThreeReady = import('/vendor/three/build/three.module.js?v=0.160.1').then(THREE => { window.THREE = THREE; });</script>
   <script src="/vendor/fabric.min.js?v=7.4.0"></script>
   <script src="<%= asset('/js/emoji-data.js') %>"></script>
   <script src="<%= asset('/js/emoji-catalog.js') %>"></script>
@@ -2562,12 +2585,18 @@
   <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
   <script src="<%= asset('/js/cloud-limits.js') %>"></script>
   <script src="<%= asset('/js/text-print-quality.js') %>"></script>
+  <script src="<%= asset('/js/blanket-cloth.js') %>"></script>
+  <script src="<%= asset('/js/product-3d-geometry.js') %>"></script>
+  <script src="<%= asset('/js/printful-product-model.js') %>"></script>
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
   <script src="<%= asset('/js/mug-icons.js') %>"></script>
   <script src="<%= asset('/js/design-fonts.js') %>"></script>
   <script src="<%= asset('/js/artwork-overlap.js') %>"></script>
   <script src="<%= asset('/js/design-layout.js') %>"></script>
+  <script src="<%= asset('/js/print-layout-client.js') %>"></script>
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
+  <script src="<%= asset('/js/product-gallery.js') %>"></script>
+  <script src="<%= asset('/js/configurator-cart-panel.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
   <script src="<%= asset('/js/canvas-viewport.js') %>"></script>
   <script src="<%= asset('/js/mug-editor.js') %>"></script>
@@ -2591,7 +2620,7 @@
     // The content fingerprint is also the revision of untouched automatic
     // drafts. A new layout engine regenerates those drafts on the next visit,
     // while explicit customer edits and immutable cart designs stay intact.
-    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}`) %>;
+    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}|${asset('/js/text-print-quality.js')}`) %>;
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
     const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
     const mobileDevice = WolkenworteDevice.isMobileDevice(navigator);
@@ -2636,6 +2665,8 @@
     const loadingMessage = document.getElementById('loading-message');
     const retryConfiguratorLoading = document.getElementById('retry-configurator-loading');
     const content = document.getElementById('config-content');
+    const galleryElement = document.getElementById('product-gallery');
+    const editorElement = document.getElementById('config-editor');
     const errorText = document.getElementById('error-text');
     const mugViewer = document.getElementById('mug-3d');
     const mugPreviewState = document.getElementById('mug-preview-state');
@@ -2729,6 +2760,8 @@
     let products = [];
     let productFamilies = [];
     let product = null;
+    let productGallery = null;
+    const galleryPendingConfigurations = new Map();
     let selectedFamilyKey = null;
     let pendingProductKey = null;
     let pendingFamilyKey = null;
@@ -2785,6 +2818,20 @@
     let cloudRebuildUndo = null;
     let cloudRebuildRedo = null;
 
+    const cartPanel = WolkenworteCartPanel.create({
+      dialog: document.getElementById('cart-panel'), trigger: headerCart, i18n: WolkenworteI18n,
+      items: () => cart.read(), describe: describeCartItem,
+      thumbnail: item => createOrderItemThumbnail(item, products.find(candidate => candidate.key === item.productKey)),
+      pendingRemoval: () => cart.pendingRemoval(),
+      onEdit: openCartPanelDesign,
+      onRemove: id => {
+        removeOrderItem(id);
+        if (cart.read().some(item => item.id === id)) throw new Error('cart_remove_failed');
+      },
+      onUndo: undoCartRemoval,
+      onContinue: continueFromCartPanel,
+    });
+
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
     const mobileBackLink = document.getElementById('mobile-back-link');
@@ -2802,6 +2849,10 @@
 
     function updateCartActions() {
       const items = loadOrderItems();
+      document.querySelectorAll('[data-gallery-back]').forEach(button => {
+        button.hidden = directDesign || !(words.length || liveWords.length);
+        button.disabled = orderActionPending || fitAreaPending || restorationFailed || !workspaceReady;
+      });
       const emptyLiveDesign = !directDesign && !words.length;
       saveDesignButton.hidden = Boolean(editingOrderItemId) && !currentDesignNeedsSave;
       saveDesignButton.disabled = orderActionPending || fitAreaPending || !workspaceReady || restorationFailed || !currentDesignNeedsSave || emptyLiveDesign;
@@ -2899,12 +2950,7 @@
 
     fitAreaButton.addEventListener('click', () => { void fitCurrentDesignToArea(); });
     mobileEditorCollapse.addEventListener('click', () => setMobileEditorExpanded(false));
-    headerCart?.addEventListener('click', () => {
-      requestAnimationFrame(() => orderBox.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'center',
-      }));
-    });
+    headerCart?.addEventListener('click', () => cartPanel.open());
     mobileEditorMedia.addEventListener('change', () => {
       updateCartActions();
       requestAnimationFrame(refreshWorkspaceLayout);
@@ -3274,7 +3320,7 @@
       const view = selected ? { ...candidate, orientation: selected.key,
         size: selected.size, printFile: selected.printFile,
         designSafeAreas: selected.designSafeAreas, layoutGeometry: selected.layoutGeometry,
-        previewMockup: selected.previewMockup } :
+        previewMockup: selected.previewMockup, previewModel: selected.previewModel || candidate.previewModel } :
         { ...candidate, orientation: 'default' };
       const areas = view.designSafeAreas || {};
       const safeArea = areas[surfaceKey] || Object.values(areas)[0];
@@ -3300,7 +3346,7 @@
     function productSizeText(candidate, orientation = null) {
       const size = productView(candidate, orientation)?.size || {};
       const label = t(size.label || '');
-      if (size.volumeMl) return `${label} · ${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
+      if (size.volumeMl) return `${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
       if (size.detail) return `${label} · ${t(size.detail)}`;
       return label;
     }
@@ -3610,6 +3656,10 @@
         const size = document.createElement('span');
         size.textContent = itemSize;
         copy.append(title, size);
+        const price = document.createElement('span');
+        price.dataset.i18nIgnore = '';
+        price.textContent = productPriceText(itemProduct);
+        copy.appendChild(price);
         const draftStatus = document.createElement('span');
         draftStatus.className = 'order-draft-status';
         draftStatus.dataset.cartDraftStatus = item.id;
@@ -3655,6 +3705,69 @@
       });
       updateCartActions();
       renderRemovalNotice();
+      cartPanel.refresh();
+      productGallery?.updateActions();
+    }
+
+    function productPriceText(candidate) {
+      if (!candidate?.price) return '';
+      return WolkenworteI18n.formatCurrency(candidate.price.unitGrossCents, candidate.price.currency);
+    }
+
+    function describeCartItem(item) {
+      const candidate = products.find(product => product.key === item.productKey);
+      const orientation = selectedOrientationOption(candidate, item.orientation);
+      return { name: t(candidate?.displayName || 'Wolkenworte Design'),
+        price: productPriceText(candidate),
+        size: candidate ? `${productSizeText(candidate, item.orientation)}${orientation ? ` · ${t(orientation.label)}` : ''}` : '' };
+    }
+
+    async function openCartPanelDesign(id) {
+      if (leavingPage || orderActionPending || fitAreaPending) return;
+      if (!await persistCurrentDraft()) {
+        cartPanel.message('Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
+        return;
+      }
+      cartPanel.close({ restoreFocus: false });
+      productGallery?.suspend();
+      galleryElement.hidden = true;
+      editorElement.hidden = false;
+      try {
+        if (!workspaceReady) {
+          const query = new URLSearchParams(location.search);
+          for (const key of ['draft', 'cart', 'accountDesign', 'accountLatest']) query.delete(key);
+          query.set('edit', id);
+          history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
+          await initializeWorkspace();
+        } else if (id !== editingOrderItemId) {
+          await loadOrderItem(id);
+        }
+        if (restorationFailed) return;
+        updateGalleryEditorLocation();
+        await initMug3D();
+        refreshWorkspaceLayout();
+        renderAll();
+        revealReviewedDesign();
+      } catch (error) { showRestorationError(error); }
+    }
+
+    async function continueFromCartPanel() {
+      if (leavingPage || orderActionPending || fitAreaPending) return;
+      if (!loadOrderItems().length) return;
+      // This action purchases the already approved cart. A browsed variant or
+      // unsubmitted editor draft must not become an additional cart item.
+      leavingPage = true;
+      try {
+        if (workspaceReady && !await persistCurrentDraft()) {
+          cartPanel.message('Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
+          return;
+        }
+        cartPanel.close({ restoreFocus: false });
+        navigateToShipping();
+      } catch (error) {
+        cartPanel.open();
+        cartPanel.message(error.userMessage || 'Eure Entwürfe konnten nicht vollständig geprüft werden. Bitte bleibt hier und versucht es erneut.');
+      } finally { leavingPage = false; }
     }
 
     function removeOrderItem(configurationId) {
@@ -3910,6 +4023,17 @@
       }
     }
 
+    let printPackingClient = null;
+    function printLayoutJobs() {
+      if (!printPackingClient) printPackingClient = PrintLayoutClient.create({
+        core: WordCloudCore, layout: DesignLayout, version: AUTOMATIC_LAYOUT_VERSION,
+        workerCount: PrintLayoutClient.parallelism(navigator.hardwareConcurrency),
+        workerUrl: <%- JSON.stringify(asset('/js/cloud-layout-worker.js')) %>,
+        coreUrl: <%- JSON.stringify(asset('/js/wordcloud-core.js')) %>,
+      });
+      return printPackingClient;
+    }
+
     function buildAutomaticDesign(surfaceKey = activeSurface, options = {}) {
       const view = productView(options.product || product, options.orientation || null, surfaceKey);
       const sourceWords = options.words || words;
@@ -3941,15 +4065,14 @@
           });
         });
       });
-      const optimized = DesignLayout.optimizeDesign(design, slots, measurementContext, {
-        fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
-      });
-      return DesignLayout.spreadDesignColors(
-        optimized,
-        colors,
-        measurementContext,
-        { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
-      );
+      const layoutOptions = { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
+        printDpi: options.allowSmallText ? undefined : Number(view.printFile.dpi),
+        signal: options.signal, priority: options.priority };
+      const optimized = options.background
+        ? printLayoutJobs().automatic(design, slots, measurementContext, layoutOptions)
+        : DesignLayout.optimizeDesign(design, slots, measurementContext, layoutOptions);
+      const recolor = result => DesignLayout.spreadDesignColors(result, colors, measurementContext, layoutOptions);
+      return options.background ? optimized.then(recolor) : recolor(optimized);
     }
 
     function syncFitAreaButton() {
@@ -4013,11 +4136,13 @@
           .filter((item) => item.type !== 'icon' && item.type !== 'image')
           .map((item) => item.fontFamily)));
         const slots = productView().layoutGeometry['fit-area'];
-        const arrangedDesign = DesignLayout.applyLayoutAction(
+        const arrangedDesign = await DesignLayout.applyLayoutActionAsync(
           currentDesign,
           slots,
           mugEditor.measureContext,
-          { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily) }
+          { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
+            printDpi: Number(productView().printFile.dpi),
+            pack: printLayoutJobs().pack, priority: 100 }
         );
         const optimizedDesign = DesignLayout.spreadDesignColors(
           arrangedDesign,
@@ -4032,8 +4157,10 @@
         mugEditor.clearSelection();
         showFitAreaFeedback(changed ? 'Fläche neu angeordnet' : 'Keine bessere Anordnung gefunden.');
         return true;
-      } catch {
-        showFitAreaFeedback('Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.', { error: true });
+      } catch (error) {
+        showFitAreaFeedback(error.message === 'print_capacity' ? TextPrintQuality.CAPACITY_MESSAGE
+          : 'Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.', { error: true });
+        if (error.message === 'print_capacity') requestAnimationFrame(() => overlapWarnings?.showCapacity());
         return false;
       } finally {
         setFitAreaBusy(false);
@@ -4166,7 +4293,7 @@
         updateSurfaceControlSelection();
         updateProductOptionSelection();
         updateProductPresentation();
-        if (mug3D?.productKey !== product.key) destroyMug3D();
+        if (mug3D?.productKey !== product.key || mug3D?.orientation !== selectedOrientation) destroyMug3D();
         renderAll();
         await initMug3D();
       } finally {
@@ -4263,8 +4390,10 @@
       await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(nextWords.map(([word]) => word)));
       const colors = getPalette(selectedTheme).colors;
       const surfaces = nextProduct.printSurfaces?.length ? nextProduct.printSurfaces : [{ key: 'default' }];
-      return Object.fromEntries(surfaces.map(surface => [surface.key, buildAutomaticDesign(surface.key,
-        { words: nextWords, product: nextProduct, orientation, colors })]));
+      const designs = {};
+      for (const surface of surfaces) designs[surface.key] = await buildAutomaticDesign(surface.key,
+        { words: nextWords, product: nextProduct, orientation, colors, background: true });
+      return designs;
     }
 
     function workingCheckpoint() {
@@ -4457,10 +4586,10 @@
       return mugEditor ? mugEditor.getDesign() : buildAutomaticDesign();
     }
 
-    function drawDesign(ctx, offsetX = 0, offsetY = 0, scale = 1) {
+    function drawDesign(ctx, offsetX = 0, offsetY = 0, scale = 1, design = getCurrentDesign()) {
       ctx.save();
       ctx.translate(offsetX, offsetY);
-      for (const item of getCurrentDesign()) {
+      for (const item of design) {
         ArtworkOverlap.drawItem(ctx, item, {
           allowMissing: true,
           image: src => mugEditor?.getImageElement(src),
@@ -4533,7 +4662,12 @@
         availableWidth / previewAspect
       ) + 24;
       const stageHeight = Math.round(Math.min(maximumHeight, Math.max(minimumHeight, desiredHeight)));
-      workbench.style.setProperty('--workspace-stage-height', `${stageHeight}px`);
+      // Flat sleeves need room for their full turn and tilt. A taller desktop
+      // preview enlarges the product while keeping the print canvas unchanged.
+      const previewHeight = view.previewModel?.kind === 'sleeve' && window.innerWidth > 940
+        ? Math.round(Math.min(maximumHeight, Math.max(stageHeight, availableWidth + 76)))
+        : stageHeight;
+      workbench.style.setProperty('--workspace-stage-height', `${previewHeight}px`);
       // Stacked cards have independent heights. A wide mug wrap needs only
       // its aspect-ratio height and padding; the 3D preview still needs depth.
       const editorHeight = window.innerWidth <= 940
@@ -4549,14 +4683,14 @@
       if (!mug3D || !product) return;
       try {
         mug3D.updateTexture((ctx, { offsetX, offsetY }) => {
-          drawDesign(ctx, offsetX, offsetY);
+          drawDesign(ctx, offsetX, offsetY, 1, (product.previewMesh?.back || product.previewModel?.kind === 'pillow') && activeSurface !== 'front' ? (surfaceStates.get('front')?.design || []) : getCurrentDesign());
         });
       } catch { setMugPreviewState('error'); }
     }
 
     function setMugPreviewState(state) {
       previewState = state;
-      const isMug = product?.previewType === 'mug';
+      const isMug = ['mug', '3d'].includes(product?.previewType);
       mugViewer.classList.toggle('is-ready', isMug && state === 'ready');
       mugViewer.tabIndex = isMug && state === 'ready' ? 0 : -1;
       mugViewer.setAttribute('aria-busy', String(isMug && state === 'loading'));
@@ -4569,7 +4703,7 @@
     }
 
     function initMug3D() {
-      if (product?.previewType !== 'mug') return Promise.resolve();
+      if (editorElement.hidden || !['mug', '3d'].includes(product?.previewType)) return Promise.resolve();
       if (mug3D) { updateMug3DTexture(); return Promise.resolve(); }
       if (mug3DLoadPromise) return mug3DLoadPromise;
       const generation = mug3DGeneration;
@@ -4581,15 +4715,19 @@
           host: mugViewer,
           interactionElement: mugViewer,
           rotateAnywhere: () => workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product',
-          framingFill: () => mobileDevice && mobileEditorMedia.matches && !mobileEditorExpanded && !workspace.mobileCanvas?.active ? .96 : .88,
-          product,
+          framingFill: () => mobileDevice && mobileEditorMedia.matches && !mobileEditorExpanded && !workspace.mobileCanvas?.active ? .96 : .92,
+          product: productView(),
+          fitToView: true,
           onStatus: (state) => { if (generation === mug3DGeneration) setMugPreviewState(state); },
+          drawBackTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, activeSurface === 'back' ? getCurrentDesign() : (surfaceStates.get('back')?.design || [])),
           drawTexture: (ctx, { offsetX, offsetY }) => {
-            drawDesign(ctx, offsetX, offsetY);
+            drawDesign(ctx, offsetX, offsetY, 1, (product.previewMesh?.back || product.previewModel?.kind === 'pillow') && activeSurface !== 'front' ? (surfaceStates.get('front')?.design || []) : getCurrentDesign());
           },
         });
         mug3D.productKey = product.key;
-        setMugPreviewState('ready');
+        mug3D.orientation = selectedOrientation;
+        if (!mug3D.loading) setMugPreviewState('ready');
+        return mug3D.ready;
       }).catch((error) => {
         if (generation !== mug3DGeneration) return;
         console.warn('3D mug preview unavailable.', error);
@@ -4602,19 +4740,22 @@
     }
 
     function renderProductPreview() {
-      if (!product) return;
-      if (product.previewType === 'mug') { updateMug3DTexture(); return; }
-      const view = productView();
-      const canvas = flatCanvas;
+      if (editorElement.hidden || !product) return;
+      if (['mug', '3d'].includes(product.previewType)) { updateMug3DTexture(); return; }
+      paintFlatProductPreview(flatCanvas, productView(), getCurrentDesign(), activeSurface);
+    }
+
+    function paintFlatProductPreview(canvas, view, design, surfaceKey) {
       const ctx = setupCanvas(canvas);
       const width = canvas.width;
       const height = canvas.height;
       ctx.clearRect(0, 0, width, height);
-      const hasProductMockup = product.previewType === 'flat' && Boolean(currentProductMockupAsset());
-      if (product.previewType === 'flat' && !hasProductMockup) {
+      const hasProductMockup = view.previewType === 'flat' && Boolean(currentProductMockupAsset(view, surfaceKey));
+      if (view.previewType === 'flat' && !hasProductMockup) {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
       }
+      if (view.previewMockup?.backgroundColor) { ctx.fillStyle = view.previewMockup.backgroundColor; ctx.fillRect(0, 0, width, height); }
       const widthScale = width / view.printFile.width;
       const heightScale = height / view.printFile.height;
       const scale = (hasProductMockup && view.previewMockup.canvas.fit === 'cover'
@@ -4624,32 +4765,15 @@
         ctx,
         (width - view.printFile.width * scale) / 2,
         (height - view.printFile.height * scale) / 2,
-        scale
+        scale,
+        design
       );
-      if (product.previewType === 'mug') updateMug3DTexture();
-    }
-
-    function updatePrintReadability() {
-      const notice = document.getElementById('print-readability');
-      if (!mugEditor || !product) { notice.hidden = true; return; }
-      const design = productSurfaces().flatMap(surface => surface.key === activeSurface
-        ? mugEditor.getDesign() : (surfaceStates.get(surface.key)?.design || []));
-      const quality = TextPrintQuality.evaluate(design, Number(productView().printFile.dpi));
-      notice.hidden = !quality || quality.level === 'good';
-      if (notice.hidden) { clearText(notice); return; }
-      notice.dataset.level = quality.level;
-      setText(notice, quality.level === 'low'
-        ? 'Auf euren Druckflächen sind {{count}} Texte sehr klein (kleinste Schrift: {{size}} pt). Vergrößert die Schrift, wählt ein größeres Produkt oder reduziert die Texte im Druckdesign. Die Live-Wortwolke bleibt vollständig.'
-        : 'Auf euren Druckflächen sind {{count}} Texte klein (kleinste Schrift: {{size}} pt). Prüft die Lesbarkeit; ein größeres Produkt bietet mehr Platz.',
-      { count: quality.level === 'low' ? quality.tiny : quality.small,
-        size: WolkenworteI18n.formatNumber(quality.minPt, { maximumFractionDigits: 1 }) });
     }
 
     function renderAll() {
       cancelAnimationFrame(renderFrame);
       renderFrame = requestAnimationFrame(() => {
         renderProductPreview();
-        updatePrintReadability();
         overlapWarnings?.schedule();
       });
     }
@@ -4672,14 +4796,17 @@
       }
     }
 
-    function currentProductMockupAsset() {
-      const assets = productView()?.previewMockup?.assets;
-      return assets?.[activeSurface] || assets?.default || '';
+    function currentProductMockupAsset(view = productView(), surfaceKey = activeSurface) {
+      const assets = view?.previewMockup?.assets;
+      return assets?.[surfaceKey] || assets?.default || '';
     }
 
     function updateProductMockup() {
-      const view = productView();
-      const asset = currentProductMockupAsset();
+      configureProductMockup(productView(), activeSurface, flatPreview, flatMockup);
+    }
+
+    function configureProductMockup(view, surfaceKey, flatPreview, flatMockup) {
+      const asset = currentProductMockupAsset(view, surfaceKey);
       const canvas = view?.previewMockup?.canvas;
       flatPreview.classList.toggle('has-product-mockup', Boolean(asset));
       flatPreview.style.setProperty(
@@ -4689,6 +4816,10 @@
       flatPreview.style.setProperty(
         '--product-mockup-blend',
         view?.previewMockup?.blendMode || 'normal'
+      );
+      flatPreview.style.setProperty(
+        '--product-mockup-background',
+        view?.previewMockup?.backgroundColor || 'transparent'
       );
       flatPreview.style.setProperty(
         '--product-mockup-rotation',
@@ -4716,7 +4847,8 @@
     function updateProductPresentation() {
       if (!product) return;
       const view = productView();
-      const isMug = product.previewType === 'mug';
+      const isMug = ['mug', '3d'].includes(product.previewType);
+      const isCloth = product.previewModel?.kind === 'blanket';
       const mobileProduct = workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product';
       mugViewer.classList.toggle('is-flat', !isMug);
       productStage.classList.toggle('is-flat-product', !isMug);
@@ -4735,7 +4867,7 @@
       );
       requestAnimationFrame(refreshWorkspaceLayout);
       mugViewer.tabIndex = isMug ? 0 : -1;
-      mugViewer.setAttribute('aria-label', isMug
+      mugViewer.setAttribute('aria-label', isCloth ? t('{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.', { product: t(product.displayName), size: t(view.size.label) }) : product.previewType === '3d' ? t('Interaktive 3D-Vorschau. Ziehen oder Pfeiltasten zum Drehen.') : isMug
         ? t(mobileProduct ? 'Interaktive 3D-Tasse. Überall in der Vorschau ziehen, um sie zu drehen.' : 'Interaktive 3D-Tasse. Direkt auf der Tasse ziehen, um sie in alle Richtungen zu drehen; neben der Tasse wischen, um zu scrollen. Alternativ die Pfeiltasten verwenden.')
         : t('Vorschau: {{product}}, {{size}}', {
           product: t(product.displayName),
@@ -4744,7 +4876,11 @@
       const activeSurfaceLabel = productSurfaces().length > 1
         ? ` · ${t(productSurfaces().find((surface) => surface.key === activeSurface)?.label || '')}`
         : '';
-      document.getElementById('mug-viewer-hint').textContent = isMug
+      document.getElementById('mug-viewer-hint').textContent = isCloth
+        ? `${t('Stoff ziehen · Daneben drehen · Leertaste: Stoff bewegen')} · ${t(view.size.label)}`
+        : product.previewType === '3d'
+        ? `${t('Ziehen zum Drehen')} · ${t(view.orientation === 'landscape' ? view.size.label : product.variantLabel || view.size.label)}`
+        : isMug
         ? t(mobileProduct ? 'Überall ziehen zum Drehen · {{height}} cm × Ø {{diameter}} cm' : '↔↕ Tasse ziehen zum Drehen · Daneben scrollen · {{height}} cm × Ø {{diameter}} cm', {
           height: localizedNumber(product.size.heightCm),
           diameter: localizedNumber(product.size.diameterCm),
@@ -4837,6 +4973,7 @@
       const detail = selectedProductSummary(product);
       selectedProductDetail.textContent = detail;
       mobileSelectedProductDetail.textContent = detail;
+      document.getElementById('selected-product-price').textContent = productPriceText(product);
       updateToolbarSummaries();
     }
 
@@ -5021,9 +5158,10 @@
           await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts(contents
             .filter(item => item.type !== 'icon' && item.type !== 'image').map(item => item.fontFamily)));
           await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(contents.map(item => item.text || '')));
-          transferred = DesignTransfer.prepare(state, source, target, mugEditor.measureContext, {
+          transferred = await DesignTransfer.prepareAsync(state, source, target, mugEditor.measureContext, {
             fontFamily: item => DesignFonts.cssFamily(item.fontFamily), automatic: !wasEdited && !previousEditingId,
-            independent: Boolean(options.independent),
+            printDpi: Number(nextProduct.printFile?.dpi),
+            independent: Boolean(options.independent), pack: printLayoutJobs().pack, priority: 100,
           });
           await WolkenworteConfiguratorSession.withTimeout(mugEditor.preloadImages(Object.values(transferred.designs).flat()));
         }
@@ -5078,7 +5216,7 @@
         if (options.refreshCloud) setCloudFeedback(error.message === 'no_words'
           ? 'Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.'
           : 'Die aktuelle Wortwolke konnte nicht geladen werden. Euer Design bleibt unverändert. Bitte versucht es erneut.', { notice: true });
-        setText(errorText, options.refreshCloud
+        setText(errorText, error.message === 'print_capacity' ? TextPrintQuality.CAPACITY_MESSAGE : options.refreshCloud
           ? 'Die aktuelle Wortwolke konnte nicht geladen werden. Bitte versucht es erneut.'
           : 'Das Design konnte nicht auf das neue Produkt übertragen werden. Bitte versucht es erneut.');
         return false;
@@ -5169,7 +5307,7 @@
         option.className = 'variant-option';
         option.dataset.productKey = candidate.key;
         option.setAttribute('role', 'radio');
-        option.setAttribute('aria-label', `${t(candidate.displayName)}, ${t(candidate.size.label)}`);
+        option.setAttribute('aria-label', `${t(candidate.displayName)}, ${t(candidate.variantLabel || candidate.size.label)}`);
         option.addEventListener('click', () => {
           selectDialogProduct(candidate);
           if (productDialog.dataset.presentation === 'popover') void confirmProductDialog();
@@ -5188,9 +5326,9 @@
         thumbnail.loading = 'lazy';
         const copy = document.createElement('span');
         const name = document.createElement('strong');
-        name.textContent = `${t(candidate.displayName)} · ${t(candidate.size.label)}`;
+        name.textContent = `${t(candidate.displayName)} · ${t(candidate.variantLabel || candidate.size.label)}`;
         const detail = document.createElement('span');
-        detail.textContent = productDetail(candidate);
+        detail.textContent = `${productDetail(candidate)} · ${productPriceText(candidate)}`;
         copy.append(name, detail);
         option.append(thumbnail, copy);
         variantOptions.appendChild(option);
@@ -5336,7 +5474,12 @@
       updateToolbarSummaries();
     }
 
-    function initEditor() {
+    async function initEditor(initialDesigns = null) {
+      if (!initialDesigns) {
+        initialDesigns = {};
+        for (const surface of productSurfaces()) initialDesigns[surface.key] =
+          await buildAutomaticDesign(surface.key, { background: true, priority: 100 });
+      }
       const defaultSlot = selectedProductSlot();
       const view = productView();
       mugEditor = new MugPrintEditor({
@@ -5417,11 +5560,12 @@
       });
       overlapWarnings = new ArtworkOverlapWarnings({ document, editor: mugEditor, workspace, selectSurface,
         getSurfaces: () => productSurfaces().map(surface => ({ key: surface.key, label: surface.label,
+          dpi: Number(productView(product, selectedOrientation, surface.key).printFile.dpi),
           design: surface.key === activeSurface ? mugEditor.getDesign() : (surfaceStates.get(surface.key)?.design || []),
         })),
       });
-      mugEditor.setDesign(buildAutomaticDesign(), { resetHistory: true });
-      resetSurfaceStates(mugEditor.getState());
+      mugEditor.setDesign(initialDesigns?.[activeSurface] || buildAutomaticDesign(), { resetHistory: true });
+      resetSurfaceStates(mugEditor.getState(), initialDesigns);
       if (!configuratorEmojiPicker) {
         configuratorEmojiPicker = WolkenworteEmojiPicker.create({
           trigger: document.getElementById('editor-emoji-toggle'),
@@ -5529,14 +5673,8 @@
         const revision = designRevision;
         let data = pendingConfiguration?.revision === revision ? pendingConfiguration.data : null;
         if (!data) {
-          const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
-            method: 'POST', signal: AbortSignal.timeout(30000),
-            headers: { 'Content-Type': 'application/json', 'X-Wolkenworte-Guest-Id': guestId },
-            body: JSON.stringify({ productKey: product.key, orientation: selectedOrientation,
-              theme: selectedTheme, words, designs, accountDesignId: accountController?.source()?.id }),
-          });
-          data = await response.json();
-          if (!response.ok) throw new Error(data.error || 'save_failed');
+          data = await createConfiguration({ productKey: product.key, orientation: selectedOrientation,
+            theme: selectedTheme, words, designs }, accountController?.source()?.id);
           pendingConfiguration = { revision, data };
         }
         if (previousId && !loadOrderItems().some(item => item.id === previousId)) throw new Error('cart_changed');
@@ -5634,6 +5772,12 @@
     }
 
     function revealReviewedDesign() {
+      productGallery?.suspend();
+      galleryElement.hidden = true;
+      editorElement.hidden = false;
+      refreshWorkspaceLayout();
+      renderAll();
+      void initMug3D();
       if (mobileDevice && workspace.mobileCanvas?.open(mobileEditorToggle)) return;
       const editor = document.querySelector('.wrap-preview');
       editor.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
@@ -5667,7 +5811,7 @@
             await loadOrderItem(choice.slice(5));
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(editingOrderItemId)}`);
             revealReviewedDesign();
-            return;
+            return 'edit';
           } else if (choice === 'cart') {
             const saved = await persistCurrentDraft();
             if (!saved && await askToLeaveWithoutDraft() !== 'leave') return;
@@ -5705,6 +5849,10 @@
           }
           designs = await prepareCloudDesigns(checked);
         } catch (error) {
+          if (error.message === 'print_capacity') {
+            setCloudFeedback(TextPrintQuality.CAPACITY_MESSAGE, { notice: true });
+            return;
+          }
           cloudSourceState = error.message === 'source_unavailable' ? 'unavailable' : 'error';
           setCloudFeedback(error.message === 'source_unavailable'
             ? 'Die Wortwolke ist nicht mehr verfügbar. Euer Design bleibt erhalten.'
@@ -5726,8 +5874,15 @@
       if (!workspaceReady || orderActionPending) return;
       workspace.requestReset(() => {
         // Keep the existing one-step, current-side reset and its Undo.
+        let design;
+        try { design = buildAutomaticDesign(); }
+        catch (error) {
+          if (error.message === 'print_capacity') overlapWarnings?.showCapacity();
+          else mugEditor.setFeedback('Die Druckfläche konnte nicht neu angeordnet werden. Bitte versucht es erneut.');
+          return;
+        }
         mugEditor.recordHistory();
-        mugEditor.setDesign(buildAutomaticDesign(), { record: true });
+        mugEditor.setDesign(design, { record: true });
         mugEditor.setFeedback(directDesign ? 'Design zurückgesetzt' : 'Automatische Wortwolke wiederhergestellt');
         markDirty();
       }, workspace.mobileCanvas?.active ? document.getElementById('editor-options-reset') : undefined);
@@ -5750,6 +5905,8 @@
         clearPrintfulMockupState(configurationId);
       }
       destroyMug3D();
+      productGallery?.destroy();
+      printPackingClient?.dispose();
       draftStore.close();
     });
     window.addEventListener('beforeunload', (event) => {
@@ -5769,13 +5926,14 @@
       content.inert = false;
       if (draftLossDialog.open) draftLossDialog.close('stay');
       // Reload so the page can restore the latest local draft or immutable cart snapshot.
-      if (workspaceReady) { allowNavigation = true; location.reload(); return; }
+      if (workspaceReady || productGallery) { allowNavigation = true; location.reload(); return; }
       setOrderActionsBusy(false);
       void initMug3D();
     });
 
     function refreshLocalizedConfigurator() {
       if (!product || !products.length) return;
+      productGallery?.localize();
       buildProductOptions();
       buildOrientationOptions();
       buildThemeOptions();
@@ -5790,6 +5948,14 @@
     window.addEventListener('wolkenworte:localechange', refreshLocalizedConfigurator);
 
     async function showReadyWorkspace() {
+      const query = new URLSearchParams(location.search);
+      const galleryEntry = WolkenworteProductGallery.shouldOpen({ directDesign, words, query, draft: null });
+      const draft = galleryEntry ? await loadLocalDraft(query.get('draft')
+        ? { workingDesignId: query.get('draft') } : null) : null;
+      if (galleryEntry && (query.get('view') === 'products' || !draft)) {
+        showProductGallery(draft);
+        return;
+      }
       // Initialize while hidden, then measure and paint the restored design
       // before dismissing the loader.
       await initializeWorkspace();
@@ -5797,6 +5963,176 @@
       refreshWorkspaceLayout();
       renderAll();
       loading.hidden = true;
+    }
+
+    function showProductGallery(snapshot = null) {
+      updateGalleryLocation(snapshot);
+      const sourceWords = (liveWords.length ? liveWords : words).map(pair => [...pair]);
+      const theme = selectedTheme;
+      const colors = [...getPalette(theme).colors];
+      const paletteColors = [...customColors];
+      editorElement.hidden = true;
+      galleryElement.hidden = false;
+      content.hidden = false;
+      loading.hidden = true;
+      updateHeaderCart(loadOrderItems());
+      if (productGallery) { void productGallery.resume(snapshot); return; }
+      productGallery = new WolkenworteProductGallery.Gallery({
+        element: galleryElement, products, i18n: WolkenworteI18n,
+        getView: (candidate, orientation) => productView(candidate, orientation, candidate.printSurfaces[0].key),
+        configureFlat: configureProductMockup,
+        paintFlat: paintFlatProductPreview,
+        prepare: async (candidate, { signal, allowSmallText = false }) => {
+          const orientation = candidate.defaultOrientation || 'default';
+          const designs = {};
+          for (const surface of candidate.printSurfaces) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            designs[surface.key] = await buildAutomaticDesign(surface.key, {
+              product: candidate, orientation, words: sourceWords, colors, background: true, signal, allowSmallText,
+            });
+          }
+          return { productKey: candidate.key, orientation, theme, currentDesignEdited: allowSmallText,
+            customColors: paletteColors, words: sourceWords, designs };
+        },
+        createMug: ({ host, product: candidate, design, designs, onStatus }) => Mug3DViewer.create({
+          THREE: window.THREE, host, product: candidate, onStatus,
+          drawTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, candidate.previewMesh?.back || candidate.previewModel?.kind === 'pillow' ? (designs?.front || design) : design),
+          drawBackTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, designs?.back || []),
+        }),
+        onChoose: openGalleryDesign,
+        onAdd: addGalleryDesign,
+        isInCart: id => loadOrderItems().some(item => item.id === id),
+      });
+      if (snapshot) void productGallery.resume(snapshot);
+    }
+
+    async function openGalleryDesign(snapshot) {
+      // Release the gallery's WebGL context before opening the editor's viewer.
+      productGallery.suspend();
+      galleryElement.hidden = true;
+      editorElement.hidden = false;
+      content.inert = true;
+      orderActionPending = true;
+      try {
+        if (!workspaceReady) {
+          await initializeWorkspace(snapshot);
+        } else if (snapshot.workingDesignId !== workingDesignId) {
+          await applyLocalDraft({ currentDesignEdited: false, ...snapshot });
+        }
+        if (restorationFailed) return;
+        updateGalleryEditorLocation();
+        await initMug3D();
+        scheduleDraftSave(0);
+      } catch (error) { showRestorationError(error); }
+      finally {
+        orderActionPending = false;
+        content.inert = false;
+        setOrderActionsBusy(false);
+      }
+      refreshWorkspaceLayout();
+      renderAll();
+      const title = document.getElementById('config-title');
+      title.focus({ preventScroll: true });
+      title.scrollIntoView({ block: 'start' });
+      if (!restorationFailed && mobileDevice && mobileEditorMedia.matches) {
+        workspace.mobileCanvas?.open(mobileEditorToggle);
+      }
+    }
+
+    function updateGalleryEditorLocation() {
+      const query = new URLSearchParams(location.search);
+      for (const key of ['view', 'edit', 'cart', 'draft', 'accountDesign', 'accountLatest']) query.delete(key);
+      query.set('draft', workingDesignId);
+      if (editingOrderItemId) query.set('edit', editingOrderItemId);
+      if (accountDesignReference?.id) query.set('accountDesign', accountDesignReference.id);
+      history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
+    }
+
+    function updateGalleryLocation(snapshot) {
+      const query = new URLSearchParams(location.search);
+      for (const key of ['edit', 'cart', 'draft', 'accountDesign', 'accountLatest']) query.delete(key);
+      query.set('view', 'products');
+      if (snapshot?.workingDesignId) query.set('draft', snapshot.workingDesignId);
+      history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
+    }
+
+    async function returnToGallery() {
+      if (leavingPage || orderActionPending || fitAreaPending || restorationFailed || !workspaceReady) return;
+      leavingPage = true;
+      try {
+        if (!await persistCurrentDraft() && await askToLeaveWithoutDraft() !== 'leave') return;
+        const snapshot = draftSnapshot();
+        workspace.close();
+        workspace.mobileCanvas?.close();
+        destroyMug3D();
+        showProductGallery(snapshot);
+        const title = document.getElementById('gallery-title');
+        title.focus({ preventScroll: true });
+        title.scrollIntoView({ block: 'start' });
+      } finally { leavingPage = false; }
+    }
+
+    document.querySelectorAll('[data-gallery-back]').forEach(button => {
+      button.addEventListener('click', () => { void returnToGallery(); });
+    });
+
+    async function createConfiguration(snapshot, accountDesignId) {
+      const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
+        method: 'POST', signal: AbortSignal.timeout(30000),
+        headers: { 'Content-Type': 'application/json', 'X-Wolkenworte-Guest-Id': guestId },
+        body: JSON.stringify({ productKey: snapshot.productKey, orientation: snapshot.orientation,
+          theme: snapshot.theme, words: snapshot.words, designs: snapshot.designs, accountDesignId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save_failed');
+      return data;
+    }
+
+    async function addGalleryDesign(snapshot) {
+      const fail = userMessage => { throw Object.assign(new Error('gallery_cart_failed'), { userMessage }); };
+      let items;
+      try { items = cart.read(); cart.write(items); }
+      catch { fail('Der Warenkorb konnte in diesem Browser nicht gesichert werden. Bitte erlaubt das Speichern von Websitedaten.'); }
+      const previous = items.find(item => item.id === snapshot.editingOrderItemId);
+      if (previous && snapshot.needsCartUpdate === false) return snapshot;
+      if (!previous && items.length >= WolkenworteConfiguratorSession.MAX_CART_ITEMS) {
+        fail('Euer Warenkorb enthält bereits 20 Designs. Entfernt zuerst ein Design.');
+      }
+      const fingerprint = WolkenworteConfiguratorSession.designFingerprint(snapshot);
+      const pending = galleryPendingConfigurations.get(snapshot.productKey);
+      const data = pending?.fingerprint === fingerprint ? pending.data
+        : await createConfiguration(snapshot, snapshot.accountDesign?.id);
+      // Retain a prepared server snapshot if local cart storage fails, so a
+      // retry never creates another immutable configuration for the same artwork.
+      galleryPendingConfigurations.set(snapshot.productKey, { fingerprint, data });
+      if (previous && !cart.read().some(item => item.id === previous.id)) {
+        fail('Der Warenkorb hat sich geändert. Bitte öffnet das Design erneut, bevor ihr Änderungen übernehmt.');
+      }
+      cart.replace({ ...orderItemFromConfiguration(data), lineId: previous?.lineId || previous?.id || data.id,
+        ...(snapshot.accountDesign?.id ? { accountDesignId: snapshot.accountDesign.id } : {}) }, previous?.id);
+      galleryPendingConfigurations.delete(snapshot.productKey);
+      if (!previous) globalThis.WolkenworteAnalytics?.track('add_to_cart', { itemId: data.productKey });
+      try {
+        WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage).replaceConfiguration(previous?.id, data.id);
+      } catch { /* Quantity drafts do not authorize checkout. */ }
+      const saved = { ...snapshot, editingOrderItemId: data.id, needsCartUpdate: false,
+        savedDesignFingerprint: fingerprint, layoutVersion: AUTOMATIC_LAYOUT_VERSION,
+        currentDesignEdited: snapshot.currentDesignEdited === true,
+        workingDesignId: snapshot.workingDesignId || WolkenworteConfiguratorSession.newWorkingId() };
+      cartDrafts.delete(previous?.id);
+      if (workspaceReady && saved.workingDesignId === workingDesignId) {
+        editingOrderItemId = data.id;
+        currentDesignNeedsSave = false;
+        savedDesignFingerprint = fingerprint;
+        pendingConfiguration = null;
+        await persistCurrentDraft();
+        saved.storageVersion = draftStorageVersion;
+      } else {
+        try { Object.assign(saved, await draftStore.save(saved)); }
+        catch (error) { console.warn('Gallery cart draft recovery unavailable.', error); }
+      }
+      renderOrderBox();
+      return saved;
     }
 
     async function retryStartupTask(task, attempts = 2) {
@@ -5840,6 +6176,7 @@
       return data;
     }, 2)
       .then(async (data) => {
+        await window.wolkenworteThreeReady;
         await WolkenworteI18n.useEventLocale(data.event.locale);
         WolkenworteJourney.remember(slug, data.event.title, true, undefined, Date.now(), directDesign);
         setText(document.getElementById('basket-context'), 'Warenkorb für {{name}}', { name: data.event.title });
@@ -5890,6 +6227,7 @@
         if (!directDesign && !data.words.length) setCloudFeedback('Die Wortwolke enthält derzeit keine Wörter. Euer Design bleibt erhalten.', { notice: true });
       })
       .catch((error) => {
+        console.warn('Configurator startup failed.', error);
         content.inert = false;
         content.hidden = true;
         loading.hidden = false;
@@ -5911,24 +6249,46 @@
       updateCartActions();
     }
 
-    async function initializeWorkspace() {
+    async function initializeWorkspace(initialDesign = null) {
       content.inert = true;
       suppressDirty = true;
       try {
         cart.read();
-        initEditor();
+        if (initialDesign) {
+          product = products.find(candidate => candidate.key === initialDesign.productKey);
+          selectedOrientation = initialDesign.orientation;
+          selectedTheme = initialDesign.theme;
+          customColors = [...initialDesign.customColors];
+          words = initialDesign.words;
+          activeSurface = productSurfaces()[0].key;
+          selectedFamilyKey = product.familyKey;
+          buildOrientationOptions();
+          updateProductOptionSelection();
+          updateProductPresentation();
+        }
+        // Restore existing artwork before attempting any new automatic layout.
+        // A dense live cloud must never prevent opening a saved manual design.
+        const entryQuery = new URLSearchParams(location.search);
+        const recovering = ['edit', 'cart', 'accountDesign'].some(key => entryQuery.has(key));
+        const recoveredDraft = !initialDesign && !recovering ? await loadLocalDraft(entryQuery.get('draft')
+          ? { workingDesignId: entryQuery.get('draft') } : null) : null;
+        const recoveryDesigns = recovering || recoveredDraft ? Object.fromEntries(
+          productSurfaces().map(surface => [surface.key, []])) : null;
+        await initEditor(initialDesign?.designs || recoveryDesigns);
+        if (initialDesign) currentDesignEdited = initialDesign.currentDesignEdited === true;
         mugEditor.flushPendingChange();
         void initMug3D();
+        if (initialDesign?.workingDesignId) await applyLocalDraft(initialDesign);
         const query = new URLSearchParams(location.search);
         const requestedEdit = query.get('edit');
-        if (query.get('accountDesign')) {
+        if (!initialDesign && query.get('accountDesign')) {
           if (!accountController) throw new Error('account_unauthorized');
           await restoreAccountDesign(query.get('accountDesign'), { latest: query.get('accountLatest') === '1', workingId: query.get('draft') });
-        } else if (requestedEdit) {
+        } else if (!initialDesign && requestedEdit) {
           setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
           await loadOrderItem(requestedEdit);
         }
-        else if (query.has('cart')) {
+        else if (!initialDesign && query.has('cart')) {
           const basket = cart.read();
           if (basket.length) {
             setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
@@ -5936,9 +6296,8 @@
             await loadOrderItem(id);
             history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?edit=${encodeURIComponent(id)}`);
           }
-        } else {
-          const localDraft = query.get('draft')
-            ? await loadLocalDraft({ workingDesignId: query.get('draft') }) : await loadLocalDraft();
+        } else if (!initialDesign) {
+          const localDraft = recoveredDraft;
           if (localDraft) {
             setText(loadingMessage, 'Euer Design wird wiederhergestellt…');
             await applyLocalDraft(localDraft);
@@ -5957,7 +6316,8 @@
           requestAnimationFrame(() => orderBox.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         }
       } catch (error) {
-        showRestorationError(error);
+        if (error.message === 'print_capacity') showProductGallery();
+        else showRestorationError(error);
       } finally {
         suppressDirty = false;
         orderActionPending = false;

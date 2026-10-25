@@ -1,0 +1,83 @@
+{
+  "source": "Pre-cold-load optimization, 24 October 2026; deterministic test metrics",
+  "cases": [
+    {
+      "count": 5,
+      "slots": [
+        {
+          "x": 36,
+          "y": 36,
+          "width": 2628,
+          "height": 978,
+          "optimize": true
+        }
+      ],
+      "sha256": "17703cdaa3b9db08b0d296ffb2e9e317cade96b67a32d4dfe92120b312e6b860"
+    },
+    {
+      "count": 5,
+      "slots": [
+        {
+          "x": 201,
+          "y": 170,
+          "width": 1416,
+          "height": 2273,
+          "optimize": true
+        }
+      ],
+      "sha256": "85d3a6f9a2f5f57d2dba76fec70370bab258519fb30959f375295b4347b22d40"
+    },
+    {
+      "count": 17,
+      "slots": [
+        {
+          "x": 36,
+          "y": 36,
+          "width": 2628,
+          "height": 978,
+          "optimize": true
+        }
+      ],
+      "sha256": "138b12924dcb2f17281018ce46802726b6026b8756aaec473d55dfeedb6bf8ba"
+    },
+    {
+      "count": 17,
+      "slots": [
+        {
+          "x": 201,
+          "y": 170,
+          "width": 1416,
+          "height": 2273,
+          "optimize": true
+        }
+      ],
+      "sha256": "0645bebe485a89c0bce65460b8f7020c74a20c0cb517a8fd3067474c766fe8c4"
+    },
+    {
+      "count": 40,
+      "slots": [
+        {
+          "x": 36,
+          "y": 36,
+          "width": 2628,
+          "height": 978,
+          "optimize": true
+        }
+      ],
+      "sha256": "ecd81108b86fd224c14b4ef76fa0c52e6045e2d314099ce648d929a78fbfa250"
+    },
+    {
+      "count": 40,
+      "slots": [
+        {
+          "x": 201,
+          "y": 170,
+          "width": 1416,
+          "height": 2273,
+          "optimize": true
+        }
+      ],
+      "sha256": "8c65a32bfb1f6aa6007a54ea9c60f3025dbd653e4624c825119d1cd41acdd326"
+    }
+  ]
+}

@@ -271,9 +271,16 @@
     if (mugViewer || !mugHost || !window.Mug3DViewer || !window.THREE) return;
     if (document.fonts && document.fonts.status === 'loading') return;
     try {
+      var product = window.wolkenworteLandingMugProduct;
+      if (!product || !window.PrintfulProductModel) return;
       mugViewer = window.Mug3DViewer.create({
         THREE: window.THREE,
         host: mugHost,
+        // Align the catalog mesh with the original animation's cup axis and
+        // cylindrical word strips; the story keeps its own motion and layout.
+        product: Object.assign({}, product, { previewMesh: Object.assign({}, product.previewMesh, {
+          rotateY: 180, diameter: product.size.diameterCm,
+        }) }),
         positionY: .1,
         initialRotationY: 0,
         autoRotateDurationMs: 8000,
@@ -282,16 +289,22 @@
         maxRenderPixels: 1200000,
         framingFill: function () { return .82; },
       });
-      mugViewer.group.scale.setScalar(1.216);
-      mugViewer.group.traverse(function (object) {
-        if (object.material && cupMaterials.indexOf(object.material) < 0) {
-          object.material.transparent = true;
-          object.material.opacity = 0;
-          object.material.needsUpdate = true;
-          cupMaterials.push(object.material);
-        }
+      mugViewer.ready.then(function (ready) {
+        if (!ready) return;
+        mugViewer.group.scale.setScalar(1.216);
+        mugViewer.group.traverse(function (object) {
+          var materials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+          materials.forEach(function (material) {
+            if (cupMaterials.indexOf(material) >= 0) return;
+            material.transparent = true;
+            material.opacity = 0;
+            material.needsUpdate = true;
+            cupMaterials.push(material);
+          });
+        });
+        buildStickers();
+        mugViewer.render();
       });
-      buildStickers();
       // Run after the viewer's own input handlers; retain its touch, pointer
       // capture and keyboard behavior while bounding this landing-page view.
       mugHost.addEventListener('pointermove', limitCupView);

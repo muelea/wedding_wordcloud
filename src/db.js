@@ -931,10 +931,13 @@ async function attachStripeCustomer(orderId, customerId) {
   if (!result.rowCount) throw new Error('Stripe customer could not be attached');
 }
 
-async function attachStripeSession(orderId, { id, url, taxCents, totalCents }) {
+async function attachStripeSession(orderId, { id, url, taxCents, totalCents, shippingTaxCents, pricedItems }) {
   const expectedAmounts = Number.isSafeInteger(taxCents) && taxCents >= 0 &&
       Number.isSafeInteger(totalCents) && totalCents >= 0
-    ? { expectedTaxCents: taxCents, expectedTotalCents: totalCents }
+    ? { expectedTaxCents: taxCents, expectedTotalCents: totalCents,
+      ...(Number.isSafeInteger(shippingTaxCents) && shippingTaxCents >= 0
+        ? { expectedShippingTaxCents: shippingTaxCents } : {}),
+      ...(Array.isArray(pricedItems) ? { expectedPricedItems: pricedItems } : {}) }
     : {};
   const result = await getPool().query(`
     UPDATE orders
@@ -977,6 +980,8 @@ async function replaceExpiredCheckoutSession(orderId, {
   const request = { ...(checkoutRequest || {}), locale: normalizedLocale };
   delete request.expectedTaxCents;
   delete request.expectedTotalCents;
+  delete request.expectedShippingTaxCents;
+  delete request.expectedPricedItems;
   const replacementKey = [
     'wolkenworte',
     'checkout',

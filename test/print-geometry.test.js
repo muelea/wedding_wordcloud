@@ -5,9 +5,10 @@ const fs = require('node:fs');
 const { createHash } = require('node:crypto');
 const path = require('node:path');
 const vm = require('node:vm');
-const { createCanvas } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 const { PRODUCTS, getProduct, getPublicProduct, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds, buildProductPrintSvg } = require('../src/mugPrint');
+const { renderProviderPng } = require('../src/printRaster');
 const Layout = require('../public/js/design-layout');
 const Fonts = require('../src/designFonts');
 const Core = require('../public/js/wordcloud-core');
@@ -97,6 +98,45 @@ test('official safe guides reserve notebook binding, textile seams and poster tr
     assert.ok(product.printFile.width - area.x - area.width >= 1.25 / 2.54 * 300);
     assert.ok(product.printFile.height - area.y - area.height >= 1.25 / 2.54 * 300);
   }
+});
+
+test('handle-free drinkware keeps a three-pixel join while preserving vertical bounds and exact print pixels', async () => {
+  const variants = [
+    ['wine-tumbler', 50], ['water-bottle-10798', 50], ['water-bottle-16030', 50],
+    ['steel-tumbler-15005', 70], ['steel-tumbler-15004', 70],
+  ];
+  const marker = createCanvas(24, 24), source = marker.getContext('2d');
+  source.fillStyle = '#0055ff'; source.fillRect(0, 0, 24, 24);
+  for (const [key, verticalMargin] of variants) {
+    const product = getProduct(key), { width, height } = product.printFile;
+    const area = product.designSafeAreas.default;
+    assert.deepEqual(area, { x: 3, y: verticalMargin, width: width - 6, height: height - verticalMargin * 2 });
+    assert.deepEqual(getPublicProduct(product).designSafeAreas.default, area);
+    assert.deepEqual(product.layoutGeometry['fit-area'], [{ ...area, optimize: true }]);
+    const design = [15, width - 15].map((x, index) => ({ id: `edge-${index}`, type: 'image',
+      src: marker.toDataURL(), x, y: verticalMargin + 12, width: 24, height: 24, angle: 0 }));
+    assert.ok(isPrintDesignWithinBounds(design, width, height, area));
+    for (const [index, changes] of [[0, { x: 14.9 }], [1, { x: width - 14.9 }],
+      [0, { y: verticalMargin + 11.9 }], [0, { y: height - verticalMargin - 11.9 }]]) {
+      const outside = design.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item);
+      assert.equal(isPrintDesignWithinBounds(outside, width, height, area), false, key + ': strict side/top/bottom boundary');
+    }
+    const bytes = await renderProviderPng(product, design), image = await loadImage(bytes);
+    assert.equal(image.width, width); assert.equal(image.height, height);
+    const output = createCanvas(width, height).getContext('2d'); output.drawImage(image, 0, 0);
+    const pixel = x => [...output.getImageData(x, verticalMargin + 12, 1, 1).data];
+    for (const x of [0, 1, 2, width - 3, width - 2, width - 1]) assert.equal(pixel(x)[3], 0);
+    for (const x of [3, 26, width - 27, width - 4]) assert.deepEqual(pixel(x), [0, 85, 255, 255]);
+    const existing = [heart(width / 2, height / 2)];
+    assert.deepEqual(await renderProviderPng(product, existing),
+      await renderProviderPng({ ...product, designSafeMargin: verticalMargin }, existing),
+      key + ': older accepted artwork is not stretched or repositioned');
+    const automatic = page(key).buildAutomaticDesign();
+    assert.ok(isPrintDesignWithinBounds(automatic, width, height, area), key + ': automatic layout uses the same rectangle');
+  }
+  assert.equal(getProduct('enamel-mug').designSafeMargin, 35);
+  assert.equal(getProduct('white-glossy-mug-duo-11oz').designSafeMargin, 24);
+  assert.equal(getProduct('travel-mug-16440').designSafeMargin, 45);
 });
 
 test('automatic front/back layouts and preview mapping use the selected side', async () => {

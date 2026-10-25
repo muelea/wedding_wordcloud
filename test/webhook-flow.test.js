@@ -31,22 +31,25 @@ async function verifyTaxPayment(t, paymentMethod) {
   t.mock.method(Object.getPrototypeOf(sdk.customers), 'create', async () => ({ id: 'cus_taxwebhook' }));
   t.mock.method(Object.getPrototypeOf(sdk.checkout.sessions), 'create', async (params) => {
     sessionParams = params;
-    const itemCents = params.line_items[0].price_data.unit_amount;
+    const itemCents = params.line_items.reduce((sum, item) => sum + item.quantity * item.price_data.unit_amount, 0);
     const shippingCents = params.shipping_options[0].shipping_rate_data.fixed_amount.amount;
-    const productTaxCents = Math.round(itemCents * 0.19);
-    const shippingTaxCents = Math.round(shippingCents * 0.19);
+    const productTaxCents = Math.round(itemCents * 0.19 / 1.19);
+    const shippingTaxCents = Math.round(shippingCents * 0.19 / 1.19);
     const taxCents = productTaxCents + shippingTaxCents;
     return {
       id: 'cs_test_tax_webhook', url: 'https://checkout.stripe.test/tax',
       customer: params.customer, currency: 'eur',
-      amount_subtotal: itemCents, amount_total: itemCents + shippingCents + taxCents,
+      amount_subtotal: itemCents, amount_total: itemCents + shippingCents,
       total_details: { amount_tax: taxCents, amount_discount: 0 },
       shipping_cost: {
         amount_subtotal: shippingCents,
         amount_tax: shippingTaxCents,
-        amount_total: shippingCents + shippingTaxCents,
+        amount_total: shippingCents,
       },
       automatic_tax: { enabled: true, status: 'complete' },
+      line_items: { data: params.line_items.map(item => ({ quantity: item.quantity,
+        amount_subtotal: item.quantity * item.price_data.unit_amount,
+        amount_total: item.quantity * item.price_data.unit_amount })) },
     };
   });
   const printful = require('../src/printful');
@@ -77,17 +80,18 @@ async function verifyTaxPayment(t, paymentMethod) {
   assert.deepEqual(JSON.parse(order.checkout_request_json).allowedPaymentMethodTypes, ['card', 'paypal']);
   assert.deepEqual(sessionParams.allowed_payment_method_types, ['card', 'paypal']);
   assert.equal(sessionParams.payment_intent_data.shipping, undefined);
-  const taxCents = Math.round(quote.itemsCents * 0.19) + Math.round(quote.shippingCents * 0.19);
+  const shippingTaxCents = Math.round(quote.shippingCents * 0.19 / 1.19);
+  const taxCents = Math.round(quote.itemsCents * 0.19 / 1.19) + shippingTaxCents;
   assert.equal(JSON.parse(order.checkout_request_json).expectedTaxCents, taxCents);
-  assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents + taxCents);
+  assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents);
   const session = {
     id: 'cs_test_tax_webhook', customer: 'cus_taxwebhook',
     currency: 'eur', payment_status: 'paid', payment_intent: `pi_test_tax_webhook_${paymentMethod}`,
     payment_method_types: ['card', 'paypal'],
-    amount_subtotal: quote.itemsCents, amount_total: quote.totalCents + taxCents,
+    amount_subtotal: quote.itemsCents, amount_total: quote.totalCents,
     total_details: { amount_tax: taxCents, amount_discount: 0 },
     shipping_cost: {
-      amount_subtotal: quote.shippingCents, amount_tax: 85, amount_total: quote.shippingCents + 85,
+      amount_subtotal: quote.shippingCents, amount_tax: shippingTaxCents, amount_total: quote.shippingCents,
     },
     automatic_tax: { enabled: true, status: 'complete' },
     customer_details: { email: 'buyer@example.test', address: { country: 'US' } },
@@ -124,20 +128,20 @@ async function verifyTaxPayment(t, paymentMethod) {
   assert.equal(paid.status, 'paid_test');
   assert.equal(paid.fulfillment_mode, 'mock');
   assert.equal(paid.tax_cents, taxCents);
-  assert.equal(paid.total_cents, quote.totalCents + taxCents);
+  assert.equal(paid.total_cents, quote.totalCents);
   assert.equal(paid.items_cents, quote.itemsCents);
   assert.equal((await db.getOrderShipments(order.id))[0].tax_cents, taxCents);
   const jobs = await db.getEmailJobsForOrder(order.id);
   assert.equal(jobs.length, 1);
-  assert.match(jobs[0].text_body, /30,37\s*€/);
-  assert.match(jobs[0].text_body, /4,85\s*€/);
+  assert.match(jobs[0].text_body, /28,34\s*€/);
+  assert.match(jobs[0].text_body, /4,52\s*€/);
   assert.equal((await send({
     ...session,
     amount_total: session.amount_total + 1,
     total_details: { amount_tax: taxCents + 1, amount_discount: 0 },
   },
     'evt_tax_changed_after_payment')).ignored, 'order_mismatch');
-  assert.equal((await db.getOrderById(order.id)).total_cents, quote.totalCents + taxCents);
+  assert.equal((await db.getOrderById(order.id)).total_cents, quote.totalCents);
   if (paymentMethod === 'paypal') {
     const charge = {
       id: 'ch_test_paypal_refund', payment_intent: session.payment_intent,
@@ -303,6 +307,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     currency: 'EUR',
     totalCents: quote.totalCents,
     shippingCents: Number(paidOrder.shipping_cents),
+    netShippingCents: Number(paidOrder.shipping_cents),
     taxCents: Number(paidOrder.tax_cents),
     quantity: 2,
     shipmentCount: 1,

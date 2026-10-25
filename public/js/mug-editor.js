@@ -2211,7 +2211,14 @@
       const selected = this.selectedObjects(active);
       const textObjects = selected.filter((object) => object.editorKind === 'text');
       if (!textObjects.length) return false;
-      const printSize = round(pointSize * this.printFileDpi / 72);
+      let printSize = round(pointSize * this.printFileDpi / 72);
+      const recommendedPt = root.TextPrintQuality?.MIN_PT;
+      // At 150 DPI, rounding a requested 10 pt to 20.8 px would immediately
+      // flag it as 9.984 pt. Keep an explicit recommended size above the floor.
+      if (Number.isFinite(recommendedPt) && pointSize >= recommendedPt &&
+          printSize * 72 / this.printFileDpi < recommendedPt) {
+        printSize = Math.ceil(recommendedPt * this.printFileDpi / 72 * 10) / 10;
+      }
       const entries = textObjects.map((object) => ({
         object,
         index: this.canvas.getObjects().indexOf(object),

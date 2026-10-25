@@ -1,0 +1,42 @@
+{
+  "cases": {
+    "eco-tote-10458--default": {
+      "views": {
+        "front": {
+          "file": "local/eco-tote-10458--default-front.png",
+          "sha256": "927622c87e62e6de08312b78c9626ca9c04d08b7133c7361af13c5389dd53f82"
+        }
+      },
+      "productSha256": "3687db3e1c71387fbcde0db82e4cd496d491d7b219832ca7aee39ed332b93bc0",
+      "designSha256": "8e795195cdbae44f874a6120bef568752de437d4aaa742841de74a99320a65ce",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.146Z"
+    },
+    "eco-tote-10457--default": {
+      "views": {
+        "front": {
+          "file": "local/eco-tote-10457--default-front.png",
+          "sha256": "e5a26c11b9c8763622b5ddd1acd6a71f777a19a70e32a6425be987ac67fba498"
+        }
+      },
+      "productSha256": "d03b84b4cb399c8fd6e4e406442ae009777694c8b5284593feaee3fd3e7a1149",
+      "designSha256": "8e795195cdbae44f874a6120bef568752de437d4aaa742841de74a99320a65ce",
+      "sources": {
+        "public/js/mug-3d-viewer.js": "ab69cc0d25a6fde7442a9034c614e893330fd92b0875926dfc88a3f07060ede8",
+        "public/js/product-3d-geometry.js": "b9aaf73eeb57b196938bc78971dc7bd28377b8f689bc9a5cb257c95c18bfeeeb",
+        "public/js/printful-product-model.js": "4141c85cc675c727b1b1fbb6d1f1ef5eb3a5925197d17206bbe8ddd97a88450c",
+        "src/productCatalogManifest.json": "9782681d925f4054610f826fc93814b1f049dd2a31b73d861384558020abb84e",
+        "src/productPreviewModels.json": "f0c1c7c800c5084dca29000eb21d55770926bc6eb242458166e470c8cbe2e3d6",
+        "test/browser/print-area-probe.js": "eb405c588eba4355189179513190c96f1e36142e3fde8807c8330a8f24341dea"
+      },
+      "renderedAt": "2026-10-24T23:32:56.294Z"
+    }
+  }
+}

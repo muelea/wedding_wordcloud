@@ -7,10 +7,12 @@
   const cloudLimits = typeof module === 'object' && module.exports
     ? require('./cloud-limits.js')
     : root.CloudLimits;
-  const api = factory(wordCloudCore, cloudLimits);
+  const printQuality = typeof module === 'object' && module.exports
+    ? require('./text-print-quality.js') : root.TextPrintQuality;
+  const api = factory(wordCloudCore, cloudLimits, printQuality);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.DesignLayout = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore, CloudLimits) {
+})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore, CloudLimits, TextPrintQuality) {
   'use strict';
 
   const MIN_PRINT_FONT_SIZE = CloudLimits.MIN_PRINT_FONT_SIZE;
@@ -83,7 +85,7 @@
         const itemFontFamily = typeof fontFamily === 'function'
           ? fontFamily(item)
           : fontFamily;
-        const textBox = WordCloudCore.measureTextBox(
+        const textBox = measuredTextBox(
           item.text,
           fontSize,
           measureContext,
@@ -240,21 +242,41 @@
     if (!context) return context;
     // One fill only: font loading or later edits get a fresh cache. Return
     // actual Canvas metrics, including glyph bounds, never estimated widths.
-    const measured = new Map();
+    const measured = new Map(), boxes = new Map();
+    let entries = 0, boxEntries = 0;
     let font = context.font;
-    return {
+    const cached = {
       get font() { return font; },
       set font(value) { font = value; },
       measureText(text) {
-        const key = JSON.stringify([font, text]);
-        if (!measured.has(key)) {
-          if (measured.size >= 8192) measured.clear();
+        let texts = measured.get(font);
+        if (!texts?.has(text)) {
+          if (entries >= 8192) { measured.clear(); entries = 0; }
+          texts = measured.get(font);
+          if (!texts) measured.set(font, texts = new Map());
           context.font = font;
-          measured.set(key, context.measureText(text));
+          texts.set(text, context.measureText(text)); entries++;
         }
-        return measured.get(key);
+        return texts.get(text);
       },
     };
+    cached.textBox = (text, size, family = WordCloudCore.FONT_FAMILY, style = {}) => {
+      font = `${Number(style.fontWeight) === 700 ? 700 : 400} ${Number(size)}px ${family}`;
+      let texts = boxes.get(font);
+      if (!texts?.has(text)) {
+        if (boxEntries >= 8192) { boxes.clear(); boxEntries = 0; }
+        texts = boxes.get(font);
+        if (!texts) boxes.set(font, texts = new Map());
+        texts.set(text, WordCloudCore.measureTextBox(text, size, cached, family, style)); boxEntries++;
+      }
+      return texts.get(text);
+    };
+    return cached;
+  }
+
+  function measuredTextBox(text, size, context, family, style) {
+    return context.textBox ? context.textBox(text, size, family, style)
+      : WordCloudCore.measureTextBox(text, size, context, family, style);
   }
 
   function breathingRoomPressure(boxes) {
@@ -380,7 +402,7 @@
         Math.sqrt(variance) * .15 + separation * .25 - emptyRegion * 3 - alignment * .6 };
   }
 
-  function rowCandidate(items, slot, measureContext, fontFamily) {
+  function* rowCandidate(items, slot, measureContext, fontFamily) {
     // Exact subset partitioning is useful for sparse phrase-heavy designs.
     // It is capped at twelve elements; capacity clouds use the bounded packer.
     if (items.length > 12) return null;
@@ -401,7 +423,7 @@
       counts[mask] = counts[rest] + 1;
       emoji[mask] = emoji[rest] + Number(boxes[index].emoji);
     }
-    function partition(scale) {
+    function* partition(scale) {
       const dp = new Float64Array(total + 1);
       dp.fill(Infinity);
       dp[0] = 0;
@@ -410,6 +432,7 @@
       waste.fill(Infinity);
       waste[0] = 0;
       for (let mask = 1; mask <= total; mask++) {
+        if (mask % 16 === 0) yield;
         const first = mask & -mask;
         for (let row = mask; row; row = (row - 1) & mask) {
           if (!(row & first) || emoji[row] > 2 ||
@@ -434,7 +457,7 @@
     let best = null;
     for (let attempt = 0; attempt < 16; attempt++) {
       const scale = (low + high) / 2;
-      const candidate = partition(scale);
+      const candidate = yield* partition(scale);
       if (candidate) { low = scale; best = candidate; } else high = scale;
     }
     if (!best || items.some(item => low < minimumScale(item))) return null;
@@ -460,6 +483,7 @@
     for (const rows of uniqueOrders) {
       const variants = emoji[total] ? (best.rows.length <= 5 ? 16 : 4) : 1;
       for (let arrangement = 0; arrangement < variants * 3; arrangement++) {
+        yield;
         const variant = arrangement % variants;
         const spread = Math.floor(arrangement / variants) / 2;
         const placed = Array(items.length);
@@ -500,7 +524,7 @@
     return result;
   }
 
-  function relaxHorizontalSpacing(items, slot, measureContext, fontFamily) {
+  function* relaxHorizontalSpacing(items, slot, measureContext, fontFamily) {
     if (items.length < 2 || items.length > 120) return items.map(item => ({ ...item }));
     const result = items.map(item => ({ ...item }));
     const boxes = designBoxes(result, measureContext, fontFamily);
@@ -517,6 +541,7 @@
       });
     const inset = Math.max(1, Math.min(slot.width, slot.height) * .012);
     for (const row of rows) {
+      yield;
       if (row.length < 2) continue;
       row.sort((a, b) => result[a].x - result[b].x || a - b);
       const members = new Set(row);
@@ -596,7 +621,7 @@
     return safe ? result : items.map(item => ({ ...item }));
   }
 
-  function staggerItems(items, slot, measureContext, fontFamily) {
+  function* staggerItems(items, slot, measureContext, fontFamily) {
     if (items.length < 12 || items.length > 120) return items.map(item => ({ ...item }));
     const result = items.map(item => ({ ...item }));
     const boxes = designBoxes(result, measureContext, fontFamily);
@@ -620,6 +645,7 @@
     // Alternate the order so earlier items do not monopolize shared slack.
     for (let sweep = 0; sweep < 3; sweep++) {
       for (const index of sweep % 2 ? order.slice().reverse() : order) {
+        if (index % 8 === 0) yield;
         const item = result[index];
         const box = boxes[index];
         // Keep the packer's deliberately separated artwork anchors intact.
@@ -658,7 +684,7 @@
   // Complement free-rectangle packing with distributed anchors. Place vertical
   // labels first, then compare the nearest free grid positions at a common
   // scale. Exact rectangles, rather than the grid, decide collision safety.
-  function distributedRotationCandidate(items, slot, measureContext, fontFamily, variant) {
+  function* distributedRotationCandidate(items, slot, measureContext, fontFamily, variant) {
     if (items.length > 120) return null;
     const dimensions = items.map(item => itemDimensions(item, 1, measureContext, fontFamily));
     const vertical = items.map((item, index) => ({ item, index }))
@@ -673,11 +699,11 @@
         (items[a].fontSize || Math.sqrt(dimensions[a].width * dimensions[a].height)) ||
         String(items[a].text || items[a].id).localeCompare(String(items[b].text || items[b].id), 'en') || a - b);
     const gap = Math.min(slot.width, slot.height) * .006;
-    const columns = 56, rows = 24;
-    function tryScale(scale) {
+    const columns = 56, rows = 24, wordsPerRow = Math.ceil(columns / 32);
+    function* tryScale(scale) {
       const occupied = [];
       const positions = Array(items.length);
-      function place(index, anchor) {
+      function* place(index, anchor) {
         const box = dimensions[index];
         const upright = rotated.has(index);
         const width = (box.width + box.spacingHeight * .2) * scale + gap;
@@ -693,15 +719,55 @@
         const x = width / 2 + anchor[0] * (slot.width - width);
         const y = height / 2 + anchor[1] * (slot.height - height);
         if (fits(x, y)) return true;
+        // Ordinary words need only exact rectangle intersections. Mark their
+        // forbidden grid positions once, rather than rescanning all occupied
+        // rectangles at every point. Upright pairs retain the pressure check.
+        let forbidden, xs, ys;
+        if (!upright) {
+          xs = Float64Array.from({ length: columns }, (_, column) =>
+            width / 2 + column / (columns - 1) * (slot.width - width));
+          ys = Float64Array.from({ length: rows }, (_, row) =>
+            height / 2 + row / (rows - 1) * (slot.height - height));
+          forbidden = new Uint32Array(rows * wordsPerRow);
+          function bound(values, test) {
+            let low = 0, high = values.length;
+            while (low < high) {
+              const middle = (low + high) >>> 1;
+              if (test(values[middle])) high = middle; else low = middle + 1;
+            }
+            return low;
+          }
+          for (const other of occupied) {
+            const left = bound(xs, x => x + width / 2 > other.x1);
+            const right = bound(xs, x => x - width / 2 >= other.x2);
+            const top = bound(ys, y => y + height / 2 > other.y1);
+            const bottom = bound(ys, y => y - height / 2 >= other.y2);
+            if (left >= right || top >= bottom) continue;
+            const first = left >>> 5, last = (right - 1) >>> 5;
+            const firstMask = 0xffffffff << (left & 31);
+            const lastMask = 0xffffffff >>> (31 - ((right - 1) & 31));
+            for (let row = top; row < bottom; row++) {
+              const offset = row * wordsPerRow;
+              if (first === last) forbidden[offset + first] |= firstMask & lastMask;
+              else {
+                forbidden[offset + first] |= firstMask;
+                for (let word = first + 1; word < last; word++) forbidden[offset + word] = 0xffffffff;
+                forbidden[offset + last] |= lastMask;
+              }
+            }
+          }
+        }
         let best = null, distance = Infinity;
         for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
-          const px = width / 2 + column / (columns - 1) * (slot.width - width);
-          const py = height / 2 + row / (rows - 1) * (slot.height - height);
+          if (column === 0 && row % 4 === 0) yield;
+          if (forbidden && (forbidden[row * wordsPerRow + (column >>> 5)] & (1 << (column & 31)))) continue;
+          const px = xs ? xs[column] : width / 2 + column / (columns - 1) * (slot.width - width);
+          const py = ys ? ys[row] : height / 2 + row / (rows - 1) * (slot.height - height);
           const score = ((px - x) / slot.width) ** 2 + ((py - y) / slot.height) ** 2;
           const rectangle = { width, height,
             x1: px - width / 2, x2: px + width / 2, y1: py - height / 2, y2: py + height / 2 };
-          if (score >= distance || occupied.some(other => boxesOverlap(rectangle, other) ||
-              (upright && other.upright && verticalPairPressure(rectangle, other, slot) > .05))) continue;
+          if (score >= distance || (!forbidden && occupied.some(other => boxesOverlap(rectangle, other) ||
+              (upright && other.upright && verticalPairPressure(rectangle, other, slot) > .05)))) continue;
           best = { x: px, y: py }; distance = score;
         }
         return best ? fits(best.x, best.y) : false;
@@ -709,12 +775,12 @@
       for (const [rank, { index }] of vertical.entries()) {
         const anchor = [.1 + .8 * ((rank * .61803398875 + variant * .19) % 1),
           .12 + .76 * ((rank * .754877666 + variant * .31) % 1)];
-        if (!place(index, anchor)) return null;
+        if (!(yield* place(index, anchor))) return null;
       }
       for (const [rank, index] of emoji.entries()) {
         const anchor = emoji.length <= 4 ? [[.12, .18], [.87, .28], [.6, .83], [.2, .8]][rank]
           : [.08 + .84 * ((rank * .61803398875) % 1), .08 + .84 * ((rank * .754877666) % 1)];
-        if (!place(index, anchor)) return null;
+        if (!(yield* place(index, anchor))) return null;
       }
       for (const [rank, index] of rest.entries()) {
         const leaderAnchors = variant >= 4 ? [[.2, .16], [.77, .84], [.78, .15], [.25, .84]]
@@ -723,7 +789,7 @@
         const anchor = rank < 4 ? leaderAnchors[rank]
           : [.08 + .84 * ((rank * .61803398875 + .43 + variant * .13) % 1),
           .08 + .84 * ((rank * .754877666 + .47 + variant * .23) % 1)];
-        if (!place(index, anchor)) return null;
+        if (!(yield* place(index, anchor))) return null;
       }
       return positions;
     }
@@ -732,8 +798,9 @@
       Math.sqrt(slot.width * slot.height / dimensions.reduce((sum, box) => sum + box.width * box.height, 0)));
     let best = null;
     for (let attempt = 0; attempt < 14; attempt++) {
+      yield;
       const scale = (low + high) / 2;
-      const placed = tryScale(scale);
+      const placed = yield* tryScale(scale);
       if (placed) { low = scale; best = placed; } else high = scale;
     }
     if (!best || items.some(item => low < minimumScale(item))) return null;
@@ -790,7 +857,7 @@
     if (item.type !== 'image' && item.type !== 'icon' && measureContext &&
         item.fontStyle !== 'italic' && !item.underline && !item.linethrough) {
       const family = typeof fontFamily === 'function' ? fontFamily(item) : fontFamily;
-      const measured = WordCloudCore.measureTextBox(item.text, item.fontSize, measureContext, family, item);
+      const measured = measuredTextBox(item.text, item.fontSize, measureContext, family, item);
       left = -measured.width / 2; right = measured.width / 2;
       top = -measured.height / 2; bottom = measured.height / 2;
       if (box.emoji) {
@@ -818,7 +885,7 @@
       width: right - left, height: bottom - top };
   }
 
-  function balancePrintSpacing(items, slot, measureContext, fontFamily) {
+  function* balancePrintSpacingSteps(items, slot, measureContext, fontFamily) {
     if (items.length < 2 || items.length > CloudLimits.MAX_DESIGN_ELEMENTS) return items.map(item => ({ ...item }));
     const result = items.map(item => ({ ...item }));
     let boxes = designBoxes(result, measureContext, fontFamily);
@@ -873,8 +940,10 @@
     const order = result.map((_, index) => index);
     const sweeps = items.length <= 120 ? 32 : 8;
     for (let sweep = 0; sweep < sweeps; sweep++) {
+      yield;
       const neighbours = spacingNeighbours(boxes.map(box => box.ink), slot, gap);
       for (const index of sweep % 2 ? order.slice().reverse() : order) {
+        if (index % 8 === 0) yield;
         const item = result[index];
         let box = boxes[index];
         for (const axis of ['x', 'y']) {
@@ -1027,7 +1096,7 @@
     return best;
   }
 
-  function optimizeItemsInSlot(items, slot, measureContext, fontFamily) {
+  function* optimizeItemsInSlot(items, slot, measureContext, fontFamily) {
     if (!items.length) return [];
     measureContext = cachedMeasurements(measureContext);
     // Preferred sizes are working-draft metadata, not print geometry. Keep
@@ -1046,13 +1115,20 @@
       .sort((a, b) => b.item.fontSize - a.item.fontSize ||
         String(a.item.text).localeCompare(String(b.item.text), 'en') || a.index - b.index)
       .slice(0, 4).map(entry => entry.index);
+    // Candidates are copied before refinement. Repeated scoring of the same
+    // completed candidate can reuse its metrics; each caller gets its own score.
+    const qualities = new WeakMap();
     function quality(design) {
       if (!Array.isArray(design) || design.length !== items.length) return null;
+      if (qualities.has(design)) {
+        const result = qualities.get(design);
+        return result ? { ...result } : null;
+      }
       const boxes = designBoxes(design, measureContext, fontFamily);
       const safe = boxes.every((box, index) => box.x1 >= slot.x && box.x2 <= slot.x + slot.width &&
         box.y1 >= slot.y && box.y2 <= slot.y + slot.height &&
         boxes.slice(0, index).every(other => !boxesOverlap(box, other)));
-      if (!safe) return null;
+      if (!safe) { qualities.set(design, null); return null; }
       const bounds = { x1: Math.min(...boxes.map(box => box.x1)), x2: Math.max(...boxes.map(box => box.x2)),
         y1: Math.min(...boxes.map(box => box.y1)), y2: Math.max(...boxes.map(box => box.y2)) };
       const deviation = design.reduce((sum, item) => sum + (item.layoutFontSize > 0
@@ -1070,7 +1146,8 @@
       const leadingX = leadingIndices.map(index => design[index].x);
       result.leadingSpread = leadingX.length > 1 ? (Math.max(...leadingX) - Math.min(...leadingX)) / slot.width : 1;
       if (items.length >= 12) result.score -= Math.max(0, .4 - result.leadingSpread);
-      return result;
+      qualities.set(design, result);
+      return { ...result };
     }
     function fingerprint(design, revision = 11) {
       // Working-draft provenance only. Include all geometry and measured font
@@ -1096,7 +1173,7 @@
     if (items[0].layoutFingerprint === fingerprint(items) && quality(items)) {
       return items.map(item => ({ ...item }));
     }
-    function finish(design) {
+    function* finish(design) {
       if (!design || !quality(design)) return null;
       const filled = design.map(item => item.type === 'image' || item.type === 'icon' ? { ...item }
         : { ...item, layoutFontSize: item.layoutFontSize || item.fontSize });
@@ -1108,6 +1185,7 @@
         const order = filled.map((_, index) => index).sort((a, b) =>
           boxes[a].width * boxes[a].height - boxes[b].width * boxes[b].height || a - b);
         for (const index of order) {
+          yield;
           const item = filled[index];
           if (item.type === 'image' || item.type === 'icon') continue;
           let low = item.fontSize;
@@ -1164,51 +1242,72 @@
       const dx = slot.x + slot.width / 2 - (measured.bounds.x1 + measured.bounds.x2) / 2;
       const dy = slot.y + slot.height / 2 - (measured.bounds.y1 + measured.bounds.y2) / 2;
       const centred = filled.map(item => ({ ...item, x: round(item.x + dx), y: round(item.y + dy) }));
-      const spaced = relaxHorizontalSpacing(quality(centred) ? centred : filled, slot, measureContext, fontFamily);
+      const spaced = yield* relaxHorizontalSpacing(quality(centred) ? centred : filled, slot, measureContext, fontFamily);
       return quality(spaced) ? spaced : filled;
     }
     const candidates = [];
-    const add = design => {
-      const candidate = finish(design);
+    function* add(design) {
+      yield;
+      const candidate = yield* finish(design);
       if (!candidate) return;
       candidates.push(candidate);
-      const staggered = staggerItems(candidate, slot, measureContext, fontFamily);
+      const staggered = yield* staggerItems(candidate, slot, measureContext, fontFamily);
       const before = quality(candidate);
       const after = quality(staggered);
       if (after && after.corners.every((coverage, index) => coverage >= Math.min(.45, before.corners[index]))) {
         candidates.push(staggered);
       }
-    };
-    function packedCandidate(reference, placement = 'importance') {
+    }
+    const packingJobs = new Map();
+    function* packingJob(reference, placement = 'importance') {
+      let jobs = packingJobs.get(reference);
+      if (!jobs) packingJobs.set(reference, jobs = new Map());
+      if (jobs.has(placement)) return jobs.get(placement);
       const topSize = Math.max(...reference.map(item => item.fontSize || 0));
-      const packed = WordCloudCore.layoutBoxesInArea(reference.map(item => {
+      const boxes = [];
+      for (const item of reference) {
+        yield;
         const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
-        return { width: dimensions.width + dimensions.spacingHeight * HORIZONTAL_BREATHING_RATIO * 2,
+        boxes.push({ width: dimensions.width + dimensions.spacingHeight * HORIZONTAL_BREATHING_RATIO * 2,
           height: dimensions.height + dimensions.spacingHeight * VERTICAL_BREATHING_RATIO * 2, emoji: WordCloudCore.isEmojiOnly(item.text),
           priority: placement === 'neutral' ? 1 : placement === 'area' ? Math.sqrt(dimensions.width * dimensions.height)
             : placement === 'accents' && Math.abs((item.angle || 0) % 180) === 90 ? Math.max(item.fontSize || 0, topSize * .8)
             : item.type === 'image' || item.type === 'icon'
-            ? Math.sqrt(dimensions.width * dimensions.height) : item.fontSize };
-      }), slot.width, slot.height);
+            ? Math.sqrt(dimensions.width * dimensions.height) : item.fontSize });
+      }
+      const job = { boxes, width: slot.width, height: slot.height };
+      jobs.set(placement, job);
+      return job;
+    }
+    function* packedCandidate(reference, placement = 'importance') {
+      const job = yield* packingJob(reference, placement);
+      const packed = yield job;
       if (packed.length !== reference.length || packed.some((box, index) =>
         box.scale < minimumScale(reference[index]))) return null;
       return reference.map((item, index) => scaleItem(item, packed[index].scale,
         slot.x + packed[index].x, slot.y + packed[index].y));
     }
-    add(packedCandidate(preferred));
     const horizontal = preferred.map(item => item.type !== 'image' && item.type !== 'icon' &&
       (Number(item.angle) || 0) % 90 === 0 ? { ...item, angle: 0 } : { ...item });
-    if (items.some((item, index) => item.angle !== horizontal[index].angle)) {
-      add(packedCandidate(horizontal));
+    const changedAngles = items.some((item, index) => item.angle !== horizontal[index].angle);
+    const initialJobs = [yield* packingJob(preferred)];
+    if (changedAngles) initialJobs.push(yield* packingJob(horizontal));
+    if (items.length > 12 && items.length <= 120) {
+      initialJobs.push(yield* packingJob(horizontal, 'neutral'), yield* packingJob(horizontal, 'area'));
+    }
+    yield { batch: initialJobs };
+    yield* add(yield* packedCandidate(preferred));
+    if (changedAngles) {
+      yield* add(yield* packedCandidate(horizontal));
     }
     if (items.length > 12 && items.length <= 120) {
       // Placement priority is independent of printed size. Compare additional
       // orders so a tiny font-metric difference cannot force every candidate
       // into the same centre stack. Actual sizes retain their preferred ratios.
-      add(packedCandidate(horizontal, 'neutral'));
-      add(packedCandidate(horizontal, 'area'));
+      yield* add(yield* packedCandidate(horizontal, 'neutral'));
+      yield* add(yield* packedCandidate(horizontal, 'area'));
     }
-    add(rowCandidate(horizontal, slot, measureContext, fontFamily));
+    yield* add(yield* rowCandidate(horizontal, slot, measureContext, fontFamily));
     const rotatable = horizontal.map((item, index) => ({ item, index,
       box: itemDimensions(item, 1, measureContext, fontFamily) }))
       .filter(({ item, box }) => item.type !== 'image' && item.type !== 'icon' &&
@@ -1257,15 +1356,20 @@
       for (const { variant, rotated } of choices) {
         const reference = horizontal.map((item, index) => rotated.has(index)
           ? { ...item, angle: -90, fontSize: item.fontSize * (1 - MAX_FONT_ADJUSTMENT) } : item);
-        add(packedCandidate(reference));
-        if (items.length > 12 && items.length <= 120) add(packedCandidate(reference, 'neutral'));
-        if (items.length > 12 && items.length <= 120) add(packedCandidate(reference, 'area'));
-        if (items.length > 12 && items.length <= 120) add(packedCandidate(reference, 'accents'));
         if (items.length > 12 && items.length <= 120) {
-          add(distributedRotationCandidate(reference, slot, measureContext, fontFamily, variant));
-          add(distributedRotationCandidate(reference, slot, measureContext, fontFamily, variant + 4));
+          const batch = [];
+          for (const placement of ['importance', 'neutral', 'area', 'accents']) batch.push(yield* packingJob(reference, placement));
+          yield { batch };
         }
-        if (items.length <= 8) add(rowCandidate(reference, slot, measureContext, fontFamily));
+        yield* add(yield* packedCandidate(reference));
+        if (items.length > 12 && items.length <= 120) yield* add(yield* packedCandidate(reference, 'neutral'));
+        if (items.length > 12 && items.length <= 120) yield* add(yield* packedCandidate(reference, 'area'));
+        if (items.length > 12 && items.length <= 120) yield* add(yield* packedCandidate(reference, 'accents'));
+        if (items.length > 12 && items.length <= 120) {
+          yield* add(yield* distributedRotationCandidate(reference, slot, measureContext, fontFamily, variant));
+          yield* add(yield* distributedRotationCandidate(reference, slot, measureContext, fontFamily, variant + 4));
+        }
+        if (items.length <= 8) yield* add(yield* rowCandidate(reference, slot, measureContext, fontFamily));
         if (items.length <= 12 && rotated.size === 1 && slot.width > slot.height * 1.5) {
           // A tall accent need not split a sparse design into two cramped
           // columns. Compare it beside a row packing of the remaining phrases.
@@ -1278,7 +1382,7 @@
           for (const left of [true, false]) {
             const area = { ...slot, x: slot.x + (left ? reserve : 0), width: slot.width - reserve };
             if (area.width <= 0) continue;
-            const rows = rowCandidate(rest, area, measureContext, fontFamily);
+            const rows = yield* rowCandidate(rest, area, measureContext, fontFamily);
             if (!rows) continue;
             const anchor = rest.findIndex(item => item.layoutFontSize > 0);
             if (anchor < 0) continue;
@@ -1288,7 +1392,7 @@
               slot.y + slot.height / 2);
             const withAccent = rows.slice();
             withAccent.splice(index, 0, accent);
-            add(withAccent);
+            yield* add(withAccent);
           }
         }
       }
@@ -1338,11 +1442,12 @@
     for (const entry of limiting.slice(0, items.length <= 12 ? 2 : 1)) {
       const reference = horizontal.map((item, index) => index === entry.index
         ? { ...item, fontSize: item.fontSize * (1 - MAX_FONT_ADJUSTMENT) } : item);
-      add(packedCandidate(reference));
-      if (items.length <= 12) add(rowCandidate(reference, slot, measureContext, fontFamily));
+      yield* add(yield* packedCandidate(reference));
+      if (items.length <= 12) yield* add(yield* rowCandidate(reference, slot, measureContext, fontFamily));
     }
     if (!candidates.length) return items.map(item => ({ ...item }));
-    const scored = candidates.map(design => ({ design, quality: quality(design) }));
+    const scored = [];
+    for (const design of candidates) { yield; scored.push({ design, quality: quality(design) }); }
     let eligible = scored;
     const verticalCount = design => design.filter(item => item.type !== 'image' && item.type !== 'icon' &&
       !WordCloudCore.isEmojiOnly(item.text) && Math.abs((Number(item.angle) || 0) % 180) === 90).length;
@@ -1428,14 +1533,16 @@
         (verticalCount(items) >= minimumVertical || !balancedMix.length)) best.design = items.map(item => ({ ...item }));
     // The first stage chooses the packing. Only then balance all four faces
     // together, close pockets with bounded size changes, and measure again.
-    let polished = eligible.slice(0, items.length > 120 ? 1 : items.length <= 12 ? 6 : 3).map(entry => {
-      const design = balancePrintSpacing(entry.design, slot, measureContext, fontFamily);
+    let polished = [];
+    for (const entry of eligible.slice(0, items.length > 120 ? 1 : items.length <= 12 ? 6 : 3)) {
+      const design = yield* balancePrintSpacingSteps(entry.design, slot, measureContext, fontFamily);
       const completedQuality = quality(design);
       // Equalizing glyph gaps must not undo the useful coverage that made a
       // mixed short/long accent layout eligible in the first place.
-      return variedSpans.length && completedQuality && completedQuality.coverage <= .5
+      const completed = variedSpans.length && completedQuality && completedQuality.coverage <= .5
         ? entry : { design, quality: completedQuality };
-    }).filter(entry => entry.quality);
+      if (completed.quality) polished.push(completed);
+    }
     const wellSpacedCorners = polished.filter(entry => entry.quality.corners.every(coverage => coverage > .45));
     if (wellSpacedCorners.length) polished = wellSpacedCorners;
     const separated = polished.filter(entry => entry.quality.separation >= .8);
@@ -1458,7 +1565,7 @@
     return completed;
   }
 
-  function optimizeDesign(design, slots, measureContext, options = {}) {
+  function* optimizeUnconstrainedSteps(design, slots, measureContext, options = {}) {
     if (!Array.isArray(design) || !design.length) return [];
     const targets = normalizedSlots(slots);
     if (!targets.length) return design.map((item) => ({ ...item }));
@@ -1469,16 +1576,178 @@
     });
 
     const optimizedByIndex = new Map();
-    grouped.forEach((group, slotIndex) => {
-      const optimized = optimizeItemsInSlot(
+    for (const [slotIndex, group] of grouped.entries()) {
+      const optimized = yield* optimizeItemsInSlot(
         group.map(({ item }) => item),
         targets[slotIndex],
         measureContext,
         fontFamily
       );
       group.forEach(({ index }, itemIndex) => optimizedByIndex.set(index, optimized[itemIndex]));
-    });
+    }
     return design.map((item, index) => optimizedByIndex.get(index) || { ...item });
+  }
+
+  function readableFingerprint(design, slots, options) {
+    const data = JSON.stringify([options.printDpi, TextPrintQuality.MIN_PT, slots, design.map(item => {
+      const { layoutFingerprint, color, ...geometry } = item;
+      return [geometry, typeof options.fontFamily === 'function' ? options.fontFamily(item) : options.fontFamily];
+    })]);
+    let hash = 2166136261;
+    for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data.charCodeAt(i), 16777619);
+    return `readable-1-${(hash >>> 0).toString(16)}`;
+  }
+
+  function safeSlotDesign(design, slot, context, fontFamily) {
+    const boxes = designBoxes(design, context, fontFamily);
+    return boxes.every((box, index) => box.x1 >= slot.x && box.x2 <= slot.x + slot.width &&
+      box.y1 >= slot.y && box.y2 <= slot.y + slot.height &&
+      boxes.slice(0, index).every(other => !boxesOverlap(box, other)));
+  }
+
+  function* optimizeDesignSteps(design, slots, measureContext, options = {}) {
+    const targets = normalizedSlots(slots);
+    const constrained = Number.isFinite(options.printDpi) && options.printDpi > 0;
+    const floor = constrained ? Math.ceil(TextPrintQuality.MIN_PT * options.printDpi / 72 * 10) / 10 : 0;
+    const safe = result => targets.every(slot => safeSlotDesign(result.filter(item =>
+      nearestSlotIndex(item, targets) === targets.indexOf(slot)), slot, measureContext, options.fontFamily));
+    if (constrained && design?.length && targets.length &&
+        design[0].layoutFingerprint === readableFingerprint(design, targets, options) &&
+        !TextPrintQuality.findings(design, options.printDpi).length && safe(design)) {
+      return design.map(item => ({ ...item }));
+    }
+    if (constrained && design?.length) {
+      // An area lower bound avoids expensive searches for clearly overfull
+      // clouds. Failure means no complete layout, never a partial print file.
+      for (const [slotIndex, slot] of targets.entries()) {
+        const area = design.filter(item => nearestSlotIndex(item, targets) === slotIndex &&
+          item.type !== 'image' && item.type !== 'icon' && !WordCloudCore.isEmojiOnly(item.text))
+          .reduce((sum, item) => {
+            const box = itemDimensions({ ...item, angle: 0, fontSize: floor }, 1, measureContext, options.fontFamily);
+            return sum + box.width * box.height;
+          }, 0);
+        if (area > slot.width * slot.height) throw Object.assign(new Error('print_capacity'), { code: 'print_capacity' });
+      }
+    }
+    const initial = yield* optimizeUnconstrainedSteps(design, slots, measureContext, options);
+    if (!constrained || !initial.length || !targets.length) return initial;
+    if (!TextPrintQuality.findings(initial, options.printDpi).length && safe(initial)) return initial;
+
+    // The physical floor is independent of the editor's geometric minimum.
+    // Round upward to the persisted tenth pixel, so 10 pt cannot become 9.984.
+    const fontFamily = options.fontFamily || 'Georgia, "Times New Roman", serif';
+    const result = new Array(initial.length);
+    for (const [slotIndex, slot] of targets.entries()) {
+      const entries = initial.map((item, index) => ({ item, index }))
+        .filter(({ item }) => nearestSlotIndex(item, targets) === slotIndex);
+      if (!entries.length) continue;
+      const text = item => item.type !== 'image' && item.type !== 'icon' &&
+        !WordCloudCore.isEmojiOnly(item.text) && item.text?.trim();
+      const smallest = Math.min(...entries.filter(({ item }) => text(item)).map(({ item }) => item.fontSize));
+      let accepted = null;
+      // First preserve importance, then progressively flatten it. Each trial
+      // packs complete measured boxes; no post-packing enlargement or omission.
+      for (const contrast of [1, .65, .35, .15, 0]) {
+        const references = entries.map(({ item }) => {
+          const commonScale = Number.isFinite(smallest) ? floor / smallest : 1;
+          const artworkScale = minimumScale(item) + (Math.max(minimumScale(item), commonScale) - minimumScale(item)) * contrast;
+          const reference = scaleItem(item, item.type === 'image' || item.type === 'icon'
+            ? artworkScale : commonScale, item.x, item.y);
+          if (text(item)) reference.fontSize = Math.ceil(floor *
+            Math.pow(Math.max(1, item.fontSize / smallest), contrast) * 10) / 10;
+          else if (item.type !== 'image' && item.type !== 'icon') {
+            reference.fontSize = floor + Math.max(0, reference.fontSize - floor) * contrast;
+          }
+          delete reference.layoutFingerprint;
+          return reference;
+        });
+        for (const horizontal of [false, true]) {
+          const reference = references.map(item => horizontal && text(item) ? { ...item, angle: 0 } : item);
+          const boxes = reference.map(item => {
+            const box = itemDimensions(item, 1, measureContext, fontFamily);
+            return { width: box.width + box.spacingHeight * HORIZONTAL_BREATHING_RATIO * 2,
+              height: box.height + box.spacingHeight * VERTICAL_BREATHING_RATIO * 2,
+              emoji: WordCloudCore.isEmojiOnly(item.text),
+              priority: item.fontSize || Math.sqrt(box.width * box.height) };
+          });
+          const packed = yield { boxes, width: slot.width, height: slot.height };
+          if (packed.length !== reference.length) continue;
+          const candidate = reference.map((item, index) => scaleItem(item, packed[index].scale,
+            slot.x + packed[index].x, slot.y + packed[index].y));
+          if (TextPrintQuality.findings(candidate, options.printDpi).length ||
+              !safeSlotDesign(candidate, slot, measureContext, fontFamily)) continue;
+          accepted = candidate;
+          break;
+        }
+        if (accepted) break;
+      }
+      if (!accepted) throw Object.assign(new Error('print_capacity'), { code: 'print_capacity' });
+      entries.forEach(({ index }, itemIndex) => { result[index] = accepted[itemIndex]; });
+    }
+    if (result.some(item => !item) || !safe(result)) throw new Error('print_capacity');
+    result[0].layoutFingerprint = readableFingerprint(result, targets, options);
+    return result;
+  }
+
+  function runSteps(steps) {
+    let step = steps.next();
+    while (!step.done) {
+      const job = step.value;
+      step = steps.next(job && !job.batch ? WordCloudCore.layoutBoxesInArea(job.boxes, job.width, job.height) : undefined);
+    }
+    return step.value;
+  }
+
+  function optimizeDesign(design, slots, measureContext, options = {}) {
+    return runSteps(optimizeDesignSteps(design, slots, measureContext, options));
+  }
+
+  function balancePrintSpacing(items, slot, measureContext, fontFamily) {
+    return runSteps(balancePrintSpacingSteps(items, slot, measureContext, fontFamily));
+  }
+
+  async function optimizeDesignAsync(design, slots, measureContext, options = {}) {
+    // Both entry points consume the same deterministic steps. Only rectangle
+    // jobs leave the page; every new font size still uses its real Canvas metrics.
+    const steps = optimizeDesignSteps(design, slots, measureContext, options);
+    const now = () => globalThis.performance?.now?.() ?? Date.now();
+    const pause = options.yieldControl || (() => new Promise(resolve => setTimeout(resolve, 0)));
+    const pack = options.pack || ((boxes, width, height) => WordCloudCore.layoutBoxesInArea(boxes, width, height));
+    const prefetched = new Map();
+    const packingOptions = { signal: options.signal, priority: options.priority };
+    let started = now();
+    let value;
+    try {
+      while (true) {
+        if (options.signal?.aborted) throw new Error('layout_cancelled');
+        if (now() - started >= 8) {
+          await pause(); started = now();
+          if (options.signal?.aborted) throw new Error('layout_cancelled');
+        }
+        const step = steps.next(value);
+        if (step.done) return step.value;
+        value = undefined;
+        if (step.value?.batch) {
+          if (pack.concurrency > 1) for (const job of step.value.batch) {
+            const result = Promise.resolve().then(() => pack(job.boxes, job.width, job.height, packingOptions));
+            result.catch(() => {});
+            prefetched.set(job, result);
+          }
+        } else if (step.value) {
+          const job = step.value;
+          value = await (prefetched.get(job) || pack(job.boxes, job.width, job.height, packingOptions));
+          prefetched.delete(job);
+          started = now();
+        }
+      }
+    } finally { steps.return(); }
+  }
+
+  async function applyLayoutActionAsync(design, slots, measureContext, options = {}) {
+    const targets = normalizedSlots(slots);
+    return targets.some(slot => slot.optimize)
+      ? optimizeDesignAsync(design, targets, measureContext, options)
+      : applyLayoutAction(design, targets, measureContext, options);
   }
 
   function spreadDesignColors(design, colors, measureContext, options = {}) {
@@ -1534,6 +1803,6 @@
       area.y + area.height / 2 + (item.y - centerY) * scale)) };
   }
 
-  return { applyLayoutAction, optimizeDesign, spreadDesignColors, fitDesignToSafeArea, printLayoutQuality,
+  return { applyLayoutAction, applyLayoutActionAsync, optimizeDesign, optimizeDesignAsync, spreadDesignColors, fitDesignToSafeArea, printLayoutQuality,
     balancePrintSpacing };
 });

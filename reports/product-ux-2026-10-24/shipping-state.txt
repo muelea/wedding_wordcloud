@@ -1,0 +1,76 @@
+Browser tab: 12, Title: "Shipping address – Wolkenworte", URL: "http://127.0.0.1:51576/e/-_AbCdEf0123456789xyZQ/shipping?configurations=FixtureCart00001%2CFixtureCart00002&edit=FixtureCart00001".
+1 AXWebArea Shipping address – Wolkenworte, URL: 127.0.0.1:51576/e/-_AbCdEf0123456789xyZQ/shipping?configurations=FixtureCart00001%2CFixtureCart00002&edit=FixtureCart00001
+	2 container
+		3 link Description: Wolkenworte, Value: 127.0.0.1:51576/
+		4 link Description: Back to the design, Value: 127.0.0.1:51576/e/-_AbCdEf0123456789xyZQ/configure
+		5 button (collapsed) Description: Open menu, Secondary Actions: Expand
+	6 container page-content
+		7 container
+			8 text ALMOST THERE
+			9 heading Where should we send your keepsake?, Value: 1, ID: shipping-title
+				10 text Where should we send your keepsake?
+			11 text We use your delivery address to check product prices, shipping costs and estimated delivery time.
+		12 container Order progress
+			13 text ✓ Design 2 Shipping address 3 Payment
+		14 container Shipping address
+			15 heading Shipping address, Value: 2, ID: address-title
+				16 text Shipping address
+			17 text Choose the quantities and enter your delivery address. After purchasing, you can order the same designs again to a different address.
+			18 container address-form
+				19 container
+					20 heading Your delivery, Value: 3
+						21 text Your delivery
+					22 text Your cart
+					23 pop up button View White mug design
+					24 pop up button View White mug design
+						25 text White mug
+						26 text 325 ml
+						27 text 1 Mug
+						28 text €11.07 each · includes 19% VAT for Germany
+					29 link Description: Open and edit White mug, Value: 127.0.0.1:51576/e/-_AbCdEf0123456789xyZQ/configure?edit=FixtureCart00001
+					30 button Remove White mug from cart
+					31 container White mug for delivery 1
+						32 button Decrease White mug by one
+						33 stepper (settable, integer) 1
+						34 button Increase White mug by one
+					35 pop up button View Matte poster design
+					36 pop up button View Matte poster design
+						37 text Matte poster
+						38 text 30 × 40 cm · 189 g/m² · matte
+						39 text 1 Posters
+						40 text €19.57 each · includes 19% VAT for Germany
+					41 link Description: Open and edit Matte poster, Value: 127.0.0.1:51576/e/-_AbCdEf0123456789xyZQ/configure?edit=FixtureCart00002
+					42 button Remove Matte poster from cart
+					43 container Matte poster for delivery 1
+						44 button Decrease Matte poster by one
+						45 stepper (settable, integer) 1
+						46 button Increase Matte poster by one
+					47 text Full name
+					48 text field (settable) Full name
+					49 text Street and house number
+					50 text field (settable) Street and house number
+					51 text Address line 2 (optional)
+					52 text field (settable) Address line 2 (optional)
+					53 text Postal code
+					54 text field (settable) Postal code
+					55 text City
+					56 text field (settable) City
+					57 text Country
+					58 pop up button (collapsed) Description: Country: Germany, Secondary Actions: Expand
+						59 text Germany
+						60 text DE
+						74 text ⌄
+				62 button Check prices and delivery , ID: submit-button
+					63 text Check prices and delivery
+				64 container
+					65 text Learn more about how we process your shipping data in our
+					66 link Description: Privacy, Value: 127.0.0.1:51576/datenschutz
+					67 text .
+	68 container
+		69 text © 2026 Wolkenworte
+		70 container Legal information
+			71 link Description: Imprint, Value: 127.0.0.1:51576/impressum
+			72 link Description: Privacy, Value: 127.0.0.1:51576/datenschutz
+			73 link Description: Order information, Value: 127.0.0.1:51576/bestellinformationen
+
+The focused UI element is 1 AXWebArea Shipping address – Wolkenworte, URL: 127.0.0.1:51576/e/-_AbCdEf0123456789xyZQ/shipping?configurations=FixtureCart00001%2CFixtureCart00002&edit=FixtureCart00001

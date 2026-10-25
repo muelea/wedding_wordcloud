@@ -24,7 +24,7 @@
 .ww-account-main h2, .ww-account-dialog h2 { font-size: 24px; font-weight: 500; line-height: 1.3; }
 .ww-account-main p, .ww-account-dialog p { line-height: 1.65; }
 .ww-account-main a, .ww-account-dialog a, .ww-account-controls a { color: #9c1c4c; }
-.ww-account-main button, .ww-account-dialog button, .ww-account-controls button {
+.ww-account-main button:not(.ww-icon-button), .ww-account-dialog button:not(.ww-icon-button), .ww-account-controls button:not(.ww-icon-button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;

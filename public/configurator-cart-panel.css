@@ -1,0 +1,25 @@
+.cart-panel { position: fixed; inset: var(--cart-panel-top, 80px) var(--cart-panel-right, 24px) auto auto; margin: 0; padding: 0; width: min(460px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - var(--cart-panel-top, 80px) - 16px)); border: 1px solid var(--line); border-radius: 22px; background: #fffefa; color: var(--ink); box-shadow: 0 20px 70px rgba(64,15,38,.18); overflow: auto; overscroll-behavior: contain; }
+.cart-panel::backdrop { background: rgba(44, 21, 30, .24); }
+.cart-panel-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 22px; background: #fffefa; border-bottom: 1px solid var(--line); z-index: 1; }
+.cart-panel-head h2 { margin: 0; font-size: 26px; }
+.cart-panel-list { list-style: none; margin: 0; padding: 0 22px; }
+.cart-panel-item { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.cart-panel-item > img { width: 76px; height: 88px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.cart-panel-item-copy { display: grid; gap: 5px; min-width: 0; font-size: 14px; }
+.cart-panel-item-copy > span { color: var(--muted); font-size: 12px; }
+.cart-panel-item-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 4px; }
+.cart-panel-item-actions button { min-height: 36px; padding: 4px 0; border: 0; background: transparent; color: var(--berry); font: inherit; font-size: 13px; cursor: pointer; }
+.cart-panel-item-actions .cart-panel-remove { color: var(--muted); }
+.cart-panel button:focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; }
+.cart-panel button:disabled { cursor: default; opacity: .6; }
+.cart-panel-empty, .cart-panel-status, .cart-panel-removal { margin: 18px 22px; font-size: 14px; }
+.cart-panel-status { color: var(--berry); }
+.cart-panel > .product-price-note { margin: 14px 22px; }
+.cart-panel-removal { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: var(--muted); }
+.cart-panel [hidden] { display: none; }
+.cart-panel-foot { position: sticky; bottom: 0; display: grid; gap: 8px; padding: 18px 22px 22px; background: #fffefa; border-top: 1px solid var(--line); }
+.cart-panel-foot button { width: 100%; min-height: 46px; }
+@media (max-width: 620px) {
+  .cart-panel { inset: auto 0 0; width: 100%; max-width: none; max-height: 85dvh; border-radius: 24px 24px 0 0; }
+  .cart-panel-foot { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+}

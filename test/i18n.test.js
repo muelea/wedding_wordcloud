@@ -58,6 +58,7 @@ function renderView(filename, header = {}, locale = 'de') {
       purchaseTerms: require('../src/purchaseTerms'),
       seller: require('../src/emailTemplates').SELLER,
     },
+    landingMugProduct: require('../src/products').getPublicProduct(require('../src/products').MUG_11),
     languages: TEST_LANGUAGES,
     asset: publicAssetUrl,
     siteFontAssets: SITE_FONT_ASSETS,
@@ -68,6 +69,18 @@ function renderView(filename, header = {}, locale = 'de') {
   }, { filename: fullPath });
 }
 const REQUIRED_MESSAGES = [
+  'Stoff ziehen · Daneben drehen · Leertaste: Stoff bewegen',
+  '{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.',
+  'inkl. MwSt., zzgl. Versand · DE',
+  'Nicht nach DE lieferbar',
+  'Preisinformationen',
+  'Produktdetails',
+  'Füge ein Wort hinzu. Es erscheint sofort bei allen.',
+  'So geht’s',
+  'Tippe unten ein Wort ein und wähle „Hinzufügen“. Es erscheint sofort bei allen.',
+  'Gestaltet mit euren Wörtern ein persönliches Andenken. Der Button wird aktiv, sobald die Wolke Wörter enthält.',
+  'Schritt {{current}} von {{total}}',
+  'Zeigen und verwalten',
   'Direkt ein Erinnerungsstück gestalten',
   'Erinnerungsstück gestalten',
   'Ihr könnt euer Erinnerungsstück auch direkt gestalten – mit eigenen Worten, Bildern und Motiven.',
@@ -173,6 +186,20 @@ test('locale catalogs cover the complete user journey and preserve interpolation
   assert.equal(I18n.translate('Organisatorbereich', 'en'), 'Organizer controls');
   assert.equal(I18n.translate('Wortwolke verwalten', 'en'), 'Manage word cloud');
   assert.equal(I18n.translate('{{count}} Elemente ausgewählt', 'fr', { count: 3 }), '3 éléments sélectionnés');
+});
+
+test('every offered framed-poster size and color has a complete localized variant label', () => {
+  const frames = require('../src/products').PRODUCTS.filter(product => product.previewShape === 'framed-poster');
+  for (const locale of CATALOG_LOCALES) {
+    const catalog = I18n.getCatalog(locale);
+    for (const product of frames) {
+      assert.ok(catalog[product.variantLabel], `${locale}: ${product.variantLabel}`);
+      assert.notEqual(I18n.translate(product.variantLabel, locale), product.variantLabel);
+    }
+  }
+  const black = frames.find(product => product.key === 'framed-matte-poster-black-30x40cm');
+  assert.match(I18n.translate(black.variantLabel, 'en'), /Black/);
+  assert.doesNotMatch(I18n.translate(black.variantLabel, 'en'), /Schwarz/);
 });
 
 test('every public page loads the shared language layer', () => {
@@ -329,7 +356,7 @@ test('interface fonts are locally served, reusable from preload and consistently
 test('server localization produces the selected language before browser scripts run', () => {
   const cases = [
     ['landing.ejs', { variant: 'landing' }, 'Collect wishes &amp; memories'],
-    ['display.ejs', { variant: 'display' }, 'Waiting for your words…'],
+    ['display.ejs', { variant: 'display' }, 'Your word cloud grows here.'],
     ['configure.ejs', {}, 'Opening your design…'],
     ['shipping.ejs', {}, 'Loading your cart and shipping details…'],
     ['order-confirmation.ejs', {}, 'Confirming payment'],
@@ -664,7 +691,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
   });
   assert.equal(rememberedStart.status, 303);
   const rememberedStartLocation = rememberedStart.headers.get('location') || '';
-  const rememberedEventMatch = /^\/e\/([^/]+)$/.exec(rememberedStartLocation);
+  const rememberedEventMatch = /^\/e\/([^/#]+)#willkommen$/.exec(rememberedStartLocation);
   assert.ok(rememberedEventMatch, `unexpected display location: ${rememberedStartLocation}`);
   const rememberedEventInfo = await fetch(
     `${baseUrl}/api/events/${rememberedEventMatch[1]}`

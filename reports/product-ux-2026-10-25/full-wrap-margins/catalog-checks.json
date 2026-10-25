@@ -1,0 +1,88 @@
+{
+  "changed": [
+    {
+      "key": "water-bottle-10798",
+      "before": {
+        "x": 50,
+        "y": 50,
+        "width": 2457,
+        "height": 1482
+      },
+      "after": {
+        "x": 3,
+        "y": 50,
+        "width": 2551,
+        "height": 1482
+      },
+      "renderValidationFloor": 3
+    },
+    {
+      "key": "water-bottle-16030",
+      "before": {
+        "x": 50,
+        "y": 50,
+        "width": 2457,
+        "height": 1482
+      },
+      "after": {
+        "x": 3,
+        "y": 50,
+        "width": 2551,
+        "height": 1482
+      },
+      "renderValidationFloor": 3
+    },
+    {
+      "key": "steel-tumbler-15005",
+      "before": {
+        "x": 70,
+        "y": 70,
+        "width": 2636,
+        "height": 2234
+      },
+      "after": {
+        "x": 3,
+        "y": 70,
+        "width": 2770,
+        "height": 2234
+      },
+      "renderValidationFloor": 3
+    },
+    {
+      "key": "steel-tumbler-15004",
+      "before": {
+        "x": 70,
+        "y": 70,
+        "width": 2636,
+        "height": 2234
+      },
+      "after": {
+        "x": 3,
+        "y": 70,
+        "width": 2770,
+        "height": 2234
+      },
+      "renderValidationFloor": 3
+    },
+    {
+      "key": "wine-tumbler",
+      "before": {
+        "x": 50,
+        "y": 50,
+        "width": 3075,
+        "height": 850
+      },
+      "after": {
+        "x": 3,
+        "y": 50,
+        "width": 3169,
+        "height": 850
+      },
+      "renderValidationFloor": 3
+    }
+  ],
+  "otherVariantsUnchanged": 56,
+  "originalVerticalMarginsPreserved": true,
+  "providerPrintFilesAndMeshesUnchanged": true,
+  "wordsSplitAtJoin": false
+}

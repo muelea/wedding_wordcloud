@@ -75,8 +75,8 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   });
 
   const quote = await calculateQuote(baseUrl, event.slug, configuration.id);
-  assert.equal(quote.paymentReserveCents, 162);
-  assert.equal(quote.totalCents, 2552);
+  assert.equal(quote.paymentReserveCents, 252);
+  assert.equal(quote.totalCents, 2834);
 
   const checkoutUrl = `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/checkout`;
   const first = await fetch(checkoutUrl, {
@@ -156,7 +156,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   }]);
 });
 
-test('a changed Printful price must be shown and confirmed before Stripe is created', async (t) => {
+test('a changed shipping price must be shown and confirmed before Stripe is created', async (t) => {
   const { baseUrl, close } = await startTestServer();
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Preis Pia & Update Uwe' });
@@ -168,16 +168,17 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   const originalCountries = printful.getShippingCountries;
   const originalEstimate = printful.estimateOrderCosts;
   const originalCheckout = stripe.createCheckoutSession;
-  let productSubtotal = 10.98;
+  const productSubtotal = 10.98;
+  let shippingCost = 4.49;
   let checkoutCalls = 0;
   printful.getShippingCountries = async () => [
     { code: 'DE', name: 'Germany', region: 'europe', states: [] },
   ];
   printful.estimateOrderCosts = async () => {
-    const vat = Math.round((productSubtotal + 4.49) * 0.19 * 100) / 100;
+    const vat = Math.round((productSubtotal + shippingCost) * 0.19 * 100) / 100;
     return {
-      currency: 'EUR', subtotal: productSubtotal, shipping: 4.49, tax: 0, vat,
-      total: productSubtotal + 4.49 + vat,
+      currency: 'EUR', subtotal: productSubtotal, shipping: shippingCost, tax: 0, vat,
+      total: productSubtotal + shippingCost + vat,
     };
   };
   stripe.createCheckoutSession = async () => {
@@ -191,7 +192,7 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   });
 
   const quote = await calculateQuote(baseUrl, event.slug, configuration.id);
-  productSubtotal = 12;
+  shippingCost = 6.49;
   const checkoutUrl = `${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/checkout`;
   const changed = await fetch(checkoutUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: quote.id }),
@@ -200,8 +201,8 @@ test('a changed Printful price must be shown and confirmed before Stripe is crea
   const changedBody = await changed.json();
   assert.equal(changedBody.error, 'quote_changed');
   assert.equal(changedBody.quote.id, quote.id);
-  assert.equal(changedBody.quote.paymentReserveCents, 170);
-  assert.equal(changedBody.quote.totalCents, 2732);
+  assert.equal(changedBody.quote.paymentReserveCents, 262);
+  assert.equal(changedBody.quote.totalCents, 3083);
   assert.equal(checkoutCalls, 0);
 
   const confirmed = await fetch(checkoutUrl, {
@@ -242,7 +243,8 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
       id: 'cs_test_cart_1',
       url: 'https://checkout.stripe.test/cs_test_cart_1',
       taxCents: 321,
-      totalCents: Number(options.order.total_cents) + 321,
+      totalCents: Number(options.order.total_cents),
+      shippingTaxCents: 96,
       expiresAt: options.order.checkout_session_expires_at,
     };
   };
@@ -287,7 +289,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   assert.equal(prepared.url, undefined, 'preparation must not expose or open Stripe Checkout');
   assert.equal(prepared.quote.checkoutPrepared, true);
   assert.equal(prepared.quote.taxCents, 321);
-  assert.equal(prepared.quote.totalCents, quote.totalCents + 321);
+  assert.equal(prepared.quote.totalCents, quote.totalCents);
 
   const checkout = await fetch(checkoutUrl, {
     method: 'POST',
@@ -313,7 +315,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   const db = require('../src/db');
   const order = await db.getOrderBySessionId('cs_test_cart_1');
   assert.equal(JSON.parse(order.checkout_request_json).expectedTaxCents, 321);
-  assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents + 321);
+  assert.equal(JSON.parse(order.checkout_request_json).expectedTotalCents, quote.totalCents);
   assert.deepEqual(JSON.parse(order.configuration_ids_json), [mug.id, coaster.id]);
   const storedShipments = await db.getOrderShipments(order.id);
   assert.equal(storedShipments.length, 1);
@@ -329,7 +331,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
   const restoredBody = await restored.json();
   assert.equal(restoredBody.quote.checkoutPrepared, true);
   assert.equal(restoredBody.quote.taxCents, 321);
-  assert.equal(restoredBody.quote.totalCents, quote.totalCents + 321);
+  assert.equal(restoredBody.quote.totalCents, quote.totalCents);
   assert.deepEqual(restoredBody.shipments[0].items, [
     { configurationId: mug.id, quantity: 1 },
     { configurationId: coaster.id, quantity: 1 },
@@ -559,4 +561,45 @@ test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
   assert.equal(response.status, 409);
   assert.equal((await response.json()).error, 'quote_expired');
   assert.equal(checkoutCalls, 0);
+});
+
+test('published case restrictions also block an already prepared single or cart checkout', async t => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl);
+  const configuration = await saveConfiguration(baseUrl, event.slug, { quantity: 1, productKey: 'tough-case-20308' });
+  const printful = require('../src/printful'), stripe = require('../src/stripe');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
+  const originals = { countries: printful.getShippingCountries, estimate: printful.estimateOrderCosts,
+    delivery: printful.assertProductDelivery, checkout: stripe.createCheckoutSession };
+  t.after(() => { printful.getShippingCountries=originals.countries; printful.estimateOrderCosts=originals.estimate;
+    printful.assertProductDelivery=originals.delivery; stripe.createCheckoutSession=originals.checkout; });
+  printful.getShippingCountries=async()=>[{code:'JP',name:'Japan',states:[]}];
+  printful.estimateOrderCosts=async()=>({currency:'EUR',subtotal:12,shipping:5,tax:0,vat:0,total:17});
+  let checkoutCalls=0;
+  stripe.createCheckoutSession=async()=>({id:`cs_test_legacy_case_${++checkoutCalls}`,url:'https://checkout.stripe.test/legacy-case'});
+  const recipient={name:'Synthetic Case',address1:'Test 1',city:'Tokyo',zip:'1000001',country_code:'JP'};
+  for(const mode of ['single','cart']) {
+    // Simulate a quote and Stripe Session prepared before this policy existed.
+    printful.assertProductDelivery=()=>{};
+    const path=mode==='single'?`configurations/${configuration.id}`:'cart';
+    const body=mode==='single'?{recipient}:{configurationIds:[configuration.id],shipments:[{recipient,items:[{configurationId:configuration.id,quantity:1}]}]};
+    const quoteResponse=await fetch(`${baseUrl}/api/events/${event.slug}/${path}/estimate-costs`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),
+    });
+    assert.equal(quoteResponse.status,200);
+    const {quote}=await quoteResponse.json();
+    const checkoutBody={quoteId:quote.id,...(mode==='cart'?{configurationIds:[configuration.id]}:{})};
+    const checkout=()=>fetch(`${baseUrl}/api/events/${event.slug}/${path}/checkout`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(checkoutBody),
+    });
+    assert.equal((await checkout()).status,200);
+    printful.assertProductDelivery=originals.delivery;
+    const blocked=await checkout();
+    assert.equal(blocked.status,422,mode);
+    const result=await blocked.json();
+    assert.equal(result.error,'product_shipping_restricted');
+    assert.equal(result.products[0].key,'tough-case-20308');
+  }
+  assert.equal(checkoutCalls,2,'restricted retries must not create or replace a Stripe Session');
 });

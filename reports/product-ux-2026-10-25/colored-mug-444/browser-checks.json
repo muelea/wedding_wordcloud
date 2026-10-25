@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "colored-mug-17196: original 444 ml geometry is loaded",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17196: camera stays fixed",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17196: artwork stays exact",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17197: original 444 ml geometry is loaded",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17197: camera stays fixed",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17197: artwork stays exact",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-22373: original 444 ml geometry is loaded",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-22373: camera stays fixed",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-22373: artwork stays exact",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17200: original 444 ml geometry is loaded",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17200: camera stays fixed",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17200: artwork stays exact",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17199: original 444 ml geometry is loaded",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17199: camera stays fixed",
+      "pass": true
+    },
+    {
+      "name": "colored-mug-17199: artwork stays exact",
+      "pass": true
+    }
+  ]
+}

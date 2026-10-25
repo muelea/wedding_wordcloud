@@ -65,8 +65,8 @@ test('single-address checkout and paid design reorders preserve commerce snapsho
     assert.equal((await query('SELECT count(*)::int AS count FROM configurations')).rows[0].count, 3);
   });
 
-  const taxCents = Math.round(quote.totalCents * 0.19);
-  const paidTotal = quote.totalCents + taxCents;
+  const taxCents = Math.round(quote.totalCents * 0.19 / 1.19);
+  const paidTotal = quote.totalCents;
   await db.recordSuccessfulPayment({ stripeEventId: 'evt_reorder_original', eventType: 'checkout.session.completed',
     stripeSessionId: sessionId, paymentIntentId: 'pi_reorder_original', livemode: false,
     amountTotal: paidTotal, currency: 'eur', checkoutSession: {
@@ -75,7 +75,7 @@ test('single-address checkout and paid design reorders preserve commerce snapsho
       automatic_tax: { enabled: true, status: 'complete' },
       total_details: { amount_tax: taxCents, amount_discount: 0 },
       shipping_cost: { amount_subtotal: quote.shippingCents,
-        amount_tax: 95, amount_total: quote.shippingCents + 95 },
+        amount_tax: Math.round(quote.shippingCents * 0.19 / 1.19), amount_total: quote.shippingCents },
     } });
   const originalOrder = await db.getOrderBySessionId(sessionId);
   const originalItems = await db.getOrderItems(originalOrder.id);

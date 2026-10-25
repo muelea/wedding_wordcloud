@@ -1,0 +1,59 @@
+{
+  "checks": {
+    "passed": true,
+    "results": [
+      {
+        "details": {
+          "angle": 0,
+          "movement": 0
+        },
+        "name": "cork-back-coaster: camera stays fixed through a full turn and tilt",
+        "pass": true
+      },
+      {
+        "name": "cork-back-coaster: artwork stays exact",
+        "pass": true
+      },
+      {
+        "details": {
+          "angle": 0,
+          "movement": 0
+        },
+        "name": "all-over-tote-8904: camera stays fixed through a full turn and tilt",
+        "pass": true
+      },
+      {
+        "name": "all-over-tote-8904: artwork stays exact",
+        "pass": true
+      },
+      {
+        "details": {
+          "angle": 0,
+          "movement": 0
+        },
+        "name": "laptop-sleeve-10984: camera stays fixed through a full turn and tilt",
+        "pass": true
+      },
+      {
+        "name": "laptop-sleeve-10984: artwork stays exact",
+        "pass": true
+      },
+      {
+        "details": {
+          "angle": 0,
+          "movement": 0
+        },
+        "name": "mouse-pad: camera stays fixed through a full turn and tilt",
+        "pass": true
+      },
+      {
+        "name": "mouse-pad: artwork stays exact",
+        "pass": true
+      }
+    ]
+  },
+  "dragCameraMovement": 0,
+  "unitTestsPassed": 31,
+  "verifiedVariants": 59,
+  "verifiedOrientations": 66
+}

@@ -1,0 +1,233 @@
+{
+  "key": "all-over-tote-black-handles",
+  "familyKey": "bags",
+  "thumbnail": "/assets/product-thumbnails/tote.svg",
+  "productPhoto": null,
+  "catalogGroup": null,
+  "variantLabel": "39 × 39 cm · Schwarz",
+  "previewModel": null,
+  "previewMesh": null,
+  "productPhotoFit": "cover",
+  "productPhotoPosition": "center",
+  "name": "Allover-Tragetasche",
+  "displayName": "Tragetasche",
+  "description": "Geräumige Tragetasche mit vollflächigem Druck und schwarzen Baumwollträgern.",
+  "icon": "▱",
+  "previewType": "flat",
+  "previewShape": "tote",
+  "previewMockup": {
+    "width": 700,
+    "height": 1000,
+    "scale": 1,
+    "blendMode": "multiply",
+    "backgroundColor": null,
+    "rotation": 0,
+    "canvas": {
+      "left": 5,
+      "top": 35.5,
+      "width": 90,
+      "height": 58.5,
+      "fit": "cover",
+      "clipPath": "polygon(0 0, 100% 0, 96% 100%, 3% 100%)"
+    },
+    "canvases": null,
+    "assets": {
+      "default": "/assets/product-mockups/tote-front.jpg"
+    }
+  },
+  "defaultQuantity": 1,
+  "minQuantity": 1,
+  "maxQuantity": 99,
+  "currency": "EUR",
+  "unit": {
+    "singular": "Tragetasche",
+    "plural": "Tragetaschen"
+  },
+  "designSafeMargin": 100,
+  "designSafeAreas": {
+    "default": {
+      "x": 305,
+      "y": 490,
+      "width": 1935,
+      "height": 1640
+    }
+  },
+  "shippingRestrictions": [],
+  "printSurfaces": [
+    {
+      "key": "default",
+      "label": "Druckfläche"
+    }
+  ],
+  "size": {
+    "label": "39 × 39 cm",
+    "detail": "10 l · schwarze Träger"
+  },
+  "printFile": {
+    "width": 2550,
+    "height": 2475,
+    "dpi": 150,
+    "fillMode": "cover",
+    "placement": "default"
+  },
+  "layoutGeometry": {
+    "fit-area": [
+      {
+        "x": 305,
+        "y": 490,
+        "width": 1935,
+        "height": 1640,
+        "optimize": true
+      }
+    ],
+    "centered": [
+      {
+        "x": 275,
+        "y": 237.5,
+        "side": 2000
+      }
+    ]
+  },
+  "themes": [
+    {
+      "key": "konfetti",
+      "label": "Konfetti",
+      "description": "Bunte Kontraste mit Kobaltblau, Sonnengelb und Fuchsia",
+      "colors": [
+        "#f77500",
+        "#ed2446",
+        "#2455f5",
+        "#18a84b",
+        "#efbf00",
+        "#e600b8"
+      ],
+      "background": [
+        "#fffdfa",
+        "#fff7ef",
+        "rgba(239,191,0,.10)",
+        "rgba(230,0,184,.05)"
+      ]
+    },
+    {
+      "key": "dopamin-pop",
+      "label": "Dopamin Pop",
+      "description": "Leuchtendes Orange, Pink, Türkis, Gelb, Violett und Apfelgrün",
+      "colors": [
+        "#ff6a00",
+        "#f500a6",
+        "#00bfc4",
+        "#ffd400",
+        "#7b2cff",
+        "#7ccc00"
+      ],
+      "background": [
+        "#fffdfa",
+        "#fff5fa",
+        "rgba(255,212,0,.10)",
+        "rgba(0,191,196,.07)"
+      ],
+      "uiPrimary": "#b84700"
+    },
+    {
+      "key": "pastel",
+      "label": "Sorbet Pop",
+      "description": "Leuchtende Beeren- und Aprikosentöne",
+      "colors": [
+        "#a40e4c",
+        "#d90368",
+        "#f45b69",
+        "#ff7f3f",
+        "#6a4c93",
+        "#168f83"
+      ],
+      "background": [
+        "#fffdfa",
+        "#fff3f5",
+        "rgba(247,238,223,.7)",
+        "rgba(209,96,126,.08)"
+      ]
+    },
+    {
+      "key": "sage-gold",
+      "label": "Smaragd & Gold",
+      "description": "Edle Juwelen- und Goldtöne",
+      "colors": [
+        "#063e36",
+        "#006d5b",
+        "#14967f",
+        "#8f6100",
+        "#d0920f",
+        "#654100"
+      ],
+      "background": [
+        "#f7fbf5",
+        "#edf6ef",
+        "rgba(20,150,127,.13)",
+        "rgba(208,146,15,.10)"
+      ]
+    },
+    {
+      "key": "ocean",
+      "label": "Ocean Electric",
+      "description": "Tiefes Blau mit leuchtendem Türkis",
+      "colors": [
+        "#003049",
+        "#00509d",
+        "#0077b6",
+        "#0096c7",
+        "#00a6a6",
+        "#136f63"
+      ],
+      "background": [
+        "#f4f9fc",
+        "#eaf4fa",
+        "rgba(0,119,182,.13)",
+        "rgba(0,166,166,.10)"
+      ]
+    },
+    {
+      "key": "custom",
+      "label": "Eigene Farben",
+      "description": "Eure ganz persönliche Farbmischung",
+      "colors": [
+        "#c2185b",
+        "#f05a28",
+        "#f2a900",
+        "#008f83",
+        "#3155c6",
+        "#7027a0"
+      ]
+    }
+  ],
+  "layouts": [
+    {
+      "key": "fit-area",
+      "label": "Fläche optimal nutzen",
+      "description": "Aktuellen Inhalt automatisch großflächig anordnen"
+    },
+    {
+      "key": "centered",
+      "label": "Motiv mittig",
+      "description": "Kompakt und mit einem großzügigen Rand"
+    }
+  ],
+  "orientation": "default",
+  "defaultOrientation": "default",
+  "orientations": [],
+  "printful": {
+    "productId": 84,
+    "variantId": 4533,
+    "printfileId": 6,
+    "templateId": 1204,
+    "placements": [
+      "default"
+    ],
+    "options": [
+      {
+        "id": "stitch_color",
+        "value": "black"
+      }
+    ],
+    "technique": "cut-sew"
+  }
+}

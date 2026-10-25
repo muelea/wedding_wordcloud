@@ -1,0 +1,195 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "water-bottle-10798: editor and layout share the three-pixel sides",
+      "pass": true,
+      "details": {
+        "x": 3,
+        "y": 50,
+        "width": 2551,
+        "height": 1482
+      }
+    },
+    {
+      "name": "water-bottle-10798: guide uses the same side margin",
+      "pass": true
+    },
+    {
+      "name": "water-bottle-10798: edge movement reaches the narrow join",
+      "pass": true,
+      "details": [
+        29,
+        2528,
+        1278.5,
+        1278.5
+      ]
+    },
+    {
+      "name": "water-bottle-10798: vertical movement keeps the original limits",
+      "pass": true,
+      "details": [
+        791,
+        791,
+        76,
+        1506
+      ]
+    },
+    {
+      "name": "water-bottle-10798: objects remain whole and the provider mesh loads",
+      "pass": true
+    },
+    {
+      "name": "water-bottle-16030: editor and layout share the three-pixel sides",
+      "pass": true,
+      "details": {
+        "x": 3,
+        "y": 50,
+        "width": 2551,
+        "height": 1482
+      }
+    },
+    {
+      "name": "water-bottle-16030: guide uses the same side margin",
+      "pass": true
+    },
+    {
+      "name": "water-bottle-16030: edge movement reaches the narrow join",
+      "pass": true,
+      "details": [
+        29,
+        2528,
+        1278.5,
+        1278.5
+      ]
+    },
+    {
+      "name": "water-bottle-16030: vertical movement keeps the original limits",
+      "pass": true,
+      "details": [
+        791,
+        791,
+        76,
+        1506
+      ]
+    },
+    {
+      "name": "water-bottle-16030: objects remain whole and the provider mesh loads",
+      "pass": true
+    },
+    {
+      "name": "steel-tumbler-15005: editor and layout share the three-pixel sides",
+      "pass": true,
+      "details": {
+        "x": 3,
+        "y": 70,
+        "width": 2770,
+        "height": 2234
+      }
+    },
+    {
+      "name": "steel-tumbler-15005: guide uses the same side margin",
+      "pass": true
+    },
+    {
+      "name": "steel-tumbler-15005: edge movement reaches the narrow join",
+      "pass": true,
+      "details": [
+        29,
+        2747,
+        1388,
+        1388
+      ]
+    },
+    {
+      "name": "steel-tumbler-15005: vertical movement keeps the original limits",
+      "pass": true,
+      "details": [
+        1187,
+        1187,
+        96,
+        2278
+      ]
+    },
+    {
+      "name": "steel-tumbler-15005: objects remain whole and the provider mesh loads",
+      "pass": true
+    },
+    {
+      "name": "steel-tumbler-15004: editor and layout share the three-pixel sides",
+      "pass": true,
+      "details": {
+        "x": 3,
+        "y": 70,
+        "width": 2770,
+        "height": 2234
+      }
+    },
+    {
+      "name": "steel-tumbler-15004: guide uses the same side margin",
+      "pass": true
+    },
+    {
+      "name": "steel-tumbler-15004: edge movement reaches the narrow join",
+      "pass": true,
+      "details": [
+        29,
+        2747,
+        1388,
+        1388
+      ]
+    },
+    {
+      "name": "steel-tumbler-15004: vertical movement keeps the original limits",
+      "pass": true,
+      "details": [
+        1187,
+        1187,
+        96,
+        2278
+      ]
+    },
+    {
+      "name": "steel-tumbler-15004: objects remain whole and the provider mesh loads",
+      "pass": true
+    },
+    {
+      "name": "wine-tumbler: editor and layout share the three-pixel sides",
+      "pass": true,
+      "details": {
+        "x": 3,
+        "y": 50,
+        "width": 3169,
+        "height": 850
+      }
+    },
+    {
+      "name": "wine-tumbler: guide uses the same side margin",
+      "pass": true
+    },
+    {
+      "name": "wine-tumbler: edge movement reaches the narrow join",
+      "pass": true,
+      "details": [
+        29,
+        3146,
+        1587.5,
+        1587.5
+      ]
+    },
+    {
+      "name": "wine-tumbler: vertical movement keeps the original limits",
+      "pass": true,
+      "details": [
+        475,
+        475,
+        76,
+        874
+      ]
+    },
+    {
+      "name": "wine-tumbler: objects remain whole and the provider mesh loads",
+      "pass": true
+    }
+  ]
+}

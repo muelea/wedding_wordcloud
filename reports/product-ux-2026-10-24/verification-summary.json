@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "scope": [
+    "Inert gallery render clicks with retained 3D rotation",
+    "Cart note padding",
+    "Header-cart shipping uses accepted items only",
+    "Larger editor camera framing for 59 mesh variants",
+    "Mouse-pad proof calibration",
+    "Rich size/color dropdowns with independently enlarged real photos"
+  ],
+  "focusedTests": {
+    "passed": 189,
+    "files": [
+      "product-gallery",
+      "mug-3d-lifecycle",
+      "product-print-area-audit",
+      "printful-product-model",
+      "print-geometry",
+      "configurator-cart-panel",
+      "configurator-session",
+      "configurator-workspace",
+      "configurator-responsive"
+    ]
+  },
+  "configuratorTests": {
+    "passed": 27
+  },
+  "localeChecks": "All focused locale checks passed; the database-backed event-locale check was rerun successfully with network access.",
+  "browserChecks": 12,
+  "browserPassed": true,
+  "shipping": {
+    "passed": true,
+    "items": [
+      "White mug · 325 ml",
+      "Matte poster · 30 × 40 cm"
+    ],
+    "extraDesignPrompt": false
+  },
+  "mobile": {
+    "width": 390,
+    "variantPicker": "Bottom sheet visually checked; all three photos, options and prices visible"
+  },
+  "mousePad": {
+    "projectionToleranceInProviderPixels": 2,
+    "webglCaptureToleranceInProviderPixels": 3,
+    "printFileUnchanged": true,
+    "safeAreaUnchanged": true,
+    "physicalSampleNotOrdered": true
+  },
+  "screenshots": [
+    "variant-picker.png",
+    "variant-picker-mobile.png",
+    "mouse-pad-editor.png",
+    "cart-padding.png",
+    "shipping-cart.png"
+  ],
+  "sources": {
+    "public/js/product-gallery.js": "0dd0b6c4fec78b618b69b3bceeced2a01b30143b069e26eb50593704521e47b4",
+    "public/product-gallery.css": "aa1b251b03032ca97b2fd247bb0696d051fc66bd3312ab6ebfc8b5b8a8c04a5a",
+    "public/js/mug-3d-viewer.js": "89d538742252fc8b2e543250d67cbe8d79d96e6da69b41280548d836bf1c4214",
+    "public/js/printful-product-model.js": "2550ebb22cb64cce5f37854aa324e0820a9487c303e0ee8dc6de522c49c6d06d",
+    "public/configurator-cart-panel.css": "21e7b4d5ece89eff011ea8fd445826506338fc329a1f2967023725364c48171f",
+    "views/configure.ejs": "0ba0eb7770192e1d28d508431ee5087c67e5b4a378d30133ad8b63a6c0182861",
+    "src/products.js": "1ded6c3e0406a386fbbc60139f762ffce2c7b3b6de237e1badf3022b5176b361",
+    "src/productPreviewModels.json": "98b7cbb50ffbf04795ac0912080b4dd40ed3478a1ce160953915e9ff4b8993a0"
+  },
+  "meshFraming": {
+    "variants": 59,
+    "orientationStates": 66,
+    "viewports": [
+      [
+        500,
+        440
+      ],
+      [
+        310,
+        500
+      ]
+    ],
+    "rotationsPerViewport": 12
+  }
+}
