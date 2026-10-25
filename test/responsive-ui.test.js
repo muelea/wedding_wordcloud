@@ -23,6 +23,8 @@ const mobileStyles = fs.readFileSync(path.join(ROOT, 'public', 'mobile-foundatio
 const mobileRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mobile-ui.js'), 'utf8');
 const controlStyles = fs.readFileSync(path.join(ROOT, 'public', 'ui-controls.css'), 'utf8');
 const workspaceStyles = fs.readFileSync(path.join(ROOT, 'public', 'configurator-workspace.css'), 'utf8');
+const landingWorkflowStyles = fs.readFileSync(path.join(ROOT, 'public', 'landing-workflow.css'), 'utf8');
+const landingWorkflowRuntime = fs.readFileSync(path.join(ROOT, 'public', 'js', 'landing-workflow.js'), 'utf8');
 const documentViews = [
   '404.ejs',
   'configure.ejs',
@@ -231,18 +233,140 @@ test('shipping is the compact cart review with edit, remove and quantity control
   assert.match(shipping, /row\.append\(preview, copy, actions, control\)/);
 });
 
-test('landing explains the workflow inline before products without blocking the page', () => {
-  const demo = fs.readFileSync(path.join(ROOT, 'views/partials/landing-demo.ejs'), 'utf8');
-  const styles = fs.readFileSync(path.join(ROOT, 'public/landing-demo.css'), 'utf8');
+test('landing page uses an accessible desktop scroll story with a static mobile sequence', () => {
+  assert.match(landing, /html \{ max-width: 100%;[\s\S]*?overflow-x: clip;[^}]*\}/);
+  assert.match(landing, /asset\('\/landing-workflow\.css'\)/);
+  assert.match(landing, /asset\('\/js\/landing-workflow\.js'\)/);
+  assert.equal((landing.match(/data-workflow-trigger="/g) || []).length, 5);
+  assert.equal((landing.match(/data-workflow-panel="/g) || []).length, 5);
+  assert.equal((landing.match(/aria-hidden="false" data-workflow-panel=/g) || []).length, 5);
+  assert.match(landing, /id="workflow-step-0"[^>]*aria-controls="workflow-panel-0"[^>]*aria-current="step"/);
+  assert.match(landing, /id="workflow-panel-0"[^>]*aria-labelledby="workflow-step-0"[^>]*aria-hidden="false"/);
+  assert.match(landing, /class="workflow-locale-screenshot workflow-create-screenshot"[\s\S]*?asset\('\/assets\/workflow\/01_' \+ locale \+ '\.png'\)/);
+  assert.match(landing, /class="workflow-locale-screenshot workflow-share-screenshot"[\s\S]*?asset\('\/assets\/workflow\/02_' \+ locale \+ '\.png'\)/);
+  assert.match(landing, /class="workflow-locale-screenshot workflow-live-screenshot"[\s\S]*?asset\('\/assets\/workflow\/04_' \+ locale \+ '\.png'\)/);
+  assert.equal((landing.match(/asset\('\/assets\/workflow\/03_' \+ locale \+ '\.png'\)/g) || []).length, 5);
+  assert.match(landing, /workflow-contributor-phone--focus">\s*<img[\s\S]*?03_' \+ locale \+ '\.png'/);
+  for (const step of ['01', '02', '04']) {
+    for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+      assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/${step}_${locale}\\.png'\\) %>"`));
+    }
+  }
+  for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+    assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/03_${locale}\\.png'\\) %>"`));
+  }
+  assert.equal((landing.match(/data-workflow-locale-screenshot(?=[\s>])/g) || []).length, 7);
+  assert.equal((landing.match(/data-workflow-locale-screenshot-group/g) || []).length, 1);
+  assert.equal((landing.match(/workflow-panel--capture/g) || []).length, 3);
+  assert.match(landingWorkflowStyles, /\.workflow-locale-screenshot \{[\s\S]*?object-fit: cover;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \{[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \.workflow-panel-art \{[\s\S]*?inset: 0;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \.workflow-locale-screenshot \{[\s\S]*?display: block;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--capture \.workflow-panel-art > :not\(\.workflow-locale-screenshot\) \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--live \.workflow-panel-art \{[\s\S]*?inset: 0;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--live \.workflow-live-screenshot \{[\s\S]*?width: auto;[\s\S]*?height: auto;[\s\S]*?max-width: 100%;[\s\S]*?max-height: 100%;[\s\S]*?border: 1px solid[\s\S]*?border-radius: 14px;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--collect \.workflow-guest-phone \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-panel--collect \.workflow-contributor-crowd \{[\s\S]*?display: block;/);
+  assert.match(landingWorkflowStyles, /\.workflow-contributor-phone \{[\s\S]*?position: absolute;[\s\S]*?top: 50%;[\s\S]*?overflow: visible;/);
+  assert.match(landingWorkflowStyles, /\.workflow-contributor-phone img \{[\s\S]*?width: auto;[\s\S]*?max-width: none;[\s\S]*?height: 100%;[\s\S]*?object-fit: contain;/);
+  assert.doesNotMatch(landingWorkflowStyles, /\.workflow-contributor-phone img \{[^}]*object-fit: fill;/);
+  assert.match(landingWorkflowStyles, /\.workflow-contributor-phone--focus \{[\s\S]*?left: 50%;[\s\S]*?height: 94%;/);
+  for (const product of ['01', '02', '03']) {
+    assert.match(landing, new RegExp(`asset\\('\\/assets\\/workflow\\/05_${product}_' \\+ locale \\+ '\\.png'\\)`));
+    for (const locale of ['de', 'en', 'es', 'fr', 'it', 'tr']) {
+      assert.match(landing, new RegExp(`data-workflow-src-${locale}="<%= asset\\('\\/assets\\/workflow\\/05_${product}_${locale}\\.png'\\) %>"`));
+    }
+  }
+  assert.match(landingWorkflowStyles, /\.workflow-keepsake-default \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-keepsake-gallery \{[\s\S]*?display: block;/);
+  assert.match(landingWorkflowStyles, /\.workflow-keepsake-asset--mug \{[\s\S]*?z-index: 3;[\s\S]*?width: 86%;/);
+  assert.match(landingWorkflowStyles, /@media \(max-width: 760px\) \{[\s\S]*?\.workflow-panel,[\s\S]*?\.workflow-step > \.workflow-panel \{[\s\S]*?aspect-ratio: \.94;/);
+  assert.match(landingWorkflowStyles, /@media \(max-width: 760px\) \{[\s\S]*?\.workflow-panel--live,[\s\S]*?\.workflow-step > \.workflow-panel--live \{[\s\S]*?aspect-ratio: 840 \/ 1038;/);
+  assert.match(landingWorkflowRuntime, /function updateLocaleScreenshots\(locale\)[\s\S]*?data-workflow-src-[\s\S]*?setAttribute\('src', nextSource\)/);
+  assert.match(landingWorkflowRuntime, /document\.querySelectorAll\('\[data-workflow-locale-screenshot\]'\)/);
+  assert.match(landingWorkflowRuntime, /localeScreenshotGroups\.forEach[\s\S]*?group\.querySelectorAll\('img'\)[\s\S]*?setAttribute\('src', nextSource\)/);
+  assert.match(landingWorkflowRuntime, /wolkenworte:localechange[\s\S]*?updateLocaleScreenshots\(event\.detail && event\.detail\.locale\)/);
+  const applyProgressSource = landingWorkflowRuntime.slice(
+    landingWorkflowRuntime.indexOf('function applyProgress'),
+    landingWorkflowRuntime.indexOf('function measureScrollProgress')
+  );
+  assert.match(applyProgressSource, /var transitionBaseIndex = reducedMotion\.matches \? activeIndex : Math\.floor\(progress\);[\s\S]*?var opacity = index < transitionBaseIndex \? 0 : clamp\(reveal \* 1\.65\);/);
+  assert.match(landingWorkflowStyles, /min-height: calc\(var\(--workflow-sticky-height\) \+ 200vh\)/);
+  assert.match(landingWorkflowStyles, /html\.workflow-scroll-ready \.workflow-sticky \{[\s\S]*?position: sticky;/);
+  assert.match(landing, /--landing-split-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(landing, /--landing-split-gap: clamp\(56px, 5vw, 72px\);/);
+  assert.match(landing, /\.hero-grid, \.print-grid \{[^}]*grid-template-columns: var\(--landing-split-columns\);[^}]*gap: var\(--landing-split-gap\);/);
+  assert.match(landingWorkflowStyles, /grid-template-columns: var\(--landing-split-columns,[^;]+\);[\s\S]*?column-gap: var\(--landing-split-gap,/);
+  assert.doesNotMatch(landingWorkflowStyles, /grid-template-columns: minmax\(315px, \.72fr\)/);
+  assert.match(landingWorkflowStyles, /@media \(min-width: 1051px\) and \(max-height: 820px\) \{[\s\S]*?\.workflow-step-copy:not\(\[data-active='true'\]\) \.workflow-step-text > span \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /@media \(min-width: 1051px\) and \(max-width: 1279px\) \{[\s\S]*?\.workflow-step-copy:not\(\[data-active='true'\]\) \.workflow-step-text > span \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /@media \(max-width: 1050px\)[\s\S]*?html\.workflow-scroll-ready \.workflow-stage \{[\s\S]*?display: none;/);
+  assert.match(landingWorkflowStyles, /\.workflow-step > \.workflow-panel \{[\s\S]*?margin: 4px auto 34px;/);
+  assert.match(landingWorkflowStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(landingWorkflowRuntime, /matchMedia\('\(min-width: 1051px\)'\)/);
+  assert.match(landingWorkflowRuntime, /window\.requestAnimationFrame\(renderScrollProgress\)/);
+  assert.match(landingWorkflowRuntime, /window\.addEventListener\('scroll', requestScrollUpdate, \{ passive: true \}\)/);
+  assert.match(landingWorkflowRuntime, /var scrubDurationMs = 240/);
+  assert.match(landingWorkflowRuntime, /--workflow-panel-stack-y/);
+  assert.match(landingWorkflowRuntime, /--workflow-panel-grayscale/);
+  assert.doesNotMatch(landingWorkflowRuntime, /index < activeIndex \? 0/);
+  assert.doesNotMatch(landingWorkflowRuntime, /--workflow-panel-saturation/);
+  assert.doesNotMatch(landingWorkflowStyles, /box-shadow: 0 34px 80px/);
+  assert.match(landingWorkflowStyles, /filter: brightness\(var\(--workflow-panel-brightness\)\) grayscale\(var\(--workflow-panel-grayscale\)\)/);
+  assert.match(landingWorkflowRuntime, /steps\[index\]\.appendChild\(panel\)/);
+  assert.match(landingWorkflowRuntime, /panel\.setAttribute\('aria-hidden', desktopLayout\.matches \? String\(!isActive\) : 'false'\)/);
+  assert.match(landing, /\.print-grid \{[^}]*grid-template-areas: 'visual copy';/);
+  assert.match(landing, /\.print-copy \{ grid-area: copy;[^}]*justify-self: start;/);
+  assert.match(landing, /\.cup-stage \{ grid-area: visual;/);
+  assert.match(landing, /<div class="print-grid">\s*<div class="print-copy">\s*<p class="eyebrow">[^<]+<\/p>\s*<h2 id="keepsakes-title">/);
+  assert.match(landing, /@media \(max-width: 760px\)[\s\S]*?\.print-grid \{ grid-template-areas: 'copy' 'visual'; text-align: center; \}/);
+  assert.doesNotMatch(landing, /\.cup-stage \{[^}]*order: -1;/);
+  assert.match(landing, /<section class="quote" id="testimonials">[\s\S]*?<\/section>\s*<\/main>/);
+  assert.doesNotMatch(landing, /class="cta"|\.cta-box|Bereit für euren Moment\?|Lasst eure Worte/);
+  assert.match(landing, /\.homepage-mug-mockup \{ width: min\(380px, 100%\); aspect-ratio: 1;/);
+  assert.match(landing, /class="homepage-mug-mockup"[\s\S]*?asset\('\/assets\/workflow\/05_01_' \+ locale \+ '\.png'\)/);
+  assert.doesNotMatch(landing, /id="mug-canvas"/);
   assert.match(landing, /include\('partials\/landing-demo'\)/);
-  assert.doesNotMatch(landing, /intro-overlay|intro-lock|intro-video/);
-  assert.ok(landing.indexOf('id="so-gehts"') < landing.indexOf('id="erinnerungsstuecke"'));
-  assert.match(demo, /data-demo-cloud role="img" aria-label=/);
-  assert.match(demo, /data-flights aria-hidden="true"/);
-  assert.match(demo, /<noscript>/);
-  assert.match(styles, /@media \(max-width: 760px\)/);
-  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(landing, /#site-header\.ww-site-header \{ background: var\(--paper\) !important;/);
+  assert.match(landing, /asset\('\/js\/mug-3d-viewer\.js'\)/);
+  assert.match(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-section-links/);
+  assert.doesNotMatch(landing, /#intro-overlay:not\(\.fade-out\) ~ #site-header \.landing-menu-toggle/);
+  assert.doesNotMatch(siteHeader, /landing-menu-start/,
+    'the persistent header CTA must not be duplicated inside the compact menu');
+  assert.doesNotMatch(landing, /landing-menu-start/);
+  assert.match(siteHeader, /for \(const link of navLinks\)/);
+  assert.match(siteHeader, /data-i18n-source="<%= link\.label %>"/);
+  assert.doesNotMatch(siteHeader, /href="#testimonials">Stimmen</);
+  assert.match(landing, /@media \(max-width: 360px\)[\s\S]*?\.landing-start-button \{ display: none; \}/);
+  assert.match(landing, /\.landing-section-links \{ display: flex; order: 3; flex-basis: 100%;/);
+  assert.match(landing, /\.landing-start-button \{ min-height: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
+});
+
+test('landing intro selects a portrait-optimized video and poster on phones', () => {
+  assert.match(
+    landing,
+    /data-mobile-src="<%= asset\('\/assets\/video\/teaser-mobile\.mp4'\) %>"/
+  );
+  assert.match(
+    landing,
+    /data-desktop-src="<%= asset\('\/assets\/video\/teaser\.mp4'\) %>"/
+  );
+  assert.match(
+    landing,
+    /@media \(max-width: 760px\) and \(orientation: portrait\) \{[\s\S]*?teaser-poster-mobile\.jpg/
+  );
+  assert.doesNotMatch(landing.match(/<video id="intro-video"[\s\S]*?<\/video>/)?.[0] || '', /<source\b/);
+  assert.doesNotMatch(landing, /poster="\/assets\/video\//);
+});
+
+test('landing browser chrome returns to the opaque header color after the intro video', () => {
+  assert.match(
+    landing,
+    /html \{[^}]*background-color: var\(--paper\);[^}]*color-scheme: light;/,
+  );
+  assert.match(
+    landing,
+    /html:not\(\.intro-fade\) #site-header\.ww-site-header \{ background: var\(--paper\) !important; \}/,
+  );
 });
 
 test('mobile naming dialog is visual-viewport aware and does not force the keyboard open', () => {

@@ -8,6 +8,7 @@
   var replayButton = root.querySelector('[data-demo-replay]');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   var paused = reduced.matches;
+  var introLocked = !!document.documentElement?.classList.contains('intro-lock');
   var visible = false;
   var elapsed = 0;
   var playbackSpeed = Number(root.getAttribute('data-demo-speed')) || 1;
@@ -385,6 +386,9 @@
       var texture = new THREE.CanvasTexture(image); texture.colorSpace = THREE.SRGBColorSpace;
       texture.generateMipmaps = true;
       texture.minFilter = THREE.LinearMipmapLinearFilter;
+      // Match the product preview: oblique print needs anisotropic filtering
+      // so mipmaps do not blur tall glyphs as they wrap around the cup sides.
+      texture.anisotropy = mugViewer.texture.anisotropy;
       var geometry = new THREE.PlaneGeometry(width / 2700 * 22.86, height / 1050 * 8.89, 60, 1);
       var original = geometry.attributes.position.array.slice();
       var mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: .01, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
@@ -839,8 +843,8 @@
     window.cancelAnimationFrame(frame);
     frame = null;
     previous = null;
-    if (mugViewer && (paused || !visible || document.hidden)) mugViewer.stopAutoRotate();
-    if (!cupInteractive && !paused && visible && !document.hidden) frame = window.requestAnimationFrame(tick);
+    if (mugViewer && (paused || introLocked || !visible || document.hidden)) mugViewer.stopAutoRotate();
+    if (!cupInteractive && !paused && !introLocked && visible && !document.hidden) frame = window.requestAnimationFrame(tick);
   }
   function staticScene() {
     setCupInteractive(false);
@@ -876,6 +880,16 @@
       if (!reduced.matches) replayStory();
     });
   });
+  // The restored intro owns the screen until its fade completes. Keep the
+  // story at its opening frame rather than letting it play behind the video.
+  if (window.MutationObserver && document.documentElement) {
+    new window.MutationObserver(function () {
+      var nextLocked = document.documentElement.classList.contains('intro-lock');
+      if (nextLocked === introLocked) return;
+      introLocked = nextLocked;
+      updatePlayback();
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  }
   document.addEventListener('visibilitychange', updatePlayback);
   reduced.addEventListener('change', function () {
     paused = reduced.matches;
@@ -883,11 +897,6 @@
     updatePlayback();
   });
   window.addEventListener('wolkenworte:localechange', function (event) {
-    var locale = event.detail && event.detail.locale;
-    document.querySelectorAll('[data-workflow-locale-screenshot]').forEach(function (image) {
-      var nextSource = image.getAttribute('data-workflow-src-' + locale);
-      if (nextSource) image.setAttribute('src', nextSource);
-    });
     setCupInteractive(false);
     elapsed = 0;
     measure();

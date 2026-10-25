@@ -29,6 +29,9 @@ function harness(reduce = false, config = {}) {
   const frames = new Map(); let nextId = 0, now = 0, observer;
   const motion = node('motion'); motion.matches = reduce;
   const document = node('document');
+  let introActive = !!config.intro, introObserver;
+  document.documentElement = node('html');
+  document.documentElement.classList.contains = name => name === 'intro-lock' && introActive;
   document.getElementById = () => node('root');
   document.createElementNS = () => node('svg-' + ++nextId);
   const window = node('window');
@@ -39,6 +42,7 @@ function harness(reduce = false, config = {}) {
     cancelAnimationFrame(id) { frames.delete(id); },
     IntersectionObserver: true,
     ResizeObserver: true,
+    MutationObserver: class { constructor(cb) { introObserver = cb; } observe() {} },
   });
   if (config.speed) node('root').setAttribute('data-demo-speed', config.speed);
   if (config.motion) node('root').setAttribute('data-demo-motion', config.motion);
@@ -48,6 +52,7 @@ function harness(reduce = false, config = {}) {
   });
   return { node, window, document, motion, frames,
     visible(value) { observer([{ isIntersecting: value }]); },
+    intro(value) { introActive = value; introObserver(); },
     advance(ms) { for (let i = 0; i <= ms; i += 50) { now += 50; const pending = [...frames.values()]; frames.clear(); pending.forEach(cb => cb(now)); } },
   };
 }
@@ -411,4 +416,44 @@ test('replay restores the caption and hides its replacement button', () => {
   assert.equal(h.node('[data-demo-story-caption]').textContent, 'Viele Menschen. Eine gemeinsame Wolke.');
   assert.equal(h.node('[data-demo-replay]').hidden, true);
   assert.equal(h.frames.size, 1);
+});
+
+
+test('landing word textures retain the product preview filtering at oblique angles', () => {
+  const Three = require('three');
+  const camera = new Three.PerspectiveCamera(31, 1, .1, 100);
+  camera.position.set(0, 2.35, 27); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true);
+  const rect = { left: 0, top: 0, width: 500, height: 500 };
+  const node = { textContent: 'Liebe', classList: { contains: () => false }, getBoundingClientRect: () => rect };
+  const ink = { measureText: () => ({ width: 100, actualBoundingBoxLeft: 0, actualBoundingBoxRight: 100,
+    actualBoundingBoxAscent: 50, actualBoundingBoxDescent: 10 }), fillText() {} };
+  const start = source.indexOf('  function buildStickers(');
+  const end = source.indexOf('  function matchSourceScale(', start);
+  for (const anisotropy of [1, 4, 8]) {
+    const productTexture = new Three.Texture(); productTexture.anisotropy = anisotropy;
+    const context = { window: { THREE: Three, DesignLayout: {}, getComputedStyle: () => ({ fontSize: '24px', color: '#9c1c4c' }) },
+      document: { createElement: () => ({ getContext: () => ink }) },
+      printSources: [node], cloudNodes: [node], t: value => value, singleWord: true,
+      mugHost: { setAttribute() {} }, scene: { getBoundingClientRect: () => rect },
+      mugViewer: { group: new Three.Group(), camera, canvas: { getBoundingClientRect: () => rect }, texture: productTexture }, stickers: [] };
+    vm.createContext(context); vm.runInContext(source.slice(start, end), context); context.buildStickers();
+    assert.equal(context.stickers.length, 1);
+    const wordTexture = context.stickers[0].mesh.material.map;
+    assert.equal(wordTexture.anisotropy, productTexture.anisotropy, 'word textures use the same hardware-bounded filtering as the product print');
+    assert.equal(wordTexture.generateMipmaps, true);
+    assert.equal(wordTexture.minFilter, Three.LinearMipmapLinearFilter);
+  }
+});
+
+
+test('the restored intro holds the new story at its opening frame until dismissal', () => {
+  const h = harness(false, { intro: true }); h.visible(true);
+  assert.equal(h.frames.size, 0);
+  h.advance(10000);
+  assert.equal(h.node('[data-typing="0"]').textContent, '');
+  h.intro(false);
+  assert.equal(h.frames.size, 1);
+  h.advance(500);
+  assert.ok(h.node('[data-typing="0"]').textContent.length > 0);
+  assert.equal(h.node('[data-arrival="0"]').style.opacity, '0');
 });
