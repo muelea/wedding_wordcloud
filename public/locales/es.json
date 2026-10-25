@@ -1474,5 +1474,8 @@
   "Unter der empfohlenen Mindestgröße von 10 pt.": "Por debajo del tamaño mínimo recomendado de 10 pt.",
   "Für alle Elemente wurde auf dieser Druckfläche keine Anordnung mit mindestens 10 pt gefunden. Wählt ein größeres Produkt, reduziert Texte im Druckdesign oder gestaltet bewusst mit kleinerer Schrift. Die Live-Wortwolke bleibt vollständig.": "No hemos encontrado una distribución para todos los elementos con textos de al menos 10 pt. Elegid un producto más grande, reducid los textos del diseño impreso o elegid conscientemente una letra más pequeña. La nube de palabras en directo seguirá completa.",
   "Mit kleiner Schrift gestalten": "Diseñar con textos más pequeños",
-  "Design prüfen ({{count}})": "Revisar diseño ({{count}})"
+  "Design prüfen ({{count}})": "Revisar diseño ({{count}})",
+  "Dein Erinnerungsstück": "Tu recuerdo",
+  "Dieser Browser merkt sich deine zuletzt geöffnete Wortwolke oder Gestaltung für 7 Tage.": "Este navegador recuerda tu última nube de palabras o diseño durante 7 días.",
+  "Über deinen Wortwolken-Link kannst du deine Wortwolke ab Erstellung 365 Tage lang erreichen.": "Puedes acceder a tu nube de palabras a través de su enlace durante 365 días desde su creación."
 }

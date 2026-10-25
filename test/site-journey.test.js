@@ -9,7 +9,7 @@ const landingTemplate = fs.readFileSync(path.join(__dirname, '../views/landing.e
 
 test('Home gives the remembered journey a clear unboxed re-entry hierarchy', () => {
   assert.match(landingTemplate, /class="resume-kicker">Zuletzt geöffnet</);
-  assert.match(landingTemplate, /class="resume-title" data-resume-title/);
+  assert.doesNotMatch(landingTemplate, /data-resume-title/);
   assert.match(landingTemplate, /resume-link resume-link-primary[^>]*data-resume-cloud/);
   assert.match(landingTemplate, /resume-link resume-link-secondary[^>]*data-resume-design/);
   assert.match(landingTemplate, /Warenkorb öffnen/);
@@ -67,7 +67,6 @@ test('Home shows the unexpired device-local cart and never points it at a fresh 
   assert.equal(designLink.hidden, false);
   assert.equal(designLink.href, '/e/-_AbCdEf0123456789xyZQ/configure?cart=1');
   assert.equal(cloudLink.href, '/e/-_AbCdEf0123456789xyZQ');
-  assert.equal(title.textContent, 'Cloud');
 });
 
 test('direct designs resume the editor from Home and retain their purpose through shipping and cart updates', async () => {

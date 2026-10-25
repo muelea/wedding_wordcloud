@@ -164,19 +164,27 @@
     #resume-journey[hidden], #resume-journey a[hidden] { display: none; }
     #resume-journey {
       position: relative;
-      max-width: 460px;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      align-items: center;
+      gap: 48px;
+      max-width: 960px;
       margin: 0 auto 40px;
-      padding: 3px 0 3px 21px;
+      padding: 28px 0 12px;
       text-align: left;
     }
     #resume-journey::before {
       content: '';
       position: absolute;
-      inset: 0 auto 0 0;
-      width: 2px;
+      inset: 0 auto auto 0;
+      width: 44px;
+      height: 2px;
       border-radius: 999px;
-      background: linear-gradient(180deg, var(--champagne), var(--sage-deep));
+      background: linear-gradient(90deg, var(--champagne), var(--sage-deep));
     }
+    .resume-heading { margin: 10px 0 12px; font: 500 clamp(1.7rem, 2.8vw, 2.2rem)/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.02em; }
+    .resume-copy { margin: 0; max-width: 44ch; color: var(--muted); font-size: .94rem; line-height: 1.65; }
+    .resume-content { min-width: 0; }
     .resume-kicker {
       margin: 0;
       color: var(--sage-deep);
@@ -184,16 +192,6 @@
       font-weight: 600;
       letter-spacing: .18em;
       text-transform: uppercase;
-    }
-    .resume-title {
-      display: block;
-      margin-top: 5px;
-      overflow: hidden;
-      color: var(--ink);
-      font: 500 1.45rem/1.25 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif;
-      letter-spacing: -.015em;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
     .resume-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
     .resume-link {
@@ -356,6 +354,10 @@
     }
     #site-header .landing-menu-sections { display: none; }
     @media (max-width: 1050px) {
+      #resume-journey { grid-template-columns: minmax(0, 1fr); gap: 24px; max-width: 640px; text-align: center; }
+      #resume-journey::before { left: 50%; transform: translateX(-50%); }
+      .resume-copy { margin-inline: auto; }
+      .resume-links { justify-content: center; }
       .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; text-align: center; }
       .hero-copy { display: contents; }
       .hero-copy > h1 { grid-row: 2; margin-bottom: 0; }
@@ -510,14 +512,19 @@
       </div>
     </section>
 
-          <aside class="shell" id="resume-journey" hidden aria-label="Hier weitermachen">
-            <p class="resume-kicker">Zuletzt geöffnet</p>
-            <strong class="resume-title" data-resume-title data-i18n-ignore></strong>
-            <div class="resume-links">
-              <a class="resume-link resume-link-primary" data-resume-cloud href="/"><span data-resume-cloud-label>Zur Wortwolke</span> <span aria-hidden="true">→</span></a>
-              <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
-            </div>
-          </aside>
+    <aside class="shell" id="resume-journey" hidden aria-label="Hier weitermachen">
+      <div class="resume-intro">
+        <p class="resume-kicker">Zuletzt geöffnet</p>
+        <h2 class="resume-heading">Dein Erinnerungsstück</h2>
+        <p class="resume-copy"><span>Dieser Browser merkt sich deine zuletzt geöffnete Wortwolke oder Gestaltung für 7 Tage.</span> <span>Über deinen Wortwolken-Link kannst du deine Wortwolke ab Erstellung 365 Tage lang erreichen.</span></p>
+      </div>
+      <div class="resume-content">
+        <div class="resume-links">
+          <a class="resume-link resume-link-primary" data-resume-cloud href="/"><span data-resume-cloud-label>Zur Wortwolke</span> <span aria-hidden="true">→</span></a>
+          <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </aside>
 
     <section id="inspiration">
       <div class="shell">

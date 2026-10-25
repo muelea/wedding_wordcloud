@@ -1474,5 +1474,8 @@
   "Unter der empfohlenen Mindestgröße von 10 pt.": "En dessous de la taille minimale recommandée de 10 pt.",
   "Für alle Elemente wurde auf dieser Druckfläche keine Anordnung mit mindestens 10 pt gefunden. Wählt ein größeres Produkt, reduziert Texte im Druckdesign oder gestaltet bewusst mit kleinerer Schrift. Die Live-Wortwolke bleibt vollständig.": "Nous n’avons pas trouvé de disposition avec tous les éléments et des textes d’au moins 10 pt. Choisissez un produit plus grand, réduisez les textes du design imprimé ou choisissez volontairement une police plus petite. Le nuage de mots en direct reste complet.",
   "Mit kleiner Schrift gestalten": "Créer avec des textes plus petits",
-  "Design prüfen ({{count}})": "Vérifier le design ({{count}})"
+  "Design prüfen ({{count}})": "Vérifier le design ({{count}})",
+  "Dein Erinnerungsstück": "Ton souvenir",
+  "Dieser Browser merkt sich deine zuletzt geöffnete Wortwolke oder Gestaltung für 7 Tage.": "Ce navigateur mémorise ton dernier nuage de mots ou ta dernière création pendant 7 jours.",
+  "Über deinen Wortwolken-Link kannst du deine Wortwolke ab Erstellung 365 Tage lang erreichen.": "Le lien de ton nuage de mots te permet d’y accéder pendant 365 jours à compter de sa création."
 }

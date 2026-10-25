@@ -1474,5 +1474,8 @@
   "Unter der empfohlenen Mindestgröße von 10 pt.": "Below the recommended minimum of 10 pt.",
   "Für alle Elemente wurde auf dieser Druckfläche keine Anordnung mit mindestens 10 pt gefunden. Wählt ein größeres Produkt, reduziert Texte im Druckdesign oder gestaltet bewusst mit kleinerer Schrift. Die Live-Wortwolke bleibt vollständig.": "We couldn’t fit all elements on this print area with text at least 10 pt. Choose a larger product, reduce text in the print design or deliberately use smaller type. The live word cloud stays complete.",
   "Mit kleiner Schrift gestalten": "Design with smaller text",
-  "Design prüfen ({{count}})": "Design check ({{count}})"
+  "Design prüfen ({{count}})": "Design check ({{count}})",
+  "Dein Erinnerungsstück": "Your keepsake",
+  "Dieser Browser merkt sich deine zuletzt geöffnete Wortwolke oder Gestaltung für 7 Tage.": "This browser remembers your last opened word cloud or design for 7 days.",
+  "Über deinen Wortwolken-Link kannst du deine Wortwolke ab Erstellung 365 Tage lang erreichen.": "You can access your word cloud through its link for 365 days from creation."
 }

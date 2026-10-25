@@ -58,7 +58,6 @@
         items.some((item) => /^[A-Za-z0-9_-]{16}$/.test(item?.id));
     } catch {}
     designLink.hidden = !hasCart;
-    card.querySelector('[data-resume-title]').textContent = saved.title;
     card.hidden = false;
     // Validate expiry without making navigation wait on network availability.
     try {

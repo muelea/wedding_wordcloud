@@ -1474,5 +1474,8 @@
   "Unter der empfohlenen Mindestgröße von 10 pt.": "Önerilen en az 10 punto boyutunun altında.",
   "Für alle Elemente wurde auf dieser Druckfläche keine Anordnung mit mindestens 10 pt gefunden. Wählt ein größeres Produkt, reduziert Texte im Druckdesign oder gestaltet bewusst mit kleinerer Schrift. Die Live-Wortwolke bleibt vollständig.": "Bu baskı alanında tüm öğeler en az 10 punto yazıyla yerleştirilemedi. Daha büyük bir ürün seçin, baskı tasarımındaki yazıları azaltın veya bilinçli olarak daha küçük yazı kullanın. Canlı kelime bulutu eksiksiz kalır.",
   "Mit kleiner Schrift gestalten": "Daha küçük yazıyla tasarla",
-  "Design prüfen ({{count}})": "Tasarımı kontrol et ({{count}})"
+  "Design prüfen ({{count}})": "Tasarımı kontrol et ({{count}})",
+  "Dein Erinnerungsstück": "Hatıran",
+  "Dieser Browser merkt sich deine zuletzt geöffnete Wortwolke oder Gestaltung für 7 Tage.": "Bu tarayıcı son açtığın kelime bulutunu veya tasarımı 7 gün boyunca hatırlar.",
+  "Über deinen Wortwolken-Link kannst du deine Wortwolke ab Erstellung 365 Tage lang erreichen.": "Kelime bulutuna, oluşturulduğu tarihten itibaren 365 gün boyunca bağlantısı üzerinden erişebilirsin."
 }
