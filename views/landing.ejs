@@ -149,6 +149,10 @@
     h1 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.9rem, 4.8vw, 4.5rem); line-height: 1.07; letter-spacing: -.03em; margin: 0 0 22px; font-weight: 500; }
     h1 em { color: var(--sage-deep); font-style: italic; font-weight: 500; }
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
+    .hero-description { list-style: none; padding: 0; font-weight: 400; }
+    .hero-description .trust { margin-top: 0; align-items: flex-start; }
+    .hero-description .trust + .trust { margin-top: 10px; }
+    .hero-description .trust-heart { margin-top: 2px; }
     .hero-actions { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; }
     .hero-actions > .button, .hero-actions .direct-design-form .button { min-height: 48px; }
     .hero-actions .direct-design-form { display: flex; }
@@ -353,14 +357,15 @@
     @media (max-width: 1050px) {
       .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; text-align: center; }
       .hero-copy { display: contents; }
-      .hero-copy > h1 { grid-row: 1; margin-bottom: 0; }
+      .hero-copy > h1 { grid-row: 2; margin-bottom: 0; }
       .hero-copy > .lead { grid-row: 5; position: relative; z-index: 2; margin-top: 0; margin-bottom: 0; }
-      .hero-grid > .word-demo { grid-row: 2; margin-top: -28px; }
+      .hero-grid > .word-demo { grid-row: 1; margin-top: 0; }
       .hero-grid > .word-demo .demo-cloud-halo { top: -12%; }
-      .hero-copy > .hero-actions { grid-row: 3; position: relative; z-index: 2; margin-top: -12px; }
+      .hero-copy > .hero-actions { grid-row: 3; position: relative; z-index: 2; margin-top: 0; }
       .hero-copy > .direct-design-error { grid-row: 4; position: relative; z-index: 2; }
       .hero-copy > h1, .hero-copy > .lead, .hero-copy > .hero-actions, .hero-copy > .direct-design-error { width: 100%; max-width: 560px; justify-self: center; }
-      .hero-grid .hero-copy .trust { display: none; }
+      .hero-copy > .hero-trust { grid-row: 6; width: 100%; max-width: 560px; justify-self: center; display: grid; gap: 10px; }
+      .hero-copy .trust { margin: 0; justify-content: center; }
       html:not(.intro-lock) #site-header.hero-visible .landing-start-button { display: none; }
       .hero-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 8px; }
       .hero-actions .direct-design-form { min-width: 0; }
@@ -386,8 +391,6 @@
       .hero-copy .eyebrow { margin-bottom: 12px; font-size: .6rem; letter-spacing: .16em; }
       .hero-copy h1 { font-size: clamp(2.35rem, 10vw, 3.4rem); margin-bottom: 14px; }
       .hero-copy .lead { max-width: 34ch; margin: 0 auto; font-size: .95rem; line-height: 1.55; }
-      .hero-copy .trust:not(:last-child) { display: none; }
-      .hero-copy .trust { margin-top: 10px; }
       .hero-actions, .trust { justify-content: center; }
       #resume-journey { margin-inline: auto; padding: 23px 0 0; text-align: center; }
       #resume-journey::before { inset: 0 auto auto 50%; width: 44px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg, var(--champagne), var(--sage-deep)); }
@@ -472,7 +475,10 @@
       <div class="shell hero-grid">
         <div class="hero-copy">
           <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
-          <p class="lead">Sammelt gemeinsam Worte für Menschen und Ereignisse die euch wichtig sind. Wolkenworte macht daraus ein Erinnerungsstück.</p>
+          <ul class="lead hero-description">
+            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Sammelt gemeinsam Worte für Menschen und Ereignisse die euch wichtig sind.</span></li>
+            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Drucke deine Wortwolke auf ein Erinnerungsstück deiner Wahl</span></li>
+          </ul>
           <div class="hero-actions">
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
             <form class="direct-design-form" action="/design/start" method="post">
@@ -483,17 +489,19 @@
             <p class="direct-design-error" role="alert"><%= pageData.directDesignError %></p>
           <% } %>
 
-          <div class="trust">
-            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-            <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
-          </div>
-          <div class="trust">
-            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-            <span class="copy">Jeder kann mitmachen – ganz einfach per Smartphone.</span>
-          </div>
-          <div class="trust">
-            <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-            <span class="copy">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</span>
+          <div class="hero-trust">
+            <div class="trust">
+              <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+              <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
+            </div>
+            <div class="trust">
+              <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+              <span class="copy">Jeder kann mitmachen – ganz einfach per Smartphone.</span>
+            </div>
+            <div class="trust">
+              <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+              <span class="copy">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</span>
+            </div>
           </div>
         </div>
 
