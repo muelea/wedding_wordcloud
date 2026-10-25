@@ -149,18 +149,18 @@
     h1 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.9rem, 4.8vw, 4.5rem); line-height: 1.07; letter-spacing: -.03em; margin: 0 0 22px; font-weight: 500; }
     h1 em { color: var(--sage-deep); font-style: italic; font-weight: 500; }
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .hero-actions { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; }
+    .hero-actions > .button, .hero-actions .direct-design-form .button { min-height: 48px; }
+    .hero-actions .direct-design-form { display: flex; }
+    .hero-actions .button.outline { border-color: rgba(64,15,38,.25); }
     .direct-design-form { margin: 0; }
-    .hero-direct-design { margin-top: 6px; }
-    .direct-design-link { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; max-width: 100%; padding: 8px 0; border: 0; background: transparent; color: var(--sage-deep); font: 400 .84rem/1.5 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; text-align: inherit; cursor: pointer; }
-    .direct-design-link:hover { text-decoration: underline; text-underline-offset: 4px; }
-    .direct-design-link:focus-visible, .direct-design-form .button:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 4px; }
+    .direct-design-form .button:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 4px; }
     .direct-design-error { margin: 8px 0 0; color: var(--sage-deep); font-size: .84rem; line-height: 1.5; }
     #resume-journey[hidden], #resume-journey a[hidden] { display: none; }
     #resume-journey {
       position: relative;
       max-width: 460px;
-      margin-top: 30px;
+      margin: 0 auto 40px;
       padding: 3px 0 3px 21px;
       text-align: left;
     }
@@ -348,6 +348,10 @@
 
     #site-header .landing-menu-sections { display: none; }
     @media (max-width: 1050px) {
+      html:not(.intro-lock) #site-header.hero-visible .landing-start-button { display: none; }
+      .hero-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 8px; }
+      .hero-actions .direct-design-form { min-width: 0; }
+      .hero-actions .button { width: 100%; min-width: 0; padding: 12px 10px; gap: 6px; font-size: .8rem; }
       #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
       #site-header .ww-nav { display: flex !important; flex-wrap: nowrap; gap: 16px !important; }
       #site-header .landing-section-links { display: none; }
@@ -401,7 +405,6 @@
       .start-dialog-pin-fields { grid-template-columns: 1fr; }
     }
     @media (max-width: 360px) {
-      #site-header .landing-header-actions .landing-start-button { display: none; }
       #site-header .landing-header-actions { margin-left: auto; }
       .resume-links { display: grid; }
       .resume-link { width: 100%; }
@@ -455,26 +458,18 @@
     <section class="hero">
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow">Wünsche &amp; Erinnerungen sammeln</p>
           <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
           <p class="lead">Sammelt gemeinsam Wünsche per Smartphone. Eure Wortwolke wächst live – und wird auf Wunsch zum Erinnerungsstück.</p>
           <div class="hero-actions">
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
+            <form class="direct-design-form" action="/design/start" method="post">
+              <button class="button outline" type="submit" data-hero-design-label data-i18n-ignore><%= locale === 'de' ? 'Erinnerung gestalten' : t('Erinnerungsstück gestalten') %></button>
+            </form>
           </div>
-          <form class="direct-design-form hero-direct-design" action="/design/start" method="post">
-            <button class="direct-design-link" type="submit">Direkt ein Erinnerungsstück gestalten <span aria-hidden="true">→</span></button>
-          </form>
           <% if (pageData.directDesignError) { %>
             <p class="direct-design-error" role="alert"><%= pageData.directDesignError %></p>
           <% } %>
-          <aside id="resume-journey" hidden aria-label="Hier weitermachen">
-            <p class="resume-kicker">Zuletzt geöffnet</p>
-            <strong class="resume-title" data-resume-title data-i18n-ignore></strong>
-            <div class="resume-links">
-              <a class="resume-link resume-link-primary" data-resume-cloud href="/"><span data-resume-cloud-label>Zur Wortwolke</span> <span aria-hidden="true">→</span></a>
-              <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
-            </div>
-          </aside>
+
           <div class="trust">
             <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
             <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
@@ -492,6 +487,15 @@
         <%- include('partials/landing-demo') %>
       </div>
     </section>
+
+          <aside class="shell" id="resume-journey" hidden aria-label="Hier weitermachen">
+            <p class="resume-kicker">Zuletzt geöffnet</p>
+            <strong class="resume-title" data-resume-title data-i18n-ignore></strong>
+            <div class="resume-links">
+              <a class="resume-link resume-link-primary" data-resume-cloud href="/"><span data-resume-cloud-label>Zur Wortwolke</span> <span aria-hidden="true">→</span></a>
+              <a class="resume-link resume-link-secondary" data-resume-design href="/">Warenkorb öffnen <span aria-hidden="true">→</span></a>
+            </div>
+          </aside>
 
     <section id="inspiration">
       <div class="shell">
@@ -958,7 +962,13 @@
   <%- include('partials/site-footer') %>
 
   <script src="<%= asset('/js/site-header.js') %>"></script>
+  <script src="<%= asset('/js/landing-header.js') %>"></script>
   <script>
+    // Only the German hero action uses the shorter label.
+    window.addEventListener('wolkenworte:localechange', function (event) {
+      document.querySelector('[data-hero-design-label]').textContent = event.detail.locale === 'de'
+        ? 'Erinnerung gestalten' : WolkenworteI18n.t('Erinnerungsstück gestalten');
+    });
     void WolkenworteJourney.mountHome(document);
     window.addEventListener('pageshow', () => { void WolkenworteJourney.mountHome(document); });
   </script>

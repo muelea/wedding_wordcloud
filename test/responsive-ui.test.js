@@ -336,7 +336,7 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(siteHeader, /for \(const link of navLinks\)/);
   assert.match(siteHeader, /data-i18n-source="<%= link\.label %>"/);
   assert.doesNotMatch(siteHeader, /href="#testimonials">Stimmen</);
-  assert.match(landing, /@media \(max-width: 360px\)[\s\S]*?\.landing-start-button \{ display: none; \}/);
+  assert.match(landing, /@media \(max-width: 1050px\)[\s\S]*?#site-header\.hero-visible \.landing-start-button \{ display: none; \}/);
   assert.match(landing, /@media \(max-width: 1050px\) \{[^@]*?#site-header \.landing-section-links \{ display: none; \}/);
   assert.match(landing, /#site-header \.landing-menu-sections \{ display: none; \}/);
   assert.match(landing, /@media \(max-width: 1050px\) \{[^@]*?#site-header \.landing-menu-sections \{ display: block; \}/);

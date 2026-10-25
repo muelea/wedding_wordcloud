@@ -355,7 +355,7 @@ test('interface fonts are locally served, reusable from preload and consistently
 
 test('server localization produces the selected language before browser scripts run', () => {
   const cases = [
-    ['landing.ejs', { variant: 'landing' }, 'Collect wishes &amp; memories'],
+    ['landing.ejs', { variant: 'landing' }, 'full of happiness.'],
     ['display.ejs', { variant: 'display' }, 'Your word cloud grows here.'],
     ['configure.ejs', {}, 'Opening your design…'],
     ['shipping.ejs', {}, 'Loading your cart and shipping details…'],
