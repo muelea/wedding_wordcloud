@@ -42,7 +42,10 @@ test('all page variants share navigation and preferences, with cloud controls in
   const panels=[];
   for(const variant of ['landing','display','back','brand-only']){
     const h=mount(t,variant);
-    panels.push([...h.menu.querySelector('.ww-site-menu-panel').children].filter(node=>!node.classList.contains('ww-site-menu-cloud')).map(node=>node.outerHTML).join(''));
+    const sectionLinks=h.menu.querySelector('.landing-menu-sections');
+    assert.equal(Boolean(sectionLinks),variant==='landing');
+    if(sectionLinks){assert.equal(sectionLinks.querySelectorAll('a').length,4);sectionLinks.remove();}
+    panels.push([...h.menu.querySelector('.ww-site-menu-panel').children].filter(node=>!node.classList.contains('ww-site-menu-cloud')).map(node=>node.outerHTML).join('').replace(/>\s+</g,'><'));
     assert.equal(h.document.querySelectorAll('[data-ww-site-menu]').length,1);
     assert.equal(h.menu.querySelector('[data-account-menu]').getAttribute('href'),'/konto');
     assert.equal(h.menu.querySelectorAll('[data-language-picker]').length,1);
