@@ -239,58 +239,23 @@ test('rotation delay slider changes the start while preserving right-front landi
   }
 });
 
-test('finished cup exposes existing rotation controls and replay removes interaction', () => {
-  const start = source.indexOf('  function setCupInteractive(');
+test('finished story offers replay without making the mug rotatable or focusable', () => {
+  const start = source.indexOf('  function setStoryFinished(');
   const end = source.indexOf('  function ensureMug(', start);
-  const attributes = {}, classes = new Set();
-  const caption = { textContent: '' };
-  const replayButton = { hidden: true };
-  const context = { storyCaption: caption, replayButton, mugViewer: { group: { rotation: { x: .3 } } }, cupInteractive: false, t: value => value,
-    mugStage: { classList: { toggle(name, on) { on ? classes.add(name) : classes.delete(name); } },
-      setAttribute(name, value) { attributes[name] = value; }, querySelector() { return caption; } },
-    mugHost: { setAttribute(name, value) { attributes['host-' + name] = value; } } };
+  const replayButton = { hidden: true }, attributes = {};
+  const context = { replayButton, storyFinished: false,
+    mugHost: { setAttribute(name, value) { attributes[name] = value; } } };
   vm.createContext(context);
   vm.runInContext(source.slice(start, end), context);
-  context.setCupInteractive(true);
-  assert.equal(context.cupInteractive, true);
-  assert.ok(classes.has('is-interactive'));
-  assert.equal(attributes['aria-hidden'], 'false');
-  assert.equal(attributes['host-tabindex'], '0');
-  assert.equal(caption.hidden, true);
+  context.setStoryFinished(true);
+  assert.equal(context.storyFinished, true);
   assert.equal(replayButton.hidden, false);
-  context.setCupInteractive(false);
-  assert.equal(context.cupInteractive, false);
-  assert.equal(classes.size, 0);
-  assert.equal(context.mugViewer.group.rotation.x, 0);
-  assert.equal(attributes['host-tabindex'], '-1');
-  assert.equal(caption.hidden, false);
+  assert.equal(attributes.tabindex, '-1');
+  context.setStoryFinished(false);
+  assert.equal(context.storyFinished, false);
   assert.equal(replayButton.hidden, true);
+  assert.doesNotMatch(source, /is-interactive|limitCupView|Zum Drehen ziehen/);
 });
-
-
-test('finished product interaction stays close to its final viewing angle', () => {
-  const start = source.indexOf('  function limitCupView(');
-  const end = source.indexOf('  function ensureMug(', start);
-  let renders = 0;
-  const context = { cupInteractive: true, cupRestYaw: -1.6,
-    mugViewer: { group: { rotation: { x: 9, y: 20 } }, render() { renders++; } } };
-  vm.createContext(context);
-  vm.runInContext(source.slice(start, end), context);
-  context.limitCupView();
-  assert.equal(context.mugViewer.group.rotation.y, -1.6 + .42);
-  assert.equal(context.mugViewer.group.rotation.x, .18);
-  context.mugViewer.group.rotation.y = -20;
-  context.mugViewer.group.rotation.x = -9;
-  context.limitCupView();
-  assert.equal(context.mugViewer.group.rotation.y, -1.6 - .42);
-  assert.equal(context.mugViewer.group.rotation.x, -.18);
-  context.cupInteractive = false;
-  context.mugViewer.group.rotation.y = 3;
-  context.limitCupView();
-  assert.equal(context.mugViewer.group.rotation.y, 3, 'animation remains free to perform its reveal');
-  assert.equal(renders, 2);
-});
-
 
 test('homepage honors its configured pace', () => {
   const h = harness(false, { speed: '1.8', motion: 'ribbon-airy' });
@@ -407,13 +372,10 @@ test('cloud handoff hides the frozen source on the first visible mesh frame', ()
 });
 
 
-test('replay restores the caption and hides its replacement button', () => {
+test('replay hides the overlay control and resumes the story', () => {
   const h = harness(false, { speed: '1.8', motion: 'ribbon-airy' });
   h.visible(true); h.advance(10000);
-  assert.equal(h.node('[data-demo-story-caption]').textContent, 'Aus Wolken werden Erinnerungen.');
   h.node('[data-demo-replay]').fire('click');
-  assert.equal(h.node('[data-demo-story-caption]').hidden, false);
-  assert.equal(h.node('[data-demo-story-caption]').textContent, 'Viele Menschen. Eine gemeinsame Wolke.');
   assert.equal(h.node('[data-demo-replay]').hidden, true);
   assert.equal(h.frames.size, 1);
 });
@@ -474,7 +436,7 @@ test('landing attaches its unchanged word animation only after the catalog mug i
       window: { THREE, PrintfulProductModel: {}, wolkenworteLandingMugProduct: product,
         Mug3DViewer: { create(options) { createdOptions = options; return viewer; } } },
       document: { fonts: { status: 'loaded' } },
-      mugViewer: null, mugHost: { addEventListener() {} }, cupMaterials: [],
+      mugViewer: null, mugHost: { addEventListener() {}, setAttribute() {} }, cupMaterials: [],
       limitCupView() {}, buildStickers() { attached++; },
     };
     vm.createContext(context); vm.runInContext(source.slice(start, end), context);

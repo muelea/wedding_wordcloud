@@ -445,7 +445,7 @@
 
 /* In the overview animation, a familiar floating composer conveys mobile input
    without six visually heavy device frames. The full phone remains in the mockup. */
-.word-demo .demo-phone { --person-color: #9c1c4c; width: 16.5%; aspect-ratio: auto; filter: none; }
+.word-demo .demo-phone { z-index: 12; --person-color: #9c1c4c; width: 16.5%; aspect-ratio: auto; filter: none; }
 .word-demo .demo-device-render,
 .word-demo .demo-phone-brand,
 .word-demo .demo-phone-title { display: none; }
@@ -517,10 +517,7 @@
 .demo-full-sequence .word-demo .demo-phone { display: block !important; }
 
 /* Hand control to the existing Three.js viewer only after the reveal finishes. */
-.demo-mug.is-interactive { pointer-events: auto; }
-.demo-mug.is-interactive .demo-mug-viewer { cursor: grab; touch-action: none; }
-.demo-mug.is-interactive .demo-mug-viewer.dragging { cursor: grabbing; }
-.demo-mug.is-interactive .demo-mug-viewer:focus-visible { outline: 2px solid #9c1c4c; outline-offset: 4px; border-radius: 16px; }
+.demo-mug-viewer { pointer-events: none; }
 
 
 /* The original hero copy stays left; the new story replaces only its demo. */
@@ -599,38 +596,24 @@
 /* Isolated comparison previews omit the copy column. */
 .demo-cup-only main > .hero > .hero-grid { grid-template-columns: minmax(0, 1fr); }
 
-/* Keep the caption/replay below the demo on the cloud's horizontal centre. */
-.demo-story-footer {
+/* Replay overlays the completed animation without reserving caption space. */
+.demo-replay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   place-items: center;
-  min-height: 44px;
-  margin-top: 12px;
-  text-align: center;
-  color: var(--muted, #8a7178);
-  font-size: .76rem;
-  letter-spacing: .025em;
-}
-.demo-story-footer > * { grid-area: 1 / 1; }
-.demo-story-footer > [hidden] { display: none; }
-.demo-story-footer button {
-  min-height: 44px;
-  padding: 6px 14px;
+  width: 72px;
+  height: 72px;
+  padding: 16px;
   border: 0;
   background: transparent;
-  color: inherit;
-  font: inherit;
+  color: var(--muted, #8a7178);
   cursor: pointer;
 }
-
-.demo-story-footer > [data-demo-story-caption]::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: #9c1c4c;
-  box-shadow: 0 0 0 4px #9c1c4c0b, 0 0 12px #bf668b42;
-  vertical-align: middle;
-}
+.demo-replay[hidden] { display: none; }
+.demo-replay svg { width: 100%; height: 100%; }
+.demo-replay:hover { color: var(--ink, #400f26); }
+.demo-replay:focus-visible { outline: 2px solid #9c1c4c; outline-offset: 4px; }

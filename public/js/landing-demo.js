@@ -4,7 +4,6 @@
   if (!root) return;
   var scene = root.querySelector('[data-demo-scene]');
   var svg = root.querySelector('[data-flights]');
-  var storyCaption = root.querySelector('[data-demo-story-caption]');
   var replayButton = root.querySelector('[data-demo-replay]');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   var paused = reduced.matches;
@@ -12,8 +11,7 @@
   var visible = false;
   var elapsed = 0;
   var playbackSpeed = Number(root.getAttribute('data-demo-speed')) || 1;
-  var cupInteractive = false;
-  var cupRestYaw = 0;
+  var storyFinished = false;
   var rotationDelay = 500;
   window.addEventListener('message', function (event) {
     if (event.origin !== window.location.origin || event.source !== window.parent) return;
@@ -21,7 +19,7 @@
       var delay = Number(event.data.delay);
       if (Number.isFinite(delay)) {
         rotationDelay = Math.max(0, Math.min(1500, delay));
-        setCupInteractive(false);
+        setStoryFinished(false);
         elapsed = cupOnly ? mugStart : 0;
         previousCycleTime = cycleDuration;
         previous = null;
@@ -244,28 +242,10 @@
     });
     ctx.restore();
   }
-  function setCupInteractive(enabled) {
-    cupInteractive = enabled;
-    if (storyCaption) storyCaption.hidden = enabled;
+  function setStoryFinished(enabled) {
+    storyFinished = enabled;
     if (replayButton) replayButton.hidden = !enabled;
-    if (enabled && mugViewer) {
-      cupRestYaw = mugViewer.group.rotation.y;
-      mugViewer.render?.();
-    }
-    if (!enabled && mugViewer) mugViewer.group.rotation.x = 0;
-    if (!mugStage || !mugHost) return;
-    mugStage.classList.toggle('is-interactive', enabled);
-    mugStage.setAttribute('aria-hidden', enabled ? 'false' : 'true');
-    mugHost.setAttribute('tabindex', enabled ? '0' : '-1');
-    mugHost.setAttribute('role', 'img');
-    mugHost.setAttribute('aria-label', t('Fertige Tasse. Zum Drehen ziehen oder die Pfeiltasten verwenden.'));
-  }
-  function limitCupView() {
-    if (!cupInteractive || !mugViewer) return;
-    var rotation = mugViewer.group.rotation;
-    rotation.y = Math.max(cupRestYaw - .42, Math.min(cupRestYaw + .42, rotation.y));
-    rotation.x = Math.max(-.18, Math.min(.18, rotation.x));
-    mugViewer.render();
+    if (mugHost) mugHost.setAttribute('tabindex', '-1');
   }
   function ensureMug() {
     if (mugViewer || !mugHost || !window.Mug3DViewer || !window.THREE) return;
@@ -305,10 +285,7 @@
         buildStickers();
         mugViewer.render();
       });
-      // Run after the viewer's own input handlers; retain its touch, pointer
-      // capture and keyboard behavior while bounding this landing-page view.
-      mugHost.addEventListener('pointermove', limitCupView);
-      mugHost.addEventListener('keydown', limitCupView);
+      mugHost.setAttribute('tabindex', '-1');
       mugViewer.render();
     } catch (_) { mugViewer = null; }
   }
@@ -606,7 +583,7 @@
       canvas: mugViewer ? mugViewer.canvas.getBoundingClientRect() : null,
       sources: cloudNodes.map(function (node) { return node.getBoundingClientRect(); })
     };
-    if (cupInteractive) return;
+    if (storyFinished) return;
     if (cupOnly && elapsed >= cycleDuration) elapsed = mugStart;
     var cycleTime = elapsed % cycleDuration;
     if (cycleTime < previousCycleTime) {
@@ -669,10 +646,6 @@
     var attachmentDuration = cupOnly ? 4400 : 11000;
     var attachmentProgress = Math.min(1, attachmentAge / attachmentDuration);
     var mugActive = mugAge >= 0;
-    if (storyCaption) {
-      var nextCaption = t(mugActive ? 'Aus Wolken werden Erinnerungen.' : 'Viele Menschen. Eine gemeinsame Wolke.');
-      if (storyCaption.textContent !== nextCaption) storyCaption.textContent = nextCaption;
-    }
     drawRevealMagic(mugAge);
     if (mugStage) {
       var reveal = mugActive ? Math.max(0, Math.min(1, mugAge / revealDuration)) : 0;
@@ -837,31 +810,30 @@
       });
     });
     if (mugViewer && mugActive) {
-      // Pointer bounds are only needed when the completed cup becomes interactive.
+      // The landing demo is decorative; replay is its only interactive control.
       mugViewer.render({ updateInteractionRegion: false });
       var lastLandingAge = stickers.reduce(function (latest, sticker) {
         return Math.max(latest, (sticker.departureAge || 0) + (sticker.duration || 6500));
       }, 0);
       if (motionStudy && stickers.length && stickers.every(function (sticker) { return sticker.departureAge != null; }) &&
-          mugAge >= lastLandingAge + 3200) setCupInteractive(true);
+          mugAge >= lastLandingAge + 3200) setStoryFinished(true);
     }
   }
   function tick(now) {
     if (previous !== null) elapsed += Math.max(0, now - previous) * playbackSpeed;
     previous = now;
     draw();
-    frame = cupInteractive ? null : window.requestAnimationFrame(tick);
+    frame = storyFinished ? null : window.requestAnimationFrame(tick);
   }
   function updatePlayback() {
     window.cancelAnimationFrame(frame);
     frame = null;
     previous = null;
     if (mugViewer && (paused || introLocked || !visible || document.hidden)) mugViewer.stopAutoRotate();
-    if (!cupInteractive && !paused && !introLocked && visible && !document.hidden) frame = window.requestAnimationFrame(tick);
+    if (!storyFinished && !paused && !introLocked && visible && !document.hidden) frame = window.requestAnimationFrame(tick);
   }
   function staticScene() {
-    setCupInteractive(false);
-    if (storyCaption) storyCaption.textContent = t('Viele Menschen. Eine gemeinsame Wolke.');
+    setStoryFinished(false);
     revealMagic.setAttribute('opacity', '0');
     cloudNodes.forEach(function (node) { node.style.transform = ''; node.style.filter = ''; node.style.opacity = ''; });
     if (mugStage) { mugStage.style.opacity = '0'; mugStage.style.transform = ''; }
@@ -876,7 +848,7 @@
     });
   }
   function replayStory() {
-    setCupInteractive(false);
+    setStoryFinished(false);
     elapsed = cupOnly ? mugStart : 0;
     previousCycleTime = cycleDuration;
     previous = null;
@@ -910,7 +882,7 @@
     updatePlayback();
   });
   window.addEventListener('wolkenworte:localechange', function (event) {
-    setCupInteractive(false);
+    setStoryFinished(false);
     elapsed = 0;
     measure();
     if (reduced.matches) staticScene(); else draw();
