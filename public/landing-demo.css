@@ -447,7 +447,7 @@
 
 /* In the overview animation, a familiar floating composer conveys mobile input
    without six visually heavy device frames. The full phone remains in the mockup. */
-.word-demo .demo-phone { z-index: 12; --person-color: #914bc4; width: 16.5%; aspect-ratio: auto; filter: none; }
+.word-demo .demo-phone { z-index: 12; --person-color: var(--button-primary, #61001f); width: 16.5%; aspect-ratio: auto; filter: none; }
 .word-demo .demo-device-render,
 .word-demo .demo-phone-brand,
 .word-demo .demo-phone-title { display: none; }
