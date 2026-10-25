@@ -78,6 +78,10 @@ function connectSocket(baseUrl, slug, guestId, options = {}) {
 }
 
 test('Socket.io coalescing, bounded snapshots and performance probe', async (t) => {
+  // Batch loaders deliberately unref their timers in production. Keep this
+  // isolated test process alive while those pending promises are exercised.
+  const keepAlive = setInterval(() => {}, 1000);
+  t.after(() => clearInterval(keepAlive));
   await t.test('capacity tooling is guarded and cannot silently lower the qualifying target', () => {
     const env = {
       DATABASE_URL: 'postgresql://runtime@example.invalid/postgres',
@@ -311,7 +315,7 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
     assert.equal(broadcaster.pendingRoomCount, 0);
   });
 
-  await t.test('three committed submissions coalesce into one isolated complete room update', async () => {
+  await t.test('three committed submissions coalesce into one isolated complete room update', async (t) => {
     const app = await startTestServer();
     t.after(app.close);
     const eventA = await createEvent(app.baseUrl, { title: 'Coalesce Alpha' });
@@ -352,7 +356,7 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
     assert.deepEqual(foreignUpdates, []);
   });
 
-  await t.test('shutdown-style transport closure preserves automatic reconnection', async () => {
+  await t.test('shutdown-style transport closure preserves automatic reconnection', async (t) => {
     const app = await startTestServer();
     t.after(app.close);
     const event = await createEvent(app.baseUrl, { title: 'Reconnect Transport' });
@@ -383,7 +387,7 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
     assert.equal(socket.connected, true);
   });
 
-  await t.test('polling fallback receives a complete maximum-size initial snapshot', async () => {
+  await t.test('polling fallback receives a complete maximum-size initial snapshot', async (t) => {
     const app = await startTestServer();
     t.after(app.close);
     const event = await createEvent(app.baseUrl, { title: 'Polling Grenze' });
@@ -412,7 +416,7 @@ test('Socket.io coalescing, bounded snapshots and performance probe', async (t) 
     assert.equal(client.socket.io.engine.transport.name, 'polling');
   });
 
-  await t.test('performance snapshots are secret-bound and expose no room or buyer data', async () => {
+  await t.test('performance snapshots are secret-bound and expose no room or buyer data', async (t) => {
     const app = await startTestServer();
     t.after(app.close);
     const hidden = await fetch(`${app.baseUrl}/internal/performance/snapshot`);

@@ -7,6 +7,14 @@ const { Pool } = require('pg');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
+// Integration fixtures use the documented pricing defaults, independent of
+// an operator's local development settings. Individual tests may override them.
+Object.assign(process.env, {
+  SHOP_PRODUCT_MARKUP_PERCENT: '50',
+  SHOP_PAYMENT_RESERVE_PERCENT: '3.69',
+  SHOP_PAYMENT_RESERVE_FIXED_CENTS: '49',
+});
+
 const INITIAL_DATABASE_URL = process.env.TEST_DATABASE_URL ||
   process.env.MIGRATION_DATABASE_URL ||
   process.env.DATABASE_URL;
