@@ -51,7 +51,7 @@ function harness(reduce = false, config = {}) {
     ResizeObserver: class { observe() {} },
   });
   return { node, window, document, motion, frames,
-    visible(value) { observer([{ isIntersecting: value }]); },
+    visible(value, ratio = value ? 1 : 0) { observer([{ isIntersecting: value, intersectionRatio: ratio }]); },
     intro(value) { introActive = value; introObserver(); },
     advance(ms) { for (let i = 0; i <= ms; i += 50) { now += 50; const pending = [...frames.values()]; frames.clear(); pending.forEach(cb => cb(now)); } },
   };
@@ -495,4 +495,17 @@ test('landing attaches its unchanged word animation only after the catalog mug i
       assert.equal(context.cupMaterials[0], material);
     }
   }
+});
+
+test('a partially visible demo waits until most of the scene can be seen', () => {
+  const h = harness();
+  h.visible(true, .2);
+  h.advance(2000);
+  assert.equal(h.frames.size, 0);
+  assert.equal(h.node('[data-typing="0"]').textContent, '');
+  h.visible(true, .7);
+  h.advance(500);
+  assert.ok(h.node('[data-typing="0"]').textContent.length > 0);
+  h.visible(true, .3);
+  assert.equal(h.frames.size, 0);
 });

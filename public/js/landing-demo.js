@@ -922,7 +922,12 @@
   measure();
   if (reduced.matches) staticScene(); else draw();
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (entries) { visible = entries[0].isIntersecting; if (visible) ensureMug(); updatePlayback(); }, { threshold: .15 }).observe(scene);
+    // A sliver below the copy must not start the story before visitors see it.
+    new IntersectionObserver(function (entries) {
+      visible = entries[0].isIntersecting && entries[0].intersectionRatio >= .65;
+      if (visible) ensureMug();
+      updatePlayback();
+    }, { threshold: [0, .65] }).observe(scene);
   } else { visible = true; }
   updatePlayback();
 })();

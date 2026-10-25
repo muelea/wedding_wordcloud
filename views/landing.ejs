@@ -81,9 +81,8 @@
     html.intro-fade .button.outline:hover { border-color: #fff; }
     /* Keep the complete header present over the teaser, but remove only the
        section-link words until the video is dismissed. */
-    /* These are deliberately literal landing-page links: they must stay
-       inspectable and visible once the teaser has finished, even at narrow
-       viewport widths. */
+    /* Wide screens show section links in the header. Compact screens use
+       the same destinations inside the shared hamburger menu. */
     #site-header .ww-nav { display: grid !important; grid-template-columns: 1fr auto 1fr; }
     #site-header .landing-section-links { display: flex; align-items: center; gap: 30px; opacity: 1; visibility: visible; pointer-events: auto; color: var(--muted); font-size: .85rem; letter-spacing: .01em; white-space: nowrap; transition: opacity .25s ease, visibility .25s ease; }
     #site-header .landing-section-link { position: relative; padding-bottom: 3px; color: var(--muted); white-space: nowrap; transition: color .2s ease; }
@@ -347,14 +346,13 @@
     html.js-reveal-ready .inspiration-card:nth-child(5) { transition-delay: .16s; }
     html.js-reveal-ready .inspiration-card:nth-child(6) { transition-delay: .24s; }
 
+    #site-header .landing-menu-sections { display: none; }
     @media (max-width: 1050px) {
       #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
-      #site-header .ww-nav { display: flex !important; height: auto !important; padding-top: 8px !important; padding-bottom: 4px !important; flex-wrap: wrap; gap: 10px 16px !important; }
-      #site-header .landing-section-links { display: flex; order: 3; flex-basis: 100%; min-width: 0; justify-content: center; flex-wrap: wrap; gap: 0 12px; font-size: 12px; white-space: normal; }
-      #site-header .landing-section-links::-webkit-scrollbar { display: none; }
-      #site-header .landing-section-link { flex: 0 0 auto; }
-      #site-header .landing-section-link { display: inline-flex; align-items: center; min-height: 36px; }
-      #site-header .landing-header-actions { margin-left: 12px; }
+      #site-header .ww-nav { display: flex !important; flex-wrap: nowrap; gap: 16px !important; }
+      #site-header .landing-section-links { display: none; }
+      #site-header .landing-menu-sections { display: block; }
+      #site-header .landing-header-actions { margin-left: auto; }
     }
     @media (max-width: 760px) { .heart-accent { display: none; } }
     @media (max-width: 760px) {
@@ -367,7 +365,12 @@
       .hero-grid, .print-grid { grid-template-columns: 1fr; gap: 46px; }
       .hero-copy { max-width: 560px; justify-self: center; text-align: center; }
       .hero-copy .eyebrow { justify-content: center; }
-      .lead { margin-inline: auto; }
+      .hero-grid { gap: 20px; }
+      .hero-copy .eyebrow { margin-bottom: 12px; font-size: .6rem; letter-spacing: .16em; }
+      .hero-copy h1 { font-size: clamp(2.35rem, 10vw, 3.4rem); margin-bottom: 14px; }
+      .hero-copy .lead { max-width: 34ch; margin: 0 auto 18px; font-size: .95rem; line-height: 1.55; }
+      .hero-copy .trust:not(:last-child) { display: none; }
+      .hero-copy .trust { margin-top: 10px; }
       .hero-actions, .trust { justify-content: center; }
       #resume-journey { margin-inline: auto; padding: 23px 0 0; text-align: center; }
       #resume-journey::before { inset: 0 auto auto 50%; width: 44px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg, var(--champagne), var(--sage-deep)); }
@@ -454,7 +457,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Wünsche &amp; Erinnerungen sammeln</p>
           <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
-          <p class="lead">Ihr sammelt Wünsche und Erinnerungen für Menschen die euch wichtig sind. Wolkenworte macht daraus eine lebendige Wortwolke. Ob auf großen Feiern oder in kleiner Runde – mit Wolkenworte entsteht eine Erinnerung, die für immer bleibt.</p>
+          <p class="lead">Sammelt gemeinsam Wünsche per Smartphone. Eure Wortwolke wächst live – und wird auf Wunsch zum Erinnerungsstück.</p>
           <div class="hero-actions">
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
           </div>

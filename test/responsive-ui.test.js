@@ -337,7 +337,12 @@ test('landing page uses an accessible desktop scroll story with a static mobile 
   assert.match(siteHeader, /data-i18n-source="<%= link\.label %>"/);
   assert.doesNotMatch(siteHeader, /href="#testimonials">Stimmen</);
   assert.match(landing, /@media \(max-width: 360px\)[\s\S]*?\.landing-start-button \{ display: none; \}/);
-  assert.match(landing, /\.landing-section-links \{ display: flex; order: 3; flex-basis: 100%;/);
+  assert.match(landing, /@media \(max-width: 1050px\) \{[^@]*?#site-header \.landing-section-links \{ display: none; \}/);
+  assert.match(landing, /#site-header \.landing-menu-sections \{ display: none; \}/);
+  assert.match(landing, /@media \(max-width: 1050px\) \{[^@]*?#site-header \.landing-menu-sections \{ display: block; \}/);
+  assert.doesNotMatch(landing, /order: 3; flex-basis: 100%/);
+  assert.match(siteMenu, /if \(variant === 'landing'\)[\s\S]*?class="landing-menu-sections"[\s\S]*?for \(const link of navLinks\)/);
+  assert.match(siteMenu, /href="<%= link\.href %>" data-i18n-source="<%= link\.label %>"/);
   assert.match(landing, /\.landing-start-button \{ min-height: var\(--ww-touch-target\); height: var\(--ww-touch-target\); \}/);
 });
 

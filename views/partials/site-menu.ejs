@@ -5,6 +5,13 @@
   <div class="ww-site-menu-panel" id="site-menu-panel">
     <nav aria-label="Seitennavigation">
       <a class="ww-header-menu-item" href="/">Startseite</a>
+      <% if (variant === 'landing') { %>
+      <div class="landing-menu-sections">
+        <% for (const link of navLinks) { %>
+        <a class="ww-header-menu-item" href="<%= link.href %>" data-i18n-source="<%= link.label %>"><%= t(link.label) %></a>
+        <% } %>
+      </div>
+      <% } %>
       <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
       <section data-browser-baskets hidden aria-label="Warenkörbe in diesem Browser"></section>
     </nav>
