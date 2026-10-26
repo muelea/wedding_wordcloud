@@ -1,6 +1,4 @@
 /* Panels live in the browser's top layer, never in a toolbar grid track. */
-html { scrollbar-gutter: stable; }
-html:has(.config-panel[open]) { overflow-y: hidden; }
 .config-panel {
   position: fixed;
   inset: 0;

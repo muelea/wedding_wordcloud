@@ -12,12 +12,12 @@
   const CATEGORIES = Object.freeze([
     ['all', 'Alle'], ['mug', 'Tassen'], ['poster', 'Poster'], ['coaster', 'Untersetzer'],
     ['drinkware', 'Trinkflaschen & Becher'], ['tech', 'Technik & Zubehör'], ['canvas', 'Leinwände'],
-    ['tote', 'Taschen'], ['blanket', 'Decken'], ['pillow', 'Kissen'], ['notebook', 'Notizbücher'],
+    ['tote', 'Taschen'], ['clothing', 'Kleidung'], ['blanket', 'Decken'], ['pillow', 'Kissen'], ['notebook', 'Notizbücher'],
   ]);
   const is3D = product => ['mug', '3d'].includes(product.previewType);
   const referencePhoto = product => product.productPhoto || product.previewMockup?.assets?.default ||
     product.previewMockup?.assets?.front || Object.values(product.previewMockup?.assets || {})[0] || '';
-  const categoryFor = product => product.familyKey === 'bags' ? 'tote' : product.familyKey === 'tech' ? 'tech' : product.familyKey === 'drinkware' ? 'drinkware' : product.catalogGroup === 'colored-mug' ? 'mug' : product.previewType === 'mug' ? 'mug'
+  const categoryFor = product => product.familyKey === 'clothing' ? 'clothing' : product.familyKey === 'bags' ? 'tote' : product.familyKey === 'tech' ? 'tech' : product.familyKey === 'drinkware' ? 'drinkware' : product.catalogGroup === 'colored-mug' ? 'mug' : product.previewType === 'mug' ? 'mug'
     : product.previewShape === 'framed-poster' ? 'poster' : product.previewShape;
 
   function printPrecision(designs) {
@@ -49,8 +49,8 @@
   }
 
   class Gallery {
-    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, onChoose, onAdd, isInCart, i18n }) {
-      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, onChoose, onAdd, isInCart, i18n });
+    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, renderArtwork, preview, onChoose, onAdd, isInCart, i18n }) {
+      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, renderArtwork, preview, onChoose, onAdd, isInCart, i18n });
       this.document = element.ownerDocument;
       this.window = this.document.defaultView;
       this.controller = new this.window.AbortController();
@@ -71,15 +71,37 @@
       this.suspended = false;
       this.choosing = false;
       this.frame = null;
+      this.scrolling = false;
+      this.scrollTimer = null;
+      this.viewSequence = 0;
+      this.previewQueue = new Set();
+      this.previewTurn = null;
+      this.previewActive = null;
+      this.requestPreviewTurn = callback => this.window.requestIdleCallback
+        ? this.window.requestIdleCallback(callback, { timeout: 1000 }) : this.window.setTimeout(callback, 50);
+      this.cancelPreviewTurn = id => this.window.requestIdleCallback
+        ? this.window.cancelIdleCallback(id) : this.window.clearTimeout(id);
       this.buildPhotoDialog();
       this.buildVariantDialog();
       this.buildPriceInfo();
-      this.resizeObserver = this.window.ResizeObserver ? new this.window.ResizeObserver(() => this.resize()) : null;
+      this.resizeObserver = this.window.ResizeObserver ? new this.window.ResizeObserver(entries =>
+        this.resize(entries.map(entry => this.cards.find(card => card.stage === entry.target)).filter(Boolean))) : null;
       this.intersectionObserver = this.window.IntersectionObserver ? new this.window.IntersectionObserver(entries => {
+        const changed = [];
         for (const entry of entries) {
           const card = this.cards.find(card => card.stage === entry.target);
-          if (card) { card.visible = entry.isIntersecting; if (!card.visible) { card.viewer?.destroy(); card.viewer = null; } this.render(card); }
+          if (card) {
+            card.visible = entry.isIntersecting;
+            if (!card.visible) {
+              this.previewQueue.delete(card);
+              if (this.previewActive?.card === card && card.viewer?.loading) {
+                card.viewer.destroy(); card.viewer = null; this.previewActive = null;
+              }
+            }
+            changed.push(card);
+          }
         }
+        changed.filter(card => card.visible).forEach(card => this.render(card));
       }) : null;
       const grid = element.querySelector('[data-gallery-grid]');
       this.filters = element.querySelector('[data-gallery-filters]');
@@ -104,6 +126,20 @@
         void this.load(card, variants[0], false);
       }
       this.listen(this.window, 'resize', () => this.resize());
+      const scrolling = () => {
+        if (this.destroyed || this.suspended) return;
+        this.scrolling = true;
+        if (this.previewTurn !== null) this.cancelPreviewTurn(this.previewTurn);
+        this.previewTurn = null;
+        this.window.clearTimeout(this.scrollTimer);
+        this.scrollTimer = this.window.setTimeout(() => {
+          this.scrolling = false;
+          this.resize();
+        }, 350);
+      };
+      this.listen(this.window, 'scroll', scrolling, { passive: true });
+      this.listen(this.window, 'wheel', scrolling, { passive: true });
+      this.listen(this.window, 'touchmove', scrolling, { passive: true });
     }
 
     listen(element, event, callback, options = {}) {
@@ -167,6 +203,38 @@
         this.photoDialog.dialog.showModal();
         this.photoDialog.title.focus({ preventScroll: true });
       }
+    }
+
+    artwork(card, side) {
+      return card.previewUrls[side] ||= this.renderArtwork(
+        this.getView(card.product, card.snapshot.orientation), card.snapshot.designs[side], side);
+    }
+
+    openPreview(card) {
+      if (!card.snapshot || this.destroyed || this.suspended || card.element.hidden || this.choosing) return;
+      this.closePriceInfo();
+      this.preview.open({ product: card.view, printPreviewUrls: Object.fromEntries(
+        card.product.printSurfaces.map(side => [side.key, this.artwork(card, side.key)])),
+      }, card.photoButton);
+    }
+
+    updateThumbnail(card) {
+      if (!card.snapshot || card.thumbnailVersion === card.version) return;
+      try {
+        if (is3D(card.product)) {
+          const source = card.viewer?.canvas;
+          if (!source?.width || !source.height) return;
+          card.viewer.render();
+          const canvas = this.document.createElement('canvas');
+          canvas.width = canvas.height = 200;
+          const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
+          canvas.getContext('2d').drawImage(source, (canvas.width - source.width * scale) / 2,
+            (canvas.height - source.height * scale) / 2, source.width * scale, source.height * scale);
+          card.thumbnailUrl = canvas.toDataURL('image/png');
+        } else card.thumbnailUrl = this.artwork(card, card.surface);
+        card.photo.src = card.thumbnailUrl;
+        card.thumbnailVersion = card.version;
+      } catch { /* The matching reference photo remains available if rendering fails. */ }
     }
 
     priceFor(product) {
@@ -331,17 +399,16 @@
       this.i18n.setAttribute(priceInfoButton, 'aria-label', 'Preisinformationen');
       const infoIcon = this.node('span', '', priceInfoButton);
       infoIcon.textContent = 'ⓘ'; infoIcon.setAttribute('aria-hidden', 'true');
-      const delivery = this.node('small', 'product-gallery-delivery', caption);
-      const photoButton = this.node('button', 'product-gallery-photo-button', details);
+      const photoButton = this.node('button', 'product-gallery-photo-button cart-product-preview', details);
       photoButton.type = 'button';
       photoButton.hidden = true;
       photoButton.setAttribute('aria-haspopup', 'dialog');
-      photoButton.setAttribute('aria-controls', this.photoDialog.dialog.id);
+      photoButton.setAttribute('aria-controls', 'print-preview');
       const photo = this.node('img', 'product-gallery-photo', photoButton);
       photo.hidden = true;
       photo.loading = 'lazy';
       photo.draggable = false;
-      const zoom = this.node('span', 'product-gallery-photo-zoom ww-preview-eye', photoButton);
+      const zoom = this.node('span', 'cart-product-preview-eye ww-preview-eye', photoButton);
       zoom.setAttribute('aria-hidden', 'true');
       const sizes = this.node('div', 'product-gallery-sizes', details);
       sizes.setAttribute('role', 'group');
@@ -362,7 +429,7 @@
       retry.type = 'button';
       retry.hidden = true;
       this.i18n.setText(retry, 'Erneut versuchen');
-      const card = { element, preview, stage, host, flat, canvas, image, previousPreview, name, detail, priceRow, price, priceNote, priceInfoButton, delivery, details, photo, photoButton, customize, sizes, add, status, retry,
+      const card = { element, preview, stage, host, flat, canvas, image, previousPreview, name, detail, priceRow, price, priceNote, priceInfoButton, details, photo, photoButton, customize, sizes, add, status, retry,
         variants, product: variants[0], snapshot: null, version: 0, viewer: null, visible: !this.intersectionObserver };
       const variantSummary = this.node(variants.length > 1 ? 'button' : 'div', 'product-gallery-variant-summary', sizes);
       card.variantLabel = this.node('span', '', variantSummary);
@@ -378,8 +445,19 @@
       }
       this.listen(add, 'click', () => { void this.add(card); });
       this.listen(priceInfoButton, 'click', () => this.openPriceInfo(card));
-      this.listen(photoButton, 'click', () => this.openPhoto(card));
+      this.listen(photoButton, 'click', () => this.openPreview(card));
       this.listen(customize, 'click', () => { void this.choose(card); });
+      // A retained bitmap needs no model rebuild just because it reenters the
+      // viewport. Capture runs before the viewer's target/bubble listeners, so
+      // a deliberate first drag/key also reaches a newly created viewer.
+      this.listen(stage, 'pointerdown', event => {
+        if (event.isPrimary === false || (event.button != null && event.button !== 0)) return;
+        if (event.target === host || host.contains(event.target)) this.render(card, false, true);
+      }, { capture: true });
+      this.listen(stage, 'keydown', event => {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape'].includes(event.key) &&
+          (event.target === host || host.contains(event.target))) this.render(card, false, true);
+      }, { capture: true });
       this.listen(retry, 'click', () => {
         if (card.capacity) {
           this.entries.delete(card.product.key);
@@ -407,6 +485,9 @@
 
     async load(card, product, deliberate = true, allowSmallText = false) {
       const version = ++card.version;
+      card.cachedPreviewVersion = null;
+      this.previewQueue.delete(card);
+      card.previousPreview.style.removeProperty('opacity');
       const previous = card.product;
       if (previous.key !== product.key && this.preparationQueue.cancel(previous.key)) {
         this.entries.delete(previous.key);
@@ -423,6 +504,8 @@
       card.viewer?.destroy();
       card.viewer = null;
       card.snapshot = null;
+      card.previewUrls = {};
+      card.thumbnailUrl = null;
       card.failed = false;
       card.capacity = false;
       card.product = product;
@@ -462,35 +545,102 @@
       }
     }
 
-    render(card, retry = false) {
-      if (this.destroyed || this.suspended || card.element.hidden || !card.snapshot) return;
+    render(card, retry = false, immediate = false) {
+      if (this.destroyed || this.suspended || card.element.hidden || !card.visible || !card.snapshot) return;
       if (card.failed && !retry) return;
+      const width = card.stage.clientWidth, height = card.stage.clientHeight;
+      const density = this.window.devicePixelRatio || 1;
       const design = card.snapshot.designs[card.surface];
       if (is3D(card.product)) {
-        if (!card.visible) return;
+        card.lastViewed = ++this.viewSequence;
+        // Building models, shaders and textures can take hundreds of ms. Keep
+        // native scrolling free of that work; prepare newly visible 3D views
+        // after scrolling settles, reusing nearby views in the meantime.
+        if (this.scrolling && !retry && !immediate) return;
         try {
           if (retry) { card.viewer?.destroy(); card.viewer = null; }
-          if (!card.viewer) card.viewer = this.createMug({ host: card.host, product: card.view, design, designs: card.snapshot.designs,
+          if (card.viewer && card.renderedWidth === width && card.renderedHeight === height && card.renderedDensity === density && !retry) return;
+          if (!card.viewer && !retry && !immediate) {
+            if (card.cachedPreviewVersion === card.version && card.renderedWidth === width &&
+              card.renderedHeight === height && card.renderedDensity === density) return;
+            if (this.intersectionObserver) { this.previewQueue.add(card); this.schedulePreview(); return; }
+          }
+          if (!card.viewer) {
+            this.previewQueue.delete(card);
+            this.releaseDistantViewer();
+            card.viewer = this.createMug({ host: card.host, product: card.view, design, designs: card.snapshot.designs,
             onStatus: state => {
               if (state === 'error') this.previewError(card);
               else if (state === 'ready') this.previewReady(card);
             } });
+          }
           card.viewer.resize();
           if (!card.viewer.loading) this.previewReady(card);
         } catch { this.previewError(card); }
       } else {
+        if (card.renderedVersion === card.version && card.renderedWidth === width && card.renderedHeight === height && card.renderedDensity === density && !retry) return;
         const mockup = card.view.previewMockup;
         const aspect = mockup ? mockup.width / mockup.height : card.view.printFile.width / card.view.printFile.height;
-        const width = Math.min(Math.max(1, card.stage.clientWidth - 24), Math.max(1, card.stage.clientHeight - 24) * aspect);
-        card.flat.style.setProperty('--flat-preview-width', `${Math.floor(width)}px`);
-        card.flat.style.setProperty('--flat-preview-height', `${Math.floor(width / aspect)}px`);
+        const flatWidth = Math.min(Math.max(1, width - 24), Math.max(1, height - 24) * aspect);
+        card.flat.style.setProperty('--flat-preview-width', `${Math.floor(flatWidth)}px`);
+        card.flat.style.setProperty('--flat-preview-height', `${Math.floor(flatWidth / aspect)}px`);
         this.paintFlat(card.canvas, card.view, design, card.surface);
         this.previewReady(card);
       }
+      card.renderedVersion = card.version;
+      card.renderedWidth = width;
+      card.renderedHeight = height;
+      card.renderedDensity = density;
+    }
+
+    schedulePreview() {
+      if (this.destroyed || this.suspended || this.scrolling || this.previewTurn !== null || this.previewActive || !this.previewQueue.size) return;
+      this.previewTurn = this.requestPreviewTurn(() => {
+        this.previewTurn = null;
+        if (this.destroyed || this.suspended || this.scrolling) return;
+        // One model per idle turn: a row must not compile several WebGL scenes
+        // in one burst during the short pauses between mouse-wheel movements.
+        const card = this.previewQueue.values().next().value;
+        this.previewQueue.delete(card);
+        if (card) this.render(card, false, true);
+        if (card?.viewer?.loading && card.viewer.ready) {
+          const active = this.previewActive = { card, viewer: card.viewer };
+          const finish = () => {
+            if (this.previewActive !== active) return;
+            this.previewActive = null;
+            this.schedulePreview();
+          };
+          Promise.resolve(card.viewer.ready).then(finish, finish);
+        } else this.schedulePreview();
+      });
+    }
+
+    releaseDistantViewer() {
+      if (!this.intersectionObserver || this.cards.filter(card => card.viewer).length < 6) return;
+      const candidates = this.cards.filter(card => card.viewer && !card.host.classList.contains('dragging'));
+      const oldest = candidates.sort((a, b) => Number(a.visible) - Number(b.visible) || a.lastViewed - b.lastViewed)[0];
+      if (!oldest) return;
+      // Wide/tall viewports can intersect more than six cards. Keep their
+      // rendered images instead of exceeding Safari's WebGL context budget.
+      try {
+        if (oldest.viewer.canvas && !oldest.viewer.loading && !oldest.failed) {
+          oldest.viewer.render();
+          oldest.previousPreview.width = oldest.viewer.canvas.width;
+          oldest.previousPreview.height = oldest.viewer.canvas.height;
+          oldest.previousPreview.getContext('2d').drawImage(oldest.viewer.canvas, 0, 0);
+          oldest.previousPreview.style.opacity = '1';
+          oldest.previousPreview.style.objectFit = 'contain';
+          oldest.previousPreview.hidden = false;
+          oldest.cachedPreviewVersion = oldest.version;
+        }
+      } catch { oldest.previousPreview.hidden = true; }
+      oldest.viewer.destroy();
+      oldest.viewer = null;
     }
 
     previewReady(card) {
       card.failed = false;
+      card.cachedPreviewVersion = null;
       card.host.classList.add('is-ready');
       card.stage.dataset.ready = 'true';
       card.preview.setAttribute('aria-busy', 'false');
@@ -499,6 +649,7 @@
       card.status.classList.remove('is-loading');
       card.status.hidden = true;
       card.retry.hidden = true;
+      this.updateThumbnail(card);
     }
 
     previewError(card) {
@@ -512,9 +663,17 @@
       card.retry.hidden = false;
     }
 
-    resize() {
-      this.window.cancelAnimationFrame(this.frame);
-      this.frame = this.window.requestAnimationFrame(() => this.cards.forEach(card => this.render(card)));
+    resize(cards = this.cards) {
+      if (this.destroyed || this.suspended) return;
+      this.resizeCards ||= new Set();
+      cards.forEach(card => this.resizeCards.add(card));
+      if (this.frame !== null) return;
+      this.frame = this.window.requestAnimationFrame(() => {
+        this.frame = null;
+        const pending = [...this.resizeCards];
+        this.resizeCards.clear();
+        pending.forEach(card => this.render(card));
+      });
     }
 
     filter(category) {
@@ -526,7 +685,7 @@
       }
       for (const card of this.cards) {
         card.element.hidden = category !== 'all' && categoryFor(card.product) !== category;
-        if (card.element.hidden) { card.viewer?.destroy(); card.viewer = null; }
+        if (card.element.hidden) { this.previewQueue.delete(card); card.viewer?.destroy(); card.viewer = null; }
       }
       this.resize();
     }
@@ -543,28 +702,20 @@
           ? 'Nicht nach DE lieferbar'
           : 'inkl. MwSt., zzgl. Versand · DE');
       }
-      card.delivery.hidden = !card.product.shippingRestrictions?.length;
-      if (!card.delivery.hidden) {
-        const names = new Intl.DisplayNames([this.i18n.getLocale?.() || 'de'], { type: 'region' });
-        this.i18n.setText(card.delivery, 'Nicht lieferbar nach: {{countries}}.', {
-          countries: card.product.shippingRestrictions.map(code => names.of(code)).join(', '),
-        });
-      }
       card.photo.hidden = !referencePhoto(card.product);
       card.photoButton.hidden = card.photo.hidden;
       card.sizes.classList.toggle('has-product-photo', !card.photo.hidden);
       if (referencePhoto(card.product)) {
-        if (card.photo.getAttribute('src') !== referencePhoto(card.product)) card.photo.src = referencePhoto(card.product);
-        card.photo.style.objectFit = card.product.productPhotoFit;
-        card.photo.style.objectPosition = card.product.productPhotoPosition;
-        this.i18n.setAttribute(card.photo, 'alt', 'Produktfoto: {{product}}, {{size}}', {
-          product: this.i18n.t(card.product.displayName), size: this.i18n.t(card.product.size.label),
-        });
-        this.i18n.setAttribute(card.photoButton, 'aria-label', 'Produktfoto vergrößern: {{product}}, {{size}}', {
-          product: this.i18n.t(card.product.displayName), size: this.i18n.t(card.product.size.label),
+        const url = card.thumbnailUrl || referencePhoto(card.product);
+        if (card.photo.getAttribute('src') !== url) card.photo.src = url;
+        card.photo.alt = '';
+        this.i18n.setAttribute(card.photoButton, 'aria-label', '{{view}}: {{product}}, {{variant}}', {
+          view: this.i18n.t('Details & Vorschau'), product: this.i18n.t(card.product.displayName),
+          variant: this.i18n.t(card.product.variantLabel || card.product.size.label),
         });
       }
-      this.i18n.setAttribute(card.host, 'aria-label', card.product.previewModel?.kind === 'blanket'
+      card.photoButton.disabled = !card.snapshot || this.choosing;
+      this.i18n.setAttribute(card.host, 'aria-label', ['blanket', 'garment'].includes(card.product.previewModel?.kind)
         ? '{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.' : '{{product}}, {{size}}', {
         product: this.i18n.t(card.product.displayName), size: this.i18n.t(card.product.size.label),
       });
@@ -618,11 +769,20 @@
 
     suspend() {
       this.suspended = true;
+      this.preview?.close();
       this.closePriceInfo();
       if (this.photoDialog.dialog.open) this.photoDialog.dialog.close();
       if (this.variantDialog.dialog.open) this.variantDialog.dialog.close();
       this.preparationQueue.pause();
       this.window.cancelAnimationFrame(this.frame);
+      this.frame = null;
+      this.resizeCards?.clear();
+      if (this.previewTurn !== null) this.cancelPreviewTurn(this.previewTurn);
+      this.previewTurn = null;
+      this.previewActive = null;
+      this.previewQueue.clear();
+      this.window.clearTimeout(this.scrollTimer);
+      this.scrolling = false;
       this.cards.forEach(card => { card.viewer?.destroy(); card.viewer = null; });
     }
 
@@ -662,6 +822,7 @@
 
     destroy() {
       this.destroyed = true;
+      this.preview?.close();
       this.closePriceInfo();
       this.priceInfo.remove();
       if (this.photoDialog.dialog.open) this.photoDialog.dialog.close();
@@ -672,6 +833,11 @@
       this.resizeObserver?.disconnect();
       this.intersectionObserver?.disconnect();
       this.window.cancelAnimationFrame(this.frame);
+      this.window.clearTimeout(this.scrollTimer);
+      if (this.previewTurn !== null) this.cancelPreviewTurn(this.previewTurn);
+      this.previewTurn = null;
+      this.previewActive = null;
+      this.previewQueue.clear();
       this.cards.forEach(card => card.viewer?.destroy());
       this.entries.clear();
     }

@@ -50,6 +50,53 @@ rectangles and blank fabric colors are pinned in the same manifest. New 3D
 previews use procedural geometry, not these reference photographs. See
 `docs/print-geometry.md` for the supported range and physical fidelity limits.
 
+Metric poster expansion (2026-10-25): 20 additional unmodified
+`catalog-{variantId}.jpg` photos come from `GET /products/268` and
+`GET /products/304`. Their source URLs and SHA-256 hashes are pinned in the
+manifest, alongside the exact print files and templates. These cover matte
+variants 19515, 8953 and 8954, and framed variants 19644, 19645, 19646, 19642,
+19643, 19652, 19653, 19649, 19650, 19647, 19648, 9356, 11790, 10296, 9359,
+11793 and 10299. The photos are references; the previews use the existing 3D
+paper/frame renderer in both orientations.
+
+Canvas expansion (2026-10-25): 97 additional unmodified `catalog-{variantId}.jpg`
+photos come from active variants in `GET /products/3`, `/products/614` and
+`/products/616`. Source URLs and SHA-256 hashes are pinned alongside the exact
+print-file and template records in the manifest. Standard, thin and framed
+canvas references remain distinct; the original variant 5 photo and provider
+mesh are unchanged. Photos are reference images; the additions use physical
+3D canvas previews with their own wrap depths and frame colors.
+
+Phone-case expansion (2026-10-25): all 140 active tough-case variants in
+products 601, 798 and 686 have local, unmodified model/finish reference photos.
+The 128 additions retain their individual provider URLs and SHA-256 hashes in
+the manifest. The offline catalog and image-mapping audit is pinned in
+`test/fixtures/phone-case-catalog.json`. Original provider camera/safe-area
+guides are deduplicated by hash under `test/fixtures/printful-case-guides/`.
+
+All four iPhone 17 MagSafe models use their exact product-page gallery PNGs:
+`magsafe-iphone-17.png`, `magsafe-iphone-17-air.png`,
+`magsafe-iphone-17-pro.png` and `magsafe-iphone-17-pro-max.png`.
+The Catalog API incorrectly repeats the Air image across that entire series.
+Preserve each gallery mapping and its original transparency when refreshing.
+
+The MagSafe iPhone 17 Pro matte/glossy variants (34006 / 34005) share
+`magsafe-iphone-17-pro.png`, the unmodified transparent PNG shown for both
+finishes in Printful's product-page gallery, verified on 2026-10-25:
+[`2fc130516c3a83258f8a4a40cf3ac5be_l`](https://files.cdn.printful.com/o/upload/variant-image/2f/2fc130516c3a83258f8a4a40cf3ac5be_l).
+The Catalog API's `variants[].image` URLs for these two IDs show an incorrect
+single-camera phone on black. Do not restore those catalog photos during an
+asset refresh. Their replacement source and SHA-256 are pinned per variant in
+`src/productCatalogManifest.json`; keep the PNG transparency intact.
+
+Clothing expansion (2026-10-25): `sttu169-{white,black}.jpg`,
+`stsu178-{white,black}.jpg` and `stsu177-{white,black}.jpg` are the unmodified
+reference photographs returned by `GET /products/456`, `/products/493` and
+`/products/479`. They represent each garment and colour across the offered
+sizes. Source URLs and SHA-256 hashes are pinned in `src/apparelCatalog.json`.
+The interactive previews use separate sewn cotton geometry and never paint
+customer artwork into these reference photos.
+
 The organic tote layers are semi-transparent over the complete fabric blank,
 including the handles. Their provider `background_color` must sit behind the
 whole composition, with the layer's opaque white pixels masking the outside

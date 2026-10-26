@@ -135,3 +135,10 @@ test('layoutForExport (real font metrics) still guarantees zero overlaps and eve
   const textElementCount = (svg.match(/<text /g) || []).length;
   assert.equal(textElementCount, words.length);
 });
+
+test('unmeasured print seeds retain the exact live frequency curve, stable order and emoji sizing', () => {
+  for (const words of [[], [['eins', 1]], [['Liebe', 20], ['💜', 3], ['Freude', 3], ['Danke', 1]]]) {
+    const measured = WordCloudCore.measureWords(words, createCanvas(1, 1).getContext('2d'));
+    assert.deepEqual(WordCloudCore.wordSizes(words), measured.map(({ word, fontPx }) => ({ word, fontPx })));
+  }
+});

@@ -1360,6 +1360,5628 @@
         "can_rotate": false
       },
       "previews": []
+    },
+    {
+      "productKey": "matte-poster-19515",
+      "productId": 268,
+      "variant": {
+        "variant_id": 19515,
+        "placements": {
+          "default": 621
+        }
+      },
+      "printfile": {
+        "printfile_id": 621,
+        "width": 9933,
+        "height": 7016,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "matte-poster-8953",
+      "productId": 268,
+      "variant": {
+        "variant_id": 8953,
+        "placements": {
+          "default": 155
+        }
+      },
+      "printfile": {
+        "printfile_id": 155,
+        "width": 10748,
+        "height": 7200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "matte-poster-8954",
+      "productId": 268,
+      "variant": {
+        "variant_id": 8954,
+        "placements": {
+          "default": 115
+        }
+      },
+      "printfile": {
+        "printfile_id": 115,
+        "width": 11812,
+        "height": 8268,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19644",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19644,
+        "placements": {
+          "default": 17
+        }
+      },
+      "printfile": {
+        "printfile_id": 17,
+        "width": 5400,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19645",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19645,
+        "placements": {
+          "default": 41
+        }
+      },
+      "printfile": {
+        "printfile_id": 41,
+        "width": 6000,
+        "height": 4800,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19646",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19646,
+        "placements": {
+          "default": 38
+        }
+      },
+      "printfile": {
+        "printfile_id": 38,
+        "width": 7200,
+        "height": 5400,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19642",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19642,
+        "placements": {
+          "default": 621
+        }
+      },
+      "printfile": {
+        "printfile_id": 621,
+        "width": 9933,
+        "height": 7016,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19643",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19643,
+        "placements": {
+          "default": 624
+        }
+      },
+      "printfile": {
+        "printfile_id": 624,
+        "width": 7016,
+        "height": 4961,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19652",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19652,
+        "placements": {
+          "default": 621
+        }
+      },
+      "printfile": {
+        "printfile_id": 621,
+        "width": 9933,
+        "height": 7016,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19653",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19653,
+        "placements": {
+          "default": 624
+        }
+      },
+      "printfile": {
+        "printfile_id": 624,
+        "width": 7016,
+        "height": 4961,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19649",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19649,
+        "placements": {
+          "default": 17
+        }
+      },
+      "printfile": {
+        "printfile_id": 17,
+        "width": 5400,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19650",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19650,
+        "placements": {
+          "default": 41
+        }
+      },
+      "printfile": {
+        "printfile_id": 41,
+        "width": 6000,
+        "height": 4800,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19647",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19647,
+        "placements": {
+          "default": 621
+        }
+      },
+      "printfile": {
+        "printfile_id": 621,
+        "width": 9933,
+        "height": 7016,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-19648",
+      "productId": 304,
+      "variant": {
+        "variant_id": 19648,
+        "placements": {
+          "default": 624
+        }
+      },
+      "printfile": {
+        "printfile_id": 624,
+        "width": 7016,
+        "height": 4961,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-9356",
+      "productId": 304,
+      "variant": {
+        "variant_id": 9356,
+        "placements": {
+          "default": 106
+        }
+      },
+      "printfile": {
+        "printfile_id": 106,
+        "width": 3544,
+        "height": 2480,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-11790",
+      "productId": 304,
+      "variant": {
+        "variant_id": 11790,
+        "placements": {
+          "default": 106
+        }
+      },
+      "printfile": {
+        "printfile_id": 106,
+        "width": 3544,
+        "height": 2480,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-10296",
+      "productId": 304,
+      "variant": {
+        "variant_id": 10296,
+        "placements": {
+          "default": 106
+        }
+      },
+      "printfile": {
+        "printfile_id": 106,
+        "width": 3544,
+        "height": 2480,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-9359",
+      "productId": 304,
+      "variant": {
+        "variant_id": 9359,
+        "placements": {
+          "default": 39
+        }
+      },
+      "printfile": {
+        "printfile_id": 39,
+        "width": 10800,
+        "height": 7200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-11793",
+      "productId": 304,
+      "variant": {
+        "variant_id": 11793,
+        "placements": {
+          "default": 39
+        }
+      },
+      "printfile": {
+        "printfile_id": 39,
+        "width": 10800,
+        "height": 7200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-poster-10299",
+      "productId": 304,
+      "variant": {
+        "variant_id": 10299,
+        "placements": {
+          "default": 39
+        }
+      },
+      "printfile": {
+        "printfile_id": 39,
+        "width": 10800,
+        "height": 7200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19291",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19291,
+        "placements": {
+          "default": 540
+        }
+      },
+      "printfile": {
+        "printfile_id": 540,
+        "width": 2700,
+        "height": 2700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19292",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19292,
+        "placements": {
+          "default": 541
+        }
+      },
+      "printfile": {
+        "printfile_id": 541,
+        "width": 3300,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19293",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19293,
+        "placements": {
+          "default": 495
+        }
+      },
+      "printfile": {
+        "printfile_id": 495,
+        "width": 3900,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19294",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19294,
+        "placements": {
+          "default": 554
+        }
+      },
+      "printfile": {
+        "printfile_id": 554,
+        "width": 4500,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19295",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19295,
+        "placements": {
+          "default": 497
+        }
+      },
+      "printfile": {
+        "printfile_id": 497,
+        "width": 4500,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19296",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19296,
+        "placements": {
+          "default": 542
+        }
+      },
+      "printfile": {
+        "printfile_id": 542,
+        "width": 3900,
+        "height": 3900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19297",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19297,
+        "placements": {
+          "default": 558
+        }
+      },
+      "printfile": {
+        "printfile_id": 558,
+        "width": 6900,
+        "height": 3900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19298",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19298,
+        "placements": {
+          "default": 499
+        }
+      },
+      "printfile": {
+        "printfile_id": 499,
+        "width": 5100,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-823",
+      "productId": 3,
+      "variant": {
+        "variant_id": 823,
+        "placements": {
+          "default": 51
+        }
+      },
+      "printfile": {
+        "printfile_id": 51,
+        "width": 5400,
+        "height": 5400,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19299",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19299,
+        "placements": {
+          "default": 501
+        }
+      },
+      "printfile": {
+        "printfile_id": 501,
+        "width": 6300,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19300",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19300,
+        "placements": {
+          "default": 562
+        }
+      },
+      "printfile": {
+        "printfile_id": 562,
+        "width": 8100,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19301",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19301,
+        "placements": {
+          "default": 564
+        }
+      },
+      "printfile": {
+        "printfile_id": 564,
+        "width": 11700,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19302",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19302,
+        "placements": {
+          "default": 543
+        }
+      },
+      "printfile": {
+        "printfile_id": 543,
+        "width": 5100,
+        "height": 5100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-824",
+      "productId": 3,
+      "variant": {
+        "variant_id": 824,
+        "placements": {
+          "default": 52
+        }
+      },
+      "printfile": {
+        "printfile_id": 52,
+        "width": 6600,
+        "height": 6600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-6",
+      "productId": 3,
+      "variant": {
+        "variant_id": 6,
+        "placements": {
+          "default": 48
+        }
+      },
+      "printfile": {
+        "printfile_id": 48,
+        "width": 7800,
+        "height": 6600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19303",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19303,
+        "placements": {
+          "default": 568
+        }
+      },
+      "printfile": {
+        "printfile_id": 568,
+        "width": 8100,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19304",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19304,
+        "placements": {
+          "default": 574
+        }
+      },
+      "printfile": {
+        "printfile_id": 574,
+        "width": 10500,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19305",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19305,
+        "placements": {
+          "default": 577
+        }
+      },
+      "printfile": {
+        "printfile_id": 577,
+        "width": 15300,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19306",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19306,
+        "placements": {
+          "default": 544
+        }
+      },
+      "printfile": {
+        "printfile_id": 544,
+        "width": 6300,
+        "height": 6300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-7",
+      "productId": 3,
+      "variant": {
+        "variant_id": 7,
+        "placements": {
+          "default": 50
+        }
+      },
+      "printfile": {
+        "printfile_id": 50,
+        "width": 9000,
+        "height": 7200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19307",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19307,
+        "placements": {
+          "default": 579
+        }
+      },
+      "printfile": {
+        "printfile_id": 579,
+        "width": 8700,
+        "height": 6300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19308",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19308,
+        "placements": {
+          "default": 545
+        }
+      },
+      "printfile": {
+        "printfile_id": 545,
+        "width": 6900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19309",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19309,
+        "placements": {
+          "default": 581
+        }
+      },
+      "printfile": {
+        "printfile_id": 581,
+        "width": 8100,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19310",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19310,
+        "placements": {
+          "default": 503
+        }
+      },
+      "printfile": {
+        "printfile_id": 503,
+        "width": 9300,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19311",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19311,
+        "placements": {
+          "default": 365
+        }
+      },
+      "printfile": {
+        "printfile_id": 365,
+        "width": 9900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19312",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19312,
+        "placements": {
+          "default": 584
+        }
+      },
+      "printfile": {
+        "printfile_id": 584,
+        "width": 12900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19313",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19313,
+        "placements": {
+          "default": 586
+        }
+      },
+      "printfile": {
+        "printfile_id": 586,
+        "width": 18900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19314",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19314,
+        "placements": {
+          "default": 546
+        }
+      },
+      "printfile": {
+        "printfile_id": 546,
+        "width": 8100,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19315",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19315,
+        "placements": {
+          "default": 591
+        }
+      },
+      "printfile": {
+        "printfile_id": 591,
+        "width": 9900,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19316",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19316,
+        "placements": {
+          "default": 572
+        }
+      },
+      "printfile": {
+        "printfile_id": 572,
+        "width": 10500,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-825",
+      "productId": 3,
+      "variant": {
+        "variant_id": 825,
+        "placements": {
+          "default": 54
+        }
+      },
+      "printfile": {
+        "printfile_id": 54,
+        "width": 12600,
+        "height": 9000,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19317",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19317,
+        "placements": {
+          "default": 594
+        }
+      },
+      "printfile": {
+        "printfile_id": 594,
+        "width": 15300,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19318",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19318,
+        "placements": {
+          "default": 547
+        }
+      },
+      "printfile": {
+        "printfile_id": 547,
+        "width": 8700,
+        "height": 8700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19319",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19319,
+        "placements": {
+          "default": 597
+        }
+      },
+      "printfile": {
+        "printfile_id": 597,
+        "width": 12900,
+        "height": 8700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19320",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19320,
+        "placements": {
+          "default": 548
+        }
+      },
+      "printfile": {
+        "printfile_id": 548,
+        "width": 9300,
+        "height": 9300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19321",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19321,
+        "placements": {
+          "default": 599
+        }
+      },
+      "printfile": {
+        "printfile_id": 599,
+        "width": 12900,
+        "height": 9300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19322",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19322,
+        "placements": {
+          "default": 549
+        }
+      },
+      "printfile": {
+        "printfile_id": 549,
+        "width": 9900,
+        "height": 9900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19323",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19323,
+        "placements": {
+          "default": 601
+        }
+      },
+      "printfile": {
+        "printfile_id": 601,
+        "width": 12900,
+        "height": 9900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19324",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19324,
+        "placements": {
+          "default": 610
+        }
+      },
+      "printfile": {
+        "printfile_id": 610,
+        "width": 18900,
+        "height": 9900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19325",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19325,
+        "placements": {
+          "default": 550
+        }
+      },
+      "printfile": {
+        "printfile_id": 550,
+        "width": 10500,
+        "height": 10500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19326",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19326,
+        "placements": {
+          "default": 603
+        }
+      },
+      "printfile": {
+        "printfile_id": 603,
+        "width": 15300,
+        "height": 10500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19327",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19327,
+        "placements": {
+          "default": 538
+        }
+      },
+      "printfile": {
+        "printfile_id": 538,
+        "width": 11700,
+        "height": 11700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19328",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19328,
+        "placements": {
+          "default": 539
+        }
+      },
+      "printfile": {
+        "printfile_id": 539,
+        "width": 12000,
+        "height": 12000,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19329",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19329,
+        "placements": {
+          "default": 605
+        }
+      },
+      "printfile": {
+        "printfile_id": 605,
+        "width": 17400,
+        "height": 12900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "canvas-19330",
+      "productId": 3,
+      "variant": {
+        "variant_id": 19330,
+        "placements": {
+          "default": 607
+        }
+      },
+      "printfile": {
+        "printfile_id": 607,
+        "width": 18900,
+        "height": 12900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17627",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17627,
+        "placements": {
+          "default": 495
+        }
+      },
+      "printfile": {
+        "printfile_id": 495,
+        "width": 3900,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17634",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17634,
+        "placements": {
+          "default": 495
+        }
+      },
+      "printfile": {
+        "printfile_id": 495,
+        "width": 3900,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17641",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17641,
+        "placements": {
+          "default": 495
+        }
+      },
+      "printfile": {
+        "printfile_id": 495,
+        "width": 3900,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17628",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17628,
+        "placements": {
+          "default": 497
+        }
+      },
+      "printfile": {
+        "printfile_id": 497,
+        "width": 4500,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17635",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17635,
+        "placements": {
+          "default": 497
+        }
+      },
+      "printfile": {
+        "printfile_id": 497,
+        "width": 4500,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17642",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17642,
+        "placements": {
+          "default": 497
+        }
+      },
+      "printfile": {
+        "printfile_id": 497,
+        "width": 4500,
+        "height": 3600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17629",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17629,
+        "placements": {
+          "default": 499
+        }
+      },
+      "printfile": {
+        "printfile_id": 499,
+        "width": 5100,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17636",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17636,
+        "placements": {
+          "default": 499
+        }
+      },
+      "printfile": {
+        "printfile_id": 499,
+        "width": 5100,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17643",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17643,
+        "placements": {
+          "default": 499
+        }
+      },
+      "printfile": {
+        "printfile_id": 499,
+        "width": 5100,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16034",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16034,
+        "placements": {
+          "default": 360
+        }
+      },
+      "printfile": {
+        "printfile_id": 360,
+        "width": 4500,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16040",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16040,
+        "placements": {
+          "default": 360
+        }
+      },
+      "printfile": {
+        "printfile_id": 360,
+        "width": 4500,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-15695",
+      "productId": 614,
+      "variant": {
+        "variant_id": 15695,
+        "placements": {
+          "default": 360
+        }
+      },
+      "printfile": {
+        "printfile_id": 360,
+        "width": 4500,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16035",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16035,
+        "placements": {
+          "default": 362
+        }
+      },
+      "printfile": {
+        "printfile_id": 362,
+        "width": 5700,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16041",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16041,
+        "placements": {
+          "default": 362
+        }
+      },
+      "printfile": {
+        "printfile_id": 362,
+        "width": 5700,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-15696",
+      "productId": 614,
+      "variant": {
+        "variant_id": 15696,
+        "placements": {
+          "default": 362
+        }
+      },
+      "printfile": {
+        "printfile_id": 362,
+        "width": 5700,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17630",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17630,
+        "placements": {
+          "default": 501
+        }
+      },
+      "printfile": {
+        "printfile_id": 501,
+        "width": 6300,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17637",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17637,
+        "placements": {
+          "default": 501
+        }
+      },
+      "printfile": {
+        "printfile_id": 501,
+        "width": 6300,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17644",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17644,
+        "placements": {
+          "default": 501
+        }
+      },
+      "printfile": {
+        "printfile_id": 501,
+        "width": 6300,
+        "height": 4500,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16036",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16036,
+        "placements": {
+          "default": 361
+        }
+      },
+      "printfile": {
+        "printfile_id": 361,
+        "width": 5700,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16042",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16042,
+        "placements": {
+          "default": 361
+        }
+      },
+      "printfile": {
+        "printfile_id": 361,
+        "width": 5700,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-15697",
+      "productId": 614,
+      "variant": {
+        "variant_id": 15697,
+        "placements": {
+          "default": 361
+        }
+      },
+      "printfile": {
+        "printfile_id": 361,
+        "width": 5700,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16037",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16037,
+        "placements": {
+          "default": 363
+        }
+      },
+      "printfile": {
+        "printfile_id": 363,
+        "width": 6900,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16043",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16043,
+        "placements": {
+          "default": 363
+        }
+      },
+      "printfile": {
+        "printfile_id": 363,
+        "width": 6900,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-15698",
+      "productId": 614,
+      "variant": {
+        "variant_id": 15698,
+        "placements": {
+          "default": 363
+        }
+      },
+      "printfile": {
+        "printfile_id": 363,
+        "width": 6900,
+        "height": 5700,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16038",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16038,
+        "placements": {
+          "default": 364
+        }
+      },
+      "printfile": {
+        "printfile_id": 364,
+        "width": 8100,
+        "height": 6300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16044",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16044,
+        "placements": {
+          "default": 364
+        }
+      },
+      "printfile": {
+        "printfile_id": 364,
+        "width": 8100,
+        "height": 6300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-15699",
+      "productId": 614,
+      "variant": {
+        "variant_id": 15699,
+        "placements": {
+          "default": 364
+        }
+      },
+      "printfile": {
+        "printfile_id": 364,
+        "width": 8100,
+        "height": 6300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17631",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17631,
+        "placements": {
+          "default": 503
+        }
+      },
+      "printfile": {
+        "printfile_id": 503,
+        "width": 9300,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17638",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17638,
+        "placements": {
+          "default": 503
+        }
+      },
+      "printfile": {
+        "printfile_id": 503,
+        "width": 9300,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17645",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17645,
+        "placements": {
+          "default": 503
+        }
+      },
+      "printfile": {
+        "printfile_id": 503,
+        "width": 9300,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17633",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17633,
+        "placements": {
+          "default": 365
+        }
+      },
+      "printfile": {
+        "printfile_id": 365,
+        "width": 9900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17640",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17640,
+        "placements": {
+          "default": 365
+        }
+      },
+      "printfile": {
+        "printfile_id": 365,
+        "width": 9900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17647",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17647,
+        "placements": {
+          "default": 365
+        }
+      },
+      "printfile": {
+        "printfile_id": 365,
+        "width": 9900,
+        "height": 6900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17632",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17632,
+        "placements": {
+          "default": 505
+        }
+      },
+      "printfile": {
+        "printfile_id": 505,
+        "width": 10500,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17639",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17639,
+        "placements": {
+          "default": 505
+        }
+      },
+      "printfile": {
+        "printfile_id": 505,
+        "width": 10500,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-17646",
+      "productId": 614,
+      "variant": {
+        "variant_id": 17646,
+        "placements": {
+          "default": 505
+        }
+      },
+      "printfile": {
+        "printfile_id": 505,
+        "width": 10500,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16039",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16039,
+        "placements": {
+          "default": 366
+        }
+      },
+      "printfile": {
+        "printfile_id": 366,
+        "width": 11700,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-16045",
+      "productId": 614,
+      "variant": {
+        "variant_id": 16045,
+        "placements": {
+          "default": 366
+        }
+      },
+      "printfile": {
+        "printfile_id": 366,
+        "width": 11700,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "framed-canvas-15700",
+      "productId": 614,
+      "variant": {
+        "variant_id": 15700,
+        "placements": {
+          "default": 366
+        }
+      },
+      "printfile": {
+        "printfile_id": 366,
+        "width": 11700,
+        "height": 8100,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17620",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17620,
+        "placements": {
+          "default": 482
+        }
+      },
+      "printfile": {
+        "printfile_id": 482,
+        "width": 3600,
+        "height": 3000,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17623",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17623,
+        "placements": {
+          "default": 484
+        }
+      },
+      "printfile": {
+        "printfile_id": 484,
+        "width": 4200,
+        "height": 3300,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17621",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17621,
+        "placements": {
+          "default": 486
+        }
+      },
+      "printfile": {
+        "printfile_id": 486,
+        "width": 4800,
+        "height": 3900,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-15701",
+      "productId": 616,
+      "variant": {
+        "variant_id": 15701,
+        "placements": {
+          "default": 373
+        }
+      },
+      "printfile": {
+        "printfile_id": 373,
+        "width": 4200,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-15702",
+      "productId": 616,
+      "variant": {
+        "variant_id": 15702,
+        "placements": {
+          "default": 374
+        }
+      },
+      "printfile": {
+        "printfile_id": 374,
+        "width": 5400,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17622",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17622,
+        "placements": {
+          "default": 488
+        }
+      },
+      "printfile": {
+        "printfile_id": 488,
+        "width": 6000,
+        "height": 4200,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-15703",
+      "productId": 616,
+      "variant": {
+        "variant_id": 15703,
+        "placements": {
+          "default": 51
+        }
+      },
+      "printfile": {
+        "printfile_id": 51,
+        "width": 5400,
+        "height": 5400,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-15704",
+      "productId": 616,
+      "variant": {
+        "variant_id": 15704,
+        "placements": {
+          "default": 46
+        }
+      },
+      "printfile": {
+        "printfile_id": 46,
+        "width": 6600,
+        "height": 5400,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-15705",
+      "productId": 616,
+      "variant": {
+        "variant_id": 15705,
+        "placements": {
+          "default": 376
+        }
+      },
+      "printfile": {
+        "printfile_id": 376,
+        "width": 7800,
+        "height": 6000,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17624",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17624,
+        "placements": {
+          "default": 490
+        }
+      },
+      "printfile": {
+        "printfile_id": 490,
+        "width": 9000,
+        "height": 6600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17626",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17626,
+        "placements": {
+          "default": 480
+        }
+      },
+      "printfile": {
+        "printfile_id": 480,
+        "width": 9600,
+        "height": 6600,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-17625",
+      "productId": 616,
+      "variant": {
+        "variant_id": 17625,
+        "placements": {
+          "default": 492
+        }
+      },
+      "printfile": {
+        "printfile_id": 492,
+        "width": 10200,
+        "height": 7800,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "thin-canvas-15706",
+      "productId": 616,
+      "variant": {
+        "variant_id": 15706,
+        "placements": {
+          "default": 379
+        }
+      },
+      "printfile": {
+        "printfile_id": 379,
+        "width": 11400,
+        "height": 7800,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": true
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "t-shirt-53681",
+      "productId": 456,
+      "variant": {
+        "variant_id": 53681,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11864",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11864,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11865",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11865,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11866",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11866,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11867",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11867,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11868",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11868,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-17228",
+      "productId": 456,
+      "variant": {
+        "variant_id": 17228,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-17232",
+      "productId": 456,
+      "variant": {
+        "variant_id": 17232,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-17235",
+      "productId": 456,
+      "variant": {
+        "variant_id": 17235,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-53682",
+      "productId": 456,
+      "variant": {
+        "variant_id": 53682,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11869",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11869,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11870",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11870,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11871",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11871,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11872",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11872,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-11873",
+      "productId": 456,
+      "variant": {
+        "variant_id": 11873,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-17229",
+      "productId": 456,
+      "variant": {
+        "variant_id": 17229,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-17233",
+      "productId": 456,
+      "variant": {
+        "variant_id": 17233,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "t-shirt-17236",
+      "productId": 456,
+      "variant": {
+        "variant_id": 17236,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12605",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12605,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12606",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12606,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12607",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12607,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12608",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12608,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12609",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12609,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12585",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12585,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12586",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12586,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12587",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12587,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12588",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12588,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "sweatshirt-12589",
+      "productId": 493,
+      "variant": {
+        "variant_id": 12589,
+        "placements": {
+          "front": 1
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12402",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12402,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12403",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12403,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12404",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12404,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12405",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12405,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12406",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12406,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12372",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12372,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12373",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12373,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12374",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12374,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12375",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12375,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "hoodie-12376",
+      "productId": 479,
+      "variant": {
+        "variant_id": 12376,
+        "placements": {
+          "front": 139
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": []
+    },
+    {
+      "productKey": "tough-case-15383",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15383,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15382",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15382,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15381",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15381,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15385",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15385,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15387",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15387,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15386",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15386,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15384",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15384,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15389",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15389,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15391",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15391,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15390",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15390,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15388",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15388,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16128",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16128,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16130",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16130,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16126",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16126,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16124",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16124,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17716",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17716,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17720",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17720,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17718",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17718,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17714",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17714,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20303",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20303,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20305",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20305,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20302",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20302,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-33986",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33986,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-33988",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33988,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-33985",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33985,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-52386",
+      "productId": 601,
+      "variant": {
+        "variant_id": 52386,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-52384",
+      "productId": 601,
+      "variant": {
+        "variant_id": 52384,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15394",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15394,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15393",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15393,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15392",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15392,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15396",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15396,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15398",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15398,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15397",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15397,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15395",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15395,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15400",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15400,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15402",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15402,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15401",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15401,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-15399",
+      "productId": 601,
+      "variant": {
+        "variant_id": 15399,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16129",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16129,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16131",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16131,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16127",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16127,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16125",
+      "productId": 601,
+      "variant": {
+        "variant_id": 16125,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17717",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17717,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17721",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17721,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17719",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17719,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17715",
+      "productId": 601,
+      "variant": {
+        "variant_id": 17715,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20307",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20307,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20309",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20309,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20306",
+      "productId": 601,
+      "variant": {
+        "variant_id": 20306,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-33990",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33990,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-33992",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33992,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-33989",
+      "productId": 601,
+      "variant": {
+        "variant_id": 33989,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-52387",
+      "productId": 601,
+      "variant": {
+        "variant_id": 52387,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-52385",
+      "productId": 601,
+      "variant": {
+        "variant_id": 52385,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20691",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20691,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20693",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20693,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20689",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20689,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20687",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20687,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20323",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20323,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20325",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20325,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20321",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20321,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20319",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20319,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20333",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20333,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20331",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20331,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20327",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20327,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-34003",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34003,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-34007",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34007,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-34001",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34001,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-53190",
+      "productId": 798,
+      "variant": {
+        "variant_id": 53190,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-53188",
+      "productId": 798,
+      "variant": {
+        "variant_id": 53188,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20692",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20692,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20694",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20694,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20690",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20690,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20688",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20688,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20322",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20322,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20324",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20324,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20320",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20320,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20318",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20318,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20332",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20332,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20330",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20330,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-20326",
+      "productId": 798,
+      "variant": {
+        "variant_id": 20326,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-34004",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34004,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-34008",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34008,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-34002",
+      "productId": 798,
+      "variant": {
+        "variant_id": 34002,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-53191",
+      "productId": 798,
+      "variant": {
+        "variant_id": 53191,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-53189",
+      "productId": 798,
+      "variant": {
+        "variant_id": 53189,
+        "placements": {
+          "default": 331
+        }
+      },
+      "printfile": {
+        "printfile_id": 331,
+        "width": 1392,
+        "height": 2220,
+        "dpi": 300,
+        "fill_mode": "cover",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16975",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16975,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16977",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16977,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16979",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16979,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16981",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16981,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16983",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16983,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16985",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16985,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16987",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16987,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16989",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16989,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16991",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16991,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16993",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16993,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16995",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16995,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16997",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16997,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16999",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16999,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17001",
+      "productId": 686,
+      "variant": {
+        "variant_id": 17001,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-18744",
+      "productId": 686,
+      "variant": {
+        "variant_id": 18744,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-18745",
+      "productId": 686,
+      "variant": {
+        "variant_id": 18745,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-18743",
+      "productId": 686,
+      "variant": {
+        "variant_id": 18743,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-21471",
+      "productId": 686,
+      "variant": {
+        "variant_id": 21471,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-21469",
+      "productId": 686,
+      "variant": {
+        "variant_id": 21469,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-49328",
+      "productId": 686,
+      "variant": {
+        "variant_id": 49328,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-49327",
+      "productId": 686,
+      "variant": {
+        "variant_id": 49327,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16976",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16976,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16978",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16978,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16980",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16980,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16982",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16982,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16984",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16984,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16986",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16986,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16988",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16988,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16990",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16990,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16992",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16992,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16994",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16994,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16996",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16996,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-16998",
+      "productId": 686,
+      "variant": {
+        "variant_id": 16998,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17000",
+      "productId": 686,
+      "variant": {
+        "variant_id": 17000,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-17002",
+      "productId": 686,
+      "variant": {
+        "variant_id": 17002,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-18747",
+      "productId": 686,
+      "variant": {
+        "variant_id": 18747,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-18748",
+      "productId": 686,
+      "variant": {
+        "variant_id": 18748,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-18746",
+      "productId": 686,
+      "variant": {
+        "variant_id": 18746,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-21472",
+      "productId": 686,
+      "variant": {
+        "variant_id": 21472,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-21470",
+      "productId": 686,
+      "variant": {
+        "variant_id": 21470,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-49330",
+      "productId": 686,
+      "variant": {
+        "variant_id": 49330,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
+    },
+    {
+      "productKey": "tough-case-49332",
+      "productId": 686,
+      "variant": {
+        "variant_id": 49332,
+        "placements": {
+          "default": 441
+        }
+      },
+      "printfile": {
+        "printfile_id": 441,
+        "width": 1396,
+        "height": 2304,
+        "dpi": 300,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "previews": [],
+      "verifiedAt": "2026-10-25"
     }
   ]
 }

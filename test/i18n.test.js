@@ -70,6 +70,11 @@ function renderView(filename, header = {}, locale = 'de') {
   }, { filename: fullPath });
 }
 const REQUIRED_MESSAGES = [
+  'Produktbeschreibung',
+  'Produktfoto',
+  '3D-Ansicht',
+  '{{view}}: {{product}}, {{variant}}',
+  'Menge: {{product}}',
   'Stoff ziehen · Daneben drehen · Leertaste: Stoff bewegen',
   '{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.',
   'inkl. MwSt., zzgl. Versand · DE',
@@ -201,6 +206,22 @@ test('every offered framed-poster size and color has a complete localized varian
   const black = frames.find(product => product.key === 'framed-matte-poster-black-30x40cm');
   assert.match(I18n.translate(black.variantLabel, 'en'), /Black/);
   assert.doesNotMatch(I18n.translate(black.variantLabel, 'en'), /Schwarz/);
+});
+
+test('canvas ranges and all framed canvas sizes/colors have complete localized labels', () => {
+  const products = require('../src/products').PRODUCTS.filter(product => [3, 614, 616].includes(product.printful.productId));
+  for (const locale of CATALOG_LOCALES) for (const product of products) {
+    const catalog = I18n.getCatalog(locale);
+    assert.ok(catalog[product.displayName], `${locale}: ${product.displayName}`);
+    if (product.printful.productId === 614) {
+      assert.ok(catalog[product.variantLabel], `${locale}: ${product.variantLabel}`);
+      assert.notEqual(I18n.translate(product.variantLabel, locale), product.variantLabel);
+    }
+    for (const orientation of product.orientationOptions) {
+      const oriented = require('../src/products').resolveProductOrientation(product, orientation.key);
+      assert.ok(catalog[oriented.size.label], `${locale}: ${oriented.size.label}`);
+    }
+  }
 });
 
 test('every public page loads the shared language layer', () => {

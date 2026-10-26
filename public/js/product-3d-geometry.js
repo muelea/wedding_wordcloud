@@ -215,6 +215,10 @@
       const cloth = typeof module === 'object' && module.exports ? require('./blanket-cloth') : root.BlanketCloth;
       return cloth.create(THREE, group, texture, product);
     }
+    if (model.kind === 'garment') {
+      const cloth = typeof module === 'object' && module.exports ? require('./garment-cloth') : root.GarmentCloth;
+      return cloth.create(THREE, group, texture, product);
+    }
     const material = (color, roughness = .42, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
     const add = (geometry, surface, position) => {
       const mesh = new THREE.Mesh(geometry, surface);
@@ -276,6 +280,85 @@
         if (previous?.materialIndex === index) previous.count += 3;
         else geometry.addGroup(i, 3, index);
       }
+    }
+    if (model.kind === 'canvas' && model.style) {
+      const { width, height, depth, face } = model, framed = model.style === 'framed';
+      const canvasDepth = framed ? 1.905 : depth;
+      const frontZ = framed ? depth / 2 - .24 : depth / 2, backZ = frontZ - canvasDepth;
+      const pixels = new Uint8Array(128 * 128 * 4);
+      for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+        const value = 128 + Math.round(22 * Math.cos(x * Math.PI / 2) + 18 * Math.cos(y * Math.PI / 2));
+        const i = (y * 128 + x) * 4;
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = value; pixels[i + 3] = 255;
+      }
+      const weave = new THREE.DataTexture(pixels, 128, 128);
+      weave.wrapS = weave.wrapT = THREE.RepeatWrapping;
+      weave.repeat.set(width / 3, height / 3); weave.generateMipmaps = true;
+      weave.magFilter = THREE.LinearFilter; weave.minFilter = THREE.LinearMipmapLinearFilter; weave.needsUpdate = true;
+      const fabric = new THREE.MeshStandardMaterial({ color: '#ffffff', map: texture,
+        roughness: .91, bumpMap: weave, bumpScale: .012 });
+      let disposed = false;
+      fabric.addEventListener('dispose', () => { if (!disposed) { disposed = true; weave.dispose(); } });
+      const shell = new THREE.ExtrudeGeometry(roundRect(-width / 2, -height / 2, width, height, .06), {
+        depth: canvasDepth, bevelEnabled: false, curveSegments: 12 });
+      shell.translate(0, 0, backZ);
+      const p = shell.getAttribute('position'), uv = shell.getAttribute('uv');
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), inset = frontZ - p.getZ(i);
+        let u = face.x + (x / width + .5) * face.width;
+        let v = 1 - face.y - (.5 - y / height) * face.height;
+        if (Math.abs(x) > width / 2 - .061) u += Math.sign(x) * inset / width * face.width;
+        if (Math.abs(y) > height / 2 - .061) v += Math.sign(y) * inset / height * face.height;
+        uv.setXY(i, u, v);
+      }
+      // Separate rear material prevents the front print showing through.
+      const rear = material('#e8dfcd', .95);
+      facingMaterials(shell, (i, positions, normals) => normals.getZ(i) < -.5 ? 1 : 0);
+      add(shell, [fabric, rear]).name = 'canvas-cloth';
+      const wood = material('#c5aa7c', .86), bar = Math.min(2.4, width * .11);
+      for (const side of [-1, 1]) {
+        add(new THREE.BoxGeometry(bar, height - .12, canvasDepth - .18), wood,
+          [side * (width - bar - .12) / 2, 0, backZ + canvasDepth / 2 - .04]).name = 'canvas-stretcher';
+        add(new THREE.BoxGeometry(width - bar * 2 - .12, bar, canvasDepth - .18), wood,
+          [0, side * (height - bar - .12) / 2, backZ + canvasDepth / 2 - .04]).name = 'canvas-stretcher';
+      }
+      // The back of the cloth is recessed behind the exposed wooden bars.
+      const rearCap = shell.getAttribute('normal');
+      for (let i = 0; i < p.count; i++) if (rearCap.getZ(i) < -.5) p.setZ(i, frontZ - .10);
+      p.needsUpdate = true;
+      if (Math.max(width, height) > 65) add(new THREE.BoxGeometry(bar, height - bar * 2, canvasDepth - .25), wood,
+        [0, 0, backZ + canvasDepth / 2]).name = 'canvas-crossbar';
+      const staple = material('#929493', .35, .8);
+      for (const side of [-1, 1]) for (let i = 0; i < 5; i++) {
+        const t = (i + .5) / 5 - .5;
+        add(new THREE.BoxGeometry(.3, .055, .045), staple, [t * (width - bar * 2), side * (height / 2 - .5), backZ - .015]).name = 'canvas-staple';
+        add(new THREE.BoxGeometry(.055, .3, .045), staple, [side * (width / 2 - .5), t * (height - bar * 2), backZ - .015]).name = 'canvas-staple';
+      }
+      add(new THREE.BoxGeometry(2, .4, .12), staple, [0, height / 2 - bar * .55, backZ - .08]).name = 'canvas-hanger';
+      if (framed) {
+        // A floating canvas has a visible gap and a raised outer wooden frame.
+        const gap = .7, rail = 1.1, halfW = width / 2 + gap, halfH = height / 2 + gap;
+        const outline = new THREE.Shape();
+        outline.moveTo(-halfW - rail, -halfH - rail); outline.lineTo(halfW + rail, -halfH - rail);
+        outline.lineTo(halfW + rail, halfH + rail); outline.lineTo(-halfW - rail, halfH + rail); outline.closePath();
+        const hole = new THREE.Path();
+        hole.moveTo(-halfW, -halfH); hole.lineTo(-halfW, halfH); hole.lineTo(halfW, halfH); hole.lineTo(halfW, -halfH); hole.closePath();
+        outline.holes.push(hole);
+        const frame = new THREE.ExtrudeGeometry(outline, { depth: depth - .05, bevelEnabled: true,
+          bevelSize: .025, bevelThickness: .025, bevelSegments: 2 });
+        frame.translate(0, 0, -depth / 2 + .025);
+        add(frame, material(model.frameColor, .65)).name = 'canvas-floating-frame';
+        const lining = material(model.frameColor === '#f8f6ee' ? '#eceae4' : '#171717', .94);
+        // A recessed support bridges the gap at the back, leaving its front open.
+        const supportOutline = outline.clone(), inner = new THREE.Path();
+        inner.moveTo(-width / 2 + .2, -height / 2 + .2); inner.lineTo(-width / 2 + .2, height / 2 - .2);
+        inner.lineTo(width / 2 - .2, height / 2 - .2); inner.lineTo(width / 2 - .2, -height / 2 + .2); inner.closePath();
+        supportOutline.holes = [inner];
+        const support = new THREE.ExtrudeGeometry(supportOutline, { depth: .12, bevelEnabled: false });
+        support.translate(0, 0, -depth / 2 + .08);
+        add(support, lining).name = 'canvas-frame-backing';
+      }
+      return;
     }
     if (model.kind === 'sleeve') {
       const { width, height, depth } = model, radius = model.radius || 1.8;
@@ -376,9 +459,8 @@
     }
     if (model.kind === 'case') {
       const { width, height, depth, face, camera } = model;
-      const samsung = /Samsung/.test(model.device || product.size?.label || '');
-      const later = /17|26/.test(model.device || product.size?.label || '');
-      const radius = samsung ? .64 : 1.10, frontZ = depth / 2;
+      const details = model.cameraDetails;
+      const radius = details.cornerRadius, frontZ = depth / 2, backZ = -depth / 2;
       const liner = material('#202226', .8), lipMaterial = material('#282a2d', .6);
       const outline = roundRect(-width / 2, -height / 2, width, height, radius);
       const cameraPoints = model.cameraPath
@@ -406,7 +488,7 @@
       facingMaterials(plateGeometry, (i, p, n) => n.getZ(i) < -.5 ? 1 : 0);
       const shell = add(plateGeometry, [ink, liner]); shell.name = 'case-printed-shell'; shell.userData.printFace = face;
       const outer = outline.getSpacedPoints(256).slice(0, -1);
-      const innerShape = roundRect(-width / 2 + .18, -height / 2 + .18, width - .36, height - .36, radius - .18);
+      const innerShape = roundRect(-width / 2 + .18, -height / 2 + .18, width - .36, height - .36, Math.max(.02,radius - .18));
       const inner = innerShape.getSpacedPoints(256).slice(0, -1);
       function portAt(p, z) {
         return p.y < -height / 2 + .23 && Math.abs(z + .16) < .18 &&
@@ -415,15 +497,15 @@
       for (const inside of [false, true]) {
         const points = inside ? inner : outer;
         const wall = surfaceGrid(256, 20, (u, v) => {
-          const p = points[Math.round(u * 256) % 256], z = -.45 + v * (frontZ + .31);
+          const p = points[Math.round(u * 256) % 256], z = backZ + v * (depth - .14);
           return { x: p.x, y: p.y, z };
         }, inside ? liner : ink, inside ? 'case-inner-wall' : 'case-outer-wall', inside,
-        (u, v) => portAt(points[Math.floor(u * 256) % 256], -.45 + v * (frontZ + .31)));
+        (u, v) => portAt(points[Math.floor(u * 256) % 256], backZ + v * (depth - .14)));
         printUV(wall.geometry, !inside);
       }
       const rimShape = roundRect(-width / 2, -height / 2, width, height, radius);
       rimShape.holes.push(new THREE.Path(innerShape.getPoints(48)));
-      const rim = add(new THREE.ShapeGeometry(rimShape, 28), liner, [0, 0, -.45]);
+      const rim = add(new THREE.ShapeGeometry(rimShape, 28), liner, [0, 0, backZ]);
       rim.rotation.y = Math.PI; rim.name = 'case-front-lip';
       // A black charging-port tunnel joins the two wall surfaces. It remains
       // an actual opening in the case, including when the phone is omitted.
@@ -443,8 +525,8 @@
         bevelSize: .02, bevelThickness: .02, bevelSegments: 3, curveSegments: 20 });
       cameraGeometry.translate(0, 0, frontZ + .025);
       add(cameraGeometry, lipMaterial).name = 'case-camera-rim';
-      for (const [side, y, length] of samsung ? [[1, 4.5, 1.45], [1, 2.5, 1.0]]
-        : [[-1, 5.1, .65], [-1, 3.7, 1.0], [-1, 2.1, 1.0], [1, 3.6, 1.35], [1, -.3, 1.3]]) {
+      for (const [side, relativeY, relativeLength] of details.buttons) {
+        const y = relativeY * height, length = relativeLength * height;
         const button = roundRect(-.17, -length / 2, .34, length, .13);
         const geometry = new THREE.ExtrudeGeometry(button, { depth: .11, bevelEnabled: true,
           bevelSize: .025, bevelThickness: .025, bevelSegments: 3, curveSegments: 12 });
@@ -454,12 +536,15 @@
       if (model.magSafe) {
         // The reference moulding is a shallow exterior relief, not a silver
         // circle painted on the phone-facing liner. Retain the print under it.
-        const ringRadius = Math.min(2.45, width * .29), ringY = -.70;
+        const ring = model.magSafeRing;
+        const ringRadius = ring.radius, ringY = ring.y;
         const relief = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .66, map: texture });
         const ringGeometry = new THREE.TorusGeometry(ringRadius, .06, 12, 112);
-        ringGeometry.translate(0, ringY, frontZ + .075); printUV(ringGeometry);
+        ringGeometry.translate(ring.x, ringY, frontZ + .075); printUV(ringGeometry);
         add(ringGeometry, relief).name = 'case-magsafe-relief';
-        const alignment = new THREE.ExtrudeGeometry(roundRect(-.20, ringY - ringRadius - 1.15, .40, .95, .19), {
+        const stem = ring.alignment || {x:ring.x,y:ringY-ringRadius-.65,width:.4,height:.95};
+        const alignment = new THREE.ExtrudeGeometry(roundRect(stem.x-stem.width/2, stem.y-stem.height/2,
+          stem.width, stem.height, Math.min(stem.width/2,.19)), {
           depth: .06, bevelEnabled: true, bevelSize: .035, bevelThickness: .035, bevelSegments: 3, curveSegments: 20 });
         alignment.translate(0, 0, frontZ + .055); printUV(alignment);
         add(alignment, relief).name = 'case-magsafe-alignment';
@@ -472,7 +557,7 @@
           const mesh = new THREE.Mesh(geometry, surface); if (position) mesh.position.set(...position);
           mesh.name = name; mesh.userData.previewAccessory = true; phone.add(mesh); return mesh;
         }
-        const phoneShape = roundRect(-width / 2 + .20, -height / 2 + .20, width - .40, height - .40, radius - .17);
+        const phoneShape = roundRect(-width / 2 + .20, -height / 2 + .20, width - .40, height - .40, Math.max(.02,radius - .17));
         const handset = new THREE.ExtrudeGeometry(phoneShape, { depth: depth - .27, bevelEnabled: true,
           bevelSize: .035, bevelThickness: .035, bevelSegments: 3, curveSegments: 24 });
         handset.translate(0, 0, -depth / 2 + .09);
@@ -484,12 +569,8 @@
           bevelSize: .035, bevelThickness: .035, bevelSegments: 3, curveSegments: 24 });
         island.translate(0, 0, frontZ - .005);
         accessory(island, material('#303237', .32, .25), null, 'display-phone-camera-island');
-        const x = camera.x, y = camera.y, w = camera.width, h = camera.height;
-        const lenses = samsung
-          ? [[x + w * .27, y + h * .17, w * .19], [x + w * .27, y + h * .50, w * .19], [x + w * .27, y + h * .82, w * .19],
-            [x + w * .76, y + h * .79, w * .115], [x + w * .76, y + h * .45, w * .115]]
-          : later ? [[x + w * .18, y + h * .25, h * .19], [x + w * .18, y + h * .75, h * .19], [x + w * .47, y + h * .50, h * .19]]
-          : [[x + w * .26, y + h * .24, w * .185], [x + w * .26, y + h * .76, w * .185], [x + w * .73, y + h * .50, w * .185]];
+        const x = camera.x, y = camera.y, w = camera.width, h = camera.height, cameraScale = Math.min(w,h);
+        const lenses = details.lenses.map(([u,v,r,shape]) => [x+w*u,y+h*v,cameraScale*r,shape]);
         const glassPixels = new Uint8Array(64 * 64 * 4);
         for (let py = 0; py < 64; py++) for (let px = 0; px < 64; px++) {
           const u = (px - 31.5) / 32, v = (py - 31.5) / 32, r = Math.hypot(u, v), i = (py * 64 + px) * 4;
@@ -504,15 +585,22 @@
         const lensGlass = new THREE.MeshStandardMaterial({ map: lensTexture, roughness: .10, metalness: .18 });
         let lensDisposed = false;
         lensGlass.addEventListener('dispose', () => { if (!lensDisposed) { lensDisposed = true; lensTexture.dispose(); } });
-        for (const [cx, cy, r] of lenses) {
-          const bezel = accessory(new THREE.CylinderGeometry(r, r, .10, 48), material(samsung && later ? '#a1a6ac' : '#555b62', .24, .65), [cx, cy, frontZ + .19], 'display-phone-lens-bezel');
-          bezel.rotation.x = Math.PI / 2;
-          accessory(new THREE.TorusGeometry(r * .88, .028, 8, 48), material('#7f858c', .18, .8), [cx, cy, frontZ + .243], 'display-phone-lens-rim');
-          accessory(new THREE.CircleGeometry(r * .86, 48), lensGlass, [cx, cy, frontZ + .247], 'display-phone-lens');
+        for (const [cx, cy, r, shape] of lenses) {
+          const square = shape === 'square';
+          const bezel = accessory(square ? new THREE.BoxGeometry(r*2,r*2,.10) : new THREE.CylinderGeometry(r, r, .10, 48),
+            material('#555b62', .24, .65), [cx, cy, frontZ + .19], 'display-phone-lens-bezel');
+          if (!square) {
+            bezel.rotation.x = Math.PI / 2;
+            accessory(new THREE.TorusGeometry(r * .88, .028, 8, 48), material('#7f858c', .18, .8), [cx, cy, frontZ + .243], 'display-phone-lens-rim');
+          }
+          accessory(square ? new THREE.PlaneGeometry(r*1.72,r*1.72) : new THREE.CircleGeometry(r * .86, 48),
+            lensGlass, [cx, cy, frontZ + .247], 'display-phone-lens');
         }
-        const flashX = x + w * (samsung ? .76 : later ? .82 : .75), flashY = y + h * (samsung ? .62 : .85);
-        accessory(new THREE.CircleGeometry(.19, 32), material('#dfdccb', .45), [flashX, flashY, frontZ + .249], 'display-phone-flash');
-        if (!samsung) accessory(new THREE.CircleGeometry(.22, 32), material('#111419', .8), [flashX, y + h * .20, frontZ + .249], 'display-phone-lidar');
+        const [flashX,flashY,flashRadius] = details.flash;
+        accessory(new THREE.CircleGeometry(cameraScale*flashRadius, 32), material('#dfdccb', .45),
+          [x+w*flashX,y+h*flashY,frontZ+.249], 'display-phone-flash');
+        for (const [u,v,r] of details.sensors) accessory(new THREE.CircleGeometry(cameraScale*r,32), material('#111419',.8),
+          [x+w*u,y+h*v,frontZ+.249], 'display-phone-sensor');
       }
       return;
     }

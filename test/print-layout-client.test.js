@@ -237,3 +237,54 @@ test('catalog warms its first product alone, then bounds concurrency and waits f
   finishes.get('c')(); await Promise.all(jobs); await queue.idle();
   assert.equal(idle, true); queue.dispose();
 });
+
+test('gallery measurements share exact native results across products and separate text shaping settings', async t => {
+  let calls = 0;
+  const measure = (textBaseline = 'alphabetic') => ({ font: '10px serif', textBaseline,
+    measureText(text) { calls++; return Object.freeze({ width: text.length * 12.345, actualBoundingBoxAscent: textBaseline === 'top' ? 2 : 8 }); } });
+  const h = harness(t, { shareMeasurements: true, layout: { optimizeDesignAsync: async (input, area, context) => {
+    context.font = '400 74.76249999999999px "Wolkenworte Classic", serif';
+    const metric = context.measureText('Liebe');
+    return input.map(item => ({ ...item, x: metric.width, y: metric.actualBoundingBoxAscent }));
+  } } });
+  const first = await h.client.automatic(source, slots, measure());
+  const second = await h.client.automatic(source, [{ ...slots[0], width: 1001 }], measure());
+  assert.deepEqual(first, second); assert.equal(calls, 1);
+  const otherBaseline = await h.client.automatic(source, slots, measure('top'));
+  assert.equal(otherBaseline[0].y, 2); assert.equal(calls, 2);
+});
+
+test('measurement sharing invalidates loaded fonts, bypasses loading and releases its listener', async t => {
+  let listener, calls = 0, value = 10, removed = false;
+  const fontSet = { status: 'loaded', addEventListener(name, fn) { assert.equal(name, 'loadingdone'); listener = fn; },
+    removeEventListener(name, fn) { assert.equal(name, 'loadingdone'); assert.equal(fn, listener); removed = true; } };
+  const context = () => ({ font: '10px serif', measureText() { calls++; return { width: value }; } });
+  const h = harness(t, { shareMeasurements: true, fontSet, layout: { optimizeDesignAsync: async (input, area, ctx) => {
+    ctx.font = '400 20px serif'; return input.map(item => ({ ...item, x: ctx.measureText('Liebe').width }));
+  } } });
+  const fill = width => h.client.automatic(source, [{ ...slots[0], width }], context());
+  assert.equal((await fill(1001))[0].x, 10);
+  assert.equal((await fill(1002))[0].x, 10); assert.equal(calls, 1);
+  fontSet.status = 'loading'; value = 11;
+  assert.equal((await fill(1003))[0].x, 11);
+  assert.equal((await fill(1004))[0].x, 11); assert.equal(calls, 3);
+  fontSet.status = 'loaded'; value = 12; listener();
+  assert.equal((await fill(1005))[0].x, 12); assert.equal(calls, 4);
+  assert.equal((await fill(1001))[0].x, 12); assert.equal(calls, 4);
+  h.client.dispose(); assert.equal(removed, true);
+});
+
+test('shared measurement storage stays bounded and never crosses client instances', async t => {
+  let calls = 0;
+  const layout = { optimizeDesignAsync: async (input, area, context) => {
+    context.font = '400 16px serif';
+    for (let index = 0; index < 8300; index++) context.measureText(String(index));
+    context.measureText('0');
+    return input;
+  } };
+  const context = { font: '16px serif', measureText: () => { calls++; return { width: 20 }; } };
+  const h = harness(t, { shareMeasurements: true, layout });
+  await h.client.automatic(source, slots, context); assert.equal(calls, 8301);
+  const other = harness(t, { shareMeasurements: true, layout });
+  await other.client.automatic(source, slots, context); assert.equal(calls, 16602);
+});

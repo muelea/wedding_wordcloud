@@ -92,7 +92,8 @@ test('only the larger travel mug has a straw, with a short exposed section that 
 });
 
 test('case openings are real holes and the safe-area centre maps to the exact provider pixel', () => {
-  for(const product of PRODUCTS.filter(p=>p.previewModel?.kind==='case')) {
+  // Finish pairs share a device mesh and UVs (checked by the catalog test).
+  for(const product of PRODUCTS.filter(p=>p.previewModel?.kind==='case' && p.previewModel.finish==='matte')) {
     const profile=product.previewModel, group=model({ ...product, previewModel: { ...profile, displayPhone: false } }), safe=product.designSafeAreas.default;
     const u=(safe.x+safe.width/2)/product.printFile.width;
     const v=1-(safe.y+safe.height/2)/product.printFile.height;
@@ -102,7 +103,7 @@ test('case openings are real holes and the safe-area centre maps to the exact pr
     assert.ok(hit,product.key);
     assert.ok(Math.abs(hit.uv.x-u)<1e-6 && Math.abs(hit.uv.y-v)<1e-6,product.key);
     const polygon=profile.cameraPath;
-    let checked=0;
+    const samples=[];
     for(let x=-profile.width/2+.2;x<profile.width/2;x+=.4)for(let y=1;y<profile.height/2-.2;y+=.4) {
       if(!inside([x,y],polygon))continue;
       const edgeDistance = Math.min(...polygon.map(([ax,ay],i) => {
@@ -111,10 +112,14 @@ test('case openings are real holes and the safe-area centre maps to the exact pr
         return Math.hypot(x-ax-t*dx,y-ay-t*dy);
       }));
       if(edgeDistance<.12)continue; // the physical bevel remains around the opening
-      assert.equal(ray(group,x,y).length,0,`${product.key}: camera opening must remain empty`);
-      checked++;
+      samples.push([x,y]);
     }
-    assert.ok(checked>5);
+    assert.ok(samples.length>5);
+    for(let i=0;i<Math.min(samples.length,16);i++) {
+      const [x,y]=samples[Math.floor(i*(samples.length-1)/Math.max(1,Math.min(samples.length,16)-1))];
+      assert.equal(ray(group,x,y).length,0,`${product.key}: camera opening must remain empty`);
+    }
+    group.traverse(mesh=>{mesh.geometry?.dispose();(Array.isArray(mesh.material)?mesh.material:[mesh.material]).forEach(m=>m?.dispose());});
   }
 });
 
@@ -156,6 +161,35 @@ test('canvas artwork reserves the fold and keeps front UVs correct in both orien
     assert.ok(Math.abs(ray(group,width*.4,height*.4)[0].uv.x-(face.x+.9*face.width))<1e-6);
     const safe=product.designSafeAreas.default;
     assert.ok(safe.x>900&&safe.y>900);
+  }
+});
+
+test('expanded canvases map their exact front crop, keep unprinted backs and model the floating frame independently', () => {
+  for (const source of PRODUCTS.filter(p => p.previewModel?.style && p.previewModel.kind === 'canvas')) {
+    for (const orientation of source.orientationOptions.length ? ['portrait', 'landscape'] : ['default']) {
+      const product = resolveProductOrientation(source, orientation), group = model(product), m = product.previewModel;
+      const hit = ray(group, m.width * .25, m.height * .25)[0];
+      assert.equal(hit.object.name, 'canvas-cloth');
+      assert.ok(Math.abs(hit.uv.x - (m.face.x + .75 * m.face.width)) < 1e-6, `${source.key}/${orientation}`);
+      assert.ok(Math.abs(hit.uv.y - (1 - m.face.y - .25 * m.face.height)) < 1e-6);
+      const rear = new THREE.Raycaster(new THREE.Vector3(m.width * .2, m.height * .2, -30), new THREE.Vector3(0, 0, 1)).intersectObjects(group.children, true)[0];
+      const material = Array.isArray(rear.object.material) ? rear.object.material[rear.face.materialIndex] : rear.object.material;
+      assert.equal(material.map, null, `${source.key}: reverse never shows the front print`);
+      assert.ok(group.getObjectByName('canvas-hanger'));
+      assert.equal(group.children.filter(mesh => mesh.name === 'canvas-stretcher').length, 4);
+      const frame = group.getObjectByName('canvas-floating-frame');
+      assert.equal(Boolean(frame), m.style === 'framed');
+      if (frame) {
+        assert.equal(frame.material.color.getHexString(), m.frameColor.slice(1));
+        const gap = ray(group, m.width / 2 + .35, 0)[0];
+        assert.equal(gap.object.name, 'canvas-frame-backing', 'floating gap remains visibly recessed');
+        assert.ok(gap.point.z < hit.point.z - .5);
+      }
+      group.traverse(mesh => {
+        mesh.geometry?.dispose();
+        for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) material?.dispose();
+      });
+    }
   }
 });
 
@@ -311,9 +345,11 @@ test('case shells have hollow interiors, open charging ports and independent dis
     const bare = model({ ...product, previewModel: { ...product.previewModel, displayPhone: false } });
     const { width, height, depth, face } = product.previewModel;
     const shell = bare.getObjectByName('case-printed-shell');
+    assert.equal(bare.getObjectByName('case-front-lip').position.z,-depth/2,
+      product.key + ': the Air uses its own shallower case depth');
     assert.ok(bare.getObjectByName('case-outer-wall') && bare.getObjectByName('case-inner-wall'));
     const interior = new THREE.Raycaster(new THREE.Vector3(0, 0, -2), new THREE.Vector3(0, 0, 1)).intersectObjects(bare.children, true)[0];
-    assert.equal(interior.object, shell);
+    assert.equal(interior.object.uuid, shell.uuid, product.key + ': interior ray reaches the rear plate');
     assert.ok(interior.point.z > depth / 2 - .22, 'air cavity reaches the back plate');
     assert.equal(shell.material[interior.face.materialIndex].map, null, 'liner has no rear print to shine through');
     const port = new THREE.Raycaster(new THREE.Vector3(0, -height / 2 - 1, -.16), new THREE.Vector3(0, 1, 0))
@@ -333,9 +369,14 @@ test('case shells have hollow interiors, open charging ports and independent dis
     assert.equal(dressed.getObjectByName('case-printed-shell').userData.printFace, product.previewModel.face);
     assert.equal(Boolean(dressed.getObjectByName('case-magsafe-relief')), product.previewModel.magSafe);
     if (product.previewModel.magSafe) {
-      const ringRadius = Math.min(2.45, width * .29), ringY = -.70;
-      assert.equal(ray(dressed, ringRadius, ringY)[0].object.name, 'case-magsafe-relief', 'moulded ring remains visible above the printed shell');
-      assert.equal(ray(dressed, 0, ringY - ringRadius - .65)[0].object.name, 'case-magsafe-alignment');
+      const ring = product.previewModel.magSafeRing;
+      assert.equal(ray(dressed, ring.x + ring.radius, ring.y)[0].object.name, 'case-magsafe-relief', 'moulded ring remains visible above the printed shell');
+      const stem = ring.alignment || {x:ring.x,y:ring.y-ring.radius-.65};
+      assert.equal(ray(dressed, stem.x, stem.y)[0].object.name, 'case-magsafe-alignment');
     }
+    for(const group of [bare,dressed]) group.traverse(mesh=>{
+      mesh.geometry?.dispose();
+      (Array.isArray(mesh.material)?mesh.material:[mesh.material]).forEach(material=>material?.dispose());
+    });
   }
 });

@@ -493,7 +493,16 @@
       }
       write(record.shipments);
     }
-    return { write, restore, replaceConfiguration, removeConfigurations, restoreConfiguration };
+    function setQuantity(configurationId, quantity) {
+      if (!validId(configurationId) || !Number.isInteger(quantity) || quantity < 0 || quantity > 99) return false;
+      const shipments = read()?.shipments || [{ recipient: {}, items: [] }];
+      const items = shipments[0].items ||= [];
+      const item = items.find(item => item.configurationId === configurationId);
+      if (item) item.quantity = quantity;
+      else items.push({ configurationId, quantity });
+      return write(shipments);
+    }
+    return { write, restore, replaceConfiguration, removeConfigurations, restoreConfiguration, setQuantity };
   }
 
 

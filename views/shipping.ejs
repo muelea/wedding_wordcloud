@@ -93,15 +93,15 @@
     }
     .shipment-product {
       display: grid;
-      grid-template-columns: 48px minmax(0, 1fr) auto auto;
-      align-items: center;
-      gap: 12px;
-      padding: 10px;
+      grid-template-columns: 72px minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 4px 12px;
+      padding: 12px;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: #fff;
     }
-    .shipment-product img {
+    .shipment-product > img {
       width: 48px;
       height: 42px;
       object-fit: contain;
@@ -109,59 +109,65 @@
       border-radius: 10px;
       background: #fff;
     }
-    .shipment-product-copy { min-width: 0; }
+    .shipment-product > .cart-product-previews { grid-column: 1; grid-row: 1 / 3; }
+    .shipment-product-copy { grid-column: 2; grid-row: 1; display: grid; gap: 4px; min-width: 0; line-height: 1.4; }
     .shipment-product-preview, button.shipment-product-copy { padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
     .shipment-product-preview { position: relative; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
     .shipment-preview-eye { position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--berry); color: #fff; }
     button.shipment-product-copy { min-height: 44px; font: inherit; }
     button.shipment-product-copy:hover strong { color: var(--berry); text-decoration: underline; text-underline-offset: 3px; }
     .shipment-product-preview:focus-visible, button.shipment-product-copy:focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; border-radius: 8px; }
-    .shipment-product-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-    .shipment-product-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
-    .shipment-product-actions { display: flex; align-items: center; gap: 4px; }
+    .shipment-product-copy strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
+    .shipment-product-details { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .shipment-product-price { color: var(--ink); font-weight: 600; white-space: nowrap; }
+    .shipment-product-price:not(:empty)::before { content: ' · '; color: var(--muted); font-weight: 400; }
+    .shipment-price-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .shipment-product-actions { grid-column: 2 / -1; grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
     .shipment-product-action {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 34px;
-      padding: 0 9px;
+      min-height: 36px;
+      padding: 0;
       border: 0;
       border-radius: 9px;
       background: transparent;
       color: var(--berry);
       font: inherit;
-      font-size: 11px;
-      font-weight: 650;
+      font-size: 13px;
+      font-weight: 400;
       text-align: center;
       text-decoration: none;
       cursor: pointer;
     }
     .shipment-product-action:hover { background: rgba(156, 28, 76, .07); }
     .shipment-product-action:focus-visible { outline: 2px solid rgba(156, 28, 76, .28); outline-offset: 1px; }
-    .shipment-product-remove { color: var(--danger); }
+    .shipment-product-remove { color: var(--muted); }
     .quantity-control {
+      grid-column: 3;
+      grid-row: 1;
+      align-self: center;
       flex: 0 0 auto;
       display: grid;
-      grid-template-columns: 38px 56px 38px;
-      height: 46px;
+      grid-template-columns: 32px 34px 32px;
+      height: 38px;
       overflow: hidden;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 9px;
       background: #fff;
     }
     .quantity-control button {
       border: 0;
-      background: var(--surface-soft);
+      background: #fffefa;
       color: var(--ink);
       cursor: pointer;
-      font-size: 20px;
+      font-size: 16px;
       line-height: 1;
     }
     .quantity-control input {
-      height: 44px;
+      height: 36px;
       padding: 0;
       border: 0;
-      border-inline: 1px solid var(--line);
       border-radius: 0;
       text-align: center;
       font-weight: 600;
@@ -169,6 +175,8 @@
     }
     .quantity-control input::-webkit-inner-spin-button,
     .quantity-control input::-webkit-outer-spin-button { margin: 0; appearance: none; }
+    .quantity-control button:hover:not(:disabled) { background: #fbf0f3; }
+    .quantity-control button:focus-visible, .quantity-control input:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
     .address-fields { display: grid; gap: 13px; }
     .field-row { display: grid; grid-template-columns: minmax(105px, .72fr) minmax(0, 1.28fr); gap: 13px; align-items: start; }
     label, .field-control { display: grid; gap: 5px; color: var(--ink); font-size: 13px; font-weight: 500; line-height: 1.2; }
@@ -302,6 +310,10 @@
     @media (min-width: 840px) {
       main { padding-top: 50px; }
     }
+    @media (max-width: 620px) {
+      .quantity-control { height: 46px; }
+      .quantity-control input { height: 44px; }
+    }
     @media (max-width: 520px) {
       .topbar { width: min(100% - 32px, 560px); min-height: 72px; }
       .brand { font-size: 18px; }
@@ -320,11 +332,11 @@
       .steps .step.active .step-label { display: inline; }
       .field-row { grid-template-columns: 1fr; }
       .shipment-card { padding: 15px; }
-      .shipment-product { grid-template-columns: 44px minmax(0, 1fr) auto; }
-      .shipment-product-actions { grid-column: 3; grid-row: 1; flex-direction: column; align-items: stretch; }
-      .shipment-product .quantity-control { grid-column: 1 / -1; }
-      .quantity-control { width: 100%; grid-template-columns: 44px minmax(0, 1fr) 44px; }
-      .quantity-control input { width: 100%; }
+      .shipment-product { column-gap: 8px; padding: 10px; }
+      .shipment-product > .cart-product-previews { grid-row: 1; }
+      .shipment-product-copy { grid-column: 2 / -1; }
+      .shipment-product-actions { grid-column: 1 / 3; grid-row: 2; column-gap: 12px; }
+      .shipment-product .quantity-control { grid-column: 3; grid-row: 2; }
     }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
@@ -389,6 +401,13 @@
 
   <script src="<%= asset('/js/configurator-session.js') %>"></script>
   <script src="<%= asset('/js/site-journey.js') %>"></script>
+  <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js?v=0.160.1"}}</script>
+  <script src="<%= asset('/js/blanket-cloth.js') %>"></script>
+  <script src="<%= asset('/js/garment-cloth.js') %>"></script>
+  <script src="<%= asset('/js/product-3d-geometry.js') %>"></script>
+  <script src="<%= asset('/js/printful-product-model.js') %>"></script>
+  <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
+  <script src="<%= asset('/js/cart-product-preview.js') %>"></script>
   <script src="<%= asset('/js/product-mockup-preview.js') %>"></script>
   <script src="<%= asset('/js/print-preview.js') %>"></script>
   <script>
@@ -960,11 +979,7 @@
     }
 
     function configurationSizeText(itemConfiguration) {
-      const size = itemConfiguration?.product?.size || {};
-      const label = t(size.label || '');
-      if (size.volumeMl) return `${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
-      if (size.detail) return `${label} · ${t(size.detail)}`;
-      return label;
+      return WolkenworteCartProductPreview.variant(itemConfiguration?.product, WolkenworteI18n);
     }
 
     function totalUnitLabel(quantity) {
@@ -976,11 +991,6 @@
 
     function totalProductLabel(quantity) {
       return `${WolkenworteI18n.formatNumber(quantity)} ${totalUnitLabel(quantity)}`;
-    }
-
-    function quantityLabel(quantity, itemConfiguration = configuration) {
-      const unit = itemConfiguration?.product?.unit || { singular: 'Produkt', plural: 'Produkte' };
-      return `${WolkenworteI18n.formatNumber(quantity)} ${t(quantity === 1 ? unit.singular : unit.plural)}`;
     }
 
     function defaultQuantityForConfiguration(itemConfiguration) {
@@ -1068,9 +1078,19 @@
         const row = input.closest('.shipment-product');
         row.querySelector('[data-quantity-minus]').disabled = value <= 0;
         row.querySelector('[data-quantity-plus]').disabled = value >= itemConfiguration.product.maxQuantity;
-        row.querySelector('[data-quantity-copy]').textContent = quantityLabel(Math.max(0, value || 0), itemConfiguration);
+        const price = itemConfiguration.product.price;
+        const priceElement = row.querySelector('[data-item-price]');
+        const referencePrice = price && Number.isSafeInteger(value) && value >= 0 && value <= itemConfiguration.product.maxQuantity
+          ? formatMoney(price.unitGrossCents * value, price.currency) : '';
+        priceElement.dataset.referencePrice = referencePrice;
+        priceElement.textContent = referencePrice;
         row.querySelector('[data-quantity-excluded]').hidden = value > 0;
       });
+    }
+
+    function setProductPriceNote(note, confirmed = false) {
+      setText(note, confirmed ? 'Inkl. Steuern, zzgl. Versand.'
+        : 'Inkl. 19 % MwSt., zzgl. Versand. Preis für Deutschland; andere Lieferländer können abweichen.');
     }
 
     function createShipmentProductRow(itemConfiguration, shipment, index) {
@@ -1078,25 +1098,15 @@
       const row = document.createElement('div');
       row.className = 'shipment-product';
 
-      const image = document.createElement('img');
-      image.src = itemConfiguration.printFileUrl;
-      image.alt = '';
-      image.loading = 'lazy';
-
-      const preview = document.createElement('button');
-      preview.type = 'button';
-      preview.className = 'shipment-product-preview';
-      preview.appendChild(image);
-      const eye = document.createElement('span');
-      eye.className = 'shipment-preview-eye ww-preview-eye';
-      eye.setAttribute('aria-hidden', 'true');
-      preview.appendChild(eye);
+      const preview = WolkenworteCartProductPreview.createThumbnails({ document, item: itemConfiguration, i18n: WolkenworteI18n,
+        onOpen: (view, trigger) => printPreview.open(itemConfiguration, trigger),
+      });
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'shipment-product-copy';
       const title = document.createElement('strong');
       const productName = t(itemConfiguration.product.displayName);
-      for (const trigger of [preview, copy]) {
+      for (const trigger of [copy]) {
         trigger.setAttribute('aria-haspopup', 'dialog');
         trigger.setAttribute('aria-controls', 'print-preview');
         setTranslatedAttribute(trigger, 'aria-label', 'Design von {{item}} ansehen', { item: productName });
@@ -1106,19 +1116,14 @@
       const size = document.createElement('span');
       size.setAttribute('data-i18n-ignore', '');
       size.textContent = configurationSizeText(itemConfiguration);
-      const quantityCopy = document.createElement('span');
-      quantityCopy.dataset.quantityCopy = '';
-      quantityCopy.setAttribute('data-i18n-ignore', '');
-      copy.append(title, size, quantityCopy);
-      const unitPrice = document.createElement('span');
-      unitPrice.dataset.itemPrice = itemConfiguration.id;
-      unitPrice.setAttribute('data-i18n-ignore', '');
-      const price = itemConfiguration.product.price;
-      if (price) unitPrice.textContent = t('{{price}} pro Stück · inkl. 19 % MwSt. für Deutschland', {
-        price: formatMoney(price.unitGrossCents, price.currency),
-      });
-      unitPrice.dataset.referencePrice = unitPrice.textContent;
-      copy.appendChild(unitPrice);
+      const details = document.createElement('span');
+      details.className = 'shipment-product-details';
+      const price = document.createElement('span');
+      price.className = 'shipment-product-price';
+      price.dataset.itemPrice = itemConfiguration.id;
+      price.setAttribute('data-i18n-ignore', '');
+      details.append(size, price);
+      copy.append(title, details);
       const excluded = document.createElement('span');
       excluded.className = 'quantity-excluded';
       excluded.dataset.quantityExcluded = '';
@@ -1222,6 +1227,11 @@
       configurations.forEach((itemConfiguration) => {
         productsBlock.appendChild(createShipmentProductRow(itemConfiguration, shipment, index));
       });
+      const priceNote = document.createElement('p');
+      priceNote.className = 'shipment-price-note';
+      priceNote.dataset.productPriceNote = '';
+      setProductPriceNote(priceNote);
+      productsBlock.append(priceNote);
 
       const recipient = shipment.recipient || {};
       const fields = document.createElement('div');
@@ -1398,6 +1408,7 @@
       shipmentList.querySelectorAll('[data-item-price]').forEach(element => {
         element.textContent = element.dataset.referencePrice;
       });
+      shipmentList.querySelectorAll('[data-product-price-note]').forEach(note => setProductPriceNote(note));
       shippingRevision += 1;
       currentQuote = null;
       quoteResult.hidden = true;
@@ -1514,12 +1525,12 @@
       if (prepared && quote.pricingVersion === 2) {
         for (const item of quote.pricedItems || []) {
           const priceElement = shipmentList.querySelector(`[data-item-price="${item.configurationId}"]`);
-          if (priceElement && Number.isSafeInteger(item.grossTotalCents)) priceElement.textContent =
-            t('{{quantity}} Stück: {{price}} inkl. Steuern', {
-              quantity: WolkenworteI18n.formatNumber(item.quantity), price: formatMoney(item.grossTotalCents, quote.currency),
-            });
+          if (priceElement && Number.isSafeInteger(item.grossTotalCents)) {
+            priceElement.textContent = formatMoney(item.grossTotalCents, quote.currency);
+          }
         }
       }
+      shipmentList.querySelectorAll('[data-product-price-note]').forEach(note => setProductPriceNote(note, prepared));
       if (prepared) document.getElementById('tax-price').textContent = formatMoney(quote.taxCents, quote.currency);
       setText(document.getElementById('total-label'), prepared ? 'Gesamtbetrag' : 'Zwischensumme');
       document.getElementById('total-price').textContent = formatMoney(

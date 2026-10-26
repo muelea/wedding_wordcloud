@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { JSDOM } = require('jsdom');
 
 const source = fs.readFileSync(path.join(__dirname, '../views/shipping.ejs'), 'utf8');
 function pageFunction(name) {
@@ -301,6 +302,7 @@ test('the shipping summary shows Stripe tax and gross total only for a prepared 
     checkoutButton,
     checkoutError: { textContent: '' },
     document: { getElementById: id => nodes[id] },
+    shipmentList: { querySelectorAll: () => [] },
     totalProductLabel: quantity => `${quantity} products`,
     formatMoney: (cents, currency) => `${cents} ${currency}`,
     renderDeliveryInformation() {},
@@ -331,10 +333,11 @@ test('the shipping summary shows Stripe tax and gross total only for a prepared 
   assert.equal(checkoutButton.disabled, true);
 });
 
-test('shipping displays confirmed gross lines for both tax modes and clears stale destination prices', () => {
+test('shipping displays compact confirmed gross lines for both tax modes and clears stale destination prices', () => {
   const nodes = Object.fromEntries(['items-label', 'items-price', 'shipping-price', 'tax-row', 'tax-label',
     'tax-price', 'total-label', 'total-price'].map(id => [id, {}]));
-  const row = { dataset: { referencePrice: '11,07 € pro Stück · inkl. 19 % MwSt. für Deutschland' } };
+  const row = { dataset: { referencePrice: '22,14 €' } };
+  const note = {};
   const page = harness(async () => response({}));
   Object.assign(page.scope, {
     document: { getElementById: id => nodes[id] },
@@ -343,8 +346,9 @@ test('shipping displays confirmed gross lines for both tax modes and clears stal
     WolkenworteI18n: { formatNumber: String },
   });
   page.scope.shipmentList.querySelector = () => row;
-  page.scope.shipmentList.querySelectorAll = selector => selector === '[data-item-price]' ? [row] : [];
-  vm.runInContext(pageFunction('showQuote'), page.scope);
+  page.scope.shipmentList.querySelectorAll = selector => selector === '[data-item-price]' ? [row]
+    : selector === '[data-product-price-note]' ? [note] : [];
+  vm.runInContext(pageFunction('setProductPriceNote') + '\n' + pageFunction('showQuote'), page.scope);
   for (const quote of [
     { itemsCents: 4171, shippingCents: 1484, taxCents: 903, totalCents: 5655,
       grossItemsCents: 4171, grossShippingCents: 1484, taxBehavior: 'inclusive', itemGross: 2214 },
@@ -360,15 +364,56 @@ test('shipping displays confirmed gross lines for both tax modes and clears stal
     assert.equal(nodes['shipping-price'].textContent, String(quote.grossShippingCents));
     assert.equal(nodes['tax-label'].textContent, 'Davon MwSt.');
     assert.equal(nodes['total-price'].textContent, String(quote.totalCents));
-    assert.match(row.textContent, new RegExp(String(quote.itemGross)));
+    assert.equal(row.textContent, String(quote.itemGross));
+    assert.doesNotMatch(note.textContent, /19 %/, 'confirmed foreign prices must not claim the German reference tax rate');
     assert.equal(page.scope.quoteResult.hidden, false);
     assert.throws(() => page.scope.showQuote({ ...prepared, totalCents: quote.totalCents + 1 }, { scroll: false }));
     page.scope.clearQuote();
     assert.equal(row.textContent, row.dataset.referencePrice, 'an edited address cannot retain an old final item price');
+    assert.match(note.textContent, /19 %/, 'an edited address restores the clearly identified German reference price');
     assert.equal(page.scope.quoteResult.hidden, true);
     page.scope.showQuote({ ...prepared, checkoutPrepared: false }, { scroll: false });
     assert.equal(page.scope.quoteResult.hidden, true, 'foreign net estimates are never presented as final gross totals');
   }
+});
+
+test('shipping item totals follow quantity controls and preserve zero exclusion without a separate quantity caption', t => {
+  const dom = new JSDOM('<div id="items"></div>');
+  t.after(() => dom.window.close());
+  const { document, Event } = dom.window;
+  const item = { id: 'a'.repeat(16), product: { displayName: 'Tasse', maxQuantity: 3,
+    price: { unitGrossCents: 1107, currency: 'EUR' } } };
+  const page = harness(async () => response({}));
+  const translate = (source, values = {}) => require('../src/i18n').translate(source, 'en', values);
+  Object.assign(page.scope, {
+    document, shipmentList: document.getElementById('items'), findConfiguration: () => item,
+    t: translate, setText: (node, source, values) => { node.textContent = translate(source, values); },
+    setTranslatedAttribute: (node, name, source, values) => node.setAttribute(name, translate(source, values)),
+    configurationSizeText: () => '325 ml', configureHref: id => `/configure?edit=${id}`,
+    itemFieldPath: (index, id) => `${index}.${id}`,
+    shipmentItemsById: shipment => new Map(shipment.items.map(item => [item.configurationId, item.quantity])),
+    formatMoney: (cents, currency) => new Intl.NumberFormat('en', { style: 'currency', currency }).format(cents / 100),
+    WolkenworteCartProductPreview: { createThumbnails: () => document.createElement('div') },
+  });
+  vm.runInContext(['setProductPriceNote', 'updateQuantityButtons', 'createShipmentProductRow'].map(pageFunction).join('\n'), page.scope);
+  const row = page.scope.createShipmentProductRow(item, { items: [{ configurationId: item.id, quantity: 1 }] }, 0);
+  page.scope.shipmentList.append(row);
+  const price = row.querySelector('[data-item-price]'), quantity = row.querySelector('[data-item-quantity]');
+  assert.equal(price.textContent, '€11.07');
+  row.querySelector('[data-quantity-plus]').click();
+  assert.equal(quantity.value, '2');
+  assert.equal(price.textContent, '€22.14');
+  assert.equal(price.dataset.referencePrice, '€22.14', 'clearing an old quote retains the updated quantity total');
+  quantity.value = '0'; quantity.dispatchEvent(new Event('input'));
+  assert.equal(price.textContent, '€0.00');
+  assert.equal(row.querySelector('[data-quantity-excluded]').hidden, false);
+  assert.equal(row.querySelector('[data-quantity-minus]').disabled, true);
+  quantity.value = '3'; quantity.dispatchEvent(new Event('input'));
+  assert.equal(price.textContent, '€33.21');
+  assert.equal(row.querySelector('[data-quantity-excluded]').hidden, true);
+  assert.equal(row.querySelector('[data-quantity-plus]').disabled, true);
+  quantity.value = '1.5'; quantity.dispatchEvent(new Event('input'));
+  assert.equal(price.textContent, '', 'an invalid quantity never displays a misleading partial-cent item total');
 });
 
 function deliveryLines(delivery, { shipments = [{ customsFeesPossible: false, departureCountry: 'LV', items: [] }], locale = 'de' } = {}) {

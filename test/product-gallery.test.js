@@ -3,6 +3,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
+const fs = require('node:fs');
+const Preview = require('../public/js/print-preview');
+const ProductPreviews = require('../public/js/cart-product-preview');
 const { Gallery, groupProducts, shouldOpen } = require('../public/js/product-gallery');
 const { getPublicProducts } = require('../src/products');
 
@@ -14,7 +17,8 @@ const snapshot = product => ({ productKey: product.key, orientation: product.def
     [{ id: 'word', text: 'Liebe', x: 100 + index, y: 120, fontSize: 40, color: '#ed2446' }]])) });
 
 function harness(t, options = {}) {
-  const dom = new JSDOM('<section><div data-gallery-filters></div><div data-gallery-grid></div></section>', { pretendToBeVisual: true });
+  const markup = fs.readFileSync(require.resolve('../views/partials/print-preview.ejs'), 'utf8');
+  const dom = new JSDOM('<section><div data-gallery-filters></div><div data-gallery-grid></div></section>' + markup, { pretendToBeVisual: true });
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
   dom.window.HTMLDialogElement.prototype.close = function () {
     this.removeAttribute('open');
@@ -22,10 +26,22 @@ function harness(t, options = {}) {
   };
   options.observe?.(dom.window);
   const prepared = [], painted = [], chosen = [], added = [], viewers = [];
+  const i18n = { t: translate, setText: (element, text, values) => { element.textContent = translate(text, values); },
+    setAttribute: (element, key, text, values) => element.setAttribute(key, translate(text, values)) };
+  const previewDialog = dom.window.document.getElementById('print-preview');
+  const previewModels = [], artwork = [];
+  const preview = Preview.create(previewDialog, { window: dom.window, i18n,
+    render3D: async options => { previewModels.push(options); return { resize() {}, destroy() {} }; },
+  });
   const gallery = new Gallery({
-    element: dom.window.document.querySelector('section'), products,
+    element: dom.window.document.querySelector('section'), products: options.products || products,
     prepare: async (product, opts) => { prepared.push(product.key); return options.prepare ? options.prepare(product, opts) : snapshot(product); },
-    getView: product => product,
+    getView: options.getView || (product => product),
+    preview,
+    renderArtwork: (product, design, side) => {
+      artwork.push({ product, design, side });
+      return `/gallery/${product.key}/${side}.png`;
+    },
     configureFlat() {},
     paintFlat: (canvas, product, design, side) => painted.push({ product, design, side }),
     createMug: params => {
@@ -41,11 +57,10 @@ function harness(t, options = {}) {
       return options.onAdd ? options.onAdd(design) : { ...design, editingOrderItemId: 'Cart00001', needsCartUpdate: false };
     },
     isInCart: options.isInCart,
-    i18n: { t: translate, setText: (element, text, values) => { element.textContent = translate(text, values); },
-      setAttribute: (element, key, text, values) => element.setAttribute(key, translate(text, values)) },
+    i18n,
   });
   t.after(() => { gallery.destroy(); dom.window.close(); });
-  return { gallery, window: dom.window, prepared, painted, chosen, added, viewers,
+  return { gallery, window: dom.window, prepared, painted, chosen, added, viewers, previewDialog, previewModels, artwork,
     settle: async () => { await gallery.queue; await Promise.resolve(); },
     card: shape => gallery.cards.find(card => (card.product.previewType === 'mug' ? 'mug' : card.product.previewShape) === shape),
   };
@@ -56,9 +71,12 @@ test('the gallery covers every catalog variant in distinct product groups', () =
   assert.equal(groups.length, new Set(products.map(product => product.catalogGroup || (product.previewType === 'mug' ? 'mug' : product.previewShape))).size);
   assert.deepEqual(groups.flat().map(product => product.key).sort(), products.map(product => product.key).sort());
   assert.equal(groups.find(group => group[0].previewType === 'mug').length, 3);
-  assert.equal(groups.find(group => group[0].previewShape === 'poster').length, 4);
-  assert.equal(groups.find(group => group[0].previewShape === 'framed-poster').length, 5);
+  assert.equal(groups.find(group => group[0].previewShape === 'poster').length, 7);
+  assert.equal(groups.find(group => group[0].previewShape === 'framed-poster').length, 22);
   assert.equal(groups.find(group => group[0].catalogGroup === 'colored-mug').length, 11);
+  assert.equal(groups.find(group => group[0].catalogGroup === 'canvas').length, 46);
+  assert.equal(groups.find(group => group[0].catalogGroup === 'thin-canvas').length, 13);
+  assert.equal(groups.find(group => group[0].catalogGroup === 'framed-canvas').length, 39);
 });
 
 test('only a first visit from a populated live cloud enters the gallery', () => {
@@ -69,6 +87,24 @@ test('only a first visit from a populated live cloud enters the gallery', () => 
   assert.equal(shouldOpen({ ...entry, draft: { productKey: 'retained' } }), false);
   for (const key of ['edit', 'cart', 'accountDesign', 'draft']) {
     assert.equal(shouldOpen({ ...entry, query: new URLSearchParams(`${key}=chosen`) }), false, key);
+  }
+});
+
+test('clothing offers three garment groups and all 38 exact size and colour choices through the cart', async t => {
+  const h = harness(t); await h.settle(); h.gallery.filter('clothing');
+  const cards = h.gallery.cards.filter(card => !card.element.hidden);
+  assert.equal(cards.length, 3);
+  assert.deepEqual(cards.map(card => card.product.previewShape), ['t-shirt', 'sweatshirt', 'hoodie']);
+  for (const [kind, count] of [['t-shirt', 18], ['sweatshirt', 10], ['hoodie', 10]]) {
+    const card = h.card(kind), choices = products.filter(p => p.previewShape === kind);
+    assert.equal(choices.length, count);
+    const selected = choices.find(p => p.size.label === '2XL · Schwarz');
+    await h.gallery.load(card, selected);
+    assert.equal(card.product.key, selected.key);
+    assert.equal(card.photo.getAttribute('src'), selected.productPhoto);
+    await h.gallery.add(card);
+    assert.equal(h.added.at(-1).productKey, selected.key);
+    assert.deepEqual(Object.keys(h.added.at(-1).designs), ['front']);
   }
 });
 
@@ -136,13 +172,50 @@ test('reference photos follow the selected variant for mugs and flat products', 
     assert.equal(mug.photo.hidden, false);
     assert.equal(mug.photo.getAttribute('src'), variant.productPhoto);
     assert.ok(require('node:fs').existsSync(require('node:path').join(__dirname, '../public', variant.productPhoto)));
-    assert.equal(mug.photo.alt, `Produktfoto: ${variant.displayName}, ${variant.size.label}`);
-    assert.equal(mug.photo.style.objectFit, variant.productPhotoFit);
-    assert.equal(mug.photo.style.objectPosition, variant.productPhotoPosition);
+    assert.match(mug.photoButton.getAttribute('aria-label'), new RegExp(variant.size.label));
     photos.add(variant.productPhoto);
   }
   assert.equal(photos.size, 3);
   assert.ok(h.gallery.cards.filter(card => card.product.previewType === 'flat' && card.variants.length > 1).every(card => !card.photoButton.hidden), 'flat product options also show their real reference image');
+});
+
+test('every metric poster variant keeps its own photo, price and exact product identity through customization', async t => {
+  const h = harness(t);
+  await h.settle();
+  for (const shape of ['poster', 'framed-poster']) {
+    const card = h.card(shape);
+    for (const variant of card.variants) {
+      await h.gallery.load(card, variant);
+      assert.equal(card.photo.getAttribute('src'), variant.productPhoto || variant.previewMockup.assets.default);
+      assert.equal(card.variantLabel.textContent, variant.variantLabel || variant.size.label);
+      assert.equal(card.price.textContent, new Intl.NumberFormat('de', { style: 'currency', currency: 'EUR' })
+        .format(variant.price.unitGrossCents / 100));
+      assert.equal(card.viewer.params.product.key, variant.key);
+      assert.deepEqual(card.viewer.params.product.printFile, variant.printFile);
+      await h.gallery.choose(card);
+      assert.equal(h.chosen.at(-1).productKey, variant.key);
+      assert.equal(h.chosen.at(-1).orientation, 'portrait');
+    }
+  }
+  assert.equal(h.chosen.length, 29);
+});
+
+test('the canvas filter exposes all three ranges and every size/color keeps its own photo and approved cart identity', async t => {
+  const h = harness(t);
+  await h.settle();
+  h.gallery.filters.querySelector('[data-category="canvas"]').click();
+  const cards = h.gallery.cards.filter(card => !card.element.hidden);
+  assert.deepEqual(cards.map(card => card.product.catalogGroup), ['canvas', 'framed-canvas', 'thin-canvas']);
+  for (const card of cards) for (const variant of card.variants) {
+    await h.gallery.load(card, variant);
+    assert.equal(card.photo.getAttribute('src'), variant.productPhoto);
+    assert.equal(card.variantLabel.textContent, variant.variantLabel);
+    assert.equal(card.viewer.params.product.key, variant.key);
+    await h.gallery.add(card);
+    assert.equal(h.added.at(-1).productKey, variant.key);
+    assert.equal(h.added.at(-1).orientation, variant.defaultOrientation);
+  }
+  assert.equal(h.added.length, 98);
 });
 
 test('every product has the same variant summary and only multiple variants offer a menu', async t => {
@@ -163,9 +236,9 @@ test('every product has the same variant summary and only multiple variants offe
       assert.equal(h.gallery.variantDialog.dialog.open, false);
       assert.equal(summary.hasAttribute('aria-haspopup'), false);
       card.photoButton.click();
-      assert.equal(h.gallery.photoDialog.photo.getAttribute('src'), card.photo.getAttribute('src'));
-      assert.equal(h.gallery.photoDialog.dialog.open, true);
-      h.gallery.photoDialog.dialog.close();
+      assert.equal(h.previewDialog.querySelector('[data-preview-photo-artwork] img').getAttribute('src'), ProductPreviews.photo(card.product));
+      assert.equal(h.previewDialog.open, true);
+      h.previewDialog.close();
       assert.deepEqual(card.snapshot, before);
     }
   }
@@ -262,24 +335,30 @@ test('rich variant choices show exact photos and prices, enlarge independently, 
   assert.equal(dialog.isConnected, false);
 });
 
-test('the reference photo opens its selected size in a modal without choosing or changing a design', async t => {
+test('the gallery thumbnail opens the shared overview with its exact variant and every design side without saving', async t => {
   const h = harness(t);
   await h.settle();
   const mug = h.card('mug');
-  const { dialog, title, photo } = h.gallery.photoDialog;
+  const dialog = h.previewDialog, title = dialog.querySelector('[data-preview-title]');
   for (const variant of mug.variants) {
     await h.gallery.load(mug, variant);
     const before = structuredClone(mug.snapshot);
     mug.photoButton.click();
+    await Promise.resolve();
+    const photo = dialog.querySelector('[data-preview-photo-artwork] img');
     assert.equal(dialog.open, true);
     assert.equal(h.window.document.activeElement, title, 'opening does not put a focus frame around the close button');
     assert.equal(mug.photoButton.getAttribute('aria-controls'), dialog.id);
     assert.equal(mug.photoButton.getAttribute('aria-haspopup'), 'dialog');
     assert.equal(photo.getAttribute('src'), variant.productPhoto);
-    assert.equal(photo.style.objectFit, variant.productPhotoFit);
-    assert.equal(photo.style.objectPosition, variant.productPhotoPosition);
-    assert.equal(title.textContent, `${variant.displayName} · ${variant.size.label}`);
-    assert.equal(photo.alt, `Produktfoto: ${variant.displayName}, ${variant.size.label}`);
+    assert.equal(title.textContent, variant.displayName);
+    assert.equal(dialog.querySelector('[data-preview-detail]').textContent, variant.variantLabel || variant.size.label);
+    assert.equal(dialog.querySelector('[data-preview-artwork] img').getAttribute('src'), `/gallery/${variant.key}/${mug.surface}.png`);
+    assert.deepEqual(h.previewModels.at(-1).item.printPreviewUrls, Object.fromEntries(
+      variant.printSurfaces.map(side => [side.key, `/gallery/${variant.key}/${side.key}.png`])));
+    assert.deepEqual(h.artwork.filter(entry => entry.product.key === variant.key).map(entry => entry.design),
+      variant.printSurfaces.map(side => before.designs[side.key]));
+    assert.equal(h.gallery.photoDialog.dialog.open, false, 'the former photo-only modal is not used');
     photo.click();
     assert.equal(dialog.open, true, 'clicking the photo itself keeps the modal open');
     dialog.querySelector('button').click();
@@ -294,11 +373,11 @@ test('the reference photo opens its selected size in a modal without choosing or
   assert.equal(dialog.open, false, 'clicking outside the modal dismisses it');
 });
 
-test('leaving or disposing the gallery closes and removes its photo modal', async t => {
+test('leaving or disposing the gallery closes its shared overview while retaining the cart dialog', async t => {
   const h = harness(t);
   await h.settle();
   const mug = h.card('mug');
-  const { dialog } = h.gallery.photoDialog;
+  const dialog = h.previewDialog;
   mug.photoButton.click();
   h.gallery.suspend();
   assert.equal(dialog.open, false);
@@ -309,7 +388,51 @@ test('leaving or disposing the gallery closes and removes its photo modal', asyn
   assert.equal(dialog.open, true);
   h.gallery.destroy();
   assert.equal(dialog.open, false);
-  assert.equal(dialog.isConnected, false);
+  assert.equal(dialog.isConnected, true);
+});
+
+test('a variant that is still preparing cannot open the previous variant artwork', async t => {
+  let finish;
+  const variants = products.filter(product => product.previewType === 'mug');
+  const h = harness(t, { products: variants, prepare: product => product.key === variants[1].key
+    ? new Promise(resolve => { finish = () => resolve(snapshot(product)); }) : snapshot(product) });
+  await h.settle();
+  const mug = h.card('mug');
+  mug.photoButton.click(); h.previewDialog.close();
+  const loading = h.gallery.load(mug, variants[1]);
+  assert.equal(mug.photoButton.disabled, true);
+  h.gallery.openPreview(mug);
+  assert.equal(h.previewDialog.open, false);
+  while (!finish) await new Promise(setImmediate);
+  finish(); await loading;
+  mug.photoButton.click();
+  assert.equal(h.previewDialog.querySelector('[data-preview-artwork] img').getAttribute('src'),
+    `/gallery/${variants[1].key}/${mug.surface}.png`);
+  assert.equal(h.added.length, 0);
+});
+
+test('the gallery overview retains edited front and back artwork and switches sides without saving', async t => {
+  const product = products.find(product => product.previewType === '3d' && product.printSurfaces.length === 2);
+  const h = harness(t, { products: [product] });
+  await h.settle();
+  const retained = snapshot(product);
+  product.printSurfaces.forEach((side, index) => Object.assign(retained.designs[side.key][0], {
+    text: `Edited side ${index}`, x: 213.4 + index, color: '#123456',
+  }));
+  await h.gallery.resume(retained);
+  const card = h.gallery.cards[0];
+  card.photoButton.click();
+  await Promise.resolve();
+  for (const side of product.printSurfaces) {
+    h.previewDialog.querySelector(`[data-surface="${side.key}"]`).click();
+    assert.equal(h.previewDialog.querySelector('[data-preview-artwork] img').getAttribute('src'),
+      `/gallery/${product.key}/${side.key}.png`);
+  }
+  assert.deepEqual(h.artwork.map(entry => entry.design), product.printSurfaces.map(side => retained.designs[side.key]));
+  assert.deepEqual(card.snapshot, retained);
+  assert.equal(h.previewModels.length, 1, 'switching the flat design side retains the same 3D viewer');
+  assert.equal(h.chosen.length, 0);
+  assert.equal(h.added.length, 0);
 });
 
 test('scrolling and deliberate size choices overtake offscreen queued products', async t => {
@@ -625,4 +748,200 @@ test('paired card buttons add on the left and customize on the right; all mug ch
   await Promise.resolve();
   assert.equal(h.chosen.length, 1);
   assert.equal(h.added.length, 0);
+});
+
+function previewObservers() {
+  const callbacks = {}, idle = new Map();
+  let sequence = 0;
+  callbacks.idleCount = () => idle.size;
+  callbacks.idle = () => {
+    const next = idle.entries().next().value;
+    if (next) { idle.delete(next[0]); next[1]({ timeRemaining: () => 20 }); }
+  };
+  return { callbacks, observe(window) {
+    window.requestIdleCallback = callback => { idle.set(++sequence, callback); return sequence; };
+    window.cancelIdleCallback = id => idle.delete(id);
+    window.IntersectionObserver = class {
+      constructor(callback) { callbacks.intersection = callback; }
+      observe() {} disconnect() {}
+    };
+    window.ResizeObserver = class {
+      constructor(callback) { callbacks.resize = callback; }
+      observe() {} disconnect() {}
+    };
+  } };
+}
+
+test('scrolling defers new 3D models and reuses nearby viewers without repacking', async t => {
+  const observations = previewObservers();
+  const h = harness(t, observations); await h.settle();
+  const [first, second] = h.gallery.cards.filter(card => ['mug', '3d'].includes(card.product.previewType));
+  const visible = (card, isIntersecting) => ({ target: card.stage, isIntersecting });
+  observations.callbacks.intersection([visible(first, true)]);
+  observations.callbacks.idle();
+  const viewer = first.viewer;
+  assert.ok(viewer);
+  const resizes = viewer.resizes;
+  h.window.dispatchEvent(new h.window.WheelEvent('wheel', { deltaY: 100 }));
+  observations.callbacks.intersection([visible(first, false), visible(second, true)]);
+  assert.equal(second.viewer, null, 'scroll frames never construct models');
+  assert.equal(first.viewer, viewer, 'leaving the viewport retains the nearby viewer');
+  assert.equal(viewer.destroyed, false);
+  observations.callbacks.idle();
+  assert.equal(second.viewer, null, 'wheel input cancels model work before a scroll event arrives');
+  await new Promise(resolve => h.window.setTimeout(resolve, 390));
+  observations.callbacks.idle();
+  assert.ok(second.viewer, 'the settled viewport gets its interactive preview');
+  observations.callbacks.intersection([visible(second, false), visible(first, true)]);
+  assert.equal(first.viewer, viewer);
+  assert.equal(viewer.resizes, resizes, 'unchanged viewport dimensions need no redraw');
+  h.window.devicePixelRatio = 2;
+  h.gallery.render(first);
+  assert.equal(viewer.resizes, resizes + 1, 'a display-density change still refreshes the renderer');
+  assert.equal(h.viewers.length, 2);
+  assert.equal(h.prepared.length, groupProducts(products).length, 'scrolling never recomputes designs');
+  h.window.dispatchEvent(new h.window.Event('scroll'));
+  h.gallery.suspend();
+  await new Promise(resolve => h.window.setTimeout(resolve, 390));
+  assert.ok(h.viewers.every(viewer => viewer.destroyed));
+  assert.equal(h.viewers.length, 2, 'a pending scroll timer cannot recreate the suspended gallery');
+});
+
+test('3D retention evicts the oldest offscreen viewer and releases all retained contexts on suspend', async t => {
+  const observations = previewObservers();
+  const copied = [];
+  const h = harness(t, { observe(window) {
+    observations.observe(window);
+    window.HTMLCanvasElement.prototype.getContext = () => ({ drawImage: canvas => copied.push(canvas) });
+  }, viewer(viewer) {
+    viewer.canvas = viewer.params.host.ownerDocument.createElement('canvas');
+    viewer.canvas.width = 128; viewer.canvas.height = 96;
+    viewer.render = () => {};
+    viewer.inputs = 0;
+    const handle = () => { viewer.inputs++; };
+    const host = viewer.params.host, destroy = viewer.destroy.bind(viewer);
+    host.addEventListener('pointerdown', handle);
+    host.addEventListener('keydown', handle);
+    viewer.destroy = () => { host.removeEventListener('pointerdown', handle); host.removeEventListener('keydown', handle); destroy(); };
+  } }); await h.settle();
+  const cards = h.gallery.cards.filter(card => ['mug', '3d'].includes(card.product.previewType)).slice(0, 8);
+  const snapshots = cards.map(card => structuredClone(card.snapshot));
+  for (const [index, card] of cards.entries()) {
+    observations.callbacks.intersection([
+      ...(index ? [{ target: cards[index - 1].stage, isIntersecting: false }] : []),
+      { target: card.stage, isIntersecting: true },
+    ]);
+    observations.callbacks.idle();
+    assert.ok(h.gallery.cards.filter(card => card.viewer).length <= 6);
+  }
+  assert.ok(h.viewers[0].destroyed && h.viewers[1].destroyed);
+  assert.equal(h.viewers[2].destroyed, false);
+  assert.equal(cards[0].previousPreview.hidden, false, 'an evicted view retains its rendered bitmap');
+  assert.equal(cards[0].previousPreview.width, 128);
+  assert.equal(cards[0].previousPreview.height, 96);
+  assert.equal(cards[0].previousPreview.style.opacity, '1');
+  assert.equal(copied[0], h.viewers[0].canvas);
+  const created = h.viewers.length;
+  observations.callbacks.intersection([{ target: cards.at(-1).stage, isIntersecting: false },
+    { target: cards[0].stage, isIntersecting: true }]);
+  observations.callbacks.idle();
+  assert.equal(h.viewers.length, created, 'revisiting an evicted card uses its bitmap without constructing WebGL');
+  assert.equal(cards[0].viewer, null);
+  cards[0].host.dispatchEvent(new h.window.MouseEvent('pointerdown', { bubbles: true, button: 2 }));
+  assert.equal(cards[0].viewer, null, 'secondary clicks do not build models');
+  cards[0].host.dispatchEvent(new h.window.MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+  assert.equal(h.viewers.length, created + 1);
+  assert.equal(cards[0].viewer.inputs, 1, 'the first drag reaches the viewer constructed during capture');
+  assert.equal(cards[0].previousPreview.hidden, true);
+  observations.callbacks.intersection([{ target: cards[0].stage, isIntersecting: false },
+    { target: cards[1].stage, isIntersecting: true }]);
+  cards[1].host.dispatchEvent(new h.window.KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+  assert.equal(cards[1].viewer.inputs, 1, 'the first keyboard action also reaches the restored viewer');
+  assert.deepEqual(cards.map(card => card.snapshot), snapshots);
+  h.gallery.suspend();
+  assert.ok(h.viewers.every(viewer => viewer.destroyed));
+  assert.ok(h.gallery.cards.every(card => !card.viewer));
+});
+
+test('first-time 3D previews build one per idle turn and suspend cancels the remaining work', async t => {
+  const observations = previewObservers();
+  const h = harness(t, observations); await h.settle();
+  const cards = h.gallery.cards.slice(0, 3);
+  observations.callbacks.intersection(cards.map(card => ({ target: card.stage, isIntersecting: true })));
+  assert.equal(h.viewers.length, 0);
+  assert.equal(observations.callbacks.idleCount(), 1);
+  observations.callbacks.idle();
+  assert.equal(h.viewers.length, 1, 'one callback never constructs a whole row');
+  assert.equal(observations.callbacks.idleCount(), 1);
+  h.gallery.suspend();
+  assert.equal(observations.callbacks.idleCount(), 0);
+  observations.callbacks.idle();
+  assert.equal(h.viewers.length, 1);
+  assert.equal(h.gallery.previewQueue.size, 0);
+});
+
+test('the idle queue waits for one provider model to finish before starting another', async t => {
+  const observations = previewObservers(), finish = [];
+  const h = harness(t, { ...observations, viewer(viewer) {
+    viewer.loading = true;
+    viewer.ready = new Promise(resolve => finish.push(resolve));
+  } }); await h.settle();
+  observations.callbacks.intersection(h.gallery.cards.slice(0, 3).map(card => ({ target: card.stage, isIntersecting: true })));
+  observations.callbacks.idle();
+  assert.equal(h.viewers.length, 1);
+  assert.equal(observations.callbacks.idleCount(), 0, 'async loads and shader uploads cannot form a concurrent burst');
+  h.viewers[0].loading = false; finish[0](true); await Promise.resolve();
+  observations.callbacks.idle();
+  assert.equal(h.viewers.length, 2);
+  observations.callbacks.intersection([{ target: h.gallery.cards[1].stage, isIntersecting: false }]);
+  assert.equal(h.viewers[1].destroyed, true, 'a pending offscreen model never needs to upload textures');
+  h.gallery.suspend(); finish[1](false); await Promise.resolve();
+  assert.equal(observations.callbacks.idleCount(), 0, 'late completion cannot restart a suspended queue');
+});
+
+test('a tall viewport keeps six WebGL viewers even when nine cards are visible', async t => {
+  const observations = previewObservers();
+  const h = harness(t, { observe(window) {
+    observations.observe(window);
+    window.HTMLCanvasElement.prototype.getContext = () => ({ drawImage() {} });
+  }, viewer(viewer) {
+    viewer.canvas = viewer.params.host.ownerDocument.createElement('canvas');
+    viewer.render = () => {};
+  } }); await h.settle();
+  const cards = h.gallery.cards.slice(0, 9);
+  observations.callbacks.intersection(cards.map(card => ({ target: card.stage, isIntersecting: true })));
+  for (let i = 0; i < 9; i++) {
+    observations.callbacks.idle();
+    if (i === 0) cards[0].host.classList.add('dragging');
+    assert.ok(cards.filter(card => card.viewer).length <= 6);
+  }
+  assert.ok(cards[0].viewer, 'a model currently being dragged is retained');
+  assert.equal(cards.filter(card => card.viewer).length, 6);
+  assert.equal(cards.filter(card => !card.previousPreview.hidden).length, 3);
+  assert.ok(cards.every(card => card.stage.dataset.ready === 'true'));
+  const created = h.viewers.length;
+  cards.forEach(card => h.gallery.render(card));
+  observations.callbacks.idle();
+  assert.equal(h.viewers.length, created, 'visible bitmap previews do not compete to recreate their contexts');
+});
+
+test('flat previews paint only visible changed cards instead of every resize notification', async t => {
+  const observations = previewObservers();
+  const h = harness(t, { ...observations, products: groupProducts(products).slice(2, 4)
+    .map(group => ({ ...group[0], previewType: 'flat' })) }); await h.settle();
+  const flat = h.gallery.cards.filter(card => !['mug', '3d'].includes(card.product.previewType));
+  const [first, second] = flat;
+  assert.equal(h.painted.length, 0, 'offscreen flat canvases are not painted');
+  observations.callbacks.intersection([{ target: first.stage, isIntersecting: true }, { target: second.stage, isIntersecting: true }]);
+  assert.equal(h.painted.length, 2);
+  h.gallery.render(first); h.gallery.render(second);
+  assert.equal(h.painted.length, 2, 'same size and design do not repaint');
+  Object.defineProperty(first.stage, 'clientWidth', { value: 360 });
+  observations.callbacks.resize([{ target: first.stage }]);
+  await new Promise(resolve => h.window.requestAnimationFrame(resolve));
+  assert.equal(h.painted.length, 3);
+  assert.equal(h.painted.at(-1).product.key, first.product.key);
+  observations.callbacks.intersection([{ target: first.stage, isIntersecting: false }]);
+  h.gallery.render(first, true);
+  assert.equal(h.painted.length, 3, 'leaving the viewport does not paint');
 });

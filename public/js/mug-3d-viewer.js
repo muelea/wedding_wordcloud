@@ -25,7 +25,7 @@
 
   function textureSizeFor(product) {
     if (product.previewMesh) return { width: product.printFile.width, height: product.printFile.height };
-    if (product.previewModel && ['case', 'canvas', 'panel', 'mousepad', 'sleeve', 'tote', 'pillow', 'blanket'].includes(product.previewModel.kind)) {
+    if (product.previewModel && ['case', 'canvas', 'panel', 'mousepad', 'sleeve', 'tote', 'pillow', 'blanket', 'garment'].includes(product.previewModel.kind)) {
       return { width: product.printFile.width, height: product.printFile.height };
     }
     const printWidthCm = (product.printFile.width / product.printFile.dpi) * 2.54;
@@ -107,7 +107,7 @@
       // ready. Loading failures keep the existing explicit retry state.
     } else if (product.previewModel) {
       const proceduralView = root.Product3DGeometry.build(THREE, group, texture, product, backTexture);
-      if (product.previewModel.kind === 'blanket') clothView = proceduralView;
+      if (['blanket', 'garment'].includes(product.previewModel.kind)) clothView = proceduralView;
     } else {
     const height = product.size.heightCm;
     const radius = product.size.diameterCm / 2;
@@ -287,7 +287,7 @@
         studioTexture.colorSpace = THREE.SRGBColorSpace; scene.environment = studioTexture;
       }
     }
-    const lightScale = bagPreview ? 1.05 : clothView ? 1 : studioPreview ? .9 : 1;
+    const lightScale = product.previewModel?.kind === 'garment' ? .72 : bagPreview ? 1.05 : clothView ? 1 : studioPreview ? .9 : 1;
     const lightColor = studioPreview ? 0xffffff : 0xfffaf5;
     if (product.previewModel) group.traverse(mesh => {
       for (const surface of Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : []) surface.envMapIntensity = surface.metalness >= .5 ? .7 : .05;

@@ -72,10 +72,43 @@ SVG snapshots. New saves use `designSafeAreas`. Reopening an older design can fi
 its draft proportionally into the current safe rectangle, with a review message
 and unsaved state. This does not change its existing approved file or paid artifact.
 
+## Clothing — 2026-10-25
+
+`src/apparelCatalog.json` pins the 38 black/white DTG variants for Stanley/Stella
+STTU169 (XS–5XL), STSU178 and STSU177 (S–2XL). Each record preserves the exact
+variant ID, front print file, provider front mockup template and supplier
+measurements of the garment laid flat. Current German availability, standard
+EU shipping departure countries and synthetic Berlin cost estimates were
+checked through the existing read-only catalog/estimate APIs. The reference
+photos are served locally; browsing does not call Printful.
+
+| Product | Front print file | Physical print area | Fabric |
+| --- | --- | --- | --- |
+| STTU169 T-shirt | 1800 × 2400 at 150 dpi | 30.48 × 40.64 cm | 180 g/m² organic cotton jersey |
+| STSU178 sweatshirt | 1800 × 2400 at 150 dpi | 30.48 × 40.64 cm | 350 g/m² organic cotton |
+| STSU177 hoodie | 2100 × 2100 at 150 dpi | 35.56 × 35.56 cm | 350 g/m² organic cotton |
+
+These products offer the included front print only. The unprinted reverse,
+sleeves, hood and pocket never repeat the artwork. The usual 60-pixel inset
+keeps editable elements inside the rectangular print area; it is an application
+margin, not a claim of an additional manufacturer restriction.
+
+The three sewn garment models change chest width, body length and sleeve
+length independently for every size. Material colour changes share geometry;
+artwork keeps its physical centimetre dimensions. Neck, shoulder and print
+placement details are visual approximations informed by the supplier imagery.
+The hollow cloth panels, hood lining, drawstrings and pocket support restrained
+pointer-driven motion with fixed shoulder supports. This supported hanging
+simulation is not a body-fit predictor or a laboratory measurement of fabric
+thickness or stiffness. It sleeps after settling and pauses offscreen. None of
+its deformed vertices, material textures or visual shading enters the immutable
+print file, provider placement or saved design.
+
 ## EU fulfillment selection — 2026-10-25
 
-The current storefront offers **61 variants across 21 product groups**, with
-**71 orientation states and 77 print surfaces**. Read-only Printful checks for
+The current storefront offers **344 variants across 26 product groups**, with
+**448 orientation states and 454 print surfaces**, including clothing, phone cases and the metric poster
+and canvas expansions below. The initial read-only Printful checks for
 all 67 previously offered variants identified six that do not have EU
 fulfillment for German delivery. They have been removed from the shared
 catalog, product picker, configuration lookup and price snapshot:
@@ -89,7 +122,7 @@ catalog, product picker, configuration lookup and price snapshot:
 | Colored-interior mug, golden yellow, 325 ml | 17358 | US fulfillment only |
 | Colored-interior mug, green, 325 ml | 17361 | US fulfillment only |
 
-All 61 retained variants were in stock in Printful's Germany selling region
+All 61 initially retained variants were in stock in Printful's Germany selling region
 and returned standard shipping estimates departing from EU countries for a
 synthetic Berlin address. The white/oak 50 × 70 cm frames retain their exact
 variant IDs, print files and geometry. Eleven colored-interior mug variants
@@ -111,6 +144,98 @@ Checkout continues to obtain current shipping and customs estimates. The
 dated audits below retain their original coverage of the former 67-variant
 range, including the removed variants' historical print geometry and proofs.
 
+## Complete metric poster range — 2026-10-25
+
+The offered range now includes all seven Germany-available variants of product
+268 (Enhanced Matte Paper Poster, cm) and all 22 Germany-available variants of
+product 304 (Enhanced Matte Paper Framed Poster, cm, without a mat). The 20
+additions retain the existing product families and use centimetres throughout:
+
+| Range | Added sizes / frame colors |
+| --- | --- |
+| Matte poster | A1 (59.4 × 84.1 cm), 61 × 91 cm, 70 × 100 cm |
+| Black frame | 21 × 30, 30 × 45, 40 × 50, 45 × 61, A2 (42 × 59.4), A1 (59.4 × 84.1), 61 × 91 cm |
+| Oak frame | 21 × 30, A2 (42 × 59.4), A1 (59.4 × 84.1), 61 × 91 cm |
+| White frame | 21 × 30, 30 × 45, 40 × 50, A2 (42 × 59.4), A1 (59.4 × 84.1), 61 × 91 cm |
+
+Read-only catalog, Germany availability, print-file and template responses were
+checked before adding these variants. Every addition returned a standard
+shipping estimate from Latvia or Spain to a synthetic Berlin address with no
+possible customs fees. Product 304's black 50 × 70 cm (9358) and white
+45 × 61 cm (19651) are not fulfillable in Germany and remain excluded. Oak
+30 × 45, 40 × 50 and 45 × 61 cm combinations do not exist in this family.
+
+Availability is intersected with the active catalog. Product 268's availability
+feed still lists variant 21487 as in stock, but both variant APIs return 404
+for it and the active product exposes only seven variants. It is not an
+orderable size and is excluded; the public product-page size selector also
+lists the same seven active sizes.
+
+Each addition pins its exact provider variant, print-file dimensions, placement,
+technique, source photo URL and SHA-256 in the manifest. The existing 154-pixel
+inset from the official poster trim guides is retained. Portrait and landscape
+use the same provider pixels with `can_rotate`; all additions use the existing
+opaque paper/frame 3D renderer. The print-geometry fixture includes the exact
+provider mappings, rather than inferring pixels from nominal centimetres.
+
+Non-binding single-item German cost estimates populate only the 20 new price
+entries; the previous 61 product costs are unchanged. `metricPostersCheckedAt`
+records this additional check in the cost and fulfillment snapshots. Frame
+size/color labels are localized in all five translation catalogs, including
+black frames. Inch-catalog products and frames with mats are outside this
+expansion.
+
+## Complete canvas range — 2026-10-25
+
+All active variants from Printful products 3 (46 standard canvases), 616
+(13 thin canvases) and 614 (13 sizes in black, brown and white frames, 39
+variants) are offered in three gallery groups. The existing 30.5 × 40.6 cm
+canvas and its original provider mesh remain unchanged; the 97 additions have
+their own provider IDs, unmodified reference photos, exact print files,
+templates, safe areas and single-item German cost estimates. The previous
+81 catalog products and costs are unchanged. Sizes are displayed in cm,
+converted from the active inch variants and rounded to one decimal; physical
+models retain the exact conversions. Square files expose no spurious rotation
+option. Rectangles support portrait and landscape.
+
+The active v1/v2 variant lists were intersected with Germany availability.
+All 98 variants were in stock and returned individual non-binding standard
+shipping quotes from Spain to a synthetic Berlin address without possible
+customs fees. Fourteen orphan records in the thin-canvas availability feed
+are not present in the active catalog and are excluded. The fulfillment and
+cost snapshots record their respective `canvasesCheckedAt` timestamps.
+
+Printful's exact files have different wrap allowances: the six original
+standard sizes reserve 900 pixels per edge, the other 40 standard sizes and
+all framed canvases reserve 450, and thin canvases reserve 300, all at 300 dpi.
+The per-variant front crop matches the green front rectangle of the official
+Catalog API cutting template. Important artwork is held a further 100 pixels
+inside this fold. No print file is resized or derived from its display label.
+
+The new previews use stretched cloth with a subtle weave, artwork continuing
+onto the sides, an unprinted recessed rear, wooden stretcher bars, staples and
+hanging hardware. Standard canvases are 3.18 cm deep, thin canvases 1.905 cm.
+Framed canvases have a recessed canvas, a visible floating gap and a separate
+3.18 cm outer wooden frame; the frame and gap remain unprinted. Both
+orientations transpose the exact front UV crop with the physical dimensions.
+
+Oversized canvas files reach 12,900 × 18,900 pixels. Above 40 million pixels,
+`src/printRaster.js` renders canvases in 128-row strips with reused native
+images and incremental lossless PNG compression in `src/stripPng.js`. This
+keeps the complete provider resolution, transparent pixels, outlined text,
+emoji, uploaded images and layer order without allocating two full-sized
+RGBA surfaces on the 1 GB host. The existing 24 MiB artifact cap still applies;
+partial or failed renders never produce an artifact. Smaller exports retain
+the existing rendering path. Strip output is checked against whole-image
+pixels across strip boundaries and rotated uploads.
+
+The local maximum-size smoke exported a 12,900 × 18,900 PNG with two corner
+motifs at a measured peak RSS of 185 MiB (192 MiB V8 heap limit). This is a
+bounded-memory render check, not a maximum-content benchmark; decoded customer
+images add their own bounded source-image memory. Rotated upload edges can
+differ from a whole-surface Cairo render by up to three antialiasing levels;
+outlined-vector pixels and the complete print dimensions are preserved.
+
 ## Catalog expansion — 2026-10-24
 
 `src/productCatalogManifest.json` pins the Catalog API variants, print files,
@@ -131,8 +256,8 @@ selection above:
   S26 Ultra cases, each in matte and glossy finishes. Other device shapes are
   deliberately outside this first verified range. Android coverage is Samsung.
 
-The large 60 × 80-inch blanket and additional oversized poster/frame sizes
-remain excluded. The cotton tote exposes only its included front placement;
+The large 60 × 80-inch blanket remains excluded. Additional metric poster/frame
+sizes were added by the 2026-10-25 expansion above. The cotton tote exposes only its included front placement;
 its paid back placement is not silently added to an estimate. Existing pillow
 and notebook front/back artwork remains independently editable and fulfilled.
 
@@ -268,24 +393,26 @@ SHA-256 `3e4ad02d07406b63de92c3e6dd3e1e3d3861e34522f86ae62e30a8fb4f5016e9`.
 | Range | Variants | Current preview / verification boundary |
 | --- | ---: | --- |
 | White mugs | 3 | Original provider UVs |
-| Colored-interior mugs | 16 | Original 325 ml meshes; 444 ml uses the white 444 ml provider mesh with a reviewed coating mask (2026-10-25) |
+| Colored-interior mugs | 11 offered | Original 325 ml meshes; 444 ml uses the white 444 ml provider mesh with a reviewed coating mask (2026-10-25) |
 | Cork-backed coaster | 1 | Original provider UVs |
-| Matte posters | 4 | Custom thin 3D paper panels with light unprinted backs |
-| Framed posters | 5 offered | Custom 3D panels for black, oak and white frames; no imported Printful mesh |
+| Matte posters | 7 | Custom thin 3D paper panels with light unprinted backs |
+| Framed posters | 22 offered | Custom 3D panels for black, oak and white frames; no imported Printful mesh |
 | All-over totes | 3 | Custom volumetric sewn bags with independently readable front/back UVs |
 | Blankets | 2 | 1 mapped overlay; 1 custom panel with bleed crop |
 | Pillows | 5 | 3 exact provider mappings; 2 scaled adaptations of the square mesh |
 | Spiral notebook | 1 | Original provider UVs, separate front/back |
 | Mouse pad | 1 | Original provider UVs |
 | Laptop sleeves | 2 | Padded custom neoprene skins, black rear/binding and two zipper pulls; existing calibrated front UVs |
-| Canvas | 1 | Original provider UVs, portrait/landscape |
+| Canvas | 46 | Original provider UVs for 30.5 × 40.6 cm; exact per-file front/side mapping on the other sizes |
+| Thin canvas | 13 | 1.905 cm stretched canvas with exact per-file front/side UVs |
+| Framed canvas | 39 | Floating black, brown and white frames, recessed cloth and exact front/side UVs |
 | Water bottles | 2 | Original provider UVs; extra shift removed |
 | Straw tumblers | 2 | Original provider UVs |
 | Enamel mug | 1 | Original provider UVs |
 | Travel mugs | 2 | Custom profiles calibrated against provider mockups |
 | Wine tumbler | 1 | Original provider UVs |
 | Organic cotton totes | 2 | Custom gusseted cotton bags; full front file on a 25.4 cm square, unprinted rear |
-| iPhone / MagSafe / Samsung tough cases | 12 | Hollow custom shells/liners, wrapped exterior UVs, provider-template camera openings and separate display handsets |
+| iPhone / MagSafe / Samsung tough cases | 140 | Per-device hollow shells/liners, wrapped exterior UVs, provider-template camera openings and separate display handsets |
 
 The audit evidence in
 [`reports/print-area-audit-2026-10-24/`](../reports/print-area-audit-2026-10-24/)
@@ -412,7 +539,7 @@ black perimeter binding, zipper tracks/teeth and two black pulls replace the
 rigid extrusion and metal placeholder. References include Printful's
 [sleeve specifications and close-ups](https://www.printful.com/custom/tech-accessories/personalized/laptop-sleeve).
 
-All twelve cases retain their provider camera paths, full-file print mapping,
+The initial twelve cases retain their provider camera paths, full-file print mapping,
 safe areas and fulfillment identities. A thin printed rear plate and separate
 outer/inner walls form a hollow case, with an unprinted liner, raised camera
 rim, buttons and lower charging/speaker openings. Exterior wall UVs continue
@@ -435,6 +562,54 @@ opaque sleeve backs, unchanged sleeve landmarks, open case cavities and
 ports, independent phone inserts, exterior wrap UVs, texture cleanup and
 camera clipping through a complete turn. These remain photo-based product
 previews rather than manufacturing CAD or physical sample approval.
+
+### Complete tough-case range — 2026-10-25
+
+All active variants of products 601 (29 iPhones × 2 finishes), 798 (18 MagSafe
+iPhones × 2 finishes) and 686 (23 Samsung devices × 2 finishes) are offered:
+140 variants, including 128 additions. Every variant was in stock for Germany;
+140 individual standard-rate estimates to Berlin showed dispatch from Italy
+without possible customs fees. Availability-only IDs absent from both active
+catalogs and returning 404 for their direct variant lookup are excluded.
+`test/fixtures/phone-case-catalog.json` pins the active IDs, device labels,
+finishes and product-gallery image mappings. These are current checks, not a
+promise of future inventory or routing.
+
+iPhone/MagSafe files remain 1392 × 2220 pixels at 300 dpi (printfile 331);
+Samsung files remain 1396 × 2304 pixels at 300 dpi (printfile 441). Each
+addition retains its own variant-to-file and exact template association. The
+62 guide sources are deduplicated into 59 unchanged PNGs under
+`test/fixtures/printful-case-guides/`, with SHA-256 pins in the manifest.
+Template coordinates are normalized using their declared dimensions, which
+can differ from the downloaded PNG dimensions. Camera contours come from the
+grey exclusion mask; conservative safe rectangles remain below the camera and
+inside the rounded safe outline. Outer shell bounds also enclose the camera
+exclusion: Samsung guides can extend it beyond the main safe body, and an
+extrusion hole must not cross its outer contour. The previous products' print
+files, safe/layout coordinates, reference photos and prices are unchanged.
+
+Explicit device profiles replace generation-number shortcuts for cameras,
+flash/sensors, buttons and rounded/square corners. They cover single-camera
+Air, vertical and diagonal dual-camera iPhones, both Pro island styles,
+Samsung triple cameras and Ultra layouts including the S20 Ultra periscope.
+Older preview camera bounding boxes are reconciled with their unchanged
+provider contours. MagSafe relief is measured from the guide where present;
+older shared templates omit it, so those profiles use the matching reference
+photograph's proportions. Matte/glossy pairs share device geometry and print
+coordinates while retaining separate identities, prices and materials.
+
+Printful's Catalog API repeats the single-camera Air photo across all four
+iPhone 17 MagSafe models. Those eight variants use their corresponding
+unmodified transparent product-page gallery photos, with the exact model
+mapping pinned per photo; the prior corrected Pro photo is preserved.
+All variant labels are localized in the five translation catalogs.
+
+Regression checks cover all 140 IDs and finish pairs, guide hashes, camera
+contours, safe rectangles, actual camera arrangements, transparent photo
+overrides and full-resolution corner landmarks for all 70 device/family
+profiles. Browser review renders and rotates every profile using the real
+viewer. These previews remain calibrated product illustrations; no physical
+samples or manufacturing CAD certification are implied.
 
 ### Checkout safeguards
 

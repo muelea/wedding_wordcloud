@@ -642,8 +642,9 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.equal(res.headers.get('cache-control'), 'no-store');
   const data = await res.json();
   const expansion = require('../src/productCatalogManifest.json').products;
-  assert.equal(data.products.length, 11 + expansion.length);
-  assert.deepEqual(data.products.slice(11).map(product => product.key), expansion.map(product => product.key));
+  const apparel = require('../src/apparelCatalog.json').products.flatMap(product => product.variants);
+  assert.equal(data.products.length, 11 + expansion.length + apparel.length);
+  assert.deepEqual(data.products.slice(11).map(product => product.key), [...expansion, ...apparel].map(product => product.key));
   assert.equal(data.product.key, 'white-glossy-mug-duo-11oz');
   assert.deepEqual(data.product.printFile, { width: 2700, height: 1050, dpi: 300, placement: 'default' });
   assert.equal(data.product.size.volumeMl, 325);
@@ -731,7 +732,7 @@ test('configurator exposes every curated product with verified Printful geometry
   );
   assert.deepEqual(
     data.productFamilies.map((family) => family.key),
-    ['mugs', 'posters', 'home', 'bags', 'tech', 'drinkware', 'notebooks']
+    ['mugs', 'posters', 'home', 'bags', 'tech', 'drinkware', 'clothing', 'notebooks']
   );
   assert.ok(data.productFamilies.every((family) => family.thumbnail.startsWith('/assets/product-thumbnails/')));
   const pillow = data.products.find((candidate) => candidate.key === 'all-over-basic-pillow-18in');
@@ -824,8 +825,11 @@ test('configurator exposes every curated product with verified Printful geometry
     [['30 × 40 cm', 3544, 4724], ['40 × 30 cm', 4724, 3544]]
   );
   const posterProducts = data.products.filter((candidate) => candidate.familyKey === 'posters');
-  assert.equal(posterProducts.length, 10);
-  assert.ok(posterProducts.every((candidate) =>
+  assert.equal(posterProducts.length, 127);
+  const squareCanvases = posterProducts.filter(candidate => candidate.printFile.width === candidate.printFile.height);
+  assert.equal(squareCanvases.length, 23);
+  assert.ok(squareCanvases.every(candidate => candidate.defaultOrientation === 'default' && candidate.orientations.length === 0));
+  assert.ok(posterProducts.filter(candidate => candidate.printFile.width !== candidate.printFile.height).every((candidate) =>
     candidate.orientations.map((orientation) => orientation.key).join(',') === 'portrait,landscape'
   ));
   assert.ok(data.products.filter((candidate) => candidate.familyKey !== 'posters')
@@ -862,6 +866,9 @@ test('configurator exposes every curated product with verified Printful geometry
     { key: 'eco-tote-10458', variantId: 10458, width: 1500, height: 1500 },
     { key: 'tough-case-20308', variantId: 20308, width: 1392, height: 2220 },
     { key: 'tough-case-21474', variantId: 21474, width: 1396, height: 2304 },
+    { key: 'tough-case-15396', variantId: 15396, width: 1392, height: 2220 },
+    { key: 'tough-case-34008', variantId: 34008, width: 1392, height: 2220 },
+    { key: 'tough-case-16980', variantId: 16980, width: 1396, height: 2304 },
   ]) {
     const saveResponse = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
       method: 'POST',
@@ -1095,9 +1102,10 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /!await saveCurrentDesign\(continueOrderButton\)\) return;[\s\S]*?navigateToShipping\(\)/);
   assert.match(configurePage, /const missingSurface = productSurfaces\(\)\.find/);
   assert.match(configurePage, /function createOrderItemThumbnail\(item, itemProduct\)/);
-  assert.match(configurePage, /if \(fallbackUrl\) fallback\.src = fallbackUrl/);
-  assert.match(configurePage, /ready = preview\.decode\(\)/);
-  assert.match(configurePage, /fallback\.replaceWith\(preview\)/);
+  assert.match(configurePage, /WolkenworteCartProductPreview\.createThumbnails/);
+  const cartPreviews = await fetch(`${baseUrl}${publicAssetUrl('/js/cart-product-preview.js')}`);
+  assert.equal(cartPreviews.status, 200);
+  assert.match(await cartPreviews.text(), /WolkenworteCartProductPreview/);
   assert.doesNotMatch(configurePage, /image\.src = item\.printFileUrl/);
 
   const fabricBrowserBuild = await fetch(`${baseUrl}/vendor/fabric.min.js?v=7.4.0`);
@@ -1813,10 +1821,14 @@ test('new saves reject unsafe artwork on every product, orientation and print si
   const { baseUrl, close } = await startTestServer();
   t.after(close);
   const event = await createEvent(baseUrl);
+  let requests = 0;
   for (const base of PRODUCTS) {
     for (const orientation of base.orientationOptions.length ? base.orientationOptions : [{key:'default'}]) {
       const product = resolveProductOrientation(base,orientation.key);
       for (const surface of product.printSurfaces) {
+        // Cover print validation for every variant without exhausting the
+        // source quota; request throttling has its own lifecycle-abuse tests.
+        if (requests++ % 100 === 0) require('../src/rateLimits').resetForTests();
         const payload = productDesignPayload(product.key,orientation.key);
         const area = product.designSafeAreas[surface.key];
         payload.designs[surface.key] = [{id:'unsafe',type:'icon',icon:'heart',size:48,

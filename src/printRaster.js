@@ -1,10 +1,56 @@
 'use strict';
 
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, Image } = require('canvas');
 const { buildProviderPrintSvg, isPrintDesignWithinBounds } = require('./mugPrint');
+const stripPng = require('./stripPng');
 
 const MIME_TYPE = 'image/png';
 const MAX_ARTIFACT_BYTES = 24 * 1024 * 1024;
+
+async function renderProviderPngInStrips(product, design) {
+  const { width, height } = product.printFile, segments = [];
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 ||
+      !isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+    throw new Error('Cannot build a print with an invalid design');
+  }
+  let vectors = [];
+  function flush() {
+    if (vectors.length) segments.push({ svg: buildProviderPrintSvg(product, vectors) });
+    vectors = [];
+  }
+  for (const item of design) {
+    if (item.type !== 'image') vectors.push(item);
+    else { flush(); segments.push({ item, bytes: Buffer.from(item.src.slice(item.src.indexOf(',') + 1), 'base64') }); }
+  }
+  flush();
+  // Reuse native Image objects so advancing through strips releases the
+  // preceding SVG surface or decoded upload instead of awaiting native GC.
+  const vectorImage = new Image(), rasterImage = new Image();
+  const decode = (image, source) => new Promise((resolve, reject) => {
+    image.onload = () => resolve(image); image.onerror = reject; image.src = source;
+  });
+  return stripPng({ width, height, maxBytes: MAX_ARTIFACT_BYTES, paint: async (context, top, rows) => {
+    for (const segment of segments) {
+      if (segment.svg) {
+        const svg = segment.svg.replace(/<svg\b[^>]*>/, opening => opening
+          .replace(/\bheight="\d+"/, `height="${rows}"`)
+          .replace(/\bviewBox="[^"]*"/, `viewBox="0 ${top} ${width} ${rows}"`));
+        context.drawImage(await decode(vectorImage, Buffer.from(svg)), 0, 0);
+      } else {
+        const { item } = segment, radius = Math.hypot(item.width, item.height) / 2;
+        if (item.y + radius < top || item.y - radius > top + rows) continue;
+        let image;
+        try { image = await decode(rasterImage, segment.bytes); }
+        catch {
+          const error = new Error('Ein hochgeladenes Bild kann nicht für den Druck gelesen werden.');
+          error.code = 'PRINT_IMAGE_INVALID'; throw error;
+        }
+        context.save(); context.translate(item.x, item.y - top); context.rotate(item.angle * Math.PI / 180);
+        context.drawImage(image, -item.width / 2, -item.height / 2, item.width, item.height); context.restore();
+      }
+    }
+  } });
+}
 
 /**
  * Render one immutable design surface into the exact transparent PNG supplied
@@ -21,6 +67,9 @@ async function renderProviderPng(product, design) {
 
   if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
     throw new Error('Cannot build a print with an invalid design');
+  }
+  if (product.previewModel?.kind === 'canvas' && width * height > 40_000_000) {
+    return renderProviderPngInStrips(product, design);
   }
   const canvas = createCanvas(width, height);
   const context = canvas.getContext('2d');
@@ -73,4 +122,5 @@ module.exports = {
   MIME_TYPE,
   MAX_ARTIFACT_BYTES,
   renderProviderPng,
+  renderProviderPngInStrips,
 };

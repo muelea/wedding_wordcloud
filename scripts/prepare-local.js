@@ -178,7 +178,7 @@ function collectRepositoryAssetPaths(root = ROOT) {
   for (const product of PRODUCTS) {
     const publicProduct = getPublicProduct(product);
     if (publicProduct.thumbnail?.startsWith('/assets/')) urls.add(publicProduct.thumbnail);
-    for (const asset of [publicProduct.previewMesh?.file, publicProduct.previewMesh?.baseAtlas]) {
+    for (const asset of [publicProduct.productPhoto, publicProduct.previewMesh?.file, publicProduct.previewMesh?.baseAtlas]) {
       if (asset?.startsWith('/assets/')) urls.add(asset);
     }
     const previews = [
@@ -200,6 +200,7 @@ function validateRepositoryAssets(root = ROOT) {
   const required = [
     path.join('public', 'js', 'mug-3d-viewer.js'),
     path.join('public', 'js', 'blanket-cloth.js'),
+    path.join('public', 'js', 'garment-cloth.js'),
     path.join('public', 'js', 'printful-product-model.js'),
     ...collectRepositoryAssetPaths(root),
   ];
