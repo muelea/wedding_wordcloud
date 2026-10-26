@@ -758,6 +758,50 @@
           }
         }
         let best = null, distance = Infinity;
+        if (forbidden) {
+          // The squared distance is separable. In a row only the nearest free
+          // column on either side of the anchor can win; examine two bits
+          // instead of every cell. Keep row/column tie order exactly as before.
+          function freeColumn(offset, start, end, direction) {
+            start = Math.max(0, start); end = Math.min(columns - 1, end);
+            if (start > end) return -1;
+            const first = start >>> 5, last = end >>> 5;
+            for (let word = direction > 0 ? first : last;
+              direction > 0 ? word <= last : word >= first; word += direction) {
+              let bits = ~forbidden[offset + word];
+              if (word === first) bits &= 0xffffffff << (start & 31);
+              if (word === last) bits &= 0xffffffff >>> (31 - (end & 31));
+              if (bits) return word * 32 + (direction > 0
+                ? 31 - Math.clz32(bits & -bits) : 31 - Math.clz32(bits));
+            }
+            return -1;
+          }
+          let anchorColumn = 0;
+          while (anchorColumn + 1 < columns && xs[anchorColumn + 1] <= x) anchorColumn++;
+          for (let row = 0; row < rows; row++) {
+            if (row % 4 === 0) yield;
+            const py = ys[row], down = ((py - y) / slot.height) ** 2;
+            if (down >= distance) continue;
+            const offset = row * wordsPerRow;
+            const left = freeColumn(offset, 0, anchorColumn, -1);
+            const right = freeColumn(offset, anchorColumn + 1, columns - 1, 1);
+            const score = column => ((xs[column] - x) / slot.width) ** 2 + down;
+            let column = left;
+            if (right >= 0 && (column < 0 || score(right) < score(column))) column = right;
+            if (column < 0 || score(column) >= distance) continue;
+            const nextDistance = score(column);
+            // A degenerate span, or floating-point addition, can give several
+            // columns the same score. Retain the first free one on that plateau.
+            let low = 0, high = column;
+            while (low < high) {
+              const middle = (low + high) >>> 1;
+              if (score(middle) <= nextDistance) high = middle; else low = middle + 1;
+            }
+            column = freeColumn(offset, low, column, 1);
+            best = { x: xs[column], y: py }; distance = nextDistance;
+          }
+          return best ? fits(best.x, best.y) : false;
+        }
         for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
           if (column === 0 && row % 4 === 0) yield;
           if (forbidden && (forbidden[row * wordsPerRow + (column >>> 5)] & (1 << (column & 31)))) continue;

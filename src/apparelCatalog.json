@@ -1,0 +1,646 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-26T00:13:03.372Z",
+  "sources": [
+    "Printful catalog and product size guides, DTG front print templates",
+    "Printful German variant availability and shipping estimates"
+  ],
+  "products": [
+    {
+      "productId": 456,
+      "garment": "t-shirt",
+      "sku": "sttu169",
+      "name": "Bio-Baumwoll-T-Shirt",
+      "unit": "T-Shirt",
+      "plural": "T-Shirts",
+      "description": "Unisex-T-Shirt aus weichem Bio-Baumwoll-Jersey mit klassischem Rundhalsausschnitt.",
+      "fabricWeight": 180,
+      "printTop": 12,
+      "measurements": {
+        "XS": {
+          "height": 65,
+          "width": 47.5,
+          "sleeve": 21
+        },
+        "S": {
+          "height": 69,
+          "width": 49.5,
+          "sleeve": 22.5
+        },
+        "M": {
+          "height": 73,
+          "width": 53.5,
+          "sleeve": 24
+        },
+        "L": {
+          "height": 75,
+          "width": 56.5,
+          "sleeve": 24.5
+        },
+        "XL": {
+          "height": 77,
+          "width": 59.5,
+          "sleeve": 25
+        },
+        "2XL": {
+          "height": 79,
+          "width": 63.5,
+          "sleeve": 25.5
+        },
+        "3XL": {
+          "height": 81,
+          "width": 67.5,
+          "sleeve": 26
+        },
+        "4XL": {
+          "height": 83,
+          "width": 72.5,
+          "sleeve": 26
+        },
+        "5XL": {
+          "height": 84,
+          "width": 77.5,
+          "sleeve": 26
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "templates": [
+        {
+          "catalog_variant_ids": [
+            11869,
+            11870,
+            11871,
+            11872,
+            11873,
+            17229,
+            17233,
+            17236,
+            53682
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/Stanley_Stella_STTU755/medium/STTU169/ghost/front/05_sttu169_ghost_front_base_whitebg.png?v=1750080103",
+          "background_url": null,
+          "background_color": "#111111",
+          "printfile_id": 1,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1140,
+          "print_area_height": 1520,
+          "print_area_top": 409,
+          "print_area_left": 930,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            11864,
+            11865,
+            11866,
+            11867,
+            11868,
+            17228,
+            17232,
+            17235,
+            53681
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/Stanley_Stella_STTU755/medium/STTU169/ghost/front/05_sttu169_ghost_front_base_whitebg.png?v=1750080104",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1140,
+          "print_area_height": 1520,
+          "print_area_top": 409,
+          "print_area_left": 930,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "variants": [
+        {
+          "id": 53681,
+          "key": "t-shirt-53681",
+          "size": "XS",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 11864,
+          "key": "t-shirt-11864",
+          "size": "S",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 11865,
+          "key": "t-shirt-11865",
+          "size": "M",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 11866,
+          "key": "t-shirt-11866",
+          "size": "L",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 11867,
+          "key": "t-shirt-11867",
+          "size": "XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 11868,
+          "key": "t-shirt-11868",
+          "size": "2XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 17228,
+          "key": "t-shirt-17228",
+          "size": "3XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 17232,
+          "key": "t-shirt-17232",
+          "size": "4XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 17235,
+          "key": "t-shirt-17235",
+          "size": "5XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/sttu169-white.jpg"
+        },
+        {
+          "id": 53682,
+          "key": "t-shirt-53682",
+          "size": "XS",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 11869,
+          "key": "t-shirt-11869",
+          "size": "S",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 11870,
+          "key": "t-shirt-11870",
+          "size": "M",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 11871,
+          "key": "t-shirt-11871",
+          "size": "L",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 11872,
+          "key": "t-shirt-11872",
+          "size": "XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 11873,
+          "key": "t-shirt-11873",
+          "size": "2XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 17229,
+          "key": "t-shirt-17229",
+          "size": "3XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 17233,
+          "key": "t-shirt-17233",
+          "size": "4XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        },
+        {
+          "id": 17236,
+          "key": "t-shirt-17236",
+          "size": "5XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/sttu169-black.jpg"
+        }
+      ],
+      "photoSources": {
+        "White": {
+          "url": "https://files.cdn.printful.com/products/456/11864_1792060543.jpg",
+          "localAsset": "/assets/product-mockups/sttu169-white.jpg",
+          "sha256": "8fb373219bc685b2b6de6043e31d3bd7ca9bb93bd1d36e150299759554eef5b0"
+        },
+        "Black": {
+          "url": "https://files.cdn.printful.com/products/456/11869_1792060542.jpg",
+          "localAsset": "/assets/product-mockups/sttu169-black.jpg",
+          "sha256": "31d163fab7dac9e2dcdd78677f8b7ad0a790ce1153e487c37464c8ea9b446852"
+        }
+      }
+    },
+    {
+      "productId": 493,
+      "garment": "sweatshirt",
+      "sku": "stsu178",
+      "name": "Bio-Baumwoll-Sweatshirt",
+      "unit": "Sweatshirt",
+      "plural": "Sweatshirts",
+      "description": "Unisex-Sweatshirt aus schwerer Bio-Baumwolle mit geripptem Rundhalsausschnitt und Bündchen.",
+      "fabricWeight": 350,
+      "printTop": 12,
+      "measurements": {
+        "S": {
+          "height": 68,
+          "width": 50.5,
+          "sleeve": 64.5
+        },
+        "M": {
+          "height": 72,
+          "width": 53,
+          "sleeve": 66
+        },
+        "L": {
+          "height": 74,
+          "width": 56,
+          "sleeve": 67.5
+        },
+        "XL": {
+          "height": 76,
+          "width": 59,
+          "sleeve": 69
+        },
+        "2XL": {
+          "height": 78,
+          "width": 62,
+          "sleeve": 70.5
+        }
+      },
+      "printfile": {
+        "printfile_id": 1,
+        "width": 1800,
+        "height": 2400,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "templates": [
+        {
+          "catalog_variant_ids": [
+            12585,
+            12586,
+            12587,
+            12588,
+            12589
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/Stanley_Stella_Changer_STSU823/medium/STSU178/ghost/front/05_stsu178_ghost_front_base_whitebg.png?v=1761112949",
+          "background_url": null,
+          "background_color": "#0b0b0b",
+          "printfile_id": 1,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1140,
+          "print_area_height": 1520,
+          "print_area_top": 415,
+          "print_area_left": 930,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            12605,
+            12606,
+            12607,
+            12608,
+            12609
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/Stanley_Stella_Changer_STSU823/medium/STSU178/ghost/front/05_stsu178_ghost_front_base_whitebg.png?v=1761112949",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 1,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 1140,
+          "print_area_height": 1520,
+          "print_area_top": 415,
+          "print_area_left": 930,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "variants": [
+        {
+          "id": 12605,
+          "key": "sweatshirt-12605",
+          "size": "S",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu178-white.jpg"
+        },
+        {
+          "id": 12606,
+          "key": "sweatshirt-12606",
+          "size": "M",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu178-white.jpg"
+        },
+        {
+          "id": 12607,
+          "key": "sweatshirt-12607",
+          "size": "L",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu178-white.jpg"
+        },
+        {
+          "id": 12608,
+          "key": "sweatshirt-12608",
+          "size": "XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu178-white.jpg"
+        },
+        {
+          "id": 12609,
+          "key": "sweatshirt-12609",
+          "size": "2XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu178-white.jpg"
+        },
+        {
+          "id": 12585,
+          "key": "sweatshirt-12585",
+          "size": "S",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu178-black.jpg"
+        },
+        {
+          "id": 12586,
+          "key": "sweatshirt-12586",
+          "size": "M",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu178-black.jpg"
+        },
+        {
+          "id": 12587,
+          "key": "sweatshirt-12587",
+          "size": "L",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu178-black.jpg"
+        },
+        {
+          "id": 12588,
+          "key": "sweatshirt-12588",
+          "size": "XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu178-black.jpg"
+        },
+        {
+          "id": 12589,
+          "key": "sweatshirt-12589",
+          "size": "2XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu178-black.jpg"
+        }
+      ],
+      "photoSources": {
+        "White": {
+          "url": "https://files.cdn.printful.com/products/493/12606_1710848986.jpg",
+          "localAsset": "/assets/product-mockups/stsu178-white.jpg",
+          "sha256": "e0602acbc54a0fdeb3729b8ef14c42301760f3581bb9d4d5c7eee5563e0c4741"
+        },
+        "Black": {
+          "url": "https://files.cdn.printful.com/products/493/12586_1710848955.jpg",
+          "localAsset": "/assets/product-mockups/stsu178-black.jpg",
+          "sha256": "5213abf8113dda5a05c8e8f69c14a483db2cef011cd9edb1c39d79832e3f20ac"
+        }
+      }
+    },
+    {
+      "productId": 479,
+      "garment": "hoodie",
+      "sku": "stsu177",
+      "name": "Bio-Baumwoll-Hoodie",
+      "unit": "Hoodie",
+      "plural": "Hoodies",
+      "description": "Unisex-Hoodie aus schwerer Bio-Baumwolle mit doppellagiger Kapuze, Kordeln und Kängurutasche.",
+      "fabricWeight": 350,
+      "printTop": 10,
+      "measurements": {
+        "S": {
+          "height": 71,
+          "width": 55,
+          "sleeve": 64.5
+        },
+        "M": {
+          "height": 74,
+          "width": 59,
+          "sleeve": 66.5
+        },
+        "L": {
+          "height": 76,
+          "width": 62,
+          "sleeve": 68.5
+        },
+        "XL": {
+          "height": 78,
+          "width": 65,
+          "sleeve": 69.5
+        },
+        "2XL": {
+          "height": 80,
+          "width": 69,
+          "sleeve": 69.5
+        }
+      },
+      "printfile": {
+        "printfile_id": 139,
+        "width": 2100,
+        "height": 2100,
+        "dpi": 150,
+        "fill_mode": "fit",
+        "can_rotate": false
+      },
+      "templates": [
+        {
+          "catalog_variant_ids": [
+            12372,
+            12373,
+            12374,
+            12375,
+            12376,
+            34182,
+            34186,
+            34190
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ss_cruiser_stsu822/medium/stsu177/ghost/front/05_stsu177_ghost_front_base_whitebg.png?v=1760699325",
+          "background_url": null,
+          "background_color": "#0b0b0b",
+          "printfile_id": 139,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 966,
+          "print_area_height": 966,
+          "print_area_top": 687,
+          "print_area_left": 1026,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        },
+        {
+          "catalog_variant_ids": [
+            12402,
+            12403,
+            12404,
+            12405,
+            12406,
+            34185,
+            34189,
+            34193
+          ],
+          "placement": "front",
+          "technique": "dtg",
+          "image_url": "https://files.cdn.printful.com/m/ss_cruiser_stsu822/medium/stsu177/ghost/front/05_stsu177_ghost_front_base_whitebg.png?v=1760699325",
+          "background_url": null,
+          "background_color": "#ffffff",
+          "printfile_id": 139,
+          "template_width": 3000,
+          "template_height": 3000,
+          "print_area_width": 966,
+          "print_area_height": 966,
+          "print_area_top": 687,
+          "print_area_left": 1026,
+          "template_positioning": "overlay",
+          "orientation": "any",
+          "template_type": null,
+          "role": "primary"
+        }
+      ],
+      "variants": [
+        {
+          "id": 12402,
+          "key": "hoodie-12402",
+          "size": "S",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu177-white.jpg"
+        },
+        {
+          "id": 12403,
+          "key": "hoodie-12403",
+          "size": "M",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu177-white.jpg"
+        },
+        {
+          "id": 12404,
+          "key": "hoodie-12404",
+          "size": "L",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu177-white.jpg"
+        },
+        {
+          "id": 12405,
+          "key": "hoodie-12405",
+          "size": "XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu177-white.jpg"
+        },
+        {
+          "id": 12406,
+          "key": "hoodie-12406",
+          "size": "2XL",
+          "color": "White",
+          "photo": "/assets/product-mockups/stsu177-white.jpg"
+        },
+        {
+          "id": 12372,
+          "key": "hoodie-12372",
+          "size": "S",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu177-black.jpg"
+        },
+        {
+          "id": 12373,
+          "key": "hoodie-12373",
+          "size": "M",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu177-black.jpg"
+        },
+        {
+          "id": 12374,
+          "key": "hoodie-12374",
+          "size": "L",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu177-black.jpg"
+        },
+        {
+          "id": 12375,
+          "key": "hoodie-12375",
+          "size": "XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu177-black.jpg"
+        },
+        {
+          "id": 12376,
+          "key": "hoodie-12376",
+          "size": "2XL",
+          "color": "Black",
+          "photo": "/assets/product-mockups/stsu177-black.jpg"
+        }
+      ],
+      "photoSources": {
+        "White": {
+          "url": "https://files.cdn.printful.com/products/479/12403_1713330053.jpg",
+          "localAsset": "/assets/product-mockups/stsu177-white.jpg",
+          "sha256": "e562158c6036e53985b5a26ae5ec4c473b7fb366da3180cb76790b7deebdc68a"
+        },
+        "Black": {
+          "url": "https://files.cdn.printful.com/products/479/12373_1713330012.jpg",
+          "localAsset": "/assets/product-mockups/stsu177-black.jpg",
+          "sha256": "500af0a48e7e6fb666187e79438067f342d8ee8cf1cf0a2e90e52aa7f4ca84a9"
+        }
+      }
+    }
+  ]
+}

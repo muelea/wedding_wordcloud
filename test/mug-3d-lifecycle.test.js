@@ -91,7 +91,7 @@ test('failed initial texture rendering releases the partial viewer instead of le
   assert.equal(host.canvas.removed, true);
 });
 
-function clothFixture() {
+function clothFixture(productKey = 'throw-blanket-50x60in') {
   const f = fixture(), frames = new Map(), listeners = new Map();
   let next = 0, clock = 0, observer;
   f.root.requestAnimationFrame = callback => { frames.set(++next, callback); return next; };
@@ -102,18 +102,35 @@ function clothFixture() {
     constructor(callback) { this.callback = callback; observer = this; }
     observe() {} disconnect() { this.disconnected = true; }
   };
-  const product = require('../src/products').getPublicProduct(require('../src/products').getProduct('throw-blanket-50x60in'));
+  const product = require('../src/products').getPublicProduct(require('../src/products').getProduct(productKey));
   const viewer = f.root.Mug3DViewer.create({ host: f.host, THREE: f.THREE, product, fitToView: true });
   const tick = () => { clock += 1000 / 60; const pending = [...frames]; frames.clear(); pending.forEach(([, callback]) => callback(clock)); };
   const atFabric = () => {
     viewer.scene.updateMatrixWorld(true); viewer.camera.updateMatrixWorld();
-    const p = new Three.Vector3().fromBufferAttribute(viewer.cloth.mesh.geometry.attributes.position, 2000);
-    viewer.cloth.mesh.localToWorld(p); p.project(viewer.camera);
+    const mesh = viewer.cloth.mesh || viewer.cloth.meshes[0];
+    const p = new Three.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, viewer.cloth.mesh ? 2000 : 500);
+    mesh.localToWorld(p); p.project(viewer.camera);
     return { pointerId: 17, pointerType: 'touch', isPrimary: true, clientX: (p.x + 1) * 200, clientY: (1 - p.y) * 150,
       preventDefault() { this.prevented = true; } };
   };
   return { ...f, viewer, frames, listeners, observer, tick, atFabric };
 }
+
+test('each garment uses real pointer cloth interaction, keeps artwork dimensions and releases motion on disposal', () => {
+  for (const key of ['t-shirt-11865', 'sweatshirt-12606', 'hoodie-12403']) {
+    const f = clothFixture(key), { viewer, host, frames } = f;
+    assert.ok(viewer.cloth); assert.equal(frames.size, 0);
+    assert.ok(Number.isInteger(viewer.textureCanvas.width) && viewer.textureCanvas.width > 0);
+    assert.ok(Number.isInteger(viewer.textureCanvas.height) && viewer.textureCanvas.height > 0);
+    const start = f.atFabric(), rotation = viewer.group.rotation.toArray();
+    host.listeners.get('pointerdown')(start);
+    assert.ok(viewer.cloth.simulation.grabbed >= 0, key);
+    host.listeners.get('pointermove')({ ...start, clientX: start.clientX + 20, clientY: start.clientY - 15 });
+    f.tick(); assert.deepEqual(viewer.group.rotation.toArray(), rotation);
+    host.listeners.get('pointercancel')(start); assert.equal(viewer.cloth.simulation.grabbed, -1);
+    viewer.destroy(); assert.equal(frames.size, 0); assert.equal(viewer.cloth.active, false);
+  }
+});
 
 test('blanket gestures pull the fabric, preserve rotation and print pixels, and stop rendering once settled', () => {
   const f = clothFixture(), { viewer, host, frames } = f;
@@ -168,7 +185,7 @@ test('all 3D variants use neutral lighting and repaint their latest artwork on b
     let firstDraws = 0, editedDraws = 0, backDraws = 0;
     const viewer = root.Mug3DViewer.create({ host, THREE, product, drawTexture: () => { firstDraws++; }, drawBackTexture: () => { backDraws++; } });
     assert.equal(await viewer.ready, true, product.key);
-    assert.equal(Boolean(viewer.cloth), source.previewModel?.kind === 'blanket', product.key);
+    assert.equal(Boolean(viewer.cloth), ['blanket', 'garment'].includes(source.previewModel?.kind), product.key);
     assert.equal(viewer.renderer.toneMapping, THREE.LinearToneMapping, product.key);
     assert.ok(viewer.scene.children.filter(object => object.isLight).every(light => light.color.getHex() === 0xffffff));
     assert.ok(firstDraws >= (source.previewMesh ? 2 : 1));

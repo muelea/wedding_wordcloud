@@ -9,6 +9,26 @@
       "productCents": 2134,
       "supplierTaxCents": 0
     },
+    "6": {
+      "productCents": 2604,
+      "supplierTaxCents": 0
+    },
+    "7": {
+      "productCents": 3069,
+      "supplierTaxCents": 0
+    },
+    "823": {
+      "productCents": 2000,
+      "supplierTaxCents": 0
+    },
+    "824": {
+      "productCents": 2558,
+      "supplierTaxCents": 0
+    },
+    "825": {
+      "productCents": 4743,
+      "supplierTaxCents": 0
+    },
     "1320": {
       "productCents": 560,
       "supplierTaxCents": 0
@@ -45,12 +65,32 @@
       "productCents": 1219,
       "supplierTaxCents": 0
     },
+    "8953": {
+      "productCents": 1627,
+      "supplierTaxCents": 0
+    },
+    "8954": {
+      "productCents": 1785,
+      "supplierTaxCents": 0
+    },
+    "9356": {
+      "productCents": 1933,
+      "supplierTaxCents": 0
+    },
     "9357": {
       "productCents": 2759,
       "supplierTaxCents": 0
     },
+    "9359": {
+      "productCents": 6625,
+      "supplierTaxCents": 0
+    },
     "9513": {
       "productCents": 1447,
+      "supplierTaxCents": 0
+    },
+    "10296": {
+      "productCents": 1933,
       "supplierTaxCents": 0
     },
     "10297": {
@@ -59,6 +99,10 @@
     },
     "10298": {
       "productCents": 5201,
+      "supplierTaxCents": 0
+    },
+    "10299": {
+      "productCents": 6747,
       "supplierTaxCents": 0
     },
     "10457": {
@@ -109,6 +153,10 @@
       "productCents": 1071,
       "supplierTaxCents": 0
     },
+    "11790": {
+      "productCents": 2066,
+      "supplierTaxCents": 0
+    },
     "11791": {
       "productCents": 3014,
       "supplierTaxCents": 0
@@ -117,8 +165,92 @@
       "productCents": 5619,
       "supplierTaxCents": 0
     },
+    "11793": {
+      "productCents": 6987,
+      "supplierTaxCents": 0
+    },
+    "11864": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11865": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11866": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11867": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11868": {
+      "productCents": 1349,
+      "supplierTaxCents": 0
+    },
+    "11869": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11870": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11871": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11872": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "11873": {
+      "productCents": 1349,
+      "supplierTaxCents": 0
+    },
     "12141": {
       "productCents": 1148,
+      "supplierTaxCents": 0
+    },
+    "12372": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12373": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12374": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12375": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12376": {
+      "productCents": 2981,
+      "supplierTaxCents": 0
+    },
+    "12402": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12403": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12404": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12405": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "12406": {
+      "productCents": 2981,
       "supplierTaxCents": 0
     },
     "12578": {
@@ -127,6 +259,46 @@
     },
     "12579": {
       "productCents": 764,
+      "supplierTaxCents": 0
+    },
+    "12585": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12586": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12587": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12588": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12589": {
+      "productCents": 3139,
+      "supplierTaxCents": 0
+    },
+    "12605": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12606": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12607": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12608": {
+      "productCents": 3009,
+      "supplierTaxCents": 0
+    },
+    "12609": {
+      "productCents": 3139,
       "supplierTaxCents": 0
     },
     "13097": {
@@ -141,16 +313,232 @@
       "productCents": 1989,
       "supplierTaxCents": 0
     },
+    "15381": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15382": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15383": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15384": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15385": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15386": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15387": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15388": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15389": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15390": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15391": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15392": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15393": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15394": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15395": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15396": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15397": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15398": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15399": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15400": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15401": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "15402": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
     "15662": {
       "productCents": 459,
+      "supplierTaxCents": 0
+    },
+    "15695": {
+      "productCents": 4700,
+      "supplierTaxCents": 0
+    },
+    "15696": {
+      "productCents": 5100,
+      "supplierTaxCents": 0
+    },
+    "15697": {
+      "productCents": 5700,
+      "supplierTaxCents": 0
+    },
+    "15698": {
+      "productCents": 6100,
+      "supplierTaxCents": 0
+    },
+    "15699": {
+      "productCents": 7100,
+      "supplierTaxCents": 0
+    },
+    "15700": {
+      "productCents": 9950,
+      "supplierTaxCents": 0
+    },
+    "15701": {
+      "productCents": 2050,
+      "supplierTaxCents": 0
+    },
+    "15702": {
+      "productCents": 2200,
+      "supplierTaxCents": 0
+    },
+    "15703": {
+      "productCents": 2450,
+      "supplierTaxCents": 0
+    },
+    "15704": {
+      "productCents": 2600,
+      "supplierTaxCents": 0
+    },
+    "15705": {
+      "productCents": 3050,
+      "supplierTaxCents": 0
+    },
+    "15706": {
+      "productCents": 5400,
       "supplierTaxCents": 0
     },
     "16030": {
       "productCents": 1729,
       "supplierTaxCents": 0
     },
+    "16034": {
+      "productCents": 4700,
+      "supplierTaxCents": 0
+    },
+    "16035": {
+      "productCents": 5100,
+      "supplierTaxCents": 0
+    },
+    "16036": {
+      "productCents": 5700,
+      "supplierTaxCents": 0
+    },
+    "16037": {
+      "productCents": 6100,
+      "supplierTaxCents": 0
+    },
+    "16038": {
+      "productCents": 7100,
+      "supplierTaxCents": 0
+    },
+    "16039": {
+      "productCents": 9950,
+      "supplierTaxCents": 0
+    },
+    "16040": {
+      "productCents": 4700,
+      "supplierTaxCents": 0
+    },
+    "16041": {
+      "productCents": 5100,
+      "supplierTaxCents": 0
+    },
+    "16042": {
+      "productCents": 5700,
+      "supplierTaxCents": 0
+    },
+    "16043": {
+      "productCents": 6100,
+      "supplierTaxCents": 0
+    },
+    "16044": {
+      "productCents": 7100,
+      "supplierTaxCents": 0
+    },
+    "16045": {
+      "productCents": 9950,
+      "supplierTaxCents": 0
+    },
     "16046": {
       "productCents": 1525,
+      "supplierTaxCents": 0
+    },
+    "16124": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16125": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16126": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16127": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16128": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16129": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16130": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16131": {
+      "productCents": 1504,
       "supplierTaxCents": 0
     },
     "16440": {
@@ -159,6 +547,118 @@
     },
     "16586": {
       "productCents": 968,
+      "supplierTaxCents": 0
+    },
+    "16975": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16976": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16977": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16978": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16979": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16980": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16981": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16982": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16983": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16984": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16985": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16986": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16987": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16988": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16989": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16990": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16991": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16992": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16993": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16994": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16995": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16996": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16997": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16998": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "16999": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17000": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17001": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17002": {
+      "productCents": 1504,
       "supplierTaxCents": 0
     },
     "17196": {
@@ -177,20 +677,484 @@
       "productCents": 866,
       "supplierTaxCents": 0
     },
+    "17228": {
+      "productCents": 1479,
+      "supplierTaxCents": 0
+    },
+    "17229": {
+      "productCents": 1479,
+      "supplierTaxCents": 0
+    },
+    "17232": {
+      "productCents": 1609,
+      "supplierTaxCents": 0
+    },
+    "17233": {
+      "productCents": 1609,
+      "supplierTaxCents": 0
+    },
+    "17235": {
+      "productCents": 1739,
+      "supplierTaxCents": 0
+    },
+    "17236": {
+      "productCents": 1739,
+      "supplierTaxCents": 0
+    },
+    "17620": {
+      "productCents": 1425,
+      "supplierTaxCents": 0
+    },
+    "17621": {
+      "productCents": 1695,
+      "supplierTaxCents": 0
+    },
+    "17622": {
+      "productCents": 1995,
+      "supplierTaxCents": 0
+    },
+    "17623": {
+      "productCents": 1525,
+      "supplierTaxCents": 0
+    },
+    "17624": {
+      "productCents": 5050,
+      "supplierTaxCents": 0
+    },
+    "17625": {
+      "productCents": 5025,
+      "supplierTaxCents": 0
+    },
+    "17626": {
+      "productCents": 4195,
+      "supplierTaxCents": 0
+    },
+    "17627": {
+      "productCents": 2825,
+      "supplierTaxCents": 0
+    },
+    "17628": {
+      "productCents": 3150,
+      "supplierTaxCents": 0
+    },
+    "17629": {
+      "productCents": 3525,
+      "supplierTaxCents": 0
+    },
+    "17630": {
+      "productCents": 4250,
+      "supplierTaxCents": 0
+    },
+    "17631": {
+      "productCents": 7000,
+      "supplierTaxCents": 0
+    },
+    "17632": {
+      "productCents": 8500,
+      "supplierTaxCents": 0
+    },
+    "17633": {
+      "productCents": 8000,
+      "supplierTaxCents": 0
+    },
+    "17634": {
+      "productCents": 2825,
+      "supplierTaxCents": 0
+    },
+    "17635": {
+      "productCents": 3150,
+      "supplierTaxCents": 0
+    },
+    "17636": {
+      "productCents": 3525,
+      "supplierTaxCents": 0
+    },
+    "17637": {
+      "productCents": 4250,
+      "supplierTaxCents": 0
+    },
+    "17638": {
+      "productCents": 7000,
+      "supplierTaxCents": 0
+    },
+    "17639": {
+      "productCents": 8500,
+      "supplierTaxCents": 0
+    },
+    "17640": {
+      "productCents": 8000,
+      "supplierTaxCents": 0
+    },
+    "17641": {
+      "productCents": 2825,
+      "supplierTaxCents": 0
+    },
+    "17642": {
+      "productCents": 3150,
+      "supplierTaxCents": 0
+    },
+    "17643": {
+      "productCents": 3525,
+      "supplierTaxCents": 0
+    },
+    "17644": {
+      "productCents": 4250,
+      "supplierTaxCents": 0
+    },
+    "17645": {
+      "productCents": 7000,
+      "supplierTaxCents": 0
+    },
+    "17646": {
+      "productCents": 8500,
+      "supplierTaxCents": 0
+    },
+    "17647": {
+      "productCents": 8000,
+      "supplierTaxCents": 0
+    },
+    "17714": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17715": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17716": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17717": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17718": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17719": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17720": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "17721": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "18743": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "18744": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "18745": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "18746": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "18747": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "18748": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "19291": {
+      "productCents": 1251,
+      "supplierTaxCents": 0
+    },
+    "19292": {
+      "productCents": 1390,
+      "supplierTaxCents": 0
+    },
+    "19293": {
+      "productCents": 1442,
+      "supplierTaxCents": 0
+    },
+    "19294": {
+      "productCents": 1483,
+      "supplierTaxCents": 0
+    },
+    "19295": {
+      "productCents": 1488,
+      "supplierTaxCents": 0
+    },
+    "19296": {
+      "productCents": 1535,
+      "supplierTaxCents": 0
+    },
+    "19297": {
+      "productCents": 2372,
+      "supplierTaxCents": 0
+    },
+    "19298": {
+      "productCents": 1581,
+      "supplierTaxCents": 0
+    },
+    "19299": {
+      "productCents": 2279,
+      "supplierTaxCents": 0
+    },
+    "19300": {
+      "productCents": 2604,
+      "supplierTaxCents": 0
+    },
+    "19301": {
+      "productCents": 4325,
+      "supplierTaxCents": 0
+    },
+    "19302": {
+      "productCents": 1767,
+      "supplierTaxCents": 0
+    },
+    "19303": {
+      "productCents": 2837,
+      "supplierTaxCents": 0
+    },
+    "19304": {
+      "productCents": 4883,
+      "supplierTaxCents": 0
+    },
+    "19305": {
+      "productCents": 5487,
+      "supplierTaxCents": 0
+    },
+    "19306": {
+      "productCents": 2720,
+      "supplierTaxCents": 0
+    },
+    "19307": {
+      "productCents": 3209,
+      "supplierTaxCents": 0
+    },
+    "19308": {
+      "productCents": 3162,
+      "supplierTaxCents": 0
+    },
+    "19309": {
+      "productCents": 3250,
+      "supplierTaxCents": 0
+    },
+    "19310": {
+      "productCents": 3255,
+      "supplierTaxCents": 0
+    },
+    "19311": {
+      "productCents": 3348,
+      "supplierTaxCents": 0
+    },
+    "19312": {
+      "productCents": 5394,
+      "supplierTaxCents": 0
+    },
+    "19313": {
+      "productCents": 9114,
+      "supplierTaxCents": 0
+    },
+    "19314": {
+      "productCents": 3906,
+      "supplierTaxCents": 0
+    },
+    "19315": {
+      "productCents": 4604,
+      "supplierTaxCents": 0
+    },
+    "19316": {
+      "productCents": 4650,
+      "supplierTaxCents": 0
+    },
+    "19317": {
+      "productCents": 6324,
+      "supplierTaxCents": 0
+    },
+    "19318": {
+      "productCents": 5022,
+      "supplierTaxCents": 0
+    },
+    "19319": {
+      "productCents": 8045,
+      "supplierTaxCents": 0
+    },
+    "19320": {
+      "productCents": 5115,
+      "supplierTaxCents": 0
+    },
+    "19321": {
+      "productCents": 6231,
+      "supplierTaxCents": 0
+    },
+    "19322": {
+      "productCents": 5580,
+      "supplierTaxCents": 0
+    },
+    "19323": {
+      "productCents": 5859,
+      "supplierTaxCents": 0
+    },
+    "19324": {
+      "productCents": 10416,
+      "supplierTaxCents": 0
+    },
+    "19325": {
+      "productCents": 5022,
+      "supplierTaxCents": 0
+    },
+    "19326": {
+      "productCents": 8277,
+      "supplierTaxCents": 0
+    },
+    "19327": {
+      "productCents": 8091,
+      "supplierTaxCents": 0
+    },
+    "19328": {
+      "productCents": 12555,
+      "supplierTaxCents": 0
+    },
+    "19329": {
+      "productCents": 10974,
+      "supplierTaxCents": 0
+    },
+    "19330": {
+      "productCents": 12555,
+      "supplierTaxCents": 0
+    },
     "19514": {
       "productCents": 1933,
+      "supplierTaxCents": 0
+    },
+    "19515": {
+      "productCents": 1581,
       "supplierTaxCents": 0
     },
     "19516": {
       "productCents": 1148,
       "supplierTaxCents": 0
     },
+    "19642": {
+      "productCents": 6741,
+      "supplierTaxCents": 0
+    },
+    "19643": {
+      "productCents": 4150,
+      "supplierTaxCents": 0
+    },
+    "19644": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "19645": {
+      "productCents": 3861,
+      "supplierTaxCents": 0
+    },
+    "19646": {
+      "productCents": 4029,
+      "supplierTaxCents": 0
+    },
+    "19647": {
+      "productCents": 6625,
+      "supplierTaxCents": 0
+    },
+    "19648": {
+      "productCents": 4150,
+      "supplierTaxCents": 0
+    },
+    "19649": {
+      "productCents": 2851,
+      "supplierTaxCents": 0
+    },
+    "19650": {
+      "productCents": 3865,
+      "supplierTaxCents": 0
+    },
+    "19652": {
+      "productCents": 6752,
+      "supplierTaxCents": 0
+    },
+    "19653": {
+      "productCents": 4156,
+      "supplierTaxCents": 0
+    },
+    "20302": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20303": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
     "20304": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20305": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20306": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20307": {
       "productCents": 1504,
       "supplierTaxCents": 0
     },
     "20308": {
       "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20309": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "20318": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20319": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20320": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20321": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20322": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20323": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20324": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20325": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20326": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20327": {
+      "productCents": 1490,
       "supplierTaxCents": 0
     },
     "20328": {
@@ -199,6 +1163,70 @@
     },
     "20329": {
       "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20330": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20331": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20332": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20333": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20687": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20688": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20689": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20690": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20691": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20692": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20693": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "20694": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "21469": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "21470": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "21471": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "21472": {
+      "productCents": 1504,
       "supplierTaxCents": 0
     },
     "21473": {
@@ -217,12 +1245,52 @@
       "productCents": 2183,
       "supplierTaxCents": 0
     },
+    "33985": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "33986": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
     "33987": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "33988": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "33989": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "33990": {
       "productCents": 1504,
       "supplierTaxCents": 0
     },
     "33991": {
       "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "33992": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "34001": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "34002": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "34003": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "34004": {
+      "productCents": 1490,
       "supplierTaxCents": 0
     },
     "34005": {
@@ -233,11 +1301,35 @@
       "productCents": 1490,
       "supplierTaxCents": 0
     },
+    "34007": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "34008": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "49327": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "49328": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
     "49329": {
       "productCents": 1504,
       "supplierTaxCents": 0
     },
+    "49330": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
     "49331": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "49332": {
       "productCents": 1504,
       "supplierTaxCents": 0
     },
@@ -248,6 +1340,49 @@
     "49854": {
       "productCents": 1275,
       "supplierTaxCents": 0
+    },
+    "52384": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "52385": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "52386": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "52387": {
+      "productCents": 1504,
+      "supplierTaxCents": 0
+    },
+    "53188": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "53189": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "53190": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "53191": {
+      "productCents": 1490,
+      "supplierTaxCents": 0
+    },
+    "53681": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
+    },
+    "53682": {
+      "productCents": 1219,
+      "supplierTaxCents": 0
     }
-  }
+  },
+  "metricPostersCheckedAt": "2026-10-25T23:00:17.670Z",
+  "canvasesCheckedAt": "2026-10-25T23:20:21.809Z",
+  "phoneCasesCheckedAt": "2026-10-26T00:16:54.562Z"
 }

@@ -30,9 +30,11 @@ module.exports = function extendCatalog({ makeProduct, products, flatLayouts, mu
       model = { kind: 'panel', width, height, depth: record.kind === 'frame' ? 1.9 : .03,
         frameColor: record.frameColor };
     } else if (record.kind === 'canvas') {
+      const inset = record.frontInset ?? 900;
       model = { kind: 'canvas', width: Math.min(record.width, record.height), height: Math.max(record.width, record.height), depth: record.depth,
-        face: { x: 900 / file.width, y: 900 / file.height,
-          width: (file.width - 1800) / file.width, height: (file.height - 1800) / file.height } };
+        ...(record.canvasStyle ? { style: record.canvasStyle, frameColor: record.frameColor } : {}),
+        face: { x: inset / file.width, y: inset / file.height,
+          width: (file.width - inset * 2) / file.width, height: (file.height - inset * 2) / file.height } };
     } else if (['mousepad', 'sleeve'].includes(record.kind)) {
       // Sleeves use the provider mockup's visible face crop. Inferring that
       // crop from nominal finished dimensions enlarged the design.
@@ -62,6 +64,11 @@ module.exports = function extendCatalog({ makeProduct, products, flatLayouts, mu
     }
     const name = record.name || base.displayName;
     const isColoredMug = record.kind === 'colored-mug';
+    const frameCopy = record.frameColor === '#c79d67'
+      ? { displayName: 'Poster im Eichenrahmen', description: 'Mattes Museumspapier im Rahmen aus Massiveiche.', detail: '189 g/m² · Rahmen aus Massiveiche' }
+      : record.frameColor === '#202124'
+        ? { displayName: base?.displayName, description: base?.description, detail: base?.size.detail }
+        : { displayName: 'Poster im weißen Rahmen', description: 'Mattes Museumspapier im weißen Holzrahmen.', detail: '189 g/m² · weißer Holzrahmen' };
     const layoutGeometry = isColoredMug ? base.layoutGeometry : {
       'fit-area': [{ ...safe, optimize: true }],
       centered: [{ x: safe.x + safe.width * .12, y: safe.y + safe.height * .12,
@@ -70,14 +77,14 @@ module.exports = function extendCatalog({ makeProduct, products, flatLayouts, mu
     const surfaces = record.kind === 'pillow' ? ['front', 'back'] : [placement];
     const product = makeProduct({ ...clone,
       key: record.key, familyKey: record.family || base.familyKey,
-      catalogGroup: record.kind === 'colored-mug' ? 'colored-mug' : record.kind === 'case' ? record.shape : ['poster','frame','pillow','blanket','tote'].includes(record.kind) ? base.previewShape : record.kind,
-      variantLabel: ['colored-mug', 'case', 'frame'].includes(record.kind) ? record.variantLabel : record.label, name,
-      displayName: isColoredMug ? 'Tasse mit farbiger Innenseite' : record.kind === 'frame' ? record.frameColor === '#c79d67' ? 'Poster im Eichenrahmen' : 'Poster im weißen Rahmen' : name,
+      catalogGroup: record.catalogGroup || (record.kind === 'colored-mug' ? 'colored-mug' : record.kind === 'case' ? record.shape : ['poster','frame','pillow','blanket','tote'].includes(record.kind) ? base.previewShape : record.kind),
+      variantLabel: record.canvasStyle === 'framed' || ['colored-mug', 'case', 'frame'].includes(record.kind) ? record.variantLabel : record.label, name,
+      displayName: isColoredMug ? 'Tasse mit farbiger Innenseite' : record.kind === 'frame' ? frameCopy.displayName : name,
       description: record.kind === 'case'
         ? 'Zweischichtige Schutzhülle. Das Motiv bleibt unterhalb der Kamera und innerhalb des sicheren Druckbereichs.'
-        : record.kind === 'frame' ? record.frameColor === '#c79d67' ? 'Mattes Museumspapier im Rahmen aus Massiveiche.' : 'Mattes Museumspapier im weißen Holzrahmen.'
+        : record.kind === 'frame' ? frameCopy.description
         : record.kind === 'tote' ? 'Tragetasche mit farbigen Baumwollträgern und eurer persönlichen Wortwolke.'
-        : record.kind === 'eco-tote' ? 'Bio-Baumwolltasche mit bedruckter Vorderseite.' : base?.description || `${name} mit eurer persönlichen Wortwolke.`,
+        : record.kind === 'eco-tote' ? 'Bio-Baumwolltasche mit bedruckter Vorderseite.' : record.description || base?.description || `${name} mit eurer persönlichen Wortwolke.`,
       icon: base?.icon || '◇', thumbnail: base?.thumbnail || `/assets/product-thumbnails/${({ case: 'phone-case', bottle: 'water-bottle', sleeve: 'laptop-sleeve', mousepad: 'mouse-pad', canvas: 'canvas', 'eco-tote': 'tote' })[record.kind] || 'drinkware'}.svg`,
       productPhoto: record.productPhoto, productPhotoFit: 'contain', productPhotoPosition: 'center',
       previewType, previewShape: record.shape || base.previewShape, previewModel: model, previewMockup,
@@ -94,13 +101,13 @@ module.exports = function extendCatalog({ makeProduct, products, flatLayouts, mu
       printSurfaces: surfaces.map(key => ({ key, label: key === 'front' ? 'Vorderseite' : key === 'back' ? 'Rückseite' : 'Druckfläche' })),
       size: { ...(base?.size || {}), label: record.kind === 'colored-mug' ? record.variantLabel : record.kind === 'case' ? record.variantLabel : record.label || base?.size.label,
         ...(record.heightCm ? { heightCm: record.heightCm, diameterCm: record.diameterCm } : {}),
-        detail: record.kind === 'case' ? '' : record.kind === 'frame' ? record.frameColor === '#c79d67' ? '189 g/m² · Rahmen aus Massiveiche' : '189 g/m² · weißer Holzrahmen'
+        detail: record.kind === 'case' ? '' : record.kind === 'frame' ? frameCopy.detail
           : record.kind === 'tote' ? record.handleColor === '#ce252b' ? '10 l · rote Träger' : '10 l · gelbe Träger'
-          : record.kind === 'eco-tote' ? 'Nur Vorderseite bedruckt' : base?.size.detail },
+          : record.kind === 'eco-tote' ? 'Nur Vorderseite bedruckt' : record.detail || base?.size.detail },
       layoutGeometry, layouts: isColoredMug ? mugLayouts : flatLayouts,
       // New physical models have a fixed, verified provider orientation.
-      orientationOptions: ['poster', 'frame', 'canvas'].includes(record.kind) ? orientations : [],
-      defaultOrientation: ['poster', 'frame', 'canvas'].includes(record.kind) ? 'portrait' : 'default',
+      orientationOptions: ['poster', 'frame', 'canvas'].includes(record.kind) && file.can_rotate ? orientations : [],
+      defaultOrientation: ['poster', 'frame', 'canvas'].includes(record.kind) && file.can_rotate ? 'portrait' : 'default',
     });
     byKey.set(product.key, product);
     return product;

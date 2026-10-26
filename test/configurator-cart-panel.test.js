@@ -14,7 +14,7 @@ function harness(t, options = {}) {
   const dialog = document.querySelector('dialog'), trigger = document.getElementById('cart');
   dialog.showModal = () => dialog.setAttribute('open', '');
   dialog.close = () => { dialog.removeAttribute('open'); dialog.dispatchEvent(new dom.window.Event('close')); };
-  let items = [{ id: 'a', name: 'Mug', size: '325 ml' }, { id: 'b', name: 'Poster', size: '30 × 40 cm' }];
+  let items = options.items || [{ id: 'a', name: 'Mug', size: '325 ml' }, { id: 'b', name: 'Poster', size: '30 × 40 cm' }];
   let removed = null;
   const calls = { edit: [], continued: 0 };
   const i18n = {
@@ -28,7 +28,11 @@ function harness(t, options = {}) {
     if (options.failRead) throw new Error('storage');
     return items;
   },
-    describe: item => item, thumbnail: () => document.createElement('img'), pendingRemoval: () => removed,
+    describe: options.describe || (item => item), thumbnail: () => document.createElement('img'), pendingRemoval: () => removed,
+    onQuantity: options.onQuantity ? async (id, quantity) => {
+      await options.onQuantity(id, quantity);
+      items.find(item => item.id === id).quantity = quantity;
+    } : undefined,
     onEdit: async id => { calls.edit.push(id); await options.onEdit?.(id); },
     onRemove: async id => {
       if (options.failRemoval) throw new Error('storage');
@@ -115,4 +119,38 @@ test('unavailable cart storage shows an error and never offers shipping', t => {
   assert.equal(h.button('[data-cart-panel-status]').hidden, false);
   assert.equal(h.button('[data-cart-panel-continue]').disabled, true);
   assert.equal(h.button('[data-cart-panel-empty]').hidden, true);
+});
+
+test('cart quantity controls update totals, enforce boundaries and retain a recoverable zero quantity', async t => {
+  const quantities = [];
+  const h = harness(t, {
+    items: [{ id: 'a', name: 'Blue mug', size: '444 ml · Blue', quantity: 1, maxQuantity: 3 }],
+    describe: item => ({ ...item, price: `EUR ${item.quantity * 16.78}` }),
+    onQuantity: (id, quantity) => quantities.push([id, quantity]),
+  });
+  h.panel.open();
+  h.button('.cart-panel-quantity button:last-child').click();
+  await h.settle();
+  assert.equal(h.button('[data-cart-quantity]').value, '2');
+  assert.equal(h.button('.cart-panel-item-price').textContent, 'EUR 33.56');
+  const input = h.button('[data-cart-quantity]');
+  input.value = '4'; input.dispatchEvent(new h.document.defaultView.Event('change'));
+  assert.equal(input.value, '2');
+  input.value = '0'; input.dispatchEvent(new h.document.defaultView.Event('change'));
+  await h.settle();
+  assert.equal(h.button('.cart-panel-quantity button').disabled, true);
+  assert.equal(h.button('.cart-panel-excluded').hidden, false);
+  assert.deepEqual(quantities, [['a', 2], ['a', 0]]);
+  assert.equal(h.dialog.querySelectorAll('.cart-panel-item').length, 1);
+});
+
+test('a failed quantity write leaves the previous quantity and price available', async t => {
+  const h = harness(t, { items: [{ id: 'a', name: 'Mug', quantity: 2 }],
+    onQuantity: () => { throw new Error('storage'); },
+  });
+  h.panel.open();
+  h.button('.cart-panel-quantity button:last-child').click();
+  await h.settle();
+  assert.equal(h.button('[data-cart-quantity]').value, '2');
+  assert.equal(h.button('[data-cart-panel-status]').hidden, false);
 });

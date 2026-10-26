@@ -1,3 +1,22 @@
+/* One modal policy for every page, including nested dialogs and mobile sheets.
+   :modal excludes anchored popovers and dialogs embedded in the canvas drawer. */
+html { scrollbar-gutter: stable; }
+html:has(dialog:modal), html:has(dialog:modal) body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+dialog, [popover], [role="dialog"], [role="menu"], [role="listbox"],
+.ww-site-menu-panel, .ww-language-menu, .mobile-canvas-drawer, .cloud-word-actions,
+.product-gallery-price-info {
+  overscroll-behavior: contain;
+}
+/* Contain both axes of diagonal trackpad gestures at inner scrollers too. */
+:where(dialog, [popover], [role="dialog"], [role="menu"], [role="listbox"],
+  .ww-site-menu-panel, .ww-language-menu, .mobile-canvas-drawer, .cloud-word-actions,
+  .product-gallery-price-info) * {
+  overscroll-behavior: contain;
+}
+
 .ww-site-header {
   position: sticky;
   top: 0;

@@ -1,5 +1,7 @@
 'use strict';
 
+const { getProductInformation } = require('./productInformation');
+
 const { models: PREVIEW_MODELS, adaptations: PREVIEW_ADAPTATIONS = [] } = require('./productPreviewModels.json');
 
 const { shippingRestrictions } = require('./productShipping');
@@ -90,6 +92,7 @@ const PRODUCT_FAMILIES = Object.freeze([
   }),
   Object.freeze({ key: 'tech', label: 'Technik & Zubehör', description: 'Handyhüllen, Laptophüllen und Mauspads', thumbnail: '/assets/product-thumbnails/phone-case.svg' }),
   Object.freeze({ key: 'drinkware', label: 'Trinkflaschen & Becher', description: 'Edelstahl und Emaille', thumbnail: '/assets/product-thumbnails/drinkware.svg' }),
+  Object.freeze({ key: 'clothing', label: 'Kleidung', description: 'T-Shirt, Sweatshirt und Hoodie aus Bio-Baumwolle', thumbnail: '/assets/product-thumbnails/t-shirt.svg' }),
   Object.freeze({
     key: 'notebooks',
     label: 'Notizbücher',
@@ -1014,7 +1017,7 @@ const BASE_PRODUCTS = Object.freeze([
 ]);
 const PRODUCTS = Object.freeze([...BASE_PRODUCTS, ...require('./productCatalogExtensions')({
   makeProduct, products: BASE_PRODUCTS, flatLayouts: FLAT_LAYOUTS, mugLayouts: MUG_LAYOUTS, orientations: POSTER_ORIENTATIONS,
-})]);
+}), ...require('./apparelProducts')({ makeProduct, layouts: FLAT_LAYOUTS })]);
 const DEFAULT_PRODUCT = MUG_11;
 
 function getProduct(key) {
@@ -1038,6 +1041,7 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
     name: resolvedProduct.name,
     displayName: resolvedProduct.displayName,
     description: resolvedProduct.description,
+    information: getProductInformation(resolvedProduct),
     icon: resolvedProduct.icon,
     previewType: resolvedProduct.previewType,
     previewShape: resolvedProduct.previewShape,

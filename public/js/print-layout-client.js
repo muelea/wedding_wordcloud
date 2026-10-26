@@ -13,7 +13,7 @@
   // glyph bounds and final print decisions remain in the page's layout engine.
   function create({ core, layout, workerUrl, coreUrl, version = '',
     WorkerClass = globalThis.Worker, timeoutMs = 10000, workerCount = 1,
-    yieldControl }) {
+    yieldControl, shareMeasurements = false, fontSet = globalThis.document?.fonts }) {
     // Posted tasks yield without the nested-timer delay browsers apply after
     // several setTimeout turns. Keep a timer fallback for non-browser callers.
     const turns = [];
@@ -30,6 +30,53 @@
     const pending = [];
     const completed = new Map(), preparing = new Map();
     let cacheBytes = 0;
+    const metrics = new Map(), states = new Map();
+    let metricBytes = 0, metricEpoch = 0, stateSequence = 0;
+    const clearMetrics = () => { metrics.clear(); states.clear(); metricBytes = 0; metricEpoch++; };
+    if (shareMeasurements) fontSet?.addEventListener?.('loadingdone', clearMetrics);
+
+    function measurementState(context) {
+      if (!context) return null;
+      // This opt-in is for the configurator's private measurement canvases.
+      // Equal requested fonts alone are insufficient: alignment, baseline,
+      // language and text-shaping settings also affect native TextMetrics.
+      return JSON.stringify(['direction', 'fontKerning', 'fontStretch', 'fontVariantCaps',
+        'letterSpacing', 'wordSpacing', 'textRendering', 'textAlign', 'textBaseline', 'lang']
+        .map(key => context[key] ?? null).concat(context.canvas?.lang || '', context.canvas?.dir || '',
+          globalThis.document?.documentElement?.lang || '', globalThis.document?.documentElement?.dir || ''));
+    }
+
+    function measurements(context) {
+      if (!shareMeasurements || !context || fontSet?.status === 'loading') return context;
+      const state = measurementState(context);
+      if (!states.has(state)) {
+        if (states.size >= 8) clearMetrics();
+        states.set(state, ++stateSequence);
+      }
+      const stateId = states.get(state);
+      let font = context.font;
+      return {
+        get font() { return font; },
+        set font(value) { font = value; },
+        measureText(text) {
+          if (fontSet?.status === 'loading') { context.font = font; return context.measureText(text); }
+          const key = JSON.stringify([metricEpoch, stateId, font, text]);
+          const cached = metrics.get(key);
+          if (cached) { metrics.delete(key); metrics.set(key, cached); return cached.value; }
+          context.font = font;
+          const value = context.measureText(text);
+          const bytes = key.length * 2 + 256;
+          if (!disposed && bytes <= 4 * 1024 * 1024) {
+            while (metrics.size && (metrics.size >= 8192 || metricBytes + bytes > 4 * 1024 * 1024)) {
+              const oldest = metrics.keys().next().value;
+              metricBytes -= metrics.get(oldest).bytes; metrics.delete(oldest);
+            }
+            metrics.set(key, { value, bytes }); metricBytes += bytes;
+          }
+          return value;
+        },
+      };
+    }
 
     function releaseWorker(slot) {
       slot.worker?.terminate();
@@ -125,7 +172,8 @@
       // Geometry is independent of palette. Include exact origins and sizes:
       // equal aspect ratios alone do not preserve rounded print geometry.
       const source = copy(design);
-      const key = JSON.stringify([version, options.printDpi || null, slots, source.map(item => {
+      const key = JSON.stringify([version, options.printDpi || null,
+        shareMeasurements ? [metricEpoch, measurementState(measureContext)] : null, slots, source.map(item => {
         const { color, ...geometry } = item;
         return [geometry, typeof options.fontFamily === 'function'
           ? options.fontFamily(item) : options.fontFamily];
@@ -138,7 +186,7 @@
         let promise = preparing.get(key);
         if (!promise) {
           if (preparing.size >= 16) throw new Error('layout_queue_full');
-          promise = layout.optimizeDesignAsync(source, slots, measureContext,
+          promise = layout.optimizeDesignAsync(source, slots, measurements(measureContext),
             { ...options, pack, yieldControl }).then(optimized => {
             if (!disposed) {
               const bytes = (key.length + JSON.stringify(optimized).length) * 2;
@@ -179,6 +227,8 @@
           job.reject(cancelled());
         }
         completed.clear(); cacheBytes = 0;
+        fontSet?.removeEventListener?.('loadingdone', clearMetrics);
+        clearMetrics();
         channel?.port1.close(); channel?.port2.close();
         while (turns.length) turns.shift()();
       },

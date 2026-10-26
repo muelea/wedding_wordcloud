@@ -3,20 +3,66 @@
     <header class="print-preview-head">
       <div>
         <h2 id="print-preview-title" data-preview-title tabindex="-1"></h2>
+        <p class="print-preview-detail" data-preview-detail data-i18n-ignore></p>
       </div>
-      <div class="print-preview-surfaces" data-preview-surfaces role="group" aria-label="Ansicht wählen" hidden></div>
       <button type="button" class="ww-icon-button ww-close-button print-preview-close" data-preview-close aria-label="Vorschau schließen"></button>
     </header>
-    <div class="print-preview-viewport" data-preview-viewport tabindex="0" aria-label="Designvorschau">
-      <div class="print-preview-artwork" data-preview-artwork hidden></div>
-      <div class="print-preview-feedback" data-preview-feedback>
-        <p data-preview-status role="status" aria-live="polite">Druckvorschau wird geladen…</p>
-        <button type="button" data-preview-retry hidden>Erneut versuchen</button>
+    <div class="print-preview-content" data-preview-content>
+      <div class="print-preview-grid">
+        <section class="print-preview-card print-preview-photo" data-preview-photo-card aria-labelledby="preview-photo-label">
+          <div class="print-preview-card-head"><h3 id="preview-photo-label">Produktfoto</h3></div>
+          <div class="print-preview-viewport" data-preview-photo>
+            <div class="print-preview-artwork" data-preview-photo-artwork hidden></div>
+            <div class="print-preview-feedback" data-preview-photo-feedback>
+              <p data-preview-photo-status role="status" aria-live="polite">Produktvorschau wird geladen…</p>
+              <button type="button" data-preview-photo-retry hidden>Erneut versuchen</button>
+            </div>
+          </div>
+        </section>
+        <section class="print-preview-card print-preview-description-card" aria-labelledby="preview-description-label">
+          <div class="print-preview-card-head"><h3 id="preview-description-label">Produktbeschreibung</h3></div>
+          <div class="print-preview-viewport print-preview-description" data-preview-description tabindex="0" aria-labelledby="preview-description-label" data-i18n-ignore></div>
+        </section>
+        <section class="print-preview-card print-preview-design" aria-labelledby="preview-design-label">
+          <div class="print-preview-card-head">
+            <h3 id="preview-design-label">Design</h3>
+            <div class="print-preview-surfaces" data-preview-surfaces role="group" aria-label="Ansicht wählen" hidden></div>
+          </div>
+          <div class="print-preview-viewport" data-preview-viewport tabindex="0" aria-label="Designvorschau">
+            <div class="print-preview-artwork" data-preview-artwork hidden></div>
+            <div class="print-preview-feedback" data-preview-feedback>
+              <p data-preview-status role="status" aria-live="polite">Druckvorschau wird geladen…</p>
+              <button type="button" data-preview-retry hidden>Erneut versuchen</button>
+            </div>
+          </div>
+        </section>
+        <section class="print-preview-card print-preview-model-card" data-preview-model-card aria-labelledby="preview-model-label">
+          <div class="print-preview-card-head"><h3 id="preview-model-label">3D-Ansicht</h3></div>
+          <div class="print-preview-viewport">
+            <div class="print-preview-model" data-preview-model></div>
+            <div class="print-preview-feedback" data-preview-model-feedback>
+              <p data-preview-model-status role="status" aria-live="polite">3D-Vorschau wird geladen…</p>
+              <button type="button" data-preview-model-retry hidden>Erneut versuchen</button>
+            </div>
+          </div>
+        </section>
       </div>
+      <section class="print-preview-card print-preview-generated" data-preview-mockup-card aria-labelledby="preview-mockup-label" hidden>
+        <div class="print-preview-card-head">
+          <h3 id="preview-mockup-label">Produktvorschau</h3>
+          <div class="print-preview-surfaces" data-preview-mockup-surfaces role="group" aria-label="Ansicht wählen" hidden></div>
+        </div>
+        <div class="print-preview-viewport" data-preview-mockup-viewport>
+          <div class="print-preview-artwork" data-preview-mockup-artwork hidden></div>
+          <div class="print-preview-feedback" data-preview-generated-feedback>
+            <p data-preview-generated-status role="status" aria-live="polite">Produktvorschau wird geladen…</p>
+          </div>
+        </div>
+      </section>
     </div>
     <div class="print-preview-mockup-actions" data-preview-mockup-actions hidden>
-      <button type="button" data-preview-mockup>Produktvorschau erstellen</button>
       <p data-preview-mockup-status role="status" aria-live="polite" hidden></p>
+      <button type="button" data-preview-mockup>Produktvorschau erstellen</button>
     </div>
   </div>
 </dialog>

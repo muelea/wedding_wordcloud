@@ -564,17 +564,26 @@
           placed.push({ ...item, x: (best.x1 + best.x2) / 2,
             y: (best.y1 + best.y2) / 2, scale });
           if (item.emoji) placedEmoji.push(placed[placed.length - 1]);
-          const next = [];
+          const next = [], groups = [[], [], [], []], kept = [];
+          // The incoming free rectangles form an antichain. After a split,
+          // containment is possible only between pieces cut on the same side,
+          // or when an unchanged rectangle contains a new piece. Preserve the
+          // original order, including the first-copy rule for equal pieces.
           for (const space of free) {
-            if (!overlaps(space, best)) { next.push(space); continue; }
-            if (best.x1 > space.x1) next.push({ ...space, x2: best.x1 });
-            if (best.x2 < space.x2) next.push({ ...space, x1: best.x2 });
-            if (best.y1 > space.y1) next.push({ ...space, y2: best.y1 });
-            if (best.y2 < space.y2) next.push({ ...space, y1: best.y2 });
+            if (!overlaps(space, best)) { kept.push(space); next.push(space); continue; }
+            function add(part, side) { part.index = next.length; groups[side].push(part); next.push(part); }
+            if (best.x1 > space.x1) add({ x1: space.x1, x2: best.x1, y1: space.y1, y2: space.y2 }, 0);
+            if (best.x2 < space.x2) add({ x1: best.x2, x2: space.x2, y1: space.y1, y2: space.y2 }, 1);
+            if (best.y1 > space.y1) add({ x1: space.x1, x2: space.x2, y1: space.y1, y2: best.y1 }, 2);
+            if (best.y2 < space.y2) add({ x1: space.x1, x2: space.x2, y1: best.y2, y2: space.y2 }, 3);
           }
-          free = next.filter((space, index) => !next.some((other, otherIndex) =>
-            otherIndex !== index && contains(other, space) &&
-            (!contains(space, other) || otherIndex < index)));
+          for (const group of groups) for (const space of group) {
+            for (const other of kept) if (contains(other, space)) { space.removed = true; break; }
+            if (space.removed) continue;
+            for (const other of group) if (other !== space && contains(other, space) &&
+              (!contains(space, other) || other.index < space.index)) { space.removed = true; break; }
+          }
+          free = next.filter(space => !space.removed);
         }
         return placed;
       }
@@ -759,8 +768,6 @@
     const searchRadius = Math.max(candidateColumns, candidateRows);
     const wordsPerRow = Math.ceil(candidateColumns / 32);
     const forbidden = new Uint32Array(wordsPerRow * candidateRows);
-    const wordsPerColumn = Math.ceil(candidateRows / 32);
-    const forbiddenColumns = new Uint32Array(wordsPerColumn * candidateColumns);
     const xPositions = new Float64Array(candidateColumns);
     const yPositions = new Float64Array(candidateRows);
     const columnFractions = Float64Array.from({ length: candidateColumns }, (_, index) => index / Math.max(1, candidateColumns - 1));
@@ -769,9 +776,9 @@
     function tryScale(scale, variant) {
       const plan = variantPlans[variant];
       const placed = [];
-      // A placed rectangle forbids an exact range of grid centers. Row and
-      // column masks skip occupied runs without changing the original spiral
-      // order or its ties. Build them only when the preferred anchor is blocked.
+      // A placed rectangle forbids an exact range of grid centers. Row masks
+      // skip occupied runs without changing the spiral order or its ties.
+      // Build them only when the preferred anchor is blocked.
       let halfWidth, halfHeight;
       function firstFree(buffer, offset, start, end, direction, extent) {
         start = Math.max(0, start); end = Math.min(extent - 1, end);
@@ -790,7 +797,30 @@
       // The earliest free point on the four edges has the same (step, edge)
       // rank as the former per-point loop, including its alternating direction.
       function nearestFree(anchorColumn, anchorRow, variant, orderIndex) {
-        for (let radius = 1; radius <= searchRadius; radius++) {
+        // Find the first nonempty square ring from the nearest free bit in
+        // each row. Rows beyond the current distance cannot improve it. This
+        // avoids rebuilding a transposed mask and searching every inner ring.
+        let distance = searchRadius + 1;
+        for (let offset = 0; offset < distance && offset < candidateRows; offset++) {
+          for (let sign = offset ? -1 : 1; sign <= 1; sign += 2) {
+            const row = anchorRow + offset * sign;
+            if (row < 0 || row >= candidateRows) continue;
+            const base = row * wordsPerRow;
+            const left = firstFree(forbidden, base, anchorColumn - distance + 1, anchorColumn, -1, candidateColumns);
+            const right = firstFree(forbidden, base, anchorColumn, anchorColumn + distance - 1, 1, candidateColumns);
+            if (left >= 0) distance = Math.min(distance, Math.max(offset, anchorColumn - left));
+            if (right >= 0) distance = Math.min(distance, Math.max(offset, right - anchorColumn));
+          }
+        }
+        function firstFreeColumn(column, start, end, direction) {
+          start = Math.max(0, start); end = Math.min(candidateRows - 1, end);
+          for (let row = direction > 0 ? start : end; direction > 0 ? row <= end : row >= start; row += direction) {
+            if (!(forbidden[row * wordsPerRow + (column >>> 5)] & (1 << (column & 31)))) return row;
+          }
+          return -1;
+        }
+        if (distance <= searchRadius) {
+          const radius = distance;
           const reverse = (variant + orderIndex + radius) % 2;
           let bestKey = Infinity, bestColumn = -1, bestRow = -1;
           function offer(column, row, step, edge) {
@@ -809,11 +839,11 @@
             if (c >= 0) offer(c, bottom, reverse ? c - anchorColumn : anchorColumn - c, 1);
           }
           if (left >= 0) {
-            const r = firstFree(forbiddenColumns, left * wordsPerColumn, top, bottom, reverse ? 1 : -1, candidateRows);
+            const r = firstFreeColumn(left, top, bottom, reverse ? 1 : -1);
             if (r >= 0) offer(left, r, reverse ? r - anchorRow : anchorRow - r, 2);
           }
           if (right < candidateColumns) {
-            const r = firstFree(forbiddenColumns, right * wordsPerColumn, top, bottom, reverse ? -1 : 1, candidateRows);
+            const r = firstFreeColumn(right, top, bottom, reverse ? -1 : 1);
             if (r >= 0) offer(right, r, reverse ? anchorRow - r : r - anchorRow, 3);
           }
           if (bestKey < Infinity) return [bestColumn, bestRow];
@@ -840,7 +870,7 @@
             (height - collisionHeight);
         }
         forbidden.fill(0);
-        forbiddenColumns.fill(0);
+
         // Correct the analytical estimate with the original comparisons: a
         // rounding error at a touching edge must not change a packing decision.
         function bound(values, value, half, count, span, end) {
@@ -862,22 +892,21 @@
           const top = bound(yPositions, other.collisionY1, halfHeight, candidateRows, height - collisionHeight, false);
           const bottom = bound(yPositions, other.collisionY2, halfHeight, candidateRows, height - collisionHeight, true);
           if (left >= right || top >= bottom) continue;
-          function mark(buffer, wordsPerLine, start, end, lineStart, lineEnd) {
-            const first = start >>> 5, last = (end - 1) >>> 5;
-            const firstMask = (0xffffffff << (start & 31)) >>> 0;
-            const lastMask = 0xffffffff >>> (31 - ((end - 1) & 31));
-            for (let line = lineStart; line < lineEnd; line++) {
-              const offset = line * wordsPerLine;
-              if (first === last) buffer[offset + first] |= firstMask & lastMask;
-              else {
-                buffer[offset + first] |= firstMask;
-                for (let word = first + 1; word < last; word++) buffer[offset + word] = 0xffffffff;
-                buffer[offset + last] |= lastMask;
-              }
+          const first = left >>> 5, last = (right - 1) >>> 5;
+          const firstMask = (0xffffffff << (left & 31)) >>> 0;
+          const lastMask = 0xffffffff >>> (31 - ((right - 1) & 31));
+          if (first === last) {
+            const mask = firstMask & lastMask;
+            const end = bottom * wordsPerRow + first;
+            for (let offset = top * wordsPerRow + first; offset < end; offset += wordsPerRow) forbidden[offset] |= mask;
+          } else {
+            const end = bottom * wordsPerRow;
+            for (let offset = top * wordsPerRow; offset < end; offset += wordsPerRow) {
+              forbidden[offset + first] |= firstMask;
+              for (let word = first + 1; word < last; word++) forbidden[offset + word] = 0xffffffff;
+              forbidden[offset + last] |= lastMask;
             }
           }
-          mark(forbidden, wordsPerRow, left, right, top, bottom);
-          mark(forbiddenColumns, wordsPerColumn, top, bottom, left, right);
         }
       }
 
@@ -1281,15 +1310,19 @@
     });
   }
 
-  function measureWords(words, measureCtx, colorFn) {
+  function wordSizes(words) {
     if (!Array.isArray(words) || !words.length) return [];
-    const getColor = colorFn || makeColorAssigner('pastel');
     const counts = words.map(([, count]) => count);
     const minCount = Math.min(...counts);
     const maxCount = Math.max(...counts);
-    const sized = words.map(([word, count]) => ({ word,
+    return words.map(([word, count]) => ({ word,
       fontPx: 1000 * sizeForCount(word, count, minCount, maxCount, .24, 1),
     })).sort((a, b) => b.fontPx - a.fontPx);
+  }
+
+  function measureWords(words, measureCtx, colorFn) {
+    const getColor = colorFn || makeColorAssigner('pastel');
+    const sized = wordSizes(words);
     assignRotations(sized);
     const boxes = sized.map((item) => {
       const rotated = item.rotated;
@@ -1397,6 +1430,7 @@
   }
 
   return {
+    wordSizes,
     FONT_FAMILY,
     SVG_FONT_FAMILY,
     TEXT_LINE_HEIGHT,

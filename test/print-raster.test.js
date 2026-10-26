@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createCanvas, loadImage } = require('canvas');
 const { FabricImage, StaticCanvas } = require('fabric/node');
-const { renderProviderPng } = require('../src/printRaster');
+const { renderProviderPng, renderProviderPngInStrips } = require('../src/printRaster');
 const { PRODUCTS, resolveProductOrientation } = require('../src/products');
 const { MAX_DESIGN_ELEMENTS } = require('../public/js/cloud-limits');
 const DesignFonts = require('../src/designFonts');
@@ -30,6 +30,39 @@ async function pixels(bytes) {
   canvas.getContext('2d').drawImage(image, 0, 0);
   return canvas.getContext('2d');
 }
+
+test('strip rendering preserves complete pixels across boundaries, rotated uploads and interleaved outlined vectors', async () => {
+  const current = { printFile: { width: 512, height: 547 }, designSafeMargin: 0 };
+  const layers = [
+    { id: 'under', type: 'text', text: 'Liebe ❤️', x: 256, y: 256, fontSize: 80, fontFamily: 'classic', color: '#18a84b', angle: 12 },
+    imageItem(sourceImage('image/png'), { x: 260, y: 260, width: 270, height: 320, angle: 27 }),
+    { id: 'over', type: 'icon', icon: 'heart', x: 270, y: 385, size: 190, angle: 35, color: '#2455f5' },
+    imageItem(sourceImage('image/jpeg', '#aabbcc'), { x: 160, y: 130, width: 110, height: 105, angle: -11 }),
+  ];
+  const expected = await pixels(await renderProviderPng(current, layers));
+  const actual = await pixels(await renderProviderPngInStrips(current, layers));
+  const a = actual.getImageData(0, 0, 512, 547).data, b = expected.getImageData(0, 0, 512, 547).data;
+  for (let i = 0; i < a.length; i += 4) {
+    // Cairo clips a rotated image polygon at each surface boundary. Fractional
+    // edge coverage can vary by two levels; opaque interior pixels stay exact.
+    assert.ok(Math.abs(a[i + 3] - b[i + 3]) <= 3, `alpha at pixel ${i / 4}`);
+    for (let c = 0; c < 3; c++) {
+      assert.ok(Math.abs(a[i + c] * a[i + 3] / 255 - b[i + c] * b[i + 3] / 255) <= 3, `coverage at pixel ${i / 4}`);
+    }
+  }
+  const vectors = layers.filter(item => item.type !== 'image');
+  const fullVectors = await pixels(await renderProviderPng(current, vectors));
+  const stripVectors = await pixels(await renderProviderPngInStrips(current, vectors));
+  assert.deepEqual(stripVectors.getImageData(0, 0, 512, 547).data, fullVectors.getImageData(0, 0, 512, 547).data);
+  assert.deepEqual(await renderProviderPngInStrips(current, layers), await renderProviderPngInStrips(current, layers));
+});
+
+test('strip PNG encoding rejects incomplete renders and enforces the artifact byte cap', async () => {
+  const encode = require('../src/stripPng');
+  await assert.rejects(encode({ width: 20, height: 30, rows: 10, maxBytes: 10000,
+    paint: async (context, top) => { if (top) throw new Error('draw failed'); } }), /draw failed/);
+  await assert.rejects(encode({ width: 20, height: 30, maxBytes: 57, paint: async () => {} }), { code: 'PRINT_FILE_TOO_LARGE' });
+});
 
 for (const mimeType of ['image/png', 'image/jpeg']) {
   test(`provider PNG includes actual uploaded ${mimeType} pixels`, async () => {

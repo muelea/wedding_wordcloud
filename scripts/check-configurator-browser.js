@@ -18,7 +18,8 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
     const product = getPublicProduct(getProduct(saved.productKey), saved.orientation);
     const printPreviewUrls = Object.fromEntries(product.printSurfaces.map(surface => [surface.key,
       `/api/events/${FIXTURE_SLUG}/configurations/${saved.id}/print.svg?surface=${surface.key}`]));
-    return { ...saved, product, printPreviewUrls, printFileUrl: Object.values(printPreviewUrls)[0] };
+    return { ...saved, product, printPreviewUrls, printFileUrl: Object.values(printPreviewUrls)[0],
+      mockupUrl: `/api/events/${FIXTURE_SLUG}/configurations/${saved.id}/mockups` };
   };
   app.use(express.json({ limit: '2mb' }));
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -51,10 +52,13 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
     <html lang="en"><head><meta charset="utf-8"><title>Responsive test word cloud</title></head>
     <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en&view=products">Create a keepsake</a></body></html>`));
   app.get(`/e/${FIXTURE_SLUG}/configure`, (req, res, next) => {
-    if (['1', 'area', 'touch', 'review', 'gallery', 'product-ux', 'performance'].includes(req.query.probe)) {
+    if (['1', 'area', 'touch', 'review', 'gallery', 'product-ux', 'performance', 'scroll', 'gallery-input'].includes(req.query.probe)) {
       const send = res.send.bind(res);
-      const probe = req.query.probe === 'product-ux' ? 'product-ux' : req.query.probe === 'gallery' ? 'product-gallery' : req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
+      const probe = req.query.probe === 'scroll' ? 'overlay-scroll' : req.query.probe === 'product-ux' ? 'product-ux' : req.query.probe === 'gallery' ? 'product-gallery' : req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
       res.send = html => {
+        if (req.query.probe === 'gallery-input') {
+          return send(html.replace('<head>', '<head><script src="/gallery-input-scroll-probe.js"></script>'));
+        }
         if (req.query.probe === 'performance') {
           return send(html.replace(/(<script src="[^\"]*\/js\/print-layout-client\.js[^\"]*"><\/script>)/,
             '$1<script src="/print-layout-performance-probe.js"></script>'));
@@ -97,7 +101,7 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
       orientation: req.body?.orientation || 'default',
       printFileUrl: '', createdAt: new Date(0).toISOString() };
     configurations.set(configuration.id, structuredClone(configuration));
-    res.status(201).json(configuration);
+    res.status(201).json(publicConfiguration(configuration));
   });
   app.get(`/api/events/${FIXTURE_SLUG}/configurations/:id/edit`, (req, res) => {
     const configuration = configurations.get(req.params.id);
@@ -128,12 +132,23 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
     const surface = req.query.surface || product.printSurfaces[0].key;
     res.type('image/svg+xml').send(require('../src/mugPrint').buildProductPrintSvg(product, saved.designs[surface]));
   });
+  app.get(`/api/events/${FIXTURE_SLUG}/configurations/:id/print.png`, async (req, res, next) => {
+    const saved = configurations.get(req.params.id);
+    if (!saved) return res.sendStatus(404);
+    const product = getPublicProduct(getProduct(saved.productKey), saved.orientation);
+    const surface = req.query.surface || product.printSurfaces[0].key;
+    try {
+      res.type('image/png').send(await require('../src/printRaster').renderProviderPng(product, saved.designs[surface]));
+    } catch (error) { next(error); }
+  });
   app.get('/responsive-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/configurator-workspace-probe.js')));
+  app.get('/overlay-scroll-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/overlay-scroll-probe.js')));
   app.get('/area-layout-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/area-layout-probe.js')));
   app.get('/mobile-canvas-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/mobile-canvas-probe.js')));
   app.get('/product-gallery-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/product-gallery-probe.js')));
   app.get('/product-ux-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/product-ux-probe.js')));
   app.get('/print-layout-performance-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/print-layout-performance-probe.js')));
+  app.get('/gallery-input-scroll-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/gallery-input-scroll-probe.js')));
   app.use(ASSET_BASE, makeEmojiArtworkRouter());
   app.get('/vendor/three.min.js', (req, res) => res.sendFile(path.join(root, 'node_modules/three/build/three.min.js')));
   app.use('/vendor/three', express.static(path.join(root, 'node_modules/three'), { index: false, dotfiles: 'deny' }));

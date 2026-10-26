@@ -1,0 +1,884 @@
+{
+  "checkedAt": "2026-10-26T00:04:11.568Z",
+  "destination": {
+    "country_code": "DE",
+    "city": "Berlin",
+    "zip": "10115"
+  },
+  "source": "Printful Catalog API v1/v2 active variants + Germany availability + 140 individual shipping quotes; public product-gallery image mappings",
+  "families": [
+    {
+      "productId": 601,
+      "variants": [
+        {
+          "variantId": 15383,
+          "model": "iPhone 11 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15382,
+          "model": "iPhone 11 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15381,
+          "model": "iPhone 11",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15385,
+          "model": "iPhone 12 mini",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15387,
+          "model": "iPhone 12 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15386,
+          "model": "iPhone 12 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15384,
+          "model": "iPhone 12",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15389,
+          "model": "iPhone 13 mini",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15391,
+          "model": "iPhone 13 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15390,
+          "model": "iPhone 13 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15388,
+          "model": "iPhone 13",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16128,
+          "model": "iPhone 14 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16130,
+          "model": "iPhone 14 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16126,
+          "model": "iPhone 14 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16124,
+          "model": "iPhone 14",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17716,
+          "model": "iPhone 15 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17720,
+          "model": "iPhone 15 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17718,
+          "model": "iPhone 15 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17714,
+          "model": "iPhone 15",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20303,
+          "model": "iPhone 16 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20305,
+          "model": "iPhone 16 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20304,
+          "model": "iPhone 16 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20302,
+          "model": "iPhone 16",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33986,
+          "model": "iPhone 17 Air",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33988,
+          "model": "iPhone 17 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33987,
+          "model": "iPhone 17 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33985,
+          "model": "iPhone 17",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 52386,
+          "model": "iPhone 18 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 52384,
+          "model": "iPhone 18 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15394,
+          "model": "iPhone 11 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15393,
+          "model": "iPhone 11 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15392,
+          "model": "iPhone 11",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15396,
+          "model": "iPhone 12 mini",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15398,
+          "model": "iPhone 12 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15397,
+          "model": "iPhone 12 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15395,
+          "model": "iPhone 12",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15400,
+          "model": "iPhone 13 mini",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15402,
+          "model": "iPhone 13 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15401,
+          "model": "iPhone 13 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 15399,
+          "model": "iPhone 13",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16129,
+          "model": "iPhone 14 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16131,
+          "model": "iPhone 14 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16127,
+          "model": "iPhone 14 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16125,
+          "model": "iPhone 14",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17717,
+          "model": "iPhone 15 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17721,
+          "model": "iPhone 15 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17719,
+          "model": "iPhone 15 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17715,
+          "model": "iPhone 15",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20307,
+          "model": "iPhone 16 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20309,
+          "model": "iPhone 16 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20308,
+          "model": "iPhone 16 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20306,
+          "model": "iPhone 16",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33990,
+          "model": "iPhone 17 Air",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33992,
+          "model": "iPhone 17 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33991,
+          "model": "iPhone 17 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 33989,
+          "model": "iPhone 17",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 52387,
+          "model": "iPhone 18 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 52385,
+          "model": "iPhone 18 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        }
+      ]
+    },
+    {
+      "productId": 798,
+      "variants": [
+        {
+          "variantId": 20691,
+          "model": "iPhone 14 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20693,
+          "model": "iPhone 14 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20689,
+          "model": "iPhone 14 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20687,
+          "model": "iPhone 14",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20323,
+          "model": "iPhone 15 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20325,
+          "model": "iPhone 15 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20321,
+          "model": "iPhone 15 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20319,
+          "model": "iPhone 15",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20333,
+          "model": "iPhone 16 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20331,
+          "model": "iPhone 16 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20329,
+          "model": "iPhone 16 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20327,
+          "model": "iPhone 16",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34003,
+          "model": "iPhone 17 Air",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34007,
+          "model": "iPhone 17 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34005,
+          "model": "iPhone 17 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34001,
+          "model": "iPhone 17",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 53190,
+          "model": "iPhone 18 Pro Max",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 53188,
+          "model": "iPhone 18 Pro",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20692,
+          "model": "iPhone 14 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20694,
+          "model": "iPhone 14 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20690,
+          "model": "iPhone 14 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20688,
+          "model": "iPhone 14",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20322,
+          "model": "iPhone 15 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20324,
+          "model": "iPhone 15 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20320,
+          "model": "iPhone 15 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20318,
+          "model": "iPhone 15",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20332,
+          "model": "iPhone 16 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20330,
+          "model": "iPhone 16 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20328,
+          "model": "iPhone 16 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 20326,
+          "model": "iPhone 16",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34004,
+          "model": "iPhone 17 Air",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34008,
+          "model": "iPhone 17 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34006,
+          "model": "iPhone 17 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 34002,
+          "model": "iPhone 17",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 53191,
+          "model": "iPhone 18 Pro Max",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 53189,
+          "model": "iPhone 18 Pro",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        }
+      ]
+    },
+    {
+      "productId": 686,
+      "variants": [
+        {
+          "variantId": 16975,
+          "model": "Samsung Galaxy S20 FE",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16977,
+          "model": "Samsung Galaxy S20 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16979,
+          "model": "Samsung Galaxy S20 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16981,
+          "model": "Samsung Galaxy S20",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16983,
+          "model": "Samsung Galaxy S21 FE",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16985,
+          "model": "Samsung Galaxy S21 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16987,
+          "model": "Samsung Galaxy S21 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16989,
+          "model": "Samsung Galaxy S21",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16991,
+          "model": "Samsung Galaxy S22 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16993,
+          "model": "Samsung Galaxy S22 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16995,
+          "model": "Samsung Galaxy S22",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16997,
+          "model": "Samsung Galaxy S23 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16999,
+          "model": "Samsung Galaxy S23 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17001,
+          "model": "Samsung Galaxy S23",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 18744,
+          "model": "Samsung Galaxy S24 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 18745,
+          "model": "Samsung Galaxy S24 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 18743,
+          "model": "Samsung Galaxy S24",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 21471,
+          "model": "Samsung Galaxy S25 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 21473,
+          "model": "Samsung Galaxy S25 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 21469,
+          "model": "Samsung Galaxy S25",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 49328,
+          "model": "Samsung Galaxy S26 Plus",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 49329,
+          "model": "Samsung Galaxy S26 Ultra",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 49327,
+          "model": "Samsung Galaxy S26",
+          "finish": "Glossy",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16976,
+          "model": "Samsung Galaxy S20 FE",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16978,
+          "model": "Samsung Galaxy S20 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16980,
+          "model": "Samsung Galaxy S20 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16982,
+          "model": "Samsung Galaxy S20",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16984,
+          "model": "Samsung Galaxy S21 FE",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16986,
+          "model": "Samsung Galaxy S21 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16988,
+          "model": "Samsung Galaxy S21 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16990,
+          "model": "Samsung Galaxy S21",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16992,
+          "model": "Samsung Galaxy S22 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16994,
+          "model": "Samsung Galaxy S22 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16996,
+          "model": "Samsung Galaxy S22",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 16998,
+          "model": "Samsung Galaxy S23 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17000,
+          "model": "Samsung Galaxy S23 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 17002,
+          "model": "Samsung Galaxy S23",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 18747,
+          "model": "Samsung Galaxy S24 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 18748,
+          "model": "Samsung Galaxy S24 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 18746,
+          "model": "Samsung Galaxy S24",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 21472,
+          "model": "Samsung Galaxy S25 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 21474,
+          "model": "Samsung Galaxy S25 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 21470,
+          "model": "Samsung Galaxy S25",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 49330,
+          "model": "Samsung Galaxy S26 Plus",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 49331,
+          "model": "Samsung Galaxy S26 Ultra",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        },
+        {
+          "variantId": 49332,
+          "model": "Samsung Galaxy S26",
+          "finish": "Matte",
+          "departureCountry": "IT"
+        }
+      ]
+    }
+  ],
+  "galleryOverrides": {
+    "iPhone 17": {
+      "id": "PFCore://VariantImage/17999",
+      "url": "https://files.cdn.printful.com/o/upload/variant-image/ae/aefdb82ec8b2fab5251d3d35e4b2eaa6_l"
+    },
+    "iPhone 17 Air": {
+      "id": "PFCore://VariantImage/18002",
+      "url": "https://files.cdn.printful.com/o/upload/variant-image/21/21af1bae1672756435f8d4e3a3c27132_l"
+    },
+    "iPhone 17 Pro": {
+      "id": "PFCore://VariantImage/18000",
+      "url": "https://files.cdn.printful.com/o/upload/variant-image/2f/2fc130516c3a83258f8a4a40cf3ac5be_l"
+    },
+    "iPhone 17 Pro Max": {
+      "id": "PFCore://VariantImage/18001",
+      "url": "https://files.cdn.printful.com/o/upload/variant-image/09/098096409fc749245cb1066cf8333d6e_l"
+    }
+  }
+}

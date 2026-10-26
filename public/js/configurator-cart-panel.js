@@ -6,7 +6,7 @@
 })(typeof window === 'object' ? window : globalThis, function () {
   'use strict';
 
-  function create({ dialog, trigger, items, describe, thumbnail, pendingRemoval, onEdit, onRemove, onUndo, onContinue, i18n }) {
+  function create({ dialog, trigger, items, describe, thumbnail, pendingRemoval, onEdit, onRemove, onUndo, onContinue, onQuantity, i18n }) {
     const document = dialog.ownerDocument;
     const window = document.defaultView;
     const list = dialog.querySelector('[data-cart-panel-list]');
@@ -60,6 +60,10 @@
         const price = node('span', 'cart-panel-item-price');
         price.textContent = description.price || '';
         price.hidden = !description.price;
+        const details = node('div', 'cart-panel-item-details');
+        details.append(size);
+        if (description.size && description.price) details.append(document.createTextNode(' · '));
+        details.append(price);
         const actions = node('div', 'cart-panel-item-actions');
         const edit = node('button', '', 'Design anpassen');
         edit.type = 'button'; edit.disabled = busy;
@@ -70,8 +74,40 @@
         i18n.setAttribute(remove, 'aria-label', '{{item}} aus dem Warenkorb entfernen', { item: description.name });
         remove.addEventListener('click', () => { void run(() => onRemove(item.id)); });
         actions.append(edit, remove);
-        copy.append(name, size, price, actions);
+        copy.append(name, details);
         row.append(image, copy);
+        if (onQuantity) {
+          const control = node('div', 'cart-panel-quantity');
+          const minus = node('button', '', '−');
+          const input = node('input', '');
+          const plus = node('button', '', '+');
+          minus.type = plus.type = 'button';
+          input.type = 'number'; input.inputMode = 'numeric';
+          input.min = '0'; input.max = String(description.maxQuantity || 99);
+          input.step = '1'; input.value = String(description.quantity ?? 1);
+          input.dataset.cartQuantity = item.id;
+          i18n.setAttribute(input, 'aria-label', 'Menge: {{product}}', { product: description.name });
+          i18n.setAttribute(minus, 'aria-label', '{{product}} einmal weniger', { product: description.name });
+          i18n.setAttribute(plus, 'aria-label', '{{product}} einmal mehr', { product: description.name });
+          input.disabled = busy;
+          minus.disabled = busy || Number(input.value) <= 0;
+          plus.disabled = busy || Number(input.value) >= Number(input.max);
+          const change = value => {
+            if (!Number.isInteger(value) || value < 0 || value > Number(input.max)) {
+              input.value = String(description.quantity ?? 1); return;
+            }
+            void run(() => onQuantity(item.id, value));
+          };
+          minus.addEventListener('click', () => change(Number(input.value) - 1));
+          plus.addEventListener('click', () => change(Number(input.value) + 1));
+          input.addEventListener('change', () => change(Number(input.value)));
+          control.append(minus, input, plus);
+          const excluded = node('span', 'cart-panel-excluded', 'Menge 0: nicht in dieser Bestellung enthalten');
+          excluded.hidden = Number(input.value) > 0;
+          copy.append(excluded);
+          row.append(control);
+        }
+        row.append(actions);
         list.append(row);
       }
       const removed = pendingRemoval();
@@ -84,6 +120,9 @@
     }
     async function run(action) {
       if (busy) return;
+      const focused = document.activeElement;
+      const focusedId = focused?.closest('[data-configuration-id]')?.dataset.configurationId;
+      const focusIndex = focusedId ? [...focused.closest('[data-configuration-id]').querySelectorAll('button, input')].indexOf(focused) : -1;
       busy = true;
       message('');
       if (!render()) { busy = false; return; }
@@ -93,6 +132,9 @@
         busy = false;
         if (dialog.open) {
           render();
+          const replacement = [...list.children].find(row => row.dataset.configurationId === focusedId)
+            ?.querySelectorAll('button, input')[focusIndex];
+          if (replacement && !replacement.disabled) replacement.focus({ preventScroll: true });
           if (!dialog.contains(document.activeElement)) dialog.querySelector('h2').focus({ preventScroll: true });
         }
       }

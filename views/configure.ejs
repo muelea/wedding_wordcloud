@@ -1561,7 +1561,7 @@
       min-width: 0;
       position: relative;
       display: grid;
-      grid-template-columns: 46px minmax(0, 1fr) auto;
+      grid-template-columns: 72px minmax(0, 1fr) auto;
       align-items: center;
       gap: 9px;
       padding: 10px 0;
@@ -1588,7 +1588,7 @@
       border-radius: 10px;
       background: rgba(156, 28, 76, .045);
     }
-    .order-item img {
+    .order-item > img {
       width: 46px;
       height: 38px;
       object-fit: contain;
@@ -1829,8 +1829,8 @@
       }
       .intro { margin-bottom: 16px; }
       .intro-copy { font-size: 15px; }
-      .order-item { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
-      .order-item img { width: 40px; }
+      .order-item { grid-template-columns: 72px minmax(0, 1fr) auto; gap: 8px; }
+      .order-item > img { width: 40px; }
       .order-copy strong, .order-copy span { white-space: normal; overflow-wrap: anywhere; }
       .workspace-tools { padding: 12px; border-radius: 16px; }
       .workbench { --workspace-stage-height: clamp(340px, 92vw, 470px); }
@@ -2099,6 +2099,7 @@
   <link rel="stylesheet" href="<%= asset('/configurator-workspace.css') %>" />
   <link rel="stylesheet" href="<%= asset('/product-gallery.css') %>" />
   <link rel="stylesheet" href="<%= asset('/configurator-cart-panel.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/print-preview.css') %>" />
   <script src="<%= asset('/js/site-header.js') %>" defer></script>
   <script src="<%= asset('/js/mobile-ui.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/ui-controls.css') %>" />
@@ -2444,6 +2445,7 @@
     </div>
   </main>
 
+  <%- include('partials/print-preview') %>
   <dialog class="cart-panel" id="cart-panel" aria-labelledby="cart-panel-title">
     <div class="cart-panel-head"><h2 id="cart-panel-title" tabindex="-1">Euer Warenkorb</h2><button class="ww-icon-button ww-close-button" type="button" data-cart-panel-close aria-label="Warenkorb schließen"></button></div>
     <p class="cart-panel-empty" data-cart-panel-empty>Euer Warenkorb ist noch leer.</p>
@@ -2586,6 +2588,7 @@
   <script src="<%= asset('/js/cloud-limits.js') %>"></script>
   <script src="<%= asset('/js/text-print-quality.js') %>"></script>
   <script src="<%= asset('/js/blanket-cloth.js') %>"></script>
+  <script src="<%= asset('/js/garment-cloth.js') %>"></script>
   <script src="<%= asset('/js/product-3d-geometry.js') %>"></script>
   <script src="<%= asset('/js/printful-product-model.js') %>"></script>
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
@@ -2597,6 +2600,9 @@
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
   <script src="<%= asset('/js/product-gallery.js') %>"></script>
   <script src="<%= asset('/js/configurator-cart-panel.js') %>"></script>
+  <script src="<%= asset('/js/cart-product-preview.js') %>"></script>
+  <script src="<%= asset('/js/product-mockup-preview.js') %>"></script>
+  <script src="<%= asset('/js/print-preview.js') %>"></script>
   <script src="<%= asset('/js/image-quality.js') %>"></script>
   <script src="<%= asset('/js/canvas-viewport.js') %>"></script>
   <script src="<%= asset('/js/mug-editor.js') %>"></script>
@@ -2818,6 +2824,7 @@
     let cloudRebuildUndo = null;
     let cloudRebuildRedo = null;
 
+    const cartProductPreview = WolkenwortePrintPreview.create(document.getElementById('print-preview'));
     const cartPanel = WolkenworteCartPanel.create({
       dialog: document.getElementById('cart-panel'), trigger: headerCart, i18n: WolkenworteI18n,
       items: () => cart.read(), describe: describeCartItem,
@@ -2829,6 +2836,11 @@
         if (cart.read().some(item => item.id === id)) throw new Error('cart_remove_failed');
       },
       onUndo: undoCartRemoval,
+      onQuantity: (id, quantity) => {
+        if (!WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage).setQuantity(id, quantity)) {
+          throw new Error('quantity_storage_failed');
+        }
+      },
       onContinue: continueFromCartPanel,
     });
 
@@ -3344,11 +3356,7 @@
     }
 
     function productSizeText(candidate, orientation = null) {
-      const size = productView(candidate, orientation)?.size || {};
-      const label = t(size.label || '');
-      if (size.volumeMl) return `${WolkenworteI18n.formatNumber(size.volumeMl)} ml`;
-      if (size.detail) return `${label} · ${t(size.detail)}`;
-      return label;
+      return WolkenworteCartProductPreview.variant(productView(candidate, orientation), WolkenworteI18n);
     }
 
     function orderItemFromConfiguration(configuration) {
@@ -3439,37 +3447,15 @@
     }
 
     function createOrderItemThumbnail(item, itemProduct) {
-      const fallback = document.createElement('img');
-      fallback.alt = '';
-      const fallbackUrl = itemProduct?.thumbnail || product?.thumbnail || '';
-      if (fallbackUrl) fallback.src = fallbackUrl;
-      else fallback.hidden = true;
-
-      if (!item.printFileUrl) return fallback;
-      const preview = new Image();
-      preview.alt = '';
-      preview.decoding = 'async';
-
-      let ready;
-      if (typeof preview.decode === 'function') {
-        preview.src = item.printFileUrl;
-        ready = preview.decode();
-      } else {
-        ready = new Promise((resolve, reject) => {
-          preview.onload = resolve;
-          preview.onerror = reject;
-          preview.src = item.printFileUrl;
-        });
+      if (!itemProduct) {
+        const unavailable = document.createElement('span');
+        setText(unavailable, 'Design');
+        return unavailable;
       }
-
-      ready.then(() => {
-        if (!fallback.isConnected) return;
-        fallback.replaceWith(preview);
-      }).catch(() => {
-        // The stable product thumbnail remains visible if the custom preview
-        // cannot be decoded. Never expose the browser's broken-image icon.
+      const configuration = WolkenworteCartProductPreview.configuration(item, productView(itemProduct, item.orientation));
+      return WolkenworteCartProductPreview.createThumbnails({ document, item: configuration, i18n: WolkenworteI18n,
+        onOpen: (view, trigger) => cartProductPreview.open(configuration, trigger),
       });
-      return fallback;
     }
 
     function updateHeaderCart(items) {
@@ -3717,8 +3703,14 @@
     function describeCartItem(item) {
       const candidate = products.find(product => product.key === item.productKey);
       const orientation = selectedOrientationOption(candidate, item.orientation);
+      let quantity = candidate?.defaultQuantity ?? 1;
+      try {
+        quantity = WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
+          .restore([item.id])?.[0]?.items.find(entry => entry.configurationId === item.id)?.quantity ?? quantity;
+      } catch { /* Quantity controls report an unavailable write without hiding the cart. */ }
       return { name: t(candidate?.displayName || 'Wolkenworte Design'),
-        price: productPriceText(candidate),
+        quantity, maxQuantity: candidate?.maxQuantity || 99,
+        price: candidate?.price ? WolkenworteI18n.formatCurrency(candidate.price.unitGrossCents * quantity, candidate.price.currency) : '',
         size: candidate ? `${productSizeText(candidate, item.orientation)}${orientation ? ` · ${t(orientation.label)}` : ''}` : '' };
     }
 
@@ -4027,6 +4019,7 @@
     function printLayoutJobs() {
       if (!printPackingClient) printPackingClient = PrintLayoutClient.create({
         core: WordCloudCore, layout: DesignLayout, version: AUTOMATIC_LAYOUT_VERSION,
+        shareMeasurements: true,
         workerCount: PrintLayoutClient.parallelism(navigator.hardwareConcurrency),
         workerUrl: <%- JSON.stringify(asset('/js/cloud-layout-worker.js')) %>,
         coreUrl: <%- JSON.stringify(asset('/js/wordcloud-core.js')) %>,
@@ -4042,9 +4035,11 @@
       const measurementContext = measurementCanvas.getContext('2d');
       const design = [];
       const slots = view.layoutGeometry['fit-area'];
-      // Share only the frequency curve and font measurement with the live
-      // cloud. Product placement starts afresh in the print-only optimizer.
-      const measured = WordCloudCore.measureWords(sourceWords, measurementContext, makePaletteAssigner(colors));
+      // Only the live frequency curve is needed for the seed. The print
+      // optimizer measures its actual boxes; measuring unused live boxes here
+      // would repeat large-font work for every product.
+      const assignColor = makePaletteAssigner(colors);
+      const measured = WordCloudCore.wordSizes(sourceWords).map(item => ({ ...item, color: assignColor(item.word) }));
       slots.forEach((slot, slotIndex) => {
         const slotHeight = slot.height || slot.side;
         const slotWidth = slot.width || slot.side;
@@ -4848,7 +4843,7 @@
       if (!product) return;
       const view = productView();
       const isMug = ['mug', '3d'].includes(product.previewType);
-      const isCloth = product.previewModel?.kind === 'blanket';
+      const isCloth = ['blanket', 'garment'].includes(product.previewModel?.kind);
       const mobileProduct = workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product';
       mugViewer.classList.toggle('is-flat', !isMug);
       productStage.classList.toggle('is-flat-product', !isMug);
@@ -5982,6 +5977,17 @@
         getView: (candidate, orientation) => productView(candidate, orientation, candidate.printSurfaces[0].key),
         configureFlat: configureProductMockup,
         paintFlat: paintFlatProductPreview,
+        preview: cartProductPreview,
+        renderArtwork: (view, design) => {
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(1, 1200 / view.printFile.width, 1200 / view.printFile.height);
+          canvas.width = Math.max(1, Math.round(view.printFile.width * scale));
+          canvas.height = Math.max(1, Math.round(view.printFile.height * scale));
+          const context = canvas.getContext('2d');
+          context.scale(canvas.width / view.printFile.width, canvas.height / view.printFile.height);
+          drawDesign(context, 0, 0, 1, design);
+          return canvas.toDataURL('image/png');
+        },
         prepare: async (candidate, { signal, allowSmallText = false }) => {
           const orientation = candidate.defaultOrientation || 'default';
           const designs = {};
@@ -5996,6 +6002,8 @@
         },
         createMug: ({ host, product: candidate, design, designs, onStatus }) => Mug3DViewer.create({
           THREE: window.THREE, host, product: candidate, onStatus,
+          maxPixelRatio: 1.5, maxRenderPixels: 300000,
+          modelOptions: { maxTextureSize: 1024 },
           drawTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, candidate.previewMesh?.back || candidate.previewModel?.kind === 'pillow' ? (designs?.front || design) : design),
           drawBackTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, designs?.back || []),
         }),

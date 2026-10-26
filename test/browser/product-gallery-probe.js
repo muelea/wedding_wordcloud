@@ -106,8 +106,9 @@
             card.image.getAttribute('src') === currentProductMockupAsset(card.view, card.surface));
           if (variant.productPhoto) {
             await card.photo.decode();
-            check(variant.key + ': the real product photo matches the selected size',
-              !card.photo.hidden && card.photo.naturalWidth > 0 && card.photo.getAttribute('src') === variant.productPhoto);
+            check(variant.key + ': the thumbnail matches the selected product and design',
+              !card.photo.hidden && card.photo.naturalWidth > 0 &&
+              card.photo.getAttribute('src') === (card.thumbnailUrl || variant.productPhoto));
             const withPhoto = card.element.getBoundingClientRect().height;
             const reservedPhoto = card.sizes.classList.contains('has-product-photo');
             card.photoButton.hidden = true;

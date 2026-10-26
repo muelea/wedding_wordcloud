@@ -4,7 +4,7 @@ A live collaborative word cloud for celebrations, teams, gifts and other shared 
 an event, participants submit words from their phones without an account or
 app, and the cloud grows in real time on the same shared event page. The
 commercial product being prepared is an optional order of personalized mugs,
-coasters, posters, tote bags, blankets, notebooks and pillows printed from a
+coasters, posters, tote bags, blankets, clothing, notebooks and pillows printed from a
 frozen snapshot of the word cloud.
 
 ## How it works
@@ -75,15 +75,37 @@ frozen snapshot of the word cloud.
    A first visit from a populated live cloud opens a product gallery showing
    that word cloud on the curated product range, with variant choices for every
    curated variant. The gallery reuses the local Printful image compositions
-   and local 3D previews. The catalog has 61 variants across 21 product groups,
+   and local 3D previews. The catalog has 344 variants across 26 product groups,
    all with EU fulfillment available for German delivery, including colored mugs,
-   drinkware, canvas, tech accessories and tough iPhone/Samsung cases. Source
+   drinkware, canvas, tech accessories and tough iPhone/Samsung cases. All seven
+   metric matte poster sizes and 22 Germany-available metric framed combinations
+   are offered. Canvas has all 46 standard sizes, 13 thin sizes and 39 framed
+   size/color combinations, in three separate groups with centimetre labels.
+   Large canvas print exports use bounded strips to retain full provider
+   resolution within the hosted server's memory budget. Source
    metadata and safe-area rules are documented in `docs/print-geometry.md`.
+   Tough phone cases include all 58 iPhone, 36 MagSafe and 46 Samsung
+   model/finish combinations available for Germany with EU dispatch. Each
+   device has its own provider-template camera opening, safe print area and
+   camera arrangement; both matte and glossy finishes are offered. The iPhone
+   17 MagSafe photos use the product gallery's exact model mappings.
+   Clothing includes the Stanley/Stella STTU169 T-shirt (XS–5XL), STSU178
+   sweatshirt and STSU177 hoodie (S–2XL), each in white and black with a front
+   DTG print and an unprinted back. Three garment-specific cotton models use
+   the supplier's body and sleeve measurements for each size. Print dimensions
+   stay fixed in centimetres. Dragging the fabric moves its stitched panels;
+   dragging beside it rotates the garment, and Space demonstrates a pull.
+   The models include collars, cuffs, hems and the hoodie's lined hood, pocket
+   and drawstrings. Cloth motion is a supported hanging approximation, not a
+   prediction of personal fit or a measured fabric stiffness. The catalog,
+   print templates and size measurements are pinned in `src/apparelCatalog.json`.
    Each product gets its own automatic filled layout;
    the dedicated Customize action opens the existing editor with that exact artwork,
    including both print sides. Clicking a preview does nothing; dragging rotates
    3D products. Size/color dropdowns show the exact variant, price and real product
-   photo, with separate photo enlargement. Single-variant products use the same
+   photo. The thumbnail beside the selection shows the current design and opens
+   the shared product-photo, description, artwork and 3D overview used by the
+   basket and shipping page. Single-variant products use the same
    thumbnail-and-details row without a selection arrow. Each card keeps its price
    and compact VAT/shipping note on one line; the adjacent information button
    explains the German reference price and possible destination differences.
@@ -277,14 +299,26 @@ frozen snapshot of the word cloud.
    page. Products, address and the price result share one card. Products appear
    only once beside their quantity controls; prices and delivery details appear
    below the form only after a successful quote, with no initial placeholder.
-   Clicking a cart thumbnail or product name opens a large artwork preview
-   fitted to the print file's proportions, with front/back selection for
-   products with two print surfaces.
+   Cart and shipping rows retain the complete size/color variant and show one
+   thumbnail of the accepted design with a Details & preview caption. The original
+   product photo remains a fallback while the local render loads. The thumbnail
+   opens the same preview dialog in two rows: Product photo / Description, then
+   Design / 3D view. The description scrolls within its panel and follows the
+   selected size, frame material and active language. The checked-in Printful
+   catalog snapshot supplies German, English, Spanish, French and Italian copy;
+   Turkish copy is translated locally. Refresh it explicitly with
+   `node scripts/refresh-product-information.js` and review the copy and Turkish
+   translations before release. Startup and customer page requests use only
+   local data and never fetch descriptions from Printful.
+   Artwork retains front/back selection for products with two print surfaces.
+   Compact quantity controls sit to the right of the product details. Cart controls
+   update the item total and share the existing tab-local
+   shipping draft, including zero quantities and quantities retained through edits.
    PNG previews render the saved immutable design through the same bounded
    renderer used for Printful fulfillment; opening or closing a preview keeps
    the address, quantities and prepared price intact. Preview rendering does
    not create paid print artifacts or upload files to Storage.
-   Inside that dialog, “Produktvorschau erstellen” explicitly requests a
+   Only on the shipping page, “Produktvorschau erstellen” inside that dialog explicitly requests a
    Printful product mockup at 1000 px. Opening the artwork preview never
    generates one automatically. Completed image links (no image bytes) are
    cached by immutable event/configuration URL in browser localStorage for up
@@ -1393,6 +1427,16 @@ stay in the existing editor. Text-sheet dismissal explicitly commits its edit
 to history. Palette and orientation use native top-layer popovers
 on wide screens, and native dialogs on compact screens (also the fallback when
 Popover is unavailable). Choosers do not take space in the document layout.
+
+All public pages share one scroll policy: wheel and one-finger touch gestures
+over menus, dropdowns and popovers stay within the innermost panel, including
+headers, non-scrollable panels and list boundaries. Scrolling outside a
+non-modal panel remains available. Native modal dialogs and blocking mobile
+sheets lock the background until the last modal closes, without moving the
+page or changing its scrollbar width. Pinch/browser zoom remains available.
+The isolated configurator fixture also accepts `&probe=scroll`; its
+“Scroll-Verhalten prüfen” button checks native modal/popover state, nested
+close order, scroll containment and page-position retention in a real browser.
 
 The live cloud and automatic product designs share one
 deterministic free-rectangle packer. It measures the actual selected fonts,

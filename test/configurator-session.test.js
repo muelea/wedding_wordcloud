@@ -1492,6 +1492,28 @@ test('shipping drafts retain addresses and quantities across replacement, never 
   assert.equal(Session.createShippingDraft('other', session).restore([id('c')]), null);
 });
 
+test('cart quantity edits initialize and share the shipping draft without losing addresses or other items', () => {
+  const session = storage();
+  const cartDraft = Session.createShippingDraft('cart', session);
+  assert.equal(cartDraft.setQuantity(id('a'), 3), true);
+  const shipping = Session.createShippingDraft('cart', session);
+  const shipment = shipping.restore([id('a')])[0];
+  assert.equal(shipment.items[0].quantity, 3);
+  shipment.recipient.city = 'Berlin';
+  shipping.write([shipment]);
+  assert.equal(cartDraft.setQuantity(id('b'), 2), true);
+  shipping.setQuantity(id('a'), 0);
+  const updated = cartDraft.restore([id('a'), id('b')])[0];
+  assert.equal(updated.recipient.city, 'Berlin');
+  assert.deepEqual(updated.items.map(item => item.quantity), [0, 2]);
+  for (const quantity of [-1, 100, 1.5, NaN]) assert.equal(cartDraft.setQuantity(id('a'), quantity), false);
+  assert.equal(cartDraft.setQuantity('invalid', 2), false);
+  cartDraft.replaceConfiguration(id('a'), id('c'));
+  assert.equal(shipping.restore([id('c')])[0].items[0].quantity, 0);
+  assert.equal(Session.createShippingDraft('other', session).restore([id('b')]), null);
+  assert.equal(Session.createShippingDraft('cart', { getItem() {}, setItem() { throw new Error('blocked'); } }).setQuantity(id('a'), 2), false);
+});
+
 test('payment cleanup removes only confirmed purchased IDs and expires the device-local receipt fence', () => {
   const session = storage(), cart = Session.createCart('a', session);
   cart.write([{ id: id('a') }, { id: id('b') }]);

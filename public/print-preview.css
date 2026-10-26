@@ -2,42 +2,97 @@
   width: min(1200px, calc(100% - 48px));
   height: fit-content;
   max-width: none;
-  max-height: calc(var(--ww-visual-viewport-height, 100vh) - 48px);
+  max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 48px);
   margin: auto;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: var(--surface);
+  background: #fff;
   color: var(--ink);
   box-shadow: 0 24px 80px rgba(64, 15, 38, .2);
 }
-.print-preview::backdrop { background: rgba(64, 15, 38, .35); backdrop-filter: blur(5px); }
-.print-preview-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
-.print-preview-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 12px 16px; }
+.print-preview::backdrop { background: rgba(44, 21, 30, .36); }
+.print-preview-shell { display: flex; flex-direction: column; max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 50px); }
+.print-preview-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 28px 20px; border-bottom: var(--ww-preview-divider); }
 .print-preview-head h2 { margin: 0; font: 500 clamp(20px, 3vw, 26px) 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
+.print-preview-detail { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.print-preview [hidden] { display: none; }
+.print-preview-content { min-height: 0; padding: 0; overflow: auto; overscroll-behavior: contain; }
+.print-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "photo description" "design model"; }
+.print-preview-grid > .print-preview-card { padding-block: 12px; }
+.print-preview-photo, .print-preview-design { padding-inline: 28px 16px; border-inline-end: var(--ww-preview-divider); }
+.print-preview-description-card, .print-preview-model-card { padding-inline: 16px 28px; }
+.print-preview-design, .print-preview-model-card { border-top: var(--ww-preview-divider); }
+.print-preview-photo { grid-area: photo; }
+.print-preview-description-card { grid-area: description; }
+.print-preview-design { grid-area: design; }
+.print-preview-model-card { grid-area: model; }
+.print-preview-card { min-width: 0; display: flex; flex-direction: column; }
+.print-preview-card-head { display: flex; flex: 1; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; min-height: 32px; margin-bottom: 8px; }
+.print-preview-card-head h3 { margin: 0; font: 600 14px/1.4 'Jost', 'Wolkenworte Jost Fallback', sans-serif; }
 .print-preview button:not(.ww-icon-button) { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
-.print-preview button:not(.ww-icon-button):hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-soft); }
+.print-preview button:not(.ww-icon-button):hover:not(:disabled) { border-color: var(--line-strong); background: #fbf0f3; }
+.print-preview .print-preview-surfaces button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
 .print-preview button:focus-visible, .print-preview-viewport:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
-.print-preview .print-preview-close { grid-column: 3; grid-row: 1; }
-.print-preview-surfaces { display: flex; align-items: center; gap: 6px; }
-.print-preview-surfaces button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
-.print-preview-viewport { position: relative; box-sizing: content-box; height: 300px; min-height: 0; overflow: hidden; background: var(--surface-soft); border-top: 1px solid var(--line); }
-.print-preview-artwork { width: max-content; min-width: 100%; min-height: 100%; display: grid; place-items: center; }
-.print-preview-artwork img { display: block; max-width: none; max-inline-size: none; height: auto; background: #fff; }
-.print-preview-feedback { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; padding: 24px; text-align: center; color: var(--muted); }
+.print-preview .print-preview-close { flex: none; }
+.print-preview-surfaces { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.print-preview .print-preview-surfaces button { padding: 5px 8px; font-size: 12px; }
+.print-preview-viewport { position: relative; flex: none; height: clamp(180px, 29vh, 280px); min-height: 0; overflow: hidden; background: #fff; }
+.print-preview-description { box-sizing: border-box; padding: 0 8px 0 0; overflow: auto; overscroll-behavior: contain; background: transparent; font-size: 14px; line-height: 1.65; }
+.print-preview-description p { margin: 0 0 12px; }
+.print-preview-description p:last-child { margin-bottom: 0; }
+.print-preview-description ul { margin: 0; padding-left: 18px; }
+.print-preview-description li + li { margin-top: 5px; }
+.print-preview-description ul + p { margin-top: 12px; }
+.print-preview-description:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
+.print-preview-artwork { position: absolute; inset: 0; display: grid; place-items: center; }
+.print-preview-artwork img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.print-preview-model, .print-preview-model-stage { position: absolute; inset: 0; }
+.print-preview-model-stage { touch-action: none; }
+.print-preview-model-stage canvas { width: 100%; height: 100%; display: block; }
+.print-preview-model-stage .mug-interaction-region { position: absolute; inset: 0; cursor: grab; }
+.print-preview-model-stage:active .mug-interaction-region { cursor: grabbing; }
+.print-preview-feedback { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
 .print-preview-feedback p { margin: 0 0 12px; }
-.print-preview-mockup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.print-preview-generated { margin-top: 24px; padding: 20px 28px; border-top: var(--ww-preview-divider); }
+.print-preview-generated .print-preview-viewport { height: min(480px, 55vh); }
+.print-preview-mockup-actions { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 16px; padding: 12px 28px; border-top: var(--ww-preview-divider); }
 .print-preview-mockup-actions p { margin: 0; color: var(--muted); font-size: 13px; }
 .print-preview button:disabled { cursor: wait; opacity: .65; }
+/* Safari softens ordinary borders when the centered dialog lands between pixels.
+   Paint the square divider strips as border images so they stay crisp there. */
+.print-preview-head,
+.print-preview-photo,
+.print-preview-design,
+.print-preview-model-card,
+.print-preview-generated,
+.print-preview-mockup-actions {
+  border-image: linear-gradient(var(--line), var(--line)) 1;
+}
 @media (max-width: 840px) {
-  .print-preview-head { grid-template-columns: minmax(0, 1fr) auto; }
-  .print-preview-surfaces { grid-column: 1 / -1; grid-row: 2; }
-  .print-preview .print-preview-close { grid-column: 2; }
+  .print-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .print-preview-viewport { height: clamp(160px, 27vh, 250px); }
 }
 @media (max-width: 620px) {
-  .print-preview-head { padding: 14px 16px; gap: 12px; }
-  .print-preview-surfaces { width: 100%; }
-  .print-preview-surfaces button { flex: 1; }
-  .print-preview-mockup-actions { flex-direction: column; align-items: stretch; gap: 8px; }
+  .print-preview { width: calc(100% - 16px); max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 16px); }
+  .print-preview-shell { max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 18px); }
+  .print-preview-head { padding: 16px 16px 12px; gap: 12px; }
+  .print-preview-grid > .print-preview-card { padding-block: 10px; }
+  .print-preview-photo, .print-preview-design { padding-inline: 16px 7px; }
+  .print-preview-description-card, .print-preview-model-card { padding-inline: 7px 16px; }
+  .print-preview-card-head { min-height: 30px; margin-bottom: 6px; }
+  .print-preview-card-head h3 { font-size: 13px; }
+  .print-preview-description { padding-right: 4px; font-size: 13px; }
+  .print-preview-generated { padding-inline: 16px; }
+  .print-preview-mockup-actions { flex-direction: column; align-items: stretch; gap: 8px; padding-inline: 16px; }
 }
+
+.cart-product-previews { width: 72px; min-width: 0; }
+.cart-product-preview { position: relative; display: block; width: 100%; padding: 0; border: 0; color: var(--muted); background: transparent; font: inherit; cursor: pointer; }
+.cart-product-preview img { display: block; box-sizing: border-box; width: 100%; height: 72px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.cart-product-preview .cart-product-preview-eye { position: absolute; right: 3px; bottom: 3px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #fffefa; color: var(--berry); }
+.cart-product-preview:hover img { border-color: var(--berry); }
+button.cart-product-preview:focus-visible { outline: none; }
+.cart-product-preview:focus-visible .cart-product-preview-eye { color: #fff; background: var(--berry); }
+.cart-product-thumbnail-stage { position: fixed; left: -1000px; top: 0; width: 200px; height: 200px; pointer-events: none; }
