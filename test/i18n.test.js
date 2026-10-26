@@ -59,6 +59,7 @@ function renderView(filename, header = {}, locale = 'de') {
       seller: require('../src/emailTemplates').SELLER,
     },
     landingMugProduct: require('../src/products').getPublicProduct(require('../src/products').MUG_11),
+    occasionStories: require('../src/occasionStories.json'),
     languages: TEST_LANGUAGES,
     asset: publicAssetUrl,
     siteFontAssets: SITE_FONT_ASSETS,
