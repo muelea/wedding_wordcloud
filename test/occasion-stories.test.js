@@ -58,7 +58,7 @@ test('all occasion photos are tracked local files and the homepage mug uses the 
   assert.ok(fs.existsSync(path.join(__dirname, '../public', product.previewMesh.file)));
 });
 
-function mountedDemo({ modelReady = true, reduced = false, autoplay = false } = {}) {
+function mountedDemo({ modelReady = true, reduced = false, autoplay = false, titleMetrics = false } = {}) {
   const { mount } = require('../public/js/occasion-stories');
   const animations = [], models = [], fields = new Map(), timers = [], observers = [];
   function node() {
@@ -100,6 +100,17 @@ function mountedDemo({ modelReady = true, reduced = false, autoplay = false } = 
       constructor(callback) { this.callback = callback; observers.push(this); }
       observe(node) { this.node = node; } disconnect() {}
     };
+  }
+  if (titleMetrics) {
+    window.getComputedStyle = () => ({ fontSize: '39px' });
+    const box = root.querySelector('[data-occasion-title-box]'); box.clientWidth = 300; box.clientHeight = 96;
+    const heading = root.querySelector('[data-occasion-title-heading]');
+    Object.defineProperty(heading, 'scrollHeight', { get() {
+      const size = parseFloat(heading.style.fontSize || 39);
+      const length = (fields.get('title')?.textContent.length || 0) + (fields.get('subtitle')?.textContent.length || 0);
+      return Math.ceil(length * size * .55 / box.clientWidth) * size * 1.22;
+    } });
+    heading.scrollWidth = 300;
   }
   mount(window);
   return { fields, root, models, window, animations, timers, observers,
@@ -236,15 +247,57 @@ test('visible demo types three words, sends each to the cloud and creates the ke
   assert.equal(h.fields.get('input').value, '');
 });
 
-test('manual interaction stops demo typing and never overwrites a visitor word', async () => {
+test('navigation stops demo typing without adding a partial word', async () => {
   const h = mountedDemo({ autoplay: true });
   h.observers.find(observer => observer.node === h.fields.get('question')).callback([{ isIntersecting: true }]);
   h.timers.shift()(); await h.flush();
   assert.equal(h.fields.get('input').value, stories[0].demoWords[0][0]);
-  h.root.fire('pointerdown');
-  h.fields.get('input').value = 'Mein Wunsch'; h.fields.get('input').fire('input');
+  h.observers.find(observer => observer.node === h.fields.get('question')).callback([{ isIntersecting: false }]);
+
   while (h.timers.length) { h.timers.shift()(); await h.flush(); }
-  assert.equal(h.fields.get('input').value, 'Mein Wunsch');
+  assert.equal(h.fields.get('input').value, '');
   assert.equal(h.models.length, 0);
   assert.equal(h.fields.get('cloud').children.length, stories[0].words.length);
+});
+
+test('quote fitting shrinks long titles into their fixed box and restores size for short titles', () => {
+  const h = mountedDemo({ titleMetrics: true });
+  const heading = h.fields.get('title-heading'), box = h.fields.get('title-box');
+  let shrunk = false;
+  for (let i = 0; i < stories.length; i++) {
+    assert.ok(heading.scrollHeight <= box.clientHeight);
+    if (parseFloat(heading.style.fontSize || 39) < 39) shrunk = true;
+    h.fields.get('next').fire('click');
+  }
+  assert.equal(shrunk, true);
+  for (let i = 0; i < stories.findIndex(story => story.key === 'birthday'); i++) h.fields.get('next').fire('click');
+  assert.equal(heading.style.fontSize, '');
+});
+
+test('occasion typing retains an inert readonly input without a keyboard or form', async () => {
+  const html = await require('ejs').renderFile(path.join(__dirname, '../views/partials/occasion-stories.ejs'), { occasionStories: stories });
+  assert.ok(!/<(?:textarea|form)\b/.test(html));
+  assert.match(html, /type="text" readonly tabindex="-1" inputmode="none"/);
+  assert.match(html, /class="occasion-composer" aria-hidden="true" inert/);
+  assert.match(html, /class="occasion-demo-input" data-occasion-input/);
+});
+
+test('demo starts for the next occasion and resumes after scrolling back without duplicate words', async () => {
+  const h = mountedDemo({ autoplay: true });
+  const observer = h.observers.find(observer => observer.node === h.fields.get('question'));
+  observer.callback([{ isIntersecting: true }]);
+  h.timers.shift()(); await h.flush();
+  observer.callback([{ isIntersecting: false }]);
+  while (h.timers.length) { h.timers.shift()(); await h.flush(); }
+  h.fields.get('next').fire('click');
+  observer.callback([{ isIntersecting: true }]);
+  for (let i = 0; i < 180 && !h.models.length; i++) { h.timers.shift()?.(); await h.flush(); await h.finish(); }
+  await h.finish();
+  assert.deepEqual(h.fields.get('cloud').children.slice(-3).map(word => word.textContent), stories[1].demoWords);
+  assert.equal(h.models.length, 1);
+  h.fields.get('next').fire('click');
+  for (let i = 0; i < 180 && h.models.length < 2; i++) { h.timers.shift()?.(); await h.flush(); await h.finish(); }
+  await h.finish();
+  assert.deepEqual(h.fields.get('cloud').children.slice(-3).map(word => word.textContent), stories[2].demoWords);
+  assert.equal(h.models.length, 2);
 });

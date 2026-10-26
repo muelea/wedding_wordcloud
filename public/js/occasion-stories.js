@@ -75,7 +75,7 @@
       keepsake.setAttribute('aria-label', label); keepsake.setAttribute('title', label);
       keepsake.setAttribute('aria-pressed', String(active));
     }
-    function busy(value) { form.querySelector('button').disabled = value; input.disabled = value; keepsake.disabled = value; }
+    function busy(value) { form.querySelector('button').disabled = value; keepsake.disabled = value; }
     function cancelAnimations() {
       animations.forEach(animation => animation.cancel()); animations.clear(); flight.textContent = '';
       Array.from(cloud.children).forEach(node => { node.style.visibility = ''; });
@@ -93,12 +93,24 @@
       span.style.animationDelay = -(word.index % 6) + 's';
       span.setAttribute('data-occasion-word', ''); return span;
     }
+    function fitTitle() {
+      const box = find('title-box'), heading = find('title-heading');
+      if (!window.getComputedStyle || !box.clientHeight) return;
+      heading.style.fontSize = '';
+      let size = parseFloat(window.getComputedStyle(heading).fontSize);
+      while (size > 12 && (heading.scrollHeight > box.clientHeight || heading.scrollWidth > box.clientWidth)) {
+        size -= .5; heading.style.fontSize = size + 'px';
+      }
+    }
+    if (window.ResizeObserver) new window.ResizeObserver(fitTitle).observe(find('title-box'));
+    document.fonts?.ready.then(fitTitle);
     function render() {
       epoch++; cancelAnimations(); destroyCup(); busy(false); announce('');
       const story = current(); root.dataset.storyKey = story.key;
       find('kicker').textContent = t(story.label);
       find('question').textContent = t(story.question);
       find('title').textContent = t(story.titleLines[0]); find('subtitle').textContent = t(story.titleLines[1]);
+      fitTitle();
       photo.style.objectPosition = story.imagePosition || 'center 40%';
       photo.srcset = story.smallImage + ' 640w, ' + story.image + ' 1200w'; photo.src = story.image; photo.alt = t(story.alt);
       input.value = ''; input.placeholder = t(story.placeholder);
@@ -182,7 +194,8 @@
       } finally { if (ticket === epoch) busy(false); }
     }
     keepsake.addEventListener('click', () => { stopDemo(); return showKeepsake(); });
-    let demoRunning = false, demoDone = false, demoGeneration = 0;
+    let demoRunning = false, demoDone = false, demoGeneration = 0, demoVisible = false;
+    const completedDemos = new Set();
     const send = form.querySelector('button');
     const pause = ms => new Promise(resolve => window.setTimeout(resolve, ms));
     function stopDemo(clear = true) {
@@ -204,7 +217,7 @@
         // The opening film can cover the section even while it intersects the viewport.
         while (active() && document.getElementById('intro-video')) await pause(350);
         if (!active()) return;
-        for (const text of current().demoWords) {
+        for (const text of current().demoWords.filter(text => !collection.words(current().key).some(word => word.text === t(text)))) {
           root.classList.add('is-typing-demo');
           for (const letter of t(text)) {
             if (!active()) return;
@@ -219,25 +232,28 @@
         keepsake.classList.add('is-demo-pressed');
         await pause(450); if (!active()) return;
         keepsake.classList.remove('is-demo-pressed'); await showKeepsake();
-        if (active()) { demoDone = true; demoRunning = false; }
+        if (active()) { completedDemos.add(current().key); demoDone = true; demoRunning = false; }
       } finally {
         if (generation === demoGeneration && demoRunning) stopDemo();
       }
     }
-    root.addEventListener('pointerdown', () => stopDemo(), { passive: true });
-    input.addEventListener('focus', () => stopDemo());
-    input.addEventListener('input', () => stopDemo(false));
     if (window.IntersectionObserver) {
       new window.IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) runDemo();
-        else if (demoRunning) stopDemo();
+        demoVisible = entries[0].isIntersecting;
+        if (demoVisible) { demoDone = completedDemos.has(current().key); runDemo(); }
+        else if (demoRunning) { stopDemo(); demoDone = completedDemos.has(current().key); }
       }, { threshold: .8 }).observe(find('question'));
     }
-    document.addEventListener?.('visibilitychange', () => { if (document.hidden && demoRunning) stopDemo(); });
+    document.addEventListener?.('visibilitychange', () => {
+      if (document.hidden && demoRunning) stopDemo();
+      else if (!document.hidden && demoVisible) { demoDone = completedDemos.has(current().key); runDemo(); }
+    });
     function step(direction) {
       stopDemo();
       index = (index + direction + stories.length) % stories.length;
       render();
+      demoDone = completedDemos.has(current().key);
+      if (demoVisible) runDemo();
       announce(t(current().label) + ' · ' + (index + 1) + ' / ' + stories.length);
     }
     previous.addEventListener('click', () => step(-1));
@@ -265,15 +281,8 @@
     scene.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
     reduced.addEventListener?.('change', () => { stopDemo(); cancelAnimations(); });
     if (window.IntersectionObserver) new window.IntersectionObserver(entries => root.classList.toggle('is-paused', !entries[0].isIntersecting)).observe(root);
-    if (window.IntersectionObserver) {
-      const hintObserver = new window.IntersectionObserver(entries => {
-        if (!entries[0].isIntersecting) return;
-        root.classList.add('is-swipe-hint-visible'); hintObserver.disconnect();
-      }, { threshold: .35 });
-      hintObserver.observe(photo);
-    } else root.classList.add('is-swipe-hint-visible');
     window.addEventListener('pagehide', () => { stopDemo(); epoch++; cancelAnimations(); destroyCup(); busy(false); labelKeepsake(false); });
-    previous.hidden = false; next.hidden = false; find('hint').hidden = false; form.hidden = false; keepsake.hidden = false; render();
+    previous.hidden = false; next.hidden = false; form.hidden = false; keepsake.hidden = false; render();
   }
   return { createCollection, planPrint, mount, MAX_WORDS };
 });
