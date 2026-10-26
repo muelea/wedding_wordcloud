@@ -24,7 +24,7 @@
     };
   }
 
-  // The same complete collection is painted into both approved mug print areas.
+  // Each product receives the same complete collection in its approved print areas.
   // Row packing is measured on the real canvas and never drops a long word.
   function planPrint(words, measure, width = 850, height = 850) {
     if (!words.length) return [];
@@ -61,11 +61,8 @@
     const collection = createCollection(stories);
     const find = name => root.querySelector('[data-occasion-' + name + ']');
     const scene = find('scene'), photo = find('photo'), cloud = find('cloud');
-    const tabs = Array.from(root.querySelectorAll('[data-occasion-tab]'));
-    const choices = Array.from(root.querySelectorAll('[data-occasion-choice]'));
-    const extraTab = find('extra-tab'), gallery = find('gallery'), allButton = find('all');
-    const featuredKeys = tabs.filter(tab => tab !== extraTab).map(tab => tab.dataset.occasionTab);
-    const cup = find('cup'), form = find('form'), input = find('input'), replay = find('replay');
+    const panel = find('panel'), previous = find('previous'), next = find('next');
+    const cup = find('cup'), form = find('form'), input = find('input');
     const keepsake = find('keepsake'), status = find('status'), flight = find('flight');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     const animations = new Set();
@@ -73,7 +70,12 @@
     const t = text => window.WolkenworteI18n ? window.WolkenworteI18n.t(text) : text;
     const current = () => stories[index];
     function announce(text, visible = false) { status.textContent = text; status.classList.toggle('occasion-sr-only', !visible); }
-    function busy(value) { form.querySelector('button').disabled = value; input.disabled = value; replay.disabled = value; keepsake.disabled = value; }
+    function labelKeepsake(active) {
+      const label = t(active ? 'Zurück zur Wortwolke' : 'Erinnerungsstück gestalten');
+      keepsake.setAttribute('aria-label', label); keepsake.setAttribute('title', label);
+      keepsake.setAttribute('aria-pressed', String(active));
+    }
+    function busy(value) { form.querySelector('button').disabled = value; input.disabled = value; keepsake.disabled = value; }
     function cancelAnimations() {
       animations.forEach(animation => animation.cancel()); animations.clear(); flight.textContent = '';
       Array.from(cloud.children).forEach(node => { node.style.visibility = ''; });
@@ -94,20 +96,14 @@
     function render() {
       epoch++; cancelAnimations(); destroyCup(); busy(false); announce('');
       const story = current(); root.dataset.storyKey = story.key;
-      extraTab.hidden = featuredKeys.includes(story.key); extraTab.dataset.occasionTab = story.key; extraTab.textContent = t(story.label);
-      for (const tab of tabs) {
-        const active = !tab.hidden && tab.dataset.occasionTab === story.key;
-        tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1;
-        if (active) find('panel').setAttribute('aria-labelledby', tab.id);
-      }
-      for (const choice of choices) choice.setAttribute('aria-current', String(choice.dataset.occasionChoice === story.key));
-      for (const name of ['kicker', 'question', 'bridge', 'quote', 'names']) find(name).textContent = t(story[name]);
+      find('kicker').textContent = t(story.label);
+      find('question').textContent = t(story.question);
       find('title').textContent = t(story.titleLines[0]); find('subtitle').textContent = t(story.titleLines[1]);
       photo.style.objectPosition = story.imagePosition || 'center 40%';
       photo.srcset = story.smallImage + ' 640w, ' + story.image + ' 1200w'; photo.src = story.image; photo.alt = t(story.alt);
       input.value = ''; input.placeholder = t(story.placeholder);
       cloud.replaceChildren(...collection.words(story.key).map(makeWord));
-      keepsake.textContent = t('Erinnerungsstück gestalten');
+      labelKeepsake(false);
     }
     async function fly(text, color, start, target, ticket) {
       const bounds = scene.getBoundingClientRect();
@@ -119,13 +115,12 @@
       ], { duration: 1400, easing: 'ease-in-out' });
       if (ticket === epoch) flight.textContent = '';
     }
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
+    async function submitWord() {
       if (!input.value.trim()) { announce(t('Bitte gebt ein Wort ein.'), true); return; }
       const ticket = ++epoch; cancelAnimations();
       Array.from(cloud.children).forEach(node => { node.style.visibility = ''; });
       if (productVisible) destroyCup();
-      keepsake.textContent = t('Erinnerungsstück gestalten');
+      labelKeepsake(false);
       const word = collection.add(current().key, input.value);
       if (!word) { announce(t('Probiert ein anderes Beispiel aus – diese Wolke ist schon gut gefüllt.'), true); return; }
       const span = makeWord(word), origin = input.getBoundingClientRect(); cloud.appendChild(span); input.value = '';
@@ -134,39 +129,41 @@
       Array.from(cloud.children).forEach(node => { if (node !== span) node.style.visibility = ''; });
       await fly(word.text, word.color, origin, span.getBoundingClientRect(), ticket);
       if (ticket === epoch) { span.style.visibility = ''; announce(t('Wort hinzugefügt') + ': ' + word.text); }
-    });
-    replay.addEventListener('click', async () => {
-      const ticket = ++epoch; cancelAnimations(); destroyCup(); keepsake.textContent = t('Erinnerungsstück gestalten'); busy(true);
-      const words = collection.words(current().key);
-      for (let i = 0; i < Math.min(3, words.length); i++) {
-        if (ticket !== epoch) return;
-        const target = cloud.children[i];
-        await fly(words[i].text, words[i].color, input.getBoundingClientRect(), target.getBoundingClientRect(), ticket);
-      }
-      if (ticket === epoch) busy(false);
-    });
-    function drawTexture(ctx) {
+    }
+    form.addEventListener('submit', event => { event.preventDefault(); stopDemo(false); return submitWord(); });
+    function drawTexture(ctx, offsets = {}, back = false) {
+      const product = current().product || window.wolkenworteLandingMugProduct;
       const words = collection.words(current().key);
       const layout = planPrint(words, (text, size) => {
         ctx.font = 'italic ' + size + 'px Georgia'; const metrics = ctx.measureText(text);
         return Math.max(metrics.width, (metrics.actualBoundingBoxLeft || 0) + (metrics.actualBoundingBoxRight || 0));
       });
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      for (const left of [162, 1687]) for (const word of layout) {
-        ctx.font = 'italic ' + word.size + 'px Georgia'; ctx.fillStyle = word.color; ctx.fillText(word.text, left + word.x, 100 + word.y);
+      const area = product.designSafeAreas?.[back ? 'back' : 'front'] || product.designSafeAreas?.default;
+      const slots = product.layoutGeometry?.['both-sides'] || (area ? [area] : product.layoutGeometry?.centered) || [{ x: 162, y: 100, side: 850 }, { x: 1687, y: 100, side: 850 }];
+      for (const slot of slots) {
+        const width = slot.width || slot.side, height = slot.height || slot.side;
+        const scale = Math.min(width, height) / 850;
+        const x = slot.x + (width - 850 * scale) / 2 + (offsets.offsetX || 0);
+        const y = slot.y + (height - 850 * scale) / 2 + (offsets.offsetY || 0);
+        for (const word of layout) {
+          ctx.font = 'italic ' + word.size * scale + 'px Georgia'; ctx.fillStyle = word.color;
+          ctx.fillText(word.text, x + word.x * scale, y + word.y * scale);
+        }
       }
-      cup.setAttribute('aria-label', t('Tasse mit euren Worten') + ': ' + words.map(word => word.text).join(', '));
+      cup.setAttribute('aria-label', t(product.name || 'Tasse') + ' · ' + t('Mit euren Worten') + ': ' + words.map(word => word.text).join(', '));
     }
-    keepsake.addEventListener('click', async () => {
+
+    async function showKeepsake() {
       const ticket = ++epoch; cancelAnimations();
-      if (productVisible) { destroyCup(); keepsake.textContent = t('Erinnerungsstück gestalten'); return; }
+      if (productVisible) { destroyCup(); labelKeepsake(false); return; }
       busy(true); announce(t('Vorschau wird geladen…'), true); cup.hidden = false;
       try {
         await window.wolkenworteThreeReady;
         if (ticket !== epoch) return;
-        const product = window.wolkenworteLandingMugProduct;
-        if (!product?.previewMesh || !window.PrintfulProductModel) throw new Error('Product mesh missing');
-        viewer = window.Mug3DViewer.create({ THREE: window.THREE, host: cup, product, framingFill: () => .88, maxPixelRatio: 1.5, maxRenderPixels: 500000, drawTexture });
+        const product = current().product || window.wolkenworteLandingMugProduct;
+        if (!product || (!product.previewMesh && !product.previewModel)) throw new Error('Product mesh missing');
+        viewer = window.Mug3DViewer.create({ THREE: window.THREE, host: cup, product, framingFill: () => .88, maxPixelRatio: 1.5, maxRenderPixels: 500000, drawTexture, drawBackTexture: (ctx, offsets) => drawTexture(ctx, offsets, true) });
         const ready = await viewer.ready;
         if (ticket !== epoch) return;
         if (!ready) throw new Error('Product mesh unavailable');
@@ -179,51 +176,104 @@
         flights.push(animate(cup, [{ opacity: 0, transform: 'translateY(15px) scale(.85)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 1500, easing: 'ease-out' }));
         await Promise.all(flights);
         if (ticket !== epoch) return;
-        cloud.classList.add('is-product'); cancelAnimations(); cup.tabIndex = 0; productVisible = true; keepsake.textContent = t('Zurück zur Wortwolke');
+        cloud.classList.add('is-product'); cancelAnimations(); cup.tabIndex = 0; productVisible = true; labelKeepsake(true);
       } catch {
         if (ticket === epoch) { destroyCup(); announce(t('Die Vorschau ist gerade nicht verfügbar. Bitte versucht es erneut.'), true); }
       } finally { if (ticket === epoch) busy(false); }
-    });
-    function chooseStory(key, focus = true) {
-      const next = stories.findIndex(story => story.key === key);
-      if (next < 0) return;
-      if (next !== index) { index = next; render(); }
-      if (focus) {
-        const active = tabs.find(tab => !tab.hidden && tab.dataset.occasionTab === key);
-        active?.focus({ preventScroll: true });
-        active?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }
+    keepsake.addEventListener('click', () => { stopDemo(); return showKeepsake(); });
+    let demoRunning = false, demoDone = false, demoGeneration = 0;
+    const send = form.querySelector('button');
+    const pause = ms => new Promise(resolve => window.setTimeout(resolve, ms));
+    function stopDemo(clear = true) {
+      demoDone = true; demoGeneration++;
+      if (!demoRunning) return;
+      demoRunning = false; epoch++; cancelAnimations(); busy(false);
+      send.classList.remove('is-demo-pressed'); keepsake.classList.remove('is-demo-pressed');
+      root.classList.remove('is-typing-demo');
+      if (clear) input.value = '';
+      if (!productVisible) destroyCup();
+    }
+    async function runDemo() {
+      if (demoDone || demoRunning || reduced.matches || document.hidden) return;
+      demoRunning = true;
+      const generation = ++demoGeneration;
+      const active = () => demoRunning && generation === demoGeneration && !document.hidden;
+      try {
+        await pause(900);
+        // The opening film can cover the section even while it intersects the viewport.
+        while (active() && document.getElementById('intro-video')) await pause(350);
+        if (!active()) return;
+        for (const text of current().demoWords) {
+          root.classList.add('is-typing-demo');
+          for (const letter of t(text)) {
+            if (!active()) return;
+            input.value += letter; await pause(85);
+          }
+          await pause(450); if (!active()) return;
+          root.classList.remove('is-typing-demo'); send.classList.add('is-demo-pressed');
+          await pause(220); if (!active()) return;
+          send.classList.remove('is-demo-pressed'); await submitWord();
+          await pause(500); if (!active()) return;
+        }
+        keepsake.classList.add('is-demo-pressed');
+        await pause(450); if (!active()) return;
+        keepsake.classList.remove('is-demo-pressed'); await showKeepsake();
+        if (active()) { demoDone = true; demoRunning = false; }
+      } finally {
+        if (generation === demoGeneration && demoRunning) stopDemo();
       }
     }
-    for (const tab of tabs) {
-      tab.addEventListener('click', () => chooseStory(tab.dataset.occasionTab, false));
-      tab.addEventListener('keydown', event => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        const visible = tabs.filter(button => !button.hidden);
-        const position = visible.indexOf(tab);
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? visible.length - 1
-          : (position + (event.key === 'ArrowRight' ? 1 : -1) + visible.length) % visible.length;
-        chooseStory(visible[next].dataset.occasionTab);
-      });
+    root.addEventListener('pointerdown', () => stopDemo(), { passive: true });
+    input.addEventListener('focus', () => stopDemo());
+    input.addEventListener('input', () => stopDemo(false));
+    if (window.IntersectionObserver) {
+      new window.IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) runDemo();
+        else if (demoRunning) stopDemo();
+      }, { threshold: .8 }).observe(find('question'));
     }
-    allButton.addEventListener('click', () => {
-      gallery.showModal();
-      find('gallery-grid').scrollTop = 0;
-      find('close').focus({ preventScroll: true });
+    document.addEventListener?.('visibilitychange', () => { if (document.hidden && demoRunning) stopDemo(); });
+    function step(direction) {
+      stopDemo();
+      index = (index + direction + stories.length) % stories.length;
+      render();
+      announce(t(current().label) + ' · ' + (index + 1) + ' / ' + stories.length);
+    }
+    previous.addEventListener('click', () => step(-1));
+    next.addEventListener('click', () => step(1));
+    panel.addEventListener('keydown', event => {
+      if (event.target !== panel || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault(); step(event.key === 'ArrowRight' ? 1 : -1);
     });
-    find('close').addEventListener('click', () => gallery.close());
-    gallery.addEventListener('click', event => {
-      if (event.target !== gallery) return;
-      const rect = gallery.getBoundingClientRect();
-      if (event.clientX < rect.left || event.clientX > rect.left + rect.width || event.clientY < rect.top || event.clientY > rect.top + rect.height) gallery.close();
-    });
-    for (const choice of choices) choice.addEventListener('click', () => {
-      gallery.close(); chooseStory(choice.dataset.occasionChoice);
-    });
-    reduced.addEventListener?.('change', cancelAnimations);
+    let touchStart = null;
+    scene.addEventListener('touchstart', event => {
+      touchStart = null;
+      if (event.touches.length !== 1 || event.target.closest?.('input, button, form, [data-occasion-cup]')) return;
+      touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    }, { passive: true });
+    scene.addEventListener('touchend', event => {
+      if (!touchStart) return;
+      const start = touchStart; touchStart = null;
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+      const dx = touch.clientX - start.x, dy = touch.clientY - start.y;
+      if (Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        root.classList.add('has-swiped'); step(dx < 0 ? 1 : -1);
+      }
+    }, { passive: true });
+    scene.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
+    reduced.addEventListener?.('change', () => { stopDemo(); cancelAnimations(); });
     if (window.IntersectionObserver) new window.IntersectionObserver(entries => root.classList.toggle('is-paused', !entries[0].isIntersecting)).observe(root);
-    window.addEventListener('pagehide', () => { epoch++; cancelAnimations(); destroyCup(); busy(false); keepsake.textContent = t('Erinnerungsstück gestalten'); });
-    find('picker').hidden = false; form.hidden = false; find('actions').hidden = false; render();
+    if (window.IntersectionObserver) {
+      const hintObserver = new window.IntersectionObserver(entries => {
+        if (!entries[0].isIntersecting) return;
+        root.classList.add('is-swipe-hint-visible'); hintObserver.disconnect();
+      }, { threshold: .35 });
+      hintObserver.observe(photo);
+    } else root.classList.add('is-swipe-hint-visible');
+    window.addEventListener('pagehide', () => { stopDemo(); epoch++; cancelAnimations(); destroyCup(); busy(false); labelKeepsake(false); });
+    previous.hidden = false; next.hidden = false; find('hint').hidden = false; form.hidden = false; keepsake.hidden = false; render();
   }
   return { createCollection, planPrint, mount, MAX_WORDS };
 });

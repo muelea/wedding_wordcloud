@@ -5,7 +5,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { createCollection, planPrint, MAX_WORDS } = require('../public/js/occasion-stories');
 const stories = require('../src/occasionStories.json');
-const { MUG_11, getPublicProduct } = require('../src/products');
+const { MUG_11, getProduct, getPublicProduct } = require('../src/products');
 
 test('consecutive wishes accumulate and stay isolated between examples', () => {
   const collection = createCollection(stories);
@@ -58,9 +58,9 @@ test('all occasion photos are tracked local files and the homepage mug uses the 
   assert.ok(fs.existsSync(path.join(__dirname, '../public', product.previewMesh.file)));
 });
 
-function mountedDemo({ modelReady = true, reduced = false } = {}) {
+function mountedDemo({ modelReady = true, reduced = false, autoplay = false } = {}) {
   const { mount } = require('../public/js/occasion-stories');
-  const animations = [], models = [], fields = new Map();
+  const animations = [], models = [], fields = new Map(), timers = [], observers = [];
   function node() {
     const listeners = new Map(), classes = new Set(), attrs = new Map();
     return { children: [], style: {}, dataset: {}, textContent: '', value: '', hidden: false,
@@ -84,14 +84,8 @@ function mountedDemo({ modelReady = true, reduced = false } = {}) {
     if (!fields.has(key)) fields.set(key, node());
     return fields.get(key);
   };
-  const tabs = ['wedding', 'birthday', 'besties', 'family', 'farewell'].map(key => {
-    const tab = node(); tab.dataset.occasionTab = key; tab.id = 'occasion-tab-' + key; return tab;
-  });
-  const extra = node(); extra.hidden = true; extra.id = 'occasion-tab-extra'; extra.dataset.occasionTab = ''; fields.set('extra-tab', extra); tabs.push(extra);
-  const choices = stories.map(story => { const choice = node(); choice.dataset.occasionChoice = story.key; return choice; });
-  root.querySelectorAll = selector => selector === '[data-occasion-tab]' ? tabs : selector === '[data-occasion-choice]' ? choices : [];
-  const data = node(); data.textContent = JSON.stringify(stories);
-  const window = { document: { getElementById: id => id === 'occasion-browser' ? root : data, createElement: node },
+  const data = node(); data.textContent = JSON.stringify(stories.map(story => ({ ...story, product: getPublicProduct(getProduct(story.productKey)) })));
+  const window = { document: { getElementById: id => id === 'occasion-browser' ? root : id === 'intro-video' ? null : data, createElement: node },
     matchMedia: () => ({ matches: reduced, addEventListener() {} }), addEventListener() {},
     wolkenworteThreeReady: Promise.resolve(), wolkenworteLandingMugProduct: getPublicProduct(MUG_11), PrintfulProductModel: {}, THREE: {},
     Mug3DViewer: { create(options) {
@@ -100,8 +94,15 @@ function mountedDemo({ modelReady = true, reduced = false } = {}) {
       options.drawTexture(ctx); models.push(model); return model;
     } },
   };
+  if (autoplay) {
+    window.setTimeout = callback => { timers.push(callback); };
+    window.IntersectionObserver = class {
+      constructor(callback) { this.callback = callback; observers.push(this); }
+      observe(node) { this.node = node; } disconnect() {}
+    };
+  }
   mount(window);
-  return { fields, root, models, window, animations, tabs, choices,
+  return { fields, root, models, window, animations, timers, observers,
     async flush() { await new Promise(resolve => setImmediate(resolve)); },
     async finish() { for (const animation of animations) animation.complete(); await new Promise(resolve => setImmediate(resolve)); },
   };
@@ -113,11 +114,14 @@ test('rapid submissions and an immediate cup transition retain every word on ret
   input.value = 'Küchentanz'; const second = form.fire('submit');
   const cup = h.fields.get('keepsake').fire('click');
   await h.flush(); await h.finish(); await Promise.all([first, second, cup]);
-  assert.equal(h.models[0].options.product, h.window.wolkenworteLandingMugProduct);
+  assert.equal(h.models[0].options.product.key, stories[0].productKey);
   assert.equal(h.models[0].options.product.previewMesh.id, 'mug-325');
   assert.match(h.fields.get('cup').getAttribute('aria-label'), /Sonnenschein, Küchentanz/);
   assert.equal(h.fields.get('cloud').classList.contains('is-product'), true);
+  assert.equal(h.fields.get('keepsake').getAttribute('aria-pressed'), 'true');
+  assert.equal(h.fields.get('keepsake').getAttribute('aria-label'), 'Zurück zur Wortwolke');
   await h.fields.get('keepsake').fire('click');
+  assert.equal(h.fields.get('keepsake').getAttribute('aria-pressed'), 'false');
   assert.ok(h.fields.get('cloud').children.every(word => word.style.visibility !== 'hidden'));
   assert.deepEqual(h.fields.get('cloud').children.slice(-2).map(word => word.textContent), ['Sonnenschein', 'Küchentanz']);
 });
@@ -129,7 +133,7 @@ test('switching stories while a mesh loads fences its late result and releases i
     h.models.push(model); return model;
   };
   const pending = h.fields.get('keepsake').fire('click'); await h.flush();
-  h.tabs.find(tab => tab.dataset.occasionTab === stories[1].key).fire('click');
+  h.fields.get('next').fire('click');
   ready(true); await pending;
   assert.equal(h.models[0].destroyed, true);
   assert.equal(h.root.dataset.storyKey, stories[1].key);
@@ -157,47 +161,90 @@ test('server-rendered examples escape JSON script terminators and retain their d
   assert.ok(html.includes('&lt;/script&gt;'));
 });
 
-test('occasion tabs support arrow, Home and End navigation with one keyboard stop', () => {
-  const h = mountedDemo();
-  h.tabs[0].fire('keydown', { key: 'ArrowRight' });
-  assert.equal(h.root.dataset.storyKey, 'birthday');
-  assert.equal(h.tabs.filter(tab => tab.tabIndex === 0).length, 1);
-  assert.equal(h.tabs[1].getAttribute('aria-selected'), 'true');
-  assert.equal(h.tabs[1].focused, true);
-  h.tabs[1].fire('keydown', { key: 'End' });
-  assert.equal(h.root.dataset.storyKey, 'farewell');
-  h.tabs[4].fire('keydown', { key: 'ArrowRight' });
-  assert.equal(h.root.dataset.storyKey, 'wedding');
-  h.tabs[0].fire('keydown', { key: 'End' }); h.tabs[4].fire('keydown', { key: 'Home' });
-  assert.equal(h.root.dataset.storyKey, 'wedding');
+test('arrows and keyboard cycle through every occasion and wrap', () => {
+  const h = mountedDemo(), panel = h.fields.get('panel');
+  h.fields.get('previous').fire('click');
+  assert.equal(h.root.dataset.storyKey, stories.at(-1).key);
+  panel.fire('keydown', { target: panel, key: 'ArrowRight' });
+  assert.equal(h.root.dataset.storyKey, stories[0].key);
+  for (let i = 1; i < stories.length; i++) {
+    h.fields.get('next').fire('click');
+    assert.equal(h.root.dataset.storyKey, stories[i].key);
+    assert.equal(h.fields.get('kicker').textContent, stories[i].label);
+  }
+  panel.fire('keydown', { target: h.fields.get('input'), key: 'ArrowLeft' });
+  assert.equal(h.root.dataset.storyKey, stories.at(-1).key);
 });
 
-test('photo gallery selects a non-featured occasion and exposes its active tab', () => {
-  const h = mountedDemo();
-  h.fields.get('all').fire('click');
-  assert.equal(h.fields.get('gallery').open, true);
-  assert.equal(h.fields.get('close').focused, true);
-  assert.equal(h.fields.get('gallery-grid').scrollTop, 0);
-  h.choices.find(choice => choice.dataset.occasionChoice === 'baby').fire('click');
-  assert.equal(h.fields.get('gallery').open, false);
-  assert.equal(h.root.dataset.storyKey, 'baby');
-  const extra = h.fields.get('extra-tab');
-  assert.equal(extra.hidden, false);
-  assert.equal(extra.getAttribute('aria-selected'), 'true');
-  assert.equal(extra.focused, true);
-  assert.equal(h.fields.get('panel').getAttribute('aria-labelledby'), extra.id);
-  h.tabs[0].fire('click');
-  assert.equal(extra.hidden, true);
+test('horizontal swipes navigate while vertical scroll, controls and cancelled gestures do not', () => {
+  const h = mountedDemo(), scene = h.fields.get('scene');
+  const start = (x, y, interactive = false) => scene.fire('touchstart', { target: { closest: () => interactive }, touches: [{ clientX: x, clientY: y }] });
+  const end = (x, y) => scene.fire('touchend', { changedTouches: [{ clientX: x, clientY: y }] });
+  start(200, 100); end(100, 105);
+  assert.equal(h.root.dataset.storyKey, stories[1].key);
+  assert.equal(h.root.classList.contains('has-swiped'), true);
+  start(200, 100); end(100, 250);
+  start(200, 100, true); end(100, 100);
+  start(200, 100); scene.fire('touchcancel'); end(100, 100);
+  assert.equal(h.root.dataset.storyKey, stories[1].key);
+  start(100, 100); end(200, 100);
+  assert.equal(h.root.dataset.storyKey, stories[0].key);
 });
 
-test('closing the picker keeps the story, and gallery navigation retains added words', async () => {
+test('cycling occasions retains added words', async () => {
   const h = mountedDemo({ reduced: true });
   h.fields.get('input').value = 'Zusammenhalt'; await h.fields.get('form').fire('submit');
-  h.fields.get('all').fire('click'); h.fields.get('close').fire('click');
-  assert.equal(h.root.dataset.storyKey, 'wedding');
-  assert.equal(h.fields.get('gallery').open, false);
-  h.fields.get('all').fire('click');
-  h.choices.find(choice => choice.dataset.occasionChoice === 'baby').fire('click');
-  h.tabs[0].fire('click');
+  h.fields.get('next').fire('click'); h.fields.get('previous').fire('click');
   assert.equal(h.fields.get('cloud').children.at(-1).textContent, 'Zusammenhalt');
+});
+
+test('every occasion previews its distinct catalog keepsake with the complete word collection', async () => {
+  assert.equal(new Set(stories.map(story => story.productKey)).size, stories.length);
+  const h = mountedDemo({ reduced: true });
+  for (const story of stories) {
+    const product = getPublicProduct(getProduct(story.productKey));
+    assert.ok(product.previewMesh || product.previewModel);
+    await h.fields.get('keepsake').fire('click');
+    assert.equal(h.models.at(-1).options.product.key, story.productKey);
+    for (const word of story.words) assert.ok(h.fields.get('cup').getAttribute('aria-label').includes(word));
+    assert.ok(h.fields.get('cup').getAttribute('aria-label').startsWith(product.name));
+    h.fields.get('next').fire('click');
+  }
+});
+
+test('landing loads blanket simulation before the product renderer for blanket occasions', () => {
+  const landing = fs.readFileSync(path.join(__dirname, '../views/landing.ejs'), 'utf8');
+  const scripts = [...landing.matchAll(/<script src="<%= asset\('([^']+)'\) %>"[^>]*>/g)].map(match => match[1]);
+  for (const asset of ['/js/blanket-cloth.js', '/js/product-3d-geometry.js', '/js/mug-3d-viewer.js', '/js/occasion-stories.js']) {
+    assert.ok(scripts.includes(asset));
+    assert.ok(fs.existsSync(path.join(__dirname, '../public', asset)));
+  }
+  assert.ok(scripts.indexOf('/js/blanket-cloth.js') < scripts.indexOf('/js/product-3d-geometry.js'));
+  assert.equal(getProduct(stories.find(story => story.key === 'getwell').productKey).previewModel.kind, 'blanket');
+});
+
+test('visible demo types three words, sends each to the cloud and creates the keepsake', async () => {
+  const h = mountedDemo({ autoplay: true });
+  h.observers.find(observer => observer.node === h.fields.get('question')).callback([{ isIntersecting: true }]);
+  for (let i = 0; i < 150 && !h.models.length; i++) {
+    h.timers.shift()?.(); await h.flush(); await h.finish();
+  }
+  await h.finish();
+  assert.equal(h.models.length, 1);
+  assert.deepEqual(h.fields.get('cloud').children.slice(-3).map(word => word.textContent), stories[0].demoWords);
+  assert.equal(h.fields.get('keepsake').getAttribute('aria-pressed'), 'true');
+  assert.equal(h.fields.get('input').value, '');
+});
+
+test('manual interaction stops demo typing and never overwrites a visitor word', async () => {
+  const h = mountedDemo({ autoplay: true });
+  h.observers.find(observer => observer.node === h.fields.get('question')).callback([{ isIntersecting: true }]);
+  h.timers.shift()(); await h.flush();
+  assert.equal(h.fields.get('input').value, stories[0].demoWords[0][0]);
+  h.root.fire('pointerdown');
+  h.fields.get('input').value = 'Mein Wunsch'; h.fields.get('input').fire('input');
+  while (h.timers.length) { h.timers.shift()(); await h.flush(); }
+  assert.equal(h.fields.get('input').value, 'Mein Wunsch');
+  assert.equal(h.models.length, 0);
+  assert.equal(h.fields.get('cloud').children.length, stories[0].words.length);
 });
