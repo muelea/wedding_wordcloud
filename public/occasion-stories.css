@@ -1,0 +1,143 @@
+.occasion-browser{--occasion-primary:var(--button-primary,#61001f);--occasion-accent:#bd2055;max-width:1000px;margin:auto;color:var(--ink,#400f26)}
+ .occasion-arrow{position:absolute;top:34px;width:48px;height:48px;border:1px solid var(--gold-line);border-radius:50%;background:transparent;color:var(--occasion-primary);font:24px Georgia,serif;cursor:pointer;z-index:4;transition:background .2s}
+.occasion-arrow:hover{background:rgba(97,0,31,.05)}
+.occasion-arrow--previous{left:0}.occasion-arrow--next{right:0}
+.occasion-story{position:relative;background:var(--paper,#fffdfa);isolation:isolate}.occasion-heading{text-align:center;padding:12px 65px 28px}.occasion-kicker{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--occasion-accent);margin:0 0 13px}.occasion-heading h3{font:400 clamp(27px,3.2vw,39px)/1.22 'Playfair Display','Wolkenworte Playfair Fallback',Georgia,serif;margin:0}.occasion-heading h3 em{display:block;font-weight:400;color:var(--occasion-accent)}
+.occasion-scene{touch-action:pan-y pinch-zoom;position:relative;isolation:isolate;margin:0 14px;padding-bottom:125px}.occasion-photo{display:block;width:100%;height:430px;object-fit:cover;object-position:center 40%;border-radius:100px 100px 18px 18px}.occasion-invitation{position:absolute;left:22px;bottom:50px;z-index:3;max-width:60%;padding:14px 16px;background:rgba(255,253,250,.72);border-radius:10px;box-shadow:0 8px 28px rgba(64,15,38,.07)}.occasion-invitation>p{font:400 22px/1.3 'Playfair Display','Wolkenworte Playfair Fallback',Georgia,serif;margin:0;max-width:315px}.occasion-input-row{display:flex;align-items:center;gap:7px;margin-top:14px;padding:3px 4px 3px 11px;border:1px solid var(--gold-line);border-radius:12px;background:rgba(255,255,255,.65)}.occasion-input-row:focus-within{outline:2px solid var(--occasion-accent);outline-offset:2px}.occasion-input-row .occasion-demo-input{width:100%;min-width:0;padding:9px 0;border:0;border-radius:8px;background:transparent;color:#000;box-shadow:none;font:inherit;font-size:16px;line-height:1.4}.occasion-input-row input:focus{outline:2px solid transparent;box-shadow:none}.occasion-demo-input:empty::before{content:attr(data-placeholder);color:var(--muted)}.occasion-input-row button{padding:0;white-space:nowrap;flex:none;width:40px;min-height:38px;border:0;border-radius:9px;background:var(--occasion-primary);color:#fffdfa;font:16px Georgia,serif;cursor:pointer}
+.occasion-cloud{position:absolute;right:-5px;bottom:0;z-index:2;isolation:isolate;display:flex;flex-wrap:wrap;align-content:center;align-items:center;justify-content:center;gap:14px 16px;width:330px;min-height:230px;padding:17px 12px;pointer-events:none}.occasion-cloud::before{content:'';position:absolute;inset:-52px -38px;z-index:-1;border-radius:50%;background:rgba(255,253,250,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);mask-image:radial-gradient(ellipse closest-side,#000 42%,#000e 58%,#0008 76%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse closest-side,#000 42%,#000e 58%,#0008 76%,transparent 100%)}
+.occasion-word{flex:0 1 auto;max-width:100%;overflow-wrap:anywhere;line-height:1.2;font-family:Georgia,serif;font-style:italic;animation:occasion-float 7s ease-in-out infinite alternate}.occasion-word:nth-child(3n+1){animation-delay:-2s;animation-duration:7s}.occasion-word:nth-child(3n+2){animation-delay:-4s;animation-duration:8.5s}.occasion-word:nth-child(3n){animation-delay:-1s;animation-duration:6s}.occasion-cloud.is-product .occasion-word{visibility:hidden!important}.occasion-browser.is-paused .occasion-word{animation-play-state:paused}
+.occasion-word--0,.occasion-word--3,.occasion-word--7{color:#528563}.occasion-word--1,.occasion-word--5,.occasion-word--8,.occasion-word--11{color:#a94c77}.occasion-word--2,.occasion-word--9{color:#a8812b}.occasion-word--4,.occasion-word--10{color:#6d7fb0}.occasion-word--6,.occasion-word--12{color:#b37c48}.occasion-word{font-size:16px}.occasion-word--0,.occasion-word--8{font-size:11px}.occasion-word--2,.occasion-word--7,.occasion-word--9{font-size:24px}.occasion-word--5{font-size:30px}
+.occasion-cup{position:absolute;right:-5px;bottom:-15px;z-index:3;width:330px;height:310px;touch-action:pan-y;cursor:grab;filter:drop-shadow(0 12px 16px #5c35281a)}.occasion-cup canvas{display:block;width:100%;height:100%}.occasion-cup .mug-interaction-region{display:none}.occasion-flight{position:absolute;z-index:5;max-width:220px;overflow-wrap:anywhere;font:italic 19px Georgia,serif;opacity:0;pointer-events:none}
+.occasion-browser button:focus-visible,.occasion-tab:focus-visible{outline:2px solid var(--occasion-accent);outline-offset:3px}.occasion-browser button:disabled{cursor:wait;opacity:.65}.occasion-status{min-height:1.5em;font-size:12px;color:var(--muted);margin:10px 0 0}.occasion-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.occasion-browser [hidden]{display:none!important}
+@keyframes occasion-float{0%{transform:translate(-1px,2px)}50%{transform:translate(1px,-2px)}100%{transform:translate(-1px,2px)}}
+@media(max-width:600px){.occasion-heading{padding:6px 6px 22px}.occasion-scene{margin:0;padding-bottom:145px}.occasion-photo{height:340px;border-radius:65px 65px 12px 12px}.occasion-invitation{left:10px;bottom:160px;max-width:85%;padding:13px 15px}.occasion-invitation>p{font-size:19px}.occasion-cloud{width:230px;min-height:210px;gap:11px 10px;padding:12px 8px;right:-8px;bottom:-5px}.occasion-word{font-size:12px}.occasion-word--0,.occasion-word--8{font-size:10px}.occasion-word--2,.occasion-word--7,.occasion-word--9{font-size:18px}.occasion-word--5{font-size:24px}.occasion-cup{width:240px;height:240px;right:-8px;bottom:-5px}}
+@media(prefers-reduced-motion:reduce){.occasion-word{animation:none}}
+/* Phones keep the cloud in document flow, so longer wishes never climb over
+   the invitation or the following story copy. The cup reuses the same space. */
+@media(max-width:600px){
+  .occasion-scene{padding-bottom:0}
+  .occasion-invitation{bottom:calc(100% - 350px)}
+  .occasion-cloud{position:relative;right:auto;bottom:auto;margin:-5px -8px 0 auto;width:67%;min-height:230px}
+
+  .occasion-cup{left:0;right:0;bottom:0;margin-inline:auto}
+}
+.occasion-browser[data-story-key="baby"] .occasion-photo{height:480px}
+/* Keep the wider family portrait complete on a phone; its invitation follows
+   the photo rather than covering the grandparents or the older sibling. */
+@media(max-width:600px){
+  .occasion-browser[data-story-key="baby"] .occasion-scene{display:grid;grid-template-columns:28% minmax(0,1fr);column-gap:5%;align-items:start}
+  .occasion-browser[data-story-key="baby"] .occasion-photo{grid-column:1 / -1;height:auto;aspect-ratio:3/2;border-radius:36px 36px 12px 12px}
+  .occasion-browser[data-story-key="baby"] .occasion-invitation{grid-column:1 / -1}
+
+  .occasion-browser[data-story-key="baby"] .occasion-cloud{grid-column:2;grid-row:3;width:auto;margin-top:0}
+  .occasion-browser[data-story-key="baby"] .occasion-invitation{position:relative;left:auto;bottom:auto;max-width:100%;margin:12px 0 8px;box-shadow:none}
+}
+@media(max-width:600px){
+  .occasion-arrow{display:none}
+}
+/* Compact stories leave the photo and floating wishes room to breathe. */
+@media(max-width:600px){
+
+  .occasion-invitation{max-width:min(250px,calc(100% - 20px));padding:10px 12px}
+  .occasion-invitation>p{font-size:17px}
+  .occasion-input-row{margin-top:9px;padding:1px 3px 1px 9px;gap:4px;border-radius:10px}
+  .occasion-input-row .occasion-demo-input{padding:6px 0;font-size:16px}
+  .occasion-input-row button{width:40px;min-height:40px}
+  .occasion-cloud{width:100%;min-height:200px;margin:-5px 0 0;padding:14px 12px}
+  .occasion-browser[data-story-key="baby"] .occasion-invitation{width:min(250px,100%);max-width:100%;justify-self:start}
+  .occasion-browser[data-story-key="baby"] .occasion-cloud{grid-column:1 / -1}
+}
+
+
+
+
+
+.occasion-composer{display:flex;align-items:center;gap:8px;margin-top:14px}
+.occasion-composer [data-occasion-form]{flex:1;min-width:0}
+.occasion-composer .occasion-input-row{margin-top:0}
+.occasion-wand{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:10px;border:1px solid var(--gold-line);border-radius:12px;background:rgba(255,253,250,.7);color:var(--occasion-primary);cursor:pointer;transition:background .2s,transform .2s}
+.occasion-wand svg{width:23px;height:23px;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.occasion-wand:hover,.occasion-wand[aria-pressed="true"]{background:var(--occasion-primary);color:var(--paper,#fffdfa)}
+.occasion-wand:active{transform:scale(.95)}
+@media(max-width:600px){.occasion-composer{gap:6px;margin-top:9px}.occasion-wand{width:40px;height:44px;padding:8px}.occasion-invitation{max-width:min(290px,calc(100% - 20px))}}
+
+.occasion-browser.is-typing-demo .occasion-input-row{outline:1px solid var(--occasion-accent);outline-offset:2px}
+.occasion-composer button.is-demo-pressed{transform:scale(.88);background:var(--occasion-accent);color:#fffdfa;box-shadow:0 0 0 6px rgba(189,32,85,.15)}
+.occasion-input-row button{transition:transform .2s,box-shadow .2s,background .2s}
+.occasion-browser[data-story-key="justbecause"] .occasion-heading h3 em,
+.occasion-browser[data-story-key="baby"] .occasion-heading h3 em{display:inline}
+.occasion-browser[data-story-key="justbecause"] .occasion-heading h3 em::before,
+.occasion-browser[data-story-key="baby"] .occasion-heading h3 em::before{content:' '}
+
+@media(max-width:600px){.occasion-cloud::before{inset:-42px -14px}}
+/* Separate grid cells prevent the composer from colliding with growing words
+   or a product when the viewport changes. Cloud and product share one cell. */
+.occasion-browser .occasion-scene{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto auto;column-gap:36px;padding-bottom:0;align-items:center}
+.occasion-browser .occasion-photo{grid-column:1 / -1;grid-row:1}
+.occasion-browser .occasion-invitation{position:relative;grid-column:1;grid-row:2;left:auto;bottom:auto;width:calc(100% - 22px);max-width:347px;margin:-90px 0 0 22px;justify-self:start;box-sizing:border-box}
+.occasion-browser .occasion-cloud{position:relative;grid-column:2;grid-row:2;right:auto;bottom:auto;width:100%;min-height:310px;margin-top:-90px;box-sizing:border-box}
+.occasion-browser .occasion-cup{position:relative;grid-column:2;grid-row:2;left:auto;right:auto;bottom:auto;width:100%;height:310px;margin:-90px 0 0;justify-self:center}
+@media(max-width:800px){
+  .occasion-browser .occasion-scene,.occasion-browser[data-story-key="baby"] .occasion-scene{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;gap:24px;margin:0;padding:0;align-items:center}
+  .occasion-browser .occasion-photo{height:340px;border-radius:60px 60px 16px 16px}
+  .occasion-browser[data-story-key="baby"] .occasion-photo{height:auto;aspect-ratio:3/2}
+  .occasion-browser .occasion-invitation,.occasion-browser[data-story-key="baby"] .occasion-invitation{position:relative;grid-column:1;grid-row:2;left:auto;bottom:auto;width:100%;max-width:360px;margin:0;justify-self:center;padding:12px 14px}
+  .occasion-browser .occasion-cloud,.occasion-browser[data-story-key="baby"] .occasion-cloud{grid-column:1;grid-row:3;width:100%;max-width:360px;min-height:280px;margin:0;padding:20px 14px;justify-self:center}
+  .occasion-browser .occasion-cup{grid-column:1;grid-row:3;width:min(100%,300px);height:280px;margin:0;justify-self:center}
+  .occasion-cloud::before{inset:-24px -10px}
+}
+
+.occasion-browser .occasion-arrow{display:grid;place-items:center;position:relative;grid-column:1 / -1;grid-row:1;align-self:center;top:auto;left:auto;right:auto;width:44px;height:44px;margin:0 12px;padding:0;border:1px solid rgba(255,253,250,.65);border-radius:50%;background:rgba(255,253,250,.78);color:var(--occasion-primary);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(64,15,38,.08);z-index:5;font-size:22px}
+.occasion-browser .occasion-arrow--previous{justify-self:start}
+.occasion-browser .occasion-arrow--next{justify-self:end}
+.occasion-browser .occasion-arrow:hover{background:rgba(255,253,250,.96)}
+@media(max-width:600px){.occasion-browser .occasion-arrow{margin-inline:8px}}
+/* The mobile composer may sit on the photo, but the preview always follows
+   in its own row, below the complete composer (including long questions). */
+@media(max-width:800px){
+  .occasion-browser .occasion-invitation,.occasion-browser[data-story-key="baby"] .occasion-invitation{margin-top:-112px;max-width:calc(100% - 20px);width:360px;justify-self:center;align-self:start}
+}
+
+/* Keep the photo anchored while quotes vary in length. */
+.occasion-heading{box-sizing:border-box;height:190px;padding:12px 32px 24px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.occasion-title-box{height:120px;width:100%;display:flex;align-items:center;justify-content:center;min-height:0}
+.occasion-title-box h3{width:100%;font-size:39px;line-height:1.22;overflow-wrap:anywhere}
+.occasion-kicker{flex:none}
+.occasion-browser[data-story-key="baby"] .occasion-photo{height:430px;aspect-ratio:auto}
+@media(max-width:800px){
+  .occasion-heading{height:200px;padding:8px 6px 24px}
+  .occasion-title-box{height:140px}
+  .occasion-title-box h3{font-size:30px}
+  .occasion-browser[data-story-key="baby"] .occasion-photo{height:340px;aspect-ratio:auto}
+}
+@media(max-width:800px){
+  .occasion-browser .occasion-invitation,.occasion-browser[data-story-key="baby"] .occasion-invitation{z-index:6}
+  .occasion-browser .occasion-cloud,.occasion-browser[data-story-key="baby"] .occasion-cloud{margin-top:0;align-self:start;align-content:flex-start;padding-top:0}
+  .occasion-browser .occasion-scene,.occasion-browser[data-story-key="baby"] .occasion-scene{row-gap:10px}
+}
+@media(max-width:800px){
+  .occasion-browser .occasion-cup{align-self:start;margin-top:-16px}
+}
+
+.occasion-demo-input{display:block;flex:1;min-height:1.4em;white-space:pre-wrap;overflow-wrap:anywhere}
+.occasion-composer{pointer-events:none;user-select:none}
+
+/* Quotes flow naturally; the fixed title box handles their overall height. */
+.occasion-heading h3 em{display:inline}
+.occasion-heading h3 em::before{content:' '}
+.occasion-heading .occasion-kicker{margin-bottom:8px}
+.occasion-title-box{align-items:flex-start}
+
+/* Reserve two default lines; longer quotes shrink inside the same space. */
+.occasion-heading{height:152px}
+.occasion-title-box{height:96px}
+@media(max-width:800px){
+  .occasion-heading{height:128px}
+  .occasion-title-box{height:74px}
+}
+#inspiration{padding-bottom:24px}
+#erinnerungsstuecke{padding-top:40px}
+@media(max-width:800px){
+  #inspiration{padding-bottom:12px}
+  #erinnerungsstuecke{padding-top:24px}
+}

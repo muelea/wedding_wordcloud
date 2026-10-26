@@ -1,0 +1,508 @@
+[
+  {
+    "key": "wedding",
+    "label": "Hochzeit",
+    "question": "„Was wünscht ihr Clara & Felix fürs Leben?“",
+    "words": [
+      "Team Fensterplatz",
+      "Ja, ich will",
+      "Noch einen Tanz",
+      "Papas Rede",
+      "Regen? Egal.",
+      "Pommes um zwei",
+      "Für immer du"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Jetzt streiten wir morgens,",
+      "wem die Tasse gehört.“"
+    ],
+    "image": "/assets/inspiration/stories/wedding.webp",
+    "smallImage": "/assets/inspiration/stories/wedding-small.webp",
+    "alt": "Beispielgeschichte Hochzeit: Menschen teilen einen persönlichen Moment.",
+    "productKey": "white-glossy-mug-duo-11oz",
+    "demoWords": [
+      "Tisch sieben",
+      "Unser Lied",
+      "Clara sagt Ja"
+    ]
+  },
+  {
+    "key": "besties",
+    "label": "Besties",
+    "question": "„Welcher Moment mit uns bleibt für immer?“",
+    "words": [
+      "Nachtbaden",
+      "Nora fährt",
+      "Falsch abgebogen",
+      "Noch ein Lied",
+      "Pommes um drei",
+      "Der gelbe Pulli",
+      "Wir drei 🪩"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Nachtbaden. Mehr muss auf der Tasche",
+      "eigentlich nicht stehen.“"
+    ],
+    "image": "/assets/inspiration/stories/besties.webp",
+    "smallImage": "/assets/inspiration/stories/besties-small.webp",
+    "alt": "Beispielgeschichte Besties: Menschen teilen einen persönlichen Moment.",
+    "productKey": "all-over-tote-black-handles",
+    "demoWords": [
+      "Mia hat Snacks",
+      "See statt Schlaf",
+      "Leas Playlist"
+    ]
+  },
+  {
+    "key": "farewell",
+    "label": "Abschied",
+    "question": "„Was möchtet ihr Nora mit auf den Weg geben?“",
+    "words": [
+      "Frag mal Alex",
+      "Läuft bei uns",
+      "Kaffee zuerst",
+      "Excel-Magie",
+      "Kurz eine Frage",
+      "Donnerstagspizza",
+      "Du fehlst"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Ihr habt mir so viel zugetraut.",
+      "Jetzt trau ich mich auch.“"
+    ],
+    "image": "/assets/inspiration/stories/farewell.webp",
+    "smallImage": "/assets/inspiration/stories/farewell-small.webp",
+    "alt": "Beispielgeschichte Abschied: Menschen teilen einen persönlichen Moment.",
+    "productKey": "spiral-notebook-dotted",
+    "demoWords": [
+      "Drucker streikt",
+      "Meetingküche",
+      "Bis zum Sommerfest"
+    ]
+  },
+  {
+    "key": "graduation",
+    "label": "Abschluss",
+    "question": "„Was wünscht ihr Emma für ihren nächsten Schritt?“",
+    "words": [
+      "Bib bis zehn",
+      "Mensa-Pommes",
+      "Panikgruppe",
+      "Noch ein Versuch",
+      "Dr. Fast",
+      "Mama wusste es",
+      "Geschafft 🎓"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Bestanden.",
+      "Auch dank euch.“"
+    ],
+    "image": "/assets/inspiration/stories/graduation.webp",
+    "smallImage": "/assets/inspiration/stories/graduation-small.webp",
+    "alt": "Beispielgeschichte Abschluss: Menschen teilen einen persönlichen Moment.",
+    "productKey": "laptop-sleeve-10984",
+    "demoWords": [
+      "Karteikartenclub",
+      "Letzte Klausur",
+      "Nie wieder Statistik"
+    ]
+  },
+  {
+    "key": "getwell",
+    "label": "Gute Besserung",
+    "question": "„Welche Worte schenken Jana heute ein Lächeln?“",
+    "words": [
+      "Wir holen dich ab",
+      "Kein Muss",
+      "Suppe vor der Tür",
+      "Dein Tempo",
+      "Schlechte Serien",
+      "Ich bleib noch",
+      "Bis morgen 🤍"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Die vielen Menschen und Wünsche",
+      "geben mir unglaublich Kraft.“"
+    ],
+    "image": "/assets/inspiration/stories/getwell.webp",
+    "smallImage": "/assets/inspiration/stories/getwell-small.webp",
+    "alt": "Beispielgeschichte Gute Besserung: Menschen teilen einen persönlichen Moment.",
+    "productKey": "throw-blanket-50x60in",
+    "demoWords": [
+      "Jana, wir sind da",
+      "Katrins Nudelsuppe",
+      "Sonntagsbesuch"
+    ]
+  },
+  {
+    "key": "justbecause",
+    "label": "Einfach so",
+    "question": "„Was macht Sabine für euch so besonders?“",
+    "words": [
+      "Kleine Schwester",
+      "Große Klappe",
+      "Ruf kurz an",
+      "Mamas Lasagne",
+      "Du wieder",
+      "Sofa reserviert",
+      "Hab dich lieb"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Meine Schwester hat mir einfach so ein Kissen geschickt.",
+      "So sweet.“"
+    ],
+    "image": "/assets/inspiration/stories/justbecause.webp",
+    "smallImage": "/assets/inspiration/stories/justbecause-small.webp",
+    "alt": "Beispielgeschichte Einfach so: Menschen teilen einen persönlichen Moment.",
+    "productKey": "all-over-basic-pillow-18in",
+    "demoWords": [
+      "Sprachnachricht 12:48",
+      "Schick mal ein Foto",
+      "Schwesterherz"
+    ]
+  },
+  {
+    "key": "birthday",
+    "label": "Geburtstag",
+    "question": "„Welche Worte schenkt ihr Mara zum Geburtstag?“",
+    "words": [
+      "29. Schon wieder.",
+      "DJ Kathi",
+      "Nur ein Getränk",
+      "Tanzfläche links",
+      "Käsekuchen!",
+      "Seit 1994",
+      "Heimweg zu Fuß 🎂"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„29.",
+      "Schon wieder.“"
+    ],
+    "image": "/assets/inspiration/stories/birthday.webp",
+    "smallImage": "/assets/inspiration/stories/birthday-small.webp",
+    "alt": "Beispielgeschichte Geburtstag: Menschen teilen einen persönlichen Moment.",
+    "productKey": "steel-tumbler-15005",
+    "demoWords": [
+      "Kathis Küchenparty",
+      "Wer hat Konfetti?",
+      "Letzte Runde"
+    ]
+  },
+  {
+    "key": "teacher",
+    "label": "Für Lehrkräfte",
+    "question": "„Was macht Frau Berger für euch besonders?“",
+    "words": [
+      "Frau Sommer!",
+      "Pünktchen 🐹",
+      "Die 4b",
+      "Noch fünf Minuten",
+      "Lesenacht",
+      "Mut gemacht",
+      "Wir können das"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Bei Frau Sommer darf man",
+      "auch mal was falsch machen.“"
+    ],
+    "image": "/assets/inspiration/stories/teacher.webp",
+    "smallImage": "/assets/inspiration/stories/teacher-small.webp",
+    "alt": "Beispielgeschichte Für Lehrkräfte: Menschen teilen einen persönlichen Moment.",
+    "productKey": "eco-tote-10458",
+    "demoWords": [
+      "Emils Radiergummi",
+      "Ausflug zum Bach",
+      "Danke fürs Zuhören"
+    ]
+  },
+  {
+    "key": "team",
+    "label": "Teams & Unternehmen",
+    "question": "„Was macht uns als Team aus?“",
+    "words": [
+      "Küchentisch GmbH",
+      "Freitag live",
+      "Schon gefixt",
+      "Kunde Nummer eins",
+      "Hat WLAN?",
+      "Ravioli-Runde",
+      "Läuft 🚀"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Unser erstes Büro war eine Küche.",
+      "Mit Bier im Kühlschrank.“"
+    ],
+    "image": "/assets/inspiration/stories/team.webp",
+    "smallImage": "/assets/inspiration/stories/team-small.webp",
+    "alt": "Beispielgeschichte Teams & Unternehmen: Menschen teilen einen persönlichen Moment.",
+    "productKey": "mouse-pad",
+    "demoWords": [
+      "Pitch um acht",
+      "Server im Flur",
+      "Erste Rechnung"
+    ]
+  },
+  {
+    "key": "vacation",
+    "label": "Urlaubserinnerungen",
+    "question": "„Welchen Moment nehmen wir aus diesem Urlaub mit?“",
+    "words": [
+      "Hütte 7",
+      "Nasse Socken",
+      "Noch ans Meer",
+      "Island ’25",
+      "Papas Wollpulli",
+      "Tankstelle mit Aussicht",
+      "Mitternachtssonne"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Aus der Tasse schmeckt selbst der Kaffee zu Hause",
+      "nach unserem Trip.“"
+    ],
+    "image": "/assets/inspiration/stories/vacation.webp",
+    "smallImage": "/assets/inspiration/stories/vacation-small.webp",
+    "alt": "Beispielgeschichte Urlaubserinnerungen: Menschen teilen einen persönlichen Moment.",
+    "productKey": "enamel-mug",
+    "demoWords": [
+      "Wal voraus 🐋",
+      "Fähre verpasst",
+      "Lea hat Snacks"
+    ]
+  },
+  {
+    "key": "reunion",
+    "label": "Klassentreffen",
+    "question": "„Welcher Moment aus unserer Schulzeit ist unvergessen?“",
+    "words": [
+      "Mathe-Tom",
+      "Raum 204",
+      "Frau Krüger",
+      "Abiball ’06",
+      "Bus 17",
+      "Wer hat Kreide?",
+      "Nichts verlernt"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Zwanzig Jahre später und wir lachen",
+      "immer noch über die gleichen Witze.“"
+    ],
+    "image": "/assets/inspiration/stories/reunion.webp",
+    "smallImage": "/assets/inspiration/stories/reunion-small.webp",
+    "alt": "Beispielgeschichte Klassentreffen: Menschen teilen einen persönlichen Moment.",
+    "productKey": "wine-tumbler",
+    "demoWords": [
+      "Hinten links",
+      "Leistungskurs Chaos",
+      "Toms Taschenrechner"
+    ]
+  },
+  {
+    "key": "community",
+    "label": "Stadt & Nachbarschaft",
+    "question": "„Was macht unseren Ort für dich besonders?“",
+    "words": [
+      "Bei Özlem",
+      "Bank am Kanal",
+      "Kiosk bis spät",
+      "Hinterhofkino",
+      "Moin, Nachbar",
+      "Schlüssel bei uns",
+      "Zuhause"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Mein Block,",
+      "mein Leben“"
+    ],
+    "image": "/assets/inspiration/stories/community.webp",
+    "smallImage": "/assets/inspiration/stories/community-small.webp",
+    "alt": "Beispielgeschichte Stadt & Nachbarschaft: Menschen teilen einen persönlichen Moment.",
+    "productKey": "canvas-12x16in",
+    "demoWords": [
+      "Balkonkonzerte",
+      "Hof Nummer acht",
+      "Späti bei Cem"
+    ]
+  },
+  {
+    "key": "club",
+    "label": "Vereine & Mannschaften",
+    "question": "„Was macht uns zu mehr als einer Mannschaft?“",
+    "words": [
+      "Kreisliga-Legenden",
+      "Auswärts dabei",
+      "Dritte Halbzeit",
+      "Unser Platz",
+      "Trainer Uwe",
+      "Latte!",
+      "Nächste Woche ⚽"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Kein Pokal.",
+      "Scheißegal.“"
+    ],
+    "image": "/assets/inspiration/stories/club.webp",
+    "smallImage": "/assets/inspiration/stories/club-small.webp",
+    "alt": "Beispielgeschichte Vereine & Mannschaften: Menschen teilen einen persönlichen Moment.",
+    "productKey": "water-bottle-10798",
+    "demoWords": [
+      "Bus voller Stollen",
+      "Uwes Halbzeitrede",
+      "0:4, trotzdem wir"
+    ]
+  },
+  {
+    "key": "family",
+    "label": "Familientreffen",
+    "question": "„Was ist für uns typisch Familie?“",
+    "words": [
+      "Omas Kartoffelsalat",
+      "Tisch für zwölf",
+      "Wer nimmt den Hund?",
+      "Noch Nachtisch?",
+      "Garten sonntags",
+      "Alle da",
+      "Heidschnucken, die sind lecker"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Oma's Sprüche müssen",
+      "einfach bewahrt werden.“"
+    ],
+    "image": "/assets/inspiration/stories/family.webp",
+    "smallImage": "/assets/inspiration/stories/family-small.webp",
+    "alt": "Beispielgeschichte Familientreffen: Menschen teilen einen persönlichen Moment.",
+    "productKey": "framed-matte-poster-black-30x40cm",
+    "demoWords": [
+      "Heideurlaub 2008",
+      "Opas Lieblingsspruch",
+      "Die letzte Frikadelle"
+    ]
+  },
+  {
+    "key": "volunteers",
+    "label": "Ehrenamt & Helfende",
+    "question": "„Was habt ihr durch euren Einsatz möglich gemacht?“",
+    "words": [
+      "Treffpunkt sechs",
+      "Wer hat den Schlüssel?",
+      "Zusammen anpacken",
+      "Kaffee im Stehen",
+      "Auf dich ist Verlass",
+      "Bis Samstag",
+      "Unser gelber Bus",
+      "Ein Herz für Pfoten"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Von den Leuten, mit denen ich samstags",
+      "viel zu früh aufstehe.“"
+    ],
+    "image": "/assets/inspiration/stories/volunteers.webp",
+    "smallImage": "/assets/inspiration/stories/volunteers-small.webp",
+    "alt": "Beispielgeschichte Ehrenamt & Helfende: Menschen teilen einen persönlichen Moment.",
+    "productKey": "travel-mug-16440",
+    "demoWords": [
+      "Brötchen von Ute",
+      "Schicht mit Ben",
+      "Noch eine Kiste"
+    ]
+  },
+  {
+    "key": "baby",
+    "label": "Willkommen, Baby",
+    "question": "„Was wünschen wir dir, kleine Mila, für dein Leben?“",
+    "words": [
+      "Willkommen, Mila",
+      "Opa liest vor",
+      "Oma ist unterwegs",
+      "Mein Dino 🦕",
+      "Tante Chaos",
+      "Kleine Nachteule",
+      "Wir sind da"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Egal wohin dich deine kleinen Füße einmal tragen werden.",
+      "Wir sind immer für dich da.“"
+    ],
+    "image": "/assets/inspiration/stories/baby.webp",
+    "smallImage": "/assets/inspiration/stories/baby-small.webp",
+    "alt": "Anna und David mit ihrem Baby, den Großeltern und der großen Schwester beim gemeinsamen Willkommenheißen.",
+    "imagePosition": "center top",
+    "productKey": "throw-blanket-30x40in",
+    "demoWords": [
+      "Von Oma Lotte",
+      "Leni teilt den Dino",
+      "Papas Kuschelzeit"
+    ]
+  },
+  {
+    "key": "retirement",
+    "label": "Ruhestand",
+    "question": "„Welche Spuren hat Thomas bei euch hinterlassen?“",
+    "words": [
+      "Frag den Peter",
+      "32 Jahre",
+      "Feierabend!",
+      "Werkstattheld",
+      "Jetzt ans Meer",
+      "Enkelzeit",
+      "Montag ausschlafen"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Endlich Kaffee trinken, ohne dass jemand",
+      "kurz eine Frage hat.“"
+    ],
+    "image": "/assets/inspiration/stories/retirement.webp",
+    "smallImage": "/assets/inspiration/stories/retirement-small.webp",
+    "alt": "Beispielgeschichte Ruhestand: Menschen teilen einen persönlichen Moment.",
+    "productKey": "white-glossy-mug-15oz",
+    "demoWords": [
+      "Peters Werkzeugkiste",
+      "Freitag letzter Tag",
+      "Wecker bleibt aus"
+    ]
+  },
+  {
+    "key": "remembrance",
+    "label": "Gemeinsam erinnern",
+    "question": "„Was von dir bleibt bei uns?“",
+    "words": [
+      "Nimm dir noch was",
+      "Apfelkuchen",
+      "Ihr Garten",
+      "Sonntags um drei",
+      "Die blaue Schürze",
+      "Ach, Kind",
+      "Deine Geschichten"
+    ],
+    "placeholder": "Dein Wort …",
+    "titleLines": [
+      "„Die Tasse erinnert mich jeden Morgen daran,",
+      "mir Zeit für meine Lieblingsmenschen zu nehmen.“"
+    ],
+    "image": "/assets/inspiration/stories/remembrance.webp",
+    "smallImage": "/assets/inspiration/stories/remembrance-small.webp",
+    "alt": "Beispielgeschichte Gemeinsam erinnern: Menschen teilen einen persönlichen Moment.",
+    "productKey": "white-glossy-mug-20oz",
+    "demoWords": [
+      "Omas Rosentasse",
+      "Noch ein Stück",
+      "Dein Platz am Fenster"
+    ]
+  }
+]

@@ -13,7 +13,8 @@ const { publicAssetUrl } = require('./publicAssets');
 const { localizeHtml } = require('./htmlLocalizer');
 const { SITE_FONT_ASSETS, siteFontPreloads } = require('./siteFonts');
 const analyticsConfig = require('./analyticsConfig');
-const { MUG_11, getPublicProduct } = require('./products');
+const { MUG_11, getProduct, getPublicProduct } = require('./products');
+const occasionStories = require('./occasionStories.json');
 
 const LANGUAGE_COOKIE = 'wolkenworte-language';
 const LANGUAGE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
@@ -110,6 +111,7 @@ async function renderPage(req, res, view, options = {}) {
     header: options.header || {},
     pageData: options.pageData || {},
     landingMugProduct: view === 'landing' ? getPublicProduct(MUG_11) : null,
+    occasionStories: view === 'landing' ? occasionStories.map(story => ({ ...story, product: getPublicProduct(getProduct(story.productKey)), image: publicAssetUrl(story.image), smallImage: publicAssetUrl(story.smallImage) })) : [],
     designAccountsEnabled: process.env.DESIGN_ACCOUNTS_ENABLED === 'true',
     languages: SUPPORTED_LOCALES.map((code) => ({
       code,

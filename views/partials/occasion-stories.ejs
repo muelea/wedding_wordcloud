@@ -1,0 +1,46 @@
+<% const firstStory = occasionStories[0]; %>
+<section id="inspiration" aria-labelledby="occasion-section-title">
+  <div class="shell">
+    <div class="section-top">
+      <div class="flourish"><i></i></div>
+      <p class="eyebrow center">Für jeden Anlass</p>
+      <h2 id="occasion-section-title">Entdecke, was aus Worten werden kann.</h2>
+    </div>
+    <div class="occasion-browser" id="occasion-browser">
+      <article class="occasion-story" id="occasion-story-panel" data-occasion-panel aria-labelledby="occasion-title" aria-roledescription="Karussell" tabindex="0">
+        <header class="occasion-heading">
+          <p class="occasion-kicker" data-occasion-kicker><%= firstStory.label %></p>
+          <div class="occasion-title-box" data-occasion-title-box><h3 id="occasion-title" data-occasion-title-heading><span data-occasion-title><%= firstStory.titleLines[0] %></span><em data-occasion-subtitle><%= firstStory.titleLines[1] %></em></h3></div>
+        </header>
+        <div class="occasion-scene" data-occasion-scene>
+        <button class="occasion-arrow occasion-arrow--previous" data-occasion-previous type="button" aria-label="Vorheriger Anlass" hidden>←</button>
+        <button class="occasion-arrow occasion-arrow--next" data-occasion-next type="button" aria-label="Nächster Anlass" hidden>→</button>
+          <img class="occasion-photo" data-occasion-photo src="<%= firstStory.image %>" srcset="<%= firstStory.smallImage %> 640w, <%= firstStory.image %> 1200w" sizes="(max-width: 760px) calc(100vw - 48px), 1000px" width="1200" height="800" alt="<%= firstStory.alt %>" loading="lazy" decoding="async" />
+          <div class="occasion-invitation">
+            <p data-occasion-question><%= firstStory.question %></p>
+            <div class="occasion-composer" aria-hidden="true" inert>
+            <div data-occasion-form hidden>
+              <div class="occasion-input-row">
+                <input class="occasion-demo-input" data-occasion-input type="text" readonly tabindex="-1" inputmode="none" autocomplete="off" placeholder="<%= firstStory.placeholder %>" />
+                <button type="button" tabindex="-1" aria-label="Wort zur Beispielwolke hinzufügen">♡ →</button>
+              </div>
+            </div>
+            <button class="occasion-wand" type="button" data-occasion-keepsake aria-label="Erinnerungsstück gestalten" title="Erinnerungsstück gestalten" aria-pressed="false" hidden>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 20 12-12 4 4L8 24z" transform="translate(0 -3)"/><path d="m13 8 4 4M5 3v4M3 5h4M19 2v4M17 4h4M20 17v4M18 19h4"/></svg>
+            </button>
+            </div>
+          </div>
+          <div class="occasion-cloud" data-occasion-cloud data-i18n-ignore aria-label="Wortwolke der Beispielgeschichte">
+            <% firstStory.words.forEach((word, index) => { %><span class="occasion-word occasion-word--<%= index %>" data-occasion-word><%= word %></span><% }); %>
+          </div>
+          <div class="occasion-cup" data-occasion-cup role="img" aria-label="Tasse mit den Worten aus dieser Beispielwolke" hidden></div>
+          <span class="occasion-flight" data-occasion-flight data-i18n-ignore aria-hidden="true"></span>
+        </div>
+
+        <p class="occasion-status occasion-sr-only" data-occasion-status role="status" aria-live="polite"></p>
+      </article>
+      <noscript><p>Mit JavaScript könnt ihr weitere Beispielgeschichten entdecken und selbst Worte hinzufügen.</p></noscript>
+      <script type="application/json" id="occasion-stories-data"><%- JSON.stringify(occasionStories).replace(/</g, '\\u003c') %></script>
+    </div>
+  </div>
+</section>
