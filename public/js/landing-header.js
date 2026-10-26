@@ -6,7 +6,9 @@
 
   function update() {
     var rect = hero.getBoundingClientRect();
-    var headerBottom = header.getBoundingClientRect().bottom;
+    var headerBounds = header.getBoundingClientRect();
+    var headerBottom = headerBounds.bottom;
+    document.documentElement.style.setProperty('--landing-header-height', headerBounds.height + 'px');
     header.classList.toggle('hero-visible', rect.bottom > headerBottom && rect.top < window.innerHeight);
   }
 
@@ -14,4 +16,5 @@
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update);
   window.addEventListener('pageshow', update);
+  if (window.ResizeObserver) new window.ResizeObserver(update).observe(header);
 })();

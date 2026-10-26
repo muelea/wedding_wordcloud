@@ -215,7 +215,7 @@
       try {
         await pause(900);
         // The opening film can cover the section even while it intersects the viewport.
-        while (active() && document.getElementById('intro-video')) await pause(350);
+        while (active() && document.documentElement.classList.contains('intro-lock')) await pause(350);
         if (!active()) return;
         for (const text of current().demoWords.filter(text => !collection.words(current().key).some(word => word.text === t(text)))) {
           root.classList.add('is-typing-demo');
