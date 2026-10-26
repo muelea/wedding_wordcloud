@@ -58,7 +58,7 @@ test('all occasion photos are tracked local files and the homepage mug uses the 
   assert.ok(fs.existsSync(path.join(__dirname, '../public', product.previewMesh.file)));
 });
 
-function mountedDemo({ modelReady = true, reduced = false, autoplay = false, titleMetrics = false } = {}) {
+function mountedDemo({ modelReady = true, reduced = false, autoplay = false, titleMetrics = false, locale = 'de' } = {}) {
   const { mount } = require('../public/js/occasion-stories');
   const animations = [], models = [], fields = new Map(), timers = [], observers = [];
   function node() {
@@ -112,6 +112,10 @@ function mountedDemo({ modelReady = true, reduced = false, autoplay = false, tit
     } });
     heading.scrollWidth = 300;
   }
+  const windowListeners = new Map();
+  window.addEventListener = (name, callback) => windowListeners.set(name, callback);
+  window.WolkenworteI18n = { t: source => require('../src/i18n').translate(source, locale) };
+  window.changeLocale = next => { locale = next; windowListeners.get('wolkenworte:localechange')(); };
   mount(window);
   return { fields, root, models, window, animations, timers, observers,
     async flush() { await new Promise(resolve => setImmediate(resolve)); },
@@ -300,4 +304,67 @@ test('demo starts for the next occasion and resumes after scrolling back without
   await h.finish();
   assert.deepEqual(h.fields.get('cloud').children.slice(-3).map(word => word.textContent), stories[2].demoWords);
   assert.equal(h.models.length, 2);
+});
+
+
+test('occasion stories translate cloud words, titles and product textures after language changes', async () => {
+  const { translate } = require('../src/i18n');
+  const h = mountedDemo({ locale: 'en', reduced: true });
+  for (const locale of ['en', 'fr', 'it', 'es', 'tr', 'de']) {
+    h.window.changeLocale(locale);
+    for (const story of stories) {
+      assert.equal(h.fields.get('kicker').textContent, translate(story.label, locale));
+      assert.equal(h.fields.get('question').textContent, translate(story.question, locale));
+      assert.equal(h.fields.get('title').textContent, translate(story.titleLines[0], locale));
+      assert.equal(h.fields.get('photo').alt, translate(story.alt, locale));
+      assert.deepEqual(h.fields.get('cloud').children.map(word => word.textContent), story.words.map(word => translate(word, locale)));
+      await h.fields.get('keepsake').fire('click');
+      assert.ok(h.fields.get('cup').getAttribute('aria-label').includes(translate(story.words[0], locale)));
+      h.fields.get('next').fire('click');
+    }
+  }
+});
+
+test('every occasion story and control has a translation in every supported catalog', async () => {
+  const { getCatalog, translate } = require('../src/i18n');
+  const controls = ['Für jeden Anlass', 'Entdecke, was aus Worten werden kann.', 'Karussell', 'Vorheriger Anlass', 'Nächster Anlass', 'Wortwolke der Beispielgeschichte', 'Tasse mit den Worten aus dieser Beispielwolke', 'Zurück zur Wortwolke', 'Probiert ein anderes Beispiel aus – diese Wolke ist schon gut gefüllt.'];
+  // Inspect the rendered template rather than relying only on a hand-maintained list.
+  const template = await require('ejs').renderFile(path.join(__dirname, '../views/partials/occasion-stories.ejs'), { occasionStories: stories });
+  const templateSources = [];
+  function collect(node) {
+    if (node.tagName === 'script') return;
+    if (node.nodeName === '#text' && /[a-zäöüß]/i.test(node.value)) templateSources.push(node.value.trim());
+    for (const attr of node.attrs || []) {
+      if (['aria-label', 'aria-roledescription', 'placeholder', 'alt', 'title'].includes(attr.name)) templateSources.push(attr.value);
+    }
+    for (const child of node.childNodes || []) collect(child);
+  }
+  collect(require('parse5').parseFragment(template, { scriptingEnabled: false }));
+  const script = fs.readFileSync(path.join(__dirname, '../public/js/occasion-stories.js'), 'utf8');
+  const runtimeSources = [...script.matchAll(/\bt\('([^']+)'\)/g)].map(match => match[1]);
+  const sources = [...controls, ...templateSources, ...runtimeSources, 'Tasse', ...stories.flatMap(story => [story.label, story.question, story.placeholder, story.alt, getProduct(story.productKey).name, ...story.titleLines, ...story.words, ...story.demoWords])];
+  for (const locale of ['en', 'fr', 'it', 'es', 'tr']) {
+    const catalog = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/locales', locale + '.json'), 'utf8'));
+    for (const source of sources) assert.ok(catalog[source], locale + ': ' + source);
+    const html = await require('ejs').renderFile(path.join(__dirname, '../views/partials/occasion-stories.ejs'), { occasionStories: stories, t: source => translate(source, locale) });
+    const localized = require('../src/htmlLocalizer').localizeHtml(html, locale);
+    assert.ok(localized.includes(translate('Für jeden Anlass', locale)));
+    assert.ok(localized.includes(translate(stories[0].words[0], locale)));
+    assert.ok(localized.includes(getCatalog(locale)['Vorheriger Anlass']));
+    assert.ok(localized.includes(translate('Mit JavaScript könnt ihr weitere Beispielgeschichten entdecken und selbst Worte hinzufügen.', locale)));
+    assert.ok(localized.includes(translate('Wort zur Beispielwolke hinzufügen', locale)));
+  }
+});
+
+test('switching language during typing restarts the demo with translated words', async () => {
+  const h = mountedDemo({ autoplay: true, locale: 'en' });
+  const observer = h.observers.find(item => item.node === h.fields.get('question'));
+  observer.callback([{ isIntersecting: true }]);
+  for (let i = 0; i < 5; i++) { h.timers.shift()?.(); await h.flush(); }
+  h.window.changeLocale('fr');
+  for (let i = 0; i < 250 && !h.models.length; i++) { h.timers.shift()?.(); await h.flush(); await h.finish(); }
+  await h.finish();
+  const { translate } = require('../src/i18n');
+  assert.deepEqual(h.fields.get('cloud').children.map(word => word.textContent), [...stories[0].words, ...stories[0].demoWords].map(word => translate(word, 'fr')));
+  assert.equal(h.models.length, 1);
 });

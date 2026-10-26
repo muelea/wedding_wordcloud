@@ -27,7 +27,7 @@
   });
   const LEGACY_STORAGE_KEY = 'wolkenworte-language';
   const COOKIE_KEY = 'wolkenworte-language';
-  const ATTRIBUTE_NAMES = Object.freeze(['aria-label', 'placeholder', 'title', 'alt', 'content']);
+  const ATTRIBUTE_NAMES = Object.freeze(['aria-label', 'aria-roledescription', 'placeholder', 'title', 'alt', 'content']);
   const textSources = new WeakMap();
   const attributeSources = new WeakMap();
   let locale = DEFAULT_LOCALE;

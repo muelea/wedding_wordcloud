@@ -3,7 +3,7 @@
 const { parse, serialize } = require('parse5');
 const { getCatalog, translate } = require('./i18n');
 
-const TRANSLATABLE_ATTRIBUTES = Object.freeze(['aria-label', 'placeholder', 'title', 'alt', 'content']);
+const TRANSLATABLE_ATTRIBUTES = Object.freeze(['aria-label', 'aria-roledescription', 'placeholder', 'title', 'alt', 'content']);
 const RAW_TEXT_ELEMENTS = new Set(['script', 'style']);
 let sourceCatalog;
 let messageSources = new Set();

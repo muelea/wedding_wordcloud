@@ -58,7 +58,6 @@
     const root = document.getElementById('occasion-browser');
     if (!root) return;
     const stories = JSON.parse(document.getElementById('occasion-stories-data').textContent);
-    const collection = createCollection(stories);
     const find = name => root.querySelector('[data-occasion-' + name + ']');
     const scene = find('scene'), photo = find('photo'), cloud = find('cloud');
     const panel = find('panel'), previous = find('previous'), next = find('next');
@@ -68,6 +67,8 @@
     const animations = new Set();
     let index = 0, epoch = 0, viewer = null, productVisible = false;
     const t = text => window.WolkenworteI18n ? window.WolkenworteI18n.t(text) : text;
+    const localizedCollection = () => createCollection(stories.map(story => ({ ...story, words: story.words.map(t) })));
+    let collection = localizedCollection();
     const current = () => stories[index];
     function announce(text, visible = false) { status.textContent = text; status.classList.toggle('occasion-sr-only', !visible); }
     function labelKeepsake(active) {
@@ -91,7 +92,7 @@
       span.textContent = word.text; span.style.color = word.color;
       if (word.index >= 13) span.style.fontSize = 'clamp(12px,1.8vw,16px)';
       span.style.animationDelay = -(word.index % 6) + 's';
-      span.setAttribute('data-occasion-word', ''); return span;
+      span.setAttribute('data-occasion-word', ''); span.setAttribute('data-i18n-ignore', ''); return span;
     }
     function fitTitle() {
       const box = find('title-box'), heading = find('title-heading');
@@ -282,6 +283,14 @@
     reduced.addEventListener?.('change', () => { stopDemo(); cancelAnimations(); });
     if (window.IntersectionObserver) new window.IntersectionObserver(entries => root.classList.toggle('is-paused', !entries[0].isIntersecting)).observe(root);
     window.addEventListener('pagehide', () => { stopDemo(); epoch++; cancelAnimations(); destroyCup(); busy(false); labelKeepsake(false); });
+    window.addEventListener('wolkenworte:localechange', () => {
+      stopDemo();
+      collection = localizedCollection();
+      completedDemos.clear();
+      demoDone = false;
+      render();
+      if (demoVisible) runDemo();
+    });
     previous.hidden = false; next.hidden = false; form.hidden = false; keepsake.hidden = false; render();
   }
   return { createCollection, planPrint, mount, MAX_WORDS };

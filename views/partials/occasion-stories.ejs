@@ -1,4 +1,4 @@
-<% const firstStory = occasionStories[0]; %>
+<% const firstStory = occasionStories[0]; const translateStory = typeof t === 'function' ? t : value => value; %>
 <section id="inspiration" aria-labelledby="occasion-section-title">
   <div class="shell">
     <div class="section-top">
@@ -7,7 +7,7 @@
       <h2 id="occasion-section-title">Entdecke, was aus Worten werden kann.</h2>
     </div>
     <div class="occasion-browser" id="occasion-browser">
-      <article class="occasion-story" id="occasion-story-panel" data-occasion-panel aria-labelledby="occasion-title" aria-roledescription="Karussell" tabindex="0">
+      <article class="occasion-story" id="occasion-story-panel" data-occasion-panel aria-labelledby="occasion-title" aria-roledescription="<%= translateStory('Karussell') %>" data-i18n-aria-roledescription-source="Karussell" tabindex="0">
         <header class="occasion-heading">
           <p class="occasion-kicker" data-occasion-kicker><%= firstStory.label %></p>
           <div class="occasion-title-box" data-occasion-title-box><h3 id="occasion-title" data-occasion-title-heading><span data-occasion-title><%= firstStory.titleLines[0] %></span><em data-occasion-subtitle><%= firstStory.titleLines[1] %></em></h3></div>
@@ -30,8 +30,8 @@
             </button>
             </div>
           </div>
-          <div class="occasion-cloud" data-occasion-cloud data-i18n-ignore aria-label="Wortwolke der Beispielgeschichte">
-            <% firstStory.words.forEach((word, index) => { %><span class="occasion-word occasion-word--<%= index %>" data-occasion-word><%= word %></span><% }); %>
+          <div class="occasion-cloud" data-occasion-cloud aria-label="Wortwolke der Beispielgeschichte">
+            <% firstStory.words.forEach((word, index) => { %><span class="occasion-word occasion-word--<%= index %>" data-occasion-word data-i18n-ignore><%= translateStory(word) %></span><% }); %>
           </div>
           <div class="occasion-cup" data-occasion-cup role="img" aria-label="Tasse mit den Worten aus dieser Beispielwolke" hidden></div>
           <span class="occasion-flight" data-occasion-flight data-i18n-ignore aria-hidden="true"></span>
@@ -39,7 +39,7 @@
 
         <p class="occasion-status occasion-sr-only" data-occasion-status role="status" aria-live="polite"></p>
       </article>
-      <noscript><p>Mit JavaScript könnt ihr weitere Beispielgeschichten entdecken und selbst Worte hinzufügen.</p></noscript>
+      <noscript><p><%= translateStory('Mit JavaScript könnt ihr weitere Beispielgeschichten entdecken und selbst Worte hinzufügen.') %></p></noscript>
       <script type="application/json" id="occasion-stories-data"><%- JSON.stringify(occasionStories).replace(/</g, '\\u003c') %></script>
     </div>
   </div>
