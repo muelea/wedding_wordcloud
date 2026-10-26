@@ -85,7 +85,7 @@ function mountedDemo({ modelReady = true, reduced = false, autoplay = false, tit
     return fields.get(key);
   };
   const data = node(); data.textContent = JSON.stringify(stories.map(story => ({ ...story, product: getPublicProduct(getProduct(story.productKey)) })));
-  const window = { document: { getElementById: id => id === 'occasion-browser' ? root : id === 'intro-video' ? null : data, createElement: node },
+  const window = { document: { documentElement: node(), getElementById: id => id === 'occasion-browser' ? root : id === 'intro-video' ? null : data, createElement: node },
     matchMedia: () => ({ matches: reduced, addEventListener() {} }), addEventListener() {},
     wolkenworteThreeReady: Promise.resolve(), wolkenworteLandingMugProduct: getPublicProduct(MUG_11), PrintfulProductModel: {}, THREE: {},
     Mug3DViewer: { create(options) {
@@ -238,8 +238,10 @@ test('landing loads blanket simulation before the product renderer for blanket o
   assert.equal(getProduct(stories.find(story => story.key === 'getwell').productKey).previewModel.kind, 'blanket');
 });
 
-test('visible demo types three words, sends each to the cloud and creates the keepsake', async () => {
+test('visible demo types words and creates the keepsake even when the finished intro video stays mounted', async () => {
   const h = mountedDemo({ autoplay: true });
+  const getElement = h.window.document.getElementById;
+  h.window.document.getElementById = id => id === 'intro-video' ? {} : getElement(id);
   h.observers.find(observer => observer.node === h.fields.get('question')).callback([{ isIntersecting: true }]);
   for (let i = 0; i < 150 && !h.models.length; i++) {
     h.timers.shift()?.(); await h.flush(); await h.finish();

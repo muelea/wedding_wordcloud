@@ -37,6 +37,9 @@
             <div class="demo-mug" data-demo-mug aria-hidden="true">
               <div class="demo-mug-viewer" data-demo-mug-viewer></div>
             </div>
+            <button class="demo-pause" type="button" data-demo-pause aria-label="<%= t('Vorschau pausieren') %>" aria-pressed="false" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path class="demo-pause-icon" d="M8 5v14M16 5v14" fill="none" stroke="currentColor" stroke-width="3"/><path class="demo-play-icon" d="m8 5 11 7-11 7Z" fill="currentColor"/></svg>
+            </button>
             <button class="demo-replay" type="button" data-demo-replay aria-label="<%= t('Erneut ansehen') %>" data-i18n-aria-label-source="Erneut ansehen" hidden>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M25 12a10 10 0 1 0 1 8M25 5v7h-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>

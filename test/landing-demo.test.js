@@ -51,7 +51,7 @@ function harness(reduce = false, config = {}) {
     ResizeObserver: class { observe() {} },
   });
   return { node, window, document, motion, frames,
-    visible(value, ratio = value ? 1 : 0) { observer([{ isIntersecting: value, intersectionRatio: ratio }]); },
+    visible(value, ratio = value ? 1 : 0, bounds = {}) { observer([{ isIntersecting: value, intersectionRatio: ratio, ...bounds }]); },
     intro(value) { introActive = value; introObserver(); },
     advance(ms) { for (let i = 0; i <= ms; i += 50) { now += 50; const pending = [...frames.values()]; frames.clear(); pending.forEach(cb => cb(now)); } },
   };
@@ -117,7 +117,7 @@ test('completed cloud transitions toward the shared 3D mug renderer', () => {
 
 test('emoji is typed as a whole character and contributor count advances only on arrival', () => {
   const h = harness(); h.visible(true);
-  h.advance(7000);
+  h.advance(5700);
   assert.equal(h.node('[data-typing="3"]').textContent, '', 'emoji composer has the same perceptible empty pause');
   h.advance(600);
   assert.equal(h.node('[data-typing="3"]').textContent, '🥂');
@@ -127,7 +127,7 @@ test('emoji is typed as a whole character and contributor count advances only on
 });
 
 test('heart emoji is sent as one character and arrives as the sixth contribution', () => {
-  const h = harness(); h.visible(true); h.advance(12800);
+  const h = harness(); h.visible(true); h.advance(10800);
   assert.equal(h.node('[data-typing="5"]').textContent, '❤️');
   assert.equal(h.node('[data-arrival="5"]').style.opacity, '0');
   h.advance(1900);
@@ -243,7 +243,7 @@ test('finished story offers replay without making the mug rotatable or focusable
   const start = source.indexOf('  function setStoryFinished(');
   const end = source.indexOf('  function ensureMug(', start);
   const replayButton = { hidden: true }, attributes = {};
-  const context = { replayButton, storyFinished: false,
+  const context = { replayButton, pauseButton: null, reduced: { matches: false }, storyFinished: false,
     mugHost: { setAttribute(name, value) { attributes[name] = value; } } };
   vm.createContext(context);
   vm.runInContext(source.slice(start, end), context);
@@ -268,7 +268,7 @@ test('homepage honors its configured pace', () => {
 
 
 test('Lena contributes Glück while Gesundheit is present in the initial cloud', () => {
-  const h = harness(); h.visible(true); h.advance(10600);
+  const h = harness(); h.visible(true); h.advance(8800);
   assert.equal(h.node('[data-typing="4"]').textContent, 'Glück');
   assert.equal(h.node('[data-arrival="4"]').style.opacity, '0');
   h.advance(1800);
@@ -470,4 +470,27 @@ test('a partially visible demo waits until most of the scene can be seen', () =>
   assert.ok(h.node('[data-typing="0"]').textContent.length > 0);
   h.visible(true, .3);
   assert.equal(h.frames.size, 0);
+});
+
+
+test('a demo taller than a landscape viewport can still play and pause', () => {
+  const h = harness();
+  h.visible(true, .4, { rootBounds: { height: 320 }, boundingClientRect: { height: 600 } });
+  h.advance(500);
+  assert.ok(h.node('[data-typing="0"]').textContent.length > 0);
+  h.node('[data-demo-pause]').fire('click');
+  assert.equal(h.frames.size, 0);
+  assert.equal(h.node('[data-demo-pause]').getAttribute('aria-pressed'), 'true');
+  h.node('[data-demo-pause]').fire('click');
+  assert.ok(h.frames.size > 0);
+});
+
+
+test('input windows appear sequentially at the quicker interval', () => {
+  const h = harness(); h.visible(true); h.advance(1900);
+  assert.ok(h.node('[data-typing="0"]').textContent.length > 0);
+  assert.equal(h.node('[data-typing="1"]').textContent, '', 'next input keeps its original empty pause');
+  h.advance(650);
+  assert.ok(h.node('[data-typing="1"]').textContent.length > 0);
+  assert.equal(h.node('[data-typing="2"]').textContent, '', 'later users still wait their turn');
 });

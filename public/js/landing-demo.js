@@ -4,12 +4,16 @@
   if (!root) return;
   var scene = root.querySelector('[data-demo-scene]');
   var svg = root.querySelector('[data-flights]');
+  var pauseButton = root.querySelector('[data-demo-pause]');
   var replayButton = root.querySelector('[data-demo-replay]');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   var paused = reduced.matches;
   var introLocked = !!document.documentElement?.classList.contains('intro-lock');
   var visible = false;
   var elapsed = 0;
+  var inputInterval = 1800;
+  var typingInterval = 105;
+  var inputFlightDuration = 1850;
   var playbackSpeed = Number(root.getAttribute('data-demo-speed')) || 1;
   var storyFinished = false;
   var rotationDelay = 500;
@@ -245,6 +249,7 @@
   function setStoryFinished(enabled) {
     storyFinished = enabled;
     if (replayButton) replayButton.hidden = !enabled;
+    if (pauseButton) pauseButton.hidden = enabled || reduced.matches;
     if (mugHost) mugHost.setAttribute('tabindex', '-1');
   }
   function ensureMug() {
@@ -593,20 +598,21 @@
       stickers.forEach(function (sticker) { sticker.mesh.visible = false; sticker.departureAge = null; sticker.previousFacePosition = null; sticker.previousReadyPosition = null; });
     }
     previousCycleTime = cycleTime;
-    var activeIndex = Math.min(words.length - 1, Math.floor(cycleTime / 2200));
+    var activeIndex = Math.min(words.length - 1, Math.floor(cycleTime / inputInterval));
     phones.forEach(function (phone) {
-      var age = cycleTime - phone.index * 2200;
+      var inputGroup = phone.index;
+      var age = cycleTime - inputGroup * inputInterval;
       var text = t(phone.word);
       var letters = Array.from(text);
       var emptyPause = phone.index === 0 ? 0 : 600;
       var typingAge = age - emptyPause;
-      var typingDuration = emptyPause + letters.length * 105 + 400;
+      var typingDuration = emptyPause + letters.length * typingInterval + 400;
       var flightAge = age - typingDuration;
-      var progress = Math.max(0, Math.min(1, flightAge / 1850));
+      var progress = Math.max(0, Math.min(1, flightAge / inputFlightDuration));
       var flying = flightAge >= 0 && progress < 1;
-      var arrivedNow = flightAge >= 1850;
-      var typed = typingAge < 0 ? '' : letters.slice(0, Math.min(letters.length, Math.floor(typingAge / 105))).join('');
-      var active = phone.index === activeIndex && flightAge < 2300;
+      var arrivedNow = flightAge >= inputFlightDuration;
+      var typed = typingAge < 0 ? '' : letters.slice(0, Math.min(letters.length, Math.floor(typingAge / typingInterval))).join('');
+      var active = inputGroup === activeIndex && age >= 0 && flightAge < 2300;
       phone.phone.classList.toggle('is-active', active);
       phone.phone.classList.toggle('is-first-composer', phone.index === 0);
       phone.participant.classList.toggle('is-active', active);
@@ -617,7 +623,7 @@
       // Visibility belongs to this cycle only, never to a previous send.
       phone.target.style.opacity = arrivedNow ? '1' : '0';
       // Brief arrival emphasis while retaining the shared layout and word positions.
-      var pulse = arrivedNow ? Math.max(0, 1 - (flightAge - 1850) / 650) : 0;
+      var pulse = arrivedNow ? Math.max(0, 1 - (flightAge - inputFlightDuration) / 650) : 0;
       phone.target.style.filter = pulse ? 'drop-shadow(0 0 ' + (pulse * 9) + 'px #914bc4)' : '';
       if (!flying || !phone.geometry) return;
       var geometry = phone.geometry;
@@ -826,6 +832,11 @@
     frame = storyFinished ? null : window.requestAnimationFrame(tick);
   }
   function updatePlayback() {
+    if (pauseButton) {
+      pauseButton.hidden = storyFinished || reduced.matches;
+      pauseButton.setAttribute('aria-label', t(paused ? 'Vorschau abspielen' : 'Vorschau pausieren'));
+      pauseButton.setAttribute('aria-pressed', String(paused));
+    }
     window.cancelAnimationFrame(frame);
     frame = null;
     previous = null;
@@ -857,6 +868,10 @@
     updatePlayback();
   }
   replayButton?.addEventListener('click', replayStory);
+  pauseButton?.addEventListener('click', function () {
+    paused = !paused;
+    updatePlayback();
+  });
   root.classList.add('is-animated');
   document.querySelectorAll('[data-try-demo]').forEach(function (link) {
     link.addEventListener('click', function (event) {
@@ -896,10 +911,16 @@
   if ('IntersectionObserver' in window) {
     // A sliver below the copy must not start the story before visitors see it.
     new IntersectionObserver(function (entries) {
-      visible = entries[0].isIntersecting && entries[0].intersectionRatio >= .65;
+      var entry = entries[0];
+      // Compare with the portion that can actually fit in a short viewport.
+      var availableHeight = entry.rootBounds ? entry.rootBounds.height : window.innerHeight;
+      var sceneHeight = entry.boundingClientRect ? entry.boundingClientRect.height : 0;
+      var threshold = sceneHeight > 0 && availableHeight > 0
+        ? Math.min(.65, availableHeight / sceneHeight * .65) : .65;
+      visible = entry.isIntersecting && entry.intersectionRatio >= threshold;
       if (visible) ensureMug();
       updatePlayback();
-    }, { threshold: [0, .65] }).observe(scene);
+    }, { threshold: [0, .1, .2, .3, .4, .5, .65, 1] }).observe(scene);
   } else { visible = true; }
   updatePlayback();
 })();

@@ -155,16 +155,21 @@
     .hero-grid { position: relative; z-index: 1; align-items: start; }
     .hero-copy { width: 100%; max-width: var(--landing-copy-width); }
     .hero-copy .eyebrow { margin-bottom: 18px; }
+    .hero-copy > h1 { padding-top: 12px; }
     h1 { font-family: 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; font-size: clamp(2.9rem, 4.8vw, 4.5rem); line-height: 1.07; letter-spacing: -.03em; margin: 0 0 22px; font-weight: 500; }
     h1 em { color: var(--sage-deep); font-style: italic; font-weight: 500; }
     .lead { max-width: 460px; color: var(--muted); font-size: 1.03rem; line-height: 1.75; margin-bottom: 28px; font-weight: 300; }
     .hero-description { list-style: none; padding: 0; font-weight: 400; }
     .hero-description .trust { margin-top: 0; align-items: flex-start; }
     .hero-description .trust + .trust { margin-top: 10px; }
-    .hero-description .trust-heart { margin-top: 2px; }
+    .hero-description .trust-heart { flex: 0 0 18px; margin-top: 3px; }
+    .hero-description .trust:last-child .copy { color: var(--sage-deep); }
+    .hero-description .trust span.copy { font-size: .9rem; line-height: 1.6; }
     .hero-actions { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; }
     .hero-actions > .button, .hero-actions .direct-design-form .button { min-height: 48px; }
+    .hero-actions > .button, .hero-actions .direct-design-form { flex: 1 1 0; min-width: 0; }
     .hero-actions .direct-design-form { display: flex; }
+    .hero-actions .direct-design-form .button { width: 100%; }
     .hero-actions .button.outline { border-color: rgba(97,0,31,.35); }
     .direct-design-form { margin: 0; }
     .direct-design-form .button:focus-visible { outline: 2px solid var(--sage-deep); outline-offset: 4px; }
@@ -226,45 +231,23 @@
     .trust-heart { width: 18px; height: auto; color: var(--coral); transform: rotate(-6deg); }
     .trust span.copy { color: var(--muted); font-size: .8rem; }
 
-    /* ── Full-screen intro ── */
-    /* Lock document scrolling while revealing the homepage. Gesture distance
-       first moves the page over the video; any excess continues into native
-       page scrolling immediately. Automatic playback uses a timed fade. */
-    html.intro-lock { overflow: hidden; }
-    main { transition: opacity .35s ease; }
-    html.intro-fade main { opacity: 0; }
-    html.intro-scroll-exit main { transition: opacity .24s ease-out, transform .24s cubic-bezier(.22,1,.36,1); }
-    html.intro-scroll-exit.intro-fade main { transform: translate3d(0, 20px, 0); }
-    #intro-overlay.scroll-exit { transition: opacity .42s ease-out, transform .42s cubic-bezier(.22,1,.36,1); will-change: opacity, transform; }
-    #intro-overlay.scroll-exit.fade-out { transform: translate3d(0, -32px, 0) scale(.985); }
-    /* Words arrive over the film first; paper and the remaining content
-       follow later in the same reversible scroll gesture. */
-    html.intro-scrubbing main { position: relative; z-index: 41; background: rgba(255,253,250,var(--intro-paper-opacity, 0)); opacity: 1; transition: none; }
-    html.intro-scrubbing .demo-cloud { transform: translate3d(0, var(--intro-rise, 100vh), 0); will-change: transform; }
-    html.intro-scrubbing .hero-copy > *,
-    html.intro-scrubbing .demo-scene > :not(.demo-cloud):not(.demo-phone),
-    html.intro-scrubbing main > :not(.hero) { opacity: var(--intro-content-opacity, 0); }
-    html.intro-scrubbing .word-demo .demo-phone { opacity: 0 !important; pointer-events: none; }
-    html.intro-scrubbing .word-demo .demo-phone.is-first-composer { opacity: var(--intro-composer-opacity, 0) !important; }
-    html.intro-scrubbing #intro-overlay { opacity: var(--intro-film-opacity, 1); transition: none; }
-    html.intro-scrubbing #intro-scroll-cue { opacity: var(--intro-film-opacity, 1); }
-    /* Sits below the sticky header's z-index (50) on purpose, so the nav
-       (and its language switcher / CTA) stay usable while the intro plays.
-       Fade the entire layer, including its loading poster, into paper first.
-       Reveal the homepage only after this layer is gone to avoid ghosting. */
-    #intro-overlay { position: fixed; inset: 0; z-index: 40; background-color: var(--paper); background-image: url('<%= asset('/assets/video/teaser-poster.jpg') %>'); background-position: center; background-size: cover; display: flex; align-items: center; justify-content: center; transition: opacity 1.2s ease; }
-    #intro-overlay.fade-out { opacity: 0; pointer-events: none; }
-    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; }
-    #intro-scroll-cue { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #fff; cursor: pointer; transition: opacity .3s ease; }
-    #intro-overlay.fade-out #intro-scroll-cue { opacity: 0; }
-    #intro-scroll-cue svg { width: 22px; height: 22px; animation: scroll-cue-bounce 1.8s ease-in-out infinite; }
-    #intro-scroll-cue span { font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
-    @keyframes scroll-cue-bounce { 0%,100% { transform: translateY(0); opacity: .7; } 50% { transform: translateY(8px); opacity: 1; } }
+    /* Native scrolling owns the reveal, including touch momentum and reversal.
+       The spacer stays in flow so completing the intro never moves the document. */
+    #intro-scroll-space { display: none; }
+    html.intro-enabled #intro-scroll-space { display: block; height: 100svh; }
+    html.intro-enabled main { position: relative; z-index: 41; background: var(--paper); }
+    #intro-overlay { display: none; position: fixed; inset: 0; z-index: 40; background: var(--paper) url('<%= asset('/assets/video/teaser-poster.jpg') %>') center / cover; opacity: var(--intro-film-opacity, 1); pointer-events: none; }
+    html.intro-enabled #intro-overlay { display: block; }
+    #intro-overlay.fade-out { visibility: hidden; }
+    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #intro-scroll-cue { position: absolute; left: 50%; bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 18px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 44px; padding: 10px 20px; border: 0; background: transparent; color: #fff; cursor: pointer; pointer-events: auto; font: inherit; }
+    #intro-scroll-cue:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+    #intro-scroll-cue svg { width: 22px; height: 22px; }
+    #intro-scroll-cue span { font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; white-space: nowrap; }
     @media (max-width: 760px) and (orientation: portrait) {
       #intro-overlay { background-image: url('<%= asset('/assets/video/teaser-poster-mobile.jpg') %>'); }
-      #intro-scroll-cue { bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 18px)); }
     }
-    @media (prefers-reduced-motion: reduce) { #intro-overlay { display: none; } #intro-scroll-cue svg { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { html.intro-enabled #intro-overlay { display: none; } }
 
     /* ── Sections shared ── */
     main > section { padding: 100px 0; }
@@ -349,17 +332,17 @@
       .resume-links { justify-content: center; }
       .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; text-align: center; }
       .hero-copy { display: contents; }
-      .hero-copy > h1 { grid-row: 2; margin-bottom: 0; }
-      .hero-copy > .lead { grid-row: 5; position: relative; z-index: 2; margin-top: 0; margin-bottom: 0; }
-      .hero-grid > .word-demo { grid-row: 1; margin-top: 0; }
+      .hero-copy > h1 { grid-row: 1; margin-bottom: 0; }
+      .hero-copy > .lead { grid-row: 2; position: relative; z-index: 2; margin-top: 0; margin-bottom: 0; }
+      .hero-grid > .word-demo { grid-row: 6; margin-top: 0; }
       .hero-grid > .word-demo .demo-cloud-halo { top: -12%; }
       .hero-copy > .hero-actions { grid-row: 3; position: relative; z-index: 2; margin-top: 0; }
       .hero-copy > .direct-design-error { grid-row: 4; position: relative; z-index: 2; }
       .hero-copy > h1, .hero-copy > .lead, .hero-copy > .hero-actions, .hero-copy > .direct-design-error { width: 100%; max-width: 560px; justify-self: center; }
-      .hero-copy > .hero-trust { grid-row: 6; width: 100%; max-width: 560px; justify-self: center; display: grid; gap: 10px; }
-      .hero-copy .trust { margin: 0; justify-content: center; }
+      .hero-copy .hero-description .trust { margin: 0; justify-content: flex-start; text-align: left; }
+      .hero-copy .hero-description .trust + .trust { margin-top: 12px; }
       html:not(.intro-lock) #site-header.hero-visible .landing-start-button { display: none; }
-      .hero-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 8px; }
+      .hero-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .hero-actions .direct-design-form { min-width: 0; }
       .hero-actions .button { width: 100%; min-width: 0; padding: 12px 10px; gap: 6px; font-size: .8rem; }
       #site-header .landing-header-actions .landing-start-button { min-height: var(--ww-touch-target); height: var(--ww-touch-target); }
@@ -416,6 +399,26 @@
       .resume-links { display: grid; }
       .resume-link { width: 100%; }
     }
+    /* Reserve one screen where content fits; enlarged text can grow naturally. */
+    main > .hero { min-height: calc(100svh - var(--landing-header-height, 80px)); display: grid; align-items: center; }
+    .hero-grid > .word-demo { width: 114%; margin-inline: -7%; max-width: min(114%, 660px, calc((100svh - var(--landing-header-height, 80px) - 72px) * 1.35)); justify-self: center; }
+    @media (max-width: 1050px) {
+      .hero-copy > h1 { grid-row: 1; }
+      .hero-copy > .hero-actions { grid-row: 3; }
+      .hero-copy > .direct-design-error { grid-row: 4; }
+      .hero-grid > .word-demo { grid-row: 6; width: 100%; margin-inline: 0; max-width: min(100%, 600px); }
+      main > .hero { padding-block: clamp(16px, 3svh, 32px); }
+    }
+    @media (max-width: 760px) {
+      .hero-grid > .word-demo { width: calc(100% + 32px); max-width: none; margin-inline: -16px; padding-inline: 0; }
+    }
+    @media (max-width: 360px) {
+      .hero-actions { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .hero-inline-heart, .trust-heart { animation: none; }
+    }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
@@ -430,10 +433,10 @@
       data-desktop-src="<%= asset('/assets/video/teaser.mp4') %>"
       data-mobile-poster="<%= asset('/assets/video/teaser-poster-mobile.jpg') %>"
       data-desktop-poster="<%= asset('/assets/video/teaser-poster.jpg') %>"></video>
-    <div id="intro-scroll-cue" aria-hidden="true">
+    <button id="intro-scroll-cue" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
       <span>Scrollen zum Fortfahren</span>
-    </div>
+    </button>
   </div>
   <script>
     (function () {
@@ -442,7 +445,7 @@
       if (reduceMotion || WolkenworteJourney.recent()) {
         if (overlay) overlay.remove();
       } else {
-        document.documentElement.classList.add('intro-lock', 'intro-fade');
+        document.documentElement.classList.add('intro-enabled', 'intro-lock', 'intro-fade');
         // Choose one URL before loading media, including on reload, so the
         // video and poster stay paired without a native desktop fallback.
         var video = document.getElementById('intro-video');
@@ -461,14 +464,17 @@
 
   <%- include('partials/site-header') %>
 
+  <div id="intro-scroll-space" aria-hidden="true"></div>
   <main>
     <section class="hero">
       <div class="shell hero-grid">
         <div class="hero-copy">
           <h1>Eine Wolke<br><em>voller Glück.</em><svg class="hero-inline-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg></h1>
           <ul class="lead hero-description">
-            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Sammelt gemeinsam Worte für Menschen und Ereignisse die euch wichtig sind.</span></li>
-            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Drucke deine Wortwolke auf ein Erinnerungsstück deiner Wahl</span></li>
+            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Erstelle eine Wortwolke für Menschen und Momente, die dir wichtig sind.</span></li>
+            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Teile die Wolke und sammelt gemeinsam Worte.</span></li>
+            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Drucke eure Wortwolke auf ein Erinnerungsstück.</span></li>
+            <li class="trust"><svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span class="copy">Einfach starten – ganz ohne Anmeldung :)</span></li>
           </ul>
           <div class="hero-actions">
             <button class="button primary" type="button" data-open-start-dialog>Hier starten <span>→</span></button>
@@ -480,20 +486,6 @@
             <p class="direct-design-error" role="alert"><%= pageData.directDesignError %></p>
           <% } %>
 
-          <div class="hero-trust">
-            <div class="trust">
-              <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-              <span class="copy">Gemacht für große Gefühle &amp; kleine Momente</span>
-            </div>
-            <div class="trust">
-              <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-              <span class="copy">Jeder kann mitmachen – ganz einfach per Smartphone.</span>
-            </div>
-            <div class="trust">
-              <svg class="heart-icon trust-heart" viewBox="0 0 80 70" aria-hidden="true"><path d="M40 62C18 48 7 36 8 21c1-12 17-15 25-3C39 6 56 9 58 21c2 15-10 27-18 41Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 16c3-4 8-5 12-3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-              <span class="copy">Wortwolke starten ist kostenlos – nur Produkte kosten extra.</span>
-            </div>
-          </div>
         </div>
 
         <%- include('partials/landing-demo') %>
@@ -1024,142 +1016,72 @@
 
       var introVideo = document.getElementById('intro-video');
       var scrollCue = document.getElementById('intro-scroll-cue');
+      var space = document.getElementById('intro-scroll-space');
       var root = document.documentElement;
-      var progress = 0, scrubbing = false, completed = false;
-      var distance = Math.max(1, window.innerHeight);
-      var frame = null, touching = false;
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+      var frame = null;
+      var finishing = false;
 
+      function distance() { return Math.max(1, space.getBoundingClientRect().height); }
       function paintProgress() {
         frame = null;
-        root.style.setProperty('--intro-rise', ((1 - progress) * distance) + 'px');
-        var paper = Math.max(0, Math.min(1, (progress - .35) / .65));
-        root.style.setProperty('--intro-film-opacity', String(1 - paper));
-        root.style.setProperty('--intro-paper-opacity', String(paper));
-        root.style.setProperty('--intro-content-opacity', String(Math.max(0, (progress - .6) / .4)));
-        root.style.setProperty('--intro-composer-opacity', String(Math.max(0, (progress - .9) / .1)));
+        var progress = Math.max(0, Math.min(1, window.scrollY / distance()));
+        root.style.setProperty('--intro-film-opacity', String(1 - progress));
+        root.classList.toggle('intro-lock', progress < 1);
+        root.classList.toggle('intro-fade', progress < .2);
+        overlay.classList.toggle('fade-out', progress >= 1);
+        overlay.inert = progress >= 1;
+        if (progress >= 1 && introVideo) introVideo.pause();
       }
-      function cleanupScroll() {
-        window.removeEventListener('wheel', onIntroWheel);
-        window.removeEventListener('touchstart', onIntroTouchStart);
-        window.removeEventListener('touchmove', onIntroTouchMove);
-        window.removeEventListener('touchend', onIntroTouchEnd);
-        window.removeEventListener('touchcancel', onIntroTouchEnd);
-        window.removeEventListener('keydown', onIntroKeydown);
-      }
-      function releaseScroll() {
-        cleanupScroll();
-        root.classList.remove('intro-lock');
-      }
-      function continuePage(delta) {
-        if (delta) window.scrollBy({ top: delta, left: 0, behavior: 'instant' });
-      }
-      function moveIntro(delta) {
-        if (completed) { continuePage(delta); return; }
-        if (!scrubbing) {
-          if (delta <= 0 || overlay.classList.contains('fade-out')) return;
-          distance = Math.max(1, window.innerHeight);
-          scrubbing = true;
-          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-          root.classList.add('intro-scrubbing');
-        }
-        var remaining = (1 - progress) * distance;
-        progress = Math.max(0, Math.min(1, progress + delta / distance));
+      function requestPaint() {
         if (frame === null) frame = window.requestAnimationFrame(paintProgress);
-        if (progress === 1) {
-          completed = true;
-          if (frame !== null) window.cancelAnimationFrame(frame);
-          paintProgress();
-          overlay.remove();
-          root.classList.remove('intro-fade', 'intro-scrubbing');
-          root.style.removeProperty('--intro-rise');
-          root.style.removeProperty('--intro-film-opacity');
-          root.style.removeProperty('--intro-paper-opacity');
-          root.style.removeProperty('--intro-content-opacity');
-          root.style.removeProperty('--intro-composer-opacity');
-          // Hand the same gesture straight to the document. Only the part
-          // beyond the reveal distance scrolls the page; nothing is replayed.
-          root.classList.remove('intro-lock');
-          continuePage(Math.max(0, delta - remaining));
-          if (!touching) releaseScroll();
-        }
       }
-
-      function finishIntro(event) {
-        if (scrubbing || completed || overlay.classList.contains('fade-out')) return;
-        var interactive = event && ['wheel', 'touchmove', 'click', 'keydown'].indexOf(event.type) !== -1;
-        if (interactive) {
-          document.documentElement.classList.add('intro-scroll-exit');
-          overlay.classList.add('scroll-exit');
-        }
-        overlay.classList.add('fade-out');
-        var header = document.getElementById('site-header');
-        if (header) header.classList.add('intro-finished');
-        cleanupScroll();
-        window.setTimeout(function () {
-          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-          document.documentElement.classList.remove('intro-fade');
-          window.setTimeout(function () {
-            document.documentElement.classList.remove('intro-lock', 'intro-scroll-exit');
-          }, interactive ? 240 : 350);
-        }, interactive ? 420 : 1250);
+      function finishIntro() {
+        if (!overlay.isConnected) return;
+        if (finishing || window.scrollY >= distance()) return;
+        finishing = true;
+        window.scrollTo({ top: distance(), behavior: reduced.matches ? 'instant' : 'smooth' });
       }
-
-      function onIntroWheel(event) {
-        if (event.ctrlKey) return;
-        event.preventDefault();
-        var delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? distance : 1);
-        moveIntro(delta);
+      // No wheel/touch/key interception: the browser owns every gesture.
+      window.addEventListener('scroll', requestPaint, { passive: true });
+      window.addEventListener('resize', requestPaint, { passive: true });
+      window.addEventListener('pageshow', requestPaint);
+      window.visualViewport?.addEventListener('resize', requestPaint, { passive: true });
+      function disableIntro() {
+        if (!reduced.matches) return;
+        var nextScroll = Math.max(0, window.scrollY - distance());
+        window.removeEventListener('scroll', requestPaint);
+        window.removeEventListener('resize', requestPaint);
+        window.removeEventListener('pageshow', requestPaint);
+        window.visualViewport?.removeEventListener('resize', requestPaint);
+        if (frame !== null) window.cancelAnimationFrame(frame);
+        root.classList.remove('intro-enabled', 'intro-lock', 'intro-fade');
+        root.style.removeProperty('--intro-film-opacity');
+        overlay.remove();
+        if (introVideo) introVideo.pause();
+        window.scrollTo({ top: nextScroll, behavior: 'instant' });
+        reduced.removeEventListener('change', disableIntro);
       }
-      var touchStartY = null;
-      function onIntroTouchStart(event) {
-        touching = event.touches.length === 1;
-        touchStartY = touching ? event.touches[0].clientY : null;
-      }
-      function onIntroTouchMove(event) {
-        if (touchStartY === null || event.touches.length !== 1) return;
-        var nextY = event.touches[0].clientY;
-        var delta = touchStartY - nextY;
-        if (!scrubbing && !completed && delta < 12) return;
-        event.preventDefault();
-        touchStartY = nextY;
-        moveIntro(delta);
-      }
-      function onIntroTouchEnd(event) {
-        if (event.touches.length) return;
-        touching = false;
-        touchStartY = null;
-        if (completed) releaseScroll();
-      }
-      function onIntroKeydown(event) {
-        if (['ArrowDown', 'PageDown', ' ', 'End'].indexOf(event.key) !== -1) {
-          event.preventDefault();
-          if (scrubbing || completed) moveIntro(distance * .5);
-          else finishIntro(event);
-        }
-      }
-
+      if (reduced.matches) { disableIntro(); return; }
+      reduced.addEventListener('change', disableIntro);
+      if (scrollCue) scrollCue.addEventListener('click', function () {
+        finishing = false;
+        finishIntro();
+      });
       if (introVideo) {
-        // Dissolve while the final title card is still playing, before a
-        // browser can replace the ended video with its poster/blank surface.
         function checkOutro() {
           if (Number.isFinite(introVideo.duration) && introVideo.duration > 1.5 &&
               introVideo.currentTime >= introVideo.duration - 1.5) finishIntro();
         }
         introVideo.addEventListener('timeupdate', checkOutro);
-        checkOutro();
         introVideo.addEventListener('ended', finishIntro);
         introVideo.addEventListener('error', finishIntro);
+        // A blocked autoplay or stalled download must still leave an exit.
+        var playback = introVideo.play();
+        if (playback && playback.catch) playback.catch(finishIntro);
+        checkOutro();
       }
-      if (scrollCue) scrollCue.addEventListener('click', function (event) {
-        if (scrubbing) moveIntro(distance);
-        else finishIntro(event);
-      });
-      window.addEventListener('wheel', onIntroWheel, { passive: false });
-      window.addEventListener('touchstart', onIntroTouchStart, { passive: true });
-      window.addEventListener('touchmove', onIntroTouchMove, { passive: false });
-      window.addEventListener('touchend', onIntroTouchEnd, { passive: true });
-      window.addEventListener('touchcancel', onIntroTouchEnd, { passive: true });
-      window.addEventListener('keydown', onIntroKeydown);
+      paintProgress();
     })();
   </script>
   <script>
