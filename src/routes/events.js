@@ -1265,6 +1265,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         if (!printful.isConfigured()) return res.status(501).json({ error: 'mockup_unavailable' });
         const result = await printfulMockups.createCustomerMockup(configuration, {
           refresh: req.body?.refresh === true,
+          requestId: req.body?.requestId,
         });
         return res.status(202).json(result);
       } catch (error) {
@@ -1286,6 +1287,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       // Provider details are for the local operator tool; customers only need the images/status.
       return res.json({
         jobId: result.jobId, status: result.status, expiresAt: result.expiresAt,
+        nextAttemptAt: result.nextAttemptAt, retryAfter: result.retryAfter,
+        attempt: result.attempt, errorCode: result.errorCode,
         mockups: result.mockups.map(({ url }) => ({ url })),
       });
     } catch (error) {
@@ -1295,6 +1298,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
   router.post(
     '/operator/printful-mockups/events/:slug/configurations/:configurationId',
+    express.json({ limit: '1kb' }),
     asyncRoute(async (req, res) => {
       res.set('Cache-Control', 'private, no-store');
       if (!printfulMockups.isOperatorCreateRequest(req)) {
@@ -1303,7 +1307,10 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
       if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
       try {
-        return res.status(202).json(await printfulMockups.createForConfiguration(configuration));
+        return res.status(202).json(await printfulMockups.createForConfiguration(configuration, {
+          refresh: req.body?.refresh === true,
+          requestId: req.body?.requestId,
+        }));
       } catch (error) {
         return sendPrintfulMockupError(res, error);
       }

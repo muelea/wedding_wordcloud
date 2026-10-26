@@ -155,13 +155,19 @@ async function cleanupExpiredMockupSources(now = Date.now()) {
   if (!testAdapter && (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY)) return 0;
   const adapter = activeAdapter();
   if (typeof adapter.listPage !== 'function') return 0;
-  const prefix = 'customer-mockup-sources';
-  const entries = await adapter.listPage(prefix, { limit: STORAGE_LIST_PAGE_SIZE, offset: 0 });
-  const expired = entries.filter(entry => {
-    const match = /^(\d+)-[A-Za-z0-9_-]{24}\.png$/.exec(String(entry?.name || ''));
-    return match && Number(match[1]) * 1000 <= now;
-  }).map(entry => `${prefix}/${entry.name}`);
-  return removeMany(expired);
+  // Parallel lists plus one deletion batch retain the existing 7s bound.
+  const prefixes = ['customer-mockup-sources', 'operator-mockup-sources'];
+  const pages = await Promise.allSettled(prefixes.map(prefix =>
+    adapter.listPage(prefix, { limit: STORAGE_LIST_PAGE_SIZE, offset: 0 })));
+  const expired = pages.flatMap((page, index) => page.status === 'fulfilled'
+    ? page.value.filter(entry => {
+      const match = /^(\d+)-[A-Za-z0-9_-]{24}\.png$/.exec(String(entry?.name || ''));
+      return match && Number(match[1]) * 1000 <= now;
+    }).slice(0, STORAGE_DELETE_BATCH_SIZE / 2).map(entry => `${prefixes[index]}/${entry.name}`) : []);
+  const count = await removeMany(expired);
+  const failed = pages.find(page => page.status === 'rejected');
+  if (failed) throw failed.reason;
+  return count;
 }
 
 function setAdapterForTests(adapter) {

@@ -6,7 +6,7 @@ const { AsyncLocalStorage } = require('node:async_hooks');
 const context = new AsyncLocalStorage();
 const SAFE_FIELDS = new Set([
   'requestId', 'operation', 'outcome', 'errorCode', 'durationMs', 'statusCode',
-  'eventId', 'orderId', 'jobId', 'shipmentId', 'maintenanceRunId',
+  'eventId', 'orderId', 'jobId', 'providerTaskId', 'shipmentId', 'maintenanceRunId',
   'operatorActionId', 'count', 'attempt', 'mode', 'provider', 'signal',
   'activeSockets', 'activeRooms', 'queueDepth', 'oldestAgeSeconds',
 ]);
@@ -36,7 +36,7 @@ function safeValue(key, value) {
     const number = Number(value);
     return Number.isFinite(number) ? Math.max(0, number) : null;
   }
-  if (['requestId', 'eventId', 'orderId', 'jobId', 'shipmentId',
+  if (['requestId', 'eventId', 'orderId', 'jobId', 'providerTaskId', 'shipmentId',
     'maintenanceRunId', 'operatorActionId'].includes(key)) return safeId(value);
   if (key === 'errorCode') return errorCode({ code: value });
   return safeToken(value);

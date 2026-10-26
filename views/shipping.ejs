@@ -419,7 +419,7 @@
     const t = (source, params) => WolkenworteI18n.t(source, params);
     const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
     const clearText = (element) => WolkenworteI18n.clearText(element);
-    const printPreview = WolkenwortePrintPreview.create(document.getElementById('print-preview'));
+    const printPreview = WolkenwortePrintPreview.create(document.getElementById('print-preview'), { allowMockups: true });
     const setTranslatedAttribute = (element, name, source, params) =>
       WolkenworteI18n.setAttribute(element, name, source, params);
     const guestId = getOrCreateGuestId();

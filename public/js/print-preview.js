@@ -198,23 +198,29 @@
 
     function showMockupError(error) {
       mockupStatus.hidden = false;
-      i18n.setText(mockupStatus, error?.retryAfter
-        ? 'Momentan ist viel los. Bitte versucht es in etwa {{seconds}} Sekunden erneut.'
-        : 'Die Produktvorschau ist gerade nicht verfügbar. Bitte versucht es erneut.', { seconds: error?.retryAfter });
+      const message = Mockups.statusMessage({ status: 'error', errorCode: error?.errorCode });
+      i18n.setText(mockupStatus, message.source, message.params);
       updateMockupButton();
     }
 
-    async function loadMockups({ rejoin = false } = {}) {
+    mockups.subscribe?.((endpoint, state) => {
+      if (!dialog.open || endpoint !== configuration?.mockupUrl || state.status !== 'loading') return;
+      const message = Mockups.statusMessage(state);
+      mockupStatus.hidden = false;
+      i18n.setText(mockupStatus, message.source, message.params);
+      updateMockupButton();
+    });
+
+    async function loadMockups() {
       if (!allowMockups || !configuration?.mockupUrl) return;
       const activeGeneration = generation;
-      const pending = mockups.load(configuration.mockupUrl);
       mockupStatus.hidden = true;
+      const pending = mockups.load(configuration.mockupUrl);
       updateMockupButton();
       try {
         const result = await pending;
         if (!dialog.open || generation !== activeGeneration) return;
-        if (!rejoin) showMockups(result);
-        else updateMockupButton();
+        showMockups(result);
       } catch (error) {
         if (dialog.open && generation === activeGeneration) showMockupError(error);
       }
@@ -288,7 +294,7 @@
         if (!modelCard.hidden) void showModel();
         // Only rejoin an already-running, explicitly requested job; the client
         // returns its existing promise without starting another generation.
-        if (allowMockups && item.mockupUrl && mockups.get(item.mockupUrl).status === 'loading') void loadMockups({ rejoin: true });
+        if (allowMockups && item.mockupUrl && mockups.get(item.mockupUrl).status === 'loading') void loadMockups();
       },
     });
   }

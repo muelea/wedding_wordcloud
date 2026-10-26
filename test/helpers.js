@@ -25,6 +25,7 @@ const APPLICATION_MIGRATIONS = [
   '20260923000000_recover_artifact_deletion.sql',
   '20260924000000_commerce_retention.sql',
   '20261012000000_optional_design_accounts.sql',
+  '20261026000000_durable_mockup_jobs.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -43,6 +44,7 @@ function clearApplicationModules() {
     '../src/stripe',
     '../src/printful',
     '../src/printfulMockups',
+    '../src/mockupQueue',
     '../src/privateStorage',
     '../src/clientIdentity',
     '../src/rateLimits',

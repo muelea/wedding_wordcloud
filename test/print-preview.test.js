@@ -134,7 +134,7 @@ test('closing a pending mockup keeps a late completion from replacing another de
   assert.equal(h.query('[data-preview-mockup-actions]').hidden, true);
 });
 
-test('customer feedback uses server retry seconds and broken mockup links need another click', async t => {
+test('terminal customer feedback leaves retry available and broken mockup links need another click', async t => {
   let calls = 0;
   let invalidated = 0;
   let state = 'idle';
@@ -155,7 +155,7 @@ test('customer feedback uses server retry seconds and broken mockup links need a
   h.query('[data-preview-mockup]').click();
   await Promise.resolve();
   assert.equal(h.query('[data-preview-mockup-status]').textContent,
-    'Momentan ist viel los. Bitte versucht es in etwa 40 Sekunden erneut.');
+    'Die Produktvorschau ist gerade nicht verfügbar. Bitte versucht es erneut.');
   assert.equal(h.query('[data-preview-mockup]').disabled, false);
   assert.equal(calls, 1);
   h.query('[data-preview-mockup]').click();
@@ -250,7 +250,7 @@ test('single-sided designs hide the side selector and have no custom zoom contro
   assert.equal(h.image().style.width, '648px');
 });
 
-test('cart and shipping show photo, exact artwork and a local 3D preview together without generating mockups', async t => {
+test('cart dialogs show photo, exact artwork and a local 3D preview without generating mockups', async t => {
   let calls = 0, destroyed = 0;
   const renders = [];
   const h = harness(t, { get: () => ({ status: 'idle' }), load: () => { calls++; } }, {
@@ -351,7 +351,7 @@ test('closing during local model initialization disposes the late renderer witho
   assert.equal(h.query('[data-preview-model]').children.length, 0);
 });
 
-test('reopening a pending mockup rejoins its promise while keeping the three-panel overview', async t => {
+test('reopening a pending mockup rejoins its promise and displays its eventual completion', async t => {
   let complete, state = 'idle', requests = 0;
   const pending = new Promise(resolve => { complete = resolve; });
   const h = harness(t, {
@@ -371,7 +371,7 @@ test('reopening a pending mockup rejoins its promise while keeping the three-pan
   await Promise.resolve();
   assert.equal(requests, 1);
   assert.equal(h.photo().getAttribute('src'), '/original.jpg');
-  assert.equal(h.query('[data-preview-mockup-card]').hidden, true);
+  assert.equal(h.query('[data-preview-mockup-card]').hidden, false);
   assert.equal(h.query('[data-preview-mockup]').disabled, false);
   h.query('[data-preview-mockup]').click();
   await Promise.resolve();

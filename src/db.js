@@ -10,7 +10,7 @@ const log = require('./structuredLog');
 const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
-const REQUIRED_SCHEMA_VERSION = '5';
+const REQUIRED_SCHEMA_VERSION = '7';
 const { yearEndDeadline, emailRetentionYears, evidenceAddresses } = require('./retentionPolicy');
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
@@ -99,7 +99,7 @@ async function assertDatabaseReady() {
   `);
   const currentVersion = Number(result.rows[0]?.version);
   accountSchemaAvailable = currentVersion >= 6;
-  const requiredVersion=process.env.DESIGN_ACCOUNTS_ENABLED === 'true' ? 6 : REQUIRED_SCHEMA_VERSION;
+  const requiredVersion = REQUIRED_SCHEMA_VERSION;
   if (!Number.isSafeInteger(currentVersion) || currentVersion < Number(requiredVersion)) {
     throw new Error(
       `Postgres-Schema ist nicht aktuell (mindestens erwartet: ${requiredVersion}). ` +
@@ -2579,6 +2579,7 @@ async function finishOperatorAction(id, { succeeded, afterState = null, errorCod
 }
 
 const PRELIVE_BUSINESS_TABLES = Object.freeze([
+  'mockup_jobs', 'mockup_provider_budgets',
   'email_smoke_runs', 'provider_smoke_runs', 'resend_webhook_events',
   'printful_webhook_events', 'stripe_webhook_events', 'email_jobs',
   'print_artifacts', 'order_items', 'checkout_order_shipments', 'orders',
@@ -2588,6 +2589,8 @@ const PRELIVE_BUSINESS_TABLES = Object.freeze([
 ]);
 
 const PRELIVE_PRESERVATION_PREDICATES = Object.freeze({
+  mockup_jobs: 'mockup_jobs.event_id = $2',
+  mockup_provider_budgets: `EXISTS (SELECT 1 FROM mockup_jobs retained_job WHERE retained_job.scope=mockup_provider_budgets.scope AND retained_job.event_id=$2)`,
   email_smoke_runs: `
     EXISTS (SELECT 1 FROM orders retained_order
       WHERE retained_order.id = email_smoke_runs.order_id
@@ -3682,7 +3685,129 @@ async function recordAuthEmailReceipt(hash,payloadHash,delivered = false) {
   return r.rows[0];
 }
 
+async function getMockupConfiguration(id, now = Date.now()) {
+  return rowToBoundary((await getPool().query(`SELECT c.* FROM configurations c JOIN events e ON e.id=c.event_id
+    WHERE c.id=$1 AND e.expires_at > $2 AND c.expires_at > $2`, [id, new Date(now)])).rows[0]);
+}
+
+// Mockup leases serialize provider work across processes without holding a
+// database connection during rendering, Storage requests or provider calls.
+async function enqueueMockupJob(job, { refresh = false } = {}) {
+  return withTransaction(async client => {
+    await client.query('INSERT INTO mockup_provider_budgets(scope) VALUES ($1) ON CONFLICT DO NOTHING', [job.scope]);
+    await client.query('SELECT scope FROM mockup_provider_budgets WHERE scope=$1 FOR UPDATE', [job.scope]);
+    const command = (await client.query(`SELECT data FROM mockup_jobs WHERE scope=$1 AND mode=$2
+      AND configuration_id=$3 AND (data->>'requestId'=$4 OR data->'requestIds' ? $4) LIMIT 1`,
+    [job.scope, job.mode, job.configurationId, job.requestId])).rows[0]?.data;
+    if (command) return command;
+    const previous = (await client.query(`SELECT data FROM mockup_jobs
+      WHERE scope=$1 AND mode=$2 AND cache_key=$3 AND expires_at > $4
+      ORDER BY created_at DESC LIMIT 1`, [job.scope, job.mode, job.cacheKey, new Date(job.createdAt)])).rows[0]?.data;
+    if (previous && previous.status !== 'failed' && !(refresh && previous.status === 'completed')) {
+      // A second tab may join an active job with its own command. Remember that
+      // identity even after completion so a lost POST response cannot regenerate.
+      const requestIds = [...new Set([previous.requestId, ...(previous.requestIds || []), job.requestId])];
+      if (requestIds.length > 64) return null;
+      await client.query(`UPDATE mockup_jobs SET data=jsonb_set(data,'{requestIds}',$2::jsonb)
+        WHERE id=$1`, [previous.id, JSON.stringify(requestIds)]);
+      return { ...previous, requestIds };
+    }
+    // Expired active records must not hold the partial unique index forever.
+    await client.query(`UPDATE mockup_jobs SET status='failed',
+      data=jsonb_set(jsonb_set(data,'{status}','"failed"'),'{errorCode}','"mockup_timeout"')
+      WHERE scope=$1 AND mode=$2 AND cache_key=$3 AND expires_at <= $4 AND status NOT IN ('completed','failed')`,
+    [job.scope, job.mode, job.cacheKey, new Date(job.createdAt)]);
+    const count = (await client.query(`SELECT count(*)::int AS n FROM mockup_jobs
+      WHERE scope=$1 AND status NOT IN ('completed','failed')`, [job.scope])).rows[0].n;
+    if (count >= 64) return null;
+    await client.query(`INSERT INTO mockup_jobs
+      (id,scope,event_id,configuration_id,mode,cache_key,status,data,next_at,created_at,expires_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [job.id, job.scope, job.eventId,
+      job.configurationId, job.mode, job.cacheKey, job.status, job, new Date(job.nextAt),
+      new Date(job.createdAt), new Date(job.expiresAt)]);
+    return job;
+  });
+}
+
+async function getMockupJob(id) {
+  return (await getPool().query('SELECT data FROM mockup_jobs WHERE id=$1', [id])).rows[0]?.data || null;
+}
+
+async function claimMockupJob({ scope, lease, now, leaseMs, operator }) {
+  return withTransaction(async client => {
+    const budget = (await client.query('SELECT * FROM mockup_provider_budgets WHERE scope=$1 FOR UPDATE', [scope])).rows[0];
+    if (!budget || (budget.lease_until && Date.parse(budget.lease_until) > now)) return null;
+    const row = (await client.query(`SELECT id,data FROM mockup_jobs WHERE scope=$1 AND next_at <= $2
+      AND (mode='customer' OR $3) AND (lease_until IS NULL OR lease_until <= $2)
+      AND (status NOT IN ('completed','failed') OR jsonb_array_length(data->'sourceObjectKeys') > 0)
+      ORDER BY next_at,created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, [scope, new Date(now), operator])).rows[0];
+    if (!row) return null;
+    await client.query('UPDATE mockup_provider_budgets SET lease=$2,lease_until=$3 WHERE scope=$1',
+      [scope, lease, new Date(now + leaseMs)]);
+    await client.query('UPDATE mockup_jobs SET lease=$2,lease_until=$3 WHERE id=$1',
+      [row.id, lease, new Date(now + leaseMs)]);
+    return row.data;
+  });
+}
+
+async function saveMockupJob(job, lease, now) {
+  const result = await getPool().query(`UPDATE mockup_jobs j SET
+      data=$2::jsonb || jsonb_build_object('requestIds',COALESCE(j.data->'requestIds',jsonb_build_array(j.data->>'requestId'))),
+      status=$3,next_at=$4
+    WHERE j.id=$1 AND j.lease=$5 AND j.lease_until > $6 AND EXISTS
+      (SELECT 1 FROM mockup_provider_budgets b WHERE b.scope=j.scope AND b.lease=$5 AND b.lease_until > $6)
+    RETURNING id`, [job.id, job, job.status, new Date(job.nextAt), lease, new Date(now)]);
+  return result.rowCount === 1;
+}
+
+async function renewMockupLease(scope, id, lease, now, leaseMs) {
+  return withTransaction(async client => {
+    const result = await client.query(`UPDATE mockup_provider_budgets SET lease_until=$4
+      WHERE scope=$1 AND lease=$2 AND lease_until > $3 RETURNING scope`,
+    [scope, lease, new Date(now), new Date(now + leaseMs)]);
+    if (!result.rowCount) return false;
+    return (await client.query(`UPDATE mockup_jobs SET lease_until=$4 WHERE id=$1 AND lease=$2
+      AND lease_until > $3 RETURNING id`, [id, lease, new Date(now), new Date(now + leaseMs)])).rowCount === 1;
+  });
+}
+
+async function releaseMockupLease(scope, id, lease) {
+  await withTransaction(async client => {
+    await client.query('UPDATE mockup_provider_budgets SET lease=NULL,lease_until=NULL WHERE scope=$1 AND lease=$2', [scope, lease]);
+    await client.query('UPDATE mockup_jobs SET lease=NULL,lease_until=NULL WHERE id=$1 AND lease=$2', [id, lease]);
+  });
+}
+
+async function reserveMockupRequest(scope, lease, now, kind) {
+  const column = kind === 'create' ? 'next_create_at' : 'next_read_at';
+  const spacing = kind === 'create' ? 30_500 : 1_000;
+  return withTransaction(async client => {
+    const row = (await client.query(`SELECT ${column} AS next FROM mockup_provider_budgets
+      WHERE scope=$1 AND lease=$2 AND lease_until > $3 FOR UPDATE`, [scope, lease, new Date(now)])).rows[0];
+    if (!row) throw Object.assign(new Error('Mockup lease lost'), { code: 'MOCKUP_LEASE_LOST' });
+    const next = Date.parse(row.next);
+    if (next > now) return next;
+    await client.query(`UPDATE mockup_provider_budgets SET ${column}=$3 WHERE scope=$1 AND lease=$2`,
+      [scope, lease, new Date(now + spacing)]);
+    return now;
+  });
+}
+
+async function deferMockupRequests(scope, lease, until, kind) {
+  const column = kind === 'create' ? 'next_create_at' : 'next_read_at';
+  await getPool().query(`UPDATE mockup_provider_budgets SET ${column}=GREATEST(${column},$3)
+    WHERE scope=$1 AND lease=$2`, [scope, lease, new Date(until)]);
+}
+
+async function pruneMockupJobs(now = Date.now()) {
+  return (await getPool().query(`DELETE FROM mockup_jobs WHERE id IN (SELECT id FROM mockup_jobs
+    WHERE expires_at <= $1 AND (lease_until IS NULL OR lease_until <= $1)
+    ORDER BY expires_at LIMIT 100)`, [new Date(now)])).rowCount;
+}
+
 module.exports = {
+  getMockupConfiguration, enqueueMockupJob, getMockupJob, claimMockupJob, saveMockupJob, renewMockupLease,
+  releaseMockupLease, reserveMockupRequest, deferMockupRequests, pruneMockupJobs,
   hasAccountSchema: () => accountSchemaAvailable,
   accountError, ensureDesignAccount, discoverDesignAccounts, getDesignAccount, touchDesignAccount,
   createAccountSession, getAccountSession, deleteAccountSession, deleteOtherAccountSessions,

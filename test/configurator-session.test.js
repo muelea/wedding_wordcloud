@@ -1461,7 +1461,7 @@ test('failed initialization always unlocks and blocks approving a partial design
 });
 
 test('page-history return reloads authoritative state without a second leave warning', () => {
-  const start = template.indexOf("    window.addEventListener('pageshow'");
+  const start = template.indexOf("    window.addEventListener('pageshow', (event) => {");
   const source = template.slice(start, template.indexOf('\n    });', start) + '\n    });'.length);
   let callback, reloads = 0;
   const context = vm.createContext({

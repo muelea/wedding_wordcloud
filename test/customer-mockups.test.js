@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
-test('customer mockup endpoints use saved event designs without database artifacts or operator access', async t => {
+test('customer mockup endpoints use saved event designs with durable tracking but without paid artifacts or operator access', async t => {
   const { baseUrl, query, close } = await startTestServer();
   t.after(close);
   const mockups = require('../src/printfulMockups');
@@ -45,9 +45,9 @@ test('customer mockup endpoints use saved event designs without database artifac
         assert.deepEqual(payload.products[0].catalog_variant_ids, [product.printful.variantId]);
         return [{ id: 1, status: 'pending' }];
       },
-      async getMockupTasks() { return [{ status: 'completed', catalog_variant_mockups: [{
+      async getMockupTasks() { return [{ id: 1, status: 'completed', catalog_variant_mockups: [{
         catalog_variant_id: product.printful.variantId,
-        mockups: [{ mockup_url: 'https://printful-upload.s3-accelerate.amazonaws.com/tmp/preview.png' }],
+        mockups: [{ placement: 'default', mockup_url: 'https://printful-upload.s3-accelerate.amazonaws.com/tmp/preview.png' }],
       }] }]; },
     },
   });
@@ -64,9 +64,10 @@ test('customer mockup endpoints use saved event designs without database artifac
   const job = await created.json();
   assert.equal((await fetch(baseUrl + second.mockupUrl + '/' + job.jobId)).status, 404);
   assert.equal((await fetch(`${baseUrl}/api/events/${other.slug}/configurations/${first.id}/mockups/${job.jobId}`)).status, 404);
+  await service.runDue({ maxJobs: 2 });
   const result = await fetch(`${url}/${job.jobId}`).then(response => response.json());
   assert.equal(result.status, 'completed');
-  assert.deepEqual(Object.keys(result).sort(), ['expiresAt', 'jobId', 'mockups', 'status']);
+  assert.deepEqual(Object.keys(result).sort(), ['attempt', 'errorCode', 'expiresAt', 'jobId', 'mockups', 'nextAttemptAt', 'retryAfter', 'status']);
   assert.deepEqual(result.mockups, [{ url: 'https://printful-upload.s3-accelerate.amazonaws.com/tmp/preview.png' }]);
   assert.deepEqual(removed, uploaded);
   await fetch(url, { method: 'POST', headers });

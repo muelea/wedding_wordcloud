@@ -1,4 +1,13 @@
 {
+  "Das tägliche Printful-Limit ist erreicht. Bitte versucht es morgen erneut.": "Se ha alcanzado el límite diario de Printful. Inténtalo de nuevo mañana.",
+  "Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.": "Printful está tardando más de lo habitual. Inténtalo de nuevo.",
+  "Printful ist ausgelastet. Neuer Versuch in {{seconds}} Sekunden…": "Printful está ocupado. Se reintentará en {{seconds}} segundos…",
+  "Die Vorschau wird in {{seconds}} Sekunden erneut versucht…": "Se reintentará la vista previa en {{seconds}} segundos…",
+  "Das Druckdesign wird sicher für Printful vorbereitet…": "Preparando el diseño de impresión de forma segura para Printful…",
+  "Die Verbindung wurde unterbrochen. Die Vorschau wird automatisch erneut versucht…": "Se interrumpió la conexión. La vista previa se reintentará automáticamente…",
+  "Die Produktvorschau wartet auf einen freien Platz…": "La vista previa del producto está esperando un turno libre…",
+  "Printful erzeugt das Mockup. Das dauert meist einige Sekunden…": "Printful está generando el mockup. Normalmente tarda unos segundos…",
+  "Neu erzeugen": "Volver a generar",
   "Tippe unten ein Wort ein und wähle „Hinzufügen“. Es erscheint sofort bei allen.": "Escribe una palabra abajo y elige «Añadir». Aparece al instante para todos.",
   "Gestaltet mit euren Wörtern ein persönliches Andenken. Der Button wird aktiv, sobald die Wolke Wörter enthält.": "Cread un recuerdo personal con vuestras palabras. El botón se activa cuando la nube contiene palabras.",
   "Startübersicht": "Vista inicial",

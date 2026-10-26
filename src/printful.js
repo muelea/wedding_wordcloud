@@ -126,7 +126,7 @@ async function printfulRequest(path, options = {}) {
     );
   }
 
-  const { allowNotFound = false, timeoutMs = 10_000, ...fetchOptions } = options;
+  const { allowNotFound = false, timeoutMs = 10_000, onRateLimit, ...fetchOptions } = options;
   const startedAt = Date.now();
   let response;
   try {
@@ -153,6 +153,21 @@ async function printfulRequest(path, options = {}) {
     // The status code below still gives callers a useful, sanitized error.
   }
 
+  const numericHeader = name => {
+    const raw = response.headers?.get?.(name);
+    if (raw == null || raw === '') return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  };
+  const rawRetry = response.headers?.get?.('retry-after');
+  const retryAfterValue = numericHeader('retry-after') ??
+    (rawRetry && Number.isFinite(Date.parse(rawRetry)) ? Math.max(0, (Date.parse(rawRetry) - Date.now()) / 1000) : null);
+  const rateLimitLimit = numericHeader('x-ratelimit-limit');
+  const rateLimitRemaining = numericHeader('x-ratelimit-remaining');
+  const rateLimitReset = numericHeader('x-ratelimit-reset');
+  await onRateLimit?.({ status: response.status, limit: rateLimitLimit,
+    remaining: rateLimitRemaining, reset: rateLimitReset, retryAfter: retryAfterValue });
+
   if (allowNotFound && response.status === 404) {
     performanceProbe.recordExternalCall('printful', {
       durationMs: Date.now() - startedAt, succeeded: true,
@@ -164,24 +179,15 @@ async function printfulRequest(path, options = {}) {
       durationMs: Date.now() - startedAt, succeeded: false,
     });
     const apiStatus = Number(data?.code) >= 400 ? Number(data.code) : response.status;
-    const message = typeof data?.error?.message === 'string'
-      ? data.error.message
+    const detail = data?.detail || data?.error?.message || data?.title;
+    const message = typeof detail === 'string'
+      ? detail
       : `Printful-Anfrage fehlgeschlagen (${response.status}).`;
     const code = apiStatus === 401 || apiStatus === 403
       ? 'PRINTFUL_AUTH_FAILED'
       : apiStatus >= 400 && apiStatus < 500 && apiStatus !== 429
         ? 'PRINTFUL_REQUEST_REJECTED'
         : 'PRINTFUL_UNAVAILABLE';
-    const numericHeader = (name) => {
-      const raw = response.headers?.get?.(name);
-      if (raw == null || raw === '') return null;
-      const value = Number(raw);
-      return Number.isFinite(value) && value >= 0 ? value : null;
-    };
-    const retryAfterValue = numericHeader('retry-after');
-    const rateLimitLimit = numericHeader('x-ratelimit-limit');
-    const rateLimitRemaining = numericHeader('x-ratelimit-remaining');
-    const rateLimitReset = numericHeader('x-ratelimit-reset');
     throw new PrintfulApiError(
       code,
       message,
@@ -321,7 +327,7 @@ async function getShippingRates({ variantId, quantity, recipient, items }) {
   }
 }
 
-async function getCatalogProductMockupStyles(productId, placements = []) {
+async function getCatalogProductMockupStyles(productId, placements = [], { onRateLimit } = {}) {
   const id = Number(productId);
   if (!Number.isSafeInteger(id) || id < 1) {
     throw new PrintfulApiError('PRINTFUL_INVALID_MOCKUP', 'Das Printful-Produkt ist ungültig.', 500);
@@ -332,6 +338,7 @@ async function getCatalogProductMockupStyles(productId, placements = []) {
   const result = await printfulRequest(`/v2/catalog-products/${id}/mockup-styles?${query}`, {
     method: 'GET',
     timeoutMs: 15_000,
+    onRateLimit,
   });
   if (!Array.isArray(result)) {
     throw new PrintfulApiError(
@@ -343,7 +350,7 @@ async function getCatalogProductMockupStyles(productId, placements = []) {
   return result;
 }
 
-async function createMockupTasks(payload) {
+async function createMockupTasks(payload, { onRateLimit } = {}) {
   if (!payload || !Array.isArray(payload.products) || !payload.products.length) {
     throw new PrintfulApiError('PRINTFUL_INVALID_MOCKUP', 'Die Mockup-Daten sind ungültig.', 500);
   }
@@ -351,6 +358,7 @@ async function createMockupTasks(payload) {
     method: 'POST',
     body: JSON.stringify(payload),
     timeoutMs: 30_000,
+    onRateLimit,
   });
   if (!Array.isArray(result) || !result.length ||
       result.some((task) => !Number.isSafeInteger(Number(task?.id)))) {
@@ -363,7 +371,7 @@ async function createMockupTasks(payload) {
   return result;
 }
 
-async function getMockupTasks(taskIds) {
+async function getMockupTasks(taskIds, { onRateLimit } = {}) {
   const ids = [...new Set((taskIds || []).map(Number))];
   if (!ids.length || ids.some((id) => !Number.isSafeInteger(id) || id < 1)) {
     throw new PrintfulApiError('PRINTFUL_INVALID_MOCKUP', 'Die Printful-Mockup-ID ist ungültig.', 500);
@@ -372,6 +380,7 @@ async function getMockupTasks(taskIds) {
   const result = await printfulRequest(`/v2/mockup-tasks?${query}`, {
     method: 'GET',
     timeoutMs: 15_000,
+    onRateLimit,
   });
   if (!Array.isArray(result)) {
     throw new PrintfulApiError(

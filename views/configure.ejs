@@ -3465,104 +3465,52 @@
       headerCartCount.textContent = count ? String(count) : '';
     }
 
+    const operatorMockups = WolkenworteProductMockups.create({ window });
+    function operatorMockupEndpoint(configurationId) {
+      return `/api/operator/printful-mockups/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}`;
+    }
     function clearPrintfulMockupState(configurationId) {
-      const state = printfulMockupStates.get(configurationId);
-      if (state?.timer) clearTimeout(state.timer);
       printfulMockupStates.delete(configurationId);
     }
-
-    function mockupErrorMessage(data) {
-      if (data?.message) return String(data.message);
-      return 'Das Printful-Mockup konnte nicht erzeugt werden.';
+    function synchronizePrintfulMockup(configurationId, state) {
+      if (state.status === 'idle') return;
+      const display = { ...state, mockups: (state.urls || []).map((url, index) => ({
+        url, displayName: t('Produktvorschau'),
+        downloadUrl: `/api/operator/printful-mockups/${encodeURIComponent(state.jobId)}/files/${index}`,
+      })) };
+      printfulMockupStates.set(configurationId, display);
+      const panel = Array.from(orderList.querySelectorAll('[data-mockup-configuration]'))
+        .find(node => node.dataset.mockupConfiguration === configurationId);
+      if (panel && state.status === 'loading') {
+        const replacement = createPrintfulMockupPanel(display);
+        panel.replaceChildren(...replacement.childNodes);
+      } else renderOrderBox();
     }
-
-    function schedulePrintfulMockupPoll(configurationId, jobId, token, delay = 4000) {
-      const state = printfulMockupStates.get(configurationId);
-      if (!state || state.token !== token) return;
-      state.timer = setTimeout(() => {
-        state.timer = null;
-        void pollPrintfulMockup(configurationId, jobId, token);
-      }, delay);
-    }
-
-    async function pollPrintfulMockup(configurationId, jobId, token) {
-      const current = printfulMockupStates.get(configurationId);
-      if (!current || current.token !== token) return;
-      if (Date.now() - current.startedAt > 10 * 60 * 1000) {
-        printfulMockupStates.set(configurationId, {
-          status: 'error', token, message: 'Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.',
-        });
-        renderOrderBox();
-        return;
-      }
-      try {
-        const response = await fetch(
-          `/api/operator/printful-mockups/${encodeURIComponent(jobId)}`,
-          { cache: 'no-store', signal: AbortSignal.timeout(20000) }
-        );
-        const data = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(mockupErrorMessage(data));
-        const latest = printfulMockupStates.get(configurationId);
-        if (!latest || latest.token !== token) return;
-        if (data.status === 'pending') {
-          latest.status = 'pending';
-          renderOrderBox();
-          schedulePrintfulMockupPoll(configurationId, jobId, token);
-          return;
-        }
-        if (data.status !== 'completed' || !Array.isArray(data.mockups) || !data.mockups.length) {
-          throw new Error((data.failureReasons || []).filter(Boolean).join(' ') ||
-            'Printful hat kein Mockup geliefert.');
-        }
-        printfulMockupStates.set(configurationId, {
-          status: 'completed', token, jobId, mockups: data.mockups,
-          mockupWidthPx: data.mockupWidthPx || current.mockupWidthPx,
-          resolutionFallback: Boolean(data.resolutionFallback || current.resolutionFallback),
-        });
-        renderOrderBox();
-      } catch (error) {
-        if (printfulMockupStates.get(configurationId)?.token !== token) return;
-        printfulMockupStates.set(configurationId, {
-          status: 'error', token, message: error.message || mockupErrorMessage(),
-        });
-        renderOrderBox();
-      }
-    }
-
+    operatorMockups.subscribe((endpoint, state) => {
+      if (!PRINTFUL_MOCKUP_TOOLS_ENABLED) return;
+      const item = loadOrderItems().find(item => operatorMockupEndpoint(item.id) === endpoint);
+      if (item) synchronizePrintfulMockup(item.id, state);
+    });
     async function generatePrintfulMockup(configurationId) {
       if (!PRINTFUL_MOCKUP_TOOLS_ENABLED) return;
-      clearPrintfulMockupState(configurationId);
-      const token = `${Date.now()}-${Math.random()}`;
-      printfulMockupStates.set(configurationId, { status: 'creating', token, startedAt: Date.now() });
-      renderOrderBox();
+      const endpoint = operatorMockupEndpoint(configurationId);
+      const refresh = operatorMockups.get(endpoint).status === 'completed';
       try {
-        const response = await fetch(
-          `/api/operator/printful-mockups/events/${encodeURIComponent(slug)}/configurations/${encodeURIComponent(configurationId)}`,
-          {
-            method: 'POST',
-            headers: { 'X-Wolkenworte-Operator': 'printful-mockup' },
-            cache: 'no-store',
-            signal: AbortSignal.timeout(40000),
-          }
-        );
-        const data = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(mockupErrorMessage(data));
-        const latest = printfulMockupStates.get(configurationId);
-        if (!latest || latest.token !== token) return;
-        latest.status = 'pending';
-        latest.jobId = data.jobId;
-        latest.mockupWidthPx = data.mockupWidthPx;
-        latest.resolutionFallback = Boolean(data.resolutionFallback);
-        renderOrderBox();
-        schedulePrintfulMockupPoll(configurationId, data.jobId, token, data.status === 'completed' ? 0 : 3000);
-      } catch (error) {
-        if (printfulMockupStates.get(configurationId)?.token !== token) return;
-        printfulMockupStates.set(configurationId, {
-          status: 'error', token, message: error.message || mockupErrorMessage(),
-        });
-        renderOrderBox();
+        await operatorMockups.load(endpoint, { refresh });
+        synchronizePrintfulMockup(configurationId, operatorMockups.get(endpoint));
+      } catch {
+        synchronizePrintfulMockup(configurationId, operatorMockups.get(endpoint));
       }
     }
+    function resumePrintfulMockups() {
+      if (!PRINTFUL_MOCKUP_TOOLS_ENABLED) return;
+      for (const item of loadOrderItems()) {
+        const endpoint = operatorMockupEndpoint(item.id), state = operatorMockups.get(endpoint);
+        if (state.status === 'completed') synchronizePrintfulMockup(item.id, state);
+        else if (state.status === 'loading') void generatePrintfulMockup(item.id);
+      }
+    }
+    window.addEventListener('pageshow', resumePrintfulMockups);
 
     function createPrintfulMockupPanel(state) {
       const panel = document.createElement('div');
@@ -3571,11 +3519,8 @@
         const status = document.createElement('p');
         status.className = `order-mockup-status${state.status === 'error' ? ' is-error' : ''}`;
         status.setAttribute('role', state.status === 'error' ? 'alert' : 'status');
-        status.textContent = state.status === 'creating'
-          ? 'Das Druckdesign wird sicher für Printful vorbereitet…'
-          : state.status === 'pending'
-          ? 'Printful erzeugt das Mockup. Das dauert meist einige Sekunden…'
-          : state.message;
+        const message = WolkenworteProductMockups.statusMessage(state);
+        setText(status, message.source, message.params);
         panel.appendChild(status);
         return panel;
       }
@@ -3671,8 +3616,8 @@
           mockup = document.createElement('button');
           mockup.type = 'button';
           mockup.className = 'order-mockup';
-          mockup.textContent = mockupState?.status === 'completed' ? 'Neu erzeugen' : 'Printful-Mockup';
-          mockup.disabled = ['creating', 'pending'].includes(mockupState?.status);
+          setText(mockup, mockupState?.status === 'completed' ? 'Neu erzeugen' : 'Printful-Mockup');
+          mockup.disabled = mockupState?.status === 'loading';
           mockup.dataset.mockupPending = String(mockup.disabled);
           mockup.setAttribute('aria-label', `Printful-Mockup für ${productName} erzeugen`);
           mockup.addEventListener('click', () => void generatePrintfulMockup(item.id));
@@ -3686,7 +3631,11 @@
         if (mockup) actions.append(mockup);
         actions.append(remove);
         row.append(image, copy, actions);
-        if (mockupState) row.appendChild(createPrintfulMockupPanel(mockupState));
+        if (mockupState) {
+          const panel = createPrintfulMockupPanel(mockupState);
+          panel.dataset.mockupConfiguration = item.id;
+          row.appendChild(panel);
+        }
         orderList.appendChild(row);
       });
       updateCartActions();

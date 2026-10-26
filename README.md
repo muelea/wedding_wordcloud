@@ -319,21 +319,36 @@ frozen snapshot of the word cloud.
    the address, quantities and prepared price intact. Preview rendering does
    not create paid print artifacts or upload files to Storage.
    Only on the shipping page, “Produktvorschau erstellen” inside that dialog explicitly requests a
-   Printful product mockup at 1000 px. Opening the artwork preview never
-   generates one automatically. Completed image links (no image bytes) are
-   cached by immutable event/configuration URL in browser localStorage for up
-   to 12 hours; the normal browser image cache handles the pictures. Broken or
-   expired results require another explicit click. Pending work and result
-   metadata live only in bounded, expiring process memory, with no mockup
-   database records or queue. A restart during generation may require retrying.
-   Customer and local operator generation share the conservative two-request
-   per-minute allowance; rejection shows the server/provider retry time and
-   requires a manual retry. Customer mockups use separate event/configuration
-   endpoints; the guarded local operator workflow below is unchanged.
-   Exact production PNG sources use one-hour private signed Storage URLs under
-   `customer-mockup-sources`, separate from paid artifacts. Completion, failure,
-   shutdown and a one-hour timer remove sources; authenticated maintenance
-   removes expired leftovers after a restart in bounded batches.
+   Printful product mockup at 1000 px. Opening an artwork preview never starts
+   generation. The shipping dialog and local operator use the same browser
+   client and durable Postgres queue. Completed image links and pending job IDs
+   (no artwork or image bytes) are cached in browser localStorage for up to
+   12 hours. Returning to a pending preview resumes its saved job; a temporarily
+   interrupted application POST reuses its command ID. Broken cached images
+   require another explicit click.
+   The queue shares a conservative dispatch allowance across processes using
+   the same Printful credentials/store, spaces creations at least 30.5 seconds
+   apart and honors provider cooldown headers. Rate limits and transient status
+   failures retry automatically. The page shows preparation, queue/cooldown and
+   generation progress. Known task IDs survive navigation and server restarts;
+   the worker resumes on startup. Operator jobs resume only with the explicit
+   local operator flag still enabled. At most 64 active jobs per provider scope
+   are admitted. Work has a 30-minute overall deadline, at most six consecutive
+   preparation/creation failures and at most two possibly accepted provider submissions.
+   Transient status failures keep polling the accepted task until that deadline.
+   An accepted
+   task that is still pending after ten minutes, or missing for three status
+   reads, gets one replacement attempt. Ambiguous submissions are recorded and
+   bounded: Printful does not document a create idempotency key or lookup by our
+   command ID, so a lost provider response can consume an extra generation slot.
+   Invalid requests, authentication failures and recognized daily quota
+   exhaustion stop with an explicit failure rather than retrying indefinitely.
+   Private one-hour PNG source URLs are minted at dispatch, not while queued.
+   Source keys are journaled before uploading. Failed deletion stays retryable;
+   abandoned accepted/ambiguous attempts retain their source until its expiry.
+   Both timestamped source prefixes also have an independent bounded maintenance
+   sweep after process crashes. Job metadata expires after 12 hours; mockup jobs
+   reference saved configurations and never create orders or paid artifacts.
    Each purchase has exactly one delivery address, with an independently
    selectable quantity for every design. Countries and state/province choices
    come directly from Printful; the server sends one Printful estimate containing all
@@ -887,14 +902,20 @@ are uploaded under a separate temporary prefix in the existing private Supabase
 Storage bucket and exposed to Printful through a one-hour signed HTTPS URL. The
 PNG avoids indefinitely pending provider tasks observed with SVG layers; only
 the temporary mockup copy differs from the frozen paid artifact's storage
-lifecycle. Sources are deleted as soon as the task
-completes or fails, on shutdown, or after the one-hour fallback timeout.
-Generated results are cached in memory for 12 hours so reopening the same
-design does not consume another generation request; restart the local process
-to clear that cache.
+lifecycle. Completed or explicitly failed tasks release their sources immediately.
+Pending work keeps its sources across shutdown; abandoned submissions retain them
+until the one-hour expiry. Failed deletions remain retryable, and the independent
+maintenance sweep discovers expired timestamped keys after crashes.
+Generated results and provider task IDs live in the shared durable queue for
+12 hours. The browser restores pending jobs across page reloads. **Neu erzeugen**
+creates a fresh explicit command; retries of that same command remain idempotent.
+The server resumes queued work after restart instead of losing the task IDs.
+Schema version 7 is required: apply the committed additive migration with the
+existing local operator command `npm run db:migrate` before restarting the app.
 
-The local gate enforces the lower Printful allowance of two creation requests
-per minute. Printful currently documents 2 requests/minute for new stores, 10
+The shared scheduler uses the lower Printful allowance of two creation requests
+per minute, including operator/customer work across processes. Cooldowns retry
+automatically; recognized daily exhaustion requires a later explicit request. Printful currently documents 2 requests/minute for new stores, 10
 for stores with at least USD 10 in fulfilled orders, and 20,000 generated files
 per environment per day. One valid variant/style/placement combination counts
 as one generated file. The command requires the existing `PRINTFUL_API_KEY`,

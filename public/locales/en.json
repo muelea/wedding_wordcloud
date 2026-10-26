@@ -1,4 +1,13 @@
 {
+  "Das tägliche Printful-Limit ist erreicht. Bitte versucht es morgen erneut.": "The daily Printful limit has been reached. Please try again tomorrow.",
+  "Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.": "Printful is taking unusually long. Please try again.",
+  "Printful ist ausgelastet. Neuer Versuch in {{seconds}} Sekunden…": "Printful is busy. Retrying in {{seconds}} seconds…",
+  "Die Vorschau wird in {{seconds}} Sekunden erneut versucht…": "Retrying the preview in {{seconds}} seconds…",
+  "Das Druckdesign wird sicher für Printful vorbereitet…": "Preparing the print design securely for Printful…",
+  "Die Verbindung wurde unterbrochen. Die Vorschau wird automatisch erneut versucht…": "The connection was interrupted. The preview will retry automatically…",
+  "Die Produktvorschau wartet auf einen freien Platz…": "The product preview is waiting for an available slot…",
+  "Printful erzeugt das Mockup. Das dauert meist einige Sekunden…": "Printful is generating the mockup. This usually takes a few seconds…",
+  "Neu erzeugen": "Regenerate",
   "Tippe unten ein Wort ein und wähle „Hinzufügen“. Es erscheint sofort bei allen.": "Enter a word below and choose “Add”. It appears instantly for everyone.",
   "Gestaltet mit euren Wörtern ein persönliches Andenken. Der Button wird aktiv, sobald die Wolke Wörter enthält.": "Create a personal keepsake with your words. This button becomes available once the cloud contains words.",
   "Startübersicht": "Start overview",

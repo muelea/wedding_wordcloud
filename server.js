@@ -453,6 +453,7 @@ async function initialize() {
 
 async function start() {
   await initialize();
+  printfulMockups.start();
   server.listen(PORT, () => {
     const base = getBaseUrl(null, PORT);
     if (process.env.NODE_ENV === 'production') {

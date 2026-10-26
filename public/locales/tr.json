@@ -1,4 +1,13 @@
 {
+  "Das tägliche Printful-Limit ist erreicht. Bitte versucht es morgen erneut.": "Günlük Printful sınırına ulaşıldı. Lütfen yarın tekrar deneyin.",
+  "Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.": "Printful işlemi normalden uzun sürüyor. Lütfen tekrar deneyin.",
+  "Printful ist ausgelastet. Neuer Versuch in {{seconds}} Sekunden…": "Printful meşgul. {{seconds}} saniye sonra yeniden denenecek…",
+  "Die Vorschau wird in {{seconds}} Sekunden erneut versucht…": "Önizleme {{seconds}} saniye sonra yeniden denenecek…",
+  "Das Druckdesign wird sicher für Printful vorbereitet…": "Baskı tasarımı Printful için güvenli bir şekilde hazırlanıyor…",
+  "Die Verbindung wurde unterbrochen. Die Vorschau wird automatisch erneut versucht…": "Bağlantı kesildi. Önizleme otomatik olarak yeniden denenecek…",
+  "Die Produktvorschau wartet auf einen freien Platz…": "Ürün önizlemesi uygun bir sıra bekliyor…",
+  "Printful erzeugt das Mockup. Das dauert meist einige Sekunden…": "Printful ürün görselini oluşturuyor. Bu işlem genellikle birkaç saniye sürer…",
+  "Neu erzeugen": "Yeniden oluştur",
   "Tippe unten ein Wort ein und wähle „Hinzufügen“. Es erscheint sofort bei allen.": "Aşağıya bir kelime yazıp “Ekle”yi seç. Anında herkesin ekranında görünür.",
   "Gestaltet mit euren Wörtern ein persönliches Andenken. Der Button wird aktiv, sobald die Wolke Wörter enthält.": "Kelimelerinizle kişisel bir hatıra oluşturun. Bulutta kelimeler olduğunda bu düğme etkinleşir.",
   "Startübersicht": "Başlangıç ekranı",

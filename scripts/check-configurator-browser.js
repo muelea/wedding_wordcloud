@@ -10,7 +10,7 @@ const { ASSET_BASE } = require('../public/js/emoji-catalog');
 const { makeEmojiArtworkRouter } = require('../src/routes/emojiArtwork');
 const FIXTURE_SLUG = '-_AbCdEf0123456789xyZQ';
 
-function createFixture({ words = [['test', 1]], directDesign = false, review = false } = {}) {
+function createFixture({ words = [['test', 1]], directDesign = false, review = false, mockups = false } = {}) {
   const app = express();
   const root = path.join(__dirname, '..');
   const configurations = new Map();
@@ -81,7 +81,7 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
         backHref: directDesign ? '/' : `/e/${FIXTURE_SLUG}`,
         backLabel: directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
         mobileMenu: true, mobileBackId: 'mobile-back-link', cartButton: true },
-      pageData: { directDesign },
+      pageData: { directDesign, printfulMockupTools: mockups },
     }).catch(next);
   });
   app.get(`/api/events/${FIXTURE_SLUG}/configurator`, (req, res) => res.json({
@@ -108,6 +108,33 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
     if (!configuration) return res.status(404).json({ error: 'not_found' });
     res.json(configuration);
   });
+  if (mockups) {
+    // Explicit browser-only simulation. No provider, Storage or database calls.
+    const jobs = new Map(), commands = new Map();
+    const create = (req, res) => {
+      const key = `${req.params.id}:${req.body.requestId}`;
+      let id = commands.get(key);
+      if (!id) {
+        id = require('node:crypto').randomBytes(18).toString('base64url');
+        commands.set(key, id); jobs.set(id, { createdAt: Date.now() });
+      }
+      res.status(202).json({ jobId: id, status: 'queued' });
+    };
+    const status = (req, res) => {
+      const job = jobs.get(req.params.jobId);
+      if (!job) return res.sendStatus(404);
+      const remaining = Math.ceil((job.createdAt + 30000 - Date.now()) / 1000);
+      res.json({ jobId: req.params.jobId, status: remaining > 0 ? 'queued' : 'completed',
+        retryAfter: Math.max(0, remaining), expiresAt: Date.now() + 3600000,
+        mockupWidthPx: 1000, mockups: remaining > 0 ? [] : [{
+          url: 'https://www.printful.com/static/images/layout/printful-logo.png',
+        }] });
+    };
+    app.post(`/api/events/${FIXTURE_SLUG}/configurations/:id/mockups`, create);
+    app.get(`/api/events/${FIXTURE_SLUG}/configurations/:id/mockups/:jobId`, status);
+    app.post(`/api/operator/printful-mockups/events/${FIXTURE_SLUG}/configurations/:id`, create);
+    app.get('/api/operator/printful-mockups/:jobId', status);
+  }
   app.get(`/e/${FIXTURE_SLUG}/shipping`, (req, res, next) => renderPage(req, res, 'shipping', {
     eventLocale: 'en', header: { variant: 'back', backHref: `/e/${FIXTURE_SLUG}/configure`,
       backLabel: 'Zurück zum Design', mobileMenu: true },
@@ -166,6 +193,7 @@ if (require.main === module) {
       ? { words: require('../marketing/clouds/classic-wedding.json').words.map(({ word, count }) => [word, count]) }
     : process.argv.includes('--layout')
       ? { words: require('../test/support/area-layout-cases').SCREENSHOT_WORDS } : {};
+  options.mockups = process.argv.includes('--mockups');
   const server = createFixture(options).listen(0, '127.0.0.1', () => {
     console.log(`Configurator: http://127.0.0.1:${server.address().port}/e/${FIXTURE_SLUG}/configure?lang=en`);
     if (options.directDesign) console.log(`Direct design Home: http://127.0.0.1:${server.address().port}/?lang=de`);

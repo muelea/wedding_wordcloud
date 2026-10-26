@@ -1,4 +1,13 @@
 {
+  "Das tägliche Printful-Limit ist erreicht. Bitte versucht es morgen erneut.": "La limite quotidienne de Printful est atteinte. Réessayez demain.",
+  "Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.": "Printful prend plus de temps que prévu. Réessayez.",
+  "Printful ist ausgelastet. Neuer Versuch in {{seconds}} Sekunden…": "Printful est occupé. Nouvelle tentative dans {{seconds}} secondes…",
+  "Die Vorschau wird in {{seconds}} Sekunden erneut versucht…": "Nouvelle tentative de l’aperçu dans {{seconds}} secondes…",
+  "Das Druckdesign wird sicher für Printful vorbereitet…": "Préparation sécurisée du motif à imprimer pour Printful…",
+  "Die Verbindung wurde unterbrochen. Die Vorschau wird automatisch erneut versucht…": "La connexion a été interrompue. L’aperçu sera réessayé automatiquement…",
+  "Die Produktvorschau wartet auf einen freien Platz…": "L’aperçu du produit attend une place disponible…",
+  "Printful erzeugt das Mockup. Das dauert meist einige Sekunden…": "Printful génère le mockup. Cela prend généralement quelques secondes…",
+  "Neu erzeugen": "Générer à nouveau",
   "Tippe unten ein Wort ein und wähle „Hinzufügen“. Es erscheint sofort bei allen.": "Saisissez un mot ci-dessous et choisissez « Ajouter ». Il apparaît instantanément pour tout le monde.",
   "Gestaltet mit euren Wörtern ein persönliches Andenken. Der Button wird aktiv, sobald die Wolke Wörter enthält.": "Créez un souvenir personnalisé avec vos mots. Ce bouton devient actif dès que le nuage contient des mots.",
   "Startübersicht": "Vue de départ",
