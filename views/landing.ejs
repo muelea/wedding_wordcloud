@@ -69,6 +69,13 @@
     /* ── Nav ── */
     .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,253,250,.82); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid transparent; box-shadow: 0 0 0 rgba(64,15,38,0); transition: background .35s ease, border-color .35s ease, box-shadow .35s ease; }
     html:not(.intro-fade) #site-header.ww-site-header { background: var(--paper) !important; }
+    html.intro-fade #site-header.ww-site-header {
+      background: transparent !important;
+      border-bottom-color: transparent !important;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
     /* Header stays fully transparent over the intro video; legibility comes
        from lightening the logo/text themselves instead of a backing wash. */
     html.intro-fade .brand,
@@ -219,28 +226,34 @@
     .trust span.copy { color: var(--muted); font-size: .8rem; }
 
     /* ── Full-screen intro ── */
-    /* intro-lock blocks scrolling for the intro's *entire* life, including
-       the fade-out: it's only lifted once the crossfade fully finishes, not
-       the instant it starts. Otherwise leftover wheel/touch momentum from
-       the gesture that triggered dismissal keeps scrolling the page while
-       the fade is still playing, and visitors land past the hero instead of
-       on it. intro-fade is the separate, shorter-lived class that drives the
-       visuals (header colors, main opacity) and is removed immediately on
-       dismissal, in parallel with the video's own opacity fade. */
+    /* Lock document scrolling while revealing the homepage. Gesture distance
+       first moves the page over the video; any excess continues into native
+       page scrolling immediately. Automatic playback uses a timed fade. */
     html.intro-lock { overflow: hidden; }
-    main { transition: opacity 1.2s ease; }
+    main { transition: opacity .35s ease; }
     html.intro-fade main { opacity: 0; }
+    html.intro-scroll-exit main { transition: opacity .24s ease-out, transform .24s cubic-bezier(.22,1,.36,1); }
+    html.intro-scroll-exit.intro-fade main { transform: translate3d(0, 20px, 0); }
+    #intro-overlay.scroll-exit { transition: opacity .42s ease-out, transform .42s cubic-bezier(.22,1,.36,1); will-change: opacity, transform; }
+    #intro-overlay.scroll-exit.fade-out { transform: translate3d(0, -32px, 0) scale(.985); }
+    /* Words arrive over the film first; paper and the remaining content
+       follow later in the same reversible scroll gesture. */
+    html.intro-scrubbing main { position: relative; z-index: 41; background: rgba(255,253,250,var(--intro-paper-opacity, 0)); opacity: 1; transition: none; }
+    html.intro-scrubbing .demo-cloud { transform: translate3d(0, var(--intro-rise, 100vh), 0); will-change: transform; }
+    html.intro-scrubbing .hero-copy > *,
+    html.intro-scrubbing .demo-scene > :not(.demo-cloud):not(.demo-phone),
+    html.intro-scrubbing main > :not(.hero) { opacity: var(--intro-content-opacity, 0); }
+    html.intro-scrubbing .word-demo .demo-phone { opacity: 0 !important; pointer-events: none; }
+    html.intro-scrubbing .word-demo .demo-phone.is-first-composer { opacity: var(--intro-composer-opacity, 0) !important; }
+    html.intro-scrubbing #intro-overlay { opacity: var(--intro-film-opacity, 1); transition: none; }
+    html.intro-scrubbing #intro-scroll-cue { opacity: var(--intro-film-opacity, 1); }
     /* Sits below the sticky header's z-index (50) on purpose, so the nav
        (and its language switcher / CTA) stay usable while the intro plays.
-       The overlay's own background is already the page's paper color, so
-       dismissal is a direct video opacity fade: the last frame (the
-       "Wolkenworte – for the people you love" title card) simply grows
-       more and more transparent, dissolving straight into the site's real
-       background instead of onto an intermediate color that itself shifts. */
-    #intro-overlay { position: fixed; inset: 0; z-index: 40; background-color: var(--paper); background-image: url('<%= asset('/assets/video/teaser-poster.jpg') %>'); background-position: center; background-size: cover; display: flex; align-items: center; justify-content: center; }
-    #intro-overlay.fade-out { pointer-events: none; }
-    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; transition: opacity 1.2s ease; }
-    #intro-overlay.fade-out #intro-video { opacity: 0; }
+       Fade the entire layer, including its loading poster, into paper first.
+       Reveal the homepage only after this layer is gone to avoid ghosting. */
+    #intro-overlay { position: fixed; inset: 0; z-index: 40; background-color: var(--paper); background-image: url('<%= asset('/assets/video/teaser-poster.jpg') %>'); background-position: center; background-size: cover; display: flex; align-items: center; justify-content: center; transition: opacity 1.2s ease; }
+    #intro-overlay.fade-out { opacity: 0; pointer-events: none; }
+    #intro-video { width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; }
     #intro-scroll-cue { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #fff; cursor: pointer; transition: opacity .3s ease; }
     #intro-overlay.fade-out #intro-scroll-cue { opacity: 0; }
     #intro-scroll-cue svg { width: 22px; height: 22px; animation: scroll-cue-bounce 1.8s ease-in-out infinite; }
@@ -1092,36 +1105,141 @@
 
       var introVideo = document.getElementById('intro-video');
       var scrollCue = document.getElementById('intro-scroll-cue');
+      var root = document.documentElement;
+      var progress = 0, scrubbing = false, completed = false;
+      var distance = Math.max(1, window.innerHeight);
+      var frame = null, touching = false;
 
-      function finishIntro() {
-        if (overlay.classList.contains('fade-out')) return;
-        overlay.classList.add('fade-out');
-        document.documentElement.classList.remove('intro-fade');
-        var header = document.getElementById('site-header');
-        if (header) header.classList.add('intro-finished');
-        window.removeEventListener('wheel', finishIntro);
-        window.removeEventListener('touchmove', finishIntro);
+      function paintProgress() {
+        frame = null;
+        root.style.setProperty('--intro-rise', ((1 - progress) * distance) + 'px');
+        var paper = Math.max(0, Math.min(1, (progress - .35) / .65));
+        root.style.setProperty('--intro-film-opacity', String(1 - paper));
+        root.style.setProperty('--intro-paper-opacity', String(paper));
+        root.style.setProperty('--intro-content-opacity', String(Math.max(0, (progress - .6) / .4)));
+        root.style.setProperty('--intro-composer-opacity', String(Math.max(0, (progress - .9) / .1)));
+      }
+      function cleanupScroll() {
+        window.removeEventListener('wheel', onIntroWheel);
+        window.removeEventListener('touchstart', onIntroTouchStart);
+        window.removeEventListener('touchmove', onIntroTouchMove);
+        window.removeEventListener('touchend', onIntroTouchEnd);
+        window.removeEventListener('touchcancel', onIntroTouchEnd);
         window.removeEventListener('keydown', onIntroKeydown);
-        window.setTimeout(function () {
-          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-          document.documentElement.classList.remove('intro-lock');
-        }, 1250);
+      }
+      function releaseScroll() {
+        cleanupScroll();
+        root.classList.remove('intro-lock');
+      }
+      function continuePage(delta) {
+        if (delta) window.scrollBy({ top: delta, left: 0, behavior: 'instant' });
+      }
+      function moveIntro(delta) {
+        if (completed) { continuePage(delta); return; }
+        if (!scrubbing) {
+          if (delta <= 0 || overlay.classList.contains('fade-out')) return;
+          distance = Math.max(1, window.innerHeight);
+          scrubbing = true;
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+          root.classList.add('intro-scrubbing');
+        }
+        var remaining = (1 - progress) * distance;
+        progress = Math.max(0, Math.min(1, progress + delta / distance));
+        if (frame === null) frame = window.requestAnimationFrame(paintProgress);
+        if (progress === 1) {
+          completed = true;
+          if (frame !== null) window.cancelAnimationFrame(frame);
+          paintProgress();
+          overlay.remove();
+          root.classList.remove('intro-fade', 'intro-scrubbing');
+          root.style.removeProperty('--intro-rise');
+          root.style.removeProperty('--intro-film-opacity');
+          root.style.removeProperty('--intro-paper-opacity');
+          root.style.removeProperty('--intro-content-opacity');
+          root.style.removeProperty('--intro-composer-opacity');
+          // Hand the same gesture straight to the document. Only the part
+          // beyond the reveal distance scrolls the page; nothing is replayed.
+          root.classList.remove('intro-lock');
+          continuePage(Math.max(0, delta - remaining));
+          if (!touching) releaseScroll();
+        }
       }
 
+      function finishIntro(event) {
+        if (scrubbing || completed || overlay.classList.contains('fade-out')) return;
+        var interactive = event && ['wheel', 'touchmove', 'click', 'keydown'].indexOf(event.type) !== -1;
+        if (interactive) {
+          document.documentElement.classList.add('intro-scroll-exit');
+          overlay.classList.add('scroll-exit');
+        }
+        overlay.classList.add('fade-out');
+        var header = document.getElementById('site-header');
+        if (header) header.classList.add('intro-finished');
+        cleanupScroll();
+        window.setTimeout(function () {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          document.documentElement.classList.remove('intro-fade');
+          window.setTimeout(function () {
+            document.documentElement.classList.remove('intro-lock', 'intro-scroll-exit');
+          }, interactive ? 240 : 350);
+        }, interactive ? 420 : 1250);
+      }
+
+      function onIntroWheel(event) {
+        if (event.ctrlKey) return;
+        event.preventDefault();
+        var delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? distance : 1);
+        moveIntro(delta);
+      }
+      var touchStartY = null;
+      function onIntroTouchStart(event) {
+        touching = event.touches.length === 1;
+        touchStartY = touching ? event.touches[0].clientY : null;
+      }
+      function onIntroTouchMove(event) {
+        if (touchStartY === null || event.touches.length !== 1) return;
+        var nextY = event.touches[0].clientY;
+        var delta = touchStartY - nextY;
+        if (!scrubbing && !completed && delta < 12) return;
+        event.preventDefault();
+        touchStartY = nextY;
+        moveIntro(delta);
+      }
+      function onIntroTouchEnd(event) {
+        if (event.touches.length) return;
+        touching = false;
+        touchStartY = null;
+        if (completed) releaseScroll();
+      }
       function onIntroKeydown(event) {
         if (['ArrowDown', 'PageDown', ' ', 'End'].indexOf(event.key) !== -1) {
           event.preventDefault();
-          finishIntro();
+          if (scrubbing || completed) moveIntro(distance * .5);
+          else finishIntro(event);
         }
       }
 
       if (introVideo) {
+        // Dissolve while the final title card is still playing, before a
+        // browser can replace the ended video with its poster/blank surface.
+        function checkOutro() {
+          if (Number.isFinite(introVideo.duration) && introVideo.duration > 1.5 &&
+              introVideo.currentTime >= introVideo.duration - 1.5) finishIntro();
+        }
+        introVideo.addEventListener('timeupdate', checkOutro);
+        checkOutro();
         introVideo.addEventListener('ended', finishIntro);
         introVideo.addEventListener('error', finishIntro);
       }
-      if (scrollCue) scrollCue.addEventListener('click', finishIntro);
-      window.addEventListener('wheel', finishIntro, { passive: true });
-      window.addEventListener('touchmove', finishIntro, { passive: true });
+      if (scrollCue) scrollCue.addEventListener('click', function (event) {
+        if (scrubbing) moveIntro(distance);
+        else finishIntro(event);
+      });
+      window.addEventListener('wheel', onIntroWheel, { passive: false });
+      window.addEventListener('touchstart', onIntroTouchStart, { passive: true });
+      window.addEventListener('touchmove', onIntroTouchMove, { passive: false });
+      window.addEventListener('touchend', onIntroTouchEnd, { passive: true });
+      window.addEventListener('touchcancel', onIntroTouchEnd, { passive: true });
       window.addEventListener('keydown', onIntroKeydown);
     })();
   </script>
