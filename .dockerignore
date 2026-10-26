@@ -11,4 +11,5 @@ supabase
 .github
 .DS_Store
 coverage
+.local-ops
 *.sqlite*

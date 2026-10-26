@@ -119,10 +119,10 @@ function validateNativeDependencies(root = ROOT) {
   }
 }
 
-function ensureDependencies(root = ROOT, run = spawnSync) {
+function ensureDependencies(root = ROOT, run = spawnSync, { force = false } = {}) {
   const state = inspectDependencies(root);
 
-  if (state.problems.length) {
+  if (force || state.problems.length) {
     console.log('[local] Installiere die exakt in package-lock.json festgelegten Abhängigkeiten ...');
     const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
     const result = run(npmCommand, ['ci', '--no-audit', '--no-fund'], {
@@ -131,7 +131,7 @@ function ensureDependencies(root = ROOT, run = spawnSync) {
       stdio: 'inherit',
     });
     if (result.error) fail(`npm ci konnte nicht gestartet werden: ${result.error.message}`);
-    if (result.status !== 0) fail(`npm ci ist fehlgeschlagen (Exit ${result.status}).`);
+    if (result.status !== 0) fail(`npm ci ist fehlgeschlagen (Exit ${result.status}). Hilfe zu Node und nativen Grafikbibliotheken: docs/development-environment.md#native-grafikbibliotheken.`);
   }
 
   const installed = inspectDependencies(root, { requireStamp: false });

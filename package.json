@@ -9,6 +9,7 @@
     "npm": ">=10"
   },
   "scripts": {
+    "doctor": "node scripts/check-environment.js",
     "start": "node server.js",
     "dev": "node --watch server.js",
     "local:prepare": "node scripts/prepare-local.js",
@@ -35,7 +36,7 @@
     "ops:verify-prelive-empty": "node scripts/verify-prelive-empty.js",
     "ops:retry-fulfillment": "node scripts/retry-blocked-fulfillment.js",
     "ops:prelive-cleanup": "node scripts/prelive-cleanup.js",
-    "test": "NODE_ENV=test node --test test/*.test.js",
+    "test": "node scripts/test.js",
     "test:emoji:browser": "node scripts/check-emoji-browser.js",
     "test:journey:browser": "node scripts/check-journey-browser.js",
     "test:configurator:browser": "node scripts/check-configurator-browser.js"

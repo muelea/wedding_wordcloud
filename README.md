@@ -662,9 +662,10 @@ distort traffic-source reports.
 
 ## Current development status
 
-- The full product now runs on Postgres. During this customer-free build phase,
-  one clean baseline migration and a dedicated least-privileged runtime role
-  define the Supabase project.
+- The full product runs on Postgres with a dedicated least-privileged runtime
+  role. The hosted database contains existing purchases; preserve that data
+  and evolve the schema only through additive migrations. Automated tests run
+  separately in disposable local Postgres.
 - The hosted test environment is active at `https://wolkenworte.io` on one
   stateless Fly Machine in Frankfurt. `https://www.wolkenworte.io` redirects to
   that canonical apex origin. The Machine scales to zero while idle and
@@ -834,6 +835,14 @@ The shared server-rendered font partial gives every preload and matching
 needed above the fold; other decorative faces remain available on demand.
 
 ## Collaborator quick start
+
+The central macOS requirements and installation guide is
+[`docs/development-environment.md`](docs/development-environment.md). On a new
+Mac, start with `./setup.sh test --install`; it also works before Node or npm
+packages are installed and asks before each installation. Use `./setup.sh develop`
+or `./setup.sh deploy` for task-specific diagnosis without installing anything.
+Deployment diagnosis distinguishes tools, Fly login and app access; operator
+credentials and the existing release approvals remain separate requirements.
 
 The supported team-onboarding path is intentionally only three steps:
 
@@ -1031,9 +1040,9 @@ The shared development `.env` should contain runtime-scoped credentials only.
 Do not distribute `MIGRATION_DATABASE_URL`, Fly access tokens, Resend management
 keys or future live-payment credentials as routine developer configuration.
 The referenced development database must already have the committed migrations
-and runtime role applied. A collaborator who needs to run the complete
-database-backed test suite should receive a separately scoped
-`TEST_DATABASE_URL` whose role may create and remove isolated test schemas.
+and runtime role applied. Automated tests are completely separate: with Docker
+Desktop running, `npm test` automatically starts disposable local Postgres 17.
+No test database URL or hosted operator credentials are needed.
 
 To create an independent local database instead of using the shared development
 environment, install the Supabase CLI and Docker, copy `.env.example` to `.env`,
@@ -1090,7 +1099,7 @@ names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
 | `ALLOW_REMOTE_MARKETING_SEEDS` | local setting | One-time acknowledgement that the local marketing importer may write to the remote development `DATABASE_URL`; forbidden in the production web process. |
 | `DATABASE_CA_CERT_PATH` | shared setting | Path to the committed public Supabase CA used by local processes and the Fly container for verified hosted Postgres TLS. |
 | `MIGRATION_DATABASE_URL` | local operator only | Privileged connection for migrations and role provisioning; forbidden in the Fly web process. |
-| `TEST_DATABASE_URL` | optional test operator | Overrides the admin connection used to create isolated test schemas; otherwise tests fall back to migration/runtime URLs. |
+| `TEST_DATABASE_URL` | optional local test process override | Normally unset: tests start disposable local Postgres automatically. Explicit overrides must use a loopback host, explicit port and database `wolkenworte_test`; hosted URLs are rejected. Never loaded from `.env`, never falls back to application/migration URLs. |
 | `SUPABASE_URL` | local/operator/Fly runtime | Supabase API origin used by the backend for private Storage; browsers never call it directly. |
 | `SUPABASE_SECRET_KEY` | local/operator/Fly secret | Backend-only `sb_secret_...` key for private Storage operations; never exposed to clients. |
 | `SUPABASE_STORAGE_BUCKET` | shared setting | Private bucket containing frozen paid print artifacts. |
@@ -1535,9 +1544,9 @@ During active development, run the smallest test file or set of files that
 covers the behavior being changed. For example:
 
 ```bash
-NODE_ENV=test node --test test/responsive-ui.test.js
-NODE_ENV=test node --test test/configurator-toolbar.test.js test/configurator-workspace.test.js
-NODE_ENV=test node --test test/configurator-session.test.js test/configurator.test.js
+npm test -- test/responsive-ui.test.js
+npm test -- test/configurator-toolbar.test.js test/configurator-workspace.test.js
+npm test -- test/configurator-session.test.js test/configurator.test.js
 ```
 
 Copy-only and documentation-only changes normally need direct diff inspection
@@ -1553,9 +1562,24 @@ Run the complete suite for broad changes and release-ready checkpoints:
 npm test
 ```
 
-Runs `node --test test/*.test.js` with `NODE_ENV=test`, so local settings for
-manual sandbox emails cannot enable real delivery in the automated suite.
-This setting applies only to the test process, including during deployment.
+Requires a running local Docker daemon (Docker Desktop on macOS/Windows). The
+runner automatically uses the official `postgres:17-alpine` image, downloading
+it on first use if needed. It publishes Postgres only on `127.0.0.1` at a random
+port, generates disposable credentials and keeps all database files in tmpfs.
+One database serves the run, with at most four test files running concurrently.
+The container and all test data are removed on completion, failure or ordinary
+SIGINT/SIGTERM interruption. A force kill or machine crash can skip cleanup;
+test containers are labeled `io.wolkenworte.automated-test=true` for inspection.
+
+The runner invokes Node's test runner with `NODE_ENV=test`, removes documented
+hosted/provider credentials from its child environment and never loads `.env`.
+Integration helpers also provision local Postgres automatically for direct
+`NODE_ENV=test node --test test/<file>.test.js` invocations. Hosted database URLs
+and fallback to `DATABASE_URL`/`MIGRATION_DATABASE_URL` are blocked in both the
+helper and the application connection settings. Missing Docker reports a local
+setup problem and never contacts Supabase. Tests use email/provider mocks.
+This isolation applies only to tests, including tests run before deployment;
+normal application and operator database settings keep their existing meaning.
 The suite covers multi-tenant
 isolation, word submission/live-update, SVG layout/export correctness, the
 print-file export endpoint, immutable product configurations, event
@@ -1570,8 +1594,10 @@ database/process abuse ceilings,
 hosting health/cache/shutdown behavior, live safety gates and
 Stripe/Printful stub behavior, per-room broadcast coalescing, bounded
 connection-storm hydration, polling fallback and restart-safe reconnects. Each test
-server uses its own randomly named migrated Postgres schema and ephemeral port,
-then drops the schema in cleanup, so files remain isolated in parallel.
+server uses its own randomly named migrated local Postgres schema and ephemeral
+HTTP port. Migrations are atomic. Cleanup also covers initialization/listen
+failures, repeated close calls and a file-level fallback for forgotten cleanup,
+so files remain isolated in parallel.
 
 **The most important test is `test/isolation.test.js`** — it proves two
 concurrent events never leak words or theme changes into each other's
@@ -1688,6 +1714,38 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   rasterized and checked against the bucket limit when approved in the
   configurator, before a customer can pay. If an uploaded image would exceed
   the limit, the customer must reduce or remove images before saving.
+
+### Database verification for releases
+
+This policy applies to every deployment, including the final check immediately
+before release. The full functional suite always runs on disposable local
+Postgres with the committed application migrations. There is no exception for
+running that suite against the hosted application database. Separate test
+schemas still share the hosted instance's resources and do not prove that the
+real runtime role can use the actual application schema.
+
+1. Run the complete local suite and the image/font checks required by the
+   guarded release command for the exact candidate commit.
+2. Before deployment, check the real Supabase target with bounded read-only
+   transactions and the real restricted runtime role: target identity,
+   connectivity, applied migration versions, required tables/columns and
+   effective schema/table/sequence/function privileges. Compare the observed
+   state with the candidate and its approved pending additive migrations;
+   unexpected drift or missing privileges blocks release. Apply migrations
+   only through the existing approved release path and verify the resulting
+   schema before exposing the candidate. Use catalog/privilege queries and
+   harmless reads, never test schemas, write-and-rollback probes, fixture
+   inserts, test purchases or deletion of hosted business data.
+3. After deployment, check `/health/live`, `/health/ready` and representative
+   read-only application routes on the canonical public origin. Confirm the
+   deployed application can reach its database and serve normal reads. Use
+   the guarded command's existing failure/rearm behavior if verification fails.
+
+These requirements do not authorize a deployment or replace its exact-commit
+approvals. They also do not imply that every compatibility check is already
+automated: any missing checks must be added to the guarded local release
+command and reviewed before release, preserving its fail-fast ordering and
+maintenance protections. Do not reproduce the release sequence manually.
 
 ## Socket capacity qualification
 

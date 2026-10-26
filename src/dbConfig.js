@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 
-const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 const SCHEMA_RE = /^[a-z_][a-z0-9_]{0,62}$/;
 
 function parseDatabaseUrl(connectionString, label = 'DATABASE_URL') {
@@ -43,6 +43,10 @@ function connectionOptions(connectionString, {
   }
 
   const local = LOCAL_DATABASE_HOSTS.has(parsed.hostname);
+  if ((process.env.NODE_ENV === 'test' || process.env.NODE_TEST_CONTEXT) && (!local || parsed.pathname !== '/wolkenworte_test' ||
+      parsed.search || parsed.hash)) {
+    throw new Error('Automatische Tests dürfen nur lokales Postgres in wolkenworte_test verwenden.');
+  }
   const requestedSslMode = parsed.searchParams.get('sslmode');
   for (const key of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey']) {
     parsed.searchParams.delete(key);

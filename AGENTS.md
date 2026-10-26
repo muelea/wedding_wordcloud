@@ -25,7 +25,7 @@ scope, a failure or an unresolved concern justifies it.
 - If a focused check fails unexpectedly, the change crosses subsystem
   boundaries, or the impact cannot be determined confidently, expand to the
   neighboring test files and then to the full suite if uncertainty remains.
-- Run the complete `npm test` (`NODE_ENV=test node --test test/*.test.js`) only
+- Run the complete `npm test` (`node scripts/test.js`) only
   when the user explicitly requests it; before an explicitly requested
   release, deployment or merge-ready handoff; after broad or cross-cutting
   changes; after dependency, runtime configuration or database-schema changes;
@@ -33,8 +33,11 @@ scope, a failure or an unresolved concern justifies it.
   previously passing full suite after subsequent copy-only, documentation-only
   or isolated styling changes.
 - `npm run deploy:hosted` retains the complete suite as a mandatory fail-fast
-  release gate. Database-backed tests use isolated migrated Postgres schemas
-  plus ephemeral ports and clean them up afterward.
+  release gate. Database-backed tests automatically use disposable local Docker
+  Postgres, isolated migrated schemas and ephemeral ports. Use
+  `npm test -- test/<concern>.test.js` for focused checks. Never supply a hosted
+  test URL or restore fallback to the application/migration database. Docker
+  must be running; no manual test-database configuration is needed.
 
 The following high-risk mappings remain mandatory whenever the described
 behavior changes, even during focused iteration:
@@ -153,6 +156,15 @@ behavior changes, even during focused iteration:
 
 ## Conventions
 
+- Team workstation requirements and installation instructions live in
+  [`docs/development-environment.md`](docs/development-environment.md).
+  `./setup.sh [develop|test|deploy]` is the read-only environment check;
+  `--install` offers individual actions with explicit interactive consent.
+  Keep its shared checks in `scripts/check-environment.js` and the Node/macOS
+  bootstrap in `setup.sh` aligned with that document when adding requirements.
+  Do not bypass a missing tool, login or app permission by changing the target,
+  copying another person's credentials or weakening release guards. Environment
+  setup grants no deployment authorization and never performs a release.
 - Backend logic lives in `src/`, routes in `src/routes/`, server-rendered page
   templates in `views/`, static frontend assets in `public/`, and tests in
   `test/` (one `*.test.js` per concern, using
@@ -161,10 +173,9 @@ behavior changes, even during focused iteration:
   no TypeScript. Keep it that way unless explicitly asked to change it —
   the project is intentionally low-dependency/low-ops.
 - Postgres through one bounded `pg.Pool` is the production and test data layer.
-  Keep SQL behind `src/db.js` and keep callers async/await. While the app has no
-  customers, `supabase/migrations/20260831000000_wolkenworte_baseline.sql` is
-  the one clean schema baseline. Once customer data exists, never rewrite that
-  baseline: evolve it only through new ordered migration files. Do not add an
+  Keep SQL behind `src/db.js` and keep callers async/await. The hosted database
+  contains existing purchases: never rewrite the schema baseline or reset
+  commerce data. Evolve it only through new ordered migration files. Do not add an
   ORM or a SQLite test substitute.
 - German is the source language throughout (`views/*.ejs` copy, form
   labels, error messages). Keep new user-facing strings in German unless
@@ -184,6 +195,21 @@ behavior changes, even during focused iteration:
 The repository is GitHub `muelea/wedding_wordcloud`, `main` branch. Pushing
 `main` is not a deployment action. GitHub is source control only: there is no
 repository deployment workflow and no deployment credentials belong there.
+
+Every deployment must follow the database verification policy in
+[`README.md` — Database verification for releases](README.md#database-verification-for-releases):
+the complete functional suite runs only on disposable local Postgres, including
+the final pre-deployment run. Never restore a hosted test URL, create test
+schemas in the application Supabase project or make a temporary exception for
+release testing. Before deployment, perform bounded read-only checks of the
+actual target's migration state, required schema and least-privileged runtime
+access; after deployment, verify readiness and representative read-only routes.
+Account for approved pending additive migrations without treating unexpected
+schema drift as safe. Failed compatibility checks block release. Add missing
+automation to the guarded local release command for review; do not work around
+it with a hosted integration suite or ad-hoc deployment sequence. Tests never
+create purchases or delete business data in the hosted application database.
+
 The only supported hosted-test release path is the guarded local
 `npm run deploy:hosted` command from an explicitly approved maintainer
 workstation. Do not reproduce its release sequence in ad-hoc commands or a

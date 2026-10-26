@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { assertGitReleaseCandidate, validateOperatorEnvironment } = require('./deploy-hosted');
+const { ensureEnvironment, assertFlyAccess } = require('./check-environment');
 const authSecrets = require('../src/authSecrets');
 
 const ROOT = path.join(__dirname, '..');
@@ -550,8 +551,9 @@ function stageDesignAccountSettings(values,spawn=spawnSync) {
   if(imported.error||imported.status!==0) fail('Account settings could not be staged; no deployment started.');
 }
 
-function main() {
+async function main() {
   const options = parseOptions();
+  await ensureEnvironment('deploy', { offerInstall: true, access: false });
   loadLocalEnvironment();
   validateConfigFamily();
   validateLocalCutoverEnvironment();
@@ -559,7 +561,7 @@ function main() {
   assertPhaseConfirmation(options, commit);
   const accountSettings=options.enableDesignAccounts?designAccountSettings():null;
 
-  runCapture('flyctl', ['auth', 'whoami']);
+  assertFlyAccess();
   runCapture('docker', ['info', '--format', '{{.ServerVersion}}']);
   verifyCertificates();
   const currentPosture = detectMachinePosture(currentMachineJson());
@@ -651,12 +653,10 @@ function main() {
 }
 
 if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
+  main().catch(error => {
     console.error(`\n[cutover:production] aborted: ${error.message}`);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = {

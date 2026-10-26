@@ -1,23 +1,29 @@
 'use strict';
 
+require('./support/test-environment');
+
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { Pool } = require('pg');
+const { after } = require('node:test');
+const { startLocalPostgres, validateTestDatabaseUrl } = require('./support/local-postgres');
 
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-
-// Integration fixtures use the documented pricing defaults, independent of
-// an operator's local development settings. Individual tests may override them.
-Object.assign(process.env, {
-  SHOP_PRODUCT_MARKUP_PERCENT: '50',
-  SHOP_PAYMENT_RESERVE_PERCENT: '3.69',
-  SHOP_PAYMENT_RESERVE_FIXED_CENTS: '49',
+const explicitTestUrl = process.env.TEST_DATABASE_URL?.trim();
+if (explicitTestUrl) validateTestDatabaseUrl(explicitTestUrl);
+let localDatabase;
+let databasePromise;
+const openServers = new Set();
+async function testDatabaseUrl() {
+  if (explicitTestUrl) return explicitTestUrl;
+  // Direct node --test invocations also work without any database configuration.
+  databasePromise ||= startLocalPostgres().then(database => { localDatabase = database; return database.url; });
+  return databasePromise;
+}
+after(async () => {
+  try { await Promise.all([...openServers].map(close => close())); }
+  finally { if (localDatabase) await localDatabase.close(); }
 });
-
-const INITIAL_DATABASE_URL = process.env.TEST_DATABASE_URL ||
-  process.env.MIGRATION_DATABASE_URL ||
-  process.env.DATABASE_URL;
 const APPLICATION_MIGRATIONS = [
   '20260831000000_wolkenworte_baseline.sql',
   '20260901000000_generalize_event_naming.sql',
@@ -78,43 +84,60 @@ function clearApplicationModules() {
  * fresh random schema and applies the exact production application migration.
  */
 async function startTestServer({ host = '127.0.0.1' } = {}) {
-  if (!INITIAL_DATABASE_URL) {
-    throw new Error('Tests require TEST_DATABASE_URL, MIGRATION_DATABASE_URL or DATABASE_URL.');
-  }
+  const databaseUrl = validateTestDatabaseUrl(await testDatabaseUrl());
   const schema = `test_${process.pid}_${crypto.randomBytes(6).toString('hex')}`;
   const { connectionOptions } = require('../src/dbConfig');
-  const adminPool = new Pool(connectionOptions(INITIAL_DATABASE_URL, {
+  const adminPool = new Pool(connectionOptions(databaseUrl, {
     schema: 'public',
     applicationName: `wolkenworte-test-setup-${process.pid}`,
     requireDirect: false,
   }));
-  const setupClient = await adminPool.connect();
+  let server, io, database, shutdown, closing;
+  const close = () => {
+    closing ||= (async () => {
+      try {
+        if (io) await new Promise(resolve => io.close(resolve));
+        if (server?.listening) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      } finally {
+        try { if (database) await database.closePool(); }
+        finally {
+          try { await adminPool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); }
+          finally { await adminPool.end(); openServers.delete(close); }
+        }
+      }
+    })();
+    return closing;
+  };
+  openServers.add(close);
   try {
-    await setupClient.query(`CREATE SCHEMA "${schema}"`);
-    await setupClient.query(`SET search_path TO "${schema}", public`);
-    for (const migration of APPLICATION_MIGRATIONS) {
-      await setupClient.query(fs.readFileSync(migration, 'utf8'));
-    }
-  } catch (error) {
-    try { await setupClient.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } catch { /* ignore */ }
-    throw error;
-  } finally {
-    setupClient.release();
-  }
+    const setupClient = await adminPool.connect();
+    try {
+      // Migrations either all commit or none do; interrupted setup cannot leave
+      // a partly migrated schema behind.
+      await setupClient.query('BEGIN');
+      await setupClient.query(`CREATE SCHEMA "${schema}"`);
+      await setupClient.query(`SET LOCAL search_path TO "${schema}", public`);
+      for (const migration of APPLICATION_MIGRATIONS) {
+        await setupClient.query(fs.readFileSync(migration, 'utf8'));
+      }
+      await setupClient.query('COMMIT');
+    } catch (error) {
+      await setupClient.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally { setupClient.release(); }
 
-  process.env.NODE_ENV = 'test';
-  process.env.DATABASE_URL = INITIAL_DATABASE_URL;
-  process.env.DATABASE_SCHEMA = schema;
-  process.env.DATABASE_APPLICATION_NAME = `wolkenworte-test-${process.pid}`;
-  process.env.RATE_LIMIT_HMAC_SECRET = 'test-rate-limit-secret-that-is-long-enough';
-  process.env.MAINTENANCE_SECRET = 'test-maintenance-secret-that-is-long-enough';
-  clearApplicationModules();
+    process.env.NODE_ENV = 'test';
+    process.env.DATABASE_URL = databaseUrl;
+    process.env.DATABASE_SCHEMA = schema;
+    process.env.DATABASE_APPLICATION_NAME = `wolkenworte-test-${process.pid}`;
+    process.env.RATE_LIMIT_HMAC_SECRET = 'test-rate-limit-secret-that-is-long-enough';
+    process.env.MAINTENANCE_SECRET = 'test-maintenance-secret-that-is-long-enough';
+    clearApplicationModules();
 
-  const { server, io, initialize, shutdown } = require('../server');
-  const database = require('../src/db');
-  await initialize();
-
-  try {
+    const app = require('../server');
+    ({ server, io, shutdown } = app);
+    database = require('../src/db');
+    await app.initialize();
     await new Promise((resolve, reject) => {
       const onListenError = (error) => reject(error);
       server.once('error', onListenError);
@@ -124,9 +147,7 @@ async function startTestServer({ host = '127.0.0.1' } = {}) {
       });
     });
   } catch (error) {
-    await database.closePool();
-    await adminPool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-    await adminPool.end();
+    await close().catch(cleanupError => { error.cause ||= cleanupError; });
     throw error;
   }
 
@@ -141,15 +162,7 @@ async function startTestServer({ host = '127.0.0.1' } = {}) {
     async query(sql, params = []) {
       return database.getPool().query(sql, params);
     },
-    async close() {
-      if (server.listening) await new Promise((resolve) => io.close(() => resolve()));
-      if (server.listening) {
-        await new Promise((resolve) => server.close(() => resolve()));
-      }
-      await database.closePool();
-      await adminPool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-      await adminPool.end();
-    },
+    close,
   };
 }
 

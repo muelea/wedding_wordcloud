@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { ensureEnvironment, assertFlyAccess } = require('./check-environment');
 
 const ROOT = path.join(__dirname, '..');
 const APP_NAME = 'wolkenworte';
@@ -207,16 +208,17 @@ function loadLocalEnvironment() {
   if (loaded.error) fail(`Die lokale .env konnte nicht geladen werden: ${loaded.error.message}`);
 }
 
-function main() {
+async function main() {
   if (process.argv.length > 2) fail('Dieser Befehl akzeptiert keine Argumente; Ziel und Sicherheitsmodus sind fest vorgegeben.');
 
+  await ensureEnvironment('deploy', { offerInstall: true, access: false });
   console.log(`[deploy:hosted] Prüfe den lokalen Release-Kandidaten für ${APP_NAME}.`);
   loadLocalEnvironment();
   validateOperatorEnvironment();
   validateHostedConfig(fs.readFileSync(path.join(ROOT, 'fly.toml'), 'utf8'));
   const commit = assertGitReleaseCandidate();
 
-  runCapture('flyctl', ['auth', 'whoami']);
+  assertFlyAccess();
   validateFlySecretBoundary(runCapture('flyctl', ['secrets', 'list', '--app', APP_NAME, '--json']));
   runCapture('docker', ['info', '--format', '{{.ServerVersion}}']);
   console.log(`[deploy:hosted] Vorprüfung erfolgreich; Release-Commit ${commit.slice(0, 12)}.`);
@@ -235,12 +237,10 @@ function main() {
 }
 
 if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
+  main().catch(error => {
     console.error(`\n[deploy:hosted] Abbruch: ${error.message}`);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = {
