@@ -117,6 +117,23 @@
     const results = [];
     const check = (name, pass) => results.push({ name, pass: Boolean(pass) });
     const frame = async () => { await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); };
+    const decodeCurrentPhoto = async card => {
+      // Reference photos load lazily. A ready 3D preview can also replace the
+      // reference with a design thumbnail while an earlier decode is pending.
+      card.photoButton.scrollIntoView({ block: 'center' });
+      const deadline = performance.now() + 15000;
+      while (performance.now() < deadline) {
+        await frame();
+        const source = card.photo.getAttribute('src');
+        try {
+          await card.photo.decode();
+          if (source === card.photo.getAttribute('src') && card.photo.naturalWidth > 0) return;
+        } catch (error) {
+          if (source === card.photo.getAttribute('src') && card.photo.complete && !card.photo.naturalWidth) throw error;
+        }
+      }
+      throw new Error('The current product thumbnail did not finish loading.');
+    };
     const fingerprint = designs => WolkenworteConfiguratorSession.designFingerprint({ designs }, true);
     try {
       if (!productGallery) throw new Error('Open this probe on a fresh gallery, before choosing a product.');
@@ -142,7 +159,7 @@
           if (variant.previewType === 'flat') check(variant.key + ': existing Printful asset is used',
             card.image.getAttribute('src') === currentProductMockupAsset(card.view, card.surface));
           if (variant.productPhoto) {
-            await card.photo.decode();
+            await decodeCurrentPhoto(card);
             check(variant.key + ': the thumbnail matches the selected product and design',
               !card.photo.hidden && card.photo.naturalWidth > 0 &&
               card.photo.getAttribute('src') === (card.thumbnailUrl || variant.productPhoto));
