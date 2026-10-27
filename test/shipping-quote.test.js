@@ -175,6 +175,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
     shipmentCount: 1,
     shippingDetails: undefined,
     taxBehavior: undefined, pricingVersion: undefined, pricedItems: undefined,
+    analyticsItems: [],
     itemsCents: 2214,
     paymentReserveCents: 252,
     shippingCents: 620,

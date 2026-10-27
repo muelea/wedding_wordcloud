@@ -311,6 +311,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
     totalCents: quote.totalCents,
     shippingCents: Number(paidOrder.shipping_cents),
     netShippingCents: Number(paidOrder.shipping_cents),
+    analyticsItems: [],
     taxCents: Number(paidOrder.tax_cents),
     quantity: 2,
     shipmentCount: 1,
