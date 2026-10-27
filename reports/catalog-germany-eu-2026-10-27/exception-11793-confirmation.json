@@ -1,0 +1,82 @@
+{
+  "variantId": 11793,
+  "productKey": "framed-poster-11793",
+  "checkedAt": "2026-10-27T16:28:48.350Z",
+  "requests": [
+    {
+      "path": "/v2/catalog-variants/11793/availability?selling_region_name=germany",
+      "status": 200,
+      "at": "2026-10-27T16:28:48.724Z",
+      "response": {
+        "data": {
+          "catalog_variant_id": 11793,
+          "techniques": [
+            {
+              "technique": "digital",
+              "selling_regions": [
+                {
+                  "name": "germany",
+                  "availability": "not fulfillable",
+                  "placement_option_availability": []
+                }
+              ]
+            }
+          ],
+          "_links": {
+            "variant": {
+              "href": "https://api.printful.com/v2/catalog-variants/11793"
+            }
+          }
+        },
+        "extra": [],
+        "_links": {
+          "self": {
+            "href": "https://api.printful.com/v2/catalog-variants/11793/availability"
+          },
+          "variant": {
+            "href": "https://api.printful.com/v2/catalog-variants/11793"
+          }
+        },
+        "filter_settings": [
+          {
+            "name": "id",
+            "value": "11793"
+          },
+          {
+            "name": "selling_region_name",
+            "value": "germany"
+          }
+        ]
+      }
+    },
+    {
+      "path": "/orders/estimate-costs",
+      "status": 400,
+      "at": "2026-10-27T16:28:48.908Z",
+      "request": {
+        "shipping": "STANDARD",
+        "recipient": {
+          "name": "Wolkenworte Katalogpruefung",
+          "address1": "Musterstrasse 1",
+          "city": "Berlin",
+          "zip": "10115",
+          "country_code": "DE"
+        },
+        "items": [
+          {
+            "variant_id": 11793,
+            "quantity": 1
+          }
+        ]
+      },
+      "response": {
+        "code": 400,
+        "result": "Item 0: This product \"Enhanced Matte Paper Framed Poster (cm) (Oak / 61×91 cm)\" ships to Australia, New Zealand only and the current shipping address is outside of this region.",
+        "error": {
+          "reason": "BadRequest",
+          "message": "Item 0: This product \"Enhanced Matte Paper Framed Poster (cm) (Oak / 61×91 cm)\" ships to Australia, New Zealand only and the current shipping address is outside of this region."
+        }
+      }
+    }
+  ]
+}

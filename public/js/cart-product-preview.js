@@ -1,16 +1,20 @@
 (function (root, factory) {
   'use strict';
-  const api = factory();
+  const api = factory(typeof module === 'object' && module.exports
+    ? require('./product-photo-preview') : root.ProductPhotoPreview);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.WolkenworteCartProductPreview = api;
-})(typeof window === 'object' ? window : globalThis, function () {
+})(typeof window === 'object' ? window : globalThis, function (PhotoPreview) {
   'use strict';
 
   const thumbnails = new Map();
   let queue = Promise.resolve();
   const is3D = product => ['mug', '3d'].includes(product?.previewType);
+  const isPhoto = product => product?.previewType === 'photo';
   const photo = product => product?.productPhoto || product?.previewMockup?.assets?.default ||
     product?.previewMockup?.assets?.front || Object.values(product?.previewMockup?.assets || {})[0] || product?.thumbnail || '';
+  const photos = product => product?.productPhotos?.length ? product.productPhotos :
+    photo(product) ? [{ src: photo(product), label: 'Produktfoto' }] : [];
 
   function variant(product, i18n) {
     const size = product?.size || {};
@@ -75,6 +79,22 @@
     } catch (error) { viewer?.destroy(); throw error; }
   }
 
+  async function renderPhoto({ host, item, onStatus = () => {} }) {
+    const product = item.product;
+    const urls = item.printFileUrls || item.printPreviewUrls;
+    const source = await loadImage(host.ownerDocument, urls[product.printSurfaces[0].key]);
+    if (!host.isConnected) throw new Error('preview_closed');
+    const viewer = PhotoPreview.create({ host, product, onStatus,
+      drawTexture: (ctx, { printWidth, printHeight }) => ctx.drawImage(source, 0, 0, printWidth, printHeight),
+    });
+    try {
+      if (!await viewer.ready) throw new Error('preview_image_failed');
+      if (!host.isConnected) throw new Error('preview_closed');
+      viewer.resize();
+      return viewer;
+    } catch (error) { viewer.destroy(); throw error; }
+  }
+
   function createThumbnails({ document, item, i18n, onOpen }) {
     const group = document.createElement('div');
     group.className = 'cart-product-previews';
@@ -106,10 +126,11 @@
       group.append(button);
       return image;
     };
-    const designImage = add('overview', 'Details & Vorschau', is3D(product) ? photo(product) :
+    const composed = is3D(product) || isPhoto(product);
+    const designImage = add('overview', 'Details & Vorschau', composed ? photo(product) :
       Object.values(item.printFileUrls || item.printPreviewUrls || {})[0] || item.printFileUrl || photo(product));
-    if (is3D(product)) {
-      const key = JSON.stringify([product.key, item.orientation, item.printPreviewUrls]);
+    if (composed) {
+      const key = JSON.stringify([product.key, item.orientation, item.printFileUrls || item.printPreviewUrls]);
       if (thumbnails.has(key)) designImage.src = thumbnails.get(key);
       else queue = queue.catch(() => {}).then(async () => {
         if (!group.isConnected || !group.getClientRects().length) return;
@@ -119,19 +140,20 @@
         document.body.append(host);
         let viewer;
         try {
-          viewer = await render3D({ host, item, window: document.defaultView });
+          const render = isPhoto(product) ? renderPhoto : render3D;
+          viewer = await render({ host, item, window: document.defaultView });
           if (!group.isConnected) return;
           viewer.render();
           const url = viewer.canvas.toDataURL('image/png');
           thumbnails.set(key, url);
           while (thumbnails.size > 32) thumbnails.delete(thumbnails.keys().next().value);
           designImage.src = url;
-        } catch { /* The approved artwork remains a usable preview on WebGL failure. */ }
+        } catch { /* Keep the matching reference photo if the local render fails. */ }
         finally { viewer?.destroy(); host.remove(); }
       });
     }
     return group;
   }
 
-  return Object.freeze({ is3D, photo, variant, configuration, render3D, createThumbnails });
+  return Object.freeze({ is3D, isPhoto, photo, photos, variant, configuration, render3D, renderPhoto, createThumbnails });
 });

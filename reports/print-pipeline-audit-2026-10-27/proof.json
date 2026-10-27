@@ -1,0 +1,12 @@
+{
+  "product": "white-glossy-mug-duo-11oz",
+  "dimensions": [
+    2700,
+    1050
+  ],
+  "fonts": 5,
+  "styleCombinationsPerFont": 16,
+  "elements": 83,
+  "bytes": 181600,
+  "sha256": "915de808404de34a65072f2456750ca8f501765076c37ecd3895f72107471214"
+}

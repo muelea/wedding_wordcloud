@@ -10,12 +10,16 @@
       "productId": 456,
       "garment": "t-shirt",
       "sku": "sttu169",
-      "name": "Bio-Baumwoll-T-Shirt",
+      "name": "Unisex-Bio-Baumwoll-T-Shirt",
       "unit": "T-Shirt",
       "plural": "T-Shirts",
       "description": "Unisex-T-Shirt aus weichem Bio-Baumwoll-Jersey mit klassischem Rundhalsausschnitt.",
       "fabricWeight": 180,
       "printTop": 12,
+      "previewLayer": {
+        "src": "/assets/product-mockups/sttu169-front-layer.png",
+        "sha256": "f4d2ca674600292aa2e543c7ea904c6e067a33e45cfd9cc4509372f9c6852db4"
+      },
       "measurements": {
         "XS": {
           "height": 65,
@@ -261,14 +265,18 @@
       ],
       "photoSources": {
         "White": {
-          "url": "https://files.cdn.printful.com/products/456/11864_1792060543.jpg",
+          "url": "https://files.cdn.printful.com/m/Stanley_Stella_STTU755/medium/STTU169/ghost/front/05_sttu169_ghost_front_base_whitebg.png?v=1750080104",
           "localAsset": "/assets/product-mockups/sttu169-white.jpg",
-          "sha256": "8fb373219bc685b2b6de6043e31d3bd7ca9bb93bd1d36e150299759554eef5b0"
+          "sourceSha256": "f4d2ca674600292aa2e543c7ea904c6e067a33e45cfd9cc4509372f9c6852db4",
+          "backgroundColor": "#ffffff",
+          "sha256": "a4fae70a931ccfcf2af3a41fa71d3c7f0cb779a9b6eddf6bedbe715f5781e364"
         },
         "Black": {
-          "url": "https://files.cdn.printful.com/products/456/11869_1792060542.jpg",
+          "url": "https://files.cdn.printful.com/m/Stanley_Stella_STTU755/medium/STTU169/ghost/front/05_sttu169_ghost_front_base_whitebg.png?v=1750080103",
           "localAsset": "/assets/product-mockups/sttu169-black.jpg",
-          "sha256": "31d163fab7dac9e2dcdd78677f8b7ad0a790ce1153e487c37464c8ea9b446852"
+          "sourceSha256": "f4d2ca674600292aa2e543c7ea904c6e067a33e45cfd9cc4509372f9c6852db4",
+          "backgroundColor": "#111111",
+          "sha256": "48608b314c14fe72ccbcdaafb9c16ba0cbcfda3d6c0ee7a2c6e3737e65d01c21"
         }
       }
     },
@@ -276,12 +284,16 @@
       "productId": 493,
       "garment": "sweatshirt",
       "sku": "stsu178",
-      "name": "Bio-Baumwoll-Sweatshirt",
+      "name": "Unisex-Bio-Baumwoll-Sweatshirt",
       "unit": "Sweatshirt",
       "plural": "Sweatshirts",
       "description": "Unisex-Sweatshirt aus schwerer Bio-Baumwolle mit geripptem Rundhalsausschnitt und Bündchen.",
       "fabricWeight": 350,
       "printTop": 12,
+      "previewLayer": {
+        "src": "/assets/product-mockups/stsu178-front-layer.png",
+        "sha256": "5fae45a6e09ee2d916b543923090c1c81c1d3a2d8a82e1cc211e2f485830f7ed"
+      },
       "measurements": {
         "S": {
           "height": 68,
@@ -458,12 +470,16 @@
       "productId": 479,
       "garment": "hoodie",
       "sku": "stsu177",
-      "name": "Bio-Baumwoll-Hoodie",
+      "name": "Unisex-Bio-Baumwoll-Hoodie",
       "unit": "Hoodie",
       "plural": "Hoodies",
       "description": "Unisex-Hoodie aus schwerer Bio-Baumwolle mit doppellagiger Kapuze, Kordeln und Kängurutasche.",
       "fabricWeight": 350,
       "printTop": 10,
+      "previewLayer": {
+        "src": "/assets/product-mockups/stsu177-front-layer.png",
+        "sha256": "2a0022a36d078d7072cb35d2306a8dd890857f7a014a2a90cf84ff962b6cf282"
+      },
       "measurements": {
         "S": {
           "height": 71,
@@ -631,14 +647,18 @@
       ],
       "photoSources": {
         "White": {
-          "url": "https://files.cdn.printful.com/products/479/12403_1713330053.jpg",
+          "url": "https://files.cdn.printful.com/m/ss_cruiser_stsu822/medium/stsu177/ghost/front/05_stsu177_ghost_front_base_whitebg.png?v=1760699325",
           "localAsset": "/assets/product-mockups/stsu177-white.jpg",
-          "sha256": "e562158c6036e53985b5a26ae5ec4c473b7fb366da3180cb76790b7deebdc68a"
+          "sourceSha256": "2a0022a36d078d7072cb35d2306a8dd890857f7a014a2a90cf84ff962b6cf282",
+          "backgroundColor": "#ffffff",
+          "sha256": "54566bdf71aad6bba75197b504d8c088925f1b71245ccc1169e340742a046cc2"
         },
         "Black": {
-          "url": "https://files.cdn.printful.com/products/479/12373_1713330012.jpg",
+          "url": "https://files.cdn.printful.com/m/ss_cruiser_stsu822/medium/stsu177/ghost/front/05_stsu177_ghost_front_base_whitebg.png?v=1760699325",
           "localAsset": "/assets/product-mockups/stsu177-black.jpg",
-          "sha256": "500af0a48e7e6fb666187e79438067f342d8ee8cf1cf0a2e90e52aa7f4ca84a9"
+          "sourceSha256": "2a0022a36d078d7072cb35d2306a8dd890857f7a014a2a90cf84ff962b6cf282",
+          "backgroundColor": "#0b0b0b",
+          "sha256": "bcabac87cdce0e1313dde2be6799513ebcc5cfb636ea8c1e78c33396e913fe86"
         }
       }
     }

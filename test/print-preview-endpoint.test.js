@@ -71,6 +71,6 @@ test('cart PNG previews match production rendering, stay event-scoped and create
   assert.equal(render.mock.callCount(), 3, 'rate limiting runs before rendering');
   limiter.mock.restore();
   render.mock.restore();
-  await query('UPDATE events SET created_at = now() - interval \'366 days\' WHERE slug = $1', [event.slug]);
+  await query('UPDATE events SET updated_at = now() - interval \'4 months\' WHERE slug = $1', [event.slug]);
   assert.equal((await fetch(`${api}/print.png`)).status, 404);
 });

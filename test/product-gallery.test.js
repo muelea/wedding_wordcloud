@@ -32,7 +32,15 @@ function harness(t, options = {}) {
   const previewModels = [], artwork = [];
   const preview = Preview.create(previewDialog, { window: dom.window, i18n,
     render3D: async options => { previewModels.push(options); return { resize() {}, destroy() {} }; },
+    renderPhoto: async options => { previewModels.push(options); return { resize() {}, destroy() {} }; },
   });
+  const createViewer = params => {
+    const viewer = { params, resizes: 0, destroyed: false,
+      resize() { this.resizes++; }, destroy() { this.destroyed = true; } };
+    viewers.push(viewer);
+    options.viewer?.(viewer);
+    return viewer;
+  };
   const gallery = new Gallery({
     element: dom.window.document.querySelector('section'), products: options.products || products,
     prepare: async (product, opts) => { prepared.push(product.key); return options.prepare ? options.prepare(product, opts) : snapshot(product); },
@@ -44,13 +52,8 @@ function harness(t, options = {}) {
     },
     configureFlat() {},
     paintFlat: (canvas, product, design, side) => painted.push({ product, design, side }),
-    createMug: params => {
-      const viewer = { params, resizes: 0, destroyed: false,
-        resize() { this.resizes++; }, destroy() { this.destroyed = true; } };
-      viewers.push(viewer);
-      options.viewer?.(viewer);
-      return viewer;
-    },
+    createMug: createViewer,
+    createPhoto: createViewer,
     onChoose: async design => { chosen.push(design); await options.onChoose?.(design); },
     onAdd: async design => {
       added.push(design);
@@ -72,20 +75,21 @@ test('the gallery covers every catalog variant in distinct product groups', () =
   assert.deepEqual(groups.flat().map(product => product.key).sort(), products.map(product => product.key).sort());
   assert.equal(groups.find(group => group[0].previewType === 'mug').length, 3);
   assert.equal(groups.find(group => group[0].previewShape === 'poster').length, 7);
-  assert.equal(groups.find(group => group[0].previewShape === 'framed-poster').length, 22);
+  assert.equal(groups.find(group => group[0].previewShape === 'framed-poster').length, 21);
   assert.equal(groups.find(group => group[0].catalogGroup === 'colored-mug').length, 11);
   assert.equal(groups.find(group => group[0].catalogGroup === 'canvas').length, 46);
   assert.equal(groups.find(group => group[0].catalogGroup === 'thin-canvas').length, 13);
   assert.equal(groups.find(group => group[0].catalogGroup === 'framed-canvas').length, 39);
 });
 
-test('only a first visit from a populated live cloud enters the gallery', () => {
+test('ordinary product entries always enter the gallery, including saved drafts and empty direct designs', () => {
   const entry = { directDesign: false, words: [['Liebe', 1]], query: new URLSearchParams(), draft: null };
   assert.equal(shouldOpen(entry), true);
-  assert.equal(shouldOpen({ ...entry, directDesign: true }), false);
-  assert.equal(shouldOpen({ ...entry, words: [] }), false);
-  assert.equal(shouldOpen({ ...entry, draft: { productKey: 'retained' } }), false);
-  for (const key of ['edit', 'cart', 'accountDesign', 'draft']) {
+  assert.equal(shouldOpen({ ...entry, directDesign: true }), true);
+  assert.equal(shouldOpen({ ...entry, words: [] }), true);
+  assert.equal(shouldOpen({ ...entry, draft: { productKey: 'retained' } }), true);
+  assert.equal(shouldOpen({ ...entry, query: new URLSearchParams('cart=1') }), true);
+  for (const key of ['edit', 'accountDesign', 'draft']) {
     assert.equal(shouldOpen({ ...entry, query: new URLSearchParams(`${key}=chosen`) }), false, key);
   }
 });
@@ -112,19 +116,30 @@ test('an explicit gallery location survives a saved draft while editor entry lin
   const entry = { directDesign: false, words: [['Liebe', 1]], draft: { workingDesignId: 'retained' },
     query: new URLSearchParams('view=products&draft=retained') };
   assert.equal(shouldOpen(entry), true);
-  assert.equal(shouldOpen({ ...entry, directDesign: true }), false);
-  for (const key of ['edit', 'cart', 'accountDesign']) {
+  assert.equal(shouldOpen({ ...entry, directDesign: true }), true);
+  for (const key of ['edit', 'accountDesign']) {
     const query = new URLSearchParams(entry.query);
     query.set(key, 'chosen');
     assert.equal(shouldOpen({ ...entry, query }), false, key);
   }
 });
 
+test('a blank product can be customized but cannot enter the cart before it has a design', async t => {
+  const h=harness(t,{prepare:async product=>({...snapshot(product),
+    designs:Object.fromEntries(product.printSurfaces.map(surface=>[surface.key,[]]))})});
+  await h.settle();
+  const card=h.card('mug');
+  assert.equal(card.customize.disabled,false);
+  assert.equal(card.add.disabled,true);
+  await h.gallery.add(card);assert.equal(h.added.length,0);
+  await h.gallery.choose(card);assert.equal(h.chosen.length,1);
+});
+
 test('every preview paints its own product and selecting it hands over the exact complete design', async t => {
   const h = harness(t);
   await h.settle();
   assert.equal(h.prepared.length, groupProducts(products).length);
-  assert.equal(h.painted.length, groupProducts(products).filter(group => !['mug','3d'].includes(group[0].previewType)).length);
+  assert.equal(h.painted.length, groupProducts(products).filter(group => !['mug','3d','photo'].includes(group[0].previewType)).length);
   assert.ok(h.gallery.cards.every(card => !card.customize.disabled));
   const notebook = h.card('notebook');
   const preview = h.viewers.find(viewer => viewer.params.product.key === notebook.product.key).params;
@@ -138,6 +153,34 @@ test('every preview paints its own product and selecting it hands over the exact
   h.chosen[0].words[0][0] = 'Edited';
   assert.equal(notebook.snapshot.designs.front[0].x, 100);
   assert.equal(notebook.snapshot.words[0][0], 'Liebe');
+});
+
+test('every clothing size uses the photo renderer, exact artwork and neutral controls without constructing a 3D model', async t => {
+  const h = harness(t, { products: products.filter(product => product.familyKey === 'clothing') });
+  const create3D = t.mock.method(h.gallery, 'createMug', () => { throw new Error('unexpected 3D garment'); });
+  await h.settle();
+  for (const card of h.gallery.cards) for (const variant of card.variants) {
+    const previous = card.viewer;
+    await h.gallery.load(card, variant);
+    assert.equal(card.viewer.params.product.key, variant.key);
+    assert.equal(card.viewer.params.product.previewType, 'photo');
+    assert.deepEqual(card.viewer.params.design, card.snapshot.designs.front);
+    assert.equal(card.flat.hidden, true);
+    assert.equal(card.host.hidden, false);
+    assert.equal(card.host.tabIndex, -1);
+    assert.doesNotMatch(card.host.getAttribute('aria-label'), /Stoff|Drehen/);
+    if (previous) {
+      assert.equal(previous.destroyed, true);
+      previous.params.onStatus('error');
+      assert.equal(card.failed, false, 'an old size cannot replace the selected photo with an error');
+    }
+    h.gallery.openPreview(card);
+    await Promise.resolve();
+    assert.equal(h.previewModels.at(-1).item.product.key, variant.key);
+    assert.deepEqual(Object.keys(h.previewModels.at(-1).item.printPreviewUrls), ['front']);
+    h.previewDialog.close();
+  }
+  assert.equal(create3D.mock.callCount(), 0);
 });
 
 test('size changes are previewed independently, cached, and stale work cannot replace the chosen size', async t => {
@@ -197,7 +240,7 @@ test('every metric poster variant keeps its own photo, price and exact product i
       assert.equal(h.chosen.at(-1).orientation, 'portrait');
     }
   }
-  assert.equal(h.chosen.length, 29);
+  assert.equal(h.chosen.length, 28);
 });
 
 test('the canvas filter exposes all three ranges and every size/color keeps its own photo and approved cart identity', async t => {
@@ -290,49 +333,80 @@ test('compact prices keep their localized explanation available without changing
   h.gallery.destroy(); assert.equal(panel.isConnected, false);
 });
 
-test('rich variant choices show exact photos and prices, enlarge independently, and retain keyboard focus', async t => {
-  const h = harness(t);
-  await h.settle();
+test('variant options preview exact photos and prices without rebuilding the gallery until confirmation', async t => {
+  const h = harness(t); await h.settle();
   const mug = h.card('mug'), before = structuredClone(mug.snapshot);
   mug.variantToggle.click();
   const { dialog, list } = h.gallery.variantDialog;
   assert.equal(dialog.open, true);
-  assert.equal(mug.variantToggle.getAttribute('aria-expanded'), 'true');
-  const choices = [...list.querySelectorAll('.product-variant-choice')];
-  const photos = [...list.querySelectorAll('.product-variant-photo')];
-  for (const [index, product] of mug.variants.entries()) {
-    assert.equal(choices[index].dataset.productKey, product.key);
-    assert.equal(choices[index].querySelector('strong').textContent, product.size.label);
-    assert.equal(choices[index].querySelector('.product-variant-price').textContent, h.gallery.priceFor(product));
-    assert.equal(photos[index].querySelector('img').getAttribute('src'), product.productPhoto);
-  }
-  assert.equal(h.window.document.activeElement, choices[0]);
-  choices[0].dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'End', bubbles: true }));
-  assert.equal(h.window.document.activeElement, choices[2]);
-  choices[2].dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-  assert.equal(h.window.document.activeElement, choices[0]);
-  photos[2].click();
-  assert.equal(h.gallery.photoDialog.dialog.open, true);
-  assert.equal(h.gallery.photoDialog.photo.getAttribute('src'), mug.variants[2].productPhoto);
+  const preparedBefore = h.prepared.length;
+  list.querySelector('[data-value="591 ml"]').click();
   assert.equal(dialog.open, true);
-  assert.deepEqual(mug.snapshot, before, 'enlarging another variant cannot change artwork or size');
-  h.gallery.photoDialog.dialog.close();
-  assert.equal(h.window.document.activeElement, photos[2]);
-  choices[2].click();
-  await h.settle();
+  assert.equal(h.prepared.length, preparedBefore);
+  assert.deepEqual(mug.snapshot, before);
+  assert.equal(list.querySelector('.product-picker-summary strong').textContent, '591 ml');
+  assert.equal(list.querySelector('.product-picker-summary span').textContent, h.gallery.priceFor(mug.variants[2]));
+  const photo = list.querySelector('.product-picker-photo');
+  assert.equal(photo.querySelector('img').getAttribute('src'), mug.variants[2].productPhoto);
+  photo.click();
+  assert.equal(h.previewDialog.open, true);
+  assert.equal(h.previewDialog.querySelector('[data-preview-photo-artwork] img').getAttribute('src'), mug.variants[2].productPhoto);
+  assert.equal(h.previewDialog.querySelector('[data-preview-view="model"]').hidden, true);
+  h.previewDialog.close(); assert.equal(h.window.document.activeElement, photo);
+  list.querySelector('.product-picker-apply').click(); await h.settle();
   assert.equal(dialog.open, false);
   assert.equal(mug.variantToggle.getAttribute('aria-expanded'), 'false');
   assert.equal(h.window.document.activeElement, mug.variantToggle);
   assert.equal(mug.product.key, mug.variants[2].key);
   assert.equal(mug.snapshot.productKey, mug.variants[2].key);
-  assert.equal(mug.price.textContent, h.gallery.priceFor(mug.variants[2]));
-  assert.equal(h.chosen.length, 0);
-  assert.equal(h.added.length, 0);
-  mug.variantToggle.click();
-  h.gallery.suspend();
-  assert.equal(dialog.open, false);
-  h.gallery.destroy();
-  assert.equal(dialog.isConnected, false);
+  assert.equal(h.chosen.length, 0); assert.equal(h.added.length, 0);
+  mug.variantToggle.click(); h.gallery.suspend(); assert.equal(dialog.open, false);
+});
+
+test('the gallery gives variant forms a definite height with bounded scrolling on desktop and mobile', async t => {
+  const h = harness(t); await h.settle(); h.card('mug').variantToggle.click();
+  const { dialog, header, list } = h.gallery.variantDialog;
+  const content = list.querySelector('.product-picker-content'), actions = list.querySelector('.product-picker-actions');
+  Object.defineProperty(header, 'offsetHeight', { value: 70 });
+  Object.defineProperty(actions, 'offsetHeight', { value: 140 });
+  let intrinsicHeight = 110;
+  Object.defineProperty(content, 'scrollHeight', { get() {
+    assert.equal(content.style.flex, '0 0 auto', 'measure intrinsic content without the zero flex basis');
+    return intrinsicHeight;
+  } });
+  content.style.flex = '1 1 0px';
+  h.gallery.positionVariants();
+  assert.equal(dialog.style.height, '322px', 'header, options and footer each receive their own space');
+  assert.equal(content.style.flex, '1 1 0px', 'restore the scrollable flex content after measuring');
+  intrinsicHeight = 1000; h.gallery.positionVariants();
+  assert.equal(dialog.style.height, '744px');
+  Object.defineProperty(h.window, 'innerWidth', { value: 390 });
+  Object.defineProperty(h.window, 'innerHeight', { value: 600 });
+  h.gallery.positionVariants();
+  assert.equal(dialog.style.height, '480px', 'the mobile sheet leaves space outside its bounded options');
+  assert.equal(dialog.style.maxHeight, '480px');
+});
+
+test('opening and filtering phone models resizes the gallery picker instead of squeezing the results', async t => {
+  const h = harness(t); await h.settle();
+  const phone = h.gallery.cards.find(card => card.product.previewModel?.kind === 'case' && card.variants.length > 8);
+  h.gallery.openVariants(phone);
+  const { dialog, header, list } = h.gallery.variantDialog;
+  Object.defineProperty(header, 'offsetHeight', { value: 70 });
+  Object.defineProperty(list.querySelector('.product-picker-actions'), 'offsetHeight', { value: 140 });
+  Object.defineProperty(list.querySelector('.product-picker-content'), 'scrollHeight', { get() {
+    return list.querySelector('.product-picker-search').hidden ? 160 :
+      list.querySelectorAll('[role="option"]').length > 1 ? 450 : 220;
+  } });
+  h.gallery.positionVariants(); assert.equal(dialog.style.height, '372px');
+  list.querySelector('[data-option-key="model"] .product-picker-select').click();
+  assert.equal(dialog.style.height, '662px', 'opening the model list expands its parent to fit the search and other fields');
+  const input = list.querySelector('input');
+  input.value = 'iPhone 11 Pro Max'; input.dispatchEvent(new h.window.Event('input'));
+  assert.equal(dialog.style.height, '432px', 'filtering reduces unused space without cropping matching results');
+  input.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  assert.equal(dialog.style.height, '372px', 'closing search restores the compact form');
+  assert.equal(dialog.open, true);
 });
 
 test('the gallery thumbnail opens the shared overview with its exact variant and every design side without saving', async t => {
@@ -639,6 +713,33 @@ test('a cart save locks selection and sizes until it completes', async t => {
   assert.equal(h.card('tote').add.disabled, false);
 });
 
+test('gallery cart updates preserve existing text nodes throughout an add', async t => {
+  let finish;
+  const h = harness(t, { onAdd: design => new Promise(resolve => { finish = () => resolve({ ...design,
+    editingOrderItemId: 'Cart00001', needsCartUpdate: false }); }) });
+  await h.settle();
+  const hoodie = h.card('hoodie');
+  const textNodes = h.gallery.cards.flatMap(card =>
+    [card.name, card.price, card.priceNote, card.variantLabel, card.add]
+      .filter(Boolean).map(element => ({ element, node: element.firstChild })));
+  const pending = h.gallery.add(hoodie);
+  const changedNodes = () => textNodes.filter(({ element, node }) => element.firstChild !== node);
+  assert.equal(changedNodes().length, 0, 'locking the gallery must retain text used by browser scroll anchors');
+  finish();
+  await pending;
+  assert.deepEqual(changedNodes().map(({ element }) => element), [hoodie.add],
+    'only the accepted product\'s changed cart label replaces text');
+  const acceptedLabel = hoodie.add.firstChild;
+  h.gallery.updateActions();
+  assert.equal(hoodie.add.firstChild, acceptedLabel, 'unchanged cart refreshes retain the accepted label too');
+  const { translate: localized } = require('../src/i18n');
+  h.gallery.i18n = { ...h.gallery.i18n, t: source => localized(source, 'en'),
+    setText: (element, source) => { element.textContent = localized(source, 'en'); } };
+  h.gallery.localize();
+  assert.equal(hoodie.add.textContent, localized('Im Warenkorb', 'en'), 'language changes still refresh cart labels');
+  assert.equal(h.card('t-shirt').add.textContent, localized('In den Warenkorb', 'en'));
+});
+
 test('failed cart saves remain in the gallery and can be retried', async t => {
   let fail = true;
   const h = harness(t, { onAdd: design => {
@@ -729,9 +830,9 @@ test('all tote reference photos contain the complete portrait image in thumbnail
   for (const product of card.variants) {
     assert.equal(product.productPhotoFit, 'contain', product.key);
     h.gallery.openPhoto(card, product);
-    assert.equal(h.gallery.photoDialog.photo.style.objectFit, 'contain', product.key);
-    assert.ok(h.gallery.photoDialog.photo.src.endsWith(product.productPhoto || product.previewMockup.assets.default));
-    h.gallery.photoDialog.dialog.close();
+    assert.equal(h.previewDialog.querySelector('[data-preview-photo-card]').hidden, false);
+    assert.ok(h.previewDialog.querySelector('[data-preview-photo-artwork] img').src.endsWith(product.productPhoto || product.previewMockup.assets.default));
+    h.previewDialog.close();
   }
 });
 
@@ -742,7 +843,7 @@ test('paired card buttons add on the left and customize on the right; all mug ch
   assert.deepEqual([...card.add.parentElement.children], [card.add, card.customize]);
   assert.equal(card.customize.tagName, 'BUTTON');
   card.variantToggle.click();
-  assert.deepEqual([...h.gallery.variantDialog.list.querySelectorAll('strong')].map(node => node.textContent), ['325 ml', '444 ml', '591 ml']);
+  assert.deepEqual([...h.gallery.variantDialog.list.querySelectorAll('[data-option-key="volume"] .product-picker-option')].map(node => node.textContent), ['325 ml', '444 ml', '591 ml']);
   h.gallery.variantDialog.dialog.close();
   card.customize.click();
   await Promise.resolve();

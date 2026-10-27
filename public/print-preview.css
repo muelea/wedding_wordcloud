@@ -1,91 +1,118 @@
 .print-preview {
-  width: min(1200px, calc(100% - 48px));
-  height: fit-content;
-  max-width: none;
-  max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 48px);
-  margin: auto;
-  padding: 0;
-  overflow: visible;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 24px 80px rgba(64, 15, 38, .2);
+  width: min(1240px, calc(100% - 48px)); max-width: none; max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 48px);
+  margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 26px;
+  background: #fff; color: var(--ink); box-shadow: 0 30px 100px rgba(64, 15, 38, .23);
 }
-.print-preview::backdrop { background: rgba(44, 21, 30, .36); }
+.print-preview::backdrop { background: rgba(36, 18, 27, .46); backdrop-filter: blur(5px); }
+.print-preview [hidden] { display: none !important; }
 .print-preview-shell { display: flex; flex-direction: column; max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 50px); }
-.print-preview-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 28px 20px; border-bottom: var(--ww-preview-divider); }
-.print-preview-head h2 { margin: 0; font: 500 clamp(20px, 3vw, 26px) 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
-.print-preview-detail { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
-.print-preview [hidden] { display: none; }
-.print-preview-content { min-height: 0; padding: 0; overflow: auto; overscroll-behavior: contain; }
-.print-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "photo description" "design model"; }
-.print-preview-grid > .print-preview-card { padding-block: 12px; }
-.print-preview-photo, .print-preview-design { padding-inline: 28px 16px; border-inline-end: var(--ww-preview-divider); }
-.print-preview-description-card, .print-preview-model-card { padding-inline: 16px 28px; }
-.print-preview-design, .print-preview-model-card { border-top: var(--ww-preview-divider); }
-.print-preview-photo { grid-area: photo; }
-.print-preview-description-card { grid-area: description; }
-.print-preview-design { grid-area: design; }
-.print-preview-model-card { grid-area: model; }
-.print-preview-card { min-width: 0; display: flex; flex-direction: column; }
-.print-preview-card-head { display: flex; flex: 1; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; min-height: 32px; margin-bottom: 8px; }
-.print-preview-card-head h3 { margin: 0; font: 600 14px/1.4 'Jost', 'Wolkenworte Jost Fallback', sans-serif; }
-.print-preview button:not(.ww-icon-button) { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
-.print-preview button:not(.ww-icon-button):hover:not(:disabled) { border-color: var(--line-strong); background: #fbf0f3; }
-.print-preview .print-preview-surfaces button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
-.print-preview button:focus-visible, .print-preview-viewport:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
-.print-preview .print-preview-close { flex: none; }
-.print-preview-surfaces { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.print-preview .print-preview-surfaces button { padding: 5px 8px; font-size: 12px; }
-.print-preview-viewport { position: relative; flex: none; height: clamp(180px, 29vh, 280px); min-height: 0; overflow: hidden; background: #fff; }
-.print-preview-description { box-sizing: border-box; padding: 0 8px 0 0; overflow: auto; overscroll-behavior: contain; background: transparent; font-size: 14px; line-height: 1.65; }
-.print-preview-description p { margin: 0 0 12px; }
-.print-preview-description p:last-child { margin-bottom: 0; }
-.print-preview-description ul { margin: 0; padding-left: 18px; }
-.print-preview-description li + li { margin-top: 5px; }
-.print-preview-description ul + p { margin-top: 12px; }
-.print-preview-description:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
-.print-preview-artwork { position: absolute; inset: 0; display: grid; place-items: center; }
+.print-preview-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 16px; padding: 23px 30px 20px; border-bottom: var(--ww-preview-divider); }
+.print-preview-head h2 { margin: 0; font: 500 clamp(22px, 2.6vw, 30px)/1.25 'Playfair Display', 'Wolkenworte Playfair Fallback', Georgia, serif; }
+.print-preview-head h2:focus { outline: none; }
+.print-preview-detail { margin: 7px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.print-preview-close { flex: none; }
+.print-preview-content { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.print-preview-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); height: min(740px, calc(var(--ww-visual-viewport-height, 100dvh) - 170px)); }
+.print-preview-media { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "toolbar toolbar" "stage photos" "caption caption"; min-width: 0; min-height: 0; padding: 18px 22px 12px; background: #fcfbf9; }
+.print-preview-toolbar { grid-area: toolbar; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.print-preview button:not(.ww-icon-button) { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; }
+.print-preview button:not(.ww-icon-button):hover:not(:disabled) { border-color: var(--berry); background: #fbf0f3; }
+.print-preview button:focus-visible, .print-preview-viewport:focus-visible, .print-preview-description:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
+.print-preview-views { display: flex; min-width: 0; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+.print-preview .print-preview-views button { min-width: 0; border: 0; background: transparent; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.print-preview .print-preview-views button[aria-selected="true"] { color: #fff; background: var(--ink); }
+.print-preview .print-preview-views button[aria-selected="true"]:hover { color: #fff; background: var(--ink); }
+.print-preview .print-preview-expand { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; }
+.print-preview-expand svg { display: block; }
+.print-preview-stage { grid-area: stage; min-height: 200px; position: relative; border: 1px solid #eee9e6; border-radius: 18px; overflow: hidden; background: #fff; }
+.print-preview-stage > .print-preview-card { position: absolute; inset: 0; display: flex; flex-direction: column; min-width: 0; }
+.print-preview-viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #fff; }
+.print-preview-artwork { position: absolute; inset: 18px; display: grid; place-items: center; }
 .print-preview-artwork img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-.print-preview-model, .print-preview-model-stage { position: absolute; inset: 0; }
-.print-preview-model-stage { touch-action: none; }
+.print-preview-model, .print-preview-model-stage { position: absolute; inset: 12px; }
+.print-preview-model-stage { inset: 0; touch-action: none; }
+.print-preview-model-stage.is-photo { touch-action: pan-y; }
 .print-preview-model-stage canvas { width: 100%; height: 100%; display: block; }
 .print-preview-model-stage .mug-interaction-region { position: absolute; inset: 0; cursor: grab; }
 .print-preview-model-stage:active .mug-interaction-region { cursor: grabbing; }
-.print-preview-feedback { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.print-preview-feedback { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; padding: 24px; text-align: center; color: var(--muted); font-size: 14px; }
 .print-preview-feedback p { margin: 0 0 12px; }
-.print-preview-generated { margin-top: 24px; padding: 20px 28px; border-top: var(--ww-preview-divider); }
-.print-preview-generated .print-preview-viewport { height: min(480px, 55vh); }
+.print-preview-surfaces { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px; }
+.print-preview-design-controls { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px; }
+.print-preview-design-controls .print-preview-surfaces { padding: 0; }
+.print-preview .print-preview-design-controls button { font-size: 12px; }
+.print-preview .print-preview-design-controls button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
+.print-preview .print-preview-design-controls button[aria-pressed="true"]:hover:not(:disabled),
+.print-preview .print-preview-surfaces button[aria-pressed="true"]:hover:not(:disabled) { color: #fff; background: var(--berry); border-color: var(--berry); }
+.print-preview .print-preview-surfaces button { padding: 7px 14px; font-size: 12px; }
+.print-preview .print-preview-surfaces button[aria-pressed="true"] { color: #fff; background: var(--berry); border-color: var(--berry); }
+.print-preview-photo-navigation { grid-area: photos; display: flex; flex-direction: column; align-items: center; min-height: 0; width: 76px; gap: 8px; margin-left: 10px; }
+.print-preview-photo-thumbnails { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1; gap: 8px; overflow-y: auto; padding: 3px; scrollbar-width: thin; }
+.print-preview .print-preview-photo-thumbnails button { flex: 0 0 64px; width: 64px; height: 70px; padding: 3px; border-radius: 10px; }
+.print-preview .print-preview-photo-thumbnails button[aria-pressed="true"] { border: 2px solid var(--berry); box-shadow: 0 0 0 2px #f7e5ec; }
+.print-preview-photo-thumbnails img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+.print-preview-caption { grid-area: caption; min-height: 20px; margin: 10px 0 0; text-align: center; font-size: 12px; color: var(--muted); }
+.print-preview-description-card { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 28px; border-left: var(--ww-preview-divider); }
+.print-preview-description-card > h3 { margin: 0 0 18px; font-size: 15px; font-weight: 600; }
+.print-preview-description { overflow: auto; overscroll-behavior: contain; padding-right: 8px; font-size: 14px; line-height: 1.75; }
+.print-preview-description p { margin: 0 0 18px; }
+.print-preview-description ul { margin: 0 0 18px; padding-left: 18px; }
+.print-preview-description li + li { margin-top: 9px; }
+.print-preview-generated { padding: 22px 28px; border-top: var(--ww-preview-divider); }
+.print-preview-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.print-preview-card-head h3 { font-size: 15px; }
+.print-preview-generated .print-preview-viewport { height: min(520px, 65dvh); }
 .print-preview-mockup-actions { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 16px; padding: 12px 28px; border-top: var(--ww-preview-divider); }
 .print-preview-mockup-actions p { margin: 0; color: var(--muted); font-size: 13px; }
 .print-preview button:disabled { cursor: wait; opacity: .65; }
-/* Safari softens ordinary borders when the centered dialog lands between pixels.
-   Paint the square divider strips as border images so they stay crisp there. */
-.print-preview-head,
-.print-preview-photo,
-.print-preview-design,
-.print-preview-model-card,
-.print-preview-generated,
-.print-preview-mockup-actions {
-  border-image: linear-gradient(var(--line), var(--line)) 1;
-}
-@media (max-width: 840px) {
-  .print-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .print-preview-viewport { height: clamp(160px, 27vh, 250px); }
-}
-@media (max-width: 620px) {
+.print-preview.is-expanded { width: calc(100% - 20px); max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 20px); }
+.print-preview.is-expanded .print-preview-shell { max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 22px); }
+.print-preview.is-expanded .print-preview-grid { grid-template-columns: minmax(0, 1fr); height: calc(var(--ww-visual-viewport-height, 100dvh) - 140px); }
+.print-preview.is-expanded .print-preview-description-card { display: none; }
+@media (min-width: 701px) and (max-height: 620px) {
   .print-preview { width: calc(100% - 16px); max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 16px); }
   .print-preview-shell { max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 18px); }
-  .print-preview-head { padding: 16px 16px 12px; gap: 12px; }
-  .print-preview-grid > .print-preview-card { padding-block: 10px; }
-  .print-preview-photo, .print-preview-design { padding-inline: 16px 7px; }
-  .print-preview-description-card, .print-preview-model-card { padding-inline: 7px 16px; }
-  .print-preview-card-head { min-height: 30px; margin-bottom: 6px; }
-  .print-preview-card-head h3 { font-size: 13px; }
-  .print-preview-description { padding-right: 4px; font-size: 13px; }
-  .print-preview-generated { padding-inline: 16px; }
-  .print-preview-mockup-actions { flex-direction: column; align-items: stretch; gap: 8px; padding-inline: 16px; }
+  .print-preview-head { padding: 10px 18px; }
+  .print-preview-head h2 { font-size: 20px; }
+  .print-preview-detail { margin-top: 2px; font-size: 11px; }
+  .print-preview-grid { height: calc(var(--ww-visual-viewport-height, 100dvh) - 90px); }
+  .print-preview.is-expanded .print-preview-grid { height: calc(var(--ww-visual-viewport-height, 100dvh) - 90px); }
+  .print-preview-media { padding: 10px 14px; }
+  .print-preview-toolbar { margin-bottom: 6px; }
+  .print-preview-stage { min-height: 0; }
+  .print-preview-caption { display: none; }
+  .print-preview-description-card { padding: 16px; }
+  .print-preview-views { padding: 2px; }
+  .print-preview .print-preview-views button { min-height: 36px; }
+  .print-preview .print-preview-expand { min-height: 38px; }
+  .print-preview-photo-navigation { width: 62px; }
+  .print-preview .print-preview-photo-thumbnails button { flex-basis: 52px; width: 52px; height: 52px; }
+  .print-preview-design-controls { padding: 4px; }
+  .print-preview .print-preview-design-controls button { min-height: 32px; }
+}
+@media (max-width: 900px) {
+  .print-preview-grid { grid-template-columns: minmax(0, 1.5fr) minmax(230px, 1fr); }
+  .print-preview-description-card { padding: 22px; }
+  .print-preview-media { padding-inline: 14px; }
+}
+@media (max-width: 700px) {
+  .print-preview { width: calc(100% - 16px); max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 16px); border-radius: 22px; }
+  .print-preview-shell { max-height: calc(var(--ww-visual-viewport-height, 100dvh) - 18px); }
+  .print-preview-head { padding: 18px; }
+  .print-preview-grid { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .print-preview-media { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto; grid-template-areas: "toolbar" "stage" "photos" "caption"; height: clamp(410px, calc(var(--ww-visual-viewport-height, 100dvh) - 210px), 680px); padding: 12px; }
+  .print-preview-photo-navigation { flex-direction: row; width: auto; margin: 10px 0 0; }
+  .print-preview-photo-thumbnails { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+  .print-preview-stage { min-height: 230px; }
+  .print-preview .print-preview-views { gap: 0; padding: 3px; }
+  .print-preview .print-preview-views button { padding: 7px 10px; font-size: 12px; line-height: 1.2; white-space: normal; }
+  .print-preview-toolbar { gap: 6px; }
+  .print-preview-description-card { border-left: 0; border-top: var(--ww-preview-divider); padding: 24px 20px; }
+  .print-preview-description { overflow: visible; }
+  .print-preview.is-expanded .print-preview-grid { height: auto; }
+  .print-preview.is-expanded .print-preview-media { height: calc(var(--ww-visual-viewport-height, 100dvh) - 130px); }
+  .print-preview-generated { padding-inline: 18px; }
+  .print-preview-mockup-actions { flex-direction: column; align-items: stretch; gap: 8px; padding-inline: 18px; }
 }
 
 .cart-product-previews { width: 72px; min-width: 0; }

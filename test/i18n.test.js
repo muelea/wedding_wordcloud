@@ -70,6 +70,9 @@ function renderView(filename, header = {}, locale = 'de') {
   }, { filename: fullPath });
 }
 const REQUIRED_MESSAGES = [
+  'Handyhüllen', 'Handymarke', 'Handymodell', 'Hüllentyp', 'Oberfläche', 'Leinwandstil',
+  'Fassungsvermögen', 'Wandbilder', 'Gerahmt', 'Dünn', 'Standard', 'Ohne Rahmen',
+  'Rahmenfarbe', 'Größe', 'Option suchen…', '{{item}} suchen', 'Keine passenden Optionen.',
   'Produktbeschreibung',
   'Produktfoto',
   '3D-Ansicht',
@@ -379,7 +382,7 @@ test('server localization produces the selected language before browser scripts 
   const cases = [
     ['landing.ejs', { variant: 'landing' }, 'full of happiness.'],
     ['display.ejs', { variant: 'display' }, 'Your word cloud grows here.'],
-    ['configure.ejs', {}, 'Opening your design…'],
+    ['configure.ejs', {}, 'Loading your products…'],
     ['shipping.ejs', {}, 'Loading your cart and shipping details…'],
     ['order-confirmation.ejs', {}, 'Confirming payment'],
     ['404.ejs', {}, 'This word cloud does not exist.'],
@@ -507,7 +510,7 @@ test('legal pages describe the hosted product and enforced retention', () => {
   assert.match(privacy, /Fly\.io, Inc\.[\s\S]*Frankfurt am Main/);
   assert.match(privacy, /Supabase, Inc\.[\s\S]*privaten Objektspeicher/);
   assert.match(privacy, /Plus Five Five, Inc\.[\s\S]*Öffnungs- und Klicktracking ist deaktiviert/);
-  assert.match(privacy, /automatisch 365 Tage nach Erstellung/);
+  assert.match(privacy, /nach drei Kalendermonaten ohne Bearbeitung/);
   assert.doesNotMatch(privacy, /ausschließlich lokal entwickelt|Google Fonts|künftige Hosting-Anbieter|künftigen Hosting-Anbieter/);
   assert.doesNotMatch(privacy, /später aktivierten echten Bestellung|wird nach einer Zahlung ausdrücklich keine Bestellung|werden vor Aktivierung des Live-Verkaufs/);
   assert.match(privacy, /Name und Lieferadresse[\s\S]*an Stripe/);

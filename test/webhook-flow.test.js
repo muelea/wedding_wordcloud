@@ -1,6 +1,7 @@
 'use strict';
 
 const test = require('node:test');
+const { stubMockupApproval } = require('./helpers');
 const assert = require('node:assert/strict');
 const Stripe = require('stripe');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
@@ -23,6 +24,7 @@ async function saveConfiguration(baseUrl, slug) {
 
 async function verifyTaxPayment(t, paymentMethod) {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_tax_webhook';
   process.env.STRIPE_TEST_LOCAL_WEBHOOK_SECRET = 'whsec_tax_webhook';
@@ -179,6 +181,7 @@ test('signed Stripe test webhook marks one trusted order paid exactly once and n
   });
 
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Webhook Wanda & Signed Sven' });
   const configuration = await saveConfiguration(baseUrl, event.slug);

@@ -6,12 +6,23 @@ const { productDesignPayload } = require('../helpers');
 const clone = value => value == null ? value : structuredClone(value);
 
 function memoryRepository() {
-  const jobs = new Map(), budgets = new Map(), configurations = new Map();
+  const jobs = new Map(), budgets = new Map(), configurations = new Map(), prepared = new Map();
   const budget = scope => {
     if (!budgets.has(scope)) budgets.set(scope,{ nextCreate: 0, nextRead: 0, until: 0, lease: null });
     return budgets.get(scope);
   };
-  return { jobs, budgets, configurations,
+  return { jobs, budgets, configurations, prepared,
+    async claimPreparedPrintFile(candidate) {
+      const key=candidate.configurationId+':'+candidate.surfaceKey;
+      let row=prepared.get(key);
+      if(!row) { row={id:candidate.id,configuration_id:candidate.configurationId,surface_key:candidate.surfaceKey,
+        spec_hash:candidate.specHash,object_key:candidate.objectKey,lease:candidate.lease,status:'uploading'};prepared.set(key,row); }
+      return clone(row);
+    },
+    async savePreparedPrintFile(id,lease,sha256,byteSize,active=false) {
+      const row=[...prepared.values()].find(value=>value.id===id);Object.assign(row,{sha256,byte_size:byteSize,status:active?'active':'uploading'});return clone(row);
+    },
+    async releasePreparedPrintFile() {},
     async getMockupConfiguration(id) { return clone(configurations.get(id)); },
     async enqueueMockupJob(job,{refresh=false}={}) {
       const command = [...jobs.values()].find(item => item.scope===job.scope && item.mode===job.mode &&
@@ -24,7 +35,14 @@ function memoryRepository() {
         previous.requestIds=requestIds;return clone(previous);
       }
       if ([...jobs.values()].filter(item=>item.scope===job.scope&&!['completed','failed'].includes(item.status)).length>=64) return null;
+      const active=[...jobs.values()].filter(item=>item.scope===job.scope&&!['completed','failed'].includes(item.status)).length;
+      if(Number.isFinite(job.latestStartAt)&&Math.max(job.createdAt,budget(job.scope).nextCreate)+active*30500>job.latestStartAt)return null;
       budget(job.scope); jobs.set(job.id,clone(job)); return clone(job);
+    },
+    async getNextMockupJobAt({scope,operator,now}) {
+      const jobsDue=[...jobs.values()].filter(item=>item.scope===scope&&(item.mode==='customer'||operator)&&
+        (!['completed','failed'].includes(item.status)||item.sourceObjectKeys.length));
+      return jobsDue.length ? Math.max(now,Math.min(...jobsDue.map(item=>item.nextAt)),budget(scope).until) : null;
     },
     async getMockupJob(id) { return clone(jobs.get(id)); },
     async claimMockupJob({scope,lease,now,leaseMs,operator}) {

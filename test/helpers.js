@@ -32,6 +32,8 @@ const APPLICATION_MIGRATIONS = [
   '20260924000000_commerce_retention.sql',
   '20261012000000_optional_design_accounts.sql',
   '20261026000000_durable_mockup_jobs.sql',
+  '20261027000000_activity_retention.sql',
+  '20261028000000_print_approval.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -63,8 +65,12 @@ function clearApplicationModules() {
     '../src/socketEventCache',
     '../src/socketOwnershipLoader',
     '../src/lifecycle',
+    '../src/dailyRetention',
+    '../src/workerPoller',
     '../src/maintenance',
     '../src/printArtifacts',
+    '../src/printPreparation',
+    '../src/mockupApproval',
     '../src/pageRenderer',
     '../src/routes/maintenance',
     '../src/routes/performance',
@@ -257,4 +263,9 @@ module.exports = {
   uniqueTitle,
   productDesignPayload,
   stripeTaxPaymentSession,
+};
+
+// Use only in suites testing downstream payment behavior; print-approval.test.js exercises the real gate.
+module.exports.stubMockupApproval = function stubMockupApproval(t) {
+  t.mock.method(require('../src/mockupApproval'), 'approve', async () => true);
 };

@@ -14,11 +14,35 @@ const { loadBrowserSvg } = require('../src/emojiBrowserAssets');
 const {
   buildProductPrintSvg,
   buildProviderPrintSvg,
+  assertSupportedPrintText,
   isPrintDesignWithinBounds,
 } = require('../src/mugPrint');
 const { PRODUCTS, resolveProductOrientation } = require('../src/products');
 const { MAX_DESIGN_ELEMENTS } = require('../public/js/cloud-limits');
 const { MAX_WORD_LENGTH } = require('../src/words');
+
+test('missing glyphs cannot silently become print boxes, including within mixed emoji text', () => {
+  const product = { printFile: { width: 2700, height: 1050 }, designSafeMargin: 24 };
+  for (const font of DesignFonts.FONTS) {
+    for (const fontWeight of [400, 700]) {
+      const item = { id: 'glyph', text: 'Liebe 東京 ❤️', fontSize: 100, x: 1350, y: 525,
+        angle: 0, color: '#123456', fontFamily: font.key, fontWeight };
+      assert.throws(() => assertSupportedPrintText([item]), { code: 'PRINT_TEXT_UNSUPPORTED' });
+      assert.throws(() => buildProviderPrintSvg(product, [item]), { code: 'PRINT_TEXT_UNSUPPORTED' });
+      assert.doesNotThrow(() => assertSupportedPrintText([{ ...item, text: 'Glück Çéğış ❤️' }]));
+      assert.doesNotThrow(() => buildProviderPrintSvg(product, [{ ...item, text: 'Glück Çéğış ❤️' }]));
+    }
+  }
+  assert.throws(() => assertSupportedPrintText([{ text: '∞', fontSize: 100, fontFamily: 'caveat' }]),
+    { code: 'PRINT_TEXT_UNSUPPORTED' });
+  assert.doesNotThrow(() => assertSupportedPrintText([{ text: '∞', fontSize: 100, fontFamily: 'classic' }]));
+  for (const text of ['नमस्ते', 'शक्ति', 'x\u0301']) {
+    const item = { id: 'shaping', text, fontSize: 100, fontFamily: 'baloo-2',
+      x: 1350, y: 525, color: '#123456', angle: 0 };
+    assert.throws(() => assertSupportedPrintText([item]), { code: 'PRINT_TEXT_UNSUPPORTED' });
+    assert.throws(() => buildProviderPrintSvg(product, [item]), { code: 'PRINT_TEXT_UNSUPPORTED' });
+  }
+});
 
 function alphaBounds(canvas, area = { x: 0, y: 0, width: canvas.width, height: canvas.height }) {
   const context = canvas.getContext('2d');
@@ -296,7 +320,9 @@ test('provider print freezes every offered font, style and palette color as exac
       assertBoundsClose(
         alphaBounds(actual, area),
         alphaBounds(expected, area),
-        `${DesignFonts.FONTS[row].key}/${JSON.stringify(styles[column])}`
+        // Linux Pango hinting and SVG outline rasterization differ by up to
+        // two edge pixels for Caveat; the actual font/glyph tests stay exact.
+        `${DesignFonts.FONTS[row].key}/${JSON.stringify(styles[column])}`, 2
       );
     }
   }

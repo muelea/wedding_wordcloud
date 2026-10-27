@@ -49,6 +49,14 @@ async function run({ expected = parseExpected(), fetchImpl = fetch, output = con
     if (root.status !== 200 || !String(root.headers.get('content-type')).includes('text/html')) {
       throw new Error('The active production landing page is not healthy.');
     }
+    const [legal, event] = await Promise.all([
+      request(fetchImpl, `${PUBLIC_URL}/bestellinformationen`),
+      request(fetchImpl, `${PUBLIC_URL}/api/events/release-read-only-unknown/configurations/release-read-only-unknown`),
+    ]);
+    if (legal.status !== 200 || event.status !== 404 ||
+        (await event.json()).error !== 'configuration_not_found') {
+      throw new Error('Representative read-only application routes failed.');
+    }
   }
   const result = {
     expected,
@@ -56,6 +64,7 @@ async function run({ expected = parseExpected(), fetchImpl = fetch, output = con
     canonicalRedirect: 'ok',
     webhookReachability: 'ok',
     publicStatus: root.status,
+    ...(expected === 'active' ? { applicationReads: 'ok' } : {}),
   };
   output(JSON.stringify(result, null, 2));
   return result;

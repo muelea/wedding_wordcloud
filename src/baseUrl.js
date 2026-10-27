@@ -27,4 +27,11 @@ function getBaseUrl(req, port) {
   return `http://${getLocalIP()}:${port}`;
 }
 
-module.exports = { getBaseUrl, getLocalIP };
+// Checkout must return to the browser's origin: its cart and shipping draft
+// belong to that origin, even when share links use a LAN IP or PUBLIC_URL.
+function getCheckoutBaseUrl(req, port) {
+  const host = req && req.get && req.get('host');
+  return host ? `${req.protocol}://${host}` : getBaseUrl(req, port);
+}
+
+module.exports = { getBaseUrl, getCheckoutBaseUrl, getLocalIP };

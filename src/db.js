@@ -10,7 +10,7 @@ const log = require('./structuredLog');
 const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
-const REQUIRED_SCHEMA_VERSION = '7';
+const REQUIRED_SCHEMA_VERSION = '9';
 const { yearEndDeadline, emailRetentionYears, evidenceAddresses } = require('./retentionPolicy');
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
@@ -242,7 +242,7 @@ async function createEventRecord({ title, pin, locale, seed = null }) {
         const result = await client.query(`
           INSERT INTO events (
             slug, title, organizer_pin_hash, organizer_pin_salt, locale, created_at, expires_at
-          ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '365 days')
+          ) VALUES ($1, $2, $3, $4, $5, transaction_timestamp(), transaction_timestamp() + interval '3 months')
           RETURNING *
         `, [slug, title, hash, salt, locale]);
         const event = result.rows[0];
@@ -519,7 +519,7 @@ async function removeWordContribution(eventId, receiptId, ownerId) {
     const event = await client.query(`
       SELECT id FROM events
       WHERE id = $1 AND expires_at > transaction_timestamp()
-      FOR KEY SHARE
+      FOR UPDATE
     `, [eventId]);
     if (!event.rowCount) return null;
     const deleted = await client.query(`
@@ -556,7 +556,7 @@ async function removeWordForAdmin(eventId, word) {
     const event = await client.query(`
       SELECT id FROM events
       WHERE id = $1 AND expires_at > transaction_timestamp()
-      FOR KEY SHARE
+      FOR UPDATE
     `, [eventId]);
     if (!event.rowCount) return false;
     const deleted = await client.query(
@@ -751,6 +751,7 @@ function configurationSnapshot(configuration) {
     printfulVariantId: configuration.printful_variant_id,
     printfulPlacements: product.printful.placements,
     printfulOptions: product.printful.options,
+    printfulTechnique: product.printful.technique,
     orientation: configuration.orientation,
     theme: configuration.theme,
     printWidth: configuration.print_width,
@@ -1692,16 +1693,17 @@ async function releaseRetainedConfigurations(client, ids) {
   `, [ids]);
 }
 
-async function cleanupOneCommerceRecord() {
+async function cleanupOneCommerceRecord(orderId = null) {
   return withTransaction(async (client) => {
     await client.query("SET LOCAL statement_timeout = '1500ms'");
     const selected = await client.query(`
       SELECT * FROM orders o WHERE o.created_at < transaction_timestamp() - interval '30 days'
-        AND (retention_checked_at IS NULL OR retention_checked_at < transaction_timestamp() - interval '1 day')
+        AND ($1::bigint IS NULL OR o.id = $1)
+        AND ($1::bigint IS NOT NULL OR retention_checked_at IS NULL OR retention_checked_at < transaction_timestamp() - interval '1 day')
         AND retention_hold_reason IS NULL
         AND NOT EXISTS (SELECT 1 FROM print_artifacts a WHERE a.order_id = o.id AND a.support_hold)
       ORDER BY retention_checked_at NULLS FIRST, id FOR UPDATE SKIP LOCKED LIMIT 1
-    `);
+    `, [orderId]);
     const order = selected.rows[0];
     if (!order) return null;
     // NOWAIT avoids deadlocking provider callbacks which lock a child first.
@@ -1831,26 +1833,30 @@ async function cleanupCommerceRecords({ limit = 5, deadline = null } = {}) {
   return summary;
 }
 
-async function cleanupRetentionMetadata() {
+async function cleanupRetentionMetadata({ strict = false } = {}) {
   // Provider IDs attached to retained evidence remain available for replay
   // protection. Unmatched IDs and completed maintenance logs need only 90 days.
   return withTransaction(async (client) => {
     await client.query("SET LOCAL statement_timeout = '1500ms'");
     const result = await client.query(`
-    WITH maintenance AS (
+    WITH daily AS (
+      DELETE FROM retention_runs WHERE day IN (SELECT day FROM retention_runs
+        WHERE status<>'running' AND completed_at<transaction_timestamp()-interval '90 days'
+        ORDER BY day LIMIT 100 FOR UPDATE NOWAIT) RETURNING day
+    ), maintenance AS (
       DELETE FROM maintenance_runs WHERE id IN (SELECT id FROM maintenance_runs
         WHERE completed_at < transaction_timestamp() - interval '90 days'
-        ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING id
+        ORDER BY id LIMIT 100 FOR UPDATE NOWAIT) RETURNING id
     ), stripe AS (
       DELETE FROM stripe_webhook_events WHERE stripe_event_id IN (SELECT stripe_event_id
         FROM stripe_webhook_events WHERE order_id IS NULL
           AND processed_at < transaction_timestamp() - interval '90 days'
-        ORDER BY processed_at LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING stripe_event_id
+        ORDER BY processed_at LIMIT 100 FOR UPDATE NOWAIT) RETURNING stripe_event_id
     ), resend AS (
       DELETE FROM resend_webhook_events WHERE svix_id IN (SELECT svix_id
         FROM resend_webhook_events WHERE email_job_id IS NULL
           AND processed_at < transaction_timestamp() - interval '90 days'
-        ORDER BY processed_at LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING svix_id
+        ORDER BY processed_at LIMIT 100 FOR UPDATE NOWAIT) RETURNING svix_id
     ), printful AS (
       DELETE FROM printful_webhook_events WHERE event_key IN (SELECT e.event_key
         FROM printful_webhook_events e
@@ -1858,13 +1864,13 @@ async function cleanupRetentionMetadata() {
           AND NOT EXISTS (SELECT 1 FROM checkout_order_shipments s
             WHERE s.printful_order_id = e.provider_order_id
               OR s.fulfillment_payload_json->>'external_id' = e.external_order_id)
-        ORDER BY processed_at LIMIT 100 FOR UPDATE SKIP LOCKED) RETURNING event_key
-    ) SELECT (SELECT count(*) FROM maintenance) + (SELECT count(*) FROM stripe) +
+        ORDER BY processed_at LIMIT 100 FOR UPDATE NOWAIT) RETURNING event_key
+    ) SELECT (SELECT count(*) FROM daily) + (SELECT count(*) FROM maintenance) + (SELECT count(*) FROM stripe) +
       (SELECT count(*) FROM resend) + (SELECT count(*) FROM printful) AS count
   `);
     return Number(result.rows[0].count);
   }).catch((error) => {
-    if (['55P03', '57014', '40P01'].includes(error.code)) return 0;
+    if (!strict && ['55P03', '57014', '40P01'].includes(error.code)) return 0;
     throw error;
   });
 }
@@ -2197,6 +2203,8 @@ async function getEventConfigurations(slug, configurationIds) {
 // scheduling and bounded batch orchestration live in the maintenance worker.
 async function prepareExpiredEventCleanup(eventId) {
   return withTransaction(async (client) => {
+    await client.query("SET LOCAL lock_timeout = '250ms'");
+    await client.query("SET LOCAL statement_timeout = '1500ms'");
     const eventResult = await client.query(`
       SELECT id FROM events
       WHERE id = $1 AND expires_at <= transaction_timestamp()
@@ -2252,6 +2260,8 @@ async function prepareExpiredEventCleanup(eventId) {
 
 async function finishExpiredEventDeletion(eventId) {
   return withTransaction(async (client) => {
+    await client.query("SET LOCAL lock_timeout = '250ms'");
+    await client.query("SET LOCAL statement_timeout = '1500ms'");
     const event = await client.query(`
       SELECT id FROM events
       WHERE id = $1 AND expires_at <= transaction_timestamp()
@@ -2281,18 +2291,19 @@ async function getOrCreatePrintArtifact({
   sha256,
   accessNonce,
   expiresAt,
+  sourceFileId = null,
 }) {
   const result = await getPool().query(`
     INSERT INTO print_artifacts (
       id, order_id, order_item_id, configuration_id, surface_key, object_key,
-      mime_type, byte_size, sha256, access_nonce, expires_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      mime_type, byte_size, sha256, access_nonce, expires_at, source_file_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     ON CONFLICT (order_item_id, surface_key) DO UPDATE
       SET order_item_id = excluded.order_item_id
     RETURNING *
   `, [
     id, orderId, orderItemId, configurationId || null, surfaceKey, objectKey,
-    mimeType, byteSize, sha256, accessNonce, expiresAt,
+    mimeType, byteSize, sha256, accessNonce, expiresAt, sourceFileId,
   ]);
   return rowToBoundary(result.rows[0]);
 }
@@ -2350,7 +2361,7 @@ async function extendOrderArtifactRetention(orderId, expiresAt) {
   return result.rowCount;
 }
 
-async function claimExpiredPrintArtifact(excludeIds = []) {
+async function claimExpiredPrintArtifact(excludeIds = [], exactId = null) {
   return withTransaction(async (client) => {
     const selected = await client.query(`
       SELECT a.id FROM print_artifacts a JOIN orders o ON o.id = a.order_id
@@ -2359,11 +2370,11 @@ async function claimExpiredPrintArtifact(excludeIds = []) {
         AND (storage_status IN ('active', 'delete_failed') OR
           (storage_status = 'deleting' AND
            (deletion_claimed_at IS NULL OR deletion_claimed_at < transaction_timestamp() - interval '5 minutes')))
-        AND NOT (a.id = ANY($1::text[]))
+        AND NOT (a.id = ANY($1::text[])) AND ($2::text IS NULL OR a.id = $2)
       ORDER BY expires_at, a.id
       FOR UPDATE OF o, a SKIP LOCKED
       LIMIT 1
-    `, [excludeIds]);
+    `, [excludeIds, exactId]);
     if (!selected.rowCount) return null;
     const claimed = await client.query(`
       UPDATE print_artifacts
@@ -2515,6 +2526,7 @@ async function getOperationalStatus() {
       printArtifactFailures: Number(row.print_artifact_failures || 0),
     },
     retention: {
+      daily: await getRetentionStatus(),
       expiredQuotes: Number(row.expired_quotes || 0),
       expiredEvents: Number(row.expired_events || 0),
       reviewsDue: Number(row.retention_reviews_due || 0),
@@ -2579,16 +2591,19 @@ async function finishOperatorAction(id, { succeeded, afterState = null, errorCod
 }
 
 const PRELIVE_BUSINESS_TABLES = Object.freeze([
+  'retention_deferrals', 'retention_runs',
   'mockup_jobs', 'mockup_provider_budgets',
   'email_smoke_runs', 'provider_smoke_runs', 'resend_webhook_events',
   'printful_webhook_events', 'stripe_webhook_events', 'email_jobs',
-  'print_artifacts', 'order_items', 'checkout_order_shipments', 'orders',
+  'print_artifacts', 'prepared_print_files', 'order_items', 'checkout_order_shipments', 'orders',
   'checkout_quotes', 'configurations',
   'organizer_pin_failures', 'archives', 'word_contributions', 'words', 'events',
   'reserved_event_slugs', 'maintenance_runs',
 ]);
 
 const PRELIVE_PRESERVATION_PREDICATES = Object.freeze({
+  retention_deferrals: 'false',
+  retention_runs: 'false',
   mockup_jobs: 'mockup_jobs.event_id = $2',
   mockup_provider_budgets: `EXISTS (SELECT 1 FROM mockup_jobs retained_job WHERE retained_job.scope=mockup_provider_budgets.scope AND retained_job.event_id=$2)`,
   email_smoke_runs: `
@@ -2625,6 +2640,9 @@ const PRELIVE_PRESERVATION_PREDICATES = Object.freeze({
   print_artifacts: `EXISTS (SELECT 1 FROM orders retained_order
     WHERE retained_order.id = print_artifacts.order_id
       AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
+  prepared_print_files: `EXISTS (SELECT 1 FROM configurations c WHERE c.id=prepared_print_files.configuration_id AND c.event_id=$2)
+    OR EXISTS (SELECT 1 FROM print_artifacts a JOIN orders o ON o.id=a.order_id
+      WHERE a.source_file_id=prepared_print_files.id AND (o.event_id=$2 OR o.event_slug_snapshot=$1))`,
   order_items: `EXISTS (SELECT 1 FROM orders retained_order
     WHERE retained_order.id = order_items.order_id
       AND (retained_order.event_id = $2 OR retained_order.event_slug_snapshot = $1))`,
@@ -2687,6 +2705,7 @@ async function getPrelivePreservationStateWithClient(client, preserveEventSlug, 
   const objectResult = await client.query(`
     SELECT object_key FROM print_artifacts
     WHERE ${PRELIVE_PRESERVATION_PREDICATES.print_artifacts}
+    UNION SELECT object_key FROM prepared_print_files WHERE ${PRELIVE_PRESERVATION_PREDICATES.prepared_print_files}
     ORDER BY object_key
   `, [slug, eventId]);
   return {
@@ -3540,7 +3559,7 @@ async function savedDesignWorkspace(accountId,id) {
     const slug = generateEventSlug();
     await client.query('INSERT INTO reserved_event_slugs(slug,original_created_at) VALUES ($1,transaction_timestamp())',[slug]);
     const event = (await client.query(`INSERT INTO events(slug,title,locale,created_at,expires_at)
-      VALUES ($1,$2,$3,transaction_timestamp(),transaction_timestamp()+interval '365 days') RETURNING id`,
+      VALUES ($1,$2,$3,transaction_timestamp(),transaction_timestamp()+interval '3 months') RETURNING id`,
     [slug,I18n.translate('Gespeichertes Design',account.locale),account.locale])).rows[0];
     await client.query('UPDATE saved_designs SET workspace_event_id=$2 WHERE id=$1',[id,event.id]);
     return slug;
@@ -3581,19 +3600,20 @@ async function finishDesignObjectDeletion(key,lease,succeeded) {
     AND lease_until > transaction_timestamp()`,[key,lease]);
 }
 
-async function claimDesignObjectDeletionBatch(accountId = null, limit = 20) {
+async function claimDesignObjectDeletionBatch(accountId = null, limit = 20, exactKey = null) {
   const lease=crypto.randomUUID();
   return rowsToBoundary((await getPool().query(`UPDATE saved_design_objects SET lease=$2,
     lease_until=transaction_timestamp()+interval '20 seconds',attempts=attempts+1
     WHERE object_key IN (SELECT object_key FROM saved_design_objects WHERE state='delete_pending'
       AND ($1::uuid IS NULL OR account_id=$1) AND delete_after <= transaction_timestamp()
       AND next_attempt_at <= transaction_timestamp() AND (lease_until IS NULL OR lease_until < transaction_timestamp())
-      ORDER BY next_attempt_at FOR UPDATE SKIP LOCKED LIMIT $3) RETURNING *`,[accountId,lease,Math.min(40,Math.max(1,limit))])).rows);
+      AND ($4::text IS NULL OR object_key=$4)
+      ORDER BY next_attempt_at FOR UPDATE SKIP LOCKED LIMIT $3) RETURNING *`,[accountId,lease,Math.min(40,Math.max(1,limit)),exactKey])).rows);
 }
 
 async function finishDesignObjectDeletionBatch(keys,lease,succeeded) {
-  if(succeeded) await getPool().query(`DELETE FROM saved_design_objects WHERE object_key=ANY($1::text[])
-    AND lease=$2 AND lease_until > transaction_timestamp()`,[keys,lease]);
+  if(succeeded) return (await getPool().query(`DELETE FROM saved_design_objects WHERE object_key=ANY($1::text[])
+    AND lease=$2 AND lease_until > transaction_timestamp()`,[keys,lease])).rowCount===keys.length;
   else await getPool().query(`UPDATE saved_design_objects SET lease=null,lease_until=null,
     next_attempt_at=transaction_timestamp()+interval '5 minutes' WHERE object_key=ANY($1::text[])
     AND lease=$2 AND lease_until > transaction_timestamp()`,[keys,lease]);
@@ -3610,16 +3630,17 @@ async function claimDesignAccountDeletion(accountId = null) {
 }
 
 async function finishDesignAccountDeletion(id,lease,succeeded) {
-  await withTransaction(async client=> {
+  return withTransaction(async client=> {
     const r=await client.query(`UPDATE account_deletions SET lease=null,lease_until=null,
       completed_at=CASE WHEN $3 THEN transaction_timestamp() ELSE null END,
       next_attempt_at=transaction_timestamp()+interval '5 minutes'
       WHERE account_id=$1 AND lease=$2 AND lease_until > transaction_timestamp() RETURNING account_id`,[id,lease,succeeded]);
     if (succeeded&&r.rowCount) await client.query('DELETE FROM design_accounts WHERE id=$1',[id]);
+    return r.rowCount===1;
   });
 }
 
-async function sweepDesignAccountRetention({ deadline = Date.now() + 3000 } = {}) {
+async function sweepDesignAccountRetention({ deadline = Date.now() + 3000, shortLivedOnly = false } = {}) {
   const result={designsExpired:0,accountsExpired:0};
   if(Date.now()>=deadline)return result;
   // Each housekeeping mutation is bounded; one round trip leaves time for
@@ -3641,6 +3662,7 @@ async function sweepDesignAccountRetention({ deadline = Date.now() + 3000 } = {}
     DELETE FROM auth_email_receipts WHERE id_hash IN(SELECT id_hash FROM auth_email_receipts WHERE created_at<transaction_timestamp()-interval '1 day' LIMIT 500)
   ) DELETE FROM account_deletions WHERE account_id IN(SELECT account_id FROM account_deletions WHERE completed_at<transaction_timestamp()-interval '35 days' LIMIT 500)`);
   if(Date.now()>=deadline)return result;
+  if (shortLivedOnly) return result;
   const expired=(await getPool().query('SELECT id,account_id FROM saved_designs WHERE expires_at <= transaction_timestamp() LIMIT 5')).rows;
   for(const row of expired) { if (Date.now() >= deadline) break; await withTransaction(async client=> {
     const a=await client.query('SELECT id FROM design_accounts WHERE id=$1 FOR UPDATE',[row.account_id]);
@@ -3695,7 +3717,7 @@ async function getMockupConfiguration(id, now = Date.now()) {
 async function enqueueMockupJob(job, { refresh = false } = {}) {
   return withTransaction(async client => {
     await client.query('INSERT INTO mockup_provider_budgets(scope) VALUES ($1) ON CONFLICT DO NOTHING', [job.scope]);
-    await client.query('SELECT scope FROM mockup_provider_budgets WHERE scope=$1 FOR UPDATE', [job.scope]);
+    const budget = (await client.query('SELECT next_create_at FROM mockup_provider_budgets WHERE scope=$1 FOR UPDATE', [job.scope])).rows[0];
     const command = (await client.query(`SELECT data FROM mockup_jobs WHERE scope=$1 AND mode=$2
       AND configuration_id=$3 AND (data->>'requestId'=$4 OR data->'requestIds' ? $4) LIMIT 1`,
     [job.scope, job.mode, job.configurationId, job.requestId])).rows[0]?.data;
@@ -3720,6 +3742,11 @@ async function enqueueMockupJob(job, { refresh = false } = {}) {
     const count = (await client.query(`SELECT count(*)::int AS n FROM mockup_jobs
       WHERE scope=$1 AND status NOT IN ('completed','failed')`, [job.scope])).rows[0].n;
     if (count >= 64) return null;
+    // Leave a full provider-generation window inside the overall deadline.
+    // Reject excess work before rendering instead of accepting jobs that can
+    // only time out in the shared two-per-minute dispatch queue.
+    const firstDispatch = Math.max(job.createdAt, Date.parse(budget.next_create_at) || 0);
+    if (Number.isFinite(job.latestStartAt) && firstDispatch + count * 30_500 > job.latestStartAt) return null;
     await client.query(`INSERT INTO mockup_jobs
       (id,scope,event_id,configuration_id,mode,cache_key,status,data,next_at,created_at,expires_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [job.id, job.scope, job.eventId,
@@ -3799,13 +3826,254 @@ async function deferMockupRequests(scope, lease, until, kind) {
     WHERE scope=$1 AND lease=$2`, [scope, lease, new Date(until)]);
 }
 
-async function pruneMockupJobs(now = Date.now()) {
+async function pruneMockupJobs(now = Date.now(), exactId = null) {
   return (await getPool().query(`DELETE FROM mockup_jobs WHERE id IN (SELECT id FROM mockup_jobs
-    WHERE expires_at <= $1 AND (lease_until IS NULL OR lease_until <= $1)
-    ORDER BY expires_at LIMIT 100)`, [new Date(now)])).rowCount;
+    WHERE expires_at <= $1 AND ($2::text IS NULL OR id=$2) AND (lease_until IS NULL OR lease_until <= $1)
+    ORDER BY expires_at LIMIT 100)`, [new Date(now),exactId])).rowCount;
+}
+
+// Daily retention uses keyset pages, never a fixed daily deletion quota.
+const RETENTION_CATEGORIES = {
+  events: { table: 'events', type: 'bigint', condition: 'expires_at <= $1' },
+  designs: { table: 'saved_designs', type: 'uuid', condition: 'expires_at <= $1' },
+  accounts: { table: 'design_accounts', type: 'uuid', condition: `status='active' AND
+    ((NOT verified AND created_at < $1::timestamptz - interval '7 days') OR
+     (verified AND last_activity_at < $1::timestamptz - interval '12 months'
+      AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=design_accounts.id)))` },
+  artifacts: { table: 'print_artifacts', type: 'text', condition: 'expires_at <= $1' },
+  mockups: { table:'mockup_jobs',type:'text',condition:'expires_at<=$1' },
+  preparedFiles: { table:'prepared_print_files',type:'text',condition:`expires_at<=$1
+    AND NOT EXISTS(SELECT 1 FROM print_artifacts a WHERE a.source_file_id=prepared_print_files.id)` },
+  objects: { table:'saved_design_objects',key:'object_key',type:'text',condition: "state='delete_pending' AND delete_after<=greatest($1::timestamptz,transaction_timestamp())" },
+  accountDeletions: { table:'account_deletions',key:'account_id',type:'uuid',condition: 'completed_at IS NULL AND created_at<=greatest($1::timestamptz,transaction_timestamp())' },
+  commerce: { table: 'orders', type: 'bigint', condition: "created_at < $1::timestamptz - interval '30 days'" },
+};
+
+async function claimDailyRetentionRun() {
+  return withTransaction(async client => {
+    if (!(await client.query('SELECT pg_try_advisory_xact_lock(hashtext(current_schema()),92401) AS ok')).rows[0].ok) return null;
+    let row = (await client.query("SELECT *,lease_until>transaction_timestamp() AS lease_active FROM retention_runs WHERE status='running' FOR UPDATE")).rows[0];
+    if (!row) {
+      row = (await client.query(`INSERT INTO retention_runs(day)
+        VALUES (((transaction_timestamp() AT TIME ZONE 'Europe/Berlin') - interval '3 hours')::date)
+        ON CONFLICT DO NOTHING RETURNING *`)).rows[0];
+    }
+    if (!row || row.lease_active) return null;
+    const lease = crypto.randomUUID();
+    return rowToBoundary((await client.query(`UPDATE retention_runs SET lease=$2,
+      lease_until=transaction_timestamp()+interval '60 seconds' WHERE day=$1
+      AND (lease_until IS NULL OR lease_until<=transaction_timestamp())
+      RETURNING *,day::text AS day`,[row.day,lease])).rows[0]);
+  });
+}
+
+async function checkpointDailyRetention(run, progress, status = 'running') {
+  const result = await getPool().query(`UPDATE retention_runs SET progress=$3::jsonb,status=$4,
+    lease_until=transaction_timestamp()+interval '60 seconds',
+    completed_at=CASE WHEN $4='running' THEN NULL ELSE transaction_timestamp() END,
+    last_error=CASE WHEN $4='running' THEN last_error ELSE NULL END,
+    last_error_at=CASE WHEN $4='running' THEN last_error_at ELSE NULL END
+    WHERE day=$1 AND lease=$2 AND lease_until>transaction_timestamp() AND status='running'`,
+  [run.day,run.lease,jsonValue(progress),status]);
+  if (!result.rowCount) throw Object.assign(new Error('Retention lease lost'),{code:'RETENTION_LEASE_LOST'});
+}
+
+async function releaseDailyRetention(run) {
+  await getPool().query('UPDATE retention_runs SET lease=NULL,lease_until=NULL WHERE day=$1 AND lease=$2',[run.day,run.lease]);
+}
+
+async function recordDailyRetentionFailure(run,code) {
+  await getPool().query(`UPDATE retention_runs SET last_error=$3,last_error_at=transaction_timestamp()
+    WHERE day=$1 AND lease=$2 AND lease_until>transaction_timestamp()`,
+  [run.day,run.lease,String(code).replace(/[^a-z0-9_:-]/g,'_').slice(0,120)]);
+}
+
+async function retentionPage(category, cutoff, cursor = null, limit = 50) {
+  const spec = RETENTION_CATEGORIES[category];
+  if (!spec) throw new Error('invalid retention category');
+  const key=spec.key || 'id';
+  // Qualify the native key: ORDER BY the text alias would skip bigint IDs.
+  return (await getPool().query(`SELECT ${key}::text AS id FROM ${spec.table}
+    WHERE (${spec.condition}) AND ($2::${spec.type} IS NULL OR ${key} > $2::${spec.type})
+    ORDER BY ${spec.table}.${key} LIMIT $3`,[cutoff,cursor,Math.min(50,Math.max(1,limit))])).rows.map(row=>row.id);
+}
+
+async function deferRetention(category, id, reason) {
+  await getPool().query(`INSERT INTO retention_deferrals(category,target_id,reason) VALUES($1,$2,$3)
+    ON CONFLICT(category,target_id) DO UPDATE SET reason=excluded.reason,
+      attempts=retention_deferrals.attempts+1,
+      next_attempt_at=transaction_timestamp()+least(interval '1 hour',
+        interval '5 minutes' * power(2,least(retention_deferrals.attempts,4)))`,
+  [category,id,String(reason).toLowerCase().replace(/[^a-z0-9_:-]/g,'_').slice(0,120)]);
+}
+
+async function clearRetentionDeferral(category, id) {
+  await getPool().query('DELETE FROM retention_deferrals WHERE category=$1 AND target_id=$2',[category,id]);
+}
+
+async function claimRetentionDeferral() {
+  const lease=crypto.randomUUID();
+  return rowToBoundary((await getPool().query(`UPDATE retention_deferrals SET lease=$1,
+    lease_until=transaction_timestamp()+interval '60 seconds' WHERE (category,target_id) IN
+    (SELECT category,target_id FROM retention_deferrals WHERE next_attempt_at<=transaction_timestamp()
+      AND (lease_until IS NULL OR lease_until<=transaction_timestamp()) ORDER BY next_attempt_at
+      LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`,[lease])).rows[0]);
+}
+
+async function finishRetentionDeferral(item,reason) {
+  if (!reason) return getPool().query(`DELETE FROM retention_deferrals WHERE category=$1 AND target_id=$2
+    AND lease=$3 AND lease_until>transaction_timestamp()`,[item.category,item.target_id,item.lease]);
+  await getPool().query(`UPDATE retention_deferrals SET reason=$4,attempts=attempts+1,lease=NULL,lease_until=NULL,
+    next_attempt_at=transaction_timestamp()+least(interval '1 hour',interval '5 minutes'*power(2,least(attempts,4)))
+    WHERE category=$1 AND target_id=$2 AND lease=$3 AND lease_until>transaction_timestamp()`,
+  [item.category,item.target_id,item.lease,String(reason).replace(/[^a-z0-9_:-]/g,'_').slice(0,120)]);
+}
+
+async function retentionCandidateExists(category,id) {
+  const spec=RETENTION_CATEGORIES[category];
+  if (!spec) return false;
+  return (await getPool().query(`SELECT 1 FROM ${spec.table} WHERE ${spec.key || 'id'}=$2::${spec.type} AND (${spec.condition})`,
+    [new Date(),id])).rowCount>0;
+}
+
+async function getRetentionStatus() {
+  const r = (await getPool().query(`SELECT
+    (SELECT row_to_json(r) FROM (SELECT day,status,cutoff,progress,completed_at,last_error,last_error_at FROM retention_runs ORDER BY day DESC LIMIT 1) r) AS latest,
+    (SELECT count(*)::int FROM retention_deferrals) AS deferred`)).rows[0];
+  return { latest:r.latest || null, deferred:r.deferred };
+}
+
+async function expireSavedDesign(id) {
+  return withTransaction(async client => {
+    await client.query("SET LOCAL lock_timeout='250ms'");
+    await client.query("SET LOCAL statement_timeout='1500ms'");
+    const row=(await client.query('SELECT account_id FROM saved_designs WHERE id=$1',[id])).rows[0];
+    if (!row) return false;
+    await client.query('SELECT id FROM design_accounts WHERE id=$1 FOR UPDATE',[row.account_id]);
+    return Boolean(await removeSavedDesignWithClient(client,row.account_id,id,true));
+  });
+}
+
+async function expireDesignAccount(id) {
+  return withTransaction(async client => {
+    await client.query("SET LOCAL lock_timeout='250ms'");
+    await client.query("SET LOCAL statement_timeout='1500ms'");
+    const a=(await client.query("SELECT * FROM design_accounts WHERE id=$1 AND status='active' FOR UPDATE",[id])).rows[0];
+    if (!a) return false;
+    const eligible=await client.query(`SELECT id FROM design_accounts a WHERE id=$1 AND
+      ((NOT verified AND created_at<transaction_timestamp()-interval '7 days') OR
+       (verified AND last_activity_at<transaction_timestamp()-interval '12 months'
+        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)))`,[id]);
+    if (!eligible.rowCount) return false;
+    await client.query("UPDATE design_accounts SET status='deleting' WHERE id=$1",[id]);
+    await client.query('DELETE FROM account_sessions WHERE account_id=$1',[id]);
+    await client.query('DELETE FROM account_oauth_flows WHERE account_id=$1',[id]);
+    await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_owner_id=$1',[id]);
+    await abandonDesignWrites(client,id);
+    await client.query('DELETE FROM saved_design_writes WHERE account_id=$1',[id]);
+    await client.query('INSERT INTO account_deletions(account_id) VALUES($1) ON CONFLICT DO NOTHING',[id]);
+    return true;
+  });
+}
+
+async function getNextMockupJobAt({scope,operator,now=Date.now()}) {
+  const row=(await getPool().query(`SELECT min(greatest(j.next_at,
+    coalesce(j.lease_until,'-infinity'),coalesce(b.lease_until,'-infinity'))) AS next
+    FROM mockup_jobs j JOIN mockup_provider_budgets b ON b.scope=j.scope
+    WHERE j.scope=$1 AND (j.mode='customer' OR $2)
+      AND (j.status NOT IN ('completed','failed') OR jsonb_array_length(j.data->'sourceObjectKeys')>0)`,[scope,operator])).rows[0];
+  return row?.next ? Math.max(now,+row.next) : null;
+}
+
+async function getNextWorkerJobAt(kind) {
+  let sql;
+  if (kind === 'fulfillment') sql=`SELECT min(greatest(fulfillment_next_attempt_at,
+    coalesce(fulfillment_locked_until,'-infinity'))) AS next FROM orders
+    WHERE provider_smoke=false AND status IN ('paid','paid_test') AND fulfillment_attempts<3
+      AND fulfillment_status IN ('pending','failed','processing')`;
+  else if (kind === 'email') sql=`SELECT min(greatest(next_attempt_at,
+    coalesce(locked_until,'-infinity'))) AS next FROM email_jobs
+    WHERE provider_smoke=false AND provider_terminal=false AND attempt_count<4
+      AND status IN ('pending','failed','processing')`;
+  else throw new Error('invalid worker kind');
+  const row=(await getPool().query(sql)).rows[0];
+  const next=row.next ? +row.next : NaN;
+  return Number.isFinite(next) ? next : null;
+}
+
+// Prepared files own the shared object; paid artifacts only reference it.
+async function claimPreparedPrintFile(candidate) {
+  return withTransaction(async client => {
+    await client.query(`INSERT INTO prepared_print_files
+      (id,configuration_id,surface_key,spec_hash,object_key,status,expires_at)
+      VALUES($1,$2,$3,$4,$5,'uploading',transaction_timestamp()+interval '24 hours') ON CONFLICT DO NOTHING`,
+    [candidate.id,candidate.configurationId,candidate.surfaceKey,candidate.specHash,candidate.objectKey]);
+    const row=(await client.query(`SELECT * FROM prepared_print_files
+      WHERE configuration_id=$1 AND surface_key=$2 FOR UPDATE`,[candidate.configurationId,candidate.surfaceKey])).rows[0];
+    if (!row || row.spec_hash!==candidate.specHash || row.status==='deleting') throw Object.assign(new Error('Frozen print specification changed'),{code:'PRINT_SPEC_CHANGED'});
+    if (row.status==='active') {
+      await client.query("UPDATE prepared_print_files SET expires_at=GREATEST(expires_at,transaction_timestamp()+interval '24 hours') WHERE id=$1",[row.id]);
+      return rowToBoundary(row);
+    }
+    if(row.lease_until && +row.lease_until>Date.now()) return null;
+    return rowToBoundary((await client.query(`UPDATE prepared_print_files SET lease=$2,
+      lease_until=transaction_timestamp()+interval '3 minutes' WHERE id=$1 RETURNING *`,[row.id,candidate.lease])).rows[0]);
+  });
+}
+async function savePreparedPrintFile(id,lease,sha256,byteSize,active=false) {
+  return rowToBoundary((await getPool().query(`UPDATE prepared_print_files SET sha256=$3,byte_size=$4,
+    status=CASE WHEN $5 THEN 'active' ELSE 'uploading' END,
+    lease_until=CASE WHEN $5 THEN NULL ELSE lease_until END
+    WHERE id=$1 AND lease=$2 AND lease_until>transaction_timestamp() RETURNING *`,[id,lease,sha256,byteSize,active])).rows[0]);
+}
+async function releasePreparedPrintFile(id,lease) {
+  await getPool().query('UPDATE prepared_print_files SET lease_until=NULL WHERE id=$1 AND lease=$2',[id,lease]);
+}
+async function getPreparedPrintFiles(ids) {
+  return rowsToBoundary((await getPool().query('SELECT * FROM prepared_print_files WHERE id=ANY($1::text[])',[ids])).rows);
+}
+async function recordMockupApproval(orderId,approval) {
+  return withTransaction(async client=>{
+    const order=(await client.query('SELECT * FROM orders WHERE id=$1 FOR UPDATE',[orderId])).rows[0];
+    if(!order || order.paid_at) return false;
+    const files=(await client.query(`SELECT * FROM prepared_print_files WHERE id=ANY($1::text[])
+      AND status='active' AND expires_at>transaction_timestamp() FOR KEY SHARE`,[approval.fileIds])).rows;
+    if(files.length!==approval.fileIds.length) return false;
+    await client.query('UPDATE orders SET mockup_approval_json=$2 WHERE id=$1',[orderId,approval]);
+    return true;
+  });
+}
+async function claimExpiredPreparedPrintFile(exactId = null) {
+  return withTransaction(async client=>{
+    const row=(await client.query(`SELECT f.* FROM prepared_print_files f WHERE f.expires_at<=transaction_timestamp()
+      AND ($1::text IS NULL OR f.id=$1)
+      AND (lease_until IS NULL OR lease_until<transaction_timestamp())
+      AND NOT EXISTS(SELECT 1 FROM print_artifacts a WHERE a.source_file_id=f.id)
+      AND NOT EXISTS(SELECT 1 FROM orders o WHERE o.mockup_approval_json->'fileIds' ? f.id AND
+        ((o.paid_at IS NOT NULL AND o.fulfillment_status NOT IN ('submitted','mocked')) OR
+         (o.retention_hold_reason IS NOT NULL) OR
+         (o.paid_at IS NULL AND (o.checkout_session_expires_at>transaction_timestamp() OR
+          (o.checkout_first_attempt_at IS NOT NULL AND o.checkout_expired_confirmed_at IS NULL)))))
+      ORDER BY f.expires_at LIMIT 1 FOR UPDATE SKIP LOCKED`,[exactId])).rows[0];
+    if(!row)return null;
+    return rowToBoundary((await client.query(`UPDATE prepared_print_files SET status='deleting',lease=$2,
+      lease_until=transaction_timestamp()+interval '1 minute' WHERE id=$1 RETURNING *`,[row.id,crypto.randomUUID()])).rows[0]);
+  });
+}
+async function finishPreparedPrintFileDeletion(id,lease,success) {
+  if(success) return (await getPool().query("DELETE FROM prepared_print_files WHERE id=$1 AND lease=$2 AND status='deleting' AND lease_until>transaction_timestamp()",[id,lease])).rowCount===1;
+  else return (await getPool().query("UPDATE prepared_print_files SET lease_until=transaction_timestamp()+interval '5 minutes' WHERE id=$1 AND lease=$2 AND lease_until>transaction_timestamp()",[id,lease])).rowCount===1;
 }
 
 module.exports = {
+  claimPreparedPrintFile, savePreparedPrintFile, releasePreparedPrintFile, getPreparedPrintFiles, recordMockupApproval,
+  claimExpiredPreparedPrintFile, finishPreparedPrintFileDeletion,
+  claimDailyRetentionRun, checkpointDailyRetention, releaseDailyRetention,
+  recordDailyRetentionFailure,
+  retentionPage, deferRetention, clearRetentionDeferral,
+  getRetentionStatus, expireSavedDesign, expireDesignAccount, cleanupOneCommerceRecord,
+  getNextMockupJobAt, claimRetentionDeferral, finishRetentionDeferral, retentionCandidateExists,
+  getNextWorkerJobAt,
   getMockupConfiguration, enqueueMockupJob, getMockupJob, claimMockupJob, saveMockupJob, renewMockupLease,
   releaseMockupLease, reserveMockupRequest, deferMockupRequests, pruneMockupJobs,
   hasAccountSchema: () => accountSchemaAvailable,

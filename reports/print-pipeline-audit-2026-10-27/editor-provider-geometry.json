@@ -1,0 +1,3682 @@
+[
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      87,
+      213,
+      56,
+      99
+    ],
+    "editor": [
+      87,
+      213,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      85,
+      214,
+      56,
+      99
+    ],
+    "editor": [
+      85,
+      214,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      85,
+      214,
+      56,
+      107
+    ],
+    "editor": [
+      85,
+      214,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      85,
+      214,
+      56,
+      107
+    ],
+    "editor": [
+      85,
+      214,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      85,
+      212,
+      56,
+      99
+    ],
+    "editor": [
+      86,
+      212,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      84,
+      214,
+      56,
+      99
+    ],
+    "editor": [
+      84,
+      214,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      79,
+      212,
+      56,
+      107
+    ],
+    "editor": [
+      79,
+      212,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      79,
+      214,
+      56,
+      107
+    ],
+    "editor": [
+      79,
+      214,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      75,
+      224,
+      56,
+      99
+    ],
+    "editor": [
+      74,
+      222,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      73,
+      226,
+      56,
+      99
+    ],
+    "editor": [
+      72,
+      227,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      73,
+      226,
+      56,
+      107
+    ],
+    "editor": [
+      72,
+      227,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      73,
+      226,
+      56,
+      107
+    ],
+    "editor": [
+      72,
+      227,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      74,
+      224,
+      56,
+      99
+    ],
+    "editor": [
+      72,
+      222,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      73,
+      226,
+      56,
+      99
+    ],
+    "editor": [
+      71,
+      227,
+      55,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      67,
+      224,
+      56,
+      107
+    ],
+    "editor": [
+      66,
+      222,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      67,
+      226,
+      56,
+      107
+    ],
+    "editor": [
+      66,
+      227,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      80,
+      219,
+      57,
+      99
+    ],
+    "editor": [
+      80,
+      219,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      99
+    ],
+    "editor": [
+      78,
+      221,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      107
+    ],
+    "editor": [
+      78,
+      221,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      107
+    ],
+    "editor": [
+      78,
+      221,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      78,
+      219,
+      57,
+      99
+    ],
+    "editor": [
+      79,
+      219,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      77,
+      221,
+      57,
+      99
+    ],
+    "editor": [
+      77,
+      221,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      72,
+      219,
+      57,
+      107
+    ],
+    "editor": [
+      72,
+      219,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      72,
+      221,
+      57,
+      107
+    ],
+    "editor": [
+      72,
+      221,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      99
+    ],
+    "editor": [
+      78,
+      221,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      77,
+      222,
+      57,
+      99
+    ],
+    "editor": [
+      77,
+      222,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      77,
+      222,
+      57,
+      107
+    ],
+    "editor": [
+      77,
+      222,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      77,
+      222,
+      57,
+      107
+    ],
+    "editor": [
+      77,
+      222,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      77,
+      220,
+      57,
+      99
+    ],
+    "editor": [
+      77,
+      221,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      76,
+      222,
+      57,
+      99
+    ],
+    "editor": [
+      76,
+      222,
+      55,
+      98
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      71,
+      220,
+      57,
+      107
+    ],
+    "editor": [
+      71,
+      221,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      71,
+      222,
+      57,
+      107
+    ],
+    "editor": [
+      71,
+      222,
+      55,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      81,
+      218,
+      57,
+      98
+    ],
+    "editor": [
+      81,
+      218,
+      56,
+      97
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      98
+    ],
+    "editor": [
+      78,
+      221,
+      56,
+      97
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      107
+    ],
+    "editor": [
+      78,
+      221,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      78,
+      221,
+      57,
+      107
+    ],
+    "editor": [
+      78,
+      221,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      80,
+      218,
+      57,
+      98
+    ],
+    "editor": [
+      80,
+      218,
+      56,
+      97
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      77,
+      221,
+      57,
+      98
+    ],
+    "editor": [
+      77,
+      221,
+      56,
+      97
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      72,
+      218,
+      57,
+      107
+    ],
+    "editor": [
+      72,
+      218,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      72,
+      221,
+      57,
+      107
+    ],
+    "editor": [
+      72,
+      221,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      70,
+      229,
+      55,
+      99
+    ],
+    "editor": [
+      70,
+      229,
+      54,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      68,
+      231,
+      55,
+      99
+    ],
+    "editor": [
+      68,
+      231,
+      54,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      68,
+      231,
+      55,
+      107
+    ],
+    "editor": [
+      68,
+      231,
+      54,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      68,
+      231,
+      55,
+      107
+    ],
+    "editor": [
+      68,
+      231,
+      54,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      69,
+      228,
+      55,
+      99
+    ],
+    "editor": [
+      69,
+      228,
+      54,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      68,
+      230,
+      55,
+      99
+    ],
+    "editor": [
+      68,
+      231,
+      54,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      63,
+      228,
+      55,
+      107
+    ],
+    "editor": [
+      63,
+      228,
+      54,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      63,
+      230,
+      55,
+      107
+    ],
+    "editor": [
+      63,
+      231,
+      54,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      108,
+      199,
+      62,
+      104
+    ],
+    "editor": [
+      108,
+      198,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      103,
+      199,
+      62,
+      104
+    ],
+    "editor": [
+      103,
+      198,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      103,
+      199,
+      62,
+      107
+    ],
+    "editor": [
+      103,
+      198,
+      60,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      103,
+      199,
+      62,
+      107
+    ],
+    "editor": [
+      103,
+      198,
+      60,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      105,
+      198,
+      62,
+      104
+    ],
+    "editor": [
+      106,
+      198,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      103,
+      198,
+      62,
+      104
+    ],
+    "editor": [
+      102,
+      198,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      97,
+      198,
+      62,
+      107
+    ],
+    "editor": [
+      97,
+      198,
+      60,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      97,
+      198,
+      62,
+      107
+    ],
+    "editor": [
+      97,
+      198,
+      60,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      107,
+      200,
+      61,
+      105
+    ],
+    "editor": [
+      107,
+      200,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      102,
+      200,
+      61,
+      105
+    ],
+    "editor": [
+      102,
+      200,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      102,
+      200,
+      61,
+      107
+    ],
+    "editor": [
+      102,
+      200,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      102,
+      200,
+      61,
+      107
+    ],
+    "editor": [
+      102,
+      200,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      104,
+      200,
+      61,
+      105
+    ],
+    "editor": [
+      105,
+      200,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      102,
+      200,
+      61,
+      105
+    ],
+    "editor": [
+      102,
+      200,
+      60,
+      103
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      97,
+      200,
+      61,
+      107
+    ],
+    "editor": [
+      97,
+      200,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      97,
+      200,
+      61,
+      107
+    ],
+    "editor": [
+      97,
+      200,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      83,
+      217,
+      61,
+      99
+    ],
+    "editor": [
+      82,
+      216,
+      60,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      80,
+      219,
+      61,
+      99
+    ],
+    "editor": [
+      79,
+      220,
+      60,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      80,
+      219,
+      61,
+      107
+    ],
+    "editor": [
+      79,
+      220,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      80,
+      219,
+      61,
+      107
+    ],
+    "editor": [
+      79,
+      220,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      81,
+      216,
+      61,
+      99
+    ],
+    "editor": [
+      80,
+      215,
+      60,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      80,
+      219,
+      61,
+      99
+    ],
+    "editor": [
+      78,
+      220,
+      60,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      74,
+      216,
+      61,
+      107
+    ],
+    "editor": [
+      74,
+      215,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      74,
+      219,
+      61,
+      107
+    ],
+    "editor": [
+      74,
+      220,
+      60,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      78,
+      221,
+      60,
+      99
+    ],
+    "editor": [
+      78,
+      221,
+      58,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      76,
+      223,
+      60,
+      99
+    ],
+    "editor": [
+      76,
+      223,
+      58,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      76,
+      223,
+      60,
+      107
+    ],
+    "editor": [
+      76,
+      223,
+      58,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      76,
+      223,
+      60,
+      107
+    ],
+    "editor": [
+      76,
+      223,
+      58,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      76,
+      221,
+      60,
+      99
+    ],
+    "editor": [
+      76,
+      221,
+      58,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      75,
+      223,
+      60,
+      99
+    ],
+    "editor": [
+      75,
+      223,
+      58,
+      97
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      70,
+      221,
+      60,
+      107
+    ],
+    "editor": [
+      70,
+      221,
+      58,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": false,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      70,
+      223,
+      60,
+      107
+    ],
+    "editor": [
+      70,
+      223,
+      58,
+      106
+    ],
+    "maxDelta": 2
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      47,
+      253,
+      56,
+      103
+    ],
+    "editor": [
+      47,
+      253,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      45,
+      253,
+      56,
+      103
+    ],
+    "editor": [
+      45,
+      253,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      45,
+      253,
+      56,
+      107
+    ],
+    "editor": [
+      45,
+      253,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      45,
+      253,
+      56,
+      107
+    ],
+    "editor": [
+      45,
+      253,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      46,
+      255,
+      56,
+      103
+    ],
+    "editor": [
+      47,
+      256,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      44,
+      255,
+      56,
+      103
+    ],
+    "editor": [
+      44,
+      256,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      39,
+      255,
+      56,
+      107
+    ],
+    "editor": [
+      39,
+      256,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      39,
+      255,
+      56,
+      107
+    ],
+    "editor": [
+      39,
+      256,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      35,
+      264,
+      56,
+      103
+    ],
+    "editor": [
+      35,
+      265,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      33,
+      264,
+      56,
+      103
+    ],
+    "editor": [
+      33,
+      265,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      33,
+      264,
+      56,
+      107
+    ],
+    "editor": [
+      33,
+      265,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      33,
+      264,
+      56,
+      107
+    ],
+    "editor": [
+      33,
+      265,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      34,
+      267,
+      56,
+      103
+    ],
+    "editor": [
+      35,
+      268,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      32,
+      267,
+      56,
+      103
+    ],
+    "editor": [
+      32,
+      268,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      27,
+      267,
+      56,
+      107
+    ],
+    "editor": [
+      28,
+      268,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "classic",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      27,
+      267,
+      56,
+      107
+    ],
+    "editor": [
+      28,
+      268,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      43,
+      257,
+      56,
+      103
+    ],
+    "editor": [
+      43,
+      257,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      41,
+      257,
+      56,
+      103
+    ],
+    "editor": [
+      41,
+      257,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      41,
+      257,
+      56,
+      107
+    ],
+    "editor": [
+      41,
+      257,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      41,
+      257,
+      56,
+      107
+    ],
+    "editor": [
+      41,
+      257,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      43,
+      259,
+      56,
+      103
+    ],
+    "editor": [
+      43,
+      260,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      40,
+      259,
+      56,
+      103
+    ],
+    "editor": [
+      40,
+      260,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      35,
+      259,
+      56,
+      107
+    ],
+    "editor": [
+      35,
+      260,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      35,
+      259,
+      56,
+      107
+    ],
+    "editor": [
+      35,
+      260,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      40,
+      259,
+      56,
+      103
+    ],
+    "editor": [
+      40,
+      259,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      38,
+      259,
+      56,
+      103
+    ],
+    "editor": [
+      38,
+      259,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      38,
+      259,
+      56,
+      107
+    ],
+    "editor": [
+      38,
+      259,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      38,
+      259,
+      56,
+      107
+    ],
+    "editor": [
+      38,
+      259,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      40,
+      262,
+      56,
+      103
+    ],
+    "editor": [
+      40,
+      262,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      38,
+      262,
+      56,
+      103
+    ],
+    "editor": [
+      38,
+      262,
+      55,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      32,
+      262,
+      56,
+      107
+    ],
+    "editor": [
+      33,
+      262,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "lora",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      32,
+      262,
+      56,
+      107
+    ],
+    "editor": [
+      33,
+      262,
+      55,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      42,
+      259,
+      56,
+      103
+    ],
+    "editor": [
+      42,
+      259,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      39,
+      259,
+      56,
+      103
+    ],
+    "editor": [
+      39,
+      259,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      39,
+      259,
+      56,
+      107
+    ],
+    "editor": [
+      39,
+      259,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      39,
+      259,
+      56,
+      107
+    ],
+    "editor": [
+      39,
+      259,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      41,
+      261,
+      56,
+      103
+    ],
+    "editor": [
+      42,
+      262,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      38,
+      261,
+      56,
+      103
+    ],
+    "editor": [
+      38,
+      262,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      33,
+      261,
+      56,
+      107
+    ],
+    "editor": [
+      33,
+      262,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      33,
+      261,
+      56,
+      107
+    ],
+    "editor": [
+      33,
+      262,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      34,
+      266,
+      56,
+      103
+    ],
+    "editor": [
+      34,
+      266,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      32,
+      266,
+      56,
+      103
+    ],
+    "editor": [
+      32,
+      266,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      32,
+      266,
+      56,
+      107
+    ],
+    "editor": [
+      32,
+      266,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      32,
+      266,
+      56,
+      107
+    ],
+    "editor": [
+      32,
+      266,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      34,
+      268,
+      56,
+      103
+    ],
+    "editor": [
+      34,
+      269,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      31,
+      268,
+      56,
+      103
+    ],
+    "editor": [
+      31,
+      269,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      26,
+      268,
+      56,
+      107
+    ],
+    "editor": [
+      27,
+      269,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "montserrat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      26,
+      268,
+      56,
+      107
+    ],
+    "editor": [
+      27,
+      269,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      73,
+      230,
+      56,
+      103
+    ],
+    "editor": [
+      74,
+      230,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      67,
+      230,
+      56,
+      103
+    ],
+    "editor": [
+      67,
+      230,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      67,
+      230,
+      56,
+      107
+    ],
+    "editor": [
+      67,
+      230,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      67,
+      230,
+      56,
+      107
+    ],
+    "editor": [
+      67,
+      230,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      70,
+      233,
+      56,
+      103
+    ],
+    "editor": [
+      71,
+      233,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      67,
+      233,
+      56,
+      103
+    ],
+    "editor": [
+      67,
+      233,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      61,
+      233,
+      56,
+      107
+    ],
+    "editor": [
+      62,
+      233,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      61,
+      233,
+      56,
+      107
+    ],
+    "editor": [
+      62,
+      233,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      72,
+      231,
+      56,
+      103
+    ],
+    "editor": [
+      72,
+      231,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      66,
+      231,
+      56,
+      103
+    ],
+    "editor": [
+      66,
+      231,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      66,
+      231,
+      56,
+      107
+    ],
+    "editor": [
+      66,
+      231,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      66,
+      231,
+      56,
+      107
+    ],
+    "editor": [
+      66,
+      231,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      69,
+      234,
+      56,
+      103
+    ],
+    "editor": [
+      69,
+      234,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      66,
+      234,
+      56,
+      103
+    ],
+    "editor": [
+      66,
+      234,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      60,
+      234,
+      56,
+      107
+    ],
+    "editor": [
+      61,
+      234,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "caveat",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      60,
+      234,
+      56,
+      107
+    ],
+    "editor": [
+      61,
+      234,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      54,
+      247,
+      56,
+      103
+    ],
+    "editor": [
+      54,
+      247,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      51,
+      247,
+      56,
+      103
+    ],
+    "editor": [
+      51,
+      247,
+      56,
+      103
+    ],
+    "maxDelta": 0
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      51,
+      247,
+      56,
+      107
+    ],
+    "editor": [
+      51,
+      247,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      51,
+      247,
+      56,
+      107
+    ],
+    "editor": [
+      51,
+      247,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      53,
+      249,
+      56,
+      103
+    ],
+    "editor": [
+      53,
+      250,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      50,
+      249,
+      56,
+      103
+    ],
+    "editor": [
+      50,
+      250,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      45,
+      249,
+      56,
+      107
+    ],
+    "editor": [
+      45,
+      250,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 400,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      45,
+      249,
+      56,
+      107
+    ],
+    "editor": [
+      45,
+      250,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      49,
+      250,
+      56,
+      103
+    ],
+    "editor": [
+      49,
+      251,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      47,
+      250,
+      56,
+      103
+    ],
+    "editor": [
+      47,
+      251,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      47,
+      250,
+      56,
+      107
+    ],
+    "editor": [
+      47,
+      251,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "normal",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      47,
+      250,
+      56,
+      107
+    ],
+    "editor": [
+      47,
+      251,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": false
+    },
+    "actual": [
+      48,
+      253,
+      56,
+      103
+    ],
+    "editor": [
+      49,
+      253,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": false,
+      "linethrough": true
+    },
+    "actual": [
+      46,
+      253,
+      56,
+      103
+    ],
+    "editor": [
+      47,
+      253,
+      56,
+      103
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": false
+    },
+    "actual": [
+      41,
+      253,
+      56,
+      107
+    ],
+    "editor": [
+      42,
+      253,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  },
+  {
+    "mixed": true,
+    "font": "baloo-2",
+    "style": {
+      "fontWeight": 700,
+      "fontStyle": "italic",
+      "underline": true,
+      "linethrough": true
+    },
+    "actual": [
+      41,
+      253,
+      56,
+      107
+    ],
+    "editor": [
+      42,
+      253,
+      56,
+      106
+    ],
+    "maxDelta": 1
+  }
+]

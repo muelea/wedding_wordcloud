@@ -190,7 +190,7 @@ test('commerce retention protects evidence and removes expired personal copies',
     await app.query(`UPDATE orders SET event_id = $2, paid_at = null, status = 'creating_checkout',
       checkout_ambiguous = true WHERE id = $1`, [order.id, row.id]);
     await app.query('UPDATE configurations SET event_id = $2 WHERE id = $1', [configId, row.id]);
-    await app.query("UPDATE events SET created_at = transaction_timestamp() - interval '366 days' WHERE id = $1", [row.id]);
+    await app.query("UPDATE events SET updated_at = transaction_timestamp() - interval '4 months' WHERE id = $1", [row.id]);
     assert.equal((await require('../src/lifecycle').cleanupExpiredEvent(row.id)).deleted, true);
     assert.ok(await db.getOrderById(order.id));
     assert.equal((await db.getConfiguration(configId)).event_id, null);

@@ -1,0 +1,411 @@
+{
+  "groups": [
+    {
+      "group": "mug",
+      "name": "White ceramic mugs",
+      "productId": 19,
+      "listed": 3,
+      "passed": 3,
+      "countries": [
+        "ES",
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "coaster",
+      "name": "Cork-backed coaster",
+      "productId": 611,
+      "listed": 1,
+      "passed": 1,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "poster",
+      "name": "Matte posters",
+      "productId": 268,
+      "listed": 7,
+      "passed": 7,
+      "countries": [
+        "ES",
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "framed-poster",
+      "name": "Framed posters",
+      "productId": 304,
+      "listed": 22,
+      "passed": 21,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": [
+        11793
+      ]
+    },
+    {
+      "group": "tote",
+      "name": "All-over tote bags",
+      "productId": 84,
+      "listed": 3,
+      "passed": 3,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "blanket",
+      "name": "Throw blankets",
+      "productId": 395,
+      "listed": 2,
+      "passed": 2,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "pillow",
+      "name": "Decorative pillows",
+      "productId": 83,
+      "listed": 5,
+      "passed": 5,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "notebook",
+      "name": "Spiral notebook",
+      "productId": 474,
+      "listed": 1,
+      "passed": 1,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "colored-mug",
+      "name": "Colored-interior mugs",
+      "productId": 403,
+      "listed": 11,
+      "passed": 11,
+      "countries": [
+        "ES",
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "mousepad",
+      "name": "Mouse pad",
+      "productId": 518,
+      "listed": 1,
+      "passed": 1,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "sleeve",
+      "name": "Laptop sleeves",
+      "productId": 394,
+      "listed": 2,
+      "passed": 2,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "canvas",
+      "name": "Standard canvases",
+      "productId": 3,
+      "listed": 46,
+      "passed": 46,
+      "countries": [
+        "ES"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "bottle",
+      "name": "Water bottles",
+      "productId": 382,
+      "listed": 2,
+      "passed": 2,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "steel-tumbler",
+      "name": "Straw tumblers",
+      "productId": 585,
+      "listed": 2,
+      "passed": 2,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "enamel",
+      "name": "Enamel mug",
+      "productId": 407,
+      "listed": 1,
+      "passed": 1,
+      "countries": [
+        "ES"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "travel",
+      "name": "Travel mugs",
+      "productId": 663,
+      "listed": 2,
+      "passed": 2,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "wine",
+      "name": "Wine tumbler",
+      "productId": 632,
+      "listed": 1,
+      "passed": 1,
+      "countries": [
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "eco-tote",
+      "name": "Organic cotton tote bags",
+      "productId": 367,
+      "listed": 2,
+      "passed": 2,
+      "countries": [
+        "ES"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "case-601",
+      "name": "Tough iPhone cases",
+      "productId": 601,
+      "listed": 58,
+      "passed": 58,
+      "countries": [
+        "IT"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "case-798",
+      "name": "MagSafe iPhone cases",
+      "productId": 798,
+      "listed": 36,
+      "passed": 36,
+      "countries": [
+        "IT"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "case-686",
+      "name": "Tough Samsung cases",
+      "productId": 686,
+      "listed": 46,
+      "passed": 46,
+      "countries": [
+        "IT"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "framed-canvas",
+      "name": "Framed canvases",
+      "productId": 614,
+      "listed": 39,
+      "passed": 39,
+      "countries": [
+        "ES"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "thin-canvas",
+      "name": "Thin canvases",
+      "productId": 616,
+      "listed": 13,
+      "passed": 13,
+      "countries": [
+        "ES"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "t-shirt",
+      "name": "Organic cotton T-shirts",
+      "productId": 456,
+      "listed": 18,
+      "passed": 18,
+      "countries": [
+        "ES",
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "sweatshirt",
+      "name": "Organic cotton sweatshirts",
+      "productId": 493,
+      "listed": 10,
+      "passed": 10,
+      "countries": [
+        "ES",
+        "LV"
+      ],
+      "exceptions": []
+    },
+    {
+      "group": "hoodie",
+      "name": "Organic cotton hoodies",
+      "productId": 479,
+      "listed": 10,
+      "passed": 10,
+      "countries": [
+        "ES"
+      ],
+      "exceptions": []
+    }
+  ],
+  "products": 26,
+  "variants": 344,
+  "passed": 343,
+  "exceptions": [
+    {
+      "key": "framed-poster-11793",
+      "variantId": 11793,
+      "name": "Poster im Eichenrahmen",
+      "variantLabel": "61 × 91 cm · Eiche",
+      "catalogActive": true,
+      "germanyAvailability": "not fulfillable",
+      "euStockRegions": [],
+      "euDispatch": false,
+      "noCustomsFeesExpected": false,
+      "shippingError": "HTTP 400: {\"data\":\"Item 0: This product \\\"Enhanced Matte Paper Framed Poster (cm) (Oak / 61×91 cm)\\\" ships to Australia, New Zealand only and the current shipping address is outside of this region.\",\"error\":{\"reason\":\"BadRequest\",\"message\":\"Item 0: This product \\\"Enhanced Matte Paper Framed Poster (cm) (Oak / 61×91 cm)\\\" ships to Australia, New Zealand only and the current shipping address is outside of this region.\"}}"
+    }
+  ],
+  "departureCountries": {
+    "IT": 140,
+    "LV": 58,
+    "ES": 145
+  },
+  "startedAt": "2026-10-27T16:27:20.960Z",
+  "completedAt": "2026-10-27T16:33:33.812Z",
+  "destination": {
+    "country": "DE",
+    "city": "Berlin",
+    "postalCode": "10115"
+  },
+  "quantityPerQuote": 1,
+  "catalogUnchangedDuringAudit": true,
+  "localGermanyRestrictions": [],
+  "additionalConfirmation": {
+    "variantId": 11793,
+    "productKey": "framed-poster-11793",
+    "checkedAt": "2026-10-27T16:28:48.350Z",
+    "requests": [
+      {
+        "path": "/v2/catalog-variants/11793/availability?selling_region_name=germany",
+        "status": 200,
+        "at": "2026-10-27T16:28:48.724Z",
+        "response": {
+          "data": {
+            "catalog_variant_id": 11793,
+            "techniques": [
+              {
+                "technique": "digital",
+                "selling_regions": [
+                  {
+                    "name": "germany",
+                    "availability": "not fulfillable",
+                    "placement_option_availability": []
+                  }
+                ]
+              }
+            ],
+            "_links": {
+              "variant": {
+                "href": "https://api.printful.com/v2/catalog-variants/11793"
+              }
+            }
+          },
+          "extra": [],
+          "_links": {
+            "self": {
+              "href": "https://api.printful.com/v2/catalog-variants/11793/availability"
+            },
+            "variant": {
+              "href": "https://api.printful.com/v2/catalog-variants/11793"
+            }
+          },
+          "filter_settings": [
+            {
+              "name": "id",
+              "value": "11793"
+            },
+            {
+              "name": "selling_region_name",
+              "value": "germany"
+            }
+          ]
+        }
+      },
+      {
+        "path": "/orders/estimate-costs",
+        "status": 400,
+        "at": "2026-10-27T16:28:48.908Z",
+        "request": {
+          "shipping": "STANDARD",
+          "recipient": {
+            "name": "Wolkenworte Katalogpruefung",
+            "address1": "Musterstrasse 1",
+            "city": "Berlin",
+            "zip": "10115",
+            "country_code": "DE"
+          },
+          "items": [
+            {
+              "variant_id": 11793,
+              "quantity": 1
+            }
+          ]
+        },
+        "response": {
+          "code": 400,
+          "result": "Item 0: This product \"Enhanced Matte Paper Framed Poster (cm) (Oak / 61×91 cm)\" ships to Australia, New Zealand only and the current shipping address is outside of this region.",
+          "error": {
+            "reason": "BadRequest",
+            "message": "Item 0: This product \"Enhanced Matte Paper Framed Poster (cm) (Oak / 61×91 cm)\" ships to Australia, New Zealand only and the current shipping address is outside of this region."
+          }
+        }
+      }
+    ]
+  }
+}

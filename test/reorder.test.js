@@ -1,6 +1,7 @@
 'use strict';
 
 const test = require('node:test');
+const { stubMockupApproval } = require('./helpers');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
@@ -11,6 +12,7 @@ async function post(url, body) {
 
 test('single-address checkout and paid design reorders preserve commerce snapshots', async (t) => {
   const { baseUrl, close, query } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const db = require('../src/db');
   const printful = require('../src/printful');
@@ -164,7 +166,7 @@ test('single-address checkout and paid design reorders preserve commerce snapsho
   });
 
   await t.test('expired events cannot create new copies of retained paid designs', async () => {
-    await query("UPDATE events SET created_at = now() - interval '366 days' WHERE id = $1", [event.id]);
+    await query("UPDATE events SET updated_at = now() - interval '4 months' WHERE id = $1", [event.id]);
     assert.equal((await post(`${api}/orders/reorder`, { ...request, requestId: 'b'.repeat(32) })).status, 404);
   });
 });

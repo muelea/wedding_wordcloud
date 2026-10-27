@@ -1,0 +1,62 @@
+{
+  "scope": "Local photographic previews for the 38 offered T-shirt, sweatshirt and hoodie variants.",
+  "sources": {
+    "src/apparelProducts.js": "c4f35a3381a2d2c976ebdddf9b81809292abe890edefb655d82bb59f1390d311",
+    "src/apparelCatalog.json": "c95e01ac63395cea61d11cab7ad0ce007a0a5fc4bc675e7231ed1b689cabe103",
+    "public/js/product-photo-preview.js": "54a70b45bb0292365cef050d22d3d390a10f83c4ee9baa1301935995994860c9",
+    "public/js/product-gallery.js": "a1153551a5daf75641a8fdf88e734e3b7ec1987b07ac1615516544010276cadd",
+    "public/js/cart-product-preview.js": "4dc806776d1f0235b970a8d77001f61ec9aea86a2f8a7b3129aa9829a58d6d68",
+    "public/js/print-preview.js": "77c87c829dd1d58c8ceb086128867eb245da392babb14eb9076c87f50fee0d2b",
+    "views/configure.ejs": "7d418e5b3aa5f01cee9371c4afffe828e91245555857fb213a70e07b58565e0e",
+    "views/shipping.ejs": "ed100e6c23241b69cfe81dafbf7b865404bbd43da3e9b8c1a25c9cb06e0e494c",
+    "public/print-preview.css": "41fd336dee711b25ae38576d937f9a65c9ea590439577b532646906b59ca96d8",
+    "scripts/prepare-local.js": "76cd3698f7b7c49aacbbd4980b538c57dab3c7f124b0d67fc3d377a07eb91a4e"
+  },
+  "checks": [
+    {
+      "files": [
+        "test/apparel-photo-preview.test.js",
+        "test/cart-product-preview.test.js",
+        "test/product-gallery.test.js",
+        "test/print-preview.test.js"
+      ],
+      "passed": 75,
+      "failed": 0
+    },
+    {
+      "files": [
+        "test/apparel-print.test.js",
+        "test/garment-cloth.test.js",
+        "test/product-photos.test.js",
+        "test/configurator-session.test.js",
+        "test/configurator-workspace.test.js",
+        "test/mobile-canvas-workspace.test.js",
+        "test/responsive-ui.test.js"
+      ],
+      "passed": 189,
+      "failed": 0
+    },
+    {
+      "check": "git diff --check",
+      "passed": true
+    },
+    {
+      "check": "local repository asset preflight",
+      "requiredAssets": 4329,
+      "passed": true
+    }
+  ],
+  "browserChecks": [
+    "Desktop gallery: white T-shirt and sweatshirt; white/black hoodie and size switching",
+    "Editor: matching photographic preview and immutable cart approval",
+    "Cart and shipping: photographic thumbnails and overview of accepted artwork",
+    "390 px mobile viewport: complete garment and photo/design tabs"
+  ],
+  "providerEvidence": "provider-check.json",
+  "comparison": "comparison.png",
+  "limitations": [
+    "Printful uses shared photographs across sizes; these reproduce its standard placement, not size-specific garment proportions.",
+    "Synthetic provider mockups, no physical garment samples."
+  ],
+  "deployment": "No deployment or push."
+}

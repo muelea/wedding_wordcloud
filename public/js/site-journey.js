@@ -42,11 +42,11 @@
     const cloudLink = card.querySelector('[data-resume-cloud]');
     const designLink = card.querySelector('[data-resume-design]');
     const eventUrl = `/e/${encodeURIComponent(saved.slug)}`;
-    cloudLink.href = saved.directDesign ? `${eventUrl}/configure` : eventUrl;
+    cloudLink.href = saved.directDesign ? `${eventUrl}/configure?view=products` : eventUrl;
     if (saved.directDesign) {
       const label = cloudLink.querySelector?.('[data-resume-cloud-label]') || cloudLink;
-      if (globalThis.WolkenworteI18n) globalThis.WolkenworteI18n.setText(label, 'Gestaltung fortsetzen');
-      else label.textContent = 'Gestaltung fortsetzen';
+      if (globalThis.WolkenworteI18n) globalThis.WolkenworteI18n.setText(label, 'Zur Produktübersicht');
+      else label.textContent = 'Zur Produktübersicht';
     }
     designLink.href = `${eventUrl}/configure?cart=1`;
     let hasCart = false;

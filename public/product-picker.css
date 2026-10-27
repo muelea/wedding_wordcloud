@@ -1,0 +1,41 @@
+.product-picker { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1; }
+.product-picker [hidden] { display: none !important; }
+.product-picker-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px 16px 16px; }
+.product-picker-content:focus { outline: none; }
+.product-picker button, .product-picker input { font: inherit; color: inherit; }
+.product-picker .product-picker-choice { display: grid; grid-template-columns: 44px minmax(0, 1fr) 16px; align-items: center; gap: 12px; width: 100%; min-height: 64px; margin: 0 0 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; text-align: left; cursor: pointer; font-size: 13px; font-weight: 600; }
+.product-picker-choice img { display: block; width: 44px; height: 44px; object-fit: contain; }
+.product-picker-chevron { justify-self: end; font-size: 22px; color: var(--berry); }
+.product-picker-path { margin: 0 0 16px; font-size: 12px; color: var(--muted); }
+.product-picker-field { min-width: 0; padding: 0; margin: 0 0 18px; border: 0; }
+.product-picker-field legend { padding: 0; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.product-picker-content:has([data-option-key="case"]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; align-content: start; }
+.product-picker-content:has([data-option-key="case"]) > * { grid-column: 1 / -1; }
+.product-picker-content:has([data-option-key="case"]) > [data-option-key="case"],
+.product-picker-content:has([data-option-key="case"]) > [data-option-key="finish"] { grid-column: auto; }
+.product-picker-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.product-picker .product-picker-option, .product-picker .product-picker-select { min-height: 44px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; text-align: left; font-size: 13px; cursor: pointer; }
+.product-picker .product-picker-option[aria-pressed="true"] { color: var(--ink); border-color: var(--berry); background: #fbf0f3; box-shadow: inset 0 0 0 1px var(--berry); }
+.product-picker .product-picker-select { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.product-picker-select::after { content: '⌄'; color: var(--berry); }
+.product-picker-select[aria-expanded="true"]::after { transform: rotate(180deg); }
+.product-picker-search { padding: 8px; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.product-picker-search input { display: block; width: 100%; min-height: 44px; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: #fff; }
+.product-picker-results { max-height: 220px; overflow-y: auto; overscroll-behavior: contain; margin-top: 6px; }
+.product-picker .product-picker-result { display: block; width: 100%; min-height: 44px; padding: 10px; border: 0; border-radius: 6px; background: #fff; text-align: left; cursor: pointer; font-size: 13px; }
+.product-picker-result[aria-selected="true"], .product-picker-result.is-active { background: #fbf0f3; color: var(--berry); }
+.product-picker-results p { margin: 10px; font-size: 13px; color: var(--muted); }
+.product-picker-actions { flex: none; padding: 12px 16px 16px; border-top: 1px solid var(--line); background: #fffdfb; }
+.product-picker-summary { display: flex; gap: 12px; align-items: center; min-width: 0; margin-bottom: 12px; }
+.product-picker .product-picker-photo { display: grid; place-items: center; flex: none; width: 56px; height: 56px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: zoom-in; }
+.product-picker-photo img { width: 48px; height: 48px; object-fit: contain; }
+.product-picker-summary > div { display: grid; gap: 4px; min-width: 0; font-size: 13px; }
+.product-picker-summary span { font-weight: 600; }
+.product-picker .product-picker-apply { display: block; width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--berry); border-radius: 10px; background: var(--berry); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
+.product-picker button:hover { border-color: var(--berry); }
+.product-picker button:focus-visible, .product-picker input:focus-visible { outline: 2px solid var(--berry); outline-offset: -2px; }
+.product-picker-apply:hover { filter: brightness(.95); }
+@media (max-width: 620px) {
+  .product-picker-content:has([data-option-key="case"]) { grid-template-columns: minmax(0, 1fr); }
+  .product-picker-search input { font-size: 16px; }
+}

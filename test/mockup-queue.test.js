@@ -5,6 +5,26 @@ const {harness}=require('./support/mockup-queue-harness');
 const {LEASE_MS}=require('../src/mockupQueue');
 const limited=(seconds=40)=>Object.assign(new Error('provider busy'),{providerStatus:429,retryAfter:seconds});
 
+test('notebook previews select the requested camera style for each side, independent of response ordering',async()=>{
+  const h=harness({productKey:'spiral-notebook-dotted'}),configuration=h.configuration();
+  const job=await h.service.createForConfiguration(configuration,{customer:true});
+  const image=(placement,style_id,view)=>({placement,style_id,
+    mockup_url:`https://printful-upload.s3-accelerate.amazonaws.com/tmp/${view}.png`});
+  h.pollReplies.push([{id:1,status:'completed',catalog_variant_mockups:[{
+    catalog_variant_id:h.product.printful.variantId,mockups:[
+      image('front',2,'wrong-back'),image('front',1,'front'),
+      image('back',1,'wrong-front'),image('back',2,'back'),
+    ],
+  }]}]);
+  await h.run(2);
+  const result=await h.service.getJob(job.jobId,configuration);
+  assert.equal(result.status,'completed');
+  assert.deepEqual(result.items[0].mockups.map(value=>[value.surfaceKey,value.styleId]),[['front',1],['back',2]]);
+  assert.deepEqual(result.items[0].mockups.map(value=>value.url.split('/').at(-1)),['front.png','back.png']);
+  assert.equal(h.uploaded.length,2,'one prepared PNG per print side, irrespective of returned camera views');
+  assert.ok(h.uploaded.every(value=>value.key.startsWith('prepared-prints/')));
+});
+
 test('one explicit command queues and deduplicates before any rendering or provider work',async()=>{
   const h=harness(),configuration=h.configuration();
   const [a,b]=await Promise.all([h.service.createForConfiguration(configuration),h.service.createForConfiguration(configuration)]);
@@ -176,9 +196,30 @@ test('failed cleanup stays journaled and retries after a restart without generat
 });
 
 test('active queue admission is bounded before any source work',async()=>{
-  const h=harness();for(let i=0;i<64;i++)await h.service.createForConfiguration(h.configuration());
+  const h=harness();
+  for(let i=0;i<39;i++)await h.service.createForConfiguration(h.configuration());
   await assert.rejects(h.service.createForConfiguration(h.configuration()),error=>error.code==='mockup_queue_full'&&error.status===429);
   assert.equal(h.uploaded.length,0);assert.equal(h.payloads.length,0);
+});
+
+test('admission leaves a generation window and rejects work behind a long provider cooldown',async()=>{
+  const h=harness();
+  const first=await h.service.createForConfiguration(h.configuration());
+  const job=h.repository.jobs.get(first.jobId);
+  assert.ok(job.deadlineAt-job.latestStartAt>600000);
+  h.repository.budgets.get(h.settings.scope).nextCreate=h.now()+1200000;
+  await assert.rejects(h.service.createForConfiguration(h.configuration()),error=>error.code==='mockup_queue_full');
+  assert.equal(h.uploaded.length,0);
+});
+
+test('a failed provider generation gets one bounded replacement before a terminal failure',async()=>{
+  const h=harness(),job=await h.service.createForConfiguration(h.configuration());
+  await h.run();h.pollReplies.push([{id:1,status:'failed',failure_reasons:[{detail:'temporary rendering failure'}]}]);
+  await h.run();assert.equal((await h.service.getJob(job.jobId)).status,'retrying');
+  h.advance(30501);await h.run();
+  h.pollReplies.push([{id:2,status:'failed',failure_reasons:[{detail:'temporary rendering failure'}]}]);
+  await h.run();assert.equal((await h.service.getJob(job.jobId)).status,'failed');
+  assert.equal(h.payloads.length,2);
 });
 
 test('the background worker advances an explicitly queued job without status requests',async t=>{

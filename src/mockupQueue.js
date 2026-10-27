@@ -24,15 +24,29 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
   shouldFallbackToStandardResolution, PrintfulMockupError, isOperatorEnabled,
   repository = db, storageClient = storage, printfulClient = printful,
   renderPng = (...args) => require('./printArtifacts').renderPreviewSurface(...args),
+  prepareFiles = (...args) => require('./printPreparation').prepare(...args),
   fetchImpl = (...args) => fetch(...args), now = () => Date.now(), customer = false,
   scope = providerScope, autoStart = process.env.NODE_ENV !== 'test',
   operatorEnabled = isOperatorEnabled,
 } = {}) {
-  let timer = null, running = null, stopping = false, lastPrune = -Infinity;
+  let timer = null, timerAt = Infinity, running = null, stopping = false, lastPrune = -Infinity;
   const scopeKey = () => typeof scope === 'function' ? scope() : scope;
   const error = (code, status = 503) => new PrintfulMockupError(code,
     'Die Produktvorschau ist gerade nicht verfügbar. Bitte versucht es erneut.', status);
   const configured = () => printfulClient !== printful || printful.isConfigured();
+
+  function productMockups(job, item, mockups) {
+    return item.surfaces.flatMap(entry => {
+      const candidates = mockups.filter(value => value.variantId === item.product.printful.variantId &&
+        value.placement === entry.placement);
+      const styleId = job.styleIds?.[item.configuration.id]?.[entry.placement];
+      // A multi-side product can return every requested camera style for every
+      // print placement. Keep the camera selected for this exact print side.
+      const selected = candidates.find(value => value.styleId === styleId) ||
+        (candidates.length === 1 && (!Number.isFinite(candidates[0].styleId) || styleId == null) ? candidates[0] : null);
+      return selected ? [{ ...selected, surfaceKey: entry.surface.key }] : [];
+    });
+  }
 
   function summary(job) {
     return { jobId: job.id, status: job.status, mockupWidthPx: job.mockupWidthPx,
@@ -40,6 +54,9 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
       nextAttemptAt: job.nextAt, retryAfter: Math.max(0, Math.ceil((job.nextAt - now()) / 1000)),
       attempt: job.attempt, errorCode: job.errorCode || null,
       mockups: job.mockups || [], failureReasons: job.failureReasons || [],
+      ...(job.configurationIds || job.mode === 'customer' ? {
+        configurationIds: job.configurationIds || [job.configurationId], items: job.items || [],
+      } : {}),
       ...(job.mode === 'operator' ? { diagnostics: { taskIds: job.taskIds,
         taskStatuses: job.lastTaskStatuses || [], lastProviderStatus: job.lastProviderStatus || null,
         sourceExpiresAt: job.sourceExpiresAt, history: job.history || [] } } : {}),
@@ -48,35 +65,57 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
 
   async function createForConfiguration(configuration, options = {}) {
     if (!configured()) throw error('mockup_unavailable', 501);
-    const { product, design } = parseConfiguration(configuration);
+    const batch = Array.isArray(configuration);
+    const configurations = batch ? configuration : [configuration];
+    configuration = configurations[0];
+    const parsed = configurations.map(value => ({ configuration: value, ...parseConfiguration(value) }));
+    const { product, design } = parsed[0];
     const mode = (options.customer ?? customer) ? 'customer' : 'operator';
     const key = crypto.createHash('sha256').update(JSON.stringify([
-      'png-v2', configuration.event_id, configuration.id, mode, product.key,
-      product.printful, product.orientation, design,
+      parsed.some(item => item.surfaces.length > 1) ? 'png-v3-side-styles' : 'png-v2',
+      configuration.event_id, configuration.id, mode, product.key,
+      ...parsed.map(item => [item.configuration.id, item.product.printful, item.product.orientation, item.design]),
     ])).digest('hex');
     const createdAt = now();
     const candidate = { id: crypto.randomBytes(18).toString('base64url'),
       scope: scopeKey(), mode, cacheKey: key, configurationId: configuration.id,
       eventId: configuration.event_id, productKey: product.key, status: 'queued',
       createdAt, expiresAt: createdAt + CACHE_MS, deadlineAt: createdAt + DEADLINE_MS,
+      latestStartAt: createdAt + DEADLINE_MS - STALE_MS - 30_500,
       nextAt: createdAt, attempt: 0, failures: 0, missingReads: 0, taskIds: [],
       history: [],
       sourceObjectKeys: [], abandonedSourceKeys: [], sourceExpiresAt: 0, mockups: [],
       mockupWidthPx: mode === 'customer' ? 1000 : 2000, resolutionFallback: false,
+      ...(batch ? { configurationIds: configurations.map(item => item.id), items: [] } : {}),
     };
     candidate.requestId = /^[A-Za-z0-9_-]{24}$/.test(options.requestId || '') ? options.requestId : candidate.id;
     const job = await repository.enqueueMockupJob(candidate, options);
-    if (!job) throw Object.assign(error('mockup_queue_full', 429), { retryAfter: 60 });
-    kick();
+    if (!job) {
+      kick(); // Backpressure must also wake older durable work after an outage.
+      throw Object.assign(error('mockup_queue_full', 429), { retryAfter: 60 });
+    }
+    if (ACTIVE.has(job.status) || job.sourceObjectKeys?.length) kick();
     return { ...summary(job), cached: job.id !== candidate.id };
+  }
+
+  async function createForConfigurations(configurations, options = {}) {
+    const groups = [];
+    for (const configuration of configurations) {
+      let group = groups.find(values => !values.some(value => value.printful_variant_id === configuration.printful_variant_id));
+      if (!group) groups.push(group = []);
+      group.push(configuration);
+    }
+    const jobs = [];
+    for (const group of groups) jobs.push(await createForConfiguration(group, { ...options, customer: true }));
+    return jobs;
   }
 
   async function getJob(id, configuration = null) {
     const job = /^[A-Za-z0-9_-]{24}$/.test(String(id)) ? await repository.getMockupJob(id) : null;
     if (!job || job.scope !== scopeKey() || job.expiresAt <= now() ||
-      (configuration && (job.mode !== 'customer' || job.configurationId !== configuration.id || String(job.eventId) !== String(configuration.event_id))) ||
+      (configuration && (job.mode !== 'customer' || (configuration.id && !(job.configurationIds || [job.configurationId]).includes(configuration.id)) || String(job.eventId) !== String(configuration.event_id))) ||
       (customer && !configuration)) throw error('mockup_job_not_found', 404);
-    kick();
+    if (ACTIVE.has(job.status) || job.sourceObjectKeys?.length) kick(Math.max(0, job.nextAt - now()));
     return summary(job);
   }
 
@@ -151,7 +190,10 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
       }
       const configuration = await repository.getMockupConfiguration(job.configurationId, now());
       if (!configuration || String(configuration.event_id) !== String(job.eventId)) return await finish('mockup_configuration_invalid');
-      const { product, surfaces } = parseConfiguration(configuration);
+      const configurations = await Promise.all((job.configurationIds || [job.configurationId]).map(id => repository.getMockupConfiguration(id, now())));
+      if (configurations.some(value => !value || String(value.event_id) !== String(job.eventId))) return await finish('mockup_configuration_invalid');
+      const parsed = configurations.map(value => ({ configuration: value, ...parseConfiguration(value) }));
+      const { product, surfaces } = parsed[0];
       if (job.taskIds.length) {
         stage = 'poll';
         const due = await repository.reserveMockupRequest(job.scope, lease, now(), 'read');
@@ -167,15 +209,33 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
         const statuses = matching.map(task => String(task.status).toLowerCase());
         job.failures = 0;
         job.missingReads = exact ? 0 : job.missingReads + 1;
+        // Retain completed products even if another task in the batch is pending or fails.
+        if (job.mode === 'customer') {
+          const completed = normalizedMockups(matching.filter(task => String(task.status).toLowerCase() === 'completed'));
+          job.items = parsed.map(item => {
+            const mockups = productMockups(job, item, completed);
+            return { configurationId: item.configuration.id,
+              fileIds: job.items?.find(value => value.configurationId === item.configuration.id)?.fileIds || [],
+              mockups: item.surfaces.every(surface => mockups.some(value => value.placement === surface.placement)) ? mockups : [],
+            };
+          });
+        }
         if (exact && statuses.every(status => status === 'completed')) {
-          const mockups = normalizedMockups(matching).filter(item => item.variantId === product.printful.variantId);
-          if (!mockups.length || surfaces.some(surface => !mockups.some(item => item.placement === surface.placement))) {
-            return await finish('mockup_empty_result', failureReasons);
-          }
-          job.mockups = mockups;
+          const allMockups = normalizedMockups(matching);
+          const items = parsed.map(item => ({ configurationId: item.configuration.id,
+            fileIds: job.items?.find(value => value.configurationId === item.configuration.id)?.fileIds || [],
+            mockups: productMockups(job, item, allMockups),
+          }));
+          if (parsed.some((item,index) => !items[index].mockups.length || item.surfaces.some(surface =>
+            !items[index].mockups.some(value => value.placement === surface.placement)))) return await finish('mockup_empty_result', failureReasons);
+          if (job.configurationIds || job.mode === 'customer') job.items = items;
+          job.mockups = items.flatMap(item => item.mockups);
           return await finish(null);
         }
-        if (statuses.includes('failed')) return await finish('mockup_provider_failed', failureReasons);
+        if (statuses.includes('failed')) {
+          if (job.attempt < MAX_ATTEMPTS) return await replace('mockup_provider_failed');
+          return await finish('mockup_provider_failed', failureReasons);
+        }
         if (job.missingReads >= 3 || now() - job.submittedAt >= STALE_MS || now() >= job.sourceExpiresAt - 60_000) {
           return await replace('mockup_stalled');
         }
@@ -198,34 +258,51 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
       job.status = 'preparing';
       job.errorCode = null;
       await save();
-      const placements = surfaces.map(item => item.placement);
-      const rows = await printfulClient.getCatalogProductMockupStyles(product.printful.productId, placements,
-        { onRateLimit: info => responseLimits(info, 'read') });
-      const styles = new Map(placements.map(placement => [placement, compatibleStyle(rows, product, placement)]));
-      const uploaded = [];
-      // URLs are minted at dispatch, never while waiting in the queue. Object
-      // keys are journaled before upload, including ambiguous Storage writes.
-      job.sourceExpiresAt = now() + SOURCE_MS;
-      for (const entry of surfaces) {
-        const key = `${job.mode === 'customer' ? 'customer' : 'operator'}-mockup-sources/` +
-          `${Math.floor(job.sourceExpiresAt / 1000)}-${crypto.randomBytes(18).toString('base64url')}.png`;
-        job.sourceObjectKeys.push(key);
-        await save();
-        const bytes = await renderPng(product, entry.design);
-        await storageClient.upload(key, bytes, 'image/png');
-        const url = new URL(await storageClient.createSignedUrl(key, SOURCE_MS / 1000));
-        if (url.protocol !== 'https:') throw error('mockup_source_unavailable');
-        uploaded.push({ ...entry, url: url.toString() });
+      const products = [];
+      for (const item of parsed) {
+        const { product, surfaces } = item;
+        const placements = surfaces.map(entry => entry.placement);
+        const rows = await printfulClient.getCatalogProductMockupStyles(product.printful.productId, placements,
+          { onRateLimit: info => responseLimits(info, 'read') });
+        const styles = new Map(placements.map(placement => [placement, compatibleStyle(rows, product, placement)]));
+        job.styleIds ||= {};
+        job.styleIds[item.configuration.id] = Object.fromEntries([...styles].map(([placement, style]) => [placement, style.id]));
+        const uploaded = [];
+        job.sourceExpiresAt = now() + SOURCE_MS;
+        if (job.mode === 'customer') {
+          const files = await prepareFiles(item.configuration, product, item.design, { repository, storageClient, renderPng });
+          job.items ||= [];
+          const previous = job.items.findIndex(value => value.configurationId === item.configuration.id);
+          const prepared = { configurationId: item.configuration.id, fileIds: files.map(file => file.id), mockups: [] };
+          if (previous < 0) job.items.push(prepared); else job.items[previous] = prepared;
+          await save();
+          for (const entry of surfaces) {
+            const file = files.find(file => file.surface_key === entry.surface.key);
+            const url = await storageClient.createSignedUrl(file.object_key, SOURCE_MS / 1000);
+            if (new URL(url).protocol !== 'https:') throw error('mockup_source_unavailable');
+            uploaded.push({ ...entry, url });
+          }
+        } else {
+          for (const entry of surfaces) {
+            const key = `operator-mockup-sources/${Math.floor(job.sourceExpiresAt / 1000)}-${crypto.randomBytes(18).toString('base64url')}.png`;
+            job.sourceObjectKeys.push(key);
+            await save();
+            const bytes = await renderPng(product, entry.design);
+            await storageClient.upload(key, bytes, 'image/png');
+            const url = await storageClient.createSignedUrl(key, SOURCE_MS / 1000);
+            if (new URL(url).protocol !== 'https:') throw error('mockup_source_unavailable');
+            uploaded.push({ ...entry, url });
+          }
+        }
+        products.push({ source: 'catalog', catalog_product_id: product.printful.productId,
+          catalog_variant_ids: [product.printful.variantId], mockup_style_ids: [...new Set([...styles.values()].map(value => value.id))],
+          ...(product.orientation === 'portrait' ? { orientation: 'vertical' } : product.orientation === 'landscape' ? { orientation: 'horizontal' } : {}),
+          placements: uploaded.map(entry => ({ placement: entry.placement, technique: product.printful.technique,
+            print_area_type: styles.get(entry.placement).printAreaType, layers: [{ type: 'file', url: entry.url }] })),
+          ...(product.printful.options.length ? { product_options: product.printful.options.map(value => ({ name: value.id, value: value.value })) } : {}),
+        });
       }
-      const payload = { format: 'png', mockup_width_px: job.mockupWidthPx, products: [{
-        source: 'catalog', catalog_product_id: product.printful.productId,
-        catalog_variant_ids: [product.printful.variantId], mockup_style_ids: [...new Set([...styles.values()].map(item => item.id))],
-        ...(product.orientation === 'portrait' ? { orientation: 'vertical' } :
-          product.orientation === 'landscape' ? { orientation: 'horizontal' } : {}),
-        placements: uploaded.map(entry => ({ placement: entry.placement, technique: product.printful.technique,
-          print_area_type: styles.get(entry.placement).printAreaType, layers: [{ type: 'file', url: entry.url }] })),
-        ...(product.printful.options.length ? { product_options: product.printful.options.map(item => ({ name: item.id, value: item.value })) } : {}),
-      }] };
+      const payload = { format: 'png', mockup_width_px: job.mockupWidthPx, products };
       if (now() >= job.deadlineAt) return await finish('mockup_timeout');
       // Reserve from the actual dispatch time; rendering itself can be slow.
       await repository.deferMockupRequests(job.scope, lease, now() + 30_500, 'create');
@@ -309,17 +386,26 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
     running = drain(options).finally(() => { running = null; });
     return running;
   }
-  function kick() {
-    if (!autoStart || stopping || timer || !configured()) return;
+  function kick(delay = 0) {
+    if (!autoStart || stopping || !configured()) return;
+    const at = now() + delay;
+    if (timer && timerAt <= at) return;
+    clearTimeout(timer);
+    timerAt = at;
     timer = setTimeout(() => {
       timer = null;
+      timerAt = Infinity;
       void runDue().catch(caught => { log.error('mockup_worker_failed', { errorCode: log.errorCode(caught) }); return 0; })
-        .then(count => { if (!stopping) timer = setTimeout(() => { timer = null; kick(); }, count ? 1000 : 5000); timer?.unref?.(); });
-    }, 0);
+        .then(async () => {
+          if (stopping || timer) return;
+          const next = await repository.getNextMockupJobAt({ scope: scopeKey(), operator: operatorEnabled(), now: now() });
+          if (next != null && !timer && !stopping) kick(Math.max(1000, next - now()));
+        }).catch(caught => log.error('mockup_wake_failed', { errorCode: log.errorCode(caught) }));
+    }, delay);
     timer.unref?.();
   }
   function start() { stopping = false; kick(); }
-  async function stop() { stopping = true; clearTimeout(timer); timer = null; await running; }
+  async function stop() { stopping = true; clearTimeout(timer); timer = null; timerAt = Infinity; await running; }
 
   async function download(id, index) {
     const job = await repository.getMockupJob(id);
@@ -336,7 +422,7 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
     const safe = value => String(value || 'view').replace(/[^a-z0-9_-]+/gi, '-');
     return { bytes, contentType, filename: `wolkenworte-${safe(job.productKey)}-${safe(item.placement)}-${item.styleId}.${contentType === 'image/png' ? 'png' : 'jpg'}` };
   }
-  return { createForConfiguration, getJob, download, runDue, start, stop };
+  return { createForConfiguration, createForConfigurations, getJob, download, runDue, start, wake: kick, stop };
 }
 
 module.exports = { create, CACHE_MS, SOURCE_MS, STALE_MS, DEADLINE_MS, LEASE_MS, MAX_ATTEMPTS };

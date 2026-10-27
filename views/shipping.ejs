@@ -280,7 +280,8 @@
       transition: transform .18s, opacity .18s, box-shadow .18s;
     }
     .submit-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 13px 28px rgba(64, 15, 38, .2); }
-    .submit-button:disabled { cursor: wait; opacity: .58; }
+    .submit-button:disabled { cursor: not-allowed; opacity: .58; }
+    .submit-button.ww-is-busy { cursor: wait; }
     .checkout-button { background: var(--berry); margin-top: 16px; }
     .privacy-note { margin: -1px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
     .privacy-note a { color: var(--berry); text-underline-offset: 2px; }
@@ -338,6 +339,31 @@
       .shipment-product-actions { grid-column: 1 / 3; grid-row: 2; column-gap: 12px; }
       .shipment-product .quantity-control { grid-column: 3; grid-row: 2; }
     }
+    .order-preview { margin-top: 28px; border-top: 1px solid var(--line, #e6dfd9); padding-top: 24px; }
+    .order-preview > p, .order-preview-variant { font-size: 13px; line-height: 1.6; color: var(--muted, #665b55); }
+    .order-preview-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
+    .order-preview-item { min-width: 0; padding: 16px; background: #faf7f3; border-radius: 14px; }
+    .order-preview-item h3 { font-size: 16px; margin: 0 0 6px; }
+    .order-preview-images { display: grid; gap: 12px; }
+    .order-preview-images figure { margin: 0; text-align: center; font-size: 12px; }
+    .order-preview-image { width: 100%; border: 0; padding: 0; background: white; cursor: zoom-in; border-radius: 8px; }
+    .order-preview-image img { display: block; width: 100%; height: auto; max-height: 360px; object-fit: contain; }
+    .order-preview-item button:not(.order-preview-image) { padding: 8px 12px; }
+    .order-preview-item [role=status] { font-size: 13px; line-height: 1.5; }
+    .order-preview-status { display: flex; align-items: flex-start; gap: 9px; margin: 13px 0; }
+    .order-preview-status p { margin: 0; min-width: 0; }
+    .order-preview-spinner { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; border: 2px solid #e6dfd9; border-top-color: var(--berry); border-radius: 50%; animation: order-preview-spin .8s linear infinite; }
+    .order-preview-spinner[hidden] { display: none; }
+    @keyframes order-preview-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .order-preview-spinner { animation: none; } }
+    .order-preview-consent { display: flex; align-items: flex-start; gap: 12px; margin-top: 20px; line-height: 1.6; font-size: 14px; }
+    .order-preview-consent input { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 3px; accent-color: var(--berry); }
+    .order-preview-consent:has(input:disabled) { color: var(--muted); opacity: .65; cursor: not-allowed; }
+    .order-preview-consent input:disabled { cursor: not-allowed; }
+    .order-preview-large { max-width: min(94vw, 1000px); max-height: 94dvh; padding: 16px; border: 0; border-radius: 16px; }
+    .order-preview-large-head { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .order-preview-large::backdrop { background: #241b16b3; }
+    .order-preview-large img { display: block; max-width: 100%; max-height: 78dvh; object-fit: contain; }
   </style>
   <link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
@@ -381,6 +407,17 @@
           <p class="form-error" id="form-error" role="alert" aria-live="polite"></p>
           <p id="shipping-draft-status" role="status" aria-live="polite"></p>
         </form>
+        <section class="order-preview" id="order-preview" aria-labelledby="order-preview-title">
+          <h2 id="order-preview-title">Eure Produkte prüfen</h2>
+          <p>Wir stellen eure Designs auf den ausgewählten Produkten dar. Bitte prüft vor der Zahlung alle Druckseiten und ihre Platzierung.</p>
+          <p data-order-preview-progress role="status" aria-live="polite"></p>
+          <div class="order-preview-list" data-order-previews></div>
+          <label class="order-preview-consent"><input type="checkbox" data-order-preview-consent disabled><span>Ich habe die Produktvorschauen aller Artikel geprüft und gebe die dargestellten Designs und ihre Platzierung für die Fertigung frei.</span></label>
+          <dialog class="order-preview-large" data-order-preview-large aria-label="Vergrößerte Produktvorschau">
+            <div class="order-preview-large-head"><button type="button" class="ww-icon-button ww-close-button" data-order-preview-close aria-label="Schließen"></button></div>
+            <img alt="Produktvorschau">
+          </dialog>
+        </section>
         <div class="quote" id="quote-result" hidden aria-live="polite">
           <div class="quote-row"><span id="items-label" data-i18n-ignore>Produkte</span><strong id="items-price" data-i18n-ignore></strong></div>
           <div class="quote-row"><span>Versand</span><strong id="shipping-price" data-i18n-ignore></strong></div>
@@ -407,8 +444,10 @@
   <script src="<%= asset('/js/product-3d-geometry.js') %>"></script>
   <script src="<%= asset('/js/printful-product-model.js') %>"></script>
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
+  <script src="<%= asset('/js/product-photo-preview.js') %>"></script>
   <script src="<%= asset('/js/cart-product-preview.js') %>"></script>
   <script src="<%= asset('/js/product-mockup-preview.js') %>"></script>
+  <script src="<%= asset('/js/order-preview.js') %>"></script>
   <script src="<%= asset('/js/print-preview.js') %>"></script>
   <script>
     'use strict';
@@ -419,7 +458,7 @@
     const t = (source, params) => WolkenworteI18n.t(source, params);
     const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
     const clearText = (element) => WolkenworteI18n.clearText(element);
-    const printPreview = WolkenwortePrintPreview.create(document.getElementById('print-preview'), { allowMockups: true });
+    const printPreview = WolkenwortePrintPreview.create(document.getElementById('print-preview'));
     const setTranslatedAttribute = (element, name, source, params) =>
       WolkenworteI18n.setAttribute(element, name, source, params);
     const guestId = getOrCreateGuestId();
@@ -538,11 +577,11 @@
     const backLink = document.getElementById('back-link');
     const mobileBackLink = document.getElementById('mobile-back-link');
     const backLinks = [backLink, mobileBackLink].filter(Boolean);
-    const editingConfigurationId = configurationIds.includes(query.get('edit')) ? query.get('edit') : configurationIds[0];
     function setBackHref(href) {
       backLinks.forEach((link) => { link.href = href; });
     }
-    setBackHref(`/e/${encodeURIComponent(slug)}/configure${editingConfigurationId ? `?edit=${encodeURIComponent(editingConfigurationId)}` : ''}`);
+    const galleryHref = `/e/${encodeURIComponent(slug)}/configure?view=products`;
+    setBackHref(galleryHref);
     backLinks.forEach((link) => { link.addEventListener('click', saveShippingDraft); });
 
     function saveShippingDraft() {
@@ -576,7 +615,7 @@
         shippingDraftReady = false;
         location.assign(remainingIds.length
           ? shippingHref(remainingIds, remainingIds[0])
-          : configureHref(configurationId));
+          : galleryHref);
       } catch {
         shippingDraftReady = true;
         renderRemovalNotice();
@@ -630,8 +669,8 @@
       setShippingActionBusy(checkoutButton, false);
       if (shippingReturnIsStale(true)) {
         currentQuote = null;
-        setBackHref(`/e/${encodeURIComponent(slug)}/configure`);
-        showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zum Design zurück.');
+        setBackHref(galleryHref);
+        showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zur Produktübersicht zurück.');
       }
     });
 
@@ -1403,7 +1442,17 @@
       return restricted;
     }
 
+    function selectedPreviewConfigurations() {
+      const ids = new Set([...shipmentList.querySelectorAll('[data-item-quantity]')].filter(input => Number(input.value)>0).map(input=>input.dataset.configurationId));
+      return configurations.filter(item=>ids.has(item.id));
+    }
+
+    function updateCheckoutEligibility() {
+      checkoutButton.disabled = currentQuote?.checkoutPrepared !== true || !productApproval.value() || Boolean(activeShippingRequest);
+    }
+
     function clearQuote() {
+      productApproval.sync(selectedPreviewConfigurations());
       updateDeliveryRestrictions();
       shipmentList.querySelectorAll('[data-item-price]').forEach(element => {
         element.textContent = element.dataset.referencePrice;
@@ -1434,7 +1483,7 @@
       form.inert = false;
       setShippingActionBusy(submitButton, false);
       setShippingActionBusy(checkoutButton, false);
-      checkoutButton.disabled = currentQuote?.checkoutPrepared !== true;
+      updateCheckoutEligibility();
     }
 
     function cancelShippingRequest() {
@@ -1540,7 +1589,7 @@
       renderDeliveryInformation(quote.shippingDetails);
       quoteResult.hidden = quote.pricingVersion === 2 && !prepared;
       if (resetAction) clearText(checkoutError);
-      if (!checkoutButton.classList.contains('ww-is-busy')) checkoutButton.disabled = !prepared;
+      if (!checkoutButton.classList.contains('ww-is-busy')) updateCheckoutEligibility();
       if (resetAction) setButtonLabel(checkoutButton, 'Weiter zur Zahlung');
       if (scroll) quoteResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -1631,12 +1680,12 @@
 
     async function loadPage() {
       if (shippingReturnIsStale(true)) {
-        setBackHref(`/e/${encodeURIComponent(slug)}/configure`);
-        showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zum Design zurück.');
+        setBackHref(galleryHref);
+        showFatal('Euer Warenkorb hat sich geändert oder wurde bereits bestellt. Bitte kehrt zur Produktübersicht zurück.');
         return;
       }
       if (!configurationIds.length || configurationIds.some((id) => !/^[A-Za-z0-9_-]{16}$/.test(id))) {
-        showFatal('Dieser Entwurf ist nicht gültig. Bitte kehrt zum Konfigurator zurück und bestätigt euer Design erneut.');
+        showFatal('Diese Produktauswahl ist nicht gültig. Bitte kehrt zur Produktübersicht zurück und prüft euren Warenkorb.');
         return;
       }
       try {
@@ -1682,6 +1731,7 @@
         submitButton.disabled = false;
         loading.hidden = true;
         pageContent.hidden = false;
+        productApproval.sync(selectedPreviewConfigurations());
       } catch (error) {
         showFatal(error.message === 'configuration'
           ? 'Der gespeicherte Entwurf wurde nicht gefunden. Bitte bestätigt euer Design erneut.'
@@ -1769,7 +1819,7 @@
     });
 
     checkoutButton.addEventListener('click', async () => {
-      if (currentQuote?.checkoutPrepared !== true || activeShippingRequest) return;
+      if (currentQuote?.checkoutPrepared !== true || activeShippingRequest || !productApproval.value()) return;
       const request = { controller: new AbortController(), revision: shippingRevision };
       activeShippingRequest = request;
       // Freeze the address being confirmed, but leave Home/Back available.
@@ -1789,6 +1839,7 @@
             },
             body: JSON.stringify({
               intent: 'pay',
+              mockupApproval: productApproval.value(),
               configurationIds,
               quoteId: currentQuote.id,
               locale: WolkenworteI18n.getLocale(),
@@ -1798,6 +1849,7 @@
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (result.quote) showQuote(result.quote);
         if (!response.ok) {
+          if (result.error === 'mockup_approval_required') productApproval.reset();
           if (['quote_expired', 'quote_not_found', 'invalid_address', 'shipping_unavailable',
             'selection_not_available', 'product_shipping_restricted', 'pricing_unavailable', 'pricing_currency_mismatch', 'pricing_not_configured'].includes(result.error)) {
             clearQuote();
@@ -1831,6 +1883,9 @@
       }
     });
 
+    const productApproval = WolkenworteOrderPreview.create(document.getElementById('order-preview'), {
+      endpoint: `/api/events/${encodeURIComponent(slug)}/cart/mockups`, guestId, i18n: WolkenworteI18n, onChange: updateCheckoutEligibility,
+    });
     loadPage();
   </script>
   <%- include('partials/analytics-ui') %>

@@ -1,0 +1,56 @@
+{
+  "scope": "CPU cloth simulation and dynamic mesh updates; GPU draw and shadow-map cost are excluded. One warmup and three measured 90-frame pulls per garment/version. Before uses the working-tree renderer at the start of this request.",
+  "results": [
+    {
+      "kind": "t-shirt",
+      "before": {
+        "nodes": 2852,
+        "triangles": 5568,
+        "setupMedianMs": 6.3654169999999795,
+        "frameMedianMs": 1.7596250000000282,
+        "frameP95Ms": 1.84050000000002
+      },
+      "after": {
+        "nodes": 3072,
+        "triangles": 5952,
+        "setupMedianMs": 8.760958000000073,
+        "frameMedianMs": 2.14383399999997,
+        "frameP95Ms": 2.2546669999999267
+      }
+    },
+    {
+      "kind": "sweatshirt",
+      "before": {
+        "nodes": 3236,
+        "triangles": 6336,
+        "setupMedianMs": 5.394667000000027,
+        "frameMedianMs": 1.9890840000002754,
+        "frameP95Ms": 2.092666999999892
+      },
+      "after": {
+        "nodes": 3568,
+        "triangles": 6912,
+        "setupMedianMs": 8.18383300000005,
+        "frameMedianMs": 2.4047499999996944,
+        "frameP95Ms": 2.5262079999997695
+      }
+    },
+    {
+      "kind": "hoodie",
+      "before": {
+        "nodes": 4290,
+        "triangles": 8312,
+        "setupMedianMs": 9.343666999999186,
+        "frameMedianMs": 2.6753750000002583,
+        "frameP95Ms": 2.7844169999998485
+      },
+      "after": {
+        "nodes": 5767,
+        "triangles": 11040,
+        "setupMedianMs": 24.652500000000146,
+        "frameMedianMs": 3.944333999999799,
+        "frameP95Ms": 4.722709000000577
+      }
+    }
+  ]
+}

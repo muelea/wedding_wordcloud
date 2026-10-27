@@ -3,14 +3,15 @@
 const db = require('./db');
 const fulfillment = require('./fulfillment');
 const emailDelivery = require('./emailDelivery');
-const lifecycle = require('./lifecycle');
+const dailyRetention = require('./dailyRetention');
+const mockups = require('./printfulMockups');
 const log = require('./structuredLog');
 const storage = require('./privateStorage');
 const savedDesigns = require('./savedDesigns');
 
 const WALL_CLOCK_BUDGET_MS = 15_000;
-const FULFILLMENT_BUDGET_MS = 7_000;
-const EMAIL_BUDGET_MS = 12_000;
+const FULFILLMENT_BUDGET_MS = 14_000;
+const EMAIL_BUDGET_MS = 14_750;
 let running = null;
 
 function sanitizedCode(error) {
@@ -28,8 +29,15 @@ async function execute(triggerKind) {
     // Address-bearing abandoned quotes have a fixed retention promise.
     // Run this bounded delete before provider work can consume the wake-up.
     const quotesCleaned = await db.cleanupAbandonedQuotes(500);
-    const commerce = await db.cleanupCommerceRecords({ limit: 1, deadline: startedAt + 5_000 });
-    const metadataCleaned = await db.cleanupRetentionMetadata();
+    // Waking is cheap when no mockup job exists; there is no idle worker timer.
+    mockups.wake();
+    const daily = await dailyRetention.run({ deadline: startedAt + 10_000 }).catch(error => {
+      log.error('daily_retention_failed',{errorCode:sanitizedCode(error)});
+      return {status:'failed',counts:{}};
+    });
+    const counts = daily.counts || {};
+    const commerce = counts.commerce || {};
+    const metadataCleaned = counts.metadata?.deleted || 0;
     const fulfillmentSummary = await fulfillment.drainDueJobs({
       maxJobs: 1,
       deadline: startedAt + FULFILLMENT_BUDGET_MS,
@@ -37,10 +45,6 @@ async function execute(triggerKind) {
     const emailSummary = await emailDelivery.drainDueJobs({
       maxJobs: 1,
       deadline: startedAt + EMAIL_BUDGET_MS,
-    });
-    const retentionSummary = await lifecycle.runRetentionBatch({
-      deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250,
-      quoteLimit: 0,
     });
     // One list and one delete each have a 3.5s timeout. Only use spare time;
     // paid fulfillment, email and retention keep their existing priority.
@@ -51,14 +55,14 @@ async function execute(triggerKind) {
     }
     let accounts = {};
     if (Date.now() + 1000 < startedAt + WALL_CLOCK_BUDGET_MS - 250) {
-      accounts = await savedDesigns.maintenance({ deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250 }).catch(error=> {
+      accounts = await savedDesigns.maintenance({ deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250, shortLivedOnly: true }).catch(error=> {
         log.error('design_account_maintenance_failed',{errorCode:sanitizedCode(error)});
         return {failed:true};
       });
     }
     const summary = {
-      designsExpired: accounts.designsExpired || 0,
-      accountsExpired: accounts.accountsExpired || 0,
+      designsExpired: counts.designs?.deleted || 0,
+      accountsExpired: counts.accounts?.queued || 0,
       designObjectsRemoved: accounts.objectsRemoved || 0,
       designAccountMaintenanceFailed: accounts.failed ? 1 : 0,
       fulfillmentClaimed: fulfillmentSummary.claimed,
@@ -66,16 +70,22 @@ async function execute(triggerKind) {
       emailsClaimed: emailSummary.claimed,
       emailsCompleted: emailSummary.completed,
       emailsBlocked: emailSummary.blocked,
-      eventsCleaned: retentionSummary.events,
-      artifactsCleaned: retentionSummary.artifacts,
+      eventsCleaned: counts.events?.deleted || 0,
+      artifactsCleaned: counts.artifacts?.deleted || 0,
       quotesCleaned,
-      commerceChecked: commerce.checked,
-      unpaidOrdersCleaned: commerce.unpaid,
-      technicalCopiesCleaned: commerce.technical,
-      operationalCopiesCleaned: commerce.operational,
-      emailContentsCleaned: commerce.emails,
-      paidOrdersCleaned: commerce.orders,
+      commerceChecked: commerce.checked || 0,
+      unpaidOrdersCleaned: commerce.unpaid || 0,
+      technicalCopiesCleaned: commerce.technical || 0,
+      operationalCopiesCleaned: commerce.operational || 0,
+      emailContentsCleaned: commerce.emails || 0,
+      paidOrdersCleaned: commerce.orders || 0,
       metadataCleaned,
+      mockupJobsCleaned: counts.mockups?.deleted || 0,
+      preparedFilesCleaned: counts.preparedFiles?.deleted || 0,
+      retentionDeferred: Object.values(counts).reduce((n,s)=>n+(s.deferred||0),0),
+      retentionFailed: Object.values(counts).reduce((n,s)=>n+(s.failed||0),0),
+      dailyRetentionStatus: daily.status,
+      dailyRetentionFailed: Number(daily.status === 'failed'),
     };
     await db.finishMaintenanceRun(run.id, summary);
     log.info('maintenance_completed', {
@@ -83,7 +93,7 @@ async function execute(triggerKind) {
       operation: 'maintenance',
       outcome: 'succeeded',
       durationMs: Date.now() - startedAt,
-      count: Object.values(summary).reduce((total, value) => total + Number(value || 0), 0),
+      count: Object.values(summary).reduce((total, value) => total + (typeof value === 'number' ? value : 0), 0),
     });
     return { status: 'ok', summary };
   } catch (error) {

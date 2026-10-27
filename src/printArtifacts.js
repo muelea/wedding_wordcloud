@@ -83,6 +83,9 @@ async function renderItemSurfaces(orderItem) {
 }
 
 async function validateProductPrintability(product, design) {
+  for (const surface of product.printSurfaces) {
+    require('./mugPrint').assertSupportedPrintText(design.surfaces[surface.key]);
+  }
   // An RGBA surface below this bound cannot approach the Storage cap even
   // when PNG compression is ineffective. Larger surfaces are rendered before
   // checkout so an unprintable image never becomes a paid order.
@@ -101,10 +104,11 @@ function renderPreviewSurface(product, design) {
 
 async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
   ensureBudget(deadline, 1_000);
-  const sha256 = crypto.createHash('sha256').update(rendered.bytes).digest('hex');
+  const sha256 = rendered.sourceFile?.sha256 || crypto.createHash('sha256').update(rendered.bytes).digest('hex');
+  const byteSize = rendered.sourceFile?.byte_size || rendered.bytes.length;
   const candidateId = crypto.randomBytes(18).toString('base64url');
   const candidateNonce = crypto.randomBytes(24).toString('base64url');
-  const objectKey = `print-artifacts/${candidateId}/${sha256}.png`;
+  const objectKey = rendered.sourceFile?.object_key || `print-artifacts/${candidateId}/${sha256}.png`;
   const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
   let artifact = await db.getOrCreatePrintArtifact({
     id: candidateId,
@@ -114,13 +118,14 @@ async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
     surfaceKey: rendered.surfaceKey,
     objectKey,
     mimeType: MIME_TYPE,
-    byteSize: rendered.bytes.length,
+    byteSize,
     sha256,
     accessNonce: candidateNonce,
     expiresAt,
+    sourceFileId: rendered.sourceFile?.id || null,
   });
 
-  if (artifact.sha256 !== sha256 || Number(artifact.byte_size) !== rendered.bytes.length ||
+  if (artifact.sha256 !== sha256 || Number(artifact.byte_size) !== byteSize ||
       artifact.mime_type !== MIME_TYPE) {
     const error = new Error('Die eingefrorene Druckdatei stimmt nicht mit ihrem bestehenden Artefakt überein.');
     error.code = 'FULFILLMENT_BLOCKED';
@@ -132,6 +137,8 @@ async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
     error.code = 'FULFILLMENT_BLOCKED';
     throw error;
   }
+
+  if (rendered.sourceFile) return db.activatePrintArtifact(artifact.id, { byteSize, sha256 });
 
   ensureBudget(deadline, 4_000);
   try {
@@ -149,7 +156,7 @@ async function persistSurface(order, orderItem, rendered, { deadline } = {}) {
     }
   }
   artifact = await db.activatePrintArtifact(artifact.id, {
-    byteSize: rendered.bytes.length,
+    byteSize,
     sha256,
   });
   if (!artifact) throw new Error('Das Druckartefakt konnte nicht aktiviert werden.');
@@ -160,7 +167,21 @@ async function ensureOrderArtifacts(order, orderItems, options = {}) {
   const artifacts = [];
   for (const orderItem of orderItems) {
     ensureBudget(options.deadline, 1_000);
-    const surfaces = await renderItemSurfaces(orderItem);
+    let surfaces;
+    if (order.mockup_approval_json) {
+      const approval = typeof order.mockup_approval_json === 'string' ? JSON.parse(order.mockup_approval_json) : order.mockup_approval_json;
+      const files = await db.getPreparedPrintFiles(approval.fileIds);
+      const snapshot = parseSnapshot(orderItem);
+      const product = resolveProductOrientation(getProduct(snapshot.productKey), snapshot.orientation);
+      const hash = require('./printPreparation').specification(product, snapshot.design);
+      surfaces = product.printSurfaces.map(surface => {
+        const file = files.find(value => value.configuration_id === orderItem.configuration_id && value.surface_key === surface.key);
+        if (!file || file.status !== 'active' || file.spec_hash !== hash) {
+          throw Object.assign(new Error('Freigegebene Druckdatei fehlt oder wurde verändert.'), { code: 'FULFILLMENT_BLOCKED' });
+        }
+        return { surfaceKey: surface.key, sourceFile: file };
+      });
+    } else surfaces = await renderItemSurfaces(orderItem);
     for (const rendered of surfaces) {
       artifacts.push(await persistSurface(order, orderItem, rendered, options));
     }

@@ -1,0 +1,36 @@
+{
+  "changedFiles": [
+    "public/js/garment-cloth.js",
+    "test/garment-cloth.test.js"
+  ],
+  "rendererSha256": "64fc9372f32200a6e8e88c4a80f4ccdbff6f66705d5fbefd9fda9b89a52b3819",
+  "baselineGitBlob": "07a72e04d1b7125133926ed9dd6e0ba38c970259",
+  "checks": [
+    {
+      "command": "npm test -- test/garment-cloth.test.js test/mug-3d-lifecycle.test.js test/blanket-cloth.test.js",
+      "passed": 28,
+      "failed": 0
+    },
+    {
+      "command": "npm test -- test/garment-cloth.test.js",
+      "note": "Final black-cotton material refinement",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "command": "git diff --check",
+      "passed": true
+    }
+  ],
+  "visualChecks": [
+    "M white: front, three-quarter, back",
+    "M black: front",
+    "Real hoodie pointer pull and return to resting shape"
+  ],
+  "unchanged": [
+    "public/js/blanket-cloth.js",
+    "Provider variant identities, measurements and print UV contract"
+  ],
+  "benchmark": "benchmark.json",
+  "benchmarkScope": "CPU simulation and mesh updates only; GPU draw time and device frame rate are not measured."
+}

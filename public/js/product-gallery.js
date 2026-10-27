@@ -2,10 +2,11 @@
   'use strict';
   const api = factory(typeof module === 'object' && module.exports
     ? require('./print-layout-client') : root.PrintLayoutClient,
-    typeof module === 'object' && module.exports ? require('./text-print-quality') : root.TextPrintQuality);
+    typeof module === 'object' && module.exports ? require('./text-print-quality') : root.TextPrintQuality,
+    typeof module === 'object' && module.exports ? require('./product-picker') : root.WolkenworteProductPicker);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.WolkenworteProductGallery = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (LayoutClient, TextPrintQuality) {
+})(typeof window !== 'undefined' ? window : globalThis, function (LayoutClient, TextPrintQuality, Picker) {
   'use strict';
 
   const copy = value => JSON.parse(JSON.stringify(value));
@@ -15,10 +16,21 @@
     ['tote', 'Taschen'], ['clothing', 'Kleidung'], ['blanket', 'Decken'], ['pillow', 'Kissen'], ['notebook', 'Notizbücher'],
   ]);
   const is3D = product => ['mug', '3d'].includes(product.previewType);
+  const usesViewer = product => is3D(product) || product.previewType === 'photo';
   const referencePhoto = product => product.productPhoto || product.previewMockup?.assets?.default ||
     product.previewMockup?.assets?.front || Object.values(product.previewMockup?.assets || {})[0] || '';
   const categoryFor = product => product.familyKey === 'clothing' ? 'clothing' : product.familyKey === 'bags' ? 'tote' : product.familyKey === 'tech' ? 'tech' : product.familyKey === 'drinkware' ? 'drinkware' : product.catalogGroup === 'colored-mug' ? 'mug' : product.previewType === 'mug' ? 'mug'
     : product.previewShape === 'framed-poster' ? 'poster' : product.previewShape;
+
+  function productThumbnail(source) {
+    if (!source?.width || !source.height) return '';
+    const canvas = source.ownerDocument.createElement('canvas');
+    canvas.width = canvas.height = 200;
+    const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
+    canvas.getContext('2d').drawImage(source, (canvas.width - source.width * scale) / 2,
+      (canvas.height - source.height * scale) / 2, source.width * scale, source.height * scale);
+    return canvas.toDataURL('image/png');
+  }
 
   function printPrecision(designs) {
     // Match MugPrintEditor.getDesign's persisted tenth-pixel coordinates before
@@ -32,10 +44,9 @@
     })]));
   }
 
-  function shouldOpen({ directDesign, words, query, draft }) {
-    return !directDesign && words.length > 0 &&
-      !['edit', 'cart', 'accountDesign'].some(key => query.has(key)) &&
-      (query.get('view') === 'products' || (!draft && !query.has('draft')));
+  function shouldOpen({ query }) {
+    return !['edit', 'accountDesign'].some(key => query.has(key)) &&
+      (query.get('view') === 'products' || !query.has('draft'));
   }
 
   function groupProducts(products) {
@@ -49,8 +60,8 @@
   }
 
   class Gallery {
-    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, renderArtwork, preview, onChoose, onAdd, isInCart, i18n }) {
-      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, renderArtwork, preview, onChoose, onAdd, isInCart, i18n });
+    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, isInCart, i18n }) {
+      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, isInCart, i18n });
       this.document = element.ownerDocument;
       this.window = this.document.defaultView;
       this.controller = new this.window.AbortController();
@@ -192,6 +203,10 @@
     openPhoto(card, product = card.product, opener = card.photoButton) {
       if (this.destroyed || this.suspended || !referencePhoto(product) || card.element.hidden) return;
       this.closePriceInfo();
+      if (this.preview?.openPhotos) {
+        this.preview.openPhotos(product, opener);
+        return;
+      }
       this.photoCard = card;
       this.photoProduct = product;
       this.photoOpener = opener;
@@ -221,16 +236,11 @@
     updateThumbnail(card) {
       if (!card.snapshot || card.thumbnailVersion === card.version) return;
       try {
-        if (is3D(card.product)) {
+        if (usesViewer(card.product)) {
           const source = card.viewer?.canvas;
           if (!source?.width || !source.height) return;
           card.viewer.render();
-          const canvas = this.document.createElement('canvas');
-          canvas.width = canvas.height = 200;
-          const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
-          canvas.getContext('2d').drawImage(source, (canvas.width - source.width * scale) / 2,
-            (canvas.height - source.height * scale) / 2, source.width * scale, source.height * scale);
-          card.thumbnailUrl = canvas.toDataURL('image/png');
+          card.thumbnailUrl = productThumbnail(source);
         } else card.thumbnailUrl = this.artwork(card, card.surface);
         card.photo.src = card.thumbnailUrl;
         card.thumbnailVersion = card.version;
@@ -303,7 +313,7 @@
       const close = this.node('button', 'ww-icon-button ww-close-button', header);
       close.type = 'button'; this.i18n.setAttribute(close, 'aria-label', 'Schließen');
       const list = this.node('div', 'product-variant-list', dialog);
-      this.variantDialog = { dialog, title, list };
+      this.variantDialog = { dialog, title, header, list };
       this.listen(close, 'click', () => dialog.close());
       this.listen(dialog, 'click', event => {
         const rect = dialog.getBoundingClientRect();
@@ -314,28 +324,41 @@
         card?.variantToggle.setAttribute('aria-expanded', 'false');
         if (card && !this.suspended && !this.destroyed) card.variantToggle.focus({ preventScroll: true });
       });
-      this.listen(list, 'keydown', event => {
-        const choices = [...list.querySelectorAll('.product-variant-choice')];
-        const index = choices.indexOf(this.document.activeElement);
-        if (index < 0 || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        choices[event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1 :
-          (index + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length].focus();
-      });
       this.listen(this.window, 'resize', () => { if (dialog.open) this.positionVariants(); });
     }
 
     positionVariants() {
-      if (!this.variantCard || this.window.innerWidth <= 620) return;
-      const dialog = this.variantDialog.dialog, rect = this.variantCard.sizes.getBoundingClientRect();
-      const width = Math.min(440, Math.max(320, rect.width), this.window.innerWidth - 24);
-      dialog.style.width = `${width}px`;
-      dialog.style.left = `${Math.max(12, Math.min(rect.left, this.window.innerWidth - width - 12))}px`;
+      if (!this.variantCard) return;
+      const { dialog, header, list } = this.variantDialog;
+      const mobile = this.window.innerWidth <= 620;
+      const viewportHeight = this.window.visualViewport?.height || this.window.innerHeight;
+      const limit = mobile ? viewportHeight * .8 : Math.min(760, viewportHeight - 24);
+      const rect = this.variantCard.sizes.getBoundingClientRect();
+      if (!mobile) {
+        const width = Math.min(440, Math.max(320, rect.width), this.window.innerWidth - 24);
+        dialog.style.width = `${width}px`;
+        dialog.style.left = `${Math.max(12, Math.min(rect.left, this.window.innerWidth - width - 12))}px`;
+      }
+      // Safari collapses an auto-height dialog containing a zero-basis flex
+      // picker. Measure its intrinsic content, then provide a definite height
+      // so the header, scrolling options and actions receive separate space.
+      const content = list.querySelector('.product-picker-content');
+      const actions = list.querySelector('.product-picker-actions');
+      const previousFlex = content.style.flex;
+      content.style.flex = 'none';
+      const preferredHeight = header.offsetHeight + content.scrollHeight + (actions?.offsetHeight || 0) + 2;
+      content.style.flex = previousFlex;
+      dialog.style.maxHeight = `${limit}px`;
+      dialog.style.height = `${Math.min(limit, Math.max(240, preferredHeight))}px`;
+      if (mobile) return;
       const below = this.window.innerHeight - rect.bottom - 20, above = rect.top - 20;
       const useBelow = below >= Math.min(360, above);
-      dialog.style.maxHeight = `${Math.max(140, Math.min(520, useBelow ? below : above))}px`;
+      // Keep a small options form together when the card sits mid-screen.
+      // Shift within the viewport rather than squeezing its contents between
+      // the card and an edge; the modal already owns interaction here.
       const height = dialog.getBoundingClientRect().height;
-      dialog.style.top = `${Math.max(12, useBelow ? rect.bottom + 8 : rect.top - height - 8)}px`;
+      dialog.style.top = `${Math.max(12, Math.min(useBelow ? rect.bottom + 8 : rect.top - height - 8,
+        this.window.innerHeight - height - 12))}px`;
     }
 
     openVariants(card) {
@@ -344,28 +367,18 @@
       const { dialog, title, list } = this.variantDialog;
       this.variantCard = card;
       title.textContent = `${this.i18n.t(card.product.displayName)} · ${this.i18n.t('Variante wählen')}`;
-      list.replaceChildren();
-      for (const product of card.variants) {
-        const row = this.node('div', 'product-variant-row', list);
-        const photo = this.node('button', 'product-variant-photo', row);
-        photo.type = 'button'; photo.disabled = !referencePhoto(product);
-        this.i18n.setAttribute(photo, 'aria-label', 'Produktfoto vergrößern: {{product}}, {{size}}', {
-          product: this.i18n.t(product.displayName), size: this.i18n.t(product.variantLabel || product.size.label) });
-        const image = this.node('img', '', photo); image.alt = ''; image.src = referencePhoto(product) || product.thumbnail;
-        image.style.objectFit = 'contain'; image.loading = 'lazy';
-        photo.addEventListener('click', () => this.openPhoto(card, product, photo));
-        const choice = this.node('button', 'product-variant-choice', row);
-        choice.type = 'button'; choice.dataset.productKey = product.key;
-        choice.setAttribute('aria-pressed', String(card.product.key === product.key));
-        this.node('strong', '', choice).textContent = this.i18n.t(product.variantLabel || product.size.label);
-        this.node('span', '', choice).textContent = this.i18n.t(product.displayName);
-        this.node('span', 'product-variant-price', choice).textContent = this.priceFor(product);
-        choice.addEventListener('click', () => { dialog.close(); if (!this.choosing) void this.load(card, product); });
-      }
+      this.variantDialog.picker = Picker.create(list, {
+        products: card.variants, selectedKey: card.product.key, i18n: this.i18n,
+        photo: referencePhoto, price: product => this.priceFor(product),
+        onPhoto: (product, trigger) => this.openPhoto(card, product, trigger),
+        onConfirm: product => { dialog.close(); if (!this.choosing) void this.load(card, product); },
+        onNavigate: () => { if (dialog.open) this.positionVariants(); },
+        onResize: () => { if (dialog.open) this.positionVariants(); },
+      });
       card.variantToggle.setAttribute('aria-expanded', 'true');
       if (!dialog.open) dialog.showModal();
       this.positionVariants();
-      list.querySelector('[aria-pressed="true"]').focus({ preventScroll: true });
+      (list.querySelector('.product-picker-select, .product-picker-option[aria-pressed="true"]') || list.querySelector('.product-picker-apply')).focus({ preventScroll: true });
     }
 
     buildCard(variants) {
@@ -517,7 +530,7 @@
       this.i18n.setText(card.retry, 'Erneut versuchen');
       card.status.hidden = false;
       card.status.classList.add('is-loading');
-      this.i18n.setText(card.status, 'Euer Design wird vorbereitet…');
+      this.i18n.setText(card.status, 'Eure Produktvorschau wird vorbereitet…');
       this.localizeCard(card);
       try {
         const snapshot = await this.prepared(product, deliberate, allowSmallText);
@@ -525,8 +538,10 @@
         card.snapshot = snapshot;
         card.view = this.getView(product, snapshot.orientation);
         card.surface = product.printSurfaces[0].key;
-        card.host.hidden = !is3D(product);
-        card.flat.hidden = is3D(product);
+        card.host.hidden = !usesViewer(product);
+        card.host.tabIndex = is3D(product) ? 0 : -1;
+        card.host.classList.toggle('is-photo', product.previewType === 'photo');
+        card.flat.hidden = usesViewer(product);
         this.configureFlat(card.view, card.surface, card.flat, card.image);
         this.updateActions();
         this.render(card);
@@ -551,25 +566,28 @@
       const width = card.stage.clientWidth, height = card.stage.clientHeight;
       const density = this.window.devicePixelRatio || 1;
       const design = card.snapshot.designs[card.surface];
-      if (is3D(card.product)) {
+      if (usesViewer(card.product)) {
         card.lastViewed = ++this.viewSequence;
         // Building models, shaders and textures can take hundreds of ms. Keep
         // native scrolling free of that work; prepare newly visible 3D views
         // after scrolling settles, reusing nearby views in the meantime.
-        if (this.scrolling && !retry && !immediate) return;
+        if (is3D(card.product) && this.scrolling && !retry && !immediate) return;
         try {
           if (retry) { card.viewer?.destroy(); card.viewer = null; }
           if (card.viewer && card.renderedWidth === width && card.renderedHeight === height && card.renderedDensity === density && !retry) return;
           if (!card.viewer && !retry && !immediate) {
             if (card.cachedPreviewVersion === card.version && card.renderedWidth === width &&
               card.renderedHeight === height && card.renderedDensity === density) return;
-            if (this.intersectionObserver) { this.previewQueue.add(card); this.schedulePreview(); return; }
+            if (is3D(card.product) && this.intersectionObserver) { this.previewQueue.add(card); this.schedulePreview(); return; }
           }
           if (!card.viewer) {
             this.previewQueue.delete(card);
-            this.releaseDistantViewer();
-            card.viewer = this.createMug({ host: card.host, product: card.view, design, designs: card.snapshot.designs,
+            if (is3D(card.product)) this.releaseDistantViewer();
+            const version = card.version;
+            const create = card.product.previewType === 'photo' ? this.createPhoto : this.createMug;
+            card.viewer = create({ host: card.host, product: card.view, design, designs: card.snapshot.designs,
             onStatus: state => {
+              if (this.destroyed || this.suspended || version !== card.version) return;
               if (state === 'error') this.previewError(card);
               else if (state === 'ready') this.previewReady(card);
             } });
@@ -616,8 +634,8 @@
     }
 
     releaseDistantViewer() {
-      if (!this.intersectionObserver || this.cards.filter(card => card.viewer).length < 6) return;
-      const candidates = this.cards.filter(card => card.viewer && !card.host.classList.contains('dragging'));
+      if (!this.intersectionObserver || this.cards.filter(card => card.viewer && is3D(card.product)).length < 6) return;
+      const candidates = this.cards.filter(card => card.viewer && is3D(card.product) && !card.host.classList.contains('dragging'));
       const oldest = candidates.sort((a, b) => Number(a.visible) - Number(b.visible) || a.lastViewed - b.lastViewed)[0];
       if (!oldest) return;
       // Wide/tall viewports can intersect more than six cards. Keep their
@@ -659,7 +677,9 @@
       card.preview.setAttribute('aria-busy', 'false');
       card.status.classList.remove('is-loading');
       card.status.hidden = false;
-      this.i18n.setText(card.status, 'Die 3D-Vorschau ist gerade nicht verfügbar. Euer Design bleibt erhalten.');
+      this.i18n.setText(card.status, card.product.previewType === 'photo'
+        ? 'Diese Vorschau konnte nicht geladen werden. Bitte versucht es erneut.'
+        : 'Die 3D-Vorschau ist gerade nicht verfügbar. Euer Design bleibt erhalten.');
       card.retry.hidden = false;
     }
 
@@ -715,15 +735,23 @@
         });
       }
       card.photoButton.disabled = !card.snapshot || this.choosing;
-      this.i18n.setAttribute(card.host, 'aria-label', ['blanket', 'garment'].includes(card.product.previewModel?.kind)
+      this.i18n.setAttribute(card.host, 'aria-label', is3D(card.product) && ['blanket', 'garment'].includes(card.product.previewModel?.kind)
         ? '{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.' : '{{product}}, {{size}}', {
         product: this.i18n.t(card.product.displayName), size: this.i18n.t(card.product.size.label),
       });
       card.detail.hidden = true;
       if (card.variantLabel) card.variantLabel.textContent = this.i18n.t(card.product.variantLabel || card.product.size.label);
+      this.updateCartLabel(card);
+    }
+
+    updateCartLabel(card) {
       card.inCart = Boolean(card.snapshot?.editingOrderItemId && (this.isInCart?.(card.snapshot.editingOrderItemId) ?? true));
-      this.i18n.setText(card.add, card.inCart && card.snapshot.needsCartUpdate === false ? 'Im Warenkorb'
-        : card.inCart ? 'Warenkorb aktualisieren' : 'In den Warenkorb');
+      const source = card.inCart && card.snapshot.needsCartUpdate === false ? 'Im Warenkorb'
+        : card.inCart ? 'Warenkorb aktualisieren' : 'In den Warenkorb';
+      if (card.addLabelSource !== source || card.add.textContent !== this.i18n.t(source)) {
+        this.i18n.setText(card.add, source);
+        card.addLabelSource = source;
+      }
     }
 
     localize() {
@@ -734,9 +762,13 @@
 
     updateActions() {
       for (const card of this.cards) {
-        this.localizeCard(card);
+        // Replacing unchanged card text makes Safari adjust the page's scroll
+        // position. Cart/busy refreshes only update actions, retaining that DOM.
+        this.updateCartLabel(card);
+        card.photoButton.disabled = this.choosing || !card.snapshot;
         card.customize.disabled = this.choosing || !card.snapshot;
         card.add.disabled = this.choosing || !card.snapshot ||
+          !card.product.printSurfaces.every(surface => card.snapshot.designs[surface.key]?.length) ||
           Boolean(card.inCart && card.snapshot.needsCartUpdate === false);
         card.add.setAttribute('aria-busy', String(Boolean(card.adding)));
         if (card.variantToggle) card.variantToggle.disabled = this.choosing;
@@ -843,5 +875,5 @@
     }
   }
 
-  return Object.freeze({ Gallery, groupProducts, shouldOpen, categoryFor });
+  return Object.freeze({ Gallery, groupProducts, shouldOpen, categoryFor, productThumbnail });
 });

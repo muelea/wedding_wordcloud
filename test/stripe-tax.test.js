@@ -149,6 +149,44 @@ test('catalog Checkout preserves unit prices, paginates large carts and rejects 
   assert.equal(listCalls, 2, 'both large-cart responses fetch all designs before validating totals');
 });
 
+test('Stripe cancel and success URLs preserve the checkout origin and the complete cart', async t => {
+  process.env.STRIPE_PAYMENT_MODE = 'test';
+  process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_return_unit';
+  delete require.cache[require.resolve('../src/stripe')];
+  const integration = require('../src/stripe');
+  const { getCheckoutBaseUrl } = require('../src/baseUrl');
+  const sdk = new Stripe('sk_test_sdk_mock');
+  let submitted;
+  t.mock.method(Object.getPrototypeOf(sdk.checkout.sessions), 'create', async params => {
+    submitted = params;
+    return { ...fixture().session, url: 'https://checkout.stripe.test/return' };
+  });
+  const product = { key: 'mug', name: 'Weiße Tasse', unit: { singular: 'Tasse', plural: 'Tassen' } };
+  for (const origin of ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://10.0.0.163:3000', 'https://example.test']) {
+    const url = new URL(origin);
+    for (const ids of [['design1'], ['design1', 'design2']]) {
+      const request = integration.freezeCheckoutRequest({
+        products: ids.map(() => product), configurationIds: ids,
+        quoteId: 'quote1', quantity: 2, slug: 'return-test', locale: 'en',
+        baseUrl: getCheckoutBaseUrl({ protocol: url.protocol.slice(0, -1), get: () => url.host }, 3000),
+        shipments: [{ items: ids.map(id => ({ configurationId: id, quantity: 2 / ids.length })),
+          recipient: { name: 'Return Test', address1: 'Musterweg 1', city: 'Berlin', zip: '10115', country_code: 'DE' } }],
+      });
+      await integration.createCheckoutSession({ order: fixture().order, ...request, customerId: 'cus_testtax' });
+      const cancel = new URL(submitted.cancel_url);
+      assert.equal(cancel.origin, origin);
+      assert.equal(cancel.pathname, '/e/return-test/shipping');
+      assert.equal(cancel.searchParams.get(ids.length === 1 ? 'configuration' : 'configurations'), ids.join(','));
+      assert.equal(cancel.searchParams.get('quote'), 'quote1');
+      assert.equal(cancel.searchParams.get('checkout'), 'cancelled');
+      assert.equal(cancel.searchParams.get('lang'), 'en');
+      const success = new URL(submitted.success_url);
+      assert.equal(success.origin, origin);
+      assert.equal(success.pathname, '/e/return-test/order-confirmation');
+    }
+  }
+});
+
 test('hosted Checkout pins shipping, separates net products and shipping, and retries identical Stripe inputs', async (t) => {
   process.env.STRIPE_PAYMENT_MODE = 'test';
   process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_tax_unit';

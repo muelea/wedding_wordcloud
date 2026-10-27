@@ -26,7 +26,7 @@ async function cleanupOneExpiredPrintArtifact(excludeIds) {
   if (!artifact) return null;
   excludeIds.add(artifact.id);
   try {
-    await storage.remove(artifact.object_key);
+    if (!artifact.source_file_id) await storage.remove(artifact.object_key);
     await db.finishPrintArtifactDeletion(artifact.id, artifact.deletion_attempts);
   } catch {
     await db.failPrintArtifactDeletion(artifact.id, 'storage_delete_failed', artifact.deletion_attempts);

@@ -10,12 +10,17 @@ const log = require('./structuredLog');
 const MAX_ATTEMPTS = 4;
 const LEASE_MS = 120_000;
 const IDEMPOTENCY_RETRY_WINDOW_MS = 23 * 60 * 60 * 1000;
-const POLL_MS = 5_000;
 const WORKER_ID = `email-${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
 
 let stopping = false;
 let workerBusy = false;
-let pollTimer = null;
+const poller = require('./workerPoller').create({
+  run: async () => {
+    const {claimed}=await drainDueJobs({maxJobs:1});
+    return claimed || {nextAt:await db.getNextWorkerJobAt('email')};
+  },
+  onError: error => log.error('email_poll_failed', { errorCode: log.errorCode(error) }),
+});
 let scheduledKick = null;
 const requestedJobs = new Set();
 
@@ -172,6 +177,7 @@ async function processJob(jobId, options = {}) {
     return await executeClaimedJob(job, options);
   } finally {
     workerBusy = false;
+    poller.active();
   }
 }
 
@@ -182,7 +188,7 @@ async function drainDueJobs({ maxJobs = 1, deadline = null } = {}) {
   let completed = 0;
   let blocked = 0;
   try {
-    while (claimed < maxJobs && (!deadline || Date.now() + 500 < deadline)) {
+    while (claimed < maxJobs && (!deadline || Date.now() + 2_000 < deadline)) {
       const job = await db.claimEmailJob({ lockedBy: WORKER_ID, leaseMs: LEASE_MS });
       if (!job) break;
       claimed += 1;
@@ -220,6 +226,7 @@ function scheduleKick() {
 function scheduleJob(jobId) {
   if (stopping || jobId == null) return false;
   requestedJobs.add(String(jobId));
+  poller.active();
   return scheduleKick();
 }
 
@@ -233,13 +240,7 @@ async function resumePendingJobs() {
 }
 
 function start() {
-  if (stopping || pollTimer) return false;
-  pollTimer = setInterval(() => {
-    drainDueJobs({ maxJobs: 1 }).catch((error) => log.error('email_poll_failed', {
-      errorCode: log.errorCode(error, 'email_poll_failed'),
-    }));
-  }, POLL_MS);
-  pollTimer.unref();
+  if (stopping || !poller.start()) return false;
   resumePendingJobs().catch((error) => log.error('email_resume_failed', {
     errorCode: log.errorCode(error, 'email_resume_failed'),
   }));
@@ -248,8 +249,7 @@ function start() {
 
 async function stop({ timeoutMs = 15_000 } = {}) {
   stopping = true;
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = null;
+  poller.stop();
   if (scheduledKick) clearImmediate(scheduledKick);
   scheduledKick = null;
   requestedJobs.clear();

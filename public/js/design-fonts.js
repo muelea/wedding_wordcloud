@@ -95,7 +95,10 @@
         Promise.all([
           fontSet.load(`400 16px "${get(key).family}"`, 'Wolkenworte'),
           fontSet.load(`700 16px "${get(key).family}"`, 'Wolkenworte'),
-        ]).then((loaded) => loaded.flat()),
+        ]).then((loaded) => {
+          if (loaded.some((faces) => !faces?.length)) throw new Error('design_font_unavailable');
+          return loaded.flat();
+        }),
         new Promise((_, reject) => {
           timer = setTimeout(() => reject(new Error('design_font_timeout')), timeoutMs);
         }),

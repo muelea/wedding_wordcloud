@@ -1,0 +1,138 @@
+{
+  "checkedAt": "2026-10-27T15:31:25.288Z",
+  "root": "reports/apparel-photo-2026-10-27",
+  "proofSize": [
+    1000,
+    1000
+  ],
+  "proofs": [
+    {
+      "key": "t-shirt-11869",
+      "color": "Black",
+      "variantIds": [
+        11869,
+        11870,
+        11871,
+        11872,
+        11873,
+        17229,
+        17233,
+        17236,
+        53682
+      ],
+      "provider": "provider-sttu169-11869.png",
+      "source": "sttu169-calibration.png",
+      "providerSha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee",
+      "blueBounds": [
+        329,
+        155,
+        671,
+        624
+      ]
+    },
+    {
+      "key": "t-shirt-11864",
+      "color": "White",
+      "variantIds": [
+        11864,
+        11865,
+        11866,
+        11867,
+        11868,
+        17228,
+        17232,
+        17235,
+        53681
+      ],
+      "provider": "provider-sttu169-11864.png",
+      "source": "sttu169-calibration.png",
+      "providerSha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213",
+      "blueBounds": [
+        329,
+        155,
+        671,
+        624
+      ]
+    },
+    {
+      "key": "sweatshirt-12585",
+      "color": "Black",
+      "variantIds": [
+        12585,
+        12586,
+        12587,
+        12588,
+        12589
+      ],
+      "provider": "provider-stsu178-12585.png",
+      "source": "stsu178-calibration.png",
+      "providerSha256": "2bf49d29f082b0b9b3c2f985af4b1a4a77faf2676d59a1553456cb5988c66078",
+      "blueBounds": [
+        329,
+        157,
+        671,
+        626
+      ]
+    },
+    {
+      "key": "sweatshirt-12605",
+      "color": "White",
+      "variantIds": [
+        12605,
+        12606,
+        12607,
+        12608,
+        12609
+      ],
+      "provider": "provider-stsu178-12605.png",
+      "source": "stsu178-calibration.png",
+      "providerSha256": "2058dc59c82a5e3658bc672d6bb69c624fe12ca6ff97a38a3ec89dbc11b6a4a1",
+      "blueBounds": [
+        329,
+        157,
+        671,
+        626
+      ]
+    },
+    {
+      "key": "hoodie-12372",
+      "color": "Black",
+      "variantIds": [
+        12372,
+        12373,
+        12374,
+        12375,
+        12376
+      ],
+      "provider": "provider-stsu177-12372.png",
+      "source": "stsu177-calibration.png",
+      "providerSha256": "74c323bdd84700f6ae578e910dd3ba04e2b44e79fb487cbee6e0629ad3358788",
+      "blueBounds": [
+        355,
+        243,
+        650,
+        538
+      ]
+    },
+    {
+      "key": "hoodie-12402",
+      "color": "White",
+      "variantIds": [
+        12402,
+        12403,
+        12404,
+        12405,
+        12406
+      ],
+      "provider": "provider-stsu177-12402.png",
+      "source": "stsu177-calibration.png",
+      "providerSha256": "419406a32d224018bfb0026e30000e8e606d023cf83ed040ddf8106156b8a768",
+      "blueBounds": [
+        356,
+        243,
+        650,
+        537
+      ]
+    }
+  ]
+}

@@ -3,6 +3,9 @@
 Approved by the maintainer: 2026-09-24. Implemented in schema version 5 and the
 existing authenticated maintenance worker. Activation requires the approved
 hosted release; editing this policy does not deploy it or delete hosted data.
+Activity expiry and worker scheduling were approved on 2026-10-26 and are
+prepared locally through the additional schema-8 migration and application
+changes below.
 
 ## Commerce policy
 
@@ -94,22 +97,94 @@ condition instead of falsely promising preservation.
 
 | Data | Lifetime |
 |---|---|
-| Event, shared words, contribution receipts and event archives | 365 days from event creation |
+| Event, shared words, contribution receipts and event archives | Three calendar months from the last committed edit (`events.updated_at`); daily cleanup after expiry |
 | Unpaid configurations with no unresolved order dependency | Removed with their expired event |
 | Unused checkout quote containing address/provider price | Usable for 5–120 minutes (default 30); eligible for deletion one day after expiry |
 | Frozen paid print artifact | At least 90 days from submission, extended to 60 days after delivery where later; holds override deletion |
+| Prepared preview/print file | Initially 24 hours; paid artifacts, unfinished paid fulfillment, holds and unresolved attempted Checkouts protect the shared source until it can safely be deleted |
 | Reserved opaque event slug | Indefinite, to prevent reuse of expired public URLs |
-| Hashed PIN-attempt source identity | Removed with the event; never contains raw IP addresses |
+| Hashed PIN-attempt source identity | Older than one day: removed on PIN checks; also removed with the event; never contains raw IP addresses |
+
+Schema 8 changes event expiry through a new ordered migration; it does not
+rewrite the customer baseline. Already active events receive three calendar
+months from migration time because their historical edit times are incomplete.
+Already expired events remain expired. New clouds and direct-design workspaces
+use the same activity policy. Committed word insertion, count changes, removal,
+nonempty reset, title/PIN changes and explicit configuration creation renew the
+parent event. Viewing, connecting, failed writes and no-op edits do not. Word
+changes touch the parent in the same transaction, once per affected event per
+SQL statement. Expired events cannot be revived by those touches. Account saves
+remain manual and keep their independent existing three-month rules.
+
+## Daily activity cleanup and worker scheduling
+
+The existing authenticated five-minute Supabase Cron wake-up remains. It now
+starts or resumes one durable daily scan, instead of applying a two-event daily
+quota. Its scheduled day changes at **03:00 Europe/Berlin**, including DST;
+startup after an outage catches up the latest due day. An unfinished day is
+finished before a new day starts. Every run has a fixed eligibility cutoff.
+
+- `retention_runs` stores category cursors, counters and a 60-second lease.
+  Candidate pages contain at most 50 entries. Successful per-record commits and
+  checkpoints allow safe replay after interruption; no transaction spans a page
+  or a Storage/Auth request. Stale lease owners cannot save progress or release
+  a successor's lease.
+- A wake-up spends at most approximately ten seconds on the daily scan, then
+  preserves the remaining maintenance budget for recovery. Application workers
+  also start paid work immediately on startup and provider callbacks. Daily
+  continuation happens on subsequent five-minute wake-ups, without waiting for
+  another night. Budgets are cooperative; individual SQL/provider timeouts
+  bound operations, rather than aborting an in-flight remote deletion.
+- Categories advance independently and rotate between pages: Auth discovery,
+  expired clouds, saved designs, dormant accounts, paid artifacts, commerce,
+  old metadata, queued design-object/Auth deletions, prepared print files and
+  expired mockup-cache records. Account expiry waits
+  for discovery and design expiry; external deletion waits for their producers.
+  Every candidate is rechecked before deletion. Commerce policies/holds and
+  payment ambiguity are unchanged; expired cloud cleanup detaches retained
+  configurations and preserves slug reservations. Prepared sources still
+  referenced by paid artifacts are excluded from discovery, rather than
+  creating routine hourly deletion retries throughout their 90-day retention.
+- Blocked/busy/failed targets enter `retention_deferrals`; they do not prevent
+  scanning later IDs. Independently leased retries back off from five minutes
+  to at most one hour. Storage failure preserves retryable metadata. Completed
+  scans with deferred targets say `completed_with_deferrals`, not unconditional
+  success. `npm run ops:status` exposes the latest daily progress and remaining
+  deferral count. Maintenance HTTP responses contain counts/status, never
+  target IDs. Daily run history expires after 90 days. Run-level errors retain
+  their sanitized code and timestamp for diagnosis; a completed scan clears
+  that transient error. File-deletion counters require the current lease owner
+  to commit successfully.
+- Short-lived quote/upload/session housekeeping, interrupted mockups and
+  explicit account/file deletion retries stay on the five-minute wake-up.
+  These do not rescan all long-lived business records.
+- Fulfillment and transactional-email work is event-triggered immediately.
+  Their safety polls run at five seconds after work, then back off to 60
+  seconds after an empty poll. A persisted retry due sooner wakes the worker
+  at that deadline instead of waiting the whole idle interval. Existing leases, retry deadlines, attempt limits
+  and provider idempotency fences are unchanged.
+- Mockup generation starts only for an explicit request. Startup and the
+  maintenance wake-up recover persisted unfinished work. The worker schedules
+  the next due job (respecting provider backoff/leases), and stops its timer
+  when no job or journaled file cleanup remains. Reading a completed cached
+  preview does not restart polling. The five-minute recovery check is the only
+  periodic check when the queue is empty.
+- Process metrics are summarized every ten seconds, in RAM. Fly readiness
+  checks remain at 15 seconds; they are independent of retention scheduling.
+
+This scheduling and activity policy is prepared locally. It takes effect on
+the hosted project only through a separately approved migration and release.
 
 ## Maintenance and activation
 
-Commerce cleanup considers at most one old order per authenticated wake-up;
-checks rotate oldest-first and each order is normally revisited no more than
-once daily. Each order's changes are transactional. Row locks, `SKIP LOCKED`,
+The daily scanner considers all old orders in keyset pages; each order is
+normally revisited once per daily scan, with separate retries for deferred
+work. Each order's changes are transactional. Row locks, `SKIP LOCKED`,
 nonblocking child locks, statement timeouts and the existing maintenance budget
 keep cleanup bounded. A failed/busy transaction rolls back and retries later.
-Completed-log/unmatched-webhook cleanup is capped at 100 rows per category per
-wake-up. Counts enter the existing maintenance heartbeat; logs contain no
+Completed-log/unmatched-webhook cleanup uses batches of 100 rows per category
+and repeats until the daily scan drains them, resuming on later wake-ups when
+its time budget is exhausted. Counts enter the existing maintenance heartbeat; logs contain no
 addresses, email recipients or message bodies. Deadlines make rows eligible;
 actual removal occurs on a subsequent successful maintenance pass.
 

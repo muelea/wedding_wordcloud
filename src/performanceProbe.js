@@ -2,7 +2,7 @@
 
 const { monitorEventLoopDelay, performance } = require('node:perf_hooks');
 
-const SAMPLE_INTERVAL_MS = 1_000;
+const SAMPLE_INTERVAL_MS = 10_000;
 
 let histogram = null;
 let timer = null;

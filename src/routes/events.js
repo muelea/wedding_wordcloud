@@ -3,7 +3,7 @@
 const express = require('express');
 const db = require('../db');
 const { isEventSlug } = require('../slug');
-const { getBaseUrl } = require('../baseUrl');
+const { getBaseUrl, getCheckoutBaseUrl } = require('../baseUrl');
 const { buildEventUrl, renderEventQrDataUrl } = require('../eventQr');
 const { sourceHashForRequest } = require('../clientIdentity');
 const rateLimits = require('../rateLimits');
@@ -11,6 +11,7 @@ const stripe = require('../stripe');
 const printful = require('../printful');
 const printfulMockups = require('../printfulMockups');
 const printArtifacts = require('../printArtifacts');
+const mockupApproval = require('../mockupApproval');
 const { shippingTermsDiffer } = require('../printfulShipping');
 const { buildCustomerQuoteForShipments } = require('../pricing');
 const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
@@ -211,6 +212,7 @@ function normalizeCartShipments(rawBody, countries, configurations) {
 
     const rawItems = Array.isArray(raw.items) ? raw.items : [];
     const items = [];
+    const seenConfigurationIds = new Set();
     for (const rawItem of rawItems) {
       const configurationId = String(rawItem?.configurationId || rawItem?.configuration_id || '').trim();
       const configuration = configurationById.get(configurationId);
@@ -221,6 +223,11 @@ function normalizeCartShipments(rawBody, countries, configurations) {
         invalidFields.push(`${fieldPrefix}items`);
         continue;
       }
+      if (seenConfigurationIds.has(configurationId)) {
+        invalidFields.push(`${fieldPrefix}items.${configurationId}`);
+        continue;
+      }
+      seenConfigurationIds.add(configurationId);
       if (!Number.isSafeInteger(quantity) || quantity < 0 || quantity > product.maxQuantity) {
         invalidFields.push(`${fieldPrefix}items.${configurationId}`);
         continue;
@@ -429,7 +436,10 @@ function checkoutClientPayload(intent, quote, order, result, quoteSummary = {}) 
   };
 }
 
-function sendCheckoutResult(res, intent, quote, order, result, quoteSummary = {}) {
+async function sendCheckoutResult(res, intent, quote, order, result, quoteSummary = {}) {
+  if (intent === 'pay' && result?.url && !await mockupApproval.approve(order, quote, res.req)) {
+    return res.status(409).json({ error: 'mockup_approval_required', message: 'Bitte prüft und bestätigt zuerst alle Produktvorschauen.' });
+  }
   if (result?.quoteExpired) {
     return res.status(409).json({
       error: 'quote_expired',
@@ -1160,6 +1170,9 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     try {
       await printArtifacts.validateProductPrintability(product, design);
     } catch (error) {
+      if (error.code === 'PRINT_TEXT_UNSUPPORTED') {
+        return res.status(422).json({ error: 'unsupported_print_characters' });
+      }
       if (error.code === 'PRINT_IMAGE_INVALID') {
         return res.status(400).json({ error: 'invalid_design' });
       }
@@ -1249,6 +1262,43 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
     const response = editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
     res.json(response);
+  }));
+
+  router.post('/events/:slug/cart/mockups', express.json({ limit: '4kb' }), asyncRoute(async (req,res) => {
+    res.set('Cache-Control','private, no-store');
+    if(req.get('x-wolkenworte-preview')!=='product-mockup') return res.status(400).json({error:'invalid_request'});
+    const event=await db.getEventBySlug(req.params.slug);
+    if(!event)return res.status(404).json({error:'event_not_found'});
+    if(!consumeEventRequest(req,event,'mockups',{max:30,windowMs:60000},{max:60,windowMs:60000}))return rateLimited(res);
+    const ids=normalizeConfigurationIdList(req.body?.configurationIds);
+    const configurations=await db.getEventConfigurations(event.slug,ids);
+    if(!ids.length || configurations.length!==ids.length)return res.status(404).json({error:'configuration_not_found'});
+    try {
+      const jobs=await printfulMockups.createForConfigurations(configurations,{requestId:req.body?.requestId,refresh:req.body?.refresh===true});
+      res.status(202).json({jobs:jobs.map(job=>({jobId:job.jobId,configurationIds:job.configurationIds}))});
+    } catch(error){return sendCustomerMockupError(res,error);}
+  }));
+
+  router.get('/events/:slug/cart/mockups', asyncRoute(async(req,res)=>{
+    res.set('Cache-Control','private, no-store');
+    const event=await db.getEventBySlug(req.params.slug);
+    if(!event)return res.status(404).json({error:'event_not_found'});
+    const ids=String(req.query.jobs||'').split(',');
+    if(!ids.length || ids.length>20 || ids.some(id=>!/^[A-Za-z0-9_-]{24}$/.test(id)))return res.status(400).json({error:'invalid_request'});
+    if(!rateLimits.consume([{name:'customer-mockup-status',key:sourceHashForRequest(req),max:120,windowMs:60000}]))return res.status(429).json({error:'mockup_rate_limited',retryAfter:10});
+    try{
+      const jobs=[];
+      for(const id of ids){
+        // Status and images must come from one event-bound snapshot: completion
+        // between two reads must never return "completed" with older empty items.
+        const job=await printfulMockups.getJob(id,{event_id:event.id});
+        jobs.push({jobId:id,status:job.status,errorCode:job.errorCode,retryAfter:job.retryAfter,expiresAt:job.expiresAt,
+          configurationIds:job.configurationIds,
+          items:(job.items||[]).map(item=>({configurationId:item.configurationId,
+            mockups:item.mockups.map(image=>({url:image.url,surfaceKey:image.surfaceKey}))}))});
+      }
+      res.json({jobs});
+    }catch(error){return sendCustomerMockupError(res,error);}
   }));
 
   router.post(
@@ -1700,7 +1750,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
         quoteId: refreshedQuote.id,
         quantity: freshQuote.quantity,
         shipmentCount: pricedShipments.length,
-        baseUrl: getBaseUrl(req, port),
+        baseUrl: getCheckoutBaseUrl(req, port),
         locale: requestedLocale,
       });
       const orderResult = await db.createCheckoutOrder({
@@ -1881,7 +1931,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
           quoteId: refreshedQuote.id,
           quantity: freshQuote.quantity,
           shipmentCount: quotedShipments.length,
-          baseUrl: getBaseUrl(req, port),
+          baseUrl: getCheckoutBaseUrl(req, port),
           locale: requestedLocale,
         });
         const orderResult = await db.createCheckoutOrder({

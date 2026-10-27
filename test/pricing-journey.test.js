@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Stripe = require('stripe');
 const { JSDOM } = require('jsdom');
-const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
+const { startTestServer, createEvent, productDesignPayload, stubMockupApproval } = require('./helpers');
 const { Gallery } = require('../public/js/product-gallery');
 
 test('gallery prices survive cart and single-product quotes, Stripe Tax, signed payment and confirmation', async t => {
@@ -15,6 +15,7 @@ test('gallery prices survive cart and single-product quotes, Stripe Tax, signed 
   process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.69';
   process.env.SHOP_PAYMENT_RESERVE_FIXED_CENTS = '49';
   const hosted = await startTestServer();
+  stubMockupApproval(t);
   t.after(hosted.close);
   const { baseUrl } = hosted;
   const printful = require('../src/printful');

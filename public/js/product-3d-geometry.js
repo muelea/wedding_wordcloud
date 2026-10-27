@@ -281,6 +281,91 @@
         else geometry.addGroup(i, 3, index);
       }
     }
+    if (model.kind === 'panel' && product.previewShape === 'framed-poster') {
+      const { width, height, depth } = model;
+      // Preview calibration against the exact metric catalog photos, not CAD
+      // dimensions. Keys are the existing print-panel dimensions in rounded mm;
+      // sorting keeps the same physical rail in portrait and landscape.
+      const size = [width, height].sort((a, b) => a - b).map(cm => Math.round(cm * 10)).join('x');
+      const rail = ({ '210x300': 2.1, '305x406': 2.2, '305x457': 2.1,
+        '406x508': 2.0, '457x610': 2.55, '500x700': 2.1, '610x914': 2.05,
+        '420x594': 2.85, '594x841': 2.85 })[size] || 2.1;
+      const frontZ = depth / 2;
+      const edge = material(model.frameColor, .75), back = material('#27292b', .9);
+      // Keep the complete artwork and its original physical panel/UVs. The
+      // wider moulding grows outwards, never scaling or covering the print.
+      const panel = new THREE.ExtrudeGeometry(roundRect(-width / 2, -height / 2, width, height, .02),
+        { depth, bevelEnabled: false, curveSegments: 20 });
+      panel.translate(0, 0, -depth / 2);
+      const panelPositions = panel.getAttribute('position'), panelUVs = panel.getAttribute('uv');
+      for (let i = 0; i < panelUVs.count; i++) {
+        panelUVs.setXY(i, panelPositions.getX(i) / width + .5, panelPositions.getY(i) / height + .5);
+      }
+      facingMaterials(panel, (i, p, n) => Math.abs(n.getZ(i)) > .5 ? n.getZ(i) < 0 ? 2 : 0 : 1);
+      add(panel, [ink, edge, back]).name = 'poster-print-panel';
+      const frame = material(model.frameColor, .64);
+      let grain = null;
+      if (model.frameColor === '#c79d67') {
+        const pixels = new Uint8Array(128 * 128 * 4);
+        for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+          const wave = y + 1.7 * Math.sin(x * Math.PI / 64) + .6 * Math.sin(x * Math.PI / 32);
+          const value = Math.round(238 + 10 * Math.sin(wave * Math.PI / 4) + 6 * Math.sin(wave * Math.PI / 2));
+          const i = (y * 128 + x) * 4;
+          pixels[i] = pixels[i + 1] = pixels[i + 2] = value; pixels[i + 3] = 255;
+        }
+        grain = new THREE.DataTexture(pixels, 128, 128);
+        grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
+        grain.magFilter = THREE.LinearFilter; grain.minFilter = THREE.LinearMipmapLinearFilter;
+        grain.generateMipmaps = true; grain.needsUpdate = true;
+        frame.map = grain; frame.bumpMap = grain; frame.bumpScale = .008;
+        let disposed = false;
+        frame.addEventListener('dispose', () => { if (!disposed) { disposed = true; grain.dispose(); } });
+      }
+      // A shallow inner lip, broad face and small outer bevel. Each rail ends
+      // on the diagonal shared with its neighbour, forming actual mitres.
+      const profile = [[0, frontZ + .025], [.07, frontZ + .14],
+        [rail - .07, frontZ + .14], [rail, frontZ + .08],
+        [rail, -depth / 2], [0, -depth / 2]];
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      const point = (corner, offset, z) => [corner[0] * (width / 2 + offset), corner[1] * (height / 2 + offset), z];
+      for (let side = 0; side < 4; side++) {
+        const start = corners[side], end = corners[(side + 1) % 4];
+        const length = side % 2 ? height : width, positions = [], uvs = [];
+        for (let j = 0; j < profile.length; j++) {
+          const [offset, z] = profile[j], [nextOffset, nextZ] = profile[(j + 1) % profile.length];
+          const vertices = [point(start, offset, z), point(end, offset, z),
+            point(start, nextOffset, nextZ), point(end, nextOffset, nextZ)];
+          const coordinates = [[0, offset / rail], [length / 12, offset / rail],
+            [0, nextOffset / rail], [length / 12, nextOffset / rail]];
+          for (const index of [0, 2, 1, 1, 2, 3]) {
+            positions.push(...vertices[index]); uvs.push(...coordinates[index]);
+          }
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geometry.computeVertexNormals();
+        add(geometry, frame).name = 'poster-frame-rail';
+      }
+      // Fine recessed-looking diagonal joins stay visible on painted frames,
+      // where a grain-direction change alone cannot describe the mitre.
+      const joint = material(new THREE.Color(model.frameColor).multiplyScalar(.75), .85);
+      const seamPositions = [];
+      for (const corner of corners) for (let j = 0; j < 3; j++) {
+        const [offset, z] = profile[j], [nextOffset, nextZ] = profile[j + 1];
+        const a = point(corner, offset, z + .001), b = point(corner, nextOffset, nextZ + .001);
+        const dx = corner[0] * .009, dy = -corner[1] * .009;
+        seamPositions.push(a[0] - dx, a[1] - dy, a[2], b[0] - dx, b[1] - dy, b[2], a[0] + dx, a[1] + dy, a[2],
+          b[0] - dx, b[1] - dy, b[2], b[0] + dx, b[1] + dy, b[2], a[0] + dx, a[1] + dy, a[2]);
+      }
+      const seams = new THREE.BufferGeometry();
+      seams.setAttribute('position', new THREE.Float32BufferAttribute(seamPositions, 3));
+      seams.computeVertexNormals();
+      // Every join faces forward regardless of the mirrored corner winding.
+      joint.side = THREE.DoubleSide;
+      add(seams, joint).name = 'poster-frame-mitres';
+      return;
+    }
     if (model.kind === 'canvas' && model.style) {
       const { width, height, depth, face } = model, framed = model.style === 'framed';
       const canvasDepth = framed ? 1.905 : depth;
@@ -539,8 +624,18 @@
         const ring = model.magSafeRing;
         const ringRadius = ring.radius, ringY = ring.y;
         const relief = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .66, map: texture });
-        const ringGeometry = new THREE.TorusGeometry(ringRadius, .06, 12, 112);
-        ringGeometry.translate(ring.x, ringY, frontZ + .075); printUV(ringGeometry);
+        // The photo shows a broad moulded band, about 9% of its outer
+        // diameter, with rounded edges rather than a thin circular wire.
+        // Preserve the former outside radius and height; widen only inwards.
+        const outerRadius = ringRadius + .06, innerRadius = outerRadius * .82, bevel = .04;
+        const ringShape = new THREE.Shape();
+        ringShape.absarc(0, 0, outerRadius - bevel, 0, Math.PI * 2, false);
+        const opening = new THREE.Path();
+        opening.absarc(0, 0, innerRadius + bevel, 0, Math.PI * 2, true);
+        ringShape.holes.push(opening);
+        const ringGeometry = new THREE.ExtrudeGeometry(ringShape, { depth: .06, bevelEnabled: true,
+          bevelSize: bevel, bevelThickness: .035, bevelSegments: 4, curveSegments: 56 });
+        ringGeometry.translate(ring.x, ringY, frontZ + .04); printUV(ringGeometry);
         add(ringGeometry, relief).name = 'case-magsafe-relief';
         const stem = ring.alignment || {x:ring.x,y:ringY-ringRadius-.65,width:.4,height:.95};
         const alignment = new THREE.ExtrudeGeometry(roundRect(stem.x-stem.width/2, stem.y-stem.height/2,

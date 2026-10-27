@@ -34,13 +34,18 @@ These are the unmodified `variants[].image` files returned by Catalog API
 `GET /products/19` on 2026-10-24, for the selected white glossy mug size:
 
 - `white-mug-325ml.jpg`: variant 1320, `https://files.cdn.printful.com/products/19/1320_1663762583.jpg`
-- `white-mug-444ml.jpg`: variant 4830, `https://files.cdn.printful.com/products/19/4830_1519394046.jpg`
+- `white-mug-444ml.jpg`: original low-resolution variant 4830 reference, retained for historical references; replaced in the current gallery as described below
 - `white-mug-591ml.jpg`: variant 16586, `https://files.cdn.printful.com/products/19/16586_1680616351.jpg`
 
-The main mug preview continues to use the existing 3D renderer and print mapping.
-Photo framing is separate from print geometry: the 444 ml photo is positioned
-at 20% vertically to exclude its excess bottom whitespace; the tall 591 ml mug
-is contained in the image frame so its rim and base stay visible.
+The 444 ml reference was replaced on 2026-10-27 with the unmodified 700 × 1000
+JPEG from Printful's public product gallery (image 1752, mapped only to 15 oz):
+[`19-1752.jpg`](../product-photos/19-1752.jpg), with its source URL and SHA-256
+pinned in `src/productPhotoCatalog.json`. The old 275 × 500 Catalog API photo
+was soft when enlarged and placed the mug above the image centre. The current
+photo uses centred positioning; its dialog display frame trims only white
+surround. The tall 591 ml mug is contained so its rim and base stay visible.
+The main mug preview continues to use the existing 3D renderer and print mapping;
+photo framing is separate from print geometry.
 
 Catalog expansion (2026-10-24): `catalog-{variantId}.jpg` files are unmodified
 `variants[].image` responses, with source URLs pinned in

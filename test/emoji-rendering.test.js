@@ -6,15 +6,53 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const express = require('express');
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, Image } = require('canvas');
 const fabric = require('fabric/node');
 const EmojiData = require('../public/js/emoji-data');
 const EmojiCatalog = require('../public/js/emoji-catalog');
 const WordCloudCore = require('../public/js/wordcloud-core');
 const DesignFonts = require('../src/designFonts');
-const { ASSET_ROOT } = require('../src/emojiAssets');
+const { ASSET_ROOT, inlineSvg } = require('../src/emojiAssets');
 const { loadBrowserSvg, normalizeBrowserSvg } = require('../src/emojiBrowserAssets');
 const { makeEmojiArtworkRouter } = require('../src/routes/emojiArtwork');
+
+test('every bundled emoji preserves its actual browser pixels when inlined for print', async () => {
+  const expected = createCanvas(1, 1).getContext('2d');
+  const actual = createCanvas(1, 1).getContext('2d');
+  const browserImage = new Image(), printImage = new Image();
+  const decode = (image, svg) => new Promise((resolve, reject) => {
+    image.onload = () => resolve(image); image.onerror = reject; image.src = Buffer.from(svg);
+  });
+  const failures = [];
+  for (const asset of new Set(Object.values(EmojiData.canonicalAssets))) {
+    const source = await loadBrowserSvg(asset);
+    const image = await decode(browserImage, source);
+    // Compare at intrinsic resolution: downsampling a decoded SVG bitmap and
+    // rasterizing its vectors at a smaller size have different antialiasing.
+    const width = image.width, height = image.height;
+    expected.canvas.width = actual.canvas.width = width;
+    expected.canvas.height = actual.canvas.height = height;
+    WordCloudCore.drawRichText(expected, '', width / 2, height / 2, height, {
+      box: { width, height, runs: [{ type: 'emoji', x: 0, width }] },
+      emojiImage: () => image,
+    });
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+      inlineSvg({ asset, key: asset }, { x: 0, y: 0, width, height, id: 'parity' }) + '</svg>';
+    actual.drawImage(await decode(printImage, svg), 0, 0);
+    const a = actual.getImageData(0, 0, width, height).data;
+    const b = expected.getImageData(0, 0, width, height).data;
+    let error = 0, ink = 0;
+    for (let i = 0; i < a.length; i += 4) {
+      ink += b[i + 3];
+      error += Math.abs(a[i + 3] - b[i + 3]);
+      for (let channel = 0; channel < 3; channel++) {
+        error += Math.abs(a[i + channel] * a[i + 3] / 255 - b[i + channel] * b[i + 3] / 255);
+      }
+    }
+    if (!ink || error / (width * height * 4) > .1) failures.push({ asset, error: error / (width * height * 4), ink });
+  }
+  assert.deepEqual(failures, [], 'print must preserve all artwork, inherited paint and flag aspect ratios');
+});
 
 function dimensions(source) {
   const tag = source.match(/<svg\b[^>]*>/i)?.[0] || '';

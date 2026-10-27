@@ -95,3 +95,33 @@ test('local 3D maps the frozen front and back pixels into the existing renderer 
   params.drawTexture(ctx, bounds); params.drawBackTexture(ctx, bounds);
   assert.deepEqual(painted, [[images[0], 12, 34, 1800, 2400], [images[1], 12, 34, 1800, 2400]]);
 });
+
+test('clothing photo previews use the frozen full-file SVG and supplier layer without WebGL or editable drafts', async t => {
+  const dom = new JSDOM('<div id="host"></div>');
+  t.after(() => dom.window.close());
+  const { document } = dom.window, images = [], draws = [];
+  const create = document.createElement.bind(document);
+  t.mock.method(document, 'createElement', tag => {
+    const element = create(tag);
+    if (tag === 'img') images.push(element);
+    if (tag === 'canvas') t.mock.method(element.getContext('2d'), 'drawImage', (...args) => draws.push(args));
+    return element;
+  });
+  const product = getPublicProducts().find(product => product.key === 'hoodie-12373');
+  const item = { product, printPreviewUrls: { front: '/accepted.png' }, printFileUrls: { front: '/accepted.svg' } };
+  const before = JSON.stringify(item);
+  const pending = Products.renderPhoto({ host: document.getElementById('host'), item,
+    window: { get THREE() { throw new Error('photo previews must not initialize WebGL'); } },
+  });
+  assert.equal(images[0].getAttribute('src'), '/accepted.svg');
+  images[0].dispatchEvent(new dom.window.Event('load'));
+  await Promise.resolve();
+  assert.equal(images[1].getAttribute('src'), product.previewMockup.assets.front);
+  images[1].dispatchEvent(new dom.window.Event('load'));
+  const viewer = await pending;
+  assert.ok(draws.some(([image, x, y, width, height]) => image === images[0] &&
+    x === 0 && y === 0 && width === 2100 && height === 2100));
+  assert.equal(JSON.stringify(item), before);
+  viewer.destroy();
+  assert.equal(document.querySelector('canvas'), null);
+});

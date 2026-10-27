@@ -24,14 +24,15 @@ scope, a failure or an unresolved concern justifies it.
   behavioral bug that was not already covered.
 - If a focused check fails unexpectedly, the change crosses subsystem
   boundaries, or the impact cannot be determined confidently, expand to the
-  neighboring test files and then to the full suite if uncertainty remains.
+  neighboring test files and the integration tests for the affected behavior.
 - Run the complete `npm test` (`node scripts/test.js`) only
-  when the user explicitly requests it; before an explicitly requested
-  release, deployment or merge-ready handoff; after broad or cross-cutting
-  changes; after dependency, runtime configuration or database-schema changes;
-  or when focused verification leaves meaningful uncertainty. Do not repeat a
-  previously passing full suite after subsequent copy-only, documentation-only
-  or isolated styling changes.
+  when the user explicitly requests a full run or before an explicitly
+  requested release, deployment or merge-ready handoff. During ongoing local
+  development, use relevant focused checks even for database-schema, runtime
+  configuration and cross-cutting changes; cover migration and integration
+  behavior directly. Broad changes alone do not start the full suite. Do not
+  repeat a previously passing full suite after subsequent copy-only,
+  documentation-only or isolated styling changes.
 - `npm run deploy:hosted` retains the complete suite as a mandatory fail-fast
   release gate. Database-backed tests automatically use disposable local Docker
   Postgres, isolated migrated schemas and ephemeral ports. Use
@@ -101,6 +102,15 @@ behavior changes, even during focused iteration:
 - **Expired events look unknown and their slugs are never reused.** Public
   lookups filter `expires_at`; `reserved_event_slugs` survives event cleanup.
   Paid configurations must detach before an event is deleted.
+- **Activity expiry and daily cleanup stay durable.** Events expire three
+  calendar months after committed edits, never after reads. Preserve the
+  atomic edit/activity boundary, the migration grace period and expired-URL
+  privacy. The daily scan starts at 03:00 Europe/Berlin and drains every
+  category through persisted keyset cursors and expiring leases; page sizes
+  are not daily quotas. Deferred failures must not starve later IDs. Keep
+  short-lived cleanup and payment/email/mockup recovery on the authenticated
+  five-minute wake-up. Mockup workers have no idle polling timer. See
+  [`docs/data-retention.md`](docs/data-retention.md).
 - **Paid Printful files are frozen private artifacts.** Draft/live work uses
   only the opaque artifact-id/nonce application URL, never the editable
   configuration route or a Supabase object URL. Failed object operations keep

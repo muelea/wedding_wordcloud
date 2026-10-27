@@ -6,6 +6,32 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { placePanel, WolkenworteWorkspace } = require('../public/js/configurator-workspace');
 
+test('internal picker scrolling never remeasures or repositions its anchored popup', t => {
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM('<div id="editor-selection"></div><div id="editor-compact-inspector"></div><div id="workspace-tools"><div class="editor-toolbar"></div><div id="editor-desktop-inspector"></div></div><div id="editor-compact-toolbar"></div><div id="editor-reset-panel"></div><button id="editor-reset"></button><button id="editor-reset-confirm"></button><dialog><div class="scroller"></div></dialog>', { runScripts: 'outside-only' });
+  t.after(() => dom.window.close());
+  const browser = dom.window;
+  browser.matchMedia = () => ({ matches: false, addEventListener() {} });
+  browser.eval(fs.readFileSync(require.resolve('../public/js/configurator-workspace'), 'utf8'));
+  const workspace = new browser.WolkenworteWorkspace(browser.document);
+  browser.document.dispatchEvent(new browser.Event('pointerdown'));
+  assert.equal(browser.document.documentElement.dataset.wwInput, 'pointer', 'pointer dismissal does not request a keyboard focus outline');
+  browser.document.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Tab' }));
+  assert.equal(browser.document.documentElement.dataset.wwInput, 'keyboard', 'Tab retains a visible focus indicator');
+  browser.document.dispatchEvent(new browser.Event('pointerdown'));
+  assert.equal(browser.document.documentElement.dataset.wwInput, 'pointer');
+  browser.document.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.equal(browser.document.documentElement.dataset.wwInput, 'keyboard', 'Escape restores visible keyboard focus to the trigger');
+  workspace.active = { panel: browser.document.querySelector('dialog'), mode: 'popover' };
+  let measurements = 0; workspace.positionChooser = () => measurements++;
+  browser.document.querySelector('.scroller').dispatchEvent(new browser.Event('scroll'));
+  assert.equal(measurements, 0);
+  browser.dispatchEvent(new browser.Event('scroll'));
+  assert.equal(measurements, 1, 'page scrolling still follows the anchor');
+  browser.dispatchEvent(new browser.Event('resize'));
+  assert.equal(measurements, 2);
+});
+
 test('both laptop sleeves get a larger desktop 3D viewport without resizing the print canvas', () => {
   const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
   const start = template.indexOf('    function refreshWorkspaceLayout()');
@@ -27,7 +53,7 @@ test('both laptop sleeves get a larger desktop 3D viewport without resizing the 
       const preview = properties.get('--workspace-stage-height');
       const editor = properties.get('--editor-stage-height');
       if (width > 940) {
-        assert.ok(preview - 76 > (editor - 76) * 1.2, `${key}: the desktop 3D viewport is noticeably taller`);
+        assert.ok(preview - 16 > (editor - 16) * 1.2, `${key}: the desktop 3D viewport is noticeably taller`);
         assert.ok(preview <= Math.round(Math.min(620, height * .72)));
       }
       view.previewModel = { ...view.previewModel, kind: 'mousepad' };
@@ -38,6 +64,37 @@ test('both laptop sleeves get a larger desktop 3D viewport without resizing the 
       view.previewModel.kind = 'sleeve';
       assert.equal(JSON.stringify(view), before, 'preview sizing preserves print geometry and artwork metadata');
     }
+  }
+});
+
+test('wide mug wraps get a taller desktop product preview while the print canvas keeps its own proportions', () => {
+  const template = fs.readFileSync(require.resolve('../views/configure.ejs'), 'utf8');
+  const start = template.indexOf('    function refreshWorkspaceLayout()');
+  const source = template.slice(start, template.indexOf('\n    }', start) + 6);
+  const mugs = require('../src/products').getPublicProducts().filter(product => product.previewType === 'mug');
+  for (const view of mugs) for (const [width, height, canvasWidth] of [[1265, 720, 528], [1789, 1300, 560], [940, 900, 780], [390, 844, 330]]) {
+    const properties = new Map(), before = JSON.stringify(view);
+    const context = vm.createContext({ product: view, productView: () => view,
+      window: { innerWidth: width, innerHeight: height }, workspace: {},
+      editorScroll: { clientWidth: canvasWidth },
+      getComputedStyle: () => ({ paddingLeft: '0', paddingRight: '0', paddingTop: '0', paddingBottom: '0' }),
+      workbench: { style: { setProperty: (key, value) => properties.set(key, parseFloat(value)) } },
+      mugEditor: { refreshViewport() {} }, refreshFlatProductPreviewFit() {}, resizeMug3D() {},
+    });
+    vm.runInContext(source, context);
+    context.refreshWorkspaceLayout();
+    const preview = properties.get('--workspace-stage-height'), editor = properties.get('--editor-stage-height');
+    if (width > 940) {
+      assert.ok(preview > editor * 1.2, `${view.key}: wide artwork must not shrink its product preview`);
+      assert.ok(preview <= Math.round(Math.min(620, height * .72)));
+    } else {
+      assert.ok(editor <= canvasWidth / (view.printFile.width / view.printFile.height) + 1,
+        'stacked print canvases retain their shorter, independent height');
+    }
+    context.refreshWorkspaceLayout();
+    assert.equal(properties.get('--workspace-stage-height'), preview, 'repeated fitting does not accumulate zoom');
+    assert.equal(properties.get('--editor-stage-height'), editor);
+    assert.equal(JSON.stringify(view), before, 'fitting never changes print geometry or product metadata');
   }
 });
 

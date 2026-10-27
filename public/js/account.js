@@ -12,6 +12,7 @@
     design_busy:'Dieses Design wird gerade gespeichert. Bitte versuche es gleich erneut.',design_not_found:'Dieses Design ist nicht mehr verfügbar.',
     design_quota:'Dein Konto bietet Platz für 20 Designs und 100 MB. Lösche ein Design oder verwende kleinere Bilder.',
     invalid_design:'Dieses Design konnte nicht gespeichert werden. Prüfe deine Elemente und versuche es erneut.',
+    unsupported_print_characters:'Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.',
     invalid_design_name:'Gib einen Designnamen mit höchstens 80 Zeichen ein.',invalid_email:'Bitte gib eine gültige E-Mail-Adresse ein.',
     same_password:'Bitte wähle ein anderes Passwort.',reauthentication_needed:'Bitte bestätige deine Identität erneut.',
     password_mismatch:'Die beiden Passwörter stimmen nicht überein.',draft_unavailable:'Dein Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasse diese Seite geöffnet.',

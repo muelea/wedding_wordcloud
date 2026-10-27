@@ -11,6 +11,15 @@ function deferred() {
 }
 
 for (const kind of ['fulfillment', 'email']) {
+  test(`${kind} leaves due work untouched when the maintenance budget cannot cover it`,async t=>{
+    const modulePath=kind==='fulfillment'?'../src/fulfillment':'../src/emailDelivery';
+    delete require.cache[require.resolve(modulePath)];
+    const worker=require(modulePath);
+    const claim=t.mock.method(db,kind==='fulfillment'?'claimFulfillmentOrder':'claimEmailJob',async()=>{throw new Error('must not claim');});
+    t.after(()=>worker.stop());
+    assert.equal((await worker.drainDueJobs({deadline:Date.now()+1_000})).claimed,0);
+    assert.equal(claim.mock.callCount(),0);
+  });
   test(`${kind} keeps one active job and waits for it during shutdown`, async (t) => {
     const modulePath = kind === 'fulfillment' ? '../src/fulfillment' : '../src/emailDelivery';
     delete require.cache[require.resolve(modulePath)];

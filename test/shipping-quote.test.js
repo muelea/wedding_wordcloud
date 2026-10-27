@@ -1,6 +1,7 @@
 'use strict';
 
 const test = require('node:test');
+const { stubMockupApproval } = require('./helpers');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
@@ -23,6 +24,38 @@ async function saveConfiguration(baseUrl, slug, quantityOrOptions = 3) {
   return response.json();
 }
 
+test('cart pricing rejects repeated design IDs but permits distinct designs of the same product', async t => {
+  const hosted = await startTestServer();
+  t.after(hosted.close);
+  const printful = require('../src/printful');
+  require('./support/printful-fixtures').mockShippingRates(t, printful);
+  t.mock.method(printful, 'getShippingCountries', async () => [{ code: 'DE', name: 'Germany', states: [] }]);
+  let estimates = 0;
+  t.mock.method(printful, 'estimateOrderCosts', async () => {
+    estimates++;
+    return { currency: 'EUR', subtotal: 11.20, shipping: 4.49, tax: 0, vat: 0, total: 15.69 };
+  });
+  const event = await createEvent(hosted.baseUrl);
+  const first = await saveConfiguration(hosted.baseUrl, event.slug, 1);
+  const second = await saveConfiguration(hosted.baseUrl, event.slug, 1);
+  const quote = items => fetch(`${hosted.baseUrl}/api/events/${event.slug}/cart/estimate-costs`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      configurationIds: [first.id, second.id], shipments: [{ items,
+        recipient: { name: 'Price Test', address1: 'Musterweg 1', city: 'Berlin', zip: '10115', country_code: 'DE' } }],
+    }),
+  });
+  for (const quantity of [0, 1]) {
+    const repeated = await quote([{ configurationId: first.id, quantity: 1 }, { configurationId: first.id, quantity }]);
+    assert.equal(repeated.status, 400, 'one design must not produce multiple prices for the same displayed cart row');
+    assert.equal(estimates, 0, 'ambiguous item input is rejected before provider pricing');
+  }
+  const distinct = await quote([{ configurationId: first.id, quantity: 1 }, { configurationId: second.id, quantity: 2 }]);
+  assert.equal(distinct.status, 200);
+  const result = (await distinct.json()).quote;
+  assert.equal(result.itemsCents, 3 * 1107);
+  assert.deepEqual(result.pricedItems.map(item => item.quantity), [1, 2]);
+});
+
 test('shipping page uses the immutable configuration and returns a server-side Printful quote', async (t) => {
   process.env.SHOP_PRODUCT_MARKUP_PERCENT = '50';
   process.env.SHOP_PAYMENT_RESERVE_PERCENT = '3.69';
@@ -34,6 +67,7 @@ test('shipping page uses the immutable configuration and returns a server-side P
   });
 
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Preis Paula & Porto Paul' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 3);
@@ -207,6 +241,7 @@ test('cart quote estimates mixed products for one address as one Printful shipme
   });
 
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Cart Carla & Mix Max' });
   const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
@@ -322,6 +357,7 @@ test('cart quote estimates mixed products for one address as one Printful shipme
 
 test('a configuration can never be quoted through another event slug', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const first = await createEvent(baseUrl, { title: 'Erste Cloud' });
   const second = await createEvent(baseUrl, { title: 'Zweite Cloud' });

@@ -254,6 +254,7 @@
       .workspace-shell .wrap-preview {
         grid-area: workspace-canvas;
         min-width: 0;
+        justify-content: center;
         padding: 18px 24px 0 0;
       }
       .preview-card {
@@ -311,7 +312,7 @@
       height: var(--workspace-stage-height);
       min-height: 0;
       margin: 16px -30px 0;
-      padding: 8px 38px 22px;
+      padding: 8px 38px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -324,21 +325,21 @@
 
     .mug-wrap {
       width: min(100%, 560px);
-      position: relative;
-      z-index: 1;
-      text-align: center;
-    }
-    .mug-stage.is-flat-product .mug-wrap {
       height: 100%;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 0;
+      position: relative;
+      z-index: 1;
+      text-align: center;
     }
     .mug-viewer {
       width: 100%;
-      height: max(160px, calc(var(--workspace-stage-height) - 76px));
+      height: 100%;
+      min-height: 0;
+      flex: 1;
       position: relative;
       cursor: grab;
       touch-action: pan-y pinch-zoom;
@@ -347,6 +348,7 @@
       -webkit-touch-callout: none;
     }
     .mug-viewer.dragging { cursor: grabbing; }
+    .mug-viewer.is-photo { cursor: default; touch-action: pan-y; }
     .mug-viewer:focus-visible { outline: 3px solid rgba(156, 28, 76, .2); outline-offset: 3px; border-radius: 24px; }
     .mug-viewer > canvas {
       width: 100%;
@@ -379,7 +381,7 @@
       color: var(--muted);
       cursor: default;
     }
-    .mug-preview-state[hidden], .mug-preview-state button[hidden], .mug-name[hidden], #retry-configurator[hidden] { display: none; }
+    .mug-preview-state[hidden], .mug-preview-state button[hidden], #retry-configurator[hidden] { display: none; }
     .mug-viewer:not(.is-ready) > canvas { visibility: hidden; }
     .flat-product-preview {
       display: none;
@@ -405,11 +407,6 @@
       height: auto;
       min-height: 0;
       flex: 1;
-    }
-    .mug-stage.is-flat-product .mug-name {
-      flex: 0 0 auto;
-      margin-top: 7px;
-      line-height: 1.35;
     }
     .mug-viewer.is-flat .mug-preview-state { display: none; }
     .mug-viewer.is-flat .flat-product-preview { display: block; }
@@ -544,21 +541,6 @@
     }
     .flat-product-preview.has-product-mockup .flat-product-mockup { display: block; }
     .flat-product-preview canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; border-radius: inherit; }
-    .mug-name {
-      display: inline-block;
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: .02em;
-    }
-    .preview-disclaimer {
-      max-width: 440px;
-      margin: 8px auto 0;
-      color: rgba(105, 78, 84, .78);
-      font-size: 11px;
-      line-height: 1.45;
-      letter-spacing: .01em;
-    }
 
     .wrap-preview {
       min-height: 0;
@@ -1154,7 +1136,9 @@
       transform: rotate(180deg);
     }
     .toolbar-summary:hover,
-    .toolbar-summary[aria-expanded="true"] {
+    .toolbar-summary[aria-expanded="true"],
+    .selected-product:hover,
+    .selected-product:has([aria-expanded="true"]) {
       border-color: rgba(156, 28, 76, .3);
       background: #fff;
       box-shadow: 0 8px 20px rgba(64, 15, 38, .06);
@@ -1202,7 +1186,7 @@
       min-height: 68px;
       padding: 8px 12px;
       display: grid;
-      grid-template-columns: 44px minmax(0, 1fr) auto;
+      grid-template-columns: 44px minmax(0, 1fr);
       align-items: center;
       gap: 12px;
       border: 1px solid var(--line);
@@ -1210,6 +1194,16 @@
       background: rgba(255, 255, 255, .7);
     }
     .toolbar-product { min-width: 0; }
+    .compact-picker-chevron { display: inline-block; line-height: 1; transition: transform .2s, color .2s; }
+    .selected-product-picker[aria-expanded="true"] .compact-picker-chevron { color: var(--berry); transform: rotate(180deg); }
+    .selected-product-info, .selected-product-picker { min-height: 44px; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .selected-product-info { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; }
+    .selected-product-picker { display: grid; grid-template-columns: minmax(0, 1fr) 12px; align-items: center; gap: 8px; min-width: 0; width: 100%; text-align: left; border-radius: 8px; }
+    .selected-product-info:focus-visible { outline: 2px solid var(--berry); outline-offset: 2px; }
+    .selected-product-picker:focus-visible { outline: none; }
+    html[data-ww-input="keyboard"] .selected-product:has(.selected-product-picker:focus-visible) { outline: 3px solid rgba(156, 28, 76, .18); outline-offset: 2px; }
+    .selected-product-eye { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; border-radius: 50%; color: var(--berry); background: #fff; box-shadow: 0 0 0 1px var(--line); }
+    .selected-product-info:hover .selected-product-eye { color: #fff; background: var(--berry); }
     .selected-product-thumb {
       width: 44px;
       height: 44px;
@@ -1984,17 +1978,11 @@
         margin: 0;
       }
       .mug-stage { height: var(--workspace-stage-height); min-height: 0; margin: 10px -20px 0; padding: 4px 14px 14px; gap: 22px; }
-      .mug-viewer { height: min(250px, calc(var(--workspace-stage-height) - 42px)); }
       html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .mug-stage:not(.is-flat-product) {
         --mobile-mug-preview-height: clamp(300px, 84vw, 340px);
         height: var(--mobile-mug-preview-height);
         padding-inline: 0;
       }
-      html[data-ww-mobile-device="true"] .config-studio[data-mobile-editor-expanded="false"] .mug-stage:not(.is-flat-product) .mug-viewer {
-        height: calc(var(--mobile-mug-preview-height) - 18px);
-      }
-      .mug-name { margin-top: 0; font-size: 11px; }
-      .preview-disclaimer { max-width: 300px; margin-top: 7px; font-size: 10.5px; }
       .surface-editor { align-items: center; flex-direction: row; }
       .surface-tabs { width: auto; }
       .surface-tab { flex: 0 0 auto; }
@@ -2019,10 +2007,10 @@
       .editor-actions .editor-button { flex: 1 1 calc(33.333% - 6px); }
       .design-toolbar-controls { gap: 8px; }
       .selected-product {
-        min-height: 112px;
+        min-height: 64px;
         padding: 10px;
-        grid-template-columns: 40px minmax(0, 1fr);
-        grid-template-rows: 40px var(--ww-touch-target);
+        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-rows: auto;
         gap: 8px;
       }
       .selected-product-thumb { width: 40px; height: 40px; padding: 3px; border-radius: 11px; }
@@ -2097,6 +2085,7 @@
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" />
   <link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <link rel="stylesheet" href="<%= asset('/configurator-workspace.css') %>" />
+  <link rel="stylesheet" href="<%= asset('/product-picker.css') %>" />
   <link rel="stylesheet" href="<%= asset('/product-gallery.css') %>" />
   <link rel="stylesheet" href="<%= asset('/configurator-cart-panel.css') %>" />
   <link rel="stylesheet" href="<%= asset('/print-preview.css') %>" />
@@ -2109,8 +2098,8 @@
 
   <main class="page">
     <div class="loading" id="loading" role="status" aria-live="polite">
-      <span id="loading-message">Euer Design wird geöffnet…</span>
-      <button class="secondary-button" id="retry-configurator-loading" type="button" hidden>Konfigurator erneut laden</button>
+      <span id="loading-message"><%= pageData.editorEntry ? 'Euer Design wird geöffnet…' : 'Eure Produktübersicht wird geladen…' %></span>
+      <button class="secondary-button" id="retry-configurator-loading" type="button" hidden>Erneut versuchen</button>
     </div>
 
     <div class="config-content" id="config-content" data-mobile-editor-expanded="false" hidden>
@@ -2143,16 +2132,20 @@
           </div>
 
           <div class="design-toolbar-controls">
-            <button class="gallery-back-button" type="button" data-gallery-back hidden><span aria-hidden="true">←</span><span>Zur Produktübersicht</span></button>
-            <button class="selected-product toolbar-product" id="change-product" type="button" aria-label="Produkt ändern" aria-haspopup="dialog" aria-expanded="false" aria-controls="product-dialog">
-              <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
-              <span class="selected-product-copy">
-                <strong id="selected-product-name">Weiße Tasse</strong>
-                <span id="selected-product-detail">325 ml</span>
-                <span id="selected-product-price" data-i18n-ignore></span>
-              </span>
-              <span class="compact-picker-chevron" aria-hidden="true">⌄</span>
-            </button>
+            <div class="selected-product toolbar-product" id="selected-product-control">
+              <button class="selected-product-info" id="product-info" type="button" aria-label="Produktdetails" aria-haspopup="dialog" aria-controls="print-preview" disabled>
+                <img class="selected-product-thumb" id="selected-product-thumb" alt="" />
+                <span class="selected-product-eye ww-preview-eye" aria-hidden="true"></span>
+              </button>
+              <button class="selected-product-picker" id="change-product" type="button" aria-label="Produkt ändern" aria-haspopup="dialog" aria-expanded="false" aria-controls="product-dialog">
+                <span class="selected-product-copy">
+                  <strong id="selected-product-name">Weiße Tasse</strong>
+                  <span id="selected-product-detail">325 ml</span>
+                  <span id="selected-product-price" data-i18n-ignore></span>
+                </span>
+                <span class="compact-picker-chevron" aria-hidden="true">⌄</span>
+              </button>
+            </div>
 
             <div class="toolbar-menu" id="orientation-step" hidden>
               <button class="toolbar-summary" type="button" data-panel-trigger="orientation-panel" aria-haspopup="dialog" aria-expanded="false" aria-controls="orientation-panel">
@@ -2408,8 +2401,6 @@
                     </span>
                   </div>
                 </div>
-                <span class="mug-name" id="mug-viewer-hint">↔↕ Tasse ziehen zum Drehen · Daneben scrollen</span>
-                <p class="preview-disclaimer">Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen.</p>
               </div>
             </div>
           </section>
@@ -2438,7 +2429,7 @@
             <button class="primary-button continue-button" id="continue-order" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="shipping-choice-dialog"><span id="continue-order-label">Zur Lieferadresse</span> <span aria-hidden="true">→</span></button>
           </div>
           <p class="error-text" id="error-text" aria-live="polite"></p>
-          <button class="secondary-button" id="retry-configurator" type="button" hidden>Konfigurator erneut laden</button>
+          <button class="secondary-button" id="retry-configurator" type="button" hidden>Erneut versuchen</button>
         </section>
       </div>
       </div>
@@ -2598,6 +2589,8 @@
   <script src="<%= asset('/js/design-layout.js') %>"></script>
   <script src="<%= asset('/js/print-layout-client.js') %>"></script>
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
+  <script src="<%= asset('/js/product-photo-preview.js') %>"></script>
+  <script src="<%= asset('/js/product-picker.js') %>"></script>
   <script src="<%= asset('/js/product-gallery.js') %>"></script>
   <script src="<%= asset('/js/configurator-cart-panel.js') %>"></script>
   <script src="<%= asset('/js/cart-product-preview.js') %>"></script>
@@ -2701,6 +2694,7 @@
     const flatMockup = document.getElementById('flat-product-mockup');
     const wrapCanvas = document.getElementById('wrap-canvas');
     const selectedProductThumb = document.getElementById('selected-product-thumb');
+    const productInfoButton = document.getElementById('product-info');
     const selectedProductName = document.getElementById('selected-product-name');
     const selectedProductDetail = document.getElementById('selected-product-detail');
     const designToolbarControls = document.querySelector('.design-toolbar-controls');
@@ -2780,6 +2774,7 @@
     let mug3D = null;
     let mug3DLoadPromise = null;
     let mug3DGeneration = 0;
+    let selectedProductThumbnailTimer = null;
     let previewState = 'loading';
     let restorationFailed = false;
     let mugEditor = null;
@@ -2847,9 +2842,16 @@
     const brandLink = document.getElementById('brand-link');
     const backLink = document.getElementById('back-link');
     const mobileBackLink = document.getElementById('mobile-back-link');
-    [backLink, mobileBackLink].forEach((link) => {
-      if (link) link.href = directDesign ? '/' : `/e/${encodeURIComponent(slug)}`;
-    });
+    function updateProductBackLink(galleryVisible) {
+      const source = galleryVisible ? (directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke') : 'Zur Produktübersicht';
+      for (const link of [backLink, mobileBackLink].filter(Boolean)) {
+        link.href = galleryVisible ? (directDesign ? '/' : `/e/${encodeURIComponent(slug)}`)
+          : `/e/${encodeURIComponent(slug)}/configure?view=products`;
+        setText(link.querySelector('span:last-child'), source);
+        WolkenworteI18n.setAttribute(link, 'aria-label', source);
+      }
+    }
+    updateProductBackLink(WolkenworteProductGallery.shouldOpen({ query: new URLSearchParams(location.search) }));
 
     function loadOrderItems() {
       try { return cart.read(); }
@@ -2861,9 +2863,10 @@
 
     function updateCartActions() {
       const items = loadOrderItems();
+      productInfoButton.disabled = !workspaceReady || restorationFailed || orderActionPending || fitAreaPending;
       document.querySelectorAll('[data-gallery-back]').forEach(button => {
-        button.hidden = directDesign || !(words.length || liveWords.length);
-        button.disabled = orderActionPending || fitAreaPending || restorationFailed || !workspaceReady;
+        button.hidden = false;
+        button.disabled = orderActionPending || fitAreaPending;
       });
       const emptyLiveDesign = !directDesign && !words.length;
       saveDesignButton.hidden = Boolean(editingOrderItemId) && !currentDesignNeedsSave;
@@ -3017,7 +3020,7 @@
       draftSaveTimer = setTimeout(() => { void persistCurrentDraft({ finalize: false }); }, delay);
     }
 
-    async function persistCurrentDraft({ finalize = true } = {}) {
+    async function persistCurrentDraft({ finalize = true, updateLocation = true } = {}) {
       if (!workspaceReady || restorationFailed || !product || !mugEditor) return true;
       clearTimeout(draftSaveTimer);
       draftSaveTimer = null;
@@ -3031,7 +3034,7 @@
           draftStorageVersion = record.storageVersion || 0;
           const query = new URLSearchParams(location.search);
           query.set('draft', workingDesignId); query.delete('accountLatest');
-          history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
+          if (updateLocation) history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
           draftSavedRevision = snapshot.designRevision;
           draftStorageFailed = false;
           if (record.editingOrderItemId) {
@@ -3060,7 +3063,7 @@
             draftStorageVersion = copy.storageVersion;
             draftSavedRevision = designRevision;
             setText(errorText, 'Das Design wurde in einem anderen Tab geändert. Eure Änderungen bleiben als separater Entwurf erhalten.');
-            history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?draft=${encodeURIComponent(workingDesignId)}`);
+            if (updateLocation) history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?draft=${encodeURIComponent(workingDesignId)}`);
             renderOrderBox();
             return false;
           }
@@ -3665,6 +3668,7 @@
 
     async function openCartPanelDesign(id) {
       if (leavingPage || orderActionPending || fitAreaPending) return;
+      const galleryLocation = !galleryElement.hidden ? location.pathname + location.search : null;
       if (!await persistCurrentDraft()) {
         cartPanel.message('Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
         return;
@@ -3684,7 +3688,7 @@
           await loadOrderItem(id);
         }
         if (restorationFailed) return;
-        updateGalleryEditorLocation();
+        updateGalleryEditorLocation({ from: galleryLocation });
         await initMug3D();
         refreshWorkspaceLayout();
         renderAll();
@@ -4606,11 +4610,11 @@
         availableWidth / previewAspect
       ) + 24;
       const stageHeight = Math.round(Math.min(maximumHeight, Math.max(minimumHeight, desiredHeight)));
-      // Flat sleeves need room for their full turn and tilt. A taller desktop
-      // preview enlarges the product while keeping the print canvas unchanged.
-      const previewHeight = view.previewModel?.kind === 'sleeve' && window.innerWidth > 940
-        ? Math.round(Math.min(maximumHeight, Math.max(stageHeight, availableWidth + 76)))
-        : stageHeight;
+      // A wide print file (such as a mug wrap) must not make its 3D product
+      // tiny. Give the preview its own space; retain the full-turn sleeve fit.
+      const previewMinimum = view.previewModel?.kind === 'sleeve' ? availableWidth + 76 : availableWidth * .8;
+      const previewHeight = ['mug', '3d'].includes(view.previewType) && window.innerWidth > 940
+        ? Math.round(Math.min(maximumHeight, Math.max(stageHeight, previewMinimum))) : stageHeight;
       workbench.style.setProperty('--workspace-stage-height', `${previewHeight}px`);
       // Stacked cards have independent heights. A wide mug wrap needs only
       // its aspect-ratio height and padding; the 3D preview still needs depth.
@@ -4634,27 +4638,32 @@
 
     function setMugPreviewState(state) {
       previewState = state;
-      const isMug = ['mug', '3d'].includes(product?.previewType);
+      const isMug = ['mug', '3d', 'photo'].includes(product?.previewType);
+      const isPhoto = product?.previewType === 'photo';
       mugViewer.classList.toggle('is-ready', isMug && state === 'ready');
-      mugViewer.tabIndex = isMug && state === 'ready' ? 0 : -1;
+      mugViewer.tabIndex = isMug && !isPhoto && state === 'ready' ? 0 : -1;
       mugViewer.setAttribute('aria-busy', String(isMug && state === 'loading'));
       mugPreviewState.hidden = !isMug || state === 'ready';
       retryMugPreview.hidden = state !== 'error';
-      document.getElementById('mug-viewer-hint').hidden = isMug && state !== 'ready';
-      setText(mugPreviewMessage, state === 'error'
+      setText(retryMugPreview, isPhoto ? 'Erneut versuchen' : '3D-Vorschau erneut laden');
+      setText(mugPreviewMessage, isPhoto ? state === 'error'
+        ? 'Diese Vorschau konnte nicht geladen werden. Bitte versucht es erneut.'
+        : 'Eure Produktvorschau wird vorbereitet…' : state === 'error'
         ? 'Die 3D-Vorschau ist gerade nicht verfügbar. Euer Design bleibt erhalten.'
         : '3D-Vorschau wird geladen…');
+      if (state === 'ready') scheduleSelectedProductThumbnail();
     }
 
     function initMug3D() {
-      if (editorElement.hidden || !['mug', '3d'].includes(product?.previewType)) return Promise.resolve();
+      if (editorElement.hidden || !['mug', '3d', 'photo'].includes(product?.previewType)) return Promise.resolve();
       if (mug3D) { updateMug3DTexture(); return Promise.resolve(); }
       if (mug3DLoadPromise) return mug3DLoadPromise;
       const generation = mug3DGeneration;
       setMugPreviewState('loading');
       mug3DLoadPromise = Promise.resolve().then(() => {
         if (generation !== mug3DGeneration) return;
-        mug3D = Mug3DViewer.create({
+        const renderer = product.previewType === 'photo' ? ProductPhotoPreview : Mug3DViewer;
+        mug3D = renderer.create({
           THREE: window.THREE,
           host: mugViewer,
           interactionElement: mugViewer,
@@ -4685,8 +4694,27 @@
 
     function renderProductPreview() {
       if (editorElement.hidden || !product) return;
-      if (['mug', '3d'].includes(product.previewType)) { updateMug3DTexture(); return; }
-      paintFlatProductPreview(flatCanvas, productView(), getCurrentDesign(), activeSurface);
+      if (['mug', '3d', 'photo'].includes(product.previewType)) updateMug3DTexture();
+      else paintFlatProductPreview(flatCanvas, productView(), getCurrentDesign(), activeSurface);
+      scheduleSelectedProductThumbnail();
+    }
+
+    function scheduleSelectedProductThumbnail() {
+      clearTimeout(selectedProductThumbnailTimer);
+      // Reuse the visible preview after edits settle; never build a second
+      // renderer or encode a thumbnail on every canvas-drag frame.
+      selectedProductThumbnailTimer = setTimeout(() => {
+        selectedProductThumbnailTimer = null;
+        if (!product || editorElement.hidden) return;
+        const usesViewer = ['mug', '3d', 'photo'].includes(product.previewType);
+        if (usesViewer && (previewState !== 'ready' || mug3D?.productKey !== product.key ||
+            mug3D.orientation !== selectedOrientation)) return;
+        try {
+          if (usesViewer) mug3D.render();
+          const thumbnail = WolkenworteProductGallery.productThumbnail(usesViewer ? mug3D.canvas : flatCanvas);
+          if (thumbnail) selectedProductThumb.src = thumbnail;
+        } catch { /* Keep the exact product photo when its preview is unavailable. */ }
+      }, 150);
     }
 
     function paintFlatProductPreview(canvas, view, design, surfaceKey) {
@@ -4791,10 +4819,12 @@
     function updateProductPresentation() {
       if (!product) return;
       const view = productView();
-      const isMug = ['mug', '3d'].includes(product.previewType);
-      const isCloth = ['blanket', 'garment'].includes(product.previewModel?.kind);
+      const isMug = ['mug', '3d', 'photo'].includes(product.previewType);
+      const isPhoto = product.previewType === 'photo';
+      const isCloth = !isPhoto && ['blanket', 'garment'].includes(product.previewModel?.kind);
       const mobileProduct = workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'product';
       mugViewer.classList.toggle('is-flat', !isMug);
+      mugViewer.classList.toggle('is-photo', isPhoto);
       productStage.classList.toggle('is-flat-product', !isMug);
       flatPreview.classList.toggle('is-coaster', product.previewShape === 'coaster');
       flatPreview.classList.toggle('is-framed', product.previewShape === 'framed-poster');
@@ -4810,26 +4840,13 @@
           : `${view.printFile.width} / ${view.printFile.height}`
       );
       requestAnimationFrame(refreshWorkspaceLayout);
-      mugViewer.tabIndex = isMug ? 0 : -1;
-      mugViewer.setAttribute('aria-label', isCloth ? t('{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.', { product: t(product.displayName), size: t(view.size.label) }) : product.previewType === '3d' ? t('Interaktive 3D-Vorschau. Ziehen oder Pfeiltasten zum Drehen.') : isMug
+      mugViewer.tabIndex = isMug && !isPhoto ? 0 : -1;
+      mugViewer.setAttribute('aria-label', isPhoto ? t('Vorschau: {{product}}, {{size}}', { product: t(product.displayName), size: t(view.size.label) }) : isCloth ? t('{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.', { product: t(product.displayName), size: t(view.size.label) }) : product.previewType === '3d' ? t('Interaktive 3D-Vorschau. Ziehen oder Pfeiltasten zum Drehen.') : isMug
         ? t(mobileProduct ? 'Interaktive 3D-Tasse. Überall in der Vorschau ziehen, um sie zu drehen.' : 'Interaktive 3D-Tasse. Direkt auf der Tasse ziehen, um sie in alle Richtungen zu drehen; neben der Tasse wischen, um zu scrollen. Alternativ die Pfeiltasten verwenden.')
         : t('Vorschau: {{product}}, {{size}}', {
           product: t(product.displayName),
           size: t(view.size.label),
         }));
-      const activeSurfaceLabel = productSurfaces().length > 1
-        ? ` · ${t(productSurfaces().find((surface) => surface.key === activeSurface)?.label || '')}`
-        : '';
-      document.getElementById('mug-viewer-hint').textContent = isCloth
-        ? `${t('Stoff ziehen · Daneben drehen · Leertaste: Stoff bewegen')} · ${t(view.size.label)}`
-        : product.previewType === '3d'
-        ? `${t('Ziehen zum Drehen')} · ${t(view.orientation === 'landscape' ? view.size.label : product.variantLabel || view.size.label)}`
-        : isMug
-        ? t(mobileProduct ? 'Überall ziehen zum Drehen · {{height}} cm × Ø {{diameter}} cm' : '↔↕ Tasse ziehen zum Drehen · Daneben scrollen · {{height}} cm × Ø {{diameter}} cm', {
-          height: localizedNumber(product.size.heightCm),
-          diameter: localizedNumber(product.size.diameterCm),
-        })
-        : `${t(product.displayName)} · ${t(view.size.label)}${activeSurfaceLabel}`;
       productStage.setAttribute(
         'aria-label',
         t('Vorschau: {{product}}, {{size}}', {
@@ -4841,6 +4858,8 @@
     }
 
     function destroyMug3D() {
+      clearTimeout(selectedProductThumbnailTimer);
+      selectedProductThumbnailTimer = null;
       mug3DGeneration += 1;
       if (mug3D) mug3D.destroy?.();
       mug3D = null;
@@ -4863,44 +4882,8 @@
       return products.find((candidate) => candidate.key === pendingProductKey) || product;
     }
 
-    function dialogSelectedFamilyKey() {
-      return pendingFamilyKey || dialogSelectedProduct()?.familyKey || selectedFamilyKey;
-    }
-
     function updateProductOptionSelection() {
       renderSelectedProduct();
-      const dialogProduct = dialogSelectedProduct();
-      const dialogFamilyKey = dialogSelectedFamilyKey();
-      productOptions.querySelectorAll('.product-option').forEach((option) => {
-        if (productPickerIsStepped()) {
-          option.setAttribute('role', 'button');
-          option.removeAttribute('aria-checked');
-          option.tabIndex = 0;
-          return;
-        }
-        const selected = option.dataset.familyKey === dialogFamilyKey;
-        option.setAttribute('role', 'radio');
-        option.setAttribute('aria-checked', String(selected));
-        option.tabIndex = selected ? 0 : -1;
-      });
-      variantOptions.querySelectorAll('.variant-option').forEach((option) => {
-        const selected = option.dataset.productKey === dialogProduct?.key;
-        option.setAttribute('aria-checked', String(selected));
-        option.tabIndex = selected ? 0 : -1;
-      });
-    }
-
-    function productsInFamily(familyKey) {
-      return products.filter((candidate) => candidate.familyKey === familyKey);
-    }
-
-    function productDetail(candidate) {
-      return candidate.size.volumeMl
-        ? t('{{volume}} ml · {{height}} cm hoch', {
-          volume: WolkenworteI18n.formatNumber(candidate.size.volumeMl),
-          height: localizedNumber(candidate.size.heightCm),
-        })
-        : t(candidate.size.detail);
     }
 
     function selectedProductSummary(candidate = product) {
@@ -4910,11 +4893,16 @@
 
     function renderSelectedProduct() {
       if (!product) return;
-      selectedProductThumb.src = product.thumbnail;
+      if (selectedProductThumb.dataset.productKey !== product.key || selectedProductThumb.dataset.orientation !== selectedOrientation) {
+        selectedProductThumb.src = WolkenworteCartProductPreview.photo(product);
+        selectedProductThumb.dataset.productKey = product.key;
+        selectedProductThumb.dataset.orientation = selectedOrientation;
+      }
       selectedProductThumb.alt = '';
       setText(selectedProductName, product.displayName);
       setText(mobileSelectedProductName, product.displayName);
       const detail = selectedProductSummary(product);
+      productInfoButton.setAttribute('aria-label', `${t('Details & Vorschau')}: ${t(product.displayName)}, ${detail}`);
       selectedProductDetail.textContent = detail;
       mobileSelectedProductDetail.textContent = detail;
       document.getElementById('selected-product-price').textContent = productPriceText(product);
@@ -4927,8 +4915,33 @@
       workspace.mobileCanvas?.restorePicker(productDialog);
     }
 
+    function renderPreviewArtwork(view, design) {
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(1, 1200 / view.printFile.width, 1200 / view.printFile.height);
+      canvas.width = Math.max(1, Math.round(view.printFile.width * scale));
+      canvas.height = Math.max(1, Math.round(view.printFile.height * scale));
+      const context = canvas.getContext('2d');
+      context.scale(canvas.width / view.printFile.width, canvas.height / view.printFile.height);
+      drawDesign(context, 0, 0, 1, design);
+      return canvas.toDataURL('image/png');
+    }
+
+    function openCurrentProductInfo() {
+      if (!workspaceReady || !product || restorationFailed || productTransitionPending) return;
+      workspace.close(false);
+      // Read the active side directly; opening details must not store or edit it.
+      const printPreviewUrls = Object.fromEntries(product.printSurfaces.map(surface => [surface.key,
+        renderPreviewArtwork(productView(product, selectedOrientation, surface.key),
+          surface.key === activeSurface ? getCurrentDesign() : surfaceStates.get(surface.key)?.design || []),
+      ]));
+      cartProductPreview.open({ product: productView(product, selectedOrientation, product.printSurfaces[0].key),
+        printPreviewUrls }, productInfoButton);
+    }
+    productInfoButton.addEventListener('click', openCurrentProductInfo);
+
     function openProductDialog() {
       workspace.close(false);
+      changeProductButton.setAttribute('aria-expanded', String(!startingAnotherProduct));
       const popover = !mobileDevice && typeof productDialog.showPopover === 'function';
       productDialog.dataset.presentation = workspace.mobileCanvas?.active ? 'embedded' : popover ? 'popover' : 'modal';
       setText(document.getElementById('product-dialog-title'), startingAnotherProduct
@@ -4945,13 +4958,11 @@
       buildProductOptions();
       if (workspace.mobileCanvas?.active) {
         workspace.mobileCanvas.showPicker(productDialog, closeProductDialog, () => {
-          if (productDialog.dataset.mobileStep === 'variants') showProductStep('families');
-          else closeProductDialog();
+          if (!productPicker.back()) closeProductDialog();
         });
-        showProductStep('families');
+        setText(document.getElementById('mobile-canvas-panel-title'), 'Produkt für dieses Design ändern');
         if (!productDialog.open) productDialog.show();
       } else if (popover) {
-        showProductStep('families');
         workspace.show(productDialog, startingAnotherProduct ? designAnotherButton : changeProductButton, true);
       } else if (!productDialog.open) productDialog.showModal();
       updateProductOptionSelection();
@@ -4963,33 +4974,6 @@
     function resetProductDialogSelection() {
       pendingProductKey = null;
       pendingFamilyKey = null;
-    }
-
-    function productPickerIsStepped() {
-      return ['embedded', 'popover'].includes(productDialog.dataset.presentation);
-    }
-
-    function showProductStep(step) {
-      if (!productPickerIsStepped()) return;
-      const popover = productDialog.dataset.presentation === 'popover';
-      productDialog.dataset.mobileStep = step;
-      productOptions.setAttribute('role', 'group');
-      productOptions.hidden = step !== 'families';
-      variantPanel.hidden = step !== 'variants';
-      productDialog.querySelector('.product-dialog-footer').hidden = popover || step !== 'variants';
-      document.getElementById('product-dialog-back').hidden = !popover || step !== 'variants';
-      const body = productDialog.querySelector('.product-dialog-body');
-      body.scrollTop = 0;
-      const title = step === 'variants' ? '{{item}} wählen' : startingAnotherProduct
-        ? 'Weiteres Produkt gestalten' : 'Produkt für dieses Design ändern';
-      setText(document.getElementById(popover ? 'product-dialog-title' : 'mobile-canvas-panel-title'), title, {
-        item: t(productFamilies.find(family => family.key === pendingFamilyKey)?.label || 'Ausführung'),
-      });
-      requestAnimationFrame(() => {
-        if (popover) workspace.positionChooser();
-        (step === 'variants' ? variantOptions.querySelector('[aria-checked="true"]')
-          : productOptions.querySelector(`[data-family-key="${dialogSelectedFamilyKey()}"]`))?.focus({ preventScroll: true });
-      });
     }
 
     async function confirmProductDialog() {
@@ -5023,14 +5007,16 @@
     }
 
     changeProductButton.addEventListener('click', () => {
-      if (productDialog.dataset.presentation === 'popover' && productDialog.matches(':popover-open')) {
+      // Native light-dismiss can hide the popover before this click arrives.
+      // Use the tracked chooser state, like the colour trigger, to close it.
+      if (workspace.active?.panel === productDialog || productDialog.open) {
         closeProductDialog(); return;
       }
       startingAnotherProduct = false;
       openProductDialog();
     });
     productDialogClose.addEventListener('click', closeProductDialog);
-    document.getElementById('product-dialog-back').addEventListener('click', () => showProductStep('families'));
+    document.getElementById('product-dialog-back').addEventListener('click', () => productPicker?.back());
     productDialogDone.addEventListener('click', confirmProductDialog);
     productDialog.addEventListener('click', (event) => {
       if (event.target === productDialog && productDialog.dataset.presentation === 'modal') closeProductDialog();
@@ -5049,14 +5035,15 @@
     });
     productDialog.addEventListener('close', () => finishProductDialogClose());
     function finishProductDialogClose(restoreFocus = true) {
+      if (productDetailsReturn) return;
+      changeProductButton.setAttribute('aria-expanded', 'false');
       workspace.mobileCanvas?.restorePicker(productDialog);
       document.getElementById('product-dialog-back').hidden = true;
       productOptions.hidden = false;
-      productOptions.setAttribute('role', 'radiogroup');
-      productDialog.querySelector('.product-dialog-footer').hidden = false;
+      productOptions.removeAttribute('role');
+      productDialog.querySelector('.product-dialog-footer').hidden = true;
       if (productDialogCloseReason !== 'confirm') {
         resetProductDialogSelection();
-        buildProductOptions();
         updateProductOptionSelection();
       }
       productDialogCloseReason = 'cancel';
@@ -5207,7 +5194,6 @@
         activeSurface = productSurfaces()[0].key;
         buildSurfaceControls();
       }
-      buildVariantOptions();
       updateProductOptionSelection();
       updateProductPresentation();
       destroyMug3D();
@@ -5222,108 +5208,52 @@
       updateProductOptionSelection();
     }
 
-    function selectDialogFamily(family) {
-      if (!family) return;
-      pendingFamilyKey = family.key;
-      const candidates = productsInFamily(family.key);
-      const currentProduct = dialogSelectedProduct();
-      const nextProduct = candidates.find((candidate) => candidate.key === currentProduct?.key) || candidates[0];
-      if (nextProduct) pendingProductKey = nextProduct.key;
-      buildVariantOptions();
-      updateProductOptionSelection();
-      showProductStep('variants');
+    let productPicker = null;
+    let productDetailsReturn = null;
+
+    function restorePickerAfterDetails() {
+      const state = productDetailsReturn;
+      if (!state) return;
+      productDetailsReturn = null;
+      if (state.picker !== productPicker || !state.trigger.isConnected) return;
+      if (state.parent?.mode === 'popover') workspace.show(productDialog, state.parent.trigger, true);
+      for (const [element, top] of state.scrollers) element.scrollTop = top;
+      state.trigger.focus({ preventScroll: true });
     }
 
-    function buildVariantOptions() {
-      const activeFamilyKey = dialogSelectedFamilyKey();
-      const family = productFamilies.find((candidate) => candidate.key === activeFamilyKey);
-      const candidates = productsInFamily(activeFamilyKey);
-      const stepped = productPickerIsStepped();
-      variantPanel.hidden = stepped ? productDialog.dataset.mobileStep !== 'variants' : candidates.length < 2;
-      variantOptions.replaceChildren();
-      if (!stepped && candidates.length < 2) return;
-      setText(document.getElementById('variant-title'), '{{item}} wählen', {
-        item: t(family?.label || 'Ausführung'),
-      });
-      candidates.forEach((candidate, candidateIndex) => {
-        const option = document.createElement('button');
-        option.type = 'button';
-        option.className = 'variant-option';
-        option.dataset.productKey = candidate.key;
-        option.setAttribute('role', 'radio');
-        option.setAttribute('aria-label', `${t(candidate.displayName)}, ${t(candidate.variantLabel || candidate.size.label)}`);
-        option.addEventListener('click', () => {
-          selectDialogProduct(candidate);
-          if (productDialog.dataset.presentation === 'popover') void confirmProductDialog();
-        });
-        option.addEventListener('keydown', (event) => {
-          if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-          const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
-          const nextIndex = (candidateIndex + direction + candidates.length) % candidates.length;
-          selectDialogProduct(candidates[nextIndex]);
-          variantOptions.querySelectorAll('.variant-option')[nextIndex]?.focus();
-          event.preventDefault();
-        });
-        const thumbnail = document.createElement('img');
-        thumbnail.src = candidate.thumbnail;
-        thumbnail.alt = '';
-        thumbnail.loading = 'lazy';
-        const copy = document.createElement('span');
-        const name = document.createElement('strong');
-        name.textContent = `${t(candidate.displayName)} · ${t(candidate.variantLabel || candidate.size.label)}`;
-        const detail = document.createElement('span');
-        detail.textContent = `${productDetail(candidate)} · ${productPriceText(candidate)}`;
-        copy.append(name, detail);
-        option.append(thumbnail, copy);
-        variantOptions.appendChild(option);
-      });
-      updateProductOptionSelection();
+    function openPickerProductInfo(candidate, trigger) {
+      productDetailsReturn = {
+        picker: productPicker, trigger,
+        parent: workspace.active?.panel === productDialog ? { ...workspace.active } : null,
+        scrollers: [...productDialog.querySelectorAll('.product-picker-content, .product-picker-results')]
+          .map(element => [element, element.scrollTop]),
+      };
+      // showModal() dismisses unrelated auto popovers. Suspend this one
+      // deliberately, preserving its live picker instead of cancelling it.
+      if (productDetailsReturn.parent?.mode === 'popover') workspace.close(false);
+      try { cartProductPreview.openPhotos(candidate, trigger); }
+      catch (error) { restorePickerAfterDetails(); throw error; }
     }
+    document.getElementById('print-preview').addEventListener('close', restorePickerAfterDetails);
 
     function buildProductOptions() {
-      productOptions.replaceChildren();
-      productFamilies.forEach((family, familyIndex) => {
-        const option = document.createElement('button');
-        option.type = 'button';
-        option.className = 'product-option';
-        option.dataset.familyKey = family.key;
-        option.setAttribute('role', 'radio');
-        setTranslatedAttribute(option, 'aria-label', family.label);
-        option.addEventListener('click', () => selectDialogFamily(family));
-        option.addEventListener('keydown', (event) => {
-          if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-          const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
-          const nextIndex = (familyIndex + direction + productFamilies.length) % productFamilies.length;
-          const nextOption = productOptions.querySelectorAll('.product-option')[nextIndex];
-          if (!productPickerIsStepped()) selectDialogFamily(productFamilies[nextIndex]);
-          nextOption?.focus();
-          event.preventDefault();
-        });
-
-        const card = document.createElement('span');
-        card.className = 'product-choice';
-        const thumbnail = document.createElement('img');
-        thumbnail.className = 'product-thumbnail';
-        thumbnail.src = family.thumbnail;
-        thumbnail.alt = '';
-        thumbnail.loading = 'lazy';
-        const copy = document.createElement('span');
-        copy.className = 'product-copy';
-        const name = document.createElement('strong');
-        setText(name, family.label);
-        const description = document.createElement('span');
-        setText(description, family.description);
-        const checkmark = document.createElement('span');
-        checkmark.className = 'checkmark';
-        checkmark.setAttribute('aria-hidden', 'true');
-        checkmark.textContent = '✓';
-        copy.append(name, description);
-        card.append(thumbnail, copy, checkmark);
-        option.append(card);
-        productOptions.appendChild(option);
+      variantPanel.hidden = true;
+      productDialog.querySelector('.product-dialog-footer').hidden = true;
+      productOptions.hidden = false;
+      productPicker = WolkenworteProductPicker.create(productOptions, {
+        products, families: productFamilies, selectedKey: pendingProductKey || product?.key, browse: true,
+        i18n: WolkenworteI18n, photo: WolkenworteCartProductPreview.photo, price: productPriceText,
+        onPhoto: openPickerProductInfo,
+        onConfirm: candidate => { selectDialogProduct(candidate); void confirmProductDialog(); },
+        onResize: () => { if (workspace.active?.panel === productDialog) workspace.positionChooser(); },
+        onNavigate: ({ title, canBack, stage }) => {
+          setText(document.getElementById('product-dialog-title'), title);
+          document.getElementById('product-dialog-back').hidden = !canBack;
+          document.getElementById('product-dialog-description').hidden = stage === 'options';
+          if (workspace.mobileCanvas?.active) setText(document.getElementById('mobile-canvas-panel-title'), title);
+          if (workspace.active?.panel === productDialog) requestAnimationFrame(() => workspace.positionChooser());
+        },
       });
-      buildVariantOptions();
-      updateProductOptionSelection();
     }
 
     async function activateOrientation(orientation) {
@@ -5657,6 +5587,8 @@
           ? 'Der Warenkorb hat sich geändert. Bitte öffnet das Design erneut, bevor ihr Änderungen übernehmt.'
           : error.message === 'print_file_too_large'
           ? 'Die Druckdatei ist für dieses Produkt zu groß. Verkleinert oder entfernt einige Bilder und versucht es erneut.'
+          : error.message === 'unsupported_print_characters'
+          ? 'Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.'
           : 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
         return false;
       }
@@ -5680,8 +5612,12 @@
       })();
     }
 
-    [brandLink, backLink, mobileBackLink].filter(Boolean)
-      .forEach((link) => link.addEventListener('click', saveBeforeLeaving));
+    brandLink?.addEventListener('click', saveBeforeLeaving);
+    [backLink, mobileBackLink].filter(Boolean).forEach(link => link.addEventListener('click', event => {
+      if (!content.hidden && galleryElement.hidden && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        event.preventDefault(); void returnToGallery();
+      } else saveBeforeLeaving(event);
+    }));
     document.querySelectorAll('a[href="/datenschutz"], a[href="/impressum"]').forEach((link) => {
       link.addEventListener('click', saveBeforeLeaving);
     });
@@ -5896,21 +5832,24 @@
       const galleryEntry = WolkenworteProductGallery.shouldOpen({ directDesign, words, query, draft: null });
       const draft = galleryEntry ? await loadLocalDraft(query.get('draft')
         ? { workingDesignId: query.get('draft') } : null) : null;
-      if (galleryEntry && (query.get('view') === 'products' || !draft)) {
+      if (galleryEntry) {
         showProductGallery(draft);
+        if (query.has('cart') && loadOrderItems().length) requestAnimationFrame(() => cartPanel.open());
         return;
       }
       // Initialize while hidden, then measure and paint the restored design
       // before dismissing the loader.
       await initializeWorkspace();
+      updateProductBackLink(false);
       content.hidden = false;
       refreshWorkspaceLayout();
       renderAll();
       loading.hidden = true;
     }
 
-    function showProductGallery(snapshot = null) {
-      updateGalleryLocation(snapshot);
+    function showProductGallery(snapshot = null, { push = false } = {}) {
+      updateGalleryLocation(snapshot, { push });
+      updateProductBackLink(true);
       const sourceWords = (liveWords.length ? liveWords : words).map(pair => [...pair]);
       const theme = selectedTheme;
       const colors = [...getPalette(theme).colors];
@@ -5919,6 +5858,11 @@
       galleryElement.hidden = false;
       content.hidden = false;
       loading.hidden = true;
+      if (directDesign) {
+        setText(galleryElement.querySelector('.product-gallery-kicker'), 'Eure Idee. Eure Erinnerung.');
+        setText(document.getElementById('gallery-title'), 'Euer Produkt. Eure Gestaltung.');
+        setText(galleryElement.querySelector('.intro-copy'), 'Wählt euer Lieblingsprodukt und gestaltet es mit eigenen Worten, Bildern und Motiven.');
+      }
       updateHeaderCart(loadOrderItems());
       if (productGallery) { void productGallery.resume(snapshot); return; }
       productGallery = new WolkenworteProductGallery.Gallery({
@@ -5927,34 +5871,30 @@
         configureFlat: configureProductMockup,
         paintFlat: paintFlatProductPreview,
         preview: cartProductPreview,
-        renderArtwork: (view, design) => {
-          const canvas = document.createElement('canvas');
-          const scale = Math.min(1, 1200 / view.printFile.width, 1200 / view.printFile.height);
-          canvas.width = Math.max(1, Math.round(view.printFile.width * scale));
-          canvas.height = Math.max(1, Math.round(view.printFile.height * scale));
-          const context = canvas.getContext('2d');
-          context.scale(canvas.width / view.printFile.width, canvas.height / view.printFile.height);
-          drawDesign(context, 0, 0, 1, design);
-          return canvas.toDataURL('image/png');
-        },
+        renderArtwork: renderPreviewArtwork,
         prepare: async (candidate, { signal, allowSmallText = false }) => {
           const orientation = candidate.defaultOrientation || 'default';
           const designs = {};
           for (const surface of candidate.printSurfaces) {
             await new Promise(resolve => setTimeout(resolve, 0));
-            designs[surface.key] = await buildAutomaticDesign(surface.key, {
+            designs[surface.key] = sourceWords.length ? await buildAutomaticDesign(surface.key, {
               product: candidate, orientation, words: sourceWords, colors, background: true, signal, allowSmallText,
-            });
+            }) : [];
           }
           return { productKey: candidate.key, orientation, theme, currentDesignEdited: allowSmallText,
             customColors: paletteColors, words: sourceWords, designs };
         },
         createMug: ({ host, product: candidate, design, designs, onStatus }) => Mug3DViewer.create({
           THREE: window.THREE, host, product: candidate, onStatus,
+          fitToView: true, framingFill: () => .92,
           maxPixelRatio: 1.5, maxRenderPixels: 300000,
           modelOptions: { maxTextureSize: 1024 },
           drawTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, candidate.previewMesh?.back || candidate.previewModel?.kind === 'pillow' ? (designs?.front || design) : design),
           drawBackTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, designs?.back || []),
+        }),
+        createPhoto: ({ host, product: candidate, design, onStatus }) => ProductPhotoPreview.create({
+          host, product: candidate, onStatus, maxPixelRatio: 1.5, maxRenderPixels: 500000,
+          drawTexture: ctx => drawDesign(ctx, 0, 0, 1, design),
         }),
         onChoose: openGalleryDesign,
         onAdd: addGalleryDesign,
@@ -5964,6 +5904,8 @@
     }
 
     async function openGalleryDesign(snapshot) {
+      const galleryLocation = location.pathname + location.search;
+      restorationFailed = false;
       // Release the gallery's WebGL context before opening the editor's viewer.
       productGallery.suspend();
       galleryElement.hidden = true;
@@ -5977,7 +5919,7 @@
           await applyLocalDraft({ currentDesignEdited: false, ...snapshot });
         }
         if (restorationFailed) return;
-        updateGalleryEditorLocation();
+        updateGalleryEditorLocation({ from: galleryLocation });
         await initMug3D();
         scheduleDraftSave(0);
       } catch (error) { showRestorationError(error); }
@@ -5996,33 +5938,38 @@
       }
     }
 
-    function updateGalleryEditorLocation() {
+    function updateGalleryEditorLocation({ from = null } = {}) {
       const query = new URLSearchParams(location.search);
       for (const key of ['view', 'edit', 'cart', 'draft', 'accountDesign', 'accountLatest']) query.delete(key);
       query.set('draft', workingDesignId);
       if (editingOrderItemId) query.set('edit', editingOrderItemId);
       if (accountDesignReference?.id) query.set('accountDesign', accountDesignReference.id);
-      history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
+      const href = `/e/${encodeURIComponent(slug)}/configure?${query}`;
+      if (from) {
+        history.replaceState(null, '', from);
+        history.pushState(null, '', href);
+      } else history.replaceState(null, '', href);
+      updateProductBackLink(false);
     }
 
-    function updateGalleryLocation(snapshot) {
+    function updateGalleryLocation(snapshot, { push = false } = {}) {
       const query = new URLSearchParams(location.search);
       for (const key of ['edit', 'cart', 'draft', 'accountDesign', 'accountLatest']) query.delete(key);
       query.set('view', 'products');
       if (snapshot?.workingDesignId) query.set('draft', snapshot.workingDesignId);
-      history.replaceState(null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
+      history[push ? 'pushState' : 'replaceState'](null, '', `/e/${encodeURIComponent(slug)}/configure?${query}`);
     }
 
     async function returnToGallery() {
-      if (leavingPage || orderActionPending || fitAreaPending || restorationFailed || !workspaceReady) return;
+      if (leavingPage || orderActionPending || fitAreaPending) return;
       leavingPage = true;
       try {
         if (!await persistCurrentDraft() && await askToLeaveWithoutDraft() !== 'leave') return;
-        const snapshot = draftSnapshot();
+        const snapshot = workspaceReady && !restorationFailed ? draftSnapshot() : null;
         workspace.close();
         workspace.mobileCanvas?.close();
         destroyMug3D();
-        showProductGallery(snapshot);
+        showProductGallery(snapshot, { push: true });
         const title = document.getElementById('gallery-title');
         title.focus({ preventScroll: true });
         title.scrollIntoView({ block: 'start' });
@@ -6032,6 +5979,24 @@
     document.querySelectorAll('[data-gallery-back]').forEach(button => {
       button.addEventListener('click', () => { void returnToGallery(); });
     });
+
+    async function restoreProductHistory() {
+      const destination = location.href;
+      if (leavingPage) return;
+      leavingPage = true;
+      try {
+        // Persist the visible working copy without rewriting the history entry
+        // the browser has just selected. Reload restores that entry's exact draft.
+        if (!await persistCurrentDraft({ updateLocation: false }) && await askToLeaveWithoutDraft() !== 'leave') {
+          if (galleryElement.hidden) updateGalleryEditorLocation();
+          else updateGalleryLocation(workspaceReady ? draftSnapshot() : null);
+          return;
+        }
+        allowNavigation = true;
+        location.replace(destination);
+      } finally { leavingPage = false; }
+    }
+    window.addEventListener('popstate', () => { void restoreProductHistory(); });
 
     async function createConfiguration(snapshot, accountDesignId) {
       const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
@@ -6191,7 +6156,7 @@
         retryConfiguratorLoading.hidden = false;
         setText(loadingMessage, error.message === 'no_words'
           ? 'Für diese Wortwolke wurden noch keine Wörter gesammelt.'
-          : 'Der Konfigurator konnte nicht geladen werden.');
+          : 'Die Produktseite konnte nicht geladen werden.');
       });
 
     function showRestorationError(error) {

@@ -1,0 +1,147 @@
+{
+  "checkedAt": "2026-10-27T17:52:17.354Z",
+  "scope": "Live configuration and non-ordering readiness checks; no payment, checkout session, purchase, fulfillment order or deployment created",
+  "account": {
+    "liveKeyAuthenticatesCorrectAccount": true,
+    "chargesEnabled": true,
+    "payoutsEnabled": true
+  },
+  "tax": {
+    "status": "active",
+    "headOfficeCountry": "DE",
+    "defaultTaxBehavior": "exclusive",
+    "defaultTaxCode": "txcd_99999999",
+    "activeRegistrations": [
+      {
+        "country": "DE",
+        "type": "oss_union"
+      },
+      {
+        "country": "GB",
+        "type": "standard"
+      }
+    ]
+  },
+  "paymentMethods": {
+    "card": {
+      "available": true,
+      "enabled": true
+    },
+    "paypal": {
+      "available": true,
+      "enabled": true
+    }
+  },
+  "webhook": {
+    "url": "https://wolkenworte.fly.dev/webhook/stripe",
+    "status": "enabled",
+    "events": [
+      "checkout.session.completed",
+      "checkout.session.async_payment_succeeded",
+      "checkout.session.expired",
+      "charge.refunded"
+    ],
+    "matchesPreparedSecret": true,
+    "probe": {
+      "url": "https://wolkenworte.fly.dev/webhook/stripe",
+      "eventType": "wolkenworte.readiness_probe",
+      "businessDataWrites": false,
+      "basis": "Deployed webhook handler hash equals inspected local handler; unknown event types return before database or fulfillment branches",
+      "results": [
+        {
+          "signature": "invalid",
+          "status": 400,
+          "acknowledged": false
+        },
+        {
+          "signature": "valid",
+          "status": 200,
+          "acknowledged": true
+        }
+      ]
+    }
+  },
+  "runtime": {
+    "releaseVersion": "103",
+    "region": "fra",
+    "environment": "production",
+    "stripeMode": "live",
+    "livePaymentsEnabled": true,
+    "fulfillmentMode": "live",
+    "printfulOrderWritesEnabled": true,
+    "printfulOrderConfirmationEnabled": true,
+    "emailMode": "live",
+    "markupPercent": 50,
+    "feePercent": 3.69,
+    "fixedFeeCents": 49,
+    "stripeConfigErrors": [],
+    "stripeSecrets": [
+      {
+        "name": "STRIPE_LIVE_SECRET_KEY",
+        "status": "Deployed"
+      },
+      {
+        "name": "STRIPE_LIVE_WEBHOOK_SECRET",
+        "status": "Deployed"
+      }
+    ],
+    "stripeTestSecretsPresent": false,
+    "catalogVariants": 12,
+    "costReferenceVariants": null,
+    "pricingExports": [
+      "eurosToCents",
+      "productMarkupPercent",
+      "paymentReservePercent",
+      "paymentReserveFixedCents",
+      "estimatePaymentFeeCents",
+      "buildCustomerQuote",
+      "buildCustomerQuoteForShipments"
+    ],
+    "fileComparisons": [
+      {
+        "path": "src/pricing.js",
+        "remoteSha256": "68bde2abdcc8a31a404acd1d78d3a0a26f97b280e17cf49357522d93b3bf7622",
+        "localSha256": "4ec536589a48002fcb96dfd148b4105ada153b6325b96b92f0f18844e8f089dc",
+        "matchesLocal": false
+      },
+      {
+        "path": "src/stripe.js",
+        "remoteSha256": "4bfc2564763c926b770ac14a6016abb8f0d94574631ce5071983690bf4d83daa",
+        "localSha256": "5fd80f3513da8c0461d05169a8634605fc50cdb374ee8035ba001cc31ce52768",
+        "matchesLocal": false
+      },
+      {
+        "path": "src/routes/webhook.js",
+        "remoteSha256": "9f46ec4935071e627813d6baf0cb6441f98da253e669c07a8b8f22b4e7fb0b4e",
+        "localSha256": "9f46ec4935071e627813d6baf0cb6441f98da253e669c07a8b8f22b4e7fb0b4e",
+        "matchesLocal": true
+      },
+      {
+        "path": "src/productCostSnapshot.json",
+        "remoteSha256": null,
+        "localSha256": "8bb83fb44a2ca6b1abb758dd467c1f958b2f8dae196727e89206b9e79960413f",
+        "matchesLocal": false
+      },
+      {
+        "path": "src/products.js",
+        "remoteSha256": "e19c4f24187cc388ca6f876b0e8f050517fa39772531b12387a41e919e403aab",
+        "localSha256": "1740fa2ed46498cb8b7ef0a5ab55fe59315b9ca2aec39ba1703e84c3fb71b031",
+        "matchesLocal": false
+      },
+      {
+        "path": "src/productCatalogManifest.json",
+        "remoteSha256": null,
+        "localSha256": "83126f28c6ce48ec060f67f306f6ca2e665e68124e95df880a2be457dc030bc6",
+        "matchesLocal": false
+      }
+    ]
+  },
+  "publicReadiness": {
+    "health": "ok",
+    "canonicalRedirect": "ok",
+    "webhookReachability": "ok",
+    "rootStatus": 200
+  },
+  "finding": "Live currently serves 12 legacy variants; current 343-variant catalog, fixed-price model and audit changes are local and require a separately approved guarded production release",
+  "notVerified": "No real payment, payment-provider authorization, tax transaction, successful payment webhook, order confirmation or payout was initiated; no full release validation was run"
+}

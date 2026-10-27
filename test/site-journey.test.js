@@ -69,7 +69,7 @@ test('Home shows the unexpired device-local cart and never points it at a fresh 
   assert.equal(cloudLink.href, '/e/-_AbCdEf0123456789xyZQ');
 });
 
-test('direct designs resume the editor from Home and retain their purpose through shipping and cart updates', async () => {
+test('direct designs resume the product gallery from Home and retain their purpose through shipping and cart updates', async () => {
   const local = storage();
   const slug = '-_AbCdEf0123456789xyZQ';
   Journey.remember(slug, 'Erinnerungsstück', true, local, Date.now(), true);
@@ -83,8 +83,8 @@ test('direct designs resume the editor from Home and retain their purpose throug
   const scope = { localStorage: local, AbortSignal };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/site-journey'), 'utf8'), scope);
   await scope.WolkenworteJourney.mountHome({ getElementById: () => card }, async () => ({ status: 200 }));
-  assert.equal(cloudLink.href, `/e/${slug}/configure`);
-  assert.equal(cloudLink.textContent, 'Gestaltung fortsetzen');
+  assert.equal(cloudLink.href, `/e/${slug}/configure?view=products`);
+  assert.equal(cloudLink.textContent, 'Zur Produktübersicht');
   assert.equal(designLink.href, `/e/${slug}/configure?cart=1`);
   assert.equal(designLink.hidden, true, 'a saved draft is not automatically a cart item');
   Journey.remember('_-aBcDeF0123456789XYzQ', 'Andere Wolke', false, local);

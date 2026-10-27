@@ -72,6 +72,36 @@ SVG snapshots. New saves use `designSafeAreas`. Reopening an older design can fi
 its draft proportionally into the current safe rectangle, with a review message
 and unsaved state. This does not change its existing approved file or paid artifact.
 
+## Product reference photos — 2026-10-26
+
+`src/productPhotoCatalog.json` records the public Printful gallery audit for all
+26 offered product groups. Only visually reviewed blank products, garment models
+and useful material/detail shots are included. Sample artwork is excluded; some
+products therefore retain a single reference photo. The coaster includes the
+blank front/cork-back pair and the blank product held in a hand.
+
+Each added image pins its provider image ID, source URL/hash, local JPEG hash,
+source size/color mappings and exact eligible catalog variant IDs. Garment model
+layers are composited over the provider's matching white/black colour. Additional
+manual colour restrictions prevent a white drinkware detail from appearing on
+the black variant. Runtime browsing reads local assets only.
+
+The 2026-10-27 duplicate review covers 243 co-occurring photo pairs across the
+343 retained variants (465 local images). Sixty-nine pairs were the same supplier
+photograph under different filenames/JPEG encodings. Visually reviewed `duplicates` entries
+pin the original copy's hash; the gallery uses one matching reviewed copy in its
+place. Replacement stays restricted to the exact variant. The photo tests also
+compare the remaining galleries' normalized image pixels to catch repeated shots.
+
+Conservative display frames remove excess white surroundings from existing
+reference photos; added supplier compositions remain complete. The design tab
+fits all visible artwork using its alpha bounds, including white ink, with a
+bounded 1024-pixel scan. "Gesamte Druckfläche" shows the complete print area for
+placement context. Both modes retain the original file and proportions; 3D
+retains physical print coordinates and full rotation framing. These display
+changes never alter accepted print files,
+saved artwork, fulfillment identities or prices.
+
 ## Clothing — 2026-10-25
 
 `src/apparelCatalog.json` pins the 38 black/white DTG variants for Stanley/Stella
@@ -81,6 +111,14 @@ measurements of the garment laid flat. Current German availability, standard
 EU shipping departure countries and synthetic Berlin cost estimates were
 checked through the existing read-only catalog/estimate APIs. The reference
 photos are served locally; browsing does not call Printful.
+
+The T-shirt and hoodie reference photos use the provider's plain ghost/front
+templates. Each local JPEG composites the template over its `background_color`
+(white or black); the template's opaque white surround keeps the photo background
+white while its transparency retains fabric shading. `photoSources` records the
+template URL, source hash, background colour and final JPEG hash. The sweatshirt
+keeps its existing plain front photos. All three garment titles identify them as
+unisex.
 
 | Product | Front print file | Physical print area | Fabric |
 | --- | --- | --- | --- |
@@ -93,21 +131,52 @@ sleeves, hood and pocket never repeat the artwork. The usual 60-pixel inset
 keeps editable elements inside the rectangular print area; it is an application
 margin, not a claim of an additional manufacturer restriction.
 
-The three sewn garment models change chest width, body length and sleeve
-length independently for every size. Material colour changes share geometry;
-artwork keeps its physical centimetre dimensions. Neck, shoulder and print
-placement details are visual approximations informed by the supplier imagery.
-The hollow cloth panels, hood lining, drawstrings and pocket support restrained
-pointer-driven motion with fixed shoulder supports. This supported hanging
-simulation is not a body-fit predictor or a laboratory measurement of fabric
-thickness or stiffness. It sleeps after settling and pauses offscreen. None of
-its deformed vertices, material textures or visual shading enters the immutable
-print file, provider placement or saved design.
+### Photographic clothing previews — 2026-10-27
+
+Clothing uses the shared `public/js/product-photo-preview.js` canvas renderer
+in the gallery, editor, cart thumbnails and product overview. The three original
+PNG front layers are local, hash-pinned `previewLayer` assets. The sweatshirt
+uses its mapped square ghost template for this composition; its separate
+700 × 1000 catalog JPEG remains an unprinted reference photo.
+
+The renderer fills the provider garment colour, paints the complete transparent
+print file in the mapped rectangle, then applies the original alpha/shadow layer.
+It never crops to the visible words, stretches to the garment silhouette, uses
+3D lighting or multiplies the design against black fabric. These mappings were
+rechecked with read-only Printful catalog APIs for all 38 offered variants:
+
+| Product | Template width × height | Full print rectangle: left, top, width, height |
+| --- | --- | --- |
+| STTU169 | 3000 × 3000 | 930, 409, 1140, 1520 |
+| STSU178 | 3000 × 3000 | 930, 415, 1140, 1520 |
+| STSU177 | 3000 × 3000 | 1026, 687, 966, 966 |
+
+The downloaded PNGs are 1000 × 1000; divide coordinates by the declared 3000 px
+template dimensions. Every variant retains its original front print file,
+safe inset and fulfillment identity. Frozen cart artwork uses its accepted SVG
+for local compositions; shipping approval continues to use the prepared PNG
+that is also retained for production. Supplier layers never enter either file.
+
+Printful maps each colour's same photograph and rectangle to all offered sizes.
+This is a provider-standard placement preview, not a measurement of the print's
+proportion on every garment size or a prediction of fit. The retained supplier
+measurements and legacy procedural garment geometry are independent of these
+customer-facing photo previews. Browsing performs no provider requests.
+
+The synthetic calibration in `reports/apparel-photo-2026-10-27/` includes
+Printful-generated Ghost/front proofs for every offered variant, using the
+matching style IDs 21409, 21074 and 21242. The 38 results contain six distinct
+images. Local calibration edges agree within one pixel at 1000 px; pinned
+offline proof hashes and measured landmarks are covered by
+`test/apparel-photo-preview.test.js`. These checks establish agreement with
+provider mockups, not physical manufacturing tolerances. The three temporary
+private diagnostic sources were deleted after generation; no orders or
+customer configurations were created.
 
 ## EU fulfillment selection — 2026-10-25
 
-The current storefront offers **344 variants across 26 product groups**, with
-**448 orientation states and 454 print surfaces**, including clothing, phone cases and the metric poster
+The current storefront offers **343 variants across 26 product groups**, with
+**446 orientation states and 452 print surfaces**, including clothing, phone cases and the metric poster
 and canvas expansions below. The initial read-only Printful checks for
 all 67 previously offered variants identified six that do not have EU
 fulfillment for German delivery. They have been removed from the shared
@@ -144,25 +213,36 @@ Checkout continues to obtain current shipping and customs estimates. The
 dated audits below retain their original coverage of the former 67-variant
 range, including the removed variants' historical print geometry and proofs.
 
+The 2026-10-27 live audit rechecked all 344 then-offered variants and found one
+additional exception: the oak-framed 61 × 91 cm poster (11793) is now marked
+not fulfillable for Germany, has only Australian stock and ships only to
+Australia and New Zealand. It has been removed from the shared catalog,
+price snapshot and active print-geometry/photo mappings. The availability
+fixture now records that exclusion and the fresh evidence for the 343 retained
+variants; older excluded variants retain their original check dates.
+The complete read-only audit is in
+[`reports/catalog-germany-eu-2026-10-27/`](../reports/catalog-germany-eu-2026-10-27/).
+
 ## Complete metric poster range — 2026-10-25
 
 The offered range now includes all seven Germany-available variants of product
-268 (Enhanced Matte Paper Poster, cm) and all 22 Germany-available variants of
-product 304 (Enhanced Matte Paper Framed Poster, cm, without a mat). The 20
-additions retain the existing product families and use centimetres throughout:
+268 (Enhanced Matte Paper Poster, cm) and 21 Germany-available variants of
+product 304 (Enhanced Matte Paper Framed Poster, cm, without a mat). The 19 retained
+additions use the existing product families and centimetres throughout:
 
 | Range | Added sizes / frame colors |
 | --- | --- |
 | Matte poster | A1 (59.4 × 84.1 cm), 61 × 91 cm, 70 × 100 cm |
 | Black frame | 21 × 30, 30 × 45, 40 × 50, 45 × 61, A2 (42 × 59.4), A1 (59.4 × 84.1), 61 × 91 cm |
-| Oak frame | 21 × 30, A2 (42 × 59.4), A1 (59.4 × 84.1), 61 × 91 cm |
+| Oak frame | 21 × 30, A2 (42 × 59.4), A1 (59.4 × 84.1) |
 | White frame | 21 × 30, 30 × 45, 40 × 50, A2 (42 × 59.4), A1 (59.4 × 84.1), 61 × 91 cm |
 
 Read-only catalog, Germany availability, print-file and template responses were
 checked before adding these variants. Every addition returned a standard
 shipping estimate from Latvia or Spain to a synthetic Berlin address with no
 possible customs fees. Product 304's black 50 × 70 cm (9358) and white
-45 × 61 cm (19651) are not fulfillable in Germany and remain excluded. Oak
+45 × 61 cm (19651) are not fulfillable in Germany and remain excluded. The
+2026-10-27 recheck also excludes oak 61 × 91 cm (11793), as described above. Oak
 30 × 45, 40 × 50 and 45 × 61 cm combinations do not exist in this family.
 
 Availability is intersected with the active catalog. Product 268's availability
@@ -396,7 +476,7 @@ SHA-256 `3e4ad02d07406b63de92c3e6dd3e1e3d3861e34522f86ae62e30a8fb4f5016e9`.
 | Colored-interior mugs | 11 offered | Original 325 ml meshes; 444 ml uses the white 444 ml provider mesh with a reviewed coating mask (2026-10-25) |
 | Cork-backed coaster | 1 | Original provider UVs |
 | Matte posters | 7 | Custom thin 3D paper panels with light unprinted backs |
-| Framed posters | 22 offered | Custom 3D panels for black, oak and white frames; no imported Printful mesh |
+| Framed posters | 21 offered | Custom 3D panels for black, oak and white frames; no imported Printful mesh |
 | All-over totes | 3 | Custom volumetric sewn bags with independently readable front/back UVs |
 | Blankets | 2 | 1 mapped overlay; 1 custom panel with bleed crop |
 | Pillows | 5 | 3 exact provider mappings; 2 scaled adaptations of the square mesh |
@@ -413,6 +493,18 @@ SHA-256 `3e4ad02d07406b63de92c3e6dd3e1e3d3861e34522f86ae62e30a8fb4f5016e9`.
 | Wine tumbler | 1 | Original provider UVs |
 | Organic cotton totes | 2 | Custom gusseted cotton bags; full front file on a 25.4 cm square, unprinted rear |
 | iPhone / MagSafe / Samsung tough cases | 140 | Per-device hollow shells/liners, wrapped exterior UVs, provider-template camera openings and separate display handsets |
+
+Framed posters have their own preview moulding, calibrated against the local
+Printful photographs for all nine metric sizes. The former universal 0.9 cm
+rail understated the visible frame, particularly on A1 and A2. The calibrated
+profiles use a broad face, shallow inner lip, outer bevel and diagonal mitred
+joins; oak grain follows each rail. These are photo-derived preview dimensions,
+not supplier CAD measurements. The complete existing artwork panel and its UVs
+remain unchanged, with the moulding extending outwards. This does not alter
+print files, safe areas, fulfillment or the separate floating-canvas renderer.
+Independent photo bounds are pinned in
+`test/fixtures/framed-poster-landmarks.json`; geometry tests check every offered
+size/colour in both orientations, front/back ownership and texture disposal.
 
 The audit evidence in
 [`reports/print-area-audit-2026-10-24/`](../reports/print-area-audit-2026-10-24/)
@@ -544,7 +636,12 @@ safe areas and fulfillment identities. A thin printed rear plate and separate
 outer/inner walls form a hollow case, with an unprinted liner, raised camera
 rim, buttons and lower charging/speaker openings. Exterior wall UVs continue
 the file into its existing bleed instead of colouring every side black.
-MagSafe variants have a shallow printed exterior relief. Matte/gloss finish
+MagSafe variants have a shallow printed exterior relief. Its rounded annular
+band matches the reference photo's width (about 9% of the outer diameter),
+replacing the former thin tube while preserving the outside diameter, centre,
+maximum height, alignment stem and artwork UVs. Independent photo bounds are
+recorded in `test/fixtures/magsafe-ring-landmarks.json`, with geometry and UV
+checks for all 36 MagSafe variants. Matte/gloss finish
 continues to control artwork roughness. References are Printful's
 [MagSafe side and exploded views](https://www.printful.com/custom/products/all/tough-iphone-case-magsafe),
 [iPhone tough cases](https://www.printful.com/custom/phone-cases/personalized/tough-iphone-case)

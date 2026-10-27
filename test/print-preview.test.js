@@ -44,6 +44,46 @@ function harness(t, mockups, options = {}) {
   };
 }
 
+test('clothing overviews open a photographic product preview and retain independent photo/design tabs and retries', async t => {
+  const photos = [], models = [];
+  let fail = true;
+  const h = harness(t, undefined, {
+    render3D: async options => { models.push(options); return { resize() {}, destroy() {} }; },
+    renderPhoto: async options => {
+      photos.push(options);
+      if (fail) throw new Error('missing supplier layer');
+      return { resize() {}, destroy() {} };
+    },
+  });
+  const item = h.configuration();
+  item.product = { ...item.product, previewType: 'photo', productPhoto: '/blank-hoodie.jpg' };
+  h.api.open(item, h.opener);
+  await Promise.resolve();
+  assert.equal(models.length, 0);
+  assert.equal(photos.length, 1);
+  assert.equal(h.query('[data-preview-view="model"]').textContent, 'Produktvorschau');
+  assert.equal(h.query('[data-preview-view="model"]').getAttribute('aria-selected'), 'true');
+  assert.equal(h.query('[data-preview-model-retry]').hidden, false);
+  assert.doesNotMatch(h.query('[data-preview-model-status]').textContent, /3D/);
+  fail = false;
+  h.query('[data-preview-model-retry]').click();
+  await Promise.resolve();
+  assert.equal(photos.length, 2);
+  assert.equal(h.query('[data-preview-model-feedback]').hidden, true);
+  h.query('[data-preview-view="photo"]').click();
+  assert.equal(h.photo().getAttribute('src'), '/blank-hoodie.jpg');
+  h.query('[data-preview-view="print"]').click();
+  assert.equal(h.image().getAttribute('src'), item.printPreviewUrls.front);
+  h.query('[data-preview-view="model"]').click();
+  assert.equal(photos.length, 2, 'switching views retains the completed composition');
+  h.dialog.close();
+  const mug = h.configuration(); mug.product.previewType = 'mug';
+  h.api.open(mug, h.opener);
+  await Promise.resolve();
+  assert.equal(models.length, 1);
+  assert.equal(h.query('[data-preview-view="model"]').textContent, '3D-Ansicht');
+});
+
 test('wide designs fit their panel without cropping or changing their proportions', t => {
   const h = harness(t);
   assert.equal(h.image(), null, 'no full-resolution image is requested before opening');
@@ -61,7 +101,7 @@ test('wide designs fit their panel without cropping or changing their proportion
   assert.equal(h.image().style.height, '174px');
 });
 
-test('the fourth panel shows localized product information as safe text and updates without changing the accepted artwork', t => {
+test('product information remains safe text and updates without changing the accepted artwork', t => {
   const h = harness(t);
   const item = h.configuration();
   item.product.information = { de: 'Keramiktasse\n\n• Keramik\n• 444 ml', en: 'Ceramic mug\n\n• Ceramic\n• 444 ml',
@@ -269,11 +309,17 @@ test('cart dialogs show photo, exact artwork and a local 3D preview without gene
   assert.equal(h.query('[data-preview-mockup-actions]').hidden, true);
   assert.equal(renders[0].item, item, '3D receives the accepted snapshot and both exact surface URLs');
   assert.equal(h.query('[data-preview-model-card]').hidden, false);
-  assert.equal(h.query('[data-preview-photo-card]').hidden, false);
+  assert.equal(h.query('[data-preview-photo-card]').hidden, true);
   assert.equal(h.query('[data-preview-model-feedback]').hidden, true);
   assert.equal(h.query('[data-preview-artwork]').hidden, false);
   assert.equal(h.query('[data-preview-photo-artwork]').hidden, false);
-  assert.equal(h.query('[data-preview-views]'), null, 'there is no view switcher');
+  h.query('[data-preview-view="photo"]').click();
+  assert.equal(h.query('[data-preview-photo-card]').hidden, false);
+  assert.equal(h.query('[data-preview-model-card]').hidden, true);
+  h.query('[data-preview-view="print"]').click();
+  assert.equal(h.query('[data-preview-print-card]').hidden, false);
+  h.query('[data-preview-view="model"]').click();
+  assert.equal(h.query('[data-preview-model-card]').hidden, false);
   const photo = h.photo();
   h.query('[data-surface="back"]').click();
   assert.equal(h.image().getAttribute('src'), '/saved/print.png?surface=back');
@@ -377,4 +423,118 @@ test('reopening a pending mockup rejoins its promise and displays its eventual c
   await Promise.resolve();
   assert.equal(h.mockupImage().getAttribute('src'), 'https://printful.example.test/front.png');
   assert.equal(requests, 1);
+});
+
+test('thumbnail-only photo navigation wraps with the keyboard, caches images and retries the selected photograph', t => {
+  const h = harness(t);
+  const item = h.configuration();
+  item.product.productPhotos = [
+    { src: '/plain.jpg', label: 'Produktfoto' },
+    { src: '/model.jpg', label: 'Am Model' },
+    { src: '/back.jpg', label: 'Rückseite' },
+  ];
+  const before = structuredClone(item);
+  h.api.open(item, h.opener);
+  h.query('[data-preview-view="photo"]').click();
+  const first = h.photo(); h.load(first);
+  assert.equal(h.query('[data-preview-photo-navigation]').hidden, false);
+  assert.equal(h.query('[data-preview-photo-previous]'), null);
+  assert.equal(h.query('[data-preview-photo-next]'), null);
+  const buttons = h.query('[data-preview-photo-thumbnails]').children;
+  buttons[0].focus();
+  buttons[0].dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  assert.equal(h.photo().getAttribute('src'), '/back.jpg');
+  buttons[2].dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  assert.equal(h.photo(), first);
+  buttons[1].click();
+  assert.equal(h.photo().getAttribute('src'), '/model.jpg');
+  h.photo().dispatchEvent(new h.window.Event('error'));
+  h.query('[data-preview-photo-retry]').click();
+  assert.equal(h.photo().getAttribute('src'), '/model.jpg');
+  assert.equal(buttons[1].getAttribute('aria-pressed'), 'true');
+  buttons[1].focus();
+  buttons[1].dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  assert.equal(h.photo().getAttribute('src'), '/back.jpg');
+  assert.equal(h.window.document.activeElement, buttons[2]);
+  assert.deepEqual(item, before, 'photo browsing never changes a design or variant');
+});
+
+test('media tabs support keyboard selection, retain the model, and expansion keeps the active view', async t => {
+  let rendered = 0, resized = 0;
+  const h = harness(t, undefined, { render3D: async () => {
+    rendered++;
+    return { resize() { resized++; }, destroy() {} };
+  } });
+  const item = h.configuration();
+  Object.assign(item.product, { previewType: '3d', productPhoto: '/plain.jpg' });
+  h.api.open(item, h.opener); await Promise.resolve();
+  const model = h.query('[data-preview-view="model"]');
+  model.focus();
+  model.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  assert.equal(h.window.document.activeElement, h.query('[data-preview-view="photo"]'));
+  assert.equal(h.query('[data-preview-photo-card]').hidden, false);
+  assert.equal(h.query('[data-preview-model-card]').hidden, true);
+  h.query('[data-preview-expand]').click();
+  assert.equal(h.dialog.classList.contains('is-expanded'), true);
+  assert.equal(h.query('[data-preview-view="photo"]').getAttribute('aria-selected'), 'true');
+  model.click();
+  assert.equal(rendered, 1, 'switching views reuses the initialized renderer');
+  assert.ok(resized > 1);
+  h.dialog.close(); h.api.open(item, h.opener);
+  assert.equal(h.dialog.classList.contains('is-expanded'), false);
+});
+
+test('photo-only variant browsing never loads artwork or initializes a model', t => {
+  const h = harness(t, undefined, { render3D: () => { throw new Error('must not render'); } });
+  const product = { displayName: 'Shirt', previewType: '3d', printSurfaces: [{ key: 'front' }],
+    productPhotos: [{ src: '/black-model.jpg', label: 'Am Model' }] };
+  h.api.openPhotos(product, h.opener);
+  assert.equal(h.photo().getAttribute('src'), '/black-model.jpg');
+  assert.equal(h.image(), null);
+  assert.equal(h.query('[data-preview-view="model"]').hidden, true);
+  assert.equal(h.query('[data-preview-view="print"]').hidden, true);
+  assert.equal(h.query('[data-preview-model]').children.length, 0);
+});
+
+test('reviewed photo bounds remove only surrounding whitespace while design fitting retains its entire file', t => {
+  const h = harness(t);
+  const viewport = h.query('[data-preview-photo]');
+  Object.defineProperties(viewport, { clientWidth: { value: 600 }, clientHeight: { value: 400 } });
+  const item = h.configuration();
+  item.product.productPhotos = [{ src: '/padded.jpg', label: 'Produktfoto', frame: [.25, .25, .5, .5] }];
+  h.api.open(item, h.opener); h.load(h.photo(), { width: 1000, height: 1000 });
+  assert.equal(h.photo().style.width, '800px');
+  assert.equal(h.photo().style.height, '800px');
+  assert.equal(h.photo().style.left, '-100px');
+  assert.equal(h.photo().style.top, '-200px');
+  h.load();
+  assert.equal(h.image().style.width, '648px');
+  assert.equal(h.image().style.height, '324px');
+});
+
+test('artwork fitting preserves white ink and every visible pixel while ignoring transparent margins', () => {
+  const width = 100, height = 160, data = new Uint8ClampedArray(width * height * 4);
+  const paint = (x, y, rgb) => data.set([...rgb, 255], (y * width + x) * 4);
+  assert.equal(Preview.visibleArtworkBounds({ data, width, height }), null);
+  paint(40, 60, [255, 255, 255]);
+  paint(65, 110, [180, 40, 80]);
+  const [x, y, w, h] = Preview.visibleArtworkBounds({ data, width, height });
+  assert.ok(x <= .4 && y <= .375, 'white ink contributes to the visible bounds');
+  assert.ok(x + w >= .66 && y + h >= 111 / 160);
+  assert.ok(w < .5 && h < .5, 'empty canvas margins do not make the artwork tiny');
+  paint(0, 0, [255, 255, 255]); paint(99, 159, [255, 255, 255]);
+  assert.deepEqual(Preview.visibleArtworkBounds({ data, width, height }), [0, 0, 1, 1]);
+});
+
+test('showing the full print area retains the exact image, surface and accepted configuration', t => {
+  const h = harness(t), item = h.configuration();
+  const before = structuredClone(item);
+  h.api.open(item, h.opener); h.load();
+  const image = h.image();
+  h.query('[data-preview-print-fit]').click();
+  assert.equal(h.query('[data-preview-print-fit]').getAttribute('aria-pressed'), 'true');
+  assert.equal(h.image(), image);
+  h.query('[data-preview-print-fit]').click();
+  assert.equal(h.image(), image);
+  assert.deepEqual(item, before);
 });

@@ -232,10 +232,12 @@ npm run cutover:production -- \
 
 The command runs `npm ci`, the complete test suite, an AMD64 production image
 build, uploaded-image pixel and font-contract/geometry tests inside that Linux
-candidate, strict configuration validation and ordered migrations. A failed
+candidate, strict configuration validation, read-only target schema/runtime
+permission checks, ordered migrations and a second schema/access check. A failed
 check stops before deployment. It rechecks the exact commit and active
 production boundary immediately before deploying `fly.production.toml`, then
-verifies public health, callback authentication and the healthy Machine.
+verifies public health, representative read-only routes, callback authentication
+and the healthy Machine.
 Deployment or post-release verification failure invokes the existing automatic
 maintenance re-arm.
 

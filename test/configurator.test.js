@@ -36,7 +36,7 @@ test('restoration bootstrap remains readable after cloud reset without granting 
   const invalid = await fetch(`${app.baseUrl}/api/events/${event.slug}/configurations`, { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, words: [] }) });
   assert.equal(invalid.status, 400);
-  await app.query("UPDATE events SET created_at=now()-interval '366 days' WHERE slug=$1", [event.slug]);
+  await app.query("UPDATE events SET updated_at=now()-interval '4 months' WHERE slug=$1", [event.slug]);
   assert.equal((await fetch(`${app.baseUrl}/api/events/${event.slug}/configurator?restore=1`)).status, 404);
 });
 
@@ -75,6 +75,33 @@ function submitWord(socket, word) {
 function oneSurfaceDesign(design) {
   return { designs: { default: design } };
 }
+
+test('missing print-font characters are rejected before cart creation on every printed side', async t => {
+  const { baseUrl, close, query } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl);
+  const url = `${baseUrl}/api/events/${event.slug}/configurations`;
+  for (const [productKey, surfaceKey, fontFamily, text] of [
+    ['white-glossy-mug-duo-11oz', 'default', 'classic', '東京 ❤️'],
+    ['white-glossy-mug-duo-11oz', 'default', 'caveat', 'Liebe ∞'],
+    ['all-over-basic-pillow-18in', 'back', 'baloo-2', 'Привет ❤️'],
+    ['white-glossy-mug-duo-11oz', 'default', 'baloo-2', 'नमस्ते'],
+    ['white-glossy-mug-duo-11oz', 'default', 'classic', 'x\u0301'],
+  ]) {
+    const payload = productDesignPayload(productKey);
+    Object.assign(payload.designs[surfaceKey][0], { fontFamily, text });
+    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, productKey, theme: 'pastel', words: [['liebe', 1]] }) });
+    assert.equal(response.status, 422);
+    assert.equal((await response.json()).error, 'unsupported_print_characters');
+  }
+  assert.equal((await query('SELECT count(*)::int AS n FROM configurations')).rows[0].n, 0);
+  const payload = productDesignPayload();
+  Object.assign(payload.designs.default[0], { fontFamily: 'lora', text: 'Привет ❤️', fontWeight: 700 });
+  const saved = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, productKey: 'white-glossy-mug-duo-11oz', theme: 'pastel', words: [['liebe', 1]] }) });
+  assert.equal(saved.status, 201, await saved.text());
+});
 
 test('duplicating a selection respects the design limit atomically and preserves existing objects', () => {
   const editor = Object.create(MugPrintEditor.prototype);
@@ -825,7 +852,7 @@ test('configurator exposes every curated product with verified Printful geometry
     [['30 × 40 cm', 3544, 4724], ['40 × 30 cm', 4724, 3544]]
   );
   const posterProducts = data.products.filter((candidate) => candidate.familyKey === 'posters');
-  assert.equal(posterProducts.length, 127);
+  assert.equal(posterProducts.length, 126);
   const squareCanvases = posterProducts.filter(candidate => candidate.printFile.width === candidate.printFile.height);
   assert.equal(squareCanvases.length, 23);
   assert.ok(squareCanvases.every(candidate => candidate.defaultOrientation === 'default' && candidate.orientations.length === 0));
@@ -989,7 +1016,6 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /id="flat-product-preview"/);
   assert.match(configurePage, /class="flat-product-composite"/);
   assert.match(configurePage, /id="flat-product-mockup"/);
-  assert.match(configurePage, /class="preview-disclaimer"[^>]*>Die Vorschau dient zur Orientierung – Farben, Position und Beschnitt können auf dem fertigen Produkt leicht abweichen\.<\/p>/);
   assert.doesNotMatch(configurePage, /id="placement-(?:options|step|panel)"/);
   assert.match(configurePage, /id="orientation-step" hidden/);
   assert.match(configurePage, /id="orientation-options"/);
@@ -1092,7 +1118,8 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.match(configurePage, /WolkenworteConfiguratorSession\.createDraftStore\(slug\)/);
   assert.match(configurePage, /await loadOrderItem\(configurationId\)/);
   assert.match(configurePage, /function saveBeforeLeaving\(event\)/);
-  assert.match(configurePage, /\[brandLink, backLink, mobileBackLink\]\.filter\(Boolean\)[\s\S]*?saveBeforeLeaving/);
+  assert.match(configurePage, /brandLink\?\.addEventListener\('click', saveBeforeLeaving\)/);
+  assert.match(configurePage, /\[backLink, mobileBackLink\]\.filter\(Boolean\)[\s\S]*?returnToGallery\(\)[\s\S]*?saveBeforeLeaving/);
   assert.match(configurePage, /location\.assign\(destination\)/);
   assert.doesNotMatch(configurePage, /location\.assign\(event\.currentTarget\.href\)/);
   assert.match(configurePage, /Euer Warenkorb/);

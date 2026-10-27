@@ -1,0 +1,392 @@
+{
+  "checkedAt": "2026-10-27T15:31:25.288Z",
+  "physicalSamples": false,
+  "styleIds": {
+    "456": 21409,
+    "479": 21242,
+    "493": 21074
+  },
+  "variants": [
+    {
+      "key": "t-shirt-11869",
+      "variantId": 11869,
+      "size": "S",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-11870",
+      "variantId": 11870,
+      "size": "M",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-11871",
+      "variantId": 11871,
+      "size": "L",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-11872",
+      "variantId": 11872,
+      "size": "XL",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-11873",
+      "variantId": 11873,
+      "size": "2XL",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-17229",
+      "variantId": 17229,
+      "size": "3XL",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-17233",
+      "variantId": 17233,
+      "size": "4XL",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-17236",
+      "variantId": 17236,
+      "size": "5XL",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-53682",
+      "variantId": 53682,
+      "size": "XS",
+      "color": "Black",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11869.png",
+      "local": "local-sttu169-black.png",
+      "sha256": "64583e625c77149e8c91ea03b80b6de9291acc6d8646e63745979885411260ee"
+    },
+    {
+      "key": "t-shirt-11864",
+      "variantId": 11864,
+      "size": "S",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-11865",
+      "variantId": 11865,
+      "size": "M",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-11866",
+      "variantId": 11866,
+      "size": "L",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-11867",
+      "variantId": 11867,
+      "size": "XL",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-11868",
+      "variantId": 11868,
+      "size": "2XL",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-17228",
+      "variantId": 17228,
+      "size": "3XL",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-17232",
+      "variantId": 17232,
+      "size": "4XL",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-17235",
+      "variantId": 17235,
+      "size": "5XL",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "t-shirt-53681",
+      "variantId": 53681,
+      "size": "XS",
+      "color": "White",
+      "styleId": 21409,
+      "provider": "provider-sttu169-11864.png",
+      "local": "local-sttu169-white.png",
+      "sha256": "0c48ec4605446b04d0e3a75ae3483467af78ebacf59dc41afbb470102d761213"
+    },
+    {
+      "key": "sweatshirt-12585",
+      "variantId": 12585,
+      "size": "S",
+      "color": "Black",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12585.png",
+      "local": "local-stsu178-black.png",
+      "sha256": "2bf49d29f082b0b9b3c2f985af4b1a4a77faf2676d59a1553456cb5988c66078"
+    },
+    {
+      "key": "sweatshirt-12586",
+      "variantId": 12586,
+      "size": "M",
+      "color": "Black",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12585.png",
+      "local": "local-stsu178-black.png",
+      "sha256": "2bf49d29f082b0b9b3c2f985af4b1a4a77faf2676d59a1553456cb5988c66078"
+    },
+    {
+      "key": "sweatshirt-12587",
+      "variantId": 12587,
+      "size": "L",
+      "color": "Black",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12585.png",
+      "local": "local-stsu178-black.png",
+      "sha256": "2bf49d29f082b0b9b3c2f985af4b1a4a77faf2676d59a1553456cb5988c66078"
+    },
+    {
+      "key": "sweatshirt-12588",
+      "variantId": 12588,
+      "size": "XL",
+      "color": "Black",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12585.png",
+      "local": "local-stsu178-black.png",
+      "sha256": "2bf49d29f082b0b9b3c2f985af4b1a4a77faf2676d59a1553456cb5988c66078"
+    },
+    {
+      "key": "sweatshirt-12589",
+      "variantId": 12589,
+      "size": "2XL",
+      "color": "Black",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12585.png",
+      "local": "local-stsu178-black.png",
+      "sha256": "2bf49d29f082b0b9b3c2f985af4b1a4a77faf2676d59a1553456cb5988c66078"
+    },
+    {
+      "key": "sweatshirt-12605",
+      "variantId": 12605,
+      "size": "S",
+      "color": "White",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12605.png",
+      "local": "local-stsu178-white.png",
+      "sha256": "2058dc59c82a5e3658bc672d6bb69c624fe12ca6ff97a38a3ec89dbc11b6a4a1"
+    },
+    {
+      "key": "sweatshirt-12606",
+      "variantId": 12606,
+      "size": "M",
+      "color": "White",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12605.png",
+      "local": "local-stsu178-white.png",
+      "sha256": "2058dc59c82a5e3658bc672d6bb69c624fe12ca6ff97a38a3ec89dbc11b6a4a1"
+    },
+    {
+      "key": "sweatshirt-12607",
+      "variantId": 12607,
+      "size": "L",
+      "color": "White",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12605.png",
+      "local": "local-stsu178-white.png",
+      "sha256": "2058dc59c82a5e3658bc672d6bb69c624fe12ca6ff97a38a3ec89dbc11b6a4a1"
+    },
+    {
+      "key": "sweatshirt-12608",
+      "variantId": 12608,
+      "size": "XL",
+      "color": "White",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12605.png",
+      "local": "local-stsu178-white.png",
+      "sha256": "2058dc59c82a5e3658bc672d6bb69c624fe12ca6ff97a38a3ec89dbc11b6a4a1"
+    },
+    {
+      "key": "sweatshirt-12609",
+      "variantId": 12609,
+      "size": "2XL",
+      "color": "White",
+      "styleId": 21074,
+      "provider": "provider-stsu178-12605.png",
+      "local": "local-stsu178-white.png",
+      "sha256": "2058dc59c82a5e3658bc672d6bb69c624fe12ca6ff97a38a3ec89dbc11b6a4a1"
+    },
+    {
+      "key": "hoodie-12372",
+      "variantId": 12372,
+      "size": "S",
+      "color": "Black",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12372.png",
+      "local": "local-stsu177-black.png",
+      "sha256": "74c323bdd84700f6ae578e910dd3ba04e2b44e79fb487cbee6e0629ad3358788"
+    },
+    {
+      "key": "hoodie-12373",
+      "variantId": 12373,
+      "size": "M",
+      "color": "Black",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12372.png",
+      "local": "local-stsu177-black.png",
+      "sha256": "74c323bdd84700f6ae578e910dd3ba04e2b44e79fb487cbee6e0629ad3358788"
+    },
+    {
+      "key": "hoodie-12374",
+      "variantId": 12374,
+      "size": "L",
+      "color": "Black",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12372.png",
+      "local": "local-stsu177-black.png",
+      "sha256": "74c323bdd84700f6ae578e910dd3ba04e2b44e79fb487cbee6e0629ad3358788"
+    },
+    {
+      "key": "hoodie-12375",
+      "variantId": 12375,
+      "size": "XL",
+      "color": "Black",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12372.png",
+      "local": "local-stsu177-black.png",
+      "sha256": "74c323bdd84700f6ae578e910dd3ba04e2b44e79fb487cbee6e0629ad3358788"
+    },
+    {
+      "key": "hoodie-12376",
+      "variantId": 12376,
+      "size": "2XL",
+      "color": "Black",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12372.png",
+      "local": "local-stsu177-black.png",
+      "sha256": "74c323bdd84700f6ae578e910dd3ba04e2b44e79fb487cbee6e0629ad3358788"
+    },
+    {
+      "key": "hoodie-12402",
+      "variantId": 12402,
+      "size": "S",
+      "color": "White",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12402.png",
+      "local": "local-stsu177-white.png",
+      "sha256": "419406a32d224018bfb0026e30000e8e606d023cf83ed040ddf8106156b8a768"
+    },
+    {
+      "key": "hoodie-12403",
+      "variantId": 12403,
+      "size": "M",
+      "color": "White",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12402.png",
+      "local": "local-stsu177-white.png",
+      "sha256": "419406a32d224018bfb0026e30000e8e606d023cf83ed040ddf8106156b8a768"
+    },
+    {
+      "key": "hoodie-12404",
+      "variantId": 12404,
+      "size": "L",
+      "color": "White",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12402.png",
+      "local": "local-stsu177-white.png",
+      "sha256": "419406a32d224018bfb0026e30000e8e606d023cf83ed040ddf8106156b8a768"
+    },
+    {
+      "key": "hoodie-12405",
+      "variantId": 12405,
+      "size": "XL",
+      "color": "White",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12402.png",
+      "local": "local-stsu177-white.png",
+      "sha256": "419406a32d224018bfb0026e30000e8e606d023cf83ed040ddf8106156b8a768"
+    },
+    {
+      "key": "hoodie-12406",
+      "variantId": 12406,
+      "size": "2XL",
+      "color": "White",
+      "styleId": 21242,
+      "provider": "provider-stsu177-12402.png",
+      "local": "local-stsu177-white.png",
+      "sha256": "419406a32d224018bfb0026e30000e8e606d023cf83ed040ddf8106156b8a768"
+    }
+  ],
+  "sourcesDeleted": true
+}

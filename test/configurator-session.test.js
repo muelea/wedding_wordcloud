@@ -53,7 +53,7 @@ function harness(extra = {}) {
   const cart = Session.createCart('event-a', local);
   const drafts = draftBackend();
   const draftStore = Session.createDraftStore('event-a', { backend: drafts });
-  const calls = { posts: 0, bodies: [], navigations: [], warnings: [], opened: [], busy: [], replaced: [], panels: [] };
+  const calls = { posts: 0, bodies: [], navigations: [], warnings: [], opened: [], busy: [], replaced: [], pushed: [], panels: [] };
   const element = () => ({ textContent: '', disabled: false, hidden: false, dataset: {}, children: [],
     append(...nodes) { this.children.push(...nodes); }, appendChild(node) { this.children.push(node); },
     replaceChildren(...nodes) { this.children = nodes; }, addEventListener() {} });
@@ -93,7 +93,7 @@ function harness(extra = {}) {
     leavingPage: false, allowNavigation: false, suppressDirty: false,
     draftSaveTimer: null, draftSavePromise: null, draftSavedRevision: -1, draftStorageFailed: false,
     saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
-    productSwitchUndo: element(),
+    productSwitchUndo: element(), productInfoButton: element(),
     orderList: { querySelectorAll: () => [] }, cartRemovalNotice: element(), cartRemovalMessage: element(),
     products: [{ key: 'mug', displayName: 'Tasse' }, { key: 'poster', displayName: 'Poster' }],
     document: { createElement: element, querySelectorAll:()=>[], getElementById: () => element() },
@@ -102,6 +102,7 @@ function harness(extra = {}) {
     content: { inert: false }, loading: { hidden: false }, editorElement: { hidden: false }, orderBox: { scrollIntoView() {} },
     galleryPendingConfigurations: new Map(),
     productGallery: null, galleryElement: { hidden: true },
+    updateProductBackLink() {},
     cartPanel: { open() {}, close() {}, refresh() {}, message() {} },
     cloudUpdateNotice: { hidden: true }, draftLossDialog: { open: false, close() {} },
     cartReview: { show() {}, dispose() {} }, revealReviewedDesign() { calls.opened.push('revealed'); },
@@ -125,7 +126,7 @@ function harness(extra = {}) {
     addOrderItem: (data, { replaceId }) => cart.replace(data, replaceId),
     setOrderActionsBusy: value => calls.busy.push(value), updateCartActions() {},
     loadOrderItem: async target => calls.opened.push(target),
-    history: { replaceState: (_, __, url) => calls.replaced.push(url) },
+    history: { replaceState: (_, __, url) => calls.replaced.push(url), pushState: (_, __, url) => calls.pushed.push(url) },
     location: { search: '', assign: url => calls.navigations.push(url) },
     fetch: async (_, options = {}) => {
       calls.posts++;
@@ -135,7 +136,7 @@ function harness(extra = {}) {
     ...extra,
   });
   vm.runInContext(['saveCurrentDesign', 'approveCurrentDesign', 'createConfiguration', 'addGalleryDesign', 'orderItemFromConfiguration',
-    'returnToGallery', 'updateGalleryEditorLocation', 'updateGalleryLocation', 'showReadyWorkspace', 'continueFromCartPanel', 'openCartPanelDesign',
+    'returnToGallery', 'restoreProductHistory', 'updateGalleryEditorLocation', 'updateGalleryLocation', 'showReadyWorkspace', 'continueFromCartPanel', 'openCartPanelDesign',
     'hasUnsavedDesign', 'shippingAction', 'askShippingChoice',
     'draftSnapshot', 'wordsMatch', 'updateCloudNotice', 'setCloudFeedback', 'syncCloudHistory', 'workingCheckpoint',
     'cloneDesign', 'cloneEditorState', 'fetchCloudWords', 'updateCartActions', 'continueToShipping', 'saveReviewedDesigns',
@@ -644,6 +645,43 @@ test('gallery return persists the current edits and never asks for ordinary cart
   await page.returnToGallery();
   assert.equal(shown, null, 'failed recovery keeps the editor open unless leaving is explicitly chosen');
   assert.equal(calls.warnings.length, 1);
+});
+
+test('ordinary and basket entries retain drafts in the gallery without opening the editor', async () => {
+  for (const directDesign of [false,true]) for (const search of ['', '?cart=1']) {
+    const {context:page,cart,calls}=harness({workspaceReady:false,directDesign,location:{search}});
+    const saved={workingDesignId:'d'.repeat(32),productKey:'mug',designs:{default:[{text:'Edited'}]}};
+    let shown,opened=0;
+    page.loadLocalDraft=async()=>saved;
+    page.showProductGallery=value=>{shown=value;};
+    page.cartPanel.open=()=>opened++;
+    cart.write([{id:id('a'),productKey:'mug'}]);
+    page.initializeWorkspace=async()=>{throw new Error('ordinary entries must not open the designer');};
+    await page.showReadyWorkspace();
+    assert.deepEqual(shown,saved);
+    assert.equal(opened,search?1:0);
+    assert.equal(calls.posts,0);
+  }
+});
+
+test('editor navigation preserves a gallery history entry and browser return saves the draft without rewriting its destination', async () => {
+  const {context:page,calls}=harness();
+  const gallery='/e/event-a/configure?view=products';
+  page.location.search='?view=products';
+  page.updateGalleryEditorLocation({from:gallery});
+  assert.equal(calls.replaced.at(-1),gallery);
+  assert.equal(calls.pushed.length,1);
+  const editor=new URL(calls.pushed[0],'http://example.test');
+  assert.equal(editor.searchParams.get('draft'),page.workingDesignId);
+  assert.equal(editor.searchParams.has('view'),false);
+  page.location.href='http://example.test'+gallery;
+  page.location.search='?view=products';
+  page.location.replace=url=>calls.navigations.push(url);
+  const replacements=calls.replaced.length;
+  await page.restoreProductHistory();
+  assert.equal(calls.replaced.length,replacements,'saving must not overwrite the selected history entry');
+  assert.equal(calls.navigations.at(-1),'http://example.test'+gallery);
+  assert.equal((await page.draftStore.loadActive()).workingDesignId,page.workingDesignId);
 });
 
 test('gallery selection replaces stale cart and library entry intent while retaining the chosen draft', () => {

@@ -46,6 +46,7 @@
     const product = options.product || DEFAULT_PRODUCT;
     const providerModel = product.previewMesh || null;
     const bagPreview = product.previewModel?.kind === 'tote';
+    const garmentPreview = product.previewModel?.kind === 'garment';
     const studioPreview = Boolean(providerModel || product.previewModel);
     let modelView = null;
     let clothView = null;
@@ -64,7 +65,7 @@
     });
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    if (studioPreview) { renderer.toneMapping = THREE.LinearToneMapping; renderer.toneMappingExposure = 1; }
+    if (studioPreview) { renderer.toneMapping = garmentPreview ? THREE.ACESFilmicToneMapping : THREE.LinearToneMapping; renderer.toneMappingExposure = garmentPreview ? 1.12 : 1; }
     if (!options.canvas) host.prepend(canvas);
 
     const ownsInteractionRegion = !options.interactionRegion;
@@ -246,7 +247,7 @@
     }
 
     // Measure around the product's rotation origin without changing its mesh.
-    // The editor reserves a complete turn and tilt; the gallery uses its sphere.
+    // Fit-to-view previews reserve a complete turn and tilt; other hosts use a sphere.
     const framingPoint = new THREE.Vector3();
     const rotationEnvelope = { profile: [], distance: null };
     let framingRadius = 1;
@@ -287,22 +288,31 @@
         studioTexture.colorSpace = THREE.SRGBColorSpace; scene.environment = studioTexture;
       }
     }
-    const lightScale = product.previewModel?.kind === 'garment' ? .72 : bagPreview ? 1.05 : clothView ? 1 : studioPreview ? .9 : 1;
+    const lightScale = garmentPreview ? 1 : bagPreview ? 1.05 : clothView ? 1 : studioPreview ? .9 : 1;
     const lightColor = studioPreview ? 0xffffff : 0xfffaf5;
     if (product.previewModel) group.traverse(mesh => {
-      for (const surface of Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : []) surface.envMapIntensity = surface.metalness >= .5 ? .7 : .05;
+      for (const surface of Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : []) surface.envMapIntensity = surface.metalness >= .5 ? .7 : garmentPreview ? (product.previewModel.color === '#0b0b0b' ? .35 : .08) : .05;
     });
-    scene.add(new THREE.AmbientLight(0xffffff, (bagPreview ? 1.35 : 1.9) * lightScale));
-    const keyLight = new THREE.DirectionalLight(lightColor, (bagPreview ? 1.6 : 1.15) * lightScale);
-    keyLight.position.set(2.2, 1.8, 2.5);
+    scene.add(new THREE.AmbientLight(0xffffff, (garmentPreview ? 1.9 : bagPreview ? 1.35 : 1.9) * lightScale));
+    const keyLight = new THREE.DirectionalLight(lightColor, (garmentPreview ? 3.0 : bagPreview ? 1.6 : 1.15) * lightScale);
+    keyLight.position.set(garmentPreview ? -3 : 2.2, garmentPreview ? 4 : 1.8, 2.5);
+    if (garmentPreview && renderer.shadowMap) {
+      // A single bounded soft shadow pass adds contact beneath the hood,
+      // pocket and sleeve folds. Other products keep their existing lighting.
+      renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      keyLight.position.set(-90, 120, 110); keyLight.castShadow = true;
+      const reach = Math.max(product.previewModel.height, product.previewModel.width) * .8;
+      Object.assign(keyLight.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach, near: 1, far: 350 });
+      keyLight.shadow.mapSize.set(1024, 1024); keyLight.shadow.normalBias = .14; keyLight.shadow.bias = -.0003;
+    }
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(lightColor, (bagPreview ? .7 : .85) * lightScale);
-    fillLight.position.set(-2.4, 1, -2.2);
+    const fillLight = new THREE.DirectionalLight(lightColor, (garmentPreview ? .65 : bagPreview ? .7 : .85) * lightScale);
+    fillLight.position.set(garmentPreview ? 3 : -2.4, 1, garmentPreview ? 2 : -2.2);
     scene.add(fillLight);
     const rimLight = new THREE.DirectionalLight(0xffffff, .45 * lightScale);
     rimLight.position.set(0, 2.2, -3);
     scene.add(rimLight);
-    const underLight = new THREE.DirectionalLight(lightColor, (bagPreview ? .3 : .55) * lightScale);
+    const underLight = new THREE.DirectionalLight(lightColor, (garmentPreview ? .18 : bagPreview ? .3 : .55) * lightScale);
     underLight.position.set(.5, -2.2, 1.8);
     scene.add(underLight);
 
@@ -686,6 +696,7 @@
       texture.dispose();
       backTexture?.dispose();
       studioTexture?.dispose();
+      if (garmentPreview) keyLight.shadow.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       if (ownsInteractionRegion) interactionRegion.remove();

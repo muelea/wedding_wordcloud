@@ -1,6 +1,7 @@
 'use strict';
 
 const { getProductInformation } = require('./productInformation');
+const { getProductPhotos } = require('./productPhotos');
 
 const { models: PREVIEW_MODELS, adaptations: PREVIEW_ADAPTATIONS = [] } = require('./productPreviewModels.json');
 
@@ -14,8 +15,8 @@ const { shippingRestrictions } = require('./productShipping');
  * preview have been verified here. Existing product identities remain stable.
  * The 2026-10-24 expansion is pinned in productCatalogManifest.json; see
  * docs/print-geometry.md for source evidence and preview limitations.
- * The 2026-10-25 EU fulfillment audit excludes the AU/NZ-only black 50 × 70 cm
- * frame and five US-only colored mugs from every catalog entry point.
+ * EU fulfillment audits exclude the AU/NZ-only black 50 × 70 cm and oak
+ * 61 × 91 cm frames and five US-only colored mugs from every catalog entry point.
  */
 
 const THEMES = Object.freeze([
@@ -466,9 +467,8 @@ const MUG_11 = makeMugProduct({
 const MUG_15 = makeMugProduct({
   key: 'white-glossy-mug-15oz',
   variantId: 4830,
-  productPhoto: '/assets/product-mockups/white-mug-444ml.jpg',
-  // The catalog photo has extra white space below the mug.
-  productPhotoPosition: 'center 20%',
+  productPhoto: '/assets/product-photos/19-1752.jpg',
+  productPhotoFit: 'contain',
   printfileId: 44,
   templateId: 920,
   size: {
@@ -1027,11 +1027,13 @@ function getProduct(key) {
 function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defaultOrientation) {
   const resolvedProduct = resolveProductOrientation(product, orientation);
   if (!resolvedProduct) return null;
+  const productPhotos = getProductPhotos(resolvedProduct);
   return {
     key: resolvedProduct.key,
     familyKey: resolvedProduct.familyKey,
     thumbnail: resolvedProduct.thumbnail,
-    productPhoto: resolvedProduct.productPhoto,
+    productPhoto: productPhotos[0]?.src || resolvedProduct.productPhoto,
+    productPhotos,
     catalogGroup: resolvedProduct.catalogGroup,
     variantLabel: resolvedProduct.variantLabel,
     previewModel: resolvedProduct.previewModel,

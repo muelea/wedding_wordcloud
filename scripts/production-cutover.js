@@ -420,19 +420,24 @@ function verificationSteps(posture, shortSha) {
       args: ['build', '--platform', 'linux/amd64', '--tag', `${APP_NAME}:${shortSha}`, '.'],
     },
     {
-      label: 'Verify uploaded-image pixels and font contracts in the Linux candidate',
+      label: 'Verify print pixels, fonts, text styles and emoji in the Linux candidate',
       command: 'docker',
       args: ['run', '--rm', '--pull=never', '--platform', 'linux/amd64', '--network', 'none', '--read-only',
         '--mount', `type=bind,source=${path.join(ROOT, 'test')},target=/app/test,readonly`,
         `${APP_NAME}:${shortSha}`, 'node', '--test',
-        'test/print-raster.test.js', 'test/design-font-contract.test.js', 'test/design-font-geometry.test.js'],
+        'test/print-raster.test.js', 'test/design-font-contract.test.js', 'test/design-font-geometry.test.js',
+        'test/text-style.test.js', 'test/emoji-rendering.test.js', 'test/emoji.test.js'],
     },
     {
       label: `Validate ${config} strictly`,
       command: 'flyctl',
       args: ['config', 'validate', '--strict', '--config', config, '--app', APP_NAME],
     },
+    { label: 'Verify target schema, pending migrations and restricted runtime access', command: 'node',
+      args: ['scripts/verify-release-database.js', '--before-migrations'], releaseBoundary: true },
     { label: 'Apply ordered database migrations', command: 'npm', args: ['run', 'db:migrate'], releaseBoundary: true },
+    { label: 'Verify the migrated target before deployment', command: 'node',
+      args: ['scripts/verify-release-database.js', '--current'], releaseBoundary: true },
   ];
 }
 

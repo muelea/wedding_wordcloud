@@ -1,0 +1,95 @@
+{
+  "scope": "Local T-shirt, sweatshirt and hoodie 3D preview improvements based on the three supplied front product photographs.",
+  "files": [
+    "public/js/garment-cloth.js",
+    "public/js/mug-3d-viewer.js",
+    "test/garment-cloth.test.js",
+    "test/mug-3d-lifecycle.test.js"
+  ],
+  "rendererSha256": "3dcc558b805c6a4da018c94167236b91aa19ca36ca57741b604844523b351a23",
+  "viewerSha256": "03e088d5a71a4194b295873ce7f63dd4b0e72436e1d4c5ad0713fa845f0f8613",
+  "changes": [
+    "Supplier-style hanging silhouettes and sleeve proportions",
+    "Raised, lined hood with a rounded crown and short tied cords",
+    "7 cm ribbed waistbands, 6.5 cm sleeve cuffs, broader ribbed crew necks",
+    "Shoulder and armhole seams, paired T-shirt hem stitches, pocket topstitch and entry welts",
+    "Physical-scale cotton and rib knit UVs independent of the print template",
+    "Cotton fibre sheen, neutral studio lights, soft contact shadows, highlight compression",
+    "Separate hood cavity occlusion prevents thin-layer shadow bands",
+    "Shadow textures are disposed when the product preview closes"
+  ],
+  "finalChecks": [
+    {
+      "command": "node --test test/garment-cloth.test.js",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "command": "node --test '--test-name-pattern=garment|neutral lighting' test/mug-3d-lifecycle.test.js",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "command": "node --check public/js/garment-cloth.js && node --check public/js/mug-3d-viewer.js",
+      "passed": true
+    },
+    {
+      "command": "git diff --check",
+      "passed": true
+    }
+  ],
+  "neighboringChecks": {
+    "command": "node --test test/mug-3d-lifecycle.test.js test/product-3d-geometry.test.js",
+    "passed": 35,
+    "failed": 0,
+    "scope": "Earlier iteration, before the last garment-only refinements; final garment/viewer checks are listed separately."
+  },
+  "runnerNote": "npm test wrapper later could not create disposable Postgres because the local Docker disk was full. The rendering tests listed here are database-free and were run directly. No hosted database or alternate database was used; Docker data was not deleted.",
+  "visualChecks": [
+    "White M: plain front, printed front and angle, blank reverse",
+    "Black M: plain and printed front",
+    "White M: T-shirt and hood front/side/back detail views",
+    "Browser pull demonstrations for all three garments",
+    "No browser console or shader errors"
+  ],
+  "browserCpuPulls": {
+    "units": "milliseconds, CPU advance and mesh update only; no GPU timing",
+    "tshirt": {
+      "median": 2.3,
+      "p95": 3
+    },
+    "sweatshirt": {
+      "median": 2.5,
+      "p95": 3
+    },
+    "hoodie": {
+      "median": 3.9,
+      "p95": 4.3
+    }
+  },
+  "benchmark": "benchmark.json",
+  "limitations": [
+    "Procedural garment reconstruction from front photographs; unseen reverse folds are inferred, not a product scan.",
+    "Cloth motion remains a supported hanging approximation, not measured fabric simulation.",
+    "No claim of pixel-identical photographic reconstruction."
+  ],
+  "preserved": [
+    "All 38 provider variants and supplier size measurements",
+    "Fixed physical front print dimensions and unprinted reverse",
+    "Receipt, checkout, payment and persistence behavior",
+    "Other product renderers"
+  ],
+  "deployment": "No deployment or push performed.",
+  "captures": [
+    "after-black-front-plain.png",
+    "after-black-front.png",
+    "after-white-angle-plain.png",
+    "after-white-angle.png",
+    "after-white-back-plain.png",
+    "after-white-back.png",
+    "after-white-front-plain.png",
+    "after-white-front.png",
+    "after-white-hoodie-detail-plain.png",
+    "after-white-t-shirt-detail-plain.png"
+  ]
+}

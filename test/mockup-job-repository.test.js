@@ -74,4 +74,25 @@ test('Postgres mockup jobs preserve commands, quota and lease ownership across s
     h.advance(30501);await h.restart().runDue({maxJobs:2});
     assert.equal(h.payloads.length,2);assert.equal(h.payloads[1].mockup_width_px,1000);
   });
+
+  await t.test('Postgres admission reserves time for generation before accepting more work',async()=>{
+    const h=setup(),first=await h.service.createForConfiguration(configuration);
+    const original=await db.getMockupJob(first.jobId);
+    const candidate=()=>{
+      const id=crypto.randomBytes(18).toString('base64url');
+      return {...original,id,requestId:id,cacheKey:crypto.createHash('sha256').update(id).digest('hex')};
+    };
+    for(let index=1;index<39;index++)assert.ok(await db.enqueueMockupJob(candidate()));
+    assert.equal(await db.enqueueMockupJob(candidate()),null);
+    assert.equal(h.payloads.length,0);
+    // Rejoining existing work still succeeds when admission is saturated.
+    assert.equal((await h.restart().createForConfiguration(configuration)).jobId,first.jobId);
+  });
+
+  await t.test('a long persisted provider cooldown prevents doomed new admissions',async()=>{
+    const h=setup(),first=await h.service.createForConfiguration(configuration);
+    await app.query('UPDATE mockup_provider_budgets SET next_create_at=$2 WHERE scope=$1',[h.settings.scope,new Date(h.now()+1200000)]);
+    const original=await db.getMockupJob(first.jobId),id=crypto.randomBytes(18).toString('base64url');
+    assert.equal(await db.enqueueMockupJob({...original,id,requestId:id,cacheKey:crypto.createHash('sha256').update(id).digest('hex')}),null);
+  });
 });

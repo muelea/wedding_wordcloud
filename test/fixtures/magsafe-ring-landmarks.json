@@ -1,0 +1,6 @@
+{
+  "source": "Reviewed local Printful iPhone 16 Pro reference; ring bounds are measured in original image pixels. These calibrate visible band proportions, not manufacturing dimensions.",
+  "photo": "public/assets/product-mockups/catalog-20328.jpg",
+  "outer": [211, 383, 487, 659],
+  "opening": [236, 408, 462, 634]
+}

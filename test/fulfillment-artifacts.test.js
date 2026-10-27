@@ -447,6 +447,7 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     assert.equal(expiredCapability.status, 404, 'an expired capability is unavailable even under support hold');
 
     await hosted.query('UPDATE print_artifacts SET support_hold = false WHERE id = $1', [artifact.id]);
+    await hosted.query("UPDATE retention_deferrals SET next_attempt_at=now() WHERE category='artifacts' AND target_id=$1",[artifact.id]);
     const interrupted = await db.claimExpiredPrintArtifact();
     assert.equal(interrupted.id, artifact.id);
     await hosted.query("UPDATE print_artifacts SET deletion_claimed_at = transaction_timestamp() - interval '6 minutes' WHERE id = $1", [artifact.id]);
@@ -461,6 +462,9 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     response = await run();
     assert.equal(response.status, 200);
     assert.equal((await db.getPrintArtifact(artifact.id)).storage_status, 'delete_failed');
+    const deferred=(await hosted.query("SELECT next_attempt_at FROM retention_deferrals WHERE category='artifacts' AND target_id=$1",[artifact.id])).rows[0];
+    assert.ok(deferred.next_attempt_at>Date.now(),'failed deletion must back off before another provider call');
+    await hosted.query("UPDATE retention_deferrals SET next_attempt_at=now() WHERE category='artifacts' AND target_id=$1",[artifact.id]);
     response = await run();
     assert.equal(response.status, 200);
     assert.equal(await db.getPrintArtifact(artifact.id), null);

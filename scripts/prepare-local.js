@@ -199,6 +199,7 @@ function collectRepositoryAssetPaths(root = ROOT) {
 function validateRepositoryAssets(root = ROOT) {
   const required = [
     path.join('public', 'js', 'mug-3d-viewer.js'),
+    path.join('public', 'js', 'product-photo-preview.js'),
     path.join('public', 'js', 'blanket-cloth.js'),
     path.join('public', 'js', 'garment-cloth.js'),
     path.join('public', 'js', 'printful-product-model.js'),

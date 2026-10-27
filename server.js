@@ -328,6 +328,8 @@ app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
   const event = await db.getEventBySlug(req.params.slug);
   if (!event) return renderPage(req, res, '404', { status: 404 });
   const directDesign = isDirectDesignEvent(event);
+  const editorEntry = Boolean(req.query.edit || req.query.accountDesign ||
+    (req.query.draft && req.query.view !== 'products'));
   return renderPage(req, res, 'configure', {
     eventLocale: event.locale,
     // A configurator document selects a content-addressed layout runtime.
@@ -335,13 +337,13 @@ app.get('/e/:slug/configure', asyncRoute(async (req, res) => {
     cacheControl: 'no-store',
     header: {
       variant: 'back', headerClass: 'topbar', brandId: 'brand-link', backId: 'back-link',
-      backHref: directDesign ? '/' : '#',
-      backLabel: directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
-      backAria: directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
+      backHref: editorEntry ? `/e/${encodeURIComponent(event.slug)}/configure?view=products` : directDesign ? '/' : `/e/${encodeURIComponent(event.slug)}`,
+      backLabel: editorEntry ? 'Zur Produktübersicht' : directDesign ? 'Zur Startseite' : 'Zurück zur Wortwolke',
       mobileMenu: true, mobileBackId: 'mobile-back-link', cartButton: true,
     },
     pageData: {
       directDesign,
+      editorEntry,
       printfulMockupTools: printfulMockups.isOperatorRequest(req),
     },
   });
@@ -353,8 +355,9 @@ app.get('/e/:slug/shipping', asyncRoute(async (req, res) => {
   return renderPage(req, res, 'shipping', {
     eventLocale: event.locale,
     header: {
-      variant: 'back', headerClass: 'topbar', backId: 'back-link', backHref: '#',
-      backLabel: 'Zurück zum Design', backAria: 'Zurück zum Design',
+      variant: 'back', headerClass: 'topbar', backId: 'back-link',
+      backHref: `/e/${encodeURIComponent(event.slug)}/configure?view=products`,
+      backLabel: 'Zur Produktübersicht', backAria: 'Zur Produktübersicht',
       mobileMenu: true, mobileBackId: 'mobile-back-link',
     },
   });

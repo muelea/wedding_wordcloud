@@ -13,6 +13,10 @@ const measureCtx = measureCanvas.getContext('2d');
 
 const DESIGN_SAFE_MARGIN = 24;
 const outlineFonts = new Map();
+// opentype.js handles Latin ligatures, but does not implement Devanagari
+// shaping or general combining-mark positioning. Pango/browser fallback can
+// look correct while those same outlines form different letters in print.
+const UNSUPPORTED_SHAPING = /[\p{Script=Devanagari}\p{Mark}]/u;
 
 function outlineFont(fontKey, weight) {
   const normalizedWeight = weight === 700 ? 700 : 400;
@@ -23,6 +27,26 @@ function outlineFont(fontKey, weight) {
     ));
   }
   return outlineFonts.get(cacheKey);
+}
+
+function unsupportedTextError() {
+  return Object.assign(new Error('Die gewählte Schrift kann diesen Text nicht zuverlässig drucken.'), {
+    code: 'PRINT_TEXT_UNSUPPORTED',
+  });
+}
+
+function assertSupportedPrintText(design) {
+  for (const item of design) {
+    if (item.type === 'image' || item.type === 'icon') continue;
+    const font = outlineFont(item.fontFamily, item.fontWeight);
+    for (const run of WordCloudCore.measureTextBox(item.text, item.fontSize, measureCtx,
+      DesignFonts.cssFamily(item.fontFamily), item).runs) {
+      if (run.type === 'text' && (UNSUPPORTED_SHAPING.test(run.text) ||
+        font.stringToGlyphs(run.text).some(glyph => glyph.index === 0))) {
+        throw unsupportedTextError();
+      }
+    }
+  }
 }
 
 function glyphSymbol(fontKey, weight, font, glyph, symbols) {
@@ -41,11 +65,13 @@ function glyphSymbol(fontKey, weight, font, glyph, symbols) {
  */
 function outlinedTextRun(text, x, baseline, runWidth, fontPx, fontKey, color, item, symbols) {
   if (!String(text).trim()) return '';
+  if (UNSUPPORTED_SHAPING.test(text)) throw unsupportedTextError();
   const weight = item?.fontWeight === 700 ? 700 : 400;
   const font = outlineFont(fontKey, weight);
   const fontScale = fontPx / font.unitsPerEm;
   const uses = [];
   const cursor = font.forEachGlyph(text, 0, 0, fontPx, {}, (glyph, glyphX) => {
+    if (glyph.index === 0) throw unsupportedTextError();
     const id = glyphSymbol(fontKey, weight, font, glyph, symbols);
     if (id) uses.push(`<g transform="translate(${glyphX.toFixed(4)} 0)"><use href="#${id}" ` +
       `transform="scale(${fontScale.toFixed(8)})"/></g>`);
@@ -274,6 +300,7 @@ function buildProviderPrintSvg(product, design) {
 }
 
 module.exports = {
+  assertSupportedPrintText,
   buildProductPrintSvg,
   buildProviderPrintSvg,
   isPrintDesignWithinBounds,

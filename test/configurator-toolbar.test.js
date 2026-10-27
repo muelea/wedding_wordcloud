@@ -28,12 +28,19 @@ async function rendered(locale) {
   return parse(html);
 }
 
-test('the gallery return button sits before product and colour controls in the shared toolbar', async () => {
+test('the shared toolbar starts with product and colour controls without a redundant gallery return button', async () => {
   const page = await rendered('en');
   const controls = nodes(page, node => attr(node, 'class') === 'design-toolbar-controls')[0];
   const children = controls.childNodes.filter(node => node.tagName);
-  assert.equal(attr(children[0], 'data-gallery-back'), '');
-  assert.equal(attr(children[1], 'id'), 'change-product');
+  assert.equal(attr(children[0], 'id'), 'selected-product-control');
+  const info = nodes(children[0], node => attr(node, 'id') === 'product-info')[0];
+  const picker = nodes(children[0], node => attr(node, 'id') === 'change-product')[0];
+  assert.equal(info.tagName, 'button');
+  assert.equal(picker.tagName, 'button');
+  assert.equal(info.parentNode, picker.parentNode, 'details and product switching are separate sibling buttons');
+  assert.equal(attr(info, 'aria-controls'), 'print-preview');
+  assert.equal(attr(picker, 'aria-controls'), 'product-dialog');
+  assert.equal(nodes(controls, node => attr(node, 'data-gallery-back') !== undefined).length, 0);
   assert.ok(children.some(node => attr(node, 'id') === 'theme-step'));
   const intro = nodes(page, node => attr(node, 'class') === 'intro')[0];
   assert.equal(nodes(intro, node => attr(node, 'data-gallery-back') !== undefined).length, 0);

@@ -27,7 +27,7 @@ function deferred() {
 function restoredEntry() {
   return { URLSearchParams, location: { search: '?edit=existing-design' },
     directDesign: false, words: [['Liebe', 1]],
-    WolkenworteProductGallery: require('../public/js/product-gallery') };
+    WolkenworteProductGallery: require('../public/js/product-gallery'), updateProductBackLink() {} };
 }
 
 const messages = [
@@ -36,6 +36,7 @@ const messages = [
   'Warenkorb und Lieferangaben werden geladen…', 'Preise und Lieferung werden geprüft…',
   'Die Zahlungsseite wird geöffnet…', 'Wir warten auf die Zahlungsbestätigung.',
   'Designs werden in den Warenkorb übernommen…', 'Die aktuellen Wörter werden geladen…', 'Eure Wortwolke wird geladen…',
+  'Eure Produktübersicht wird geladen…', 'Eure Produktvorschau wird vorbereitet…', 'Die Produktvorschau wird geladen…',
 ];
 
 test('every new loading state has an explicit translation in every supported language', () => {
@@ -52,13 +53,15 @@ test('every new loading state has an explicit translation in every supported lan
 
 test('both configurator entry paths and shipping render the destination loader in all six languages', async () => {
   for (const locale of ['de', 'en', 'fr', 'it', 'es', 'tr']) {
-    for (const [view, directDesign, source] of [
-      ['configure', false, messages[0]], ['configure', true, messages[0]], ['shipping', false, messages[6]],
+    for (const [view, directDesign, source, editorEntry] of [
+      ['configure', false, 'Eure Produktübersicht wird geladen…', false],
+      ['configure', true, 'Eure Produktübersicht wird geladen…', false],
+      ['configure', false, messages[0], true], ['shipping', false, messages[6], false],
     ]) {
       let html;
       await renderPage({ query: { lang: locale }, headers: {}, originalUrl: '/' }, {
         cookie() {}, status() {}, set() {}, vary() {}, send(value) { html = value; },
-      }, view, { pageData: { directDesign } });
+      }, view, { pageData: { directDesign, editorEntry } });
       const loader = html.match(/<div class="loading"[\s\S]*?<\/div>/)?.[0];
       assert.ok(loader.includes(translate(source, locale)), `${locale}/${view}/${directDesign}`);
       assert.match(loader, /role="status"/);
@@ -136,7 +139,7 @@ test('configurator progress survives cart refreshes and resets both button and w
   const statuses = [element(), element()];
   const scope = vm.createContext({
     document: { querySelectorAll: selector => selector === '[data-configurator-progress]' ? statuses : [] },
-    saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(),
+    saveDesignButton: element(), continueOrderButton: element(), continueOrderLabel: element(), designAnotherButton: element(), productInfoButton: element(),
     checkoutPanel: { setAttribute() {} }, content: { querySelectorAll: () => [] }, orderList: { querySelectorAll: () => [] },
     loadOrderItems: () => [{ id: 'a'.repeat(16) }], editingOrderItemId: null,
     directDesign: false, words: [['liebe', 1]], updateCloudNotice() {},

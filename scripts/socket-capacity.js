@@ -156,7 +156,7 @@ async function seedFixtures(pool, options, runId) {
         slug, title, organizer_pin_hash, organizer_pin_salt, locale, created_at, expires_at
       )
       SELECT fixture.slug, 'Socket Capacity ' || fixture.room_index,
-             $2, $3, 'de', transaction_timestamp(), transaction_timestamp() + interval '365 days'
+             $2, $3, 'de', transaction_timestamp(), transaction_timestamp() + interval '3 months'
       FROM fixture JOIN reserved USING (slug)
       ORDER BY fixture.room_index
       RETURNING id, slug

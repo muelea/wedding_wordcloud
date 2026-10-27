@@ -1,0 +1,34 @@
+{
+  "rendererSha256": "11d840d0828648a4d80ccc4b0844cf748b6dc8827f31514e1686ae0e6184e27d",
+  "visualBaselineSha256": "64fc9372f32200a6e8e88c4a80f4ccdbff6f66705d5fbefd9fda9b89a52b3819",
+  "benchmarkBaselineGitBlob": "07a72e04d1b7125133926ed9dd6e0ba38c970259",
+  "checks": [
+    {
+      "command": "npm test -- '--test-name-pattern=clothing|garment|cloth|sewn|extreme|every size|T-shirt|folded hood' test/garment-cloth.test.js test/mug-3d-lifecycle.test.js",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "command": "git diff --check",
+      "passed": true
+    },
+    {
+      "command": "node --check public/js/garment-cloth.js",
+      "passed": true
+    }
+  ],
+  "visualChecks": [
+    "M white: all garments front",
+    "M white plain: hood front, side and back, with fold close-ups",
+    "M white plain: T-shirt front, side and back",
+    "M black: all garments front",
+    "No browser console or shader errors"
+  ],
+  "unchanged": [
+    "Blanket renderer",
+    "Provider variant identities and measurements",
+    "Physical print UV contract"
+  ],
+  "benchmark": "benchmark.json",
+  "benchmarkScope": "CPU cloth simulation and mesh updates; GPU frame rate is not measured."
+}

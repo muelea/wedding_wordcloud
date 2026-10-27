@@ -14,7 +14,8 @@ const CUSTOMS_NOTICE = 'Bei Lieferungen in bestimmte Länder können zusätzlich
  * Test and live credentials are separate. Live mode is rejected unless the
  * dedicated payment mode and live safety gate both select it. No static Stripe
  * Price is needed: every
- * Checkout Session gets the revalidated net products and shipping in cents.
+ * Checkout Session gets frozen unit prices and shipping in cents, with the
+ * tax behavior selected for the validated delivery country.
  */
 
 let stripeClient = null;
@@ -76,6 +77,9 @@ function freezeProduct(product) {
       plural: String(product.unit?.plural || 'Produkte'),
     },
     size: { label: String(product.size?.label || '') },
+    // Pin the category with new orders. Older frozen requests keep their
+    // original generic category and identical idempotent retry payload.
+    ...(product.familyKey === 'clothing' ? { taxCode: 'txcd_30011000' } : {}),
   };
 }
 
@@ -280,7 +284,8 @@ async function createCheckoutSession({
         product_data: {
           name: I18n.translate(basket[index].product.name, checkoutLocale),
           description: I18n.translate(basket[index].product.size.label, checkoutLocale),
-          tax_code: 'txcd_99999999', metadata: { configurationId: item.configurationId },
+          tax_code: basket[index].product.taxCode || 'txcd_99999999',
+          metadata: { configurationId: item.configurationId },
         },
       } })) : [{ quantity: 1, price_data: {
         currency, unit_amount: order.items_cents, tax_behavior: 'exclusive',

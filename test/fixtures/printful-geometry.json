@@ -1722,26 +1722,6 @@
       "verifiedAt": "2026-10-25"
     },
     {
-      "productKey": "framed-poster-11793",
-      "productId": 304,
-      "variant": {
-        "variant_id": 11793,
-        "placements": {
-          "default": 39
-        }
-      },
-      "printfile": {
-        "printfile_id": 39,
-        "width": 10800,
-        "height": 7200,
-        "dpi": 300,
-        "fill_mode": "cover",
-        "can_rotate": true
-      },
-      "previews": [],
-      "verifiedAt": "2026-10-25"
-    },
-    {
       "productKey": "framed-poster-10299",
       "productId": 304,
       "variant": {

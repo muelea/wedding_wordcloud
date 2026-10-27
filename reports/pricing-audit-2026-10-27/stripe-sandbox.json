@@ -1,0 +1,214 @@
+{
+  "startedAt": "2026-10-27T17:18:24.843Z",
+  "mode": "Stripe sandbox; unpaid, expired Sessions; read-only Printful estimates",
+  "scenarios": [
+    {
+      "name": "DE 20 groups and pagination",
+      "country": "DE",
+      "products": [
+        "white-glossy-mug-20oz",
+        "cork-back-coaster",
+        "matte-poster-8954",
+        "framed-poster-10299",
+        "all-over-tote-8905",
+        "throw-blanket-30x40in",
+        "all-over-basic-pillow-11075",
+        "spiral-notebook-dotted",
+        "colored-mug-17199",
+        "mouse-pad",
+        "laptop-sleeve-10985",
+        "canvas-19330",
+        "water-bottle-16030",
+        "steel-tumbler-15004",
+        "enamel-mug",
+        "travel-mug-19514",
+        "wine-tumbler",
+        "eco-tote-10457",
+        "tough-case-52386",
+        "tough-case-53190"
+      ],
+      "quantity": 21,
+      "itemsCents": 87423,
+      "shippingCents": 34589,
+      "shippingSupplierCents": 27741,
+      "taxCents": 19481,
+      "shippingTaxCents": 5523,
+      "totalCents": 122012,
+      "taxBehavior": "inclusive",
+      "plannedFeeCents": 4552,
+      "reserveCents": 5591,
+      "feeBudgetDifferenceCents": 1039
+    },
+    {
+      "name": "DE remaining groups and clothing",
+      "country": "DE",
+      "products": [
+        "tough-case-49328",
+        "framed-canvas-15700",
+        "thin-canvas-15706",
+        "t-shirt-17236",
+        "sweatshirt-12589",
+        "hoodie-12376"
+      ],
+      "quantity": 7,
+      "itemsCents": 49379,
+      "shippingCents": 5793,
+      "shippingSupplierCents": 4605,
+      "taxCents": 8809,
+      "shippingTaxCents": 924,
+      "totalCents": 55172,
+      "taxBehavior": "inclusive",
+      "plannedFeeCents": 2085,
+      "reserveCents": 2431,
+      "feeBudgetDifferenceCents": 346
+    },
+    {
+      "name": "FR mixed cart",
+      "country": "FR",
+      "products": [
+        "white-glossy-mug-duo-11oz",
+        "matte-poster-30x40cm",
+        "t-shirt-53681",
+        "sweatshirt-12605",
+        "hoodie-12402"
+      ],
+      "quantity": 6,
+      "itemsCents": 14768,
+      "shippingCents": 2276,
+      "shippingSupplierCents": 2127,
+      "taxCents": 3409,
+      "shippingTaxCents": 455,
+      "totalCents": 20453,
+      "taxBehavior": "exclusive",
+      "plannedFeeCents": 804,
+      "reserveCents": 1094,
+      "feeBudgetDifferenceCents": 290
+    },
+    {
+      "name": "HU mixed cart",
+      "country": "HU",
+      "products": [
+        "white-glossy-mug-duo-11oz",
+        "matte-poster-30x40cm",
+        "t-shirt-53681",
+        "sweatshirt-12605",
+        "hoodie-12402"
+      ],
+      "quantity": 6,
+      "itemsCents": 14768,
+      "shippingCents": 2276,
+      "shippingSupplierCents": 2127,
+      "taxCents": 4602,
+      "shippingTaxCents": 615,
+      "totalCents": 21646,
+      "taxBehavior": "exclusive",
+      "plannedFeeCents": 848,
+      "reserveCents": 1094,
+      "feeBudgetDifferenceCents": 246
+    },
+    {
+      "name": "IE mixed cart",
+      "country": "IE",
+      "products": [
+        "white-glossy-mug-duo-11oz",
+        "matte-poster-30x40cm",
+        "t-shirt-53681",
+        "sweatshirt-12605",
+        "hoodie-12402"
+      ],
+      "quantity": 6,
+      "itemsCents": 14768,
+      "shippingCents": 2276,
+      "shippingSupplierCents": 2127,
+      "taxCents": 3920,
+      "shippingTaxCents": 523,
+      "totalCents": 20964,
+      "taxBehavior": "exclusive",
+      "plannedFeeCents": 823,
+      "reserveCents": 1094,
+      "feeBudgetDifferenceCents": 271
+    },
+    {
+      "name": "GB mixed cart",
+      "country": "GB",
+      "products": [
+        "white-glossy-mug-duo-11oz",
+        "matte-poster-30x40cm",
+        "t-shirt-53681",
+        "sweatshirt-12605",
+        "hoodie-12402"
+      ],
+      "quantity": 6,
+      "itemsCents": 14768,
+      "shippingCents": 2209,
+      "shippingSupplierCents": 2063,
+      "taxCents": 3395,
+      "shippingTaxCents": 442,
+      "totalCents": 20372,
+      "taxBehavior": "exclusive",
+      "plannedFeeCents": 801,
+      "reserveCents": 1091,
+      "feeBudgetDifferenceCents": 290
+    },
+    {
+      "name": "US mixed cart",
+      "country": "US",
+      "products": [
+        "white-glossy-mug-duo-11oz",
+        "matte-poster-30x40cm",
+        "t-shirt-53681",
+        "sweatshirt-12605",
+        "hoodie-12402"
+      ],
+      "quantity": 6,
+      "itemsCents": 14768,
+      "shippingCents": 2830,
+      "shippingSupplierCents": 2656,
+      "taxCents": 0,
+      "shippingTaxCents": 0,
+      "totalCents": 17598,
+      "taxBehavior": "exclusive",
+      "plannedFeeCents": 699,
+      "reserveCents": 1119,
+      "feeBudgetDifferenceCents": 420
+    },
+    {
+      "name": "HU high-price fee budget",
+      "country": "HU",
+      "products": [
+        "canvas-19328"
+      ],
+      "quantity": 1,
+      "itemsCents": 19750,
+      "shippingCents": 5594,
+      "shippingSupplierCents": 5299,
+      "taxCents": 6843,
+      "shippingTaxCents": 1510,
+      "totalCents": 32187,
+      "taxBehavior": "exclusive",
+      "plannedFeeCents": 1237,
+      "reserveCents": 1212,
+      "feeBudgetDifferenceCents": -25
+    }
+  ],
+  "taxStatus": "active",
+  "registrations": [
+    {
+      "country": "GB",
+      "options": {
+        "gb": {
+          "type": "standard"
+        }
+      }
+    },
+    {
+      "country": "DE",
+      "options": {
+        "de": {
+          "type": "oss_union"
+        }
+      }
+    }
+  ],
+  "completedAt": "2026-10-27T17:18:48.650Z"
+}

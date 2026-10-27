@@ -1,0 +1,69 @@
+{
+  "description": "CPU cloth advance, including render-mesh position and normal updates; excludes WebGL draw/GPU time. Same M white products, 60 Hz input, 1 warm-up and 3 measured 90-frame demonstrations per version. Static previews do no animation work.",
+  "node": "v25.2.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "cpu": "Apple M1",
+  "results": [
+    {
+      "kind": "t-shirt",
+      "before": {
+        "setupMedianMs": 11.863875000000007,
+        "firstGrabMedianMs": 0.01945900000009715,
+        "frameMedianMs": 6.699958999999922,
+        "frameP95Ms": 10.919957999999951,
+        "particles": 2966,
+        "triangles": 5760
+      },
+      "after": {
+        "setupMedianMs": 4.044750000000022,
+        "firstGrabMedianMs": 8.224708000000192,
+        "frameMedianMs": 1.782709000000068,
+        "frameP95Ms": 1.924916999999823,
+        "particles": 2852,
+        "triangles": 5568
+      },
+      "frameSpeedup": 3.7583021121224305
+    },
+    {
+      "kind": "sweatshirt",
+      "before": {
+        "setupMedianMs": 12.079334000000017,
+        "firstGrabMedianMs": 0.021000000000640284,
+        "frameMedianMs": 7.843708000000333,
+        "frameP95Ms": 12.989292000000205,
+        "particles": 3542,
+        "triangles": 6912
+      },
+      "after": {
+        "setupMedianMs": 4.943790999999692,
+        "firstGrabMedianMs": 7.185833000000457,
+        "frameMedianMs": 1.9977499999995416,
+        "frameP95Ms": 2.0786669999997684,
+        "particles": 3236,
+        "triangles": 6336
+      },
+      "frameSpeedup": 3.926271054937872
+    },
+    {
+      "kind": "hoodie",
+      "before": {
+        "setupMedianMs": 24.931542000000263,
+        "firstGrabMedianMs": 0.021125000001120497,
+        "frameMedianMs": 12.190667000000758,
+        "frameP95Ms": 19.385040999999546,
+        "particles": 5312,
+        "triangles": 10232
+      },
+      "after": {
+        "setupMedianMs": 9.45129199999974,
+        "firstGrabMedianMs": 9.807290999999168,
+        "frameMedianMs": 2.694959000000381,
+        "frameP95Ms": 2.805833000000348,
+        "particles": 4290,
+        "triangles": 8312
+      },
+      "frameSpeedup": 4.523507407719017
+    }
+  ]
+}

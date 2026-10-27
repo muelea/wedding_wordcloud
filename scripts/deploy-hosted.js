@@ -177,10 +177,18 @@ function releaseSteps(shortSha) {
       args: ['config', 'validate', '--strict', '--config', 'fly.toml', '--app', APP_NAME],
     },
     {
+      label: 'Zielschema und eingeschränkte Laufzeitrechte prüfen',
+      command: 'node', args: ['scripts/verify-release-database.js', '--before-migrations'], releaseBoundary: true,
+    },
+    {
       label: 'Datenbankmigrationen anwenden',
       command: 'npm',
       args: ['run', 'db:migrate'],
       releaseBoundary: true,
+    },
+    {
+      label: 'Migriertes Zielschema vor Deployment prüfen',
+      command: 'node', args: ['scripts/verify-release-database.js', '--current'], releaseBoundary: true,
     },
     {
       label: 'Freigegebenes Image zu Fly deployen',

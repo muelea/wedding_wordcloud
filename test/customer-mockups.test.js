@@ -4,6 +4,35 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
+test('cart status uses one event-bound snapshot when a job completes during polling', async t => {
+  const db = require('../src/db');
+  const mockups = require('../src/printfulMockups');
+  const {makeRouter} = require('../src/routes/events');
+  const jobId='j'.repeat(24),configurationId='c'.repeat(16),now=Date.now();
+  const pending={id:jobId,scope:'a'.repeat(64),mode:'customer',eventId:1,configurationId,
+    configurationIds:[configurationId],status:'pending',expiresAt:now+60000,nextAt:now,
+    sourceObjectKeys:[],items:[{configurationId,mockups:[]}],mockups:[]};
+  const completed={...pending,status:'completed',items:[{configurationId,
+    mockups:[{url:'https://printful.com/example.png',surfaceKey:'default'}]}]};
+  let reads=0;
+  t.mock.method(db,'getEventBySlug',async()=>({id:1}));
+  t.mock.method(db,'getMockupJob',async()=>structuredClone(++reads===1?pending:completed));
+  const service=mockups.createService({scope:'a'.repeat(64),autoStart:false});
+  t.mock.method(mockups,'getJob',(...args)=>service.getJob(...args));
+  const handler=makeRouter({io:{},port:0}).stack.find(layer=>
+    layer.route?.path==='/events/:slug/cart/mockups'&&layer.route.methods.get).route.stack[0].handle;
+  const request={params:{slug:'A'.repeat(22)},query:{jobs:jobId},headers:{},socket:{remoteAddress:'127.0.0.1'}};
+  const poll=()=>new Promise((resolve,reject)=>handler(request,{
+    set(){return this;},status(){return this;},json:resolve,
+  },reject));
+  const first=await poll();
+  assert.equal(reads,1);assert.equal(first.jobs[0].status,'pending');
+  const second=await poll();
+  assert.equal(reads,2);assert.equal(second.jobs[0].status,'completed');
+  assert.equal(second.jobs[0].items[0].mockups.length,1);
+  await assert.rejects(service.getJob(jobId,{event_id:2}),error=>error.status===404);
+});
+
 test('customer mockup endpoints use saved event designs with durable tracking but without paid artifacts or operator access', async t => {
   const { baseUrl, query, close } = await startTestServer();
   t.after(close);
@@ -69,7 +98,7 @@ test('customer mockup endpoints use saved event designs with durable tracking bu
   assert.equal(result.status, 'completed');
   assert.deepEqual(Object.keys(result).sort(), ['attempt', 'errorCode', 'expiresAt', 'jobId', 'mockups', 'nextAttemptAt', 'retryAfter', 'status']);
   assert.deepEqual(result.mockups, [{ url: 'https://printful-upload.s3-accelerate.amazonaws.com/tmp/preview.png' }]);
-  assert.deepEqual(removed, uploaded);
+  assert.equal(removed.length, 0, 'the same private PNG is retained for production');
   await fetch(url, { method: 'POST', headers });
   assert.equal(providerCreates, 1, 'a repeated request reuses the saved design job');
   assert.equal((await query('SELECT count(*)::int AS n FROM orders')).rows[0].n, 0);
@@ -85,7 +114,7 @@ test('customer mockup endpoints use saved event designs with durable tracking bu
   assert.equal(busy.status, 429);
   assert.equal(busy.headers.get('retry-after'), '40');
   assert.deepEqual(await busy.json(), { error: 'mockup_rate_limited', retryAfter: 40 });
-  await query('UPDATE events SET created_at = now() - interval \'366 days\' WHERE slug = $1', [event.slug]);
+  await query('UPDATE events SET updated_at = now() - interval \'4 months\' WHERE slug = $1', [event.slug]);
   assert.equal((await fetch(url, { method: 'POST', headers })).status, 404);
   assert.equal((await fetch(`${url}/${job.jobId}`)).status, 404);
 });

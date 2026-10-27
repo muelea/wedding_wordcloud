@@ -1,0 +1,5896 @@
+[
+  {
+    "key": "white-glossy-mug-duo-11oz",
+    "group": "mug",
+    "name": "Weiße Tasse",
+    "variantLabel": "325 ml",
+    "printful": {
+      "productId": 19,
+      "variantId": 1320,
+      "printfileId": 43,
+      "templateId": 919,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "white-glossy-mug-15oz",
+    "group": "mug",
+    "name": "Weiße Tasse",
+    "variantLabel": "444 ml",
+    "printful": {
+      "productId": 19,
+      "variantId": 4830,
+      "printfileId": 44,
+      "templateId": 920,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "white-glossy-mug-20oz",
+    "group": "mug",
+    "name": "Weiße Tasse",
+    "variantLabel": "591 ml",
+    "printful": {
+      "productId": 19,
+      "variantId": 16586,
+      "printfileId": 426,
+      "templateId": 181779,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "cork-back-coaster",
+    "group": "coaster",
+    "name": "Kork-Untersetzer",
+    "variantLabel": "95 × 95 mm",
+    "printful": {
+      "productId": 611,
+      "variantId": 15662,
+      "printfileId": 358,
+      "templateId": 133922,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "matte-poster-30x40cm",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "30 × 40 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 8948,
+      "printfileId": 153,
+      "templateId": 21395,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "matte-poster-50x70cm",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "50 × 70 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 8952,
+      "printfileId": 113,
+      "templateId": 21396,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-matte-poster-black-30x40cm",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "30 × 40 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 9357,
+      "printfileId": 15,
+      "templateId": 273627,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "all-over-tote-black-handles",
+    "group": "tote",
+    "name": "Tragetasche",
+    "variantLabel": "39 × 39 cm · Schwarz",
+    "printful": {
+      "productId": 84,
+      "variantId": 4533,
+      "printfileId": 6,
+      "templateId": 1204,
+      "placements": [
+        "default"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "black"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "throw-blanket-50x60in",
+    "group": "blanket",
+    "name": "Kuscheldecke",
+    "variantLabel": "127 × 153 cm",
+    "printful": {
+      "productId": 395,
+      "variantId": 10986,
+      "printfileId": 208,
+      "templateId": 19414,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "all-over-basic-pillow-18in",
+    "group": "pillow",
+    "name": "Dekokissen",
+    "variantLabel": "46 × 46 cm",
+    "printful": {
+      "productId": 83,
+      "variantId": 4532,
+      "printfileId": 32,
+      "templateId": 22667,
+      "placements": [
+        "front",
+        "back"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "white"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "spiral-notebook-dotted",
+    "group": "notebook",
+    "name": "Spiral-Notizbuch",
+    "variantLabel": "14,5 × 21 cm",
+    "printful": {
+      "productId": 474,
+      "variantId": 12141,
+      "printfileId": 242,
+      "templateId": 63186,
+      "placements": [
+        "front",
+        "back"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "matte-poster-8947",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "21 × 30 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 8947,
+      "printfileId": 106,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "matte-poster-19516",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "A2 · 42 × 59,4 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 19516,
+      "printfileId": 624,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-11791",
+    "group": "framed-poster",
+    "name": "Poster im Eichenrahmen",
+    "variantLabel": "30 × 40 cm · Eiche",
+    "printful": {
+      "productId": 304,
+      "variantId": 11791,
+      "printfileId": 15,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-10297",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "30 × 40 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 10297,
+      "printfileId": 15,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-11792",
+    "group": "framed-poster",
+    "name": "Poster im Eichenrahmen",
+    "variantLabel": "50 × 70 cm · Eiche",
+    "printful": {
+      "productId": 304,
+      "variantId": 11792,
+      "printfileId": 113,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-10298",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "50 × 70 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 10298,
+      "printfileId": 113,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "all-over-tote-8904",
+    "group": "tote",
+    "name": "Tragetasche",
+    "variantLabel": "39 × 39 cm · Rot",
+    "printful": {
+      "productId": 84,
+      "variantId": 8904,
+      "printfileId": 6,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "black"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "all-over-tote-8905",
+    "group": "tote",
+    "name": "Tragetasche",
+    "variantLabel": "39 × 39 cm · Gelb",
+    "printful": {
+      "productId": 84,
+      "variantId": 8905,
+      "printfileId": 6,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "black"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "all-over-basic-pillow-49853",
+    "group": "pillow",
+    "name": "Dekokissen",
+    "variantLabel": "36 × 36 cm",
+    "printful": {
+      "productId": 83,
+      "variantId": 49853,
+      "printfileId": 1701,
+      "templateId": null,
+      "placements": [
+        "front",
+        "back"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "white"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "all-over-basic-pillow-49854",
+    "group": "pillow",
+    "name": "Dekokissen",
+    "variantLabel": "41 × 41 cm",
+    "printful": {
+      "productId": 83,
+      "variantId": 49854,
+      "printfileId": 1702,
+      "templateId": null,
+      "placements": [
+        "front",
+        "back"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "white"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "all-over-basic-pillow-9513",
+    "group": "pillow",
+    "name": "Dekokissen",
+    "variantLabel": "51 × 30 cm",
+    "printful": {
+      "productId": 83,
+      "variantId": 9513,
+      "printfileId": 72,
+      "templateId": null,
+      "placements": [
+        "front",
+        "back"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "white"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "all-over-basic-pillow-11075",
+    "group": "pillow",
+    "name": "Dekokissen",
+    "variantLabel": "56 × 56 cm",
+    "printful": {
+      "productId": 83,
+      "variantId": 11075,
+      "printfileId": 214,
+      "templateId": null,
+      "placements": [
+        "front",
+        "back"
+      ],
+      "options": [
+        {
+          "id": "stitch_color",
+          "value": "white"
+        }
+      ],
+      "technique": "cut-sew"
+    }
+  },
+  {
+    "key": "throw-blanket-30x40in",
+    "group": "blanket",
+    "name": "Kuscheldecke",
+    "variantLabel": "76 × 102 cm",
+    "printful": {
+      "productId": 395,
+      "variantId": 22609,
+      "printfileId": 1034,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-11051",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "325 ml · Schwarz",
+    "printful": {
+      "productId": 403,
+      "variantId": 11051,
+      "printfileId": 43,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-17196",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "444 ml · Schwarz",
+    "printful": {
+      "productId": 403,
+      "variantId": 17196,
+      "printfileId": 44,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-11050",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "325 ml · Blau",
+    "printful": {
+      "productId": 403,
+      "variantId": 11050,
+      "printfileId": 43,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-17197",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "444 ml · Blau",
+    "printful": {
+      "productId": 403,
+      "variantId": 17197,
+      "printfileId": 44,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-22373",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "444 ml · Dunkelblau",
+    "printful": {
+      "productId": 403,
+      "variantId": 22373,
+      "printfileId": 44,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-12579",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "325 ml · Orange",
+    "printful": {
+      "productId": 403,
+      "variantId": 12579,
+      "printfileId": 43,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-12578",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "325 ml · Rosa",
+    "printful": {
+      "productId": 403,
+      "variantId": 12578,
+      "printfileId": 43,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-11049",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "325 ml · Rot",
+    "printful": {
+      "productId": 403,
+      "variantId": 11049,
+      "printfileId": 43,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-17200",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "444 ml · Rot",
+    "printful": {
+      "productId": 403,
+      "variantId": 17200,
+      "printfileId": 44,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-11048",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "325 ml · Gelb",
+    "printful": {
+      "productId": 403,
+      "variantId": 11048,
+      "printfileId": 43,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "colored-mug-17199",
+    "group": "colored-mug",
+    "name": "Tasse mit farbiger Innenseite",
+    "variantLabel": "444 ml · Rosa",
+    "printful": {
+      "productId": 403,
+      "variantId": 17199,
+      "printfileId": 44,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "mouse-pad",
+    "group": "mousepad",
+    "name": "Mauspad",
+    "variantLabel": "22 × 18 cm",
+    "printful": {
+      "productId": 518,
+      "variantId": 13097,
+      "printfileId": 265,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "laptop-sleeve-10984",
+    "group": "sleeve",
+    "name": "Laptophülle",
+    "variantLabel": "13″ · 34,3 × 26,7 cm",
+    "printful": {
+      "productId": 394,
+      "variantId": 10984,
+      "printfileId": 206,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "laptop-sleeve-10985",
+    "group": "sleeve",
+    "name": "Laptophülle",
+    "variantLabel": "15″ · 37,3 × 28,5 cm",
+    "printful": {
+      "productId": 394,
+      "variantId": 10985,
+      "printfileId": 207,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "canvas-12x16in",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "30,5 × 40,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 5,
+      "printfileId": 46,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "water-bottle-10798",
+    "group": "bottle",
+    "name": "Edelstahl-Trinkflasche",
+    "variantLabel": "500 ml · Weiß",
+    "printful": {
+      "productId": 382,
+      "variantId": 10798,
+      "printfileId": 192,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "uv"
+    }
+  },
+  {
+    "key": "water-bottle-16030",
+    "group": "bottle",
+    "name": "Edelstahl-Trinkflasche",
+    "variantLabel": "500 ml · Schwarz",
+    "printful": {
+      "productId": 382,
+      "variantId": 16030,
+      "printfileId": 192,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "uv"
+    }
+  },
+  {
+    "key": "steel-tumbler-15005",
+    "group": "steel-tumbler",
+    "name": "Edelstahlbecher mit Strohhalm",
+    "variantLabel": "600 ml · Weiß",
+    "printful": {
+      "productId": 585,
+      "variantId": 15005,
+      "printfileId": 309,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "uv"
+    }
+  },
+  {
+    "key": "steel-tumbler-15004",
+    "group": "steel-tumbler",
+    "name": "Edelstahlbecher mit Strohhalm",
+    "variantLabel": "600 ml · Schwarz",
+    "printful": {
+      "productId": 585,
+      "variantId": 15004,
+      "printfileId": 309,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "uv"
+    }
+  },
+  {
+    "key": "enamel-mug",
+    "group": "enamel",
+    "name": "Emaille-Tasse",
+    "variantLabel": "355 ml",
+    "printful": {
+      "productId": 407,
+      "variantId": 11189,
+      "printfileId": 215,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "travel-mug-16440",
+    "group": "travel",
+    "name": "Reisebecher mit Henkel",
+    "variantLabel": "739 ml",
+    "printful": {
+      "productId": 663,
+      "variantId": 16440,
+      "printfileId": 44,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "travel-mug-19514",
+    "group": "travel",
+    "name": "Reisebecher mit Henkel",
+    "variantLabel": "1183 ml",
+    "printful": {
+      "productId": 663,
+      "variantId": 19514,
+      "printfileId": 618,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "wine-tumbler",
+    "group": "wine",
+    "name": "Weinbecher",
+    "variantLabel": "355 ml",
+    "printful": {
+      "productId": 632,
+      "variantId": 16046,
+      "printfileId": 383,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "uv"
+    }
+  },
+  {
+    "key": "eco-tote-10458",
+    "group": "eco-tote",
+    "name": "Bio-Baumwolltasche",
+    "variantLabel": "Natur",
+    "printful": {
+      "productId": 367,
+      "variantId": 10458,
+      "printfileId": 5,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "eco-tote-10457",
+    "group": "eco-tote",
+    "name": "Bio-Baumwolltasche",
+    "variantLabel": "Schwarz",
+    "printful": {
+      "productId": 367,
+      "variantId": 10457,
+      "printfileId": 5,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "tough-case-20308",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 20308,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20304",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 20304,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33991",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 33991,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33987",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 33987,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20328",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20328,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20329",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20329,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34006",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 34006,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34005",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 34005,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-21474",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S25 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 21474,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-21473",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S25 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 21473,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-49331",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S26 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 49331,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-49329",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S26 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 49329,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "matte-poster-19515",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "A1 · 59,4 × 84,1 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 19515,
+      "printfileId": 621,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "matte-poster-8953",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "61 × 91 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 8953,
+      "printfileId": 155,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "matte-poster-8954",
+    "group": "poster",
+    "name": "Mattes Poster",
+    "variantLabel": "70 × 100 cm",
+    "printful": {
+      "productId": 268,
+      "variantId": 8954,
+      "printfileId": 115,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19644",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "30 × 45 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 19644,
+      "printfileId": 17,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19645",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "40 × 50 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 19645,
+      "printfileId": 41,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19646",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "45 × 61 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 19646,
+      "printfileId": 38,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19642",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "A1 · 59,4 × 84,1 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 19642,
+      "printfileId": 621,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19643",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "A2 · 42 × 59,4 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 19643,
+      "printfileId": 624,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19652",
+    "group": "framed-poster",
+    "name": "Poster im Eichenrahmen",
+    "variantLabel": "A1 · 59,4 × 84,1 cm · Eiche",
+    "printful": {
+      "productId": 304,
+      "variantId": 19652,
+      "printfileId": 621,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19653",
+    "group": "framed-poster",
+    "name": "Poster im Eichenrahmen",
+    "variantLabel": "A2 · 42 × 59,4 cm · Eiche",
+    "printful": {
+      "productId": 304,
+      "variantId": 19653,
+      "printfileId": 624,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19649",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "30 × 45 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 19649,
+      "printfileId": 17,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19650",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "40 × 50 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 19650,
+      "printfileId": 41,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19647",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "A1 · 59,4 × 84,1 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 19647,
+      "printfileId": 621,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-19648",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "A2 · 42 × 59,4 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 19648,
+      "printfileId": 624,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-9356",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "21 × 30 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 9356,
+      "printfileId": 106,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-11790",
+    "group": "framed-poster",
+    "name": "Poster im Eichenrahmen",
+    "variantLabel": "21 × 30 cm · Eiche",
+    "printful": {
+      "productId": 304,
+      "variantId": 11790,
+      "printfileId": 106,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-10296",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "21 × 30 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 10296,
+      "printfileId": 106,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-9359",
+    "group": "framed-poster",
+    "name": "Gerahmtes Poster",
+    "variantLabel": "61 × 91 cm · Schwarz",
+    "printful": {
+      "productId": 304,
+      "variantId": 9359,
+      "printfileId": 39,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-11793",
+    "group": "framed-poster",
+    "name": "Poster im Eichenrahmen",
+    "variantLabel": "61 × 91 cm · Eiche",
+    "printful": {
+      "productId": 304,
+      "variantId": 11793,
+      "printfileId": 39,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-poster-10299",
+    "group": "framed-poster",
+    "name": "Poster im weißen Rahmen",
+    "variantLabel": "61 × 91 cm · Weiß",
+    "printful": {
+      "productId": 304,
+      "variantId": 10299,
+      "printfileId": 39,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19291",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "15,2 × 15,2 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19291,
+      "printfileId": 540,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19292",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "20,3 × 20,3 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19292,
+      "printfileId": 541,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19293",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "20,3 × 25,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19293,
+      "printfileId": 495,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19294",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "20,3 × 30,5 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19294,
+      "printfileId": 554,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19295",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "22,9 × 30,5 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19295,
+      "printfileId": 497,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19296",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "25,4 × 25,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19296,
+      "printfileId": 542,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19297",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "25,4 × 50,8 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19297,
+      "printfileId": 558,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19298",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "27,9 × 35,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19298,
+      "printfileId": 499,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-823",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "30,5 × 30,5 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 823,
+      "printfileId": 51,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19299",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "30,5 × 45,7 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19299,
+      "printfileId": 501,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19300",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "30,5 × 61 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19300,
+      "printfileId": 562,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19301",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "30,5 × 91,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19301,
+      "printfileId": 564,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19302",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "35,6 × 35,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19302,
+      "printfileId": 543,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-824",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "40,6 × 40,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 824,
+      "printfileId": 52,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-6",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "40,6 × 50,8 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 6,
+      "printfileId": 48,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19303",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "40,6 × 61 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19303,
+      "printfileId": 568,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19304",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "40,6 × 81,3 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19304,
+      "printfileId": 574,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19305",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "40,6 × 121,9 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19305,
+      "printfileId": 577,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19306",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "45,7 × 45,7 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19306,
+      "printfileId": 544,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-7",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "45,7 × 61 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 7,
+      "printfileId": 50,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19307",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "45,7 × 66 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19307,
+      "printfileId": 579,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19308",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "50,8 × 50,8 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19308,
+      "printfileId": 545,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19309",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "50,8 × 61 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19309,
+      "printfileId": 581,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19310",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "50,8 × 71,1 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19310,
+      "printfileId": 503,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19311",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "50,8 × 76,2 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19311,
+      "printfileId": 365,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19312",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "50,8 × 101,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19312,
+      "printfileId": 584,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19313",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "50,8 × 152,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19313,
+      "printfileId": 586,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19314",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "61 × 61 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19314,
+      "printfileId": 546,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19315",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "61 × 76,2 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19315,
+      "printfileId": 591,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19316",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "61 × 81,3 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19316,
+      "printfileId": 572,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-825",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "61 × 91,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 825,
+      "printfileId": 54,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19317",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "61 × 121,9 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19317,
+      "printfileId": 594,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19318",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "66 × 66 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19318,
+      "printfileId": 547,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19319",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "66 × 101,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19319,
+      "printfileId": 597,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19320",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "71,1 × 71,1 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19320,
+      "printfileId": 548,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19321",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "71,1 × 101,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19321,
+      "printfileId": 599,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19322",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "76,2 × 76,2 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19322,
+      "printfileId": 549,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19323",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "76,2 × 101,6 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19323,
+      "printfileId": 601,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19324",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "76,2 × 152,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19324,
+      "printfileId": 610,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19325",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "81,3 × 81,3 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19325,
+      "printfileId": 550,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19326",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "81,3 × 121,9 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19326,
+      "printfileId": 603,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19327",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "91,4 × 91,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19327,
+      "printfileId": 538,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19328",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "94 × 94 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19328,
+      "printfileId": 539,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19329",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "101,6 × 139,7 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19329,
+      "printfileId": 605,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "canvas-19330",
+    "group": "canvas",
+    "name": "Leinwand",
+    "variantLabel": "101,6 × 152,4 cm",
+    "printful": {
+      "productId": 3,
+      "variantId": 19330,
+      "printfileId": 607,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17627",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "20,3 × 25,4 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17627,
+      "printfileId": 495,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17634",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "20,3 × 25,4 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17634,
+      "printfileId": 495,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17641",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "20,3 × 25,4 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17641,
+      "printfileId": 495,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17628",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "22,9 × 30,5 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17628,
+      "printfileId": 497,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17635",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "22,9 × 30,5 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17635,
+      "printfileId": 497,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17642",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "22,9 × 30,5 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17642,
+      "printfileId": 497,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17629",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "27,9 × 35,6 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17629,
+      "printfileId": 499,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17636",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "27,9 × 35,6 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17636,
+      "printfileId": 499,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17643",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "27,9 × 35,6 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17643,
+      "printfileId": 499,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16034",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 30,5 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 16034,
+      "printfileId": 360,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16040",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 30,5 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 16040,
+      "printfileId": 360,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-15695",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 30,5 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 15695,
+      "printfileId": 360,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16035",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 40,6 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 16035,
+      "printfileId": 362,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16041",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 40,6 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 16041,
+      "printfileId": 362,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-15696",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 40,6 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 15696,
+      "printfileId": 362,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17630",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 45,7 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17630,
+      "printfileId": 501,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17637",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 45,7 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17637,
+      "printfileId": 501,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17644",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "30,5 × 45,7 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17644,
+      "printfileId": 501,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16036",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "40,6 × 40,6 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 16036,
+      "printfileId": 361,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16042",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "40,6 × 40,6 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 16042,
+      "printfileId": 361,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-15697",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "40,6 × 40,6 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 15697,
+      "printfileId": 361,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16037",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "40,6 × 50,8 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 16037,
+      "printfileId": 363,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16043",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "40,6 × 50,8 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 16043,
+      "printfileId": 363,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-15698",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "40,6 × 50,8 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 15698,
+      "printfileId": 363,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16038",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "45,7 × 61 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 16038,
+      "printfileId": 364,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16044",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "45,7 × 61 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 16044,
+      "printfileId": 364,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-15699",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "45,7 × 61 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 15699,
+      "printfileId": 364,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17631",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "50,8 × 71,1 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17631,
+      "printfileId": 503,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17638",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "50,8 × 71,1 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17638,
+      "printfileId": 503,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17645",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "50,8 × 71,1 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17645,
+      "printfileId": 503,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17633",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "50,8 × 76,2 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17633,
+      "printfileId": 365,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17640",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "50,8 × 76,2 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17640,
+      "printfileId": 365,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17647",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "50,8 × 76,2 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17647,
+      "printfileId": 365,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17632",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "61 × 81,3 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 17632,
+      "printfileId": 505,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17639",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "61 × 81,3 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 17639,
+      "printfileId": 505,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-17646",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "61 × 81,3 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 17646,
+      "printfileId": 505,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16039",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "61 × 91,4 cm · Schwarz",
+    "printful": {
+      "productId": 614,
+      "variantId": 16039,
+      "printfileId": 366,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-16045",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "61 × 91,4 cm · Braun",
+    "printful": {
+      "productId": 614,
+      "variantId": 16045,
+      "printfileId": 366,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "framed-canvas-15700",
+    "group": "framed-canvas",
+    "name": "Gerahmte Leinwand",
+    "variantLabel": "61 × 91,4 cm · Weiß",
+    "printful": {
+      "productId": 614,
+      "variantId": 15700,
+      "printfileId": 366,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17620",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "20,3 × 25,4 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17620,
+      "printfileId": 482,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17623",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "22,9 × 30,5 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17623,
+      "printfileId": 484,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17621",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "27,9 × 35,6 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17621,
+      "printfileId": 486,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-15701",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "30,5 × 30,5 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 15701,
+      "printfileId": 373,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-15702",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "30,5 × 40,6 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 15702,
+      "printfileId": 374,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17622",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "30,5 × 45,7 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17622,
+      "printfileId": 488,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-15703",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "40,6 × 40,6 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 15703,
+      "printfileId": 51,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-15704",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "40,6 × 50,8 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 15704,
+      "printfileId": 46,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-15705",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "45,7 × 61 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 15705,
+      "printfileId": 376,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17624",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "50,8 × 71,1 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17624,
+      "printfileId": 490,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17626",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "50,8 × 76,2 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17626,
+      "printfileId": 480,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-17625",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "61 × 81,3 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 17625,
+      "printfileId": 492,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "thin-canvas-15706",
+    "group": "thin-canvas",
+    "name": "Dünne Leinwand",
+    "variantLabel": "61 × 91,4 cm",
+    "printful": {
+      "productId": 616,
+      "variantId": 15706,
+      "printfileId": 379,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "digital"
+    }
+  },
+  {
+    "key": "tough-case-15392",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 11 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15392,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15381",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 11 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15381,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15393",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 11 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15393,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15382",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 11 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15382,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15394",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 11 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15394,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15383",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 11 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15383,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15395",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15395,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15384",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15384,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15396",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 mini · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15396,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15385",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 mini · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15385,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15397",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15397,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15386",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15386,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15398",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15398,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15387",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 12 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15387,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15399",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15399,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15388",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15388,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15400",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 mini · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15400,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15389",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 mini · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15389,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15401",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15401,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15390",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15390,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15402",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 15402,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-15391",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 13 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 15391,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16125",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 16125,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16124",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 16124,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16129",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 Plus · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 16129,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16128",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 Plus · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 16128,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16127",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 16127,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16126",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 16126,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16131",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 16131,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16130",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 16130,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17715",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 17715,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17714",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 17714,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17717",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 Plus · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 17717,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17716",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 Plus · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 17716,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17719",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 17719,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17718",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 17718,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17721",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 17721,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17720",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 17720,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20306",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 20306,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20302",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 20302,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20307",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 Plus · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 20307,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20303",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 Plus · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 20303,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20309",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 20309,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20305",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 20305,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33989",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 33989,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33985",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 33985,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33990",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 Air · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 33990,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33986",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 Air · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 33986,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33992",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 33992,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-33988",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 33988,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-52385",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 52385,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-52384",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 52384,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-52387",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro Max · Matt",
+    "printful": {
+      "productId": 601,
+      "variantId": 52387,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-52386",
+    "group": "case-601",
+    "name": "iPhone-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro Max · Glänzend",
+    "printful": {
+      "productId": 601,
+      "variantId": 52386,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20688",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20688,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20687",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20687,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20692",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 Plus · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20692,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20691",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 Plus · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20691,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20690",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20690,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20689",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20689,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20694",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro Max · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20694,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20693",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 14 Pro Max · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20693,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20318",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20318,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20319",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20319,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20322",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 Plus · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20322,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20323",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 Plus · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20323,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20320",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20320,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20321",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20321,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20324",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro Max · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20324,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20325",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 15 Pro Max · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20325,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20326",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20326,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20327",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20327,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20332",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 Plus · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20332,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20333",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 Plus · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20333,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20330",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro Max · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 20330,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-20331",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 16 Pro Max · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 20331,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34002",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 34002,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34001",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 34001,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34004",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 Air · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 34004,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34003",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 Air · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 34003,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34008",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro Max · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 34008,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-34007",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 17 Pro Max · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 34007,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-53189",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 53189,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-53188",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 53188,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-53191",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro Max · Matt",
+    "printful": {
+      "productId": 798,
+      "variantId": 53191,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-53190",
+    "group": "case-798",
+    "name": "MagSafe-Schutzhülle",
+    "variantLabel": "iPhone 18 Pro Max · Glänzend",
+    "printful": {
+      "productId": 798,
+      "variantId": 53190,
+      "printfileId": 331,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16982",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16982,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16981",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16981,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16976",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 FE · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16976,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16975",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 FE · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16975,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16978",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16978,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16977",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16977,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16980",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16980,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16979",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S20 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16979,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16990",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16990,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16989",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16989,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16984",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 FE · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16984,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16983",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 FE · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16983,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16986",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16986,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16985",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16985,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16988",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16988,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16987",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S21 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16987,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16996",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S22 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16996,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16995",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S22 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16995,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16992",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S22 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16992,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16991",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S22 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16991,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16994",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S22 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16994,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16993",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S22 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16993,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17002",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S23 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 17002,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17001",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S23 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 17001,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16998",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S23 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 16998,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16997",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S23 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16997,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-17000",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S23 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 17000,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-16999",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S23 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 16999,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-18746",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S24 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 18746,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-18743",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S24 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 18743,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-18747",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S24 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 18747,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-18744",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S24 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 18744,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-18748",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S24 Ultra · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 18748,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-18745",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S24 Ultra · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 18745,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-21470",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S25 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 21470,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-21469",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S25 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 21469,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-21472",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S25 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 21472,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-21471",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S25 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 21471,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-49332",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S26 · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 49332,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-49327",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S26 · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 49327,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-49330",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S26 Plus · Matt",
+    "printful": {
+      "productId": 686,
+      "variantId": 49330,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "tough-case-49328",
+    "group": "case-686",
+    "name": "Samsung-Schutzhülle",
+    "variantLabel": "Samsung Galaxy S26 Plus · Glänzend",
+    "printful": {
+      "productId": 686,
+      "variantId": 49328,
+      "printfileId": 441,
+      "templateId": null,
+      "placements": [
+        "default"
+      ],
+      "options": [],
+      "technique": "sublimation"
+    }
+  },
+  {
+    "key": "t-shirt-53681",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "XS · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 53681,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11864",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "S · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 11864,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11865",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "M · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 11865,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11866",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "L · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 11866,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11867",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "XL · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 11867,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11868",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "2XL · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 11868,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-17228",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "3XL · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 17228,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-17232",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "4XL · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 17232,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-17235",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "5XL · Weiß",
+    "printful": {
+      "productId": 456,
+      "variantId": 17235,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-53682",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "XS · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 53682,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11869",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "S · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 11869,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11870",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "M · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 11870,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11871",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "L · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 11871,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11872",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "XL · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 11872,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-11873",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "2XL · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 11873,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-17229",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "3XL · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 17229,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-17233",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "4XL · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 17233,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "t-shirt-17236",
+    "group": "t-shirt",
+    "name": "Unisex-Bio-Baumwoll-T-Shirt",
+    "variantLabel": "5XL · Schwarz",
+    "printful": {
+      "productId": 456,
+      "variantId": 17236,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12605",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "S · Weiß",
+    "printful": {
+      "productId": 493,
+      "variantId": 12605,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12606",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "M · Weiß",
+    "printful": {
+      "productId": 493,
+      "variantId": 12606,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12607",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "L · Weiß",
+    "printful": {
+      "productId": 493,
+      "variantId": 12607,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12608",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "XL · Weiß",
+    "printful": {
+      "productId": 493,
+      "variantId": 12608,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12609",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "2XL · Weiß",
+    "printful": {
+      "productId": 493,
+      "variantId": 12609,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12585",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "S · Schwarz",
+    "printful": {
+      "productId": 493,
+      "variantId": 12585,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12586",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "M · Schwarz",
+    "printful": {
+      "productId": 493,
+      "variantId": 12586,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12587",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "L · Schwarz",
+    "printful": {
+      "productId": 493,
+      "variantId": 12587,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12588",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "XL · Schwarz",
+    "printful": {
+      "productId": 493,
+      "variantId": 12588,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "sweatshirt-12589",
+    "group": "sweatshirt",
+    "name": "Unisex-Bio-Baumwoll-Sweatshirt",
+    "variantLabel": "2XL · Schwarz",
+    "printful": {
+      "productId": 493,
+      "variantId": 12589,
+      "printfileId": 1,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12402",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "S · Weiß",
+    "printful": {
+      "productId": 479,
+      "variantId": 12402,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12403",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "M · Weiß",
+    "printful": {
+      "productId": 479,
+      "variantId": 12403,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12404",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "L · Weiß",
+    "printful": {
+      "productId": 479,
+      "variantId": 12404,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12405",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "XL · Weiß",
+    "printful": {
+      "productId": 479,
+      "variantId": 12405,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12406",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "2XL · Weiß",
+    "printful": {
+      "productId": 479,
+      "variantId": 12406,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12372",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "S · Schwarz",
+    "printful": {
+      "productId": 479,
+      "variantId": 12372,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12373",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "M · Schwarz",
+    "printful": {
+      "productId": 479,
+      "variantId": 12373,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12374",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "L · Schwarz",
+    "printful": {
+      "productId": 479,
+      "variantId": 12374,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12375",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "XL · Schwarz",
+    "printful": {
+      "productId": 479,
+      "variantId": 12375,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  },
+  {
+    "key": "hoodie-12376",
+    "group": "hoodie",
+    "name": "Unisex-Bio-Baumwoll-Hoodie",
+    "variantLabel": "2XL · Schwarz",
+    "printful": {
+      "productId": 479,
+      "variantId": 12376,
+      "printfileId": 139,
+      "templateId": null,
+      "placements": [
+        "front"
+      ],
+      "options": [],
+      "technique": "dtg"
+    }
+  }
+]

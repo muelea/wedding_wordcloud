@@ -19,18 +19,19 @@
     } catch { return false; }
   }
   function statusMessage(state) {
-    if (state.errorCode === 'mockup_daily_limit') return { source: 'Das tägliche Printful-Limit ist erreicht. Bitte versucht es morgen erneut.' };
+    if (state.errorCode === 'mockup_daily_limit') return { source: 'Die Produktvorschau ist vorübergehend nicht verfügbar. Bitte versucht es später erneut.' };
     if (state.status === 'error') return { source: ['mockup_timeout','mockup_stalled'].includes(state.errorCode)
-      ? 'Printful benötigt ungewöhnlich lange. Bitte versucht es erneut.'
+      ? 'Die Erstellung dauert ungewöhnlich lange. Bitte versucht es erneut.'
       : 'Die Produktvorschau ist gerade nicht verfügbar. Bitte versucht es erneut.' };
     if (state.retryAfter > 1 && (['queued','retrying'].includes(state.phase) || state.errorCode === 'mockup_rate_limited')) return {
       source: state.phase === 'retrying' && state.errorCode !== 'mockup_rate_limited'
         ? 'Die Vorschau wird in {{seconds}} Sekunden erneut versucht…'
-        : 'Printful ist ausgelastet. Neuer Versuch in {{seconds}} Sekunden…', params: { seconds: state.retryAfter } };
-    return { source: ['preparing','submitting'].includes(state.phase) ? 'Das Druckdesign wird sicher für Printful vorbereitet…'
+        : 'Die Erstellung wird automatisch fortgesetzt. Nächster Versuch in {{seconds}} Sekunden…', params: { seconds: state.retryAfter } };
+    return { source: state.phase === 'loading' ? 'Die Produktvorschau wird geladen…'
+      : ['preparing','submitting'].includes(state.phase) ? 'Euer Druckdesign wird für die Produktvorschau vorbereitet…'
       : state.phase === 'retrying' ? 'Die Verbindung wurde unterbrochen. Die Vorschau wird automatisch erneut versucht…'
         : state.phase === 'queued' ? 'Die Produktvorschau wartet auf einen freien Platz…'
-          : 'Printful erzeugt das Mockup. Das dauert meist einige Sekunden…' };
+          : 'Eure Produktvorschau wird erstellt. Das kann etwas dauern…' };
   }
 
   function create({ window: browser = window, now = () => Date.now(),

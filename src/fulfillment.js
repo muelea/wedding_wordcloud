@@ -11,12 +11,17 @@ const log = require('./structuredLog');
 
 const MAX_ATTEMPTS = 3;
 const LEASE_MS = 120_000;
-const POLL_MS = 5_000;
 const WORKER_ID = `web-${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
 
 let stopping = false;
 let workerBusy = false;
-let pollTimer = null;
+const poller = require('./workerPoller').create({
+  run: async () => {
+    const {claimed}=await drainDueJobs({maxJobs:1});
+    return claimed || {nextAt:await db.getNextWorkerJobAt('fulfillment')};
+  },
+  onError: error => log.error('fulfillment_poll_failed', { errorCode: log.errorCode(error) }),
+});
 let scheduledKick = null;
 const requestedOrders = new Set();
 
@@ -126,7 +131,7 @@ function itemFromSnapshot({ order, orderItem, artifactsByKey, mode }) {
   if (!product || product.printful.variantId !== Number(orderItem.printful_variant_id)) {
     throw new Error('Das gespeicherte Printful-Produkt ist ungültig.');
   }
-  const files = product.printful.placements.map((placement, index) => {
+  const files = (snapshot.printfulPlacements || product.printful.placements).map((placement, index) => {
     const surface = product.printSurfaces[index];
     const artifact = artifactsByKey.get(`${orderItem.id}:${surface.key}`);
     if (!artifact && mode !== 'mock') throw new Error('Ein eingefrorenes Druckartefakt fehlt.');
@@ -146,7 +151,7 @@ function itemFromSnapshot({ order, orderItem, artifactsByKey, mode }) {
     variant_id: Number(orderItem.printful_variant_id),
     quantity: Number(orderItem.quantity),
     files,
-    ...(product.printful.options.length ? { options: product.printful.options } : {}),
+    ...((snapshot.printfulOptions || product.printful.options).length ? { options: snapshot.printfulOptions || product.printful.options } : {}),
   };
 }
 
@@ -365,6 +370,7 @@ async function processOrder(orderId, options = {}) {
     return await executeClaimedOrder(order, options);
   } finally {
     workerBusy = false;
+    poller.active();
   }
 }
 
@@ -374,7 +380,7 @@ async function drainDueJobs({ maxJobs = 1, deadline = null } = {}) {
   let claimed = 0;
   let completed = 0;
   try {
-    while (claimed < maxJobs && (!deadline || Date.now() + 500 < deadline)) {
+    while (claimed < maxJobs && (!deadline || Date.now() + 5_000 < deadline)) {
       const order = await db.claimFulfillmentOrder({ lockedBy: WORKER_ID, leaseMs: LEASE_MS });
       if (!order) break;
       claimed += 1;
@@ -411,6 +417,7 @@ function scheduleKick() {
 function scheduleOrder(orderId) {
   if (stopping) return false;
   requestedOrders.add(String(orderId));
+  poller.active();
   return scheduleKick();
 }
 
@@ -424,13 +431,7 @@ async function resumePendingOrders() {
 }
 
 function start() {
-  if (stopping || pollTimer) return false;
-  pollTimer = setInterval(() => {
-    drainDueJobs({ maxJobs: 1 }).catch((error) => log.error('fulfillment_poll_failed', {
-      errorCode: log.errorCode(error, 'fulfillment_poll_failed'),
-    }));
-  }, POLL_MS);
-  pollTimer.unref();
+  if (stopping || !poller.start()) return false;
   resumePendingOrders().catch((error) => log.error('fulfillment_resume_failed', {
     errorCode: log.errorCode(error, 'fulfillment_resume_failed'),
   }));
@@ -439,8 +440,7 @@ function start() {
 
 async function stop({ timeoutMs = 15_000 } = {}) {
   stopping = true;
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = null;
+  poller.stop();
   if (scheduledKick) clearImmediate(scheduledKick);
   scheduledKick = null;
   requestedOrders.clear();

@@ -46,7 +46,7 @@ test('the metric poster range includes every Germany-available size and frame co
     '50 × 70 cm': ['Eiche', 'Weiß'],
     'A2 · 42 × 59,4 cm': ['Eiche', 'Schwarz', 'Weiß'],
     'A1 · 59,4 × 84,1 cm': ['Eiche', 'Schwarz', 'Weiß'],
-    '61 × 91 cm': ['Eiche', 'Schwarz', 'Weiß'],
+    '61 × 91 cm': ['Schwarz', 'Weiß'],
   });
   for (const product of [...posters, ...frames]) {
     assert.match(product.size.label, /cm$/);
@@ -63,7 +63,7 @@ test('the metric poster range includes every Germany-available size and frame co
       assert.doesNotMatch(product.displayName, /weißen|Eichen/);
     }
   }
-  for (const id of [9358, 19651]) {
+  for (const id of [9358, 11793, 19651]) {
     assert.equal(PRODUCTS.find(product => product.printful.variantId === id), undefined);
     assert.equal(fulfillment.variants.find(variant => variant.variantId === id).germanyAvailability, 'not fulfillable');
   }

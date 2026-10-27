@@ -1,0 +1,14 @@
+{
+  "source": "Reviewed local Printful front photos; bounds are [left, top, right, bottom] in source pixels, excluding soft shadows. Calibration describes preview proportions, not factory CAD measurements.",
+  "samples": [
+    { "productKey": "framed-poster-9356", "photo": "public/assets/product-photos/304-2201.jpg", "outer": [201, 421, 487, 812], "opening": [225, 445, 463, 789] },
+    { "productKey": "framed-matte-poster-black-30x40cm", "photo": "public/assets/product-mockups/framed-poster-black-30x40.png", "outer": [204, 112, 797, 887], "opening": [241, 150, 760, 849] },
+    { "productKey": "framed-poster-19644", "photo": "public/assets/product-photos/304-14825.jpg", "outer": [161, 355, 538, 913], "opening": [184, 378, 515, 890] },
+    { "productKey": "framed-poster-19645", "photo": "public/assets/product-photos/304-14824.jpg", "outer": [122, 356, 586, 929], "opening": [143, 378, 565, 907] },
+    { "productKey": "framed-poster-19646", "photo": "public/assets/product-photos/304-14823.jpg", "outer": [105, 297, 599, 946], "opening": [130, 323, 574, 919] },
+    { "productKey": "framed-poster-11792", "photo": "public/assets/product-photos/304-7855.jpg", "outer": [108, 294, 599, 970], "opening": [126, 314, 580, 950] },
+    { "productKey": "framed-poster-9359", "photo": "public/assets/product-photos/304-2298.jpg", "outer": [114, 276, 592, 982], "opening": [129, 292, 576, 966] },
+    { "productKey": "framed-poster-19643", "photo": "public/assets/product-mockups/catalog-19643.jpg", "outer": [183, 270, 517, 731], "opening": [203, 290, 497, 712] },
+    { "productKey": "framed-poster-19642", "photo": "public/assets/product-mockups/catalog-19642.jpg", "outer": [121, 179, 581, 822], "opening": [140, 199, 560, 802] }
+  ]
+}

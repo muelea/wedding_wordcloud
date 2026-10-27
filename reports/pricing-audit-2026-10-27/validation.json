@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-27",
+  "scope": "Current local working tree; no deployment; no hosted database tests",
+  "variants": 343,
+  "productGroups": 26,
+  "catalogPriceFingerprint": "e99280fd38f049e758028bb185d11b1a1da2649145eaf8a952cc86f477436f86",
+  "independentIntegerPriceChecks": {
+    "net": 343,
+    "gross": 343,
+    "mismatches": 0
+  },
+  "supplierChecks": {
+    "variants": 343,
+    "exactMatches": 343,
+    "differences": 0,
+    "errors": 0
+  },
+  "targetedTests": {
+    "files": 20,
+    "tests": 310,
+    "passed": 310,
+    "failed": 0,
+    "skipped": 0
+  },
+  "stripeSandbox": {
+    "scenarios": 8,
+    "status": "active",
+    "countries": [
+      "DE",
+      "FR",
+      "HU",
+      "IE",
+      "GB",
+      "US"
+    ]
+  },
+  "liveStripeReadOnly": {
+    "status": "active",
+    "registrations": [
+      {
+        "country": "DE",
+        "type": "oss_union"
+      },
+      {
+        "country": "GB",
+        "type": "standard"
+      }
+    ]
+  },
+  "findingsFixed": [
+    "New clothing Checkout requests freeze the clothing tax code; legacy retry inputs remain unchanged",
+    "Repeated configuration IDs in a shipment are rejected before pricing; distinct designs of the same SKU remain supported",
+    "Configurator test harness includes the new product information control"
+  ],
+  "remainingPricingPolicyLimit": {
+    "country": "HU",
+    "example": "canvas-19328",
+    "productNetCents": 19750,
+    "shippingNetCents": 5594,
+    "shippingSupplierCents": 5299,
+    "taxCents": 6843,
+    "totalCents": 32187,
+    "reserveCents": 1212,
+    "feeBudgetCents": 1237,
+    "shortfallCents": 25
+  }
+}

@@ -41,7 +41,10 @@ function harness(fetcher) {
   }
   const calls = { fetches: 0, shown: [], navigation: [] };
   const scope = vm.createContext({
+    productApproval: {sync() {}, value() { return {}; }}, selectedPreviewConfigurations: () => [],
     AbortController, AbortSignal, setTimeout, clearTimeout,
+    productApproval: { sync() {}, value() { return { accepted: true, version: 1, jobIds: [] }; }, reset() {} },
+    selectedPreviewConfigurations: () => [],
     slug: 'shipping-test', guestId: 'a'.repeat(32), configurationIds: ['a'.repeat(16)],
     configurations: [], currentQuote: null, shippingRevision: 0, activeShippingRequest: null,
     submitButton: element(), checkoutButton: element(), form: element(), formError: element(),
@@ -58,7 +61,7 @@ function harness(fetcher) {
     fetch: (...args) => { calls.fetches++; return fetcher(...args); },
   });
   scope.showQuote = quote => { scope.currentQuote = quote; calls.shown.push(quote); };
-  const functions = ['setShippingActionBusy', 'clearFieldErrors', 'updateDeliveryRestrictions', 'clearQuote'];
+  const functions = ['setShippingActionBusy', 'clearFieldErrors', 'updateDeliveryRestrictions', 'updateCheckoutEligibility', 'clearQuote'];
   for (const name of ['fetchShippingJson', 'finishShippingRequest', 'cancelShippingRequest']) {
     if (source.includes(`function ${name}(`)) functions.push(name);
   }
@@ -77,7 +80,9 @@ test('shipping cart review removes only the chosen item and keeps last-item remo
     const removedFromDraft = [];
     const navigation = [];
     const scope = vm.createContext({
+    productApproval: {sync() {}, value() { return {}; }}, selectedPreviewConfigurations: () => [],
       slug: 'shipping-test',
+      galleryHref:'/e/shipping-test/configure?view=products',
       cart: { read: () => items, remove: id => { items = items.filter(item => item.id !== id); } },
       shippingDraft: { removeConfigurations: ids => removedFromDraft.push(...ids) },
       saveShippingDraft() {},
@@ -92,7 +97,7 @@ test('shipping cart review removes only the chosen item and keeps last-item remo
     assert.deepEqual(removedFromDraft, ['a'.repeat(16)]);
     assert.match(navigation[0], initial.length === 2
       ? /shipping\?configuration=bbbbbbbbbbbbbbbb&edit=bbbbbbbbbbbbbbbb$/
-      : /configure\?edit=aaaaaaaaaaaaaaaa$/);
+      : /configure\?view=products$/);
   }
 });
 
@@ -297,7 +302,8 @@ test('the shipping summary shows Stripe tax and gross total only for a prepared 
     classList: { contains: () => false },
   };
   const scope = vm.createContext({
-    currentQuote: null,
+    productApproval: {sync() {}, value() { return {}; }}, selectedPreviewConfigurations: () => [],
+    currentQuote: null, activeShippingRequest: null,
     quoteResult,
     checkoutButton,
     checkoutError: { textContent: '' },
@@ -311,7 +317,7 @@ test('the shipping summary shows Stripe tax and gross total only for a prepared 
     setButtonLabel: (node, value) => { node.label = value; },
     customerError: value => new Error(value),
   });
-  vm.runInContext(pageFunction('showQuote'), scope);
+  vm.runInContext(pageFunction('updateCheckoutEligibility') + '\n' + pageFunction('showQuote'), scope);
 
   scope.showQuote({
     id: 'prepared', currency: 'EUR', quantity: 1, itemsCents: 800, shippingCents: 200,
@@ -420,6 +426,7 @@ function deliveryLines(delivery, { shipments = [{ customsFeesPossible: false, de
   const lines = [];
   const translate = (text, params) => require('../src/i18n').translate(text, locale, params);
   const scope = vm.createContext({
+    productApproval: {sync() {}, value() { return {}; }}, selectedPreviewConfigurations: () => [],
     Intl, Date, configurations: [], t: translate,
     WolkenworteI18n: { getLocale: () => locale, formatNumber: number => new Intl.NumberFormat(locale).format(number) },
     setText: (node, text, params) => { node.textContent = translate(text, params); },

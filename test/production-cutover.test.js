@@ -235,6 +235,9 @@ test('Linux candidate checks stop the release before migrations on failed image 
   assert.ok(linux.args.includes(`wolkenworte:${commit.slice(0, 12)}`));
   assert.ok(linux.args.includes('test/design-font-contract.test.js'));
   assert.ok(linux.args.includes('test/design-font-geometry.test.js'));
+  assert.ok(linux.args.includes('test/text-style.test.js'));
+  assert.ok(linux.args.includes('test/emoji-rendering.test.js'));
+  assert.ok(linux.args.includes('test/emoji.test.js'));
   const executed = [];
   assert.throws(() => cutover.runVerificationSteps('active', commit, {
     checkCommit() { assert.fail('Failed Linux verification must precede the migration boundary'); },
@@ -269,6 +272,27 @@ test('post-launch release rechecks production then deploys and verifies without 
   assert.deepEqual(calls[3].args, ['scripts/production-readiness-smoke.js', '--expect-active']);
   assert.equal(calls[4], 'health');
   assert.equal(calls.length, 5, 'Release must not stage secrets, configure cron or run pre-live cleanup');
+});
+
+test('target compatibility checks fence migrations and deployment, including post-migration failures', () => {
+  const commit = 'a'.repeat(40);
+  const steps = cutover.verificationSteps('active', commit.slice(0, 12));
+  const before = steps.findIndex(step => step.args.includes('--before-migrations'));
+  const migration = steps.findIndex(step => step.args.includes('db:migrate'));
+  const after = steps.findIndex(step => step.args.includes('--current'));
+  assert.equal(migration, before + 1);
+  assert.equal(after, migration + 1);
+  for (const failedArg of ['--before-migrations', '--current']) {
+    const executed = [];
+    assert.throws(() => cutover.runVerificationSteps('active', commit, {
+      checkCommit() { return commit; },
+      execute(step) {
+        executed.push(step);
+        if (step.args.includes(failedArg)) throw new Error('schema drift');
+      },
+    }), /schema drift/);
+    assert.equal(executed.some(step => step.args.includes('db:migrate')), failedArg === '--current');
+  }
 });
 
 test('post-launch release refuses a changed commit, changed posture or mixed secrets before deployment', () => {
@@ -409,4 +433,19 @@ test('production smoke checks health, maintenance, canonical redirect and signat
   assert.equal(requested.filter((request) => request.method === 'GET').length, 4);
   assert.equal(requested.filter((request) => request.method === 'POST').length, 3);
   assert.equal(requested.length, 7);
+});
+
+test('active production smoke requires representative application and database-backed reads', async () => {
+  let failure = false;
+  const fetchImpl = async url => {
+    if (url.startsWith(productionSmoke.WWW_URL)) return new Response('', {
+      status: 308, headers: { location: `${productionSmoke.PUBLIC_URL}/` },
+    });
+    if (url.includes('/webhook/')) return new Response('', { status: 400 });
+    if (url.includes('/api/events/')) return Response.json({ error: 'configuration_not_found' }, { status: failure ? 500 : 404 });
+    return new Response('<html>ok</html>', { headers: { 'content-type': 'text/html' } });
+  };
+  assert.equal((await productionSmoke.run({ expected: 'active', fetchImpl, output() {} })).applicationReads, 'ok');
+  failure = true;
+  await assert.rejects(productionSmoke.run({ expected: 'active', fetchImpl, output() {} }), /read-only application routes/);
 });

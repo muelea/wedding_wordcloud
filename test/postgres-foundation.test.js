@@ -1,6 +1,7 @@
 'use strict';
 
 const test = require('node:test');
+const { stubMockupApproval } = require('./helpers');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
@@ -65,6 +66,7 @@ async function quoteFor(db, eventId, configurations) {
 
 test('Postgres foundation preserves concurrency, ownership and checkout durability', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const db = require('../src/db');
 
@@ -99,10 +101,7 @@ test('Postgres foundation preserves concurrency, ownership and checkout durabili
 
     const { row } = await storedEvent(db, baseUrl, 'Opaque Ida & Postgres Paul');
     assert.equal(typeof row.id, 'string');
-    assert.equal(
-      Date.parse(row.expires_at) - Date.parse(row.created_at),
-      365 * 24 * 60 * 60 * 1000
-    );
+    assert.equal((await db.getPool().query("SELECT expires_at = updated_at + interval '3 months' AS valid FROM events WHERE id=$1",[row.id])).rows[0].valid,true);
     const productionDb = fs.readFileSync(path.join(__dirname, '..', 'src', 'db.js'), 'utf8');
     assert.doesNotMatch(productionDb, /node:sqlite|DatabaseSync|PRAGMA/);
   });

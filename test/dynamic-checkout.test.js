@@ -1,6 +1,7 @@
 'use strict';
 
 const test = require('node:test');
+const { stubMockupApproval } = require('./helpers');
 const assert = require('node:assert/strict');
 const { startTestServer, createEvent, productDesignPayload } = require('./helpers');
 
@@ -43,6 +44,7 @@ async function calculateQuote(baseUrl, slug, configurationId) {
 
 test('checkout revalidates Printful, creates one dynamic Stripe Session and reuses it on double click', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Checkout Clara & Cent Carl', locale: 'tr' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
@@ -93,6 +95,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
   assert.equal(capturedCheckout.shipmentCount, 1);
   assert.equal(capturedCheckout.locale, 'tr');
   assert.equal(capturedCheckout.quoteId, quote.id);
+  assert.equal(capturedCheckout.baseUrl, baseUrl, 'single-item checkout returns to the browser origin');
 
   const second = await fetch(checkoutUrl, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId: quote.id }),
@@ -158,6 +161,7 @@ test('checkout revalidates Printful, creates one dynamic Stripe Session and reus
 
 test('a changed shipping price must be shown and confirmed before Stripe is created', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Preis Pia & Update Uwe' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 2);
@@ -215,6 +219,7 @@ test('a changed shipping price must be shown and confirmed before Stripe is crea
 
 test('cart checkout revalidates mixed products and creates one Stripe Session', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Warenkorb Wanda & Stripe Sven' });
   const mug = await saveConfiguration(baseUrl, event.slug, { productKey: 'white-glossy-mug-duo-11oz' });
@@ -308,6 +313,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
     [1320, 15662],
   ]);
   assert.equal(capturedCheckout.products.length, 2);
+  assert.equal(capturedCheckout.baseUrl, baseUrl, 'cart checkout returns to the browser origin');
   assert.deepEqual(capturedCheckout.configurationIds, [mug.id, coaster.id]);
   assert.equal(capturedCheckout.quantity, 2);
   assert.equal(capturedCheckout.shipmentCount, 1);
@@ -340,6 +346,7 @@ test('cart checkout revalidates mixed products and creates one Stripe Session', 
 
 test('cart checkout follows the latest selected locale across repeated Stripe round trips', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Lingua Lea & Locale Luca', locale: 'de' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
@@ -466,6 +473,7 @@ test('cart checkout follows the latest selected locale across repeated Stripe ro
 
 test('a concurrently completed Stripe payment wins over a locale replacement', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Race Ria & Payment Paul', locale: 'de' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
@@ -523,6 +531,7 @@ test('a concurrently completed Stripe payment wins over a locale replacement', a
 
 test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl, { title: 'Ablauf Anna & Sicher Sven' });
   const configuration = await saveConfiguration(baseUrl, event.slug, 1);
@@ -565,6 +574,7 @@ test('expired quotes cannot start a Stripe Checkout Session', async (t) => {
 
 test('published case restrictions also block an already prepared single or cart checkout', async t => {
   const { baseUrl, close } = await startTestServer();
+  stubMockupApproval(t);
   t.after(close);
   const event = await createEvent(baseUrl);
   const configuration = await saveConfiguration(baseUrl, event.slug, { quantity: 1, productKey: 'tough-case-20308' });

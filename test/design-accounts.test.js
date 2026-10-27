@@ -95,6 +95,10 @@ test('optional accounts, private manual saves and deletion are independent of gu
   });
 
   await t.test('manual save retains full editable artwork; retry is idempotent and foreign access is unknown',async()=>{
+    const unsupported=saveBody();unsupported.snapshot.designs.default[0].text='東京';
+    const rejected=await request('designs',unsupported,first);
+    assert.equal(rejected.response.status,422);assert.equal(rejected.data.error,'unsupported_print_characters');
+    assert.equal(storage.objects.size,0,'missing-glyph previews cannot be saved as an apparently correct design');
     body=saveBody();const result=await request('designs',body,first);assert.equal(result.response.status,201);design=result.data.design;
     assert.equal(storage.objects.size,2);assert.equal(design.version,1);
     const retry=await request('designs',body,first);assert.equal(retry.data.design.id,design.id);assert.equal(storage.objects.size,2);
@@ -120,7 +124,7 @@ test('optional accounts, private manual saves and deletion are independent of gu
     const opened=await request(`designs/${design.id}/open`,{},first);assert.equal(opened.response.status,200);
     const slug=opened.data.url.split('/')[2];const publicData=await fetch(`${h.baseUrl}/api/events/${slug}/configurator`).then(r=>r.json());
     assert.deepEqual(publicData.words,[]);assert.equal(publicData.event.directDesign,true);
-    await h.query("UPDATE events SET created_at=transaction_timestamp()-interval '366 days' WHERE slug=$1",[slug]);
+    await h.query("UPDATE events SET updated_at=transaction_timestamp()-interval '4 months' WHERE slug=$1",[slug]);
     assert.notEqual((await request(`designs/${design.id}/open`,{},first)).data.url,opened.data.url);
     assert.equal((await request(`designs/${design.id}/load`,{},first)).response.status,200);
   });

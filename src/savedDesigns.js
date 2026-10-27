@@ -175,7 +175,12 @@ async function save(accountId,body,locale) {
   if(!auth.UUID.test(body.requestId||'')||!auth.UUID.test(body.designId||'')||!Number.isInteger(body.version)||body.version<0) throw db.accountError('invalid_request',400);
   const snapshot=normalizeSnapshot(body.snapshot,locale);
   const bytes=encodeSnapshot(snapshot);
-  const preview=await thumbnail(snapshot);
+  let preview;
+  try { preview=await thumbnail(snapshot); }
+  catch(error) {
+    if(error.code==='PRINT_TEXT_UNSUPPORTED') throw db.accountError('unsupported_print_characters',422);
+    throw error;
+  }
   if(bytes.length+preview.length>MAX_SNAPSHOT_BYTES) throw db.accountError('design_quota',413);
   const sha256=crypto.createHash('sha256').update(bytes).digest('hex');
   const prefix=`${accountId}/${body.requestId}`;
@@ -237,9 +242,9 @@ async function deleteAccount(accountId) {
   await drainObjects({accountId,maxObjects:40,deadline:Date.now()+14000});
 }
 
-async function maintenance({deadline}) {
+async function maintenance({deadline, shortLivedOnly = false}) {
   if(!db.hasAccountSchema()||(process.env.NODE_ENV==='test'&&!testStorage)) return {designsExpired:0,accountsExpired:0};
-  const result=await db.sweepDesignAccountRetention({deadline:Math.min(deadline-5100,Date.now()+5000)});
+  const result=await db.sweepDesignAccountRetention({deadline:Math.min(deadline-5100,Date.now()+5000), shortLivedOnly});
   if(Date.now()+5100<deadline&&auth.providerReady()) {
     const job=await db.claimDesignAccountDeletion();
     if(job) {
@@ -248,7 +253,7 @@ async function maintenance({deadline}) {
     }
   }
   result.objectsRemoved=await drainObjects({maxObjects:40,deadline});
-  if(Date.now()+5100<deadline&&auth.providerReady()) {
+  if(!shortLivedOnly&&Date.now()+5100<deadline&&auth.providerReady()) {
     const page=await db.accountMaintenancePage();
     const data=await auth.provider('listUsers',{page});
     await db.discoverDesignAccounts(data.users||[]);

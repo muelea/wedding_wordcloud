@@ -27,8 +27,8 @@ frozen snapshot of the word cloud.
    main homepage action or “Erinnerungsstück gestalten” in the keepsake section.
    A deliberate `POST /design/start` creates an isolated design workspace using
    the existing event lifetime, slug reservation and creation limits, with no
-   organizer PIN or live words. Its configurator opens on a blank default mug;
-   the mobile editor is immediately expanded. Customers can add their own text,
+   organizer PIN or live words. It opens the product gallery with blank products;
+   customers choose “Design anpassen” to open the editor and add their own text,
    images and motifs, change products and use the existing basket/checkout flow.
    These workspaces have a null organizer-PIN pair and no organizer actions;
    their Home return link resumes the design rather than opening a live cloud.
@@ -69,16 +69,19 @@ frozen snapshot of the word cloud.
    explicit cart reviews remain. Mobile also hides gesture hints.
    Cart rows mark pending edits,
    including edits on designs that are not currently open.
-   The word cloud's Create a keepsake action always opens the product gallery,
-   including when an editor draft already exists. The draft is retained on its
-   product card; explicit cart-edit, library and draft links still open the editor.
+   The word cloud's Create a keepsake action and the shipping page's Back action
+   always open the product gallery, including when an editor draft already exists.
+   Ordinary product links also open the gallery; basket recovery opens its cart
+   panel. The draft is retained on its product card; explicit cart-edit, library
+   and draft links still open the editor. The editor's desktop/mobile Back action
+   returns to the gallery, and browser Back/Forward preserves the chosen view.
    A first visit from a populated live cloud opens a product gallery showing
    that word cloud on the curated product range, with variant choices for every
    curated variant. The gallery reuses the local Printful image compositions
-   and local 3D previews. The catalog has 344 variants across 26 product groups,
+   and local 3D previews. The catalog has 343 variants across 26 product groups,
    all with EU fulfillment available for German delivery, including colored mugs,
    drinkware, canvas, tech accessories and tough iPhone/Samsung cases. All seven
-   metric matte poster sizes and 22 Germany-available metric framed combinations
+   metric matte poster sizes and 21 Germany-available metric framed combinations
    are offered. Canvas has all 46 standard sizes, 13 thin sizes and 39 framed
    size/color combinations, in three separate groups with centimetre labels.
    Large canvas print exports use bounded strips to retain full provider
@@ -91,21 +94,25 @@ frozen snapshot of the word cloud.
    17 MagSafe photos use the product gallery's exact model mappings.
    Clothing includes the Stanley/Stella STTU169 T-shirt (XS–5XL), STSU178
    sweatshirt and STSU177 hoodie (S–2XL), each in white and black with a front
-   DTG print and an unprinted back. Three garment-specific cotton models use
-   the supplier's body and sleeve measurements for each size. Print dimensions
-   stay fixed in centimetres. Dragging the fabric moves its stitched panels;
-   dragging beside it rotates the garment, and Space demonstrates a pull.
-   The models include collars, cuffs, hems and the hoodie's lined hood, pocket
-   and drawstrings. Cloth motion is a supported hanging approximation, not a
-   prediction of personal fit or a measured fabric stiffness. The catalog,
-   print templates and size measurements are pinned in `src/apparelCatalog.json`.
+   DTG print and an unprinted back. Their gallery, editor, cart and detail previews
+   compose the exact artwork with local Printful front-photo layers, using the
+   provider's variant-specific print rectangle and garment colour. Transparent
+   artwork margins remain intact; supplier shading never enters the print file.
+   Printful shares these photo templates across sizes, so they show its standard
+   mockup placement rather than size-specific garment proportions or personal fit.
+   The catalog, original layer hashes, print templates and size measurements are
+   pinned in `src/apparelCatalog.json`.
    Each product gets its own automatic filled layout;
    the dedicated Customize action opens the existing editor with that exact artwork,
    including both print sides. Clicking a preview does nothing; dragging rotates
    3D products. Size/color dropdowns show the exact variant, price and real product
    photo. The thumbnail beside the selection shows the current design and opens
-   the shared product-photo, description, artwork and 3D overview used by the
-   basket and shipping page. Single-variant products use the same
+   the shared product overview used by the basket and shipping page. It has one
+   large visual stage with photo, design and interactive 3D tabs, keyboard
+   navigation and an enlarged view. Reviewed blank Printful photos include
+   additional angles, material details and male/female garment models where
+   available. All photos are local and bound to the exact provider variants;
+   supplier artwork is excluded. Single-variant products use the same
    thumbnail-and-details row without a selection arrow. Each card keeps its price
    and compact VAT/shipping note on one line; the adjacent information button
    explains the German reference price and possible destination differences.
@@ -149,7 +156,13 @@ frozen snapshot of the word cloud.
    account Save. Saving or cancelling keeps the canvas, selection, zoom and Undo
    history in place. Desktop product and colour selectors share the “Your design”
    heading and wrap into a compact second row on narrower screens, leaving
-   the full remaining height for the canvas. Browser fullscreen is offered only
+   the full remaining height for the canvas. Product selection uses category,
+   product type and compatible options rather than listing every size/colour
+   combination. Phone models and long dimension lists are searchable; the exact
+   photo and price update locally, and only “Produkt übernehmen” transfers the
+   design. Gallery variant pickers reuse the same options directly for their
+   product card. Internal picker scrolling never repositions the popup.
+   Browser fullscreen is offered only
    where supported; iPhone Safari keeps its browser chrome. Compact product,
    palette and orientation pickers replace the side panel. Choosing a product
    family immediately opens its variants instead of placing them below the list.
@@ -318,14 +331,40 @@ frozen snapshot of the word cloud.
    renderer used for Printful fulfillment; opening or closing a preview keeps
    the address, quantities and prepared price intact. Preview rendering does
    not create paid print artifacts or upload files to Storage.
-   Only on the shipping page, “Produktvorschau erstellen” inside that dialog explicitly requests a
-   Printful product mockup at 1000 px. Opening an artwork preview never starts
-   generation. The shipping dialog and local operator use the same browser
-   client and durable Postgres queue. Completed image links and pending job IDs
-   (no artwork or image bytes) are cached in browser localStorage for up to
-   12 hours. Returning to a pending preview resumes its saved job; a temporarily
-   interrupted application POST reuses its command ID. Broken cached images
-   require another explicit click.
+   The shipping page automatically prepares 1000 px Printful product mockups for
+   every positive-quantity design. A shared review shows the exact variants and
+   all printed sides, with enlargement and provider-neutral progress. Distinct
+   variants are batched into one provider request; different designs on the same
+   variant are dispatched separately so responses cannot be misassigned.
+   Completed products remain visible through partial failures. Failed images or
+   jobs offer an explicit item retry. Image downloads retry twice before offering
+   regeneration, without consuming another provider generation slot. Reloads
+   rejoin durable cached jobs. Transient browser connection failures keep checking
+   the known jobs with bounded backoff until the 35-minute browser deadline;
+   reconnecting or returning to the page resumes checks without bypassing an
+   explicit HTTP cooldown. Requests and response bodies have an independent
+   timeout, including browsers without `AbortSignal.timeout`. Leaving the page
+   cancels its requests, waits and image timers. A spinner accompanies active
+   preparation, queue, generation and image-loading messages and respects reduced
+   motion. Expired previews and rejected server approvals renew the affected
+   review instead of recycling stale approval; new images always require fresh
+   deliberate consent.
+   Customers must explicitly approve all loaded previews before continuing to
+   payment. Both checkout endpoints enforce the exact purchased configuration
+   IDs, completed preview results and active frozen files, including reused Stripe
+   Sessions. Price/tax preparation can still happen before approval and does not
+   disclose the payment URL. The order records the approval version, time,
+   anonymous browser hash, job IDs and existing file references.
+   Each customer print surface is rendered and privately uploaded once under
+   `prepared-prints/`. The mockup reads that same file through a short-lived
+   signed URL. After verified payment, immutable production artifacts reference
+   the same Storage object through the existing application capability URL;
+   fulfillment neither renders again nor uploads a copy. Source hashes and the
+   frozen product specification are checked before production. New design IDs
+   require new previews and approval. Prepared files expire after 24 hours unless
+   retained by a purchase, unresolved checkout or support hold; daily retention
+   retries failed deletion. Paid artifact retention stays unchanged. The local
+   operator keeps its separate temporary diagnostic-source lifecycle.
    The queue shares a conservative dispatch allowance across processes using
    the same Printful credentials/store, spaces creations at least 30.5 seconds
    apart and honors provider cooldown headers. Rate limits and transient status
@@ -333,22 +372,24 @@ frozen snapshot of the word cloud.
    generation progress. Known task IDs survive navigation and server restarts;
    the worker resumes on startup. Operator jobs resume only with the explicit
    local operator flag still enabled. At most 64 active jobs per provider scope
-   are admitted. Work has a 30-minute overall deadline, at most six consecutive
+   are admitted, with earlier backpressure when the estimated dispatch queue or
+   provider cooldown would leave less than a ten-minute generation window.
+   Work has a 30-minute overall deadline, at most six consecutive
    preparation/creation failures and at most two possibly accepted provider submissions.
    Transient status failures keep polling the accepted task until that deadline.
    An accepted
    task that is still pending after ten minutes, or missing for three status
-   reads, gets one replacement attempt. Ambiguous submissions are recorded and
+   reads, or explicitly fails at the provider, gets one replacement attempt.
+   Ambiguous submissions are recorded and
    bounded: Printful does not document a create idempotency key or lookup by our
    command ID, so a lost provider response can consume an extra generation slot.
    Invalid requests, authentication failures and recognized daily quota
    exhaustion stop with an explicit failure rather than retrying indefinitely.
-   Private one-hour PNG source URLs are minted at dispatch, not while queued.
-   Source keys are journaled before uploading. Failed deletion stays retryable;
-   abandoned accepted/ambiguous attempts retain their source until its expiry.
-   Both timestamped source prefixes also have an independent bounded maintenance
-   sweep after process crashes. Job metadata expires after 12 hours; mockup jobs
-   reference saved configurations and never create orders or paid artifacts.
+   Private one-hour source URLs are minted at dispatch. Operator sources are
+   journaled before upload and swept after expiry, including process crashes.
+   Customer files use the shared prepared-file lifecycle described above.
+   Job metadata expires after 12 hours. Mockup generation creates no order or
+   paid print artifact; those artifacts are linked only after verified payment.
    Each purchase has exactly one delivery address, with an independently
    selectable quantity for every design. Countries and state/province choices
    come directly from Printful; the server sends one Printful estimate containing all
@@ -707,6 +748,14 @@ distort traffic-source reports.
 
 ## Guest ownership and lifecycle
 
+Clouds and direct-design workspaces expire three calendar months after their
+last committed edit (`events.updated_at`). Word changes, a nonempty reset,
+title/PIN changes and explicit configuration creation renew the deadline;
+viewing alone does not. The activity-retention migration gives existing active
+clouds a full three-month transition period without reviving expired links.
+Paid artifacts, commerce evidence and manually saved account designs retain
+their independent policies. See [data retention](docs/data-retention.md).
+
 Every guest contribution gets an unguessable receipt tied to the event and an
 anonymous browser-session id. Removing a contribution requires all three, so a
 guest can decrement only a word that this same browser session submitted. The
@@ -801,12 +850,22 @@ terminates the worker. Downloads are limited to 12 per source per minute across
 events and 30 per event per minute. Overload returns a retryable 429 or 503;
 expensive layout never runs on the HTTP/Socket.io event loop.
 
-The authenticated 15-second maintenance runner invokes race-safe cleanup
-primitives in bounded batches. Supabase Cron calls the public Fly hostname every five minutes,
-so due work wakes a stopped Machine; completion is recorded separately from
-pg_net merely queueing a request. Address-bearing abandoned checkout quotes
-are removed first, in bounded batches, once they are one day past expiry;
-interrupted private-artifact deletion claims are retried after five minutes.
+Supabase Cron calls the authenticated 15-second maintenance runner every five
+minutes, waking a stopped Fly Machine. Completion is recorded separately from
+pg_net merely queueing a request. At 03:00 Europe/Berlin, one durable daily scan
+becomes due: all eligible long-lived records are processed in pages of 50,
+with approximately ten-second slices and persisted category cursors. An
+unfinished scan continues at the next wake-up. Failed/protected records are
+recorded separately and retried without blocking later entries. There is no
+two-cloud daily quota. Short-lived quote/upload cleanup and recovery of paid
+work remain frequent. [Detailed scheduling and safety](docs/data-retention.md#daily-activity-cleanup-and-worker-scheduling).
+
+Fulfillment/email callbacks start new jobs immediately; safety polls use five
+seconds while working and 60 seconds after an empty poll. The mockup worker
+has no recurring idle timer: it runs for requested/durable pending jobs and
+stops when no work remains. Startup and central maintenance recover interrupted
+jobs. Process metrics are summarized in memory every ten seconds; Fly readiness
+checks remain at 15 seconds. These timers run only while the application runs.
 
 ## Bundled design fonts
 
@@ -910,16 +969,17 @@ transparent PNG renderer used by paid fulfillment. Those exact surface bytes
 are uploaded under a separate temporary prefix in the existing private Supabase
 Storage bucket and exposed to Printful through a one-hour signed HTTPS URL. The
 PNG avoids indefinitely pending provider tasks observed with SVG layers; only
-the temporary mockup copy differs from the frozen paid artifact's storage
-lifecycle. Completed or explicitly failed tasks release their sources immediately.
+the local operator’s temporary diagnostic copy has its own storage lifecycle.
+Completed or explicitly failed operator tasks release their sources immediately.
 Pending work keeps its sources across shutdown; abandoned submissions retain them
 until the one-hour expiry. Failed deletions remain retryable, and the independent
-maintenance sweep discovers expired timestamped keys after crashes.
+maintenance sweep discovers expired timestamped keys after crashes. Customer
+checkout instead retains one prepared PNG for both mockup and production.
 Generated results and provider task IDs live in the shared durable queue for
 12 hours. The browser restores pending jobs across page reloads. **Neu erzeugen**
 creates a fresh explicit command; retries of that same command remain idempotent.
 The server resumes queued work after restart instead of losing the task IDs.
-Schema version 7 is required: apply the committed additive migration with the
+Schema version 9 is required: apply the committed ordered migrations with the
 existing local operator command `npm run db:migrate` before restarting the app.
 
 The shared scheduler uses the lower Printful allowance of two creation requests
@@ -1208,8 +1268,11 @@ Germany passes those exact gross unit prices and gross shipping to native
 Stripe Checkout with `automatic_tax` and `tax_behavior: inclusive`. Other
 countries pass the stored net prices and net shipping with `exclusive`;
 Stripe determines actual taxes using the validated delivery address and the
-account's active registrations. The existing tangible-goods and shipping tax
-codes remain. No IP location or separate Tax Calculation API is used.
+account's active registrations. New clothing positions use Stripe's
+`txcd_30011000` (Clothing & Footwear); other goods use `txcd_99999999` and
+shipping uses `txcd_92010001`. The clothing category is frozen with new
+Checkout requests; existing persisted requests retain their exact original
+category on retries. No IP location or separate Tax Calculation API is used.
 
 Preparing checkout displays gross products, gross shipping, included tax and
 the final total from the SAME completed Stripe Session that the payment action
@@ -1251,6 +1314,8 @@ src/
   lifecycle.js             expired-event cleanup + paid-data detachment
   maintenance.js           bounded fulfillment/retention orchestration + heartbeat
   printRaster.js           one full-resolution PNG renderer for mockups + fulfillment
+  printPreparation.js      one frozen private source per customer print surface
+  mockupApproval.js        order-bound preview approval before payment redirect
   printArtifacts.js        frozen paid outlined-PNG upload, capability URL + integrity checks
   clientIdentity.js        trusted normalized/HMAC source identity
   rateLimits.js            bounded one-Machine HTTP/Socket.io rate windows
@@ -1446,6 +1511,16 @@ The verified full Classic TTF is pinned and licensed in
 same complete file. Font loading must fail visibly on missing faces or timeout,
 never silently accept a system fallback. Saving awaits a pending font choice;
 late font downloads cannot overwrite a newer choice or resurrect deleted text.
+
+Printable text must be reproducible by the selected local font without a system
+fallback. Cart saves reject missing glyphs, Devanagari shaping and remaining
+combining marks after NFC normalization before a configuration can reach payment.
+The current outline engine does not reproduce those complex shaping cases
+reliably. The account preview and final provider export also fail explicitly;
+they never replace unsupported letters with missing-glyph boxes. Both the normal
+and bold browser font faces must load successfully. Supported locale letters,
+all five offered fonts and their 16 whole-word style combinations remain covered
+by the font and print-content tests.
 
 ### Responsive configurator
 
@@ -1746,6 +1821,15 @@ approvals. They also do not imply that every compatibility check is already
 automated: any missing checks must be added to the guarded local release
 command and reviewed before release, preserving its fail-fast ordering and
 maintenance protections. Do not reproduce the release sequence manually.
+
+Both guarded release commands now invoke `scripts/verify-release-database.js`
+before and after ordered migrations. It authenticates the deployed target's
+database/Storage fingerprint, checks the exact migration checksum prefix, and
+compares tables, columns, constraints, triggers, functions and sequences with a
+reference built only in disposable local Postgres. Read-only catalog and
+privilege checks use the real restricted runtime role; customer rows are never
+loaded. Pending candidate migrations are allowed only before the migration
+step. Missing access or schema drift stops the release before deployment.
 
 ## Socket capacity qualification
 

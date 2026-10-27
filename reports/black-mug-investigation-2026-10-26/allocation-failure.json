@@ -1,0 +1,9 @@
+{
+  "method": "Existing test/mug-3d-lifecycle.test.js fixture, with the first texture canvas getContext('2d') returning null",
+  "injectedFailure": "first 2D texture context allocation returns null",
+  "error": "Cannot set properties of null (setting 'fillStyle')",
+  "rendererDisposed": false,
+  "contextReleased": false,
+  "displayCanvasRemoved": false,
+  "limitation": "Confirms an early allocation cleanup defect, not the original iPhone black-mug trigger"
+}

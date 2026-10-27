@@ -9,7 +9,7 @@ const privateStorage = require('../src/privateStorage');
 // A successful step-7 cron proof necessarily creates this bounded, non-customer
 // heartbeat before activation. It must remain observable, but it is not hosted
 // test business data and therefore cannot make the preservation boundary fail.
-const OPERATIONAL_TABLES = new Set(['maintenance_runs']);
+const OPERATIONAL_TABLES = new Set(['maintenance_runs','retention_runs','retention_deferrals']);
 
 function parseArgs(argv = process.argv.slice(2)) {
   const preserveArgument = argv.find((argument) => argument.startsWith('--preserve-event-slug='));

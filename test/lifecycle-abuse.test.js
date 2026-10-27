@@ -76,7 +76,7 @@ async function createEventConfiguration(db, eventId) {
 
 async function expireEvent(query, eventId) {
   await query(`
-    UPDATE events SET created_at = transaction_timestamp() - interval '366 days'
+    UPDATE events SET updated_at = transaction_timestamp() - interval '4 months'
     WHERE id = $1
   `, [eventId]);
 }
@@ -251,7 +251,7 @@ test('lifecycle and abuse boundaries', async (t) => {
     const event = await db.getEventBySlug(created.slug);
     const configuration = await createEventConfiguration(db, event.id);
     const lifetime = Date.parse(configuration.expires_at) - Date.parse(configuration.created_at);
-    assert.ok(Math.abs(lifetime - 365 * 24 * 60 * 60 * 1000) < 2_000);
+    assert.ok(lifetime >= 89 * 86400000 && lifetime <= 93 * 86400000);
 
     await app.query(`UPDATE configurations SET expires_at = transaction_timestamp() - interval '1 minute' WHERE id = $1`, [configuration.id]);
     assert.equal(

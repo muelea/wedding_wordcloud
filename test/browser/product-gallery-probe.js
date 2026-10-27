@@ -23,6 +23,43 @@
   const calmReport = document.createElement('pre');
   calmReport.id = 'gallery-loading-report';
   document.body.append(calm, calmReport);
+  const scrollReport = document.createElement('pre');
+  scrollReport.id = 'gallery-cart-scroll-report';
+  scrollReport.style.cssText = 'position:fixed;left:12px;top:90px;z-index:10000;max-width:340px;padding:12px;background:white;color:black;white-space:pre-wrap;pointer-events:none';
+  scrollReport.hidden = true;
+  document.body.append(scrollReport);
+  // Use the real pointer path: calling Gallery.add() directly misses Safari's
+  // response to text-node replacement after a native mouse click.
+  document.addEventListener('pointerdown', event => {
+    const add = event.target.closest('.product-gallery-add');
+    if (!event.isTrusted || event.button !== 0 || !add || add.disabled) return;
+    const card = add.closest('.product-gallery-card');
+    const beforeY = scrollY, beforeTop = card.getBoundingClientRect().top;
+    const textNodes = [...document.querySelectorAll(
+      '.product-gallery-name, .product-gallery-price, .product-gallery-price-note, .product-gallery-variant-summary > span:first-child'
+    )].map(element => [element, element.firstChild]);
+    const started = performance.now();
+    let settledAt = null, maxScrollDelta = 0;
+    scrollReport.hidden = false;
+    scrollReport.textContent = 'Recording native Add to cart…';
+    function sample(now) {
+      maxScrollDelta = Math.max(maxScrollDelta, Math.abs(scrollY - beforeY));
+      const busy = add.getAttribute('aria-busy') === 'true';
+      if (busy) settledAt = null;
+      else settledAt ??= now;
+      if (now - started < 32000 && (busy || now - settledAt < 500)) {
+        requestAnimationFrame(sample);
+        return;
+      }
+      const cardTopDelta = card.getBoundingClientRect().top - beforeTop;
+      const retainedText = textNodes.every(([element, node]) => element.firstChild === node);
+      const accepted = productGallery.cards.some(entry => entry.element === card && entry.inCart && entry.snapshot.needsCartUpdate === false);
+      const passed = accepted && !busy && maxScrollDelta < 1 && Math.abs(cardTopDelta) < 1 && retainedText;
+      scrollReport.textContent = JSON.stringify({ passed, product: card.querySelector('.product-gallery-name').textContent,
+        beforeY, afterY: scrollY, maxScrollDelta, cardTopDelta, retainedText, accepted }, null, 2);
+    }
+    requestAnimationFrame(sample);
+  }, true);
   let finishLoading = null;
   calm.addEventListener('click', async () => {
     if (finishLoading) { finishLoading(); return; }
@@ -128,12 +165,13 @@
       await gallery.choose(card);
       await frame();
       check('the selected product opens the current editor', workspaceReady && product.key === expected.productKey && galleryElement.hidden && !editorElement.hidden);
-      const galleryBack = document.querySelector('.design-toolbar-controls [data-gallery-back]');
-      check('the gallery return button is immediately before the product selector',
-        galleryBack.nextElementSibling.id === 'change-product' && !galleryBack.hidden);
+      const galleryBack = document.getElementById(mobileDevice ? 'mobile-back-link' : 'back-link');
+      check('the header returns to products while the toolbar starts with the product selector',
+        new URL(galleryBack.href).searchParams.get('view') === 'products' &&
+        document.querySelector('.design-toolbar-controls').firstElementChild.id === 'selected-product-control');
       if (!mobileDevice) {
         const backRect = galleryBack.getBoundingClientRect();
-        check('the gallery return button is visible when the editor opens', backRect.top >= document.querySelector('header').getBoundingClientRect().bottom &&
+        check('the header gallery return link is visible when the editor opens', backRect.top >= 0 &&
           backRect.bottom <= innerHeight && backRect.width > 0);
       }
       const actual = getAllSurfaceDesigns();

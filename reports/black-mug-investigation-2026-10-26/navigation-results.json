@@ -1,0 +1,144 @@
+{
+  "engine": "desktop WebKit with mobile emulation; not physical iOS",
+  "states": [
+    {
+      "label": "initial",
+      "surfaces": [
+        {
+          "size": [
+            4096,
+            4096
+          ],
+          "pixel": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "designs": 1,
+      "contextLost": false,
+      "glError": 0,
+      "opaquePixels": 93180,
+      "whiteRatio": 0.9763039278815197,
+      "darkRatio": 0
+    },
+    {
+      "label": "return-1",
+      "surfaces": [
+        {
+          "size": [
+            4096,
+            4096
+          ],
+          "pixel": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "designs": 1,
+      "contextLost": false,
+      "glError": 0,
+      "opaquePixels": 93180,
+      "whiteRatio": 0.9763039278815197,
+      "darkRatio": 0
+    },
+    {
+      "label": "return-2",
+      "surfaces": [
+        {
+          "size": [
+            4096,
+            4096
+          ],
+          "pixel": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "designs": 1,
+      "contextLost": false,
+      "glError": 0,
+      "opaquePixels": 93180,
+      "whiteRatio": 0.9763039278815197,
+      "darkRatio": 0
+    },
+    {
+      "label": "return-3",
+      "surfaces": [
+        {
+          "size": [
+            4096,
+            4096
+          ],
+          "pixel": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "designs": 1,
+      "contextLost": false,
+      "glError": 0,
+      "opaquePixels": 93180,
+      "whiteRatio": 0.9763039278815197,
+      "darkRatio": 0
+    },
+    {
+      "label": "return-4",
+      "surfaces": [
+        {
+          "size": [
+            4096,
+            4096
+          ],
+          "pixel": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "designs": 1,
+      "contextLost": false,
+      "glError": 0,
+      "opaquePixels": 93180,
+      "whiteRatio": 0.9763039278815197,
+      "darkRatio": 0
+    },
+    {
+      "label": "return-5",
+      "surfaces": [
+        {
+          "size": [
+            4096,
+            4096
+          ],
+          "pixel": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ],
+      "designs": 1,
+      "contextLost": false,
+      "glError": 0,
+      "opaquePixels": 93180,
+      "whiteRatio": 0.9763039278815197,
+      "darkRatio": 0
+    }
+  ],
+  "errors": []
+}

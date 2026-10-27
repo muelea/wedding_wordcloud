@@ -185,7 +185,9 @@ test('container, Fly config and local deployment command enforce the hosting bou
     'Vollständige Tests',
     'Produktionsimage lokal bauen',
     'Fly-Konfiguration streng validieren',
+    'Zielschema und eingeschränkte Laufzeitrechte prüfen',
     'Datenbankmigrationen anwenden',
+    'Migriertes Zielschema vor Deployment prüfen',
     'Freigegebenes Image zu Fly deployen',
     'Wartungs-Cron aktualisieren',
     'Hosted-Smoke-Test ausführen',
@@ -197,13 +199,17 @@ test('container, Fly config and local deployment command enforce the hosting bou
   assert.equal(commands[2],
     'docker build --platform linux/amd64 --tag wolkenworte:0123456789ab .');
   assert.equal(commands[3], 'flyctl config validate --strict --config fly.toml --app wolkenworte');
-  assert.equal(commands[4], 'npm run db:migrate');
-  assert.equal(commands[5], 'flyctl deploy --remote-only --ha=false --config fly.toml --app wolkenworte --yes');
-  assert.equal(commands[6],
+  assert.equal(commands[4], 'node scripts/verify-release-database.js --before-migrations');
+  assert.equal(commands[5], 'npm run db:migrate');
+  assert.equal(commands[6], 'node scripts/verify-release-database.js --current');
+  assert.equal(commands[7], 'flyctl deploy --remote-only --ha=false --config fly.toml --app wolkenworte --yes');
+  assert.equal(commands[8],
     'npm run maintenance:configure-cron -- --url https://wolkenworte.fly.dev');
-  assert.equal(commands[7], 'npm run smoke:hosted -- https://wolkenworte.io');
-  assert.equal(commands[8], 'flyctl status --app wolkenworte');
+  assert.equal(commands[9], 'npm run smoke:hosted -- https://wolkenworte.io');
+  assert.equal(commands[10], 'flyctl status --app wolkenworte');
   assert.equal(steps[4].releaseBoundary, true);
+  assert.equal(steps[5].releaseBoundary, true);
+  assert.equal(steps[6].releaseBoundary, true);
 
   const hostedSmoke = fs.readFileSync(path.join(ROOT, 'scripts', 'hosted-smoke.js'), 'utf8');
   assert.match(hostedSmoke, /finally\s*\{\s*await cleanupFixture\(fixture\)/);

@@ -27,7 +27,7 @@ function fixture({ modelOptions = {} } = {}) {
       createLinearGradient() { return { addColorStop() {} }; } }),
   });
   class Renderer {
-    constructor() { this.lost = false; this.renders = 0; this.capabilities = { getMaxAnisotropy: () => 4 }; renderers.push(this); }
+    constructor() { this.lost = false; this.renders = 0; this.capabilities = { getMaxAnisotropy: () => 4 }; this.shadowMap = {}; renderers.push(this); }
     setClearColor() {} setPixelRatio(value) { this.pixelRatio = value; } setSize() {}
     getContext() { return { isContextLost: () => this.lost }; }
     render() { this.renders += 1; }
@@ -186,7 +186,7 @@ test('all 3D variants use neutral lighting and repaint their latest artwork on b
     const viewer = root.Mug3DViewer.create({ host, THREE, product, drawTexture: () => { firstDraws++; }, drawBackTexture: () => { backDraws++; } });
     assert.equal(await viewer.ready, true, product.key);
     assert.equal(Boolean(viewer.cloth), ['blanket', 'garment'].includes(source.previewModel?.kind), product.key);
-    assert.equal(viewer.renderer.toneMapping, THREE.LinearToneMapping, product.key);
+    assert.equal(viewer.renderer.toneMapping, source.previewModel?.kind === 'garment' ? THREE.ACESFilmicToneMapping : THREE.LinearToneMapping, product.key);
     assert.ok(viewer.scene.children.filter(object => object.isLight).every(light => light.color.getHex() === 0xffffff));
     assert.ok(firstDraws >= (source.previewMesh ? 2 : 1));
     const beforeBack = backDraws;
@@ -598,4 +598,20 @@ test('full-window demo rendering stays within its pixel budget through resize', 
     assert.equal(viewer.camera.aspect, width / height, 'render budget preserves framing proportions');
   }
   viewer.destroy();
+});
+
+
+test('garment studio shadows have one bounded map and release it when the preview closes', () => {
+  const f = fixture(), products = require('../src/products');
+  const product = products.getPublicProduct(products.getProduct('hoodie-12403'));
+  const viewer = f.root.Mug3DViewer.create({ host: f.host, THREE: f.THREE, product, fitToView: true });
+  const lights = viewer.scene.children.filter(light => light.isLight && light.castShadow);
+  assert.equal(lights.length, 1);
+  assert.equal(viewer.renderer.shadowMap.enabled, true);
+  assert.equal(viewer.renderer.shadowMap.type, f.THREE.PCFSoftShadowMap);
+  assert.deepEqual(lights[0].shadow.mapSize.toArray(), [1024, 1024]);
+  let disposed = 0;
+  lights[0].shadow.map = { dispose() { disposed++; } };
+  viewer.destroy(); viewer.destroy();
+  assert.equal(disposed, 1, 'changing products does not retain the previous shadow texture');
 });

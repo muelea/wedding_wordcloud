@@ -17,7 +17,7 @@ async function startDesign(baseUrl, suffix = '') {
   return { slug: match[1], location };
 }
 
-test('both Home entries deliberately start a blank default mug without cloud setup', async (t) => {
+test('both Home entries start the product gallery without cloud setup or an approved product', async (t) => {
   const app = await startTestServer();
   t.after(app.close);
   const homepage = await fetch(app.baseUrl).then(response => response.text());
@@ -38,7 +38,7 @@ test('both Home entries deliberately start a blank default mug without cloud set
   const record = (await app.query('SELECT * FROM events WHERE slug = $1', [first.slug])).rows[0];
   assert.equal(record.organizer_pin_hash, null);
   assert.equal(record.organizer_pin_salt, null);
-  assert.equal(new Date(record.expires_at) - new Date(record.created_at), 365 * 24 * 60 * 60 * 1000);
+  assert.equal((await app.query("SELECT expires_at=updated_at+interval '3 months' AS valid FROM events WHERE id=$1",[record.id])).rows[0].valid,true);
   assert.equal((await app.query('SELECT count(*)::integer AS count FROM reserved_event_slugs')).rows[0].count, 2);
   assert.equal((await app.query('SELECT count(*)::integer AS count FROM words')).rows[0].count, 0);
   assert.equal((await app.query('SELECT count(*)::integer AS count FROM configurations')).rows[0].count, 0);
@@ -53,7 +53,7 @@ test('both Home entries deliberately start a blank default mug without cloud set
   const page = await fetch(`${app.baseUrl}${first.location}`).then(response => response.text());
   assert.match(page, /const directDesign = true/);
   assert.match(page, /id="back-link"[^>]*href="\/"|href="\/"[^>]*id="back-link"/);
-  assert.match(page, /Opening your design/);
+  assert.match(page, /Loading your products/);
 
   const verify = await fetch(`${app.baseUrl}/api/events/${first.slug}/organizer/verify`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: '1234' }),
@@ -111,7 +111,7 @@ test('direct custom designs save, reopen and freeze without live words while ret
   assert.equal(normalCloudSave.status, 400);
   assert.equal((await normalCloudSave.json()).error, 'invalid_words');
 
-  await app.query("UPDATE events SET created_at = now() - interval '366 days' WHERE slug = $1", [event.slug]);
+  await app.query("UPDATE events SET updated_at = now() - interval '4 months' WHERE slug = $1", [event.slug]);
   assert.equal((await fetch(`${app.baseUrl}${event.location}`)).status, 404);
   assert.equal((await fetch(`${app.baseUrl}/api/events/${event.slug}/configurator`)).status, 404);
 });

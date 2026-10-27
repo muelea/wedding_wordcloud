@@ -138,10 +138,10 @@ test('black framed posters share the oak frame geometry and full print UVs in bo
       const reference = oakGroup.children[index];
       assert.equal(mesh.geometry.type, reference.geometry.type);
       assert.deepEqual(mesh.geometry.getAttribute('position').array, reference.geometry.getAttribute('position').array);
-      assert.deepEqual(mesh.geometry.getAttribute('uv').array, reference.geometry.getAttribute('uv').array);
+      assert.deepEqual(mesh.geometry.getAttribute('uv')?.array, reference.geometry.getAttribute('uv')?.array);
       assert.deepEqual(mesh.position.toArray(), reference.position.toArray());
     });
-    const rails = blackGroup.children.filter(mesh => mesh.geometry.type === 'BoxGeometry');
+    const rails = blackGroup.children.filter(mesh => mesh.name === 'poster-frame-rail');
     assert.equal(rails.length, 4);
     assert.ok(rails.every(mesh => mesh.material.color.getHexString() === '202124'));
     const { width, height } = black.previewModel;
@@ -150,6 +150,57 @@ test('black framed posters share the oak frame geometry and full print UVs in bo
       `${orientation}: full artwork retains its normalized print coordinates`);
     assert.ok(fs.existsSync(require('node:path').join(__dirname, '../public', black.previewMockup.assets.default)),
       'the existing reference photograph remains available');
+  }
+});
+
+test('every framed poster matches its size-specific photo rail proportions in both orientations', () => {
+  const { samples } = require('./fixtures/framed-poster-landmarks.json');
+  for (const source of PRODUCTS.filter(p => p.previewShape === 'framed-poster')) {
+    const sample = samples.find(entry => {
+      const reference = getProduct(entry.productKey).previewModel;
+      return reference.width === source.previewModel.width && reference.height === source.previewModel.height;
+    });
+    assert.ok(sample, `${source.key}: requires an independently measured photo`);
+    assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', sample.photo)));
+    for (const orientation of ['portrait', 'landscape']) {
+      const product = resolveProductOrientation(source, orientation), group = model(product);
+      const { width, height, depth } = product.previewModel;
+      const bounds = new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3());
+      for (const axis of [0, 1]) {
+        const photoAxis = orientation === 'landscape' ? 1 - axis : axis;
+        const photoExtent = sample.outer[photoAxis + 2] - sample.outer[photoAxis];
+        const photoRail = ((sample.opening[photoAxis] - sample.outer[photoAxis]) +
+          (sample.outer[photoAxis + 2] - sample.opening[photoAxis + 2])) / 2 / photoExtent;
+        const extent = axis ? bounds.y : bounds.x, opening = axis ? height : width;
+        assert.ok(Math.abs((extent - opening) / 2 / extent - photoRail) < .0035,
+          `${source.key}/${orientation}/${axis}: projected rail agrees with the reference photo`);
+      }
+      for (const u of [.01, .25, .75, .99]) for (const v of [.01, .25, .75, .99]) {
+        const hit = ray(group, (u - .5) * width, (v - .5) * height)[0];
+        assert.equal(hit.object.name, 'poster-print-panel', 'the frame never covers or crops the artwork');
+        assert.ok(Math.abs(hit.uv.x - u) < 1e-6 && Math.abs(hit.uv.y - v) < 1e-6);
+      }
+      const lip = ray(group, width / 2 + .035, 0)[0];
+      const face = ray(group, width / 2 + .5, 0)[0];
+      assert.equal(face.object.name, 'poster-frame-rail');
+      assert.ok(face.point.z > lip.point.z && lip.point.z > depth / 2,
+        'the broad face rises above the inner lip and recessed print');
+      const rear = new THREE.Raycaster(new THREE.Vector3(0, 0, -30), new THREE.Vector3(0, 0, 1))
+        .intersectObjects(group.children, true)[0];
+      assert.equal(rear.object.material[rear.face.materialIndex].map, null, 'the rear remains unprinted');
+      const rails = group.children.filter(mesh => mesh.name === 'poster-frame-rail');
+      assert.equal(rails.length, 4);
+      assert.ok(rails.every(mesh => mesh.material.color.getHexString() === product.previewModel.frameColor.slice(1)));
+      assert.ok(group.getObjectByName('poster-frame-mitres'));
+      const frame = rails[0].material, texture = frame.map;
+      let releases = 0;
+      texture?.addEventListener('dispose', () => releases++);
+      for (const mesh of group.children) {
+        mesh.geometry.dispose();
+        for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) material.dispose();
+      }
+      assert.equal(releases, product.previewModel.frameColor === '#c79d67' ? 1 : 0);
+    }
   }
 });
 
@@ -337,6 +388,42 @@ test('both sleeves have padded opaque skins, textured binding and two full zippe
     let releases = 0; front.material[0].bumpMap.addEventListener('dispose', () => releases++);
     group.traverse(mesh => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean).forEach(m => m.dispose()));
     assert.equal(releases, 1);
+  }
+});
+
+test('MagSafe rings match the photo band width without enlarging the circle or shifting the artwork', () => {
+  const reference = require('./fixtures/magsafe-ring-landmarks.json');
+  assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', reference.photo)));
+  const photoDiameter = reference.outer[2] - reference.outer[0];
+  const photoBand = (photoDiameter - (reference.opening[2] - reference.opening[0])) / 2 / photoDiameter;
+  for (const product of PRODUCTS.filter(p => p.previewModel?.magSafe)) {
+    const group = model(product), profile = product.previewModel, ring = profile.magSafeRing;
+    const mesh = group.getObjectByName('case-magsafe-relief');
+    const bounds = new THREE.Box3().setFromObject(mesh), outside = ring.radius + .06;
+    const centre = bounds.getCenter(new THREE.Vector3()), extent = bounds.getSize(new THREE.Vector3());
+    assert.ok(Math.abs(centre.x - ring.x) < 1e-5 && Math.abs(centre.y - ring.y) < 1e-5);
+    assert.ok(Math.abs(extent.x / 2 - outside) < .001 && Math.abs(extent.y / 2 - outside) < .001,
+      `${product.key}: the original outside diameter stays fixed`);
+    assert.ok(Math.abs(bounds.max.z - (profile.depth / 2 + .135)) < 1e-5,
+      'widening the band does not increase its height');
+    const p = mesh.geometry.attributes.position, uv = mesh.geometry.attributes.uv, face = profile.face;
+    let inner = Infinity;
+    for (let i = 0; i < p.count; i++) inner = Math.min(inner, Math.hypot(p.getX(i) - ring.x, p.getY(i) - ring.y));
+    assert.ok(Math.abs((outside - inner) / (outside * 2) - photoBand) < .005);
+    for (const direction of [-1, 1]) {
+      assert.equal(ray(group, ring.x + direction * outside * .90, ring.y)[0].object, mesh,
+        'the broad annular face is present on both sides');
+      assert.equal(ray(group, ring.x + direction * (inner - .04), ring.y)[0].object.name, 'case-printed-shell',
+        'the middle remains open over the printed shell');
+    }
+    for (let i = 0; i < p.count; i++) {
+      assert.ok(Math.abs(uv.getX(i) - (face.x + (p.getX(i) / profile.width + .5) * face.width)) < 1e-6);
+      assert.ok(Math.abs(uv.getY(i) - (1 - face.y - (.5 - p.getY(i) / profile.height) * face.height)) < 1e-6);
+    }
+    group.traverse(mesh => {
+      mesh.geometry?.dispose();
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) material?.dispose();
+    });
   }
 });
 

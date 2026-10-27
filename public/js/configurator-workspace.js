@@ -32,6 +32,13 @@
       document.getElementById('editor-reset-confirm').addEventListener('click', () => this.confirmReset());
       this.capabilities = {};
       this.active = null;
+      // Safari can retain :focus-visible after script restores focus from a
+      // chooser heading. Keep pointer dismissal visually quiet while retaining
+      // the keyboard indicator when Tab or Escape returns to its trigger.
+      document.addEventListener('pointerdown', () => { document.documentElement.dataset.wwInput = 'pointer'; }, { capture: true, passive: true });
+      document.addEventListener('keydown', event => {
+        if (!['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) document.documentElement.dataset.wwInput = 'keyboard';
+      }, { capture: true });
       for (const trigger of document.querySelectorAll('[data-panel-trigger]')) {
         trigger.addEventListener('click', () => this.toggleChooser(trigger));
       }
@@ -74,7 +81,12 @@
           activeElement.focus({ preventScroll: true });
         }
       });
-      const reposition = () => this.positionChooser();
+      const reposition = event => {
+        // Scrolling a picker moves its contents, not its page anchor. Avoid
+        // synchronous panel measurement/style writes for every wheel frame.
+        if (event?.type === 'scroll' && event.target?.nodeType && this.active?.panel.contains(event.target)) return;
+        this.positionChooser();
+      };
       root.addEventListener('resize', reposition, { passive: true });
       root.addEventListener('scroll', reposition, { passive: true, capture: true });
       root.visualViewport?.addEventListener('resize', reposition, { passive: true });

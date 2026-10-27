@@ -56,6 +56,10 @@ test('print font loading rejects missing faces, failed downloads and timeouts in
   await assert.rejects(Fonts.loadFont('classic', null), /unavailable/);
   await assert.rejects(Fonts.loadFont('classic', { load: async () => [] }), /unavailable/);
   await assert.rejects(Fonts.loadFont('classic', { load: async () => [{ status: 'unloaded' }] }), /unavailable/);
+  for (const missingWeight of [400, 700]) {
+    await assert.rejects(Fonts.loadFont('classic', { load: async css =>
+      css.startsWith(String(missingWeight)) ? [] : [{ status: 'loaded' }] }), /unavailable/);
+  }
   await assert.rejects(Fonts.loadFont('classic', { load: async () => { throw new Error('network'); } }), /network/);
   await assert.rejects(Fonts.loadFont('classic', { load: () => new Promise(() => {}) }, 5), /timeout/);
   for (const font of Fonts.FONTS) {
