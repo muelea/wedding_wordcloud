@@ -109,7 +109,8 @@ frozen snapshot of the word cloud.
    photo. The thumbnail beside the selection shows the current design and opens
    the shared product overview used by the basket and shipping page. It has one
    large visual stage with photo, design and interactive 3D tabs, keyboard
-   navigation and an enlarged view. Reviewed blank Printful photos include
+   navigation and an enlarged view on desktop. Phones and tablets keep one
+   responsive overview without a maximize control. Reviewed blank Printful photos include
    additional angles, material details and male/female garment models where
    available. All photos are local and bound to the exact provider variants;
    supplier artwork is excluded. Single-variant products use the same
@@ -672,26 +673,51 @@ retention to **2 months**, turn off retention reset on new user activity, and
 keep Google signals and advertising personalization off.
 The site uses one optional analytics consent choice, kept for 180 days in a
 first-party cookie without a user ID. Google code loads only after acceptance.
-The shared site footer holds privacy settings on standard pages; the live word cloud
-keeps the same control in its top-right menu. Consent can be withdrawn on every page.
+The shared site footer and site menu hold privacy settings, including on account
+pages; the live word cloud keeps the same control in its top-right menu. All
+rendered controls work independently. Withdrawal clears GA cookies and reloads
+without the Google tag; other open tabs stop sending when they next emit or
+regain focus. Declined actions are never replayed after later acceptance.
 
 Analytics sends generic page types instead of event slugs, event titles, cart
-IDs, quote IDs or Stripe Session IDs. Events cover the start dialog, created
-clouds, accepted word submissions, product selection, cart additions/removals,
-shipping entry and a successful quote, Stripe redirects/cancellations, and
+IDs, quote IDs or Stripe Session IDs. Gallery, editor and cart transitions send
+distinct virtual `page_view` events with sanitized referrers. Events cover cloud
+creation, accepted word submissions, share methods, keepsake entry, direct design
+starts, visible gallery impressions, product selection/views, account design saves,
+cart views, quantity deltas, removal/undo, checkout entry, shipping quotes,
+`add_shipping_info`, payment redirects/cancellations, bounded failure reasons and
 verified purchases. Only the server-confirmed paid status can trigger a
 `purchase`; its transaction ID is the nonpersonal `WW-...` order number and its
-value excludes shipping and tax. Google cannot observe the Stripe-hosted
+value excludes shipping and tax. Ecommerce events carry catalog SKU, category,
+quantity and net unit price; purchases use frozen checkout prices. Rounding cents
+are split across units so item revenue reconciles exactly. Older snapshots without
+per-line net totals allocate their frozen aggregate net revenue proportionally.
+Google cannot observe the Stripe-hosted
 payment page, and purchases without a return visit are absent from GA4.
 Stripe and the database remain the source of truth for sales totals.
 
-For a simple drop-off view in GA4, create a **Funnel exploration** with
-`cloud_created` → `select_item` → `add_to_cart` → `begin_checkout` →
-`shipping_quote` → `payment_redirect` → `purchase`. Check `page_view` by the
-generic `page_location` path for overall traffic. This measures consented
-visitors and selected decisions, not every click. Only `utm_source`,
-`utm_medium` and `utm_campaign` on the homepage are retained; use campaign
-values without names or other personal data.
+Create separate **Funnel explorations** for `cloud_created` → `keepsake_open`
+and `direct_design_start` → `design_started`, then follow `view_item_list` →
+`select_item` or `view_item` → `add_to_cart` → `begin_checkout` →
+`add_shipping_info` → `payment_redirect` → `purchase`. Gallery quick-add can
+skip selection, so use an open funnel or a `view_item` step for that path.
+Reorders enter at `reorder_started` and `begin_checkout`. Register event-scoped
+custom dimensions `page_type`, `page_surface`, `entry_flow`, `app_environment`, `ui_language`,
+`payment_mode`, `checkout_stage` and `failure_reason` to use them in reports.
+`entry_flow` distinguishes cloud, direct, library and reorder entry. Check
+`page_view` by generic `page_location` for traffic. This measures consented
+visitors and selected decisions, not every click. All landing pages retain only
+validated `utm_source`, `utm_medium`, `utm_campaign`, `utm_content` and `utm_term`;
+use campaign values without names or other personal data.
+
+Run `node scripts/check-analytics-browser.js` for a loopback-only browser fixture
+using real pages and client scripts, an in-memory checkout and a local Google-tag
+recorder. Expand “Lokale Analytics-Prüfung” to inspect event payloads. It never
+loads `.env`, sends analytics to Google, calls payment providers or uses the
+business database. Focused regression checks are `npm test --
+test/analytics.test.js test/analytics-commerce.test.js test/pricing-journey.test.js
+test/product-gallery.test.js test/configurator-cart-panel.test.js
+test/shipping-state.test.js`.
 
 Before enabling a measurement ID on a hosted release, confirm the GA4 stream
 settings above and inspect browser network requests for both consent choices.

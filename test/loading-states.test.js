@@ -27,7 +27,7 @@ function deferred() {
 function restoredEntry() {
   return { URLSearchParams, location: { search: '?edit=existing-design' },
     directDesign: false, words: [['Liebe', 1]],
-    WolkenworteProductGallery: require('../public/js/product-gallery'), updateProductBackLink() {} };
+    WolkenworteProductGallery: require('../public/js/product-gallery'), updateProductBackLink() {}, analyticsEditorView() {} };
 }
 
 const messages = [

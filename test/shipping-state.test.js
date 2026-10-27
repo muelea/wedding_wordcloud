@@ -39,7 +39,7 @@ function harness(fetcher) {
       querySelectorAll: () => [], reportValidity: () => true,
     };
   }
-  const calls = { fetches: 0, shown: [], navigation: [] };
+  const calls = { fetches: 0, shown: [], navigation: [], analytics: [] };
   const scope = vm.createContext({
     productApproval: {sync() {}, value() { return {}; }}, selectedPreviewConfigurations: () => [],
     AbortController, AbortSignal, setTimeout, clearTimeout,
@@ -57,6 +57,8 @@ function harness(fetcher) {
     collectShipments: () => ({ shipments: [{ recipient: { city: 'Berlin' }, items: [] }], totalQuantity: 1 }),
     WolkenworteI18n: { getLocale: () => 'de' },
     WolkenworteActions: { setBusy: (node, busy) => { node.disabled = busy; node.classList.toggle('ww-is-busy', busy); } },
+    WolkenworteAnalytics: { commerce: (name, details) => calls.analytics.push({ name, details }),
+      track: (name, details) => calls.analytics.push({ name, details }) },
     location: { assign: url => calls.navigation.push(url) },
     fetch: (...args) => { calls.fetches++; return fetcher(...args); },
   });
@@ -87,6 +89,7 @@ test('shipping cart review removes only the chosen item and keeps last-item remo
       shippingDraft: { removeConfigurations: ids => removedFromDraft.push(...ids) },
       saveShippingDraft() {},
       collectShipments: () => ({ shipments: [{ items: [] }] }),
+      currentAnalyticsRows: () => new Map(),
       location: { assign: url => navigation.push(url) },
       setText() {}, formError: {},
     });
@@ -482,4 +485,38 @@ test('delivery restrictions identify the affected item and follow destination an
   country='JP';quantity='0';
   assert.equal(h.scope.updateDeliveryRestrictions(),false);
   assert.equal(notice.hidden,true);
+});
+
+test('successful shipping confirmation and payment send the frozen priced items, never the address', async () => {
+  const analyticsItems = [{ productKey: 'white-glossy-mug-duo-11oz', quantity: 3, unitPriceCents: 930 }];
+  const quote = { ...preparedQuote('confirmed'), analyticsItems };
+  let request = 0;
+  const page = harness(() => Promise.resolve(response(++request === 1 ? { quote } : request === 2 ? { quote } : { quote, url: 'https://checkout.stripe.test/session' })));
+  await page.submit();
+  const shipping = page.calls.analytics.filter(event=>['shipping_quote','add_shipping_info'].includes(event.name));
+  assert.deepEqual(shipping.map(event=>event.name), ['shipping_quote','add_shipping_info']);
+  assert.ok(shipping.every(event=>event.details.items===analyticsItems));
+  await page.checkout();
+  assert.equal(page.calls.analytics.at(-1).name, 'payment_redirect');
+  assert.ok(!JSON.stringify(page.calls.analytics).includes('Berlin'));
+});
+
+test('every shipping entry including reorders gets an itemized checkout once, with late-consent support', () => {
+  const item = { productKey: 'white-glossy-mug-duo-11oz', quantity: 2, unitPriceCents: 930 };
+  let consented = false;
+  const calls = [];
+  const context = vm.createContext({ shippingDraftReady: true, analyticsCheckoutStarted: false,
+    currentAnalyticsRows: () => new Map([['private-configuration', item]]),
+    WolkenworteAnalytics: { commerce: (name, details) => {
+      if (!consented) return false;
+      calls.push({ name, details }); return true;
+    } },
+  });
+  vm.runInContext(pageFunction('trackShippingEntry'), context);
+  context.trackShippingEntry(); assert.equal(calls.length,0);
+  consented=true; context.trackShippingEntry(); context.trackShippingEntry();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].name,'begin_checkout');
+  assert.equal(calls[0].details.items[0],item);
+  assert.ok(!JSON.stringify(calls).includes('private-configuration'));
 });

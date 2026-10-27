@@ -59,6 +59,8 @@ function harness(t, options = {}) {
       added.push(design);
       return options.onAdd ? options.onAdd(design) : { ...design, editingOrderItemId: 'Cart00001', needsCartUpdate: false };
     },
+    onImpression: options.onImpression, onView: options.onView, onSelect: options.onSelect,
+    mobile: options.mobile,
     isInCart: options.isInCart,
     i18n,
   });
@@ -1045,4 +1047,143 @@ test('flat previews paint only visible changed cards instead of every resize not
   observations.callbacks.intersection([{ target: first.stage, isIntersecting: false }]);
   h.gallery.render(first, true);
   assert.equal(h.painted.length, 3, 'leaving the viewport does not paint');
+});
+
+test('gallery analytics measures visible products after consent, once per variant, and deliberate choices', async t => {
+  let consented = false;
+  const impressions = [], viewed = [], selected = [];
+  const h = harness(t, { products: [products.find(p=>p.previewType==='mug'), products.find(p=>p.previewShape==='poster')],
+    onImpression: product => { if (!consented) return false; impressions.push(product.key); return true; },
+    onView: product => viewed.push(product.key), onSelect: product => selected.push(product.key),
+  });
+  await h.settle();
+  assert.deepEqual(impressions, []);
+  consented = true;
+  h.gallery.cards[1].visible = false;
+  h.gallery.reportImpressions(); h.gallery.reportImpressions();
+  assert.deepEqual(impressions, [h.gallery.cards[0].product.key]);
+  h.gallery.cards[1].visible = true;
+  h.gallery.reportImpressions();
+  assert.equal(impressions.length, 2);
+  h.gallery.openPreview(h.gallery.cards[0]);
+  assert.deepEqual(viewed, [h.gallery.cards[0].product.key]);
+  await h.gallery.choose(h.gallery.cards[0]);
+  assert.deepEqual(selected, [h.gallery.cards[0].product.key]);
+  h.gallery.suspend(); h.gallery.reportedItems.clear(); h.gallery.reportImpressions();
+  assert.equal(impressions.length, 2, 'hidden gallery never records new impressions');
+  await h.gallery.resume(snapshot(h.gallery.cards[0].product));
+  assert.deepEqual(selected, [h.gallery.cards[0].product.key], 'restoring a gallery is not a customer selection');
+});
+
+function mobileObservers() {
+  const observations = previewObservers(), intersections = [];
+  return { mobile: true, callbacks: observations.callbacks, intersections,
+    observe(window) {
+      observations.observe(window);
+      window.IntersectionObserver = class {
+        constructor(callback, options) { this.callback = callback; this.options = options; this.observed = new Set(); intersections.push(this); }
+        observe(target) { this.observed.add(target); }
+        unobserve(target) { this.observed.delete(target); }
+        disconnect() { this.observed.clear(); this.disconnected = true; }
+      };
+    },
+    enter(index, cards, isIntersecting = true) {
+      intersections[index].callback(cards.map(card => ({ target: card.stage, isIntersecting })));
+    },
+  };
+}
+
+test('mobile prepares and paints nearby cards without spending work on the distant catalog or reporting offscreen impressions', async t => {
+  const observations = mobileObservers(), impressions = [];
+  const h = harness(t, { ...observations, onImpression: product => { impressions.push(product.key); return true; } });
+  await h.settle();
+  assert.equal(h.prepared.length, 0);
+  assert.equal(h.gallery.cards[0].name.textContent, h.gallery.cards[0].product.displayName, 'catalog details do not wait for artwork');
+  assert.deepEqual(observations.intersections[1].options, { rootMargin: `${h.window.innerHeight}px 0px` });
+  const [first, next] = h.gallery.cards;
+  observations.enter(0, [first]);
+  observations.enter(1, [first, next]);
+  await h.settle();
+  assert.deepEqual(h.prepared, [first.product.key, next.product.key]);
+  assert.equal(next.visible, false);
+  assert.equal(observations.callbacks.idleCount(), 1);
+  observations.callbacks.idle(); observations.callbacks.idle();
+  assert.equal(h.viewers.length, 2, 'the next screen already has its exact rendered product');
+  assert.deepEqual(impressions, [first.product.key], 'preloading does not invent visible impressions');
+  const distant = h.gallery.cards.find(card => card.product.key === 'mouse-pad');
+  observations.enter(0, [first], false); observations.enter(1, [first, next], false);
+  observations.enter(0, [distant]); observations.enter(1, [distant]);
+  await h.settle(); observations.callbacks.idle();
+  assert.deepEqual(h.prepared, [first.product.key, next.product.key, distant.product.key]);
+  assert.equal(distant.stage.dataset.ready, 'true');
+  await h.gallery.choose(distant);
+  assert.deepEqual(h.chosen[0], distant.snapshot, 'mobile hands over the same complete design');
+});
+
+test('mobile keeps a three-context budget, retains revisited previews, and observes filters and editor return', async t => {
+  const observations = mobileObservers();
+  const h = harness(t, observations);
+  const cards = h.gallery.cards.slice(0, 4);
+  observations.enter(1, cards); await h.settle();
+  for (let index = 0; index < cards.length; index++) observations.callbacks.idle();
+  assert.equal(h.viewers.length, 4);
+  assert.equal(cards.filter(card => card.viewer).length, 3);
+  h.gallery.filter('tech');
+  const mouse = h.gallery.cards.find(card => card.product.key === 'mouse-pad');
+  assert.ok(observations.intersections[1].observed.has(mouse.stage));
+  h.gallery.suspend();
+  observations.enter(1, [mouse]);
+  await h.settle(); assert.equal(mouse.started, undefined, 'hidden editor does not start gallery work');
+  await h.gallery.resume(); await h.settle(); observations.callbacks.idle();
+  assert.equal(mouse.snapshot.productKey, mouse.product.key);
+  assert.equal(mouse.stage.dataset.ready, 'true');
+  h.gallery.destroy();
+  assert.ok(observations.intersections.every(observer => observer.disconnected));
+});
+
+test('mobile scrolling pauses new artwork and cooperative layout work, and disposal releases waiting work', async t => {
+  const observations = mobileObservers(), waits = [];
+  const h = harness(t, { ...observations, prepare: (product, options) => {
+    waits.push(options.waitForIdle);
+    return snapshot(product);
+  } });
+  h.window.dispatchEvent(new h.window.Event('touchmove'));
+  observations.enter(1, [h.gallery.cards[0]]);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(h.prepared.length, 0, 'a fling must not start another layout');
+  await new Promise(resolve => setTimeout(resolve, 160));
+  await h.settle();
+  assert.equal(waits.length, 1);
+  h.window.dispatchEvent(new h.window.Event('scroll'));
+  let resumed = false;
+  const waiting = waits[0]().then(() => { resumed = true; });
+  await Promise.resolve(); assert.equal(resumed, false);
+  h.gallery.suspend();
+  await waiting;
+  assert.equal(h.gallery.preparationWaiters.size, 0, 'editor requests must not deadlock behind a shared paused layout');
+  await waits[0]();
+  await h.gallery.resume();
+  h.window.dispatchEvent(new h.window.Event('scroll'));
+  const closing = waits[0]();
+  h.gallery.destroy();
+  await closing;
+  assert.equal(h.gallery.preparationWaiters.size, 0);
+});
+
+test('leaving the mobile preload margin releases a pending mesh after the visibility callback has already run', async t => {
+  const observations = mobileObservers();
+  let finish;
+  const ready = new Promise(resolve => { finish = resolve; });
+  const h = harness(t, { ...observations, viewer: viewer => { viewer.loading = true; viewer.ready = ready; } });
+  const card = h.gallery.cards[0];
+  observations.enter(0, [card]); observations.enter(1, [card]);
+  await h.settle(); observations.callbacks.idle();
+  const viewer = card.viewer;
+  observations.enter(0, [card], false);
+  assert.equal(viewer.destroyed, false, 'a nearby mesh may finish before it enters the screen');
+  observations.enter(1, [card], false);
+  assert.equal(viewer.destroyed, true);
+  assert.equal(h.gallery.previewActive, null);
+  assert.equal(card.viewer, null);
+  finish();
 });

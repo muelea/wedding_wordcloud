@@ -1,0 +1,58 @@
+{
+  "input": "scripted jump; local desktop CPU, mobile signals, two workers",
+  "preparations": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "start": 439.7999999821186
+    },
+    {
+      "key": "cork-back-coaster",
+      "start": 440
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "start": 440.09999999403954
+    }
+  ],
+  "previews": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "ready": 1192.9000000059605
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "ready": 1981.699999988079
+    },
+    {
+      "key": "cork-back-coaster",
+      "ready": 2040
+    }
+  ],
+  "longTasks": [
+    {
+      "start": 1933.9000000059605,
+      "duration": 51
+    }
+  ],
+  "frameGaps": [],
+  "galleryShown": 410.69999998807907,
+  "firstArtwork": 1135.0999999940395,
+  "preparedCards": 3,
+  "liveViewers": 3,
+  "fabricRequested": false,
+  "errors": [],
+  "hashes": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "hash": "0eb2089c329874aeee50036107d411b46fe884a241d273b4a11d0f3b828579fb"
+    },
+    {
+      "key": "cork-back-coaster",
+      "hash": "465c3e73d65a9f4fb0cd4bdac4e5b7571175a8c2d9d90c74905466b406ba696c"
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "hash": "f933d02ac15750df99b05e43fc10ac0839c96f52aa57f35fa03b23b1f1f6edef"
+    }
+  ]
+}

@@ -33,6 +33,16 @@
         !document.querySelector('.mobile-canvas-footer'));
       const toolbar = document.querySelector('.mobile-canvas-header').getBoundingClientRect();
       check('toolbar stays inside the viewport', toolbar.left >= 0 && toolbar.right <= innerWidth + 1);
+      const railButtons = [...document.querySelectorAll('.mobile-canvas-rail > button')];
+      check('rail labels and icons fit inside their touch targets without overlapping neighbours', railButtons.every(button => {
+        const bounds = button.getBoundingClientRect();
+        return bounds.width >= 44 && bounds.height >= 44 && button.scrollHeight <= button.clientHeight + 1 &&
+          [...button.children].every(child => {
+            const rect = child.getBoundingClientRect();
+            return rect.left >= bounds.left && rect.right <= bounds.right + 1 &&
+              rect.top >= bounds.top && rect.bottom <= bounds.bottom + 1;
+          });
+      }));
       const shell = document.getElementById('editor-canvas-shell');
       const lowerCanvas = document.getElementById('wrap-canvas');
       check('repeated adjustment taps disable browser double-tap zoom without disabling browser pinch',

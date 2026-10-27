@@ -1759,12 +1759,13 @@
     const pack = options.pack || ((boxes, width, height) => WordCloudCore.layoutBoxesInArea(boxes, width, height));
     const prefetched = new Map();
     const packingOptions = { signal: options.signal, priority: options.priority };
+    const timeSliceMs = Math.max(1, Math.min(8, Number(options.timeSliceMs) || 8));
     let started = now();
     let value;
     try {
       while (true) {
         if (options.signal?.aborted) throw new Error('layout_cancelled');
-        if (now() - started >= 8) {
+        if (now() - started >= timeSliceMs) {
           await pause(); started = now();
           if (options.signal?.aborted) throw new Error('layout_cancelled');
         }

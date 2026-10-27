@@ -91,6 +91,31 @@ test('failed initial texture rendering releases the partial viewer instead of le
   assert.equal(host.canvas.removed, true);
 });
 
+test('a small preview bounds its source texture without changing print coordinates or the default editor texture', () => {
+  const { root, host, THREE } = fixture();
+  const product = require('../src/products').getPublicProduct(require('../src/products').getProduct('mouse-pad'));
+  const draws = [];
+  const viewer = root.Mug3DViewer.create({ host, THREE, product, maxTextureSize: 1024,
+    drawTexture: (ctx, options) => draws.push(options), modelOptions: { loadScene: async () => { throw new Error('unused'); } } });
+  assert.equal(Math.max(viewer.textureCanvas.width, viewer.textureCanvas.height), 1024);
+  assert.equal(draws[0].printWidth, product.printFile.width);
+  assert.equal(draws[0].printHeight, product.printFile.height);
+  viewer.destroy();
+  const editor = root.Mug3DViewer.create({ host, THREE });
+  assert.equal(Math.max(editor.textureCanvas.width, editor.textureCanvas.height), Math.max(...Object.values(root.Mug3DViewer.textureSizeFor(root.Mug3DViewer.DEFAULT_PRODUCT))));
+  editor.destroy();
+});
+
+test('procedural and provider startup each submit one complete first frame', async () => {
+  for (const product of [undefined, require('../src/products').getPublicProduct(require('../src/products').MUG_11)]) {
+    const { root, host, THREE, renderers } = fixture();
+    const viewer = root.Mug3DViewer.create({ host, THREE, product, drawTexture() {} });
+    assert.equal(await viewer.ready, true);
+    assert.equal(renderers[0].renders, 1, 'initial sizing and thumbnail preparation must not render duplicate frames');
+    viewer.destroy();
+  }
+});
+
 function clothFixture(productKey = 'throw-blanket-50x60in') {
   const f = fixture(), frames = new Map(), listeners = new Map();
   let next = 0, clock = 0, observer;

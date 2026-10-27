@@ -48,6 +48,7 @@ test('gallery prices survive cart and single-product quotes, Stripe Tax, signed 
       shipping_cost:{amount_subtotal:shippingAmount,amount_tax:shippingTax,amount_total:shippingAmount+(inclusive?0:shippingTax)},
       line_items:{data:params.line_items.map(item=>({quantity:item.quantity,
         amount_subtotal:item.quantity*item.price_data.unit_amount,
+        amount_tax:Math.round(item.quantity*item.price_data.unit_amount*factor),
         amount_total:item.quantity*item.price_data.unit_amount+(inclusive?0:Math.round(item.quantity*item.price_data.unit_amount*rate))}))},
     };
     sessions.set(id,session);return session;
@@ -126,6 +127,14 @@ test('gallery prices survive cart and single-product quotes, Stripe Tax, signed 
     assert.equal(order.tax_cents,session.total_details.amount_tax);
     const status=await (await fetch(baseUrl+'/api/events/'+event.slug+'/orders/status?session_id='+id)).json();
     assert.equal(status.totalCents,expectedTotal);
+    assert.equal(status.analyticsItems.reduce((sum,item)=>sum+item.unitPriceCents*item.quantity,0),
+      expectedTotal-status.taxCents-status.netShippingCents);
+    assert.equal(status.analyticsItems.reduce((sum,item)=>sum+item.quantity,0),cart?3:2);
+    assert.deepEqual([...new Set(status.analyticsItems.map(item=>item.productKey))],
+      cart?[mugProduct.key,posterProduct.key]:[mugProduct.key]);
+    assert.ok(status.analyticsItems.every(item=>!('configurationId' in item)&&!('variantId' in item)));
+    assert.deepEqual(status.analyticsItems,prepared.analyticsItems);
+
     assert.equal(status.netShippingCents,country==='DE'?1484-session.shipping_cost.amount_tax:1247);
     const jobs=await hosted.query('SELECT * FROM email_jobs WHERE order_id=$1 AND kind=$2',[pending.id,'order_confirmation']);
     assert.equal(jobs.rows.length,1);

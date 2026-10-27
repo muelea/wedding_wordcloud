@@ -354,6 +354,7 @@ app.get('/e/:slug/shipping', asyncRoute(async (req, res) => {
   if (!event) return renderPage(req, res, '404', { status: 404 });
   return renderPage(req, res, 'shipping', {
     eventLocale: event.locale,
+    pageData: { directDesign: isDirectDesignEvent(event) },
     header: {
       variant: 'back', headerClass: 'topbar', backId: 'back-link',
       backHref: `/e/${encodeURIComponent(event.slug)}/configure?view=products`,
@@ -368,6 +369,7 @@ app.get('/e/:slug/order-confirmation', asyncRoute(async (req, res) => {
   if (!event) return renderPage(req, res, '404', { status: 404 });
   return renderPage(req, res, 'order-confirmation', {
     eventLocale: event.locale,
+    pageData: { directDesign: isDirectDesignEvent(event) },
     cacheControl: 'no-store',
     header: { headerClass: 'topbar' },
   });

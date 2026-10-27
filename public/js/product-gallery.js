@@ -60,14 +60,17 @@
   }
 
   class Gallery {
-    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, isInCart, i18n }) {
-      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, isInCart, i18n });
+    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, onImpression, onView, onSelect, isInCart, i18n, mobile = false }) {
+      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, onImpression, onView, onSelect, isInCart, i18n });
       this.document = element.ownerDocument;
       this.window = this.document.defaultView;
+      this.mobile = mobile && Boolean(this.window.IntersectionObserver);
       this.controller = new this.window.AbortController();
+      this.preparationWaiters = new Set();
       this.entries = new Map();
       this.cards = [];
       this.category = 'all';
+      this.reportedItems = new Set();
       this.preparationQueue = LayoutClient.createQueue({ limit: products.length,
         concurrency: LayoutClient.parallelism(this.window.navigator?.hardwareConcurrency),
         warmup: true,
@@ -103,17 +106,26 @@
           const card = this.cards.find(card => card.stage === entry.target);
           if (card) {
             card.visible = entry.isIntersecting;
-            if (!card.visible) {
-              this.previewQueue.delete(card);
-              if (this.previewActive?.card === card && card.viewer?.loading) {
-                card.viewer.destroy(); card.viewer = null; this.previewActive = null;
-              }
-            }
+            this.releasePendingPreview(card);
             changed.push(card);
           }
         }
         changed.filter(card => card.visible).forEach(card => this.render(card));
       }) : null;
+      // Phones prepare just the current screen and a screen ahead/behind. The
+      // rest of the catalog must not compete for font measurement or workers.
+      // Keep true visibility separate for analytics and viewer eviction.
+      this.preparationObserver = this.mobile ? new this.window.IntersectionObserver(entries => {
+        for (const entry of entries) {
+          const card = this.cards.find(card => card.stage === entry.target);
+          if (!card) continue;
+          card.near = entry.isIntersecting;
+          if (card.near && !card.element.hidden && !this.suspended) {
+            if (!card.started) void this.load(card, card.product, false);
+            else this.render(card);
+          } else this.releasePendingPreview(card);
+        }
+      }, { rootMargin: `${this.window.innerHeight || 800}px 0px` }) : null;
       const grid = element.querySelector('[data-gallery-grid]');
       this.filters = element.querySelector('[data-gallery-filters]');
       if (this.filters) {
@@ -134,19 +146,28 @@
         grid.appendChild(card.element);
         this.resizeObserver?.observe(card.stage);
         this.intersectionObserver?.observe(card.stage);
-        void this.load(card, variants[0], false);
+        if (this.preparationObserver) {
+          card.stage.dataset.ready = 'false';
+          this.localizeCard(card);
+          this.preparationObserver.observe(card.stage);
+        } else void this.load(card, variants[0], false);
       }
       this.listen(this.window, 'resize', () => this.resize());
       const scrolling = () => {
         if (this.destroyed || this.suspended) return;
         this.scrolling = true;
+        if (this.mobile) this.preparationQueue.pause();
         if (this.previewTurn !== null) this.cancelPreviewTurn(this.previewTurn);
         this.previewTurn = null;
         this.window.clearTimeout(this.scrollTimer);
         this.scrollTimer = this.window.setTimeout(() => {
           this.scrolling = false;
+          if (!this.suspended) {
+            this.preparationQueue.resume();
+            this.releasePreparation();
+          }
           this.resize();
-        }, 350);
+        }, this.mobile ? 120 : 350);
       };
       this.listen(this.window, 'scroll', scrolling, { passive: true });
       this.listen(this.window, 'wheel', scrolling, { passive: true });
@@ -203,6 +224,7 @@
     openPhoto(card, product = card.product, opener = card.photoButton) {
       if (this.destroyed || this.suspended || !referencePhoto(product) || card.element.hidden) return;
       this.closePriceInfo();
+      this.onView?.(product);
       if (this.preview?.openPhotos) {
         this.preview.openPhotos(product, opener);
         return;
@@ -228,6 +250,7 @@
     openPreview(card) {
       if (!card.snapshot || this.destroyed || this.suspended || card.element.hidden || this.choosing) return;
       this.closePriceInfo();
+      this.onView?.(card.product);
       this.preview.open({ product: card.view, printPreviewUrls: Object.fromEntries(
         card.product.printSurfaces.map(side => [side.key, this.artwork(card, side.key)])),
       }, card.photoButton);
@@ -239,7 +262,8 @@
         if (usesViewer(card.product)) {
           const source = card.viewer?.canvas;
           if (!source?.width || !source.height) return;
-          card.viewer.render();
+          // previewReady runs immediately after the viewer paints. Copy that
+          // frame without submitting a second full WebGL render for a thumbnail.
           card.thumbnailUrl = productThumbnail(source);
         } else card.thumbnailUrl = this.artwork(card, card.surface);
         card.photo.src = card.thumbnailUrl;
@@ -371,7 +395,13 @@
         products: card.variants, selectedKey: card.product.key, i18n: this.i18n,
         photo: referencePhoto, price: product => this.priceFor(product),
         onPhoto: (product, trigger) => this.openPhoto(card, product, trigger),
-        onConfirm: product => { dialog.close(); if (!this.choosing) void this.load(card, product); },
+        onConfirm: product => {
+          dialog.close();
+          if (!this.choosing) {
+            this.onSelect?.(product);
+            void this.load(card, product);
+          }
+        },
         onNavigate: () => { if (dialog.open) this.positionVariants(); },
         onResize: () => { if (dialog.open) this.positionVariants(); },
       });
@@ -487,7 +517,8 @@
       if (!this.entries.has(product.key)) {
         const promise = this.preparationQueue.add(product.key, async () => {
           if (this.destroyed) throw new Error('gallery_closed');
-          const prepared = await this.prepareDesign(product, { signal: this.controller.signal, allowSmallText });
+          const prepared = await this.prepareDesign(product, { signal: this.controller.signal, allowSmallText,
+            waitForIdle: this.mobile ? () => this.waitForPreparation() : undefined });
           return { ...prepared, designs: printPrecision(prepared.designs) };
         }, deliberate ? 100 : 0);
         this.entries.set(product.key, promise);
@@ -496,7 +527,20 @@
       return this.entries.get(product.key);
     }
 
+    waitForPreparation() {
+      // Shared in-flight layouts may also be requested by the editor. Let
+      // existing work finish on editor entry; only the catalog queue is paused.
+      if (this.destroyed || this.suspended || !this.scrolling) return Promise.resolve();
+      return new Promise(resolve => this.preparationWaiters.add(resolve));
+    }
+
+    releasePreparation() {
+      this.preparationWaiters.forEach(resolve => resolve());
+      this.preparationWaiters.clear();
+    }
+
     async load(card, product, deliberate = true, allowSmallText = false) {
+      card.started = true;
       const version = ++card.version;
       card.cachedPreviewVersion = null;
       this.previewQueue.delete(card);
@@ -560,8 +604,16 @@
       }
     }
 
+    reportImpression(card) {
+      if (this.destroyed || this.suspended || card.element.hidden || !card.visible || !card.snapshot || this.reportedItems.has(card.product.key)) return;
+      if (this.onImpression?.(card.product) === true) this.reportedItems.add(card.product.key);
+    }
+
+    reportImpressions() { this.cards.forEach(card => this.reportImpression(card)); }
+
     render(card, retry = false, immediate = false) {
-      if (this.destroyed || this.suspended || card.element.hidden || !card.visible || !card.snapshot) return;
+      if (this.destroyed || this.suspended || card.element.hidden || !(card.visible || card.near) || !card.snapshot) return;
+      this.reportImpression(card);
       if (card.failed && !retry) return;
       const width = card.stage.clientWidth, height = card.stage.clientHeight;
       const density = this.window.devicePixelRatio || 1;
@@ -591,8 +643,7 @@
               if (state === 'error') this.previewError(card);
               else if (state === 'ready') this.previewReady(card);
             } });
-          }
-          card.viewer.resize();
+          } else card.viewer.resize(); // Factories already size and paint their first frame.
           if (!card.viewer.loading) this.previewReady(card);
         } catch { this.previewError(card); }
       } else {
@@ -618,7 +669,7 @@
         if (this.destroyed || this.suspended || this.scrolling) return;
         // One model per idle turn: a row must not compile several WebGL scenes
         // in one burst during the short pauses between mouse-wheel movements.
-        const card = this.previewQueue.values().next().value;
+        const card = [...this.previewQueue].sort((a, b) => Number(b.visible) - Number(a.visible))[0];
         this.previewQueue.delete(card);
         if (card) this.render(card, false, true);
         if (card?.viewer?.loading && card.viewer.ready) {
@@ -633,8 +684,16 @@
       });
     }
 
+    releasePendingPreview(card) {
+      if (card.visible || card.near) return;
+      this.previewQueue.delete(card);
+      if (this.previewActive?.card === card && card.viewer?.loading) {
+        card.viewer.destroy(); card.viewer = null; this.previewActive = null;
+      }
+    }
+
     releaseDistantViewer() {
-      if (!this.intersectionObserver || this.cards.filter(card => card.viewer && is3D(card.product)).length < 6) return;
+      if (!this.intersectionObserver || this.cards.filter(card => card.viewer && is3D(card.product)).length < (this.mobile ? 3 : 6)) return;
       const candidates = this.cards.filter(card => card.viewer && is3D(card.product) && !card.host.classList.contains('dragging'));
       const oldest = candidates.sort((a, b) => Number(a.visible) - Number(b.visible) || a.lastViewed - b.lastViewed)[0];
       if (!oldest) return;
@@ -706,6 +765,12 @@
       for (const card of this.cards) {
         card.element.hidden = category !== 'all' && categoryFor(card.product) !== category;
         if (card.element.hidden) { this.previewQueue.delete(card); card.viewer?.destroy(); card.viewer = null; }
+        else if (this.preparationObserver) {
+          // Filtering can move an unvisited product into the viewport without
+          // changing its previous intersection state.
+          this.preparationObserver.unobserve(card.stage);
+          this.preparationObserver.observe(card.stage);
+        }
       }
       this.resize();
     }
@@ -815,12 +880,14 @@
       this.previewQueue.clear();
       this.window.clearTimeout(this.scrollTimer);
       this.scrolling = false;
+      this.releasePreparation();
       this.cards.forEach(card => { card.viewer?.destroy(); card.viewer = null; });
     }
 
     async resume(snapshot = null) {
       this.suspended = false;
       this.preparationQueue.resume();
+      this.releasePreparation();
       if (snapshot) {
         const card = this.cards.find(card => card.variants.some(product => product.key === snapshot.productKey));
         if (card) {
@@ -830,6 +897,9 @@
         }
       }
       this.updateActions();
+      if (this.preparationObserver) for (const card of this.cards) {
+        if (card.near && !card.started && !card.element.hidden) void this.load(card, card.product, false);
+      }
       this.resize();
     }
 
@@ -840,6 +910,7 @@
       try {
         // The cached preview is immutable from the editor's point of view.
         // Hand over every print side without measuring or arranging it again.
+        this.onSelect?.(card.product);
         await this.onChoose(copy(card.snapshot));
       } catch {
         if (!this.destroyed) {
@@ -862,8 +933,10 @@
       this.variantDialog.dialog.remove();
       this.preparationQueue.dispose();
       this.controller.abort();
+      this.releasePreparation();
       this.resizeObserver?.disconnect();
       this.intersectionObserver?.disconnect();
+      this.preparationObserver?.disconnect();
       this.window.cancelAnimationFrame(this.frame);
       this.window.clearTimeout(this.scrollTimer);
       if (this.previewTurn !== null) this.cancelPreviewTurn(this.previewTurn);

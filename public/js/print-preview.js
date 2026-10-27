@@ -3,10 +3,11 @@
 
   const api = factory(typeof module === 'object' && module.exports
     ? require('./product-mockup-preview') : root.WolkenworteProductMockups,
-    typeof module === 'object' && module.exports ? require('./cart-product-preview') : root.WolkenworteCartProductPreview);
+    typeof module === 'object' && module.exports ? require('./cart-product-preview') : root.WolkenworteCartProductPreview,
+    typeof module === 'object' && module.exports ? require('./device') : root.WolkenworteDevice);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.WolkenwortePrintPreview = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (Mockups, Products) {
+})(typeof window !== 'undefined' ? window : globalThis, function (Mockups, Products, Device) {
   'use strict';
 
   function visibleArtworkBounds({ data, width, height }) {
@@ -69,6 +70,25 @@
     let photoIndex = 0;
     let productPhotos = [];
     let fullPrintArea = false;
+
+    function setExpanded(expanded) {
+      dialog.classList.toggle('is-expanded', expanded);
+      expand.setAttribute('aria-pressed', String(expanded));
+      expand.setAttribute('aria-label', i18n.t(expanded ? 'Ansicht verkleinern' : 'Ansicht vergrößern'));
+    }
+
+    function updateExpansion() {
+      // Device identity keeps landscape phones and large tablets out of the
+      // desktop mode; the width follows the overview's compact CSS breakpoint.
+      const allowed = !Device.isMobileDevice(browser.navigator) && browser.innerWidth > 700;
+      const wasFocused = document.activeElement === expand;
+      expand.hidden = !allowed;
+      if (!allowed) {
+        setExpanded(false);
+        if (dialog.open && wasFocused) title.focus({ preventScroll: true });
+      }
+      return allowed;
+    }
 
     function measureArtwork(image) {
       try {
@@ -391,9 +411,8 @@
       photoThumbnails.children[photoIndex]?.focus();
     });
     expand.addEventListener('click', () => {
-      const expanded = dialog.classList.toggle('is-expanded');
-      expand.setAttribute('aria-pressed', String(expanded));
-      expand.setAttribute('aria-label', i18n.t(expanded ? 'Ansicht verkleinern' : 'Ansicht vergrößern'));
+      if (!updateExpansion()) return;
+      setExpanded(!dialog.classList.contains('is-expanded'));
       fitPreviews();
     });
     printFit.addEventListener('click', () => {
@@ -404,7 +423,7 @@
     });
     modelRetry.addEventListener('click', () => void showModel());
     mockupButton.addEventListener('click', () => { void loadMockups(); });
-    browser.addEventListener('resize', fitPreviews);
+    browser.addEventListener('resize', () => { updateExpansion(); fitPreviews(); });
     browser.addEventListener('wolkenworte:localechange', () => {
       if (configuration) {
         detail.textContent = Products.variant(configuration.product, i18n);
@@ -416,6 +435,7 @@
       }
       fitPreviews();
     });
+    updateExpansion();
 
     return Object.freeze({
       close() { if (dialog.open) dialog.close(); },
@@ -430,9 +450,8 @@
         opener = trigger;
         fullPrintArea = false;
         printFit.setAttribute('aria-pressed', 'false');
-        dialog.classList.remove('is-expanded');
-        expand.setAttribute('aria-pressed', 'false');
-        expand.setAttribute('aria-label', i18n.t('Ansicht vergrößern'));
+        setExpanded(false);
+        updateExpansion();
         i18n.setText(title, item.product.displayName);
         detail.textContent = Products.variant(item.product, i18n);
         showDescription();

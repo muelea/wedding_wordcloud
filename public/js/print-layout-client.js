@@ -186,8 +186,12 @@
         let promise = preparing.get(key);
         if (!promise) {
           if (preparing.size >= 16) throw new Error('layout_queue_full');
+          const yieldLayout = options.waitForIdle ? async () => {
+            await options.waitForIdle();
+            await yieldControl();
+          } : yieldControl;
           promise = layout.optimizeDesignAsync(source, slots, measurements(measureContext),
-            { ...options, pack, yieldControl }).then(optimized => {
+            { ...options, pack, yieldControl: yieldLayout }).then(optimized => {
             if (!disposed) {
               const bytes = (key.length + JSON.stringify(optimized).length) * 2;
               if (bytes <= 2 * 1024 * 1024) {

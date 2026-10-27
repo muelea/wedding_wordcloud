@@ -36,6 +36,7 @@ const { asyncRoute } = require('../asyncRoute');
 const log = require('../structuredLog');
 const performanceProbe = require('../performanceProbe');
 const { orderNumber } = require('../emailTemplates');
+const { analyticsItems } = require('../analyticsCommerce');
 
 const PIN_RE = /^\d{4,6}$/;
 const { MAX_EVENT_UNIQUE_WORDS: MAX_SNAPSHOT_WORDS,
@@ -361,6 +362,10 @@ function checkoutQuoteResponse(quote, order = null, session = null) {
     taxBehavior: pricing?.taxBehavior || 'exclusive',
     pricingVersion: pricing?.version || 1,
     pricedItems: session?.pricedItems || request.expectedPricedItems || pricing?.items || [],
+    analyticsItems: checkoutPrepared ? analyticsItems(
+      session?.pricedItems || request.expectedPricedItems || pricing?.items,
+      Number(quote.items_cents) - (inclusive ? taxCents - shippingTaxCents : 0)
+    ) : [],
     ...(checkoutPrepared && pricing ? {
       grossItemsCents: Number(quote.items_cents) + (inclusive ? 0 : taxCents - shippingTaxCents),
       grossShippingCents: Number(quote.shipping_cents) + (inclusive ? 0 : shippingTaxCents),
@@ -2048,6 +2053,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       totalCents: Number(order.total_cents),
       shippingCents: paymentConfirmed ? Number(order.shipping_cents) : null,
       netShippingCents: paymentConfirmed ? Number(order.shipping_cents) - includedShippingTax : null,
+      analyticsItems: paymentConfirmed ? analyticsItems(request.expectedPricedItems || request.pricing?.items,
+        Number(order.total_cents) - Number(order.tax_cents) - Number(order.shipping_cents) + includedShippingTax) : [],
       taxCents: paymentConfirmed ? Number(order.tax_cents) : null,
       quantity: orderShipments.length
         ? orderShipments.reduce((sum, shipment) => sum + Number(shipment.quantity || 0), 0)

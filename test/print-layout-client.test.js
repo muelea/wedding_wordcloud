@@ -147,6 +147,23 @@ const source = [{ id: 'word', text: 'Liebe', x: 500, y: 500, fontSize: 100,
   color: '#123456', fontFamily: 'classic' }];
 const slots = [{ x: 10, y: 20, width: 1000, height: 900, optimize: true }];
 
+test('cooperative mobile layouts wait for scrolling to settle before yielding the next computation slice', async t => {
+  let release, yielded = 0;
+  const gate = new Promise(resolve => { release = resolve; });
+  const h = harness(t, { yieldControl: async () => { yielded++; }, layout: {
+    async optimizeDesignAsync(design, slots, context, options) {
+      await options.yieldControl();
+      return design;
+    },
+  } });
+  const result = h.client.automatic(source, slots, {}, { waitForIdle: () => gate });
+  await tick();
+  assert.equal(yielded, 0);
+  release();
+  assert.deepEqual(await result, source);
+  assert.equal(yielded, 1);
+});
+
 test('automatic cache shares matching sides and palettes while returning independent exact copies', async t => {
   let calculations = 0, finish;
   const h = harness(t, { version: 'engine-1', layout: { optimizeDesignAsync: input => {

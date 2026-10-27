@@ -119,6 +119,8 @@ function harness(extra = {}) {
     t: message => message, renderOrderBox() {}, renderAll() {}, initEditor() {}, refreshWorkspaceLayout() {},
     productSizeText: () => '11 oz',
     initMug3D: async () => {}, finalizeCurrentText: async () => {},
+    ensureEditorRuntime: async () => {},
+    analyticsCommerce() {}, analyticsCartItem: item => item, analyticsEditorView() {},
     scheduleDraftSave() {}, loadLocalDraft: async () => null, applyLocalDraft: async () => {},
     askToLeaveWithoutDraft: async () => { calls.warnings.push('draft-loss'); return 'stay'; },
     askAnotherProductChoice: async () => 'skip',
@@ -1385,6 +1387,29 @@ test('fresh entry restores the active local draft while explicit edit and cart e
     assert.equal(page.workspaceReady, true);
     assert.equal(page.content.inert, false);
   }
+});
+
+test('editor restoration waits for its lazy runtime and a failed download leaves the saved design retryable', async () => {
+  let release, initialized = false;
+  const gate = new Promise(resolve => { release = resolve; });
+  const { context: page } = harness({ workspaceReady: false,
+    ensureEditorRuntime: () => gate,
+    initEditor: async () => { initialized = true; },
+  });
+  const pending = page.initializeWorkspace();
+  await Promise.resolve();
+  assert.equal(initialized, false);
+  release(); await pending;
+  assert.equal(initialized, true);
+  const failed = harness({ workspaceReady: false,
+    ensureEditorRuntime: async () => { throw new Error('editor_runtime_unavailable'); },
+    initEditor: async () => { throw new Error('must not construct a partial editor'); },
+  }).context;
+  await failed.initializeWorkspace();
+  assert.equal(failed.workspaceReady, false);
+  assert.equal(failed.restorationFailed, true);
+  assert.equal(failed.retryConfigurator.hidden, false);
+  assert.equal(failed.content.inert, false);
 });
 
 test('recovering a manual draft never generates temporary automatic artwork from a dense live cloud', async () => {

@@ -355,6 +355,7 @@
         catch(error){if(error.status && error.code!=='design_busy'&&(error.status<500||error.code==='account_storage_unavailable'))pendingSave=null;if(error.code==='design_conflict'&&latestButton)latestButton.hidden=false;throw error;}
         pendingSave=null;
         metadata=result.design;source={id:metadata.id,ownerId:user.id,version:metadata.version};savedFingerprint=fingerprint;
+        root.WolkenworteAnalytics?.track('design_saved');
         sourceChanged();const recovered=await preserve();dialog.close();
         saveFeedback(recovered===false?'Im Konto gespeichert. Die lokale Sicherung konnte nicht erstellt werden.':'In deinen Designs gespeichert.',recovered===false);
         clearTimeout(feedbackTimer);feedbackTimer=recovered===false?null:setTimeout(()=>saveFeedback(),3000);

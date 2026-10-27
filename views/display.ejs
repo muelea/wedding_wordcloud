@@ -1300,7 +1300,10 @@
     document.getElementById('share-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(messageWithUrl)}`;
     document.getElementById('share-email').href = `mailto:?subject=${encodeURIComponent(data.title)}&body=${encodeURIComponent(messageWithUrl)}`;
     clearText(shareFeedback);
-    if (!shareDialog.open) shareDialog.showModal();
+    if (!shareDialog.open) {
+      shareDialog.showModal();
+      globalThis.WolkenworteAnalytics?.track('share_open');
+    }
   }
 
   async function copyText(text) {
@@ -1323,6 +1326,7 @@
   async function copyEventLink() {
     try {
       await copyText(eventShareData().url);
+      globalThis.WolkenworteAnalytics?.track('share', { method: 'copy_link' });
       setText(copyLinkButton.querySelector('span'), 'Link kopiert ✓');
       setText(shareDialogCopyButton.querySelector('span'), 'Link kopiert ✓');
       setText(shareFeedback, 'Link kopiert ✓');
@@ -1348,12 +1352,18 @@
     }
     try {
       await navigator.share(data);
+      globalThis.WolkenworteAnalytics?.track('share', { method: 'native' });
     } catch (error) {
       if (error?.name !== 'AbortError') prepareShareDialog();
     }
   });
   copyLinkButton.addEventListener('click', copyEventLink);
   shareDialogCopyButton.addEventListener('click', copyEventLink);
+  for (const method of ['whatsapp', 'email']) {
+    document.getElementById(`share-${method}`).addEventListener('click', () => {
+      globalThis.WolkenworteAnalytics?.track('share', { method });
+    });
+  }
   shareDialog.addEventListener('click', (event) => {
     if (event.target === shareDialog) shareDialog.close();
   });
@@ -1858,6 +1868,7 @@
   // ── Product configurator ──────────────────────────────────────────────────
   memoryCta.addEventListener('click', () => {
     if (memoryCta.disabled || !currentWords.length) return;
+    globalThis.WolkenworteAnalytics?.track('keepsake_open');
     location.href = `/e/${encodeURIComponent(slug)}/configure?view=products`;
   });
 

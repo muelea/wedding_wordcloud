@@ -488,7 +488,8 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-dialog[open]:has(> .mobile-canvas-orientation-hint:not([hidden])) { grid-template-rows: auto auto minmax(0, 1fr); }
 .mobile-canvas-dialog::backdrop { background: var(--paper); }
 .mobile-canvas-dialog [hidden] { display: none !important; }
-.mobile-canvas-dialog button:not(.ww-icon-button) {
+/* Button defaults must yield to the rail and the controls moved into drawers. */
+.mobile-canvas-dialog :where(button:not(.ww-icon-button)) {
   min-width: 44px;
   min-height: 44px;
   padding: 6px 10px;
@@ -513,8 +514,9 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 .mobile-canvas-header .editor-tools { gap: 4px; }
 .mobile-canvas-body { min-height: 0; display: flex; position: relative; overflow: clip; }
 .mobile-canvas-rail { flex: 0 0 62px; display: flex; flex-direction: column; gap: 3px; padding: 4px; border-right: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain; }
-.mobile-canvas-rail button { flex: 0 0 46px; min-width: 0; padding: 3px 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1px; font-size: 11px; }
-.mobile-canvas-rail .editor-icon { width: 18px; height: 18px; }
+.mobile-canvas-rail button { flex: 0 0 auto; min-width: 44px; min-height: 46px; padding: 4px 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; font-size: 11px; line-height: 1.2; }
+.mobile-canvas-rail button > span { max-width: 100%; overflow-wrap: anywhere; }
+.mobile-canvas-rail .editor-icon { flex: none; width: 18px; height: 18px; }
 #mobile-canvas-overlap-rail:empty, #mobile-canvas-overlap-rail:has([hidden]) { display: none; }
 #mobile-canvas-overlap-rail .artwork-overlap-trigger { width: 100%; flex-direction: row; gap: 3px; padding: 3px; }
 .mobile-canvas-stage, .mobile-canvas-product { flex: 1; min-width: 0; min-height: 0; position: relative; background: #f8f2f0; }
@@ -628,7 +630,7 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 }
 @media (max-height: 430px) and (orientation: landscape) {
   .mobile-canvas-rail { gap: 2px; padding: 3px; }
-  .mobile-canvas-rail button { flex-basis: 44px; }
+  .mobile-canvas-rail button { min-height: 44px; }
 }
 @media (min-width: 621px) and (orientation: landscape) {
   #mobile-canvas-picker .variant-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -724,7 +726,6 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 #mobile-canvas-add .editor-button { max-width: none; min-width: 44px; flex: 0 1 auto; height: auto; white-space: normal; }
 #mobile-canvas-design-actions .editor-button::after,
 #mobile-canvas-add .editor-button::after { white-space: normal; line-height: 1.2; }
-.mobile-canvas-rail [data-canvas-tool="view"] { flex-basis: 50px; min-height: 50px; line-height: 1.05; }
 .mobile-canvas-dialog .editor-font-size-input { font-size: 16px; min-height: 44px; }
 .mobile-canvas-dialog .editor-font-toggle { font-size: 11px; }
 #mobile-canvas-elements > label { font-size: 11px; }

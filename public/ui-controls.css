@@ -56,7 +56,9 @@
 
 .ww-preview-eye { display: inline-grid; place-items: center; }
 .ww-preview-eye::before { content: ''; display: block; width: 14px; height: 14px; background: currentColor; -webkit-mask: var(--ww-eye-artwork) center / contain no-repeat; mask: var(--ww-eye-artwork) center / contain no-repeat; }
-dialog h2[tabindex="-1"]:focus { outline: none; }
+/* Static headings receive focus to announce a dialog or view change. Keep that
+   focus without browser artwork; interactive controls retain their indicators. */
+:is(h1, h2, h3, h4, h5, h6)[tabindex="-1"]:focus { outline: none; }
 
 .ww-pwa-dialog-heading .ww-icon-button { margin-left: auto; }
 .print-preview button.ww-icon-button:hover { background: rgba(64, 15, 38, .06); }

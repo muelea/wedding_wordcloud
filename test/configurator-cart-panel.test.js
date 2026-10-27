@@ -41,6 +41,7 @@ function harness(t, options = {}) {
     },
     onUndo: () => { items.push(removed.item); removed = null; },
     onContinue: async () => { calls.continued++; await options.onContinue?.(); },
+    onOpen: options.onOpen, onClose: options.onClose,
   });
   t.after(() => dom.window.close());
   const settle = () => new Promise(setImmediate);
@@ -153,4 +154,23 @@ test('a failed quantity write leaves the previous quantity and price available',
   await h.settle();
   assert.equal(h.button('[data-cart-quantity]').value, '2');
   assert.equal(h.button('[data-cart-panel-status]').hidden, false);
+});
+
+test('cart view callbacks run only on actual open and close transitions', t => {
+  let opened = 0, closed = 0;
+  const h = harness(t, { onOpen: () => opened++, onClose: () => closed++ });
+  h.panel.open(); h.panel.open();
+  assert.equal(opened, 1);
+  h.panel.close();
+  assert.equal(closed, 1);
+  h.panel.open();
+  assert.equal(opened, 2);
+});
+
+test('programmatic navigation closes identify that the underlying view was not revisited', t => {
+  const closes = [];
+  const h = harness(t, { onClose: detail => closes.push(detail) });
+  h.panel.open(); h.panel.close({ restoreFocus: false, navigating: true });
+  h.panel.open(); h.panel.close();
+  assert.deepEqual(closes, [{ navigating: true }, { navigating: false }]);
 });

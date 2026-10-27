@@ -1,0 +1,224 @@
+{
+  "input": "scripted jump; local desktop CPU, mobile signals, two workers",
+  "preparations": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "start": 358.5
+    },
+    {
+      "key": "cork-back-coaster",
+      "start": 358.80000001192093
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "start": 359
+    },
+    {
+      "key": "framed-matte-poster-black-30x40cm",
+      "start": 359.2000000178814
+    },
+    {
+      "key": "all-over-tote-black-handles",
+      "start": 359.40000000596046
+    },
+    {
+      "key": "throw-blanket-50x60in",
+      "start": 359.5
+    },
+    {
+      "key": "all-over-basic-pillow-18in",
+      "start": 359.7000000178814
+    },
+    {
+      "key": "spiral-notebook-dotted",
+      "start": 359.80000001192093
+    },
+    {
+      "key": "colored-mug-11051",
+      "start": 359.90000000596046
+    },
+    {
+      "key": "mouse-pad",
+      "start": 360
+    },
+    {
+      "key": "laptop-sleeve-10984",
+      "start": 360.2000000178814
+    },
+    {
+      "key": "canvas-12x16in",
+      "start": 360.30000001192093
+    },
+    {
+      "key": "water-bottle-10798",
+      "start": 360.40000000596046
+    },
+    {
+      "key": "steel-tumbler-15005",
+      "start": 360.5
+    },
+    {
+      "key": "enamel-mug",
+      "start": 360.7000000178814
+    },
+    {
+      "key": "travel-mug-16440",
+      "start": 360.80000001192093
+    },
+    {
+      "key": "wine-tumbler",
+      "start": 360.90000000596046
+    },
+    {
+      "key": "eco-tote-10458",
+      "start": 361.10000002384186
+    },
+    {
+      "key": "tough-case-20308",
+      "start": 361.2000000178814
+    },
+    {
+      "key": "tough-case-20328",
+      "start": 361.40000000596046
+    },
+    {
+      "key": "tough-case-21474",
+      "start": 361.5
+    },
+    {
+      "key": "framed-canvas-17627",
+      "start": 361.60000002384186
+    },
+    {
+      "key": "thin-canvas-17620",
+      "start": 361.7000000178814
+    },
+    {
+      "key": "t-shirt-53681",
+      "start": 361.80000001192093
+    },
+    {
+      "key": "sweatshirt-12605",
+      "start": 361.90000000596046
+    },
+    {
+      "key": "hoodie-12402",
+      "start": 362.10000002384186
+    }
+  ],
+  "previews": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "ready": 1269.4000000059605
+    }
+  ],
+  "longTasks": [],
+  "frameGaps": [],
+  "galleryShown": 398.7000000178814,
+  "firstArtwork": 1179.4000000059605,
+  "preparedCards": 25,
+  "liveViewers": 1,
+  "errors": [],
+  "hashes": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "hash": "0eb2089c329874aeee50036107d411b46fe884a241d273b4a11d0f3b828579fb"
+    },
+    {
+      "key": "cork-back-coaster",
+      "hash": "465c3e73d65a9f4fb0cd4bdac4e5b7571175a8c2d9d90c74905466b406ba696c"
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "hash": "f933d02ac15750df99b05e43fc10ac0839c96f52aa57f35fa03b23b1f1f6edef"
+    },
+    {
+      "key": "framed-matte-poster-black-30x40cm",
+      "hash": "808ec57773f985de214f237932013e46485b93bd3e42860dad9336e50fa281dd"
+    },
+    {
+      "key": "all-over-tote-black-handles",
+      "hash": "9133abefa3f97520a0f20c8ac2800352bcdc187c335a4a0ced8992244bd36372"
+    },
+    {
+      "key": "throw-blanket-50x60in",
+      "hash": "678501885e1115ab480f027a7bcd33fbcf51f16718550ce1878f04358e01baaf"
+    },
+    {
+      "key": "all-over-basic-pillow-18in",
+      "hash": "c93ac9754edb096e6bceea61b747cfac0ea90e0c4ecc2a35a861ba60c30f1aab"
+    },
+    {
+      "key": "spiral-notebook-dotted",
+      "hash": "ab06c2e5fce34485c3153eb129c35aca685e84b2b91f2bd52642a911b271f459"
+    },
+    {
+      "key": "colored-mug-11051",
+      "hash": "889c8cb64b2d783d3be9012ade7e833bf6fbd8f54607e61a6f90c1b4aa4e2ed2"
+    },
+    {
+      "key": "mouse-pad",
+      "hash": "c59222bda1e478cbc1e0694a7e24e86e7dc7f952f39dfe2c9e2993ef1beba99b"
+    },
+    {
+      "key": "laptop-sleeve-10984",
+      "hash": "2d91e4c3dc64b92999b71857d93b596995dc0242e79a2029c8971eb7cf0d49bd"
+    },
+    {
+      "key": "canvas-12x16in",
+      "hash": "3ef1eaadf0f7bb10cba67b76526b1592cf23d5d1c9111947720ea5f07da5c435"
+    },
+    {
+      "key": "water-bottle-10798",
+      "hash": "c4c148425ddd8dc95288d39a835f2f5305e0a2d88c873de8b46afb789dd1f7e9"
+    },
+    {
+      "key": "steel-tumbler-15005",
+      "hash": "d0843a512111ab00093ad0280eb4b95a743ddadb6dfab00706d200d6ff2f7b3f"
+    },
+    {
+      "key": "enamel-mug",
+      "hash": "b7373436dbee3499cc91cd4de7d792172bde53a7cc06b245d6f784acf883b036"
+    },
+    {
+      "key": "travel-mug-16440",
+      "hash": "895c5469fce55283ca017aa9064e4c239df8a128026dc803b165e6fb1f445589"
+    },
+    {
+      "key": "wine-tumbler",
+      "hash": "28864dff1fb142ff995a81c2630a1597747e72af4a4bc5b999d53e65e2a130f5"
+    },
+    {
+      "key": "eco-tote-10458",
+      "hash": "8a0f58de5491d2dfe328783804649f49b2b693cfef47fb47423fc956eaf7191e"
+    },
+    {
+      "key": "tough-case-20308",
+      "hash": "7a48d5d8a0daf1b5d24a40352af514bcdf4effc41e129ce71a927dc2d5d7c9c0"
+    },
+    {
+      "key": "tough-case-20328",
+      "hash": "7a48d5d8a0daf1b5d24a40352af514bcdf4effc41e129ce71a927dc2d5d7c9c0"
+    },
+    {
+      "key": "tough-case-21474",
+      "hash": "784cded18cf7f4e2dece4d1330820e730a4e58c2b1ad3562ba162c897fbaae49"
+    },
+    {
+      "key": "framed-canvas-17627",
+      "hash": "5c371d0c3165d0fb865c4cbca889c6c3744c3400be1e11691b14636e8b0dac3e"
+    },
+    {
+      "key": "thin-canvas-17620",
+      "hash": "8b6ddc5452963353e3b5dda360e872079c29f1b319979dc32e12ba4f8bd05fa2"
+    },
+    {
+      "key": "t-shirt-53681",
+      "hash": "fca222e108dbdcf2cf0826d7617af713452f49f6bd3df5670f0a02201099d7e5"
+    },
+    {
+      "key": "sweatshirt-12605",
+      "hash": "fca222e108dbdcf2cf0826d7617af713452f49f6bd3df5670f0a02201099d7e5"
+    }
+  ]
+}

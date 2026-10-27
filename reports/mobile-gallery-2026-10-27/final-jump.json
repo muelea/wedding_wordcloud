@@ -1,0 +1,113 @@
+{
+  "input": "scripted jump; local desktop CPU, mobile signals, two workers",
+  "preparations": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "start": 320.5
+    },
+    {
+      "key": "cork-back-coaster",
+      "start": 320.59999999403954
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "start": 320.69999998807907
+    },
+    {
+      "key": "colored-mug-11051",
+      "start": 3015.9000000059605
+    },
+    {
+      "key": "mouse-pad",
+      "start": 3016
+    },
+    {
+      "key": "laptop-sleeve-10984",
+      "start": 3016.199999988079
+    },
+    {
+      "key": "canvas-12x16in",
+      "start": 3016.4000000059605
+    }
+  ],
+  "previews": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "ready": 1052.2999999821186
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "ready": 1866.5
+    },
+    {
+      "key": "cork-back-coaster",
+      "ready": 1928.5
+    },
+    {
+      "key": "mouse-pad",
+      "ready": 3866.5999999940395
+    },
+    {
+      "key": "laptop-sleeve-10984",
+      "ready": 3987.699999988079
+    },
+    {
+      "key": "colored-mug-11051",
+      "ready": 4702.0999999940395
+    },
+    {
+      "key": "canvas-12x16in",
+      "ready": 4768.0999999940395
+    }
+  ],
+  "longTasks": [
+    {
+      "start": 3891.2999999821186,
+      "duration": 99
+    }
+  ],
+  "frameGaps": [
+    {
+      "start": 3896.5,
+      "duration": 83.40000000000009
+    }
+  ],
+  "galleryShown": 321,
+  "firstArtwork": 961.2999999821186,
+  "jumped": 3000.0999999940395,
+  "targetReady": 3884.0999999940395,
+  "preparedCards": 7,
+  "liveViewers": 3,
+  "fabricRequested": false,
+  "errors": [],
+  "hashes": [
+    {
+      "key": "white-glossy-mug-duo-11oz",
+      "hash": "0eb2089c329874aeee50036107d411b46fe884a241d273b4a11d0f3b828579fb"
+    },
+    {
+      "key": "cork-back-coaster",
+      "hash": "465c3e73d65a9f4fb0cd4bdac4e5b7571175a8c2d9d90c74905466b406ba696c"
+    },
+    {
+      "key": "matte-poster-30x40cm",
+      "hash": "f933d02ac15750df99b05e43fc10ac0839c96f52aa57f35fa03b23b1f1f6edef"
+    },
+    {
+      "key": "colored-mug-11051",
+      "hash": "889c8cb64b2d783d3be9012ade7e833bf6fbd8f54607e61a6f90c1b4aa4e2ed2"
+    },
+    {
+      "key": "mouse-pad",
+      "hash": "c59222bda1e478cbc1e0694a7e24e86e7dc7f952f39dfe2c9e2993ef1beba99b"
+    },
+    {
+      "key": "laptop-sleeve-10984",
+      "hash": "2d91e4c3dc64b92999b71857d93b596995dc0242e79a2029c8971eb7cf0d49bd"
+    },
+    {
+      "key": "canvas-12x16in",
+      "hash": "3ef1eaadf0f7bb10cba67b76526b1592cf23d5d1c9111947720ea5f07da5c435"
+    }
+  ]
+}

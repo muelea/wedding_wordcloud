@@ -2569,7 +2569,7 @@
 
   <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js?v=0.160.1"}}</script>
   <script>window.wolkenworteThreeReady = import('/vendor/three/build/three.module.js?v=0.160.1').then(THREE => { window.THREE = THREE; });</script>
-  <script src="/vendor/fabric.min.js?v=7.4.0"></script>
+  <script src="<%= asset('/js/configurator-runtime.js') %>"></script>
   <script src="<%= asset('/js/emoji-data.js') %>"></script>
   <script src="<%= asset('/js/emoji-catalog.js') %>"></script>
   <script src="<%= asset('/js/emoji-search.js') %>"></script>
@@ -2623,6 +2623,9 @@
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
     const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
     const mobileDevice = WolkenworteDevice.isMobileDevice(navigator);
+    const ensureEditorRuntime = WolkenworteConfiguratorRuntime.createLoader({
+      document, src: '/vendor/fabric.min.js?v=7.4.0', ready: () => Boolean(window.fabric),
+    });
     const EMOJI_SEARCH_INDEX_URLS = Object.freeze({
       de: <%- JSON.stringify(asset('/emoji-search/48.2/de.json')) %>,
       en: <%- JSON.stringify(asset('/emoji-search/48.2/en.json')) %>,
@@ -2832,11 +2835,21 @@
       },
       onUndo: undoCartRemoval,
       onQuantity: (id, quantity) => {
+        const item = cart.read().find(item => item.id === id);
+        const previous = analyticsCartItem(item);
         if (!WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage).setQuantity(id, quantity)) {
           throw new Error('quantity_storage_failed');
         }
+        if (previous && previous.quantity !== quantity) globalThis.WolkenworteAnalytics?.cartChange(previous, analyticsCartItem(item, quantity));
       },
       onContinue: continueFromCartPanel,
+      onOpen: () => {
+        globalThis.WolkenworteAnalytics?.page('cart', analyticsFlow());
+        analyticsCommerce('view_cart');
+      },
+      onClose: ({ navigating }) => {
+        if (!navigating) globalThis.WolkenworteAnalytics?.page(galleryElement.hidden ? 'editor' : 'gallery', analyticsFlow());
+      },
     });
 
     const brandLink = document.getElementById('brand-link');
@@ -2860,6 +2873,31 @@
         return [];
       }
     }
+
+    function analyticsFlow() {
+      return accountDesignReference || new URLSearchParams(location.search).has('accountDesign')
+        ? 'library' : directDesign ? 'direct' : 'cloud';
+    }
+    function analyticsCartItem(item, quantity) {
+      const candidate = products.find(product => product.key === item?.productKey);
+      return candidate ? globalThis.WolkenworteAnalytics?.item(candidate,
+        quantity ?? describeCartItem(item).quantity) : null;
+    }
+    function analyticsCommerce(name, items = loadOrderItems().map(item => analyticsCartItem(item))) {
+      return globalThis.WolkenworteAnalytics?.commerce(name, { currency: 'EUR', items: items.filter(item => item?.quantity > 0) });
+    }
+    function analyticsEditorView() {
+      globalThis.WolkenworteAnalytics?.page('editor', analyticsFlow());
+      if (product && !restorationFailed) analyticsCommerce('view_item', [globalThis.WolkenworteAnalytics?.item(product)]);
+    }
+    window.addEventListener('wolkenworte:analytics-granted', () => {
+      if (!products.length) return;
+      if (document.getElementById('cart-panel').open) {
+        globalThis.WolkenworteAnalytics?.page('cart', analyticsFlow());
+        analyticsCommerce('view_cart');
+      } else if (!galleryElement.hidden) productGallery?.reportImpressions();
+      else if (workspaceReady) analyticsEditorView();
+    });
 
     function updateCartActions() {
       const items = loadOrderItems();
@@ -3673,7 +3711,7 @@
         cartPanel.message('Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
         return;
       }
-      cartPanel.close({ restoreFocus: false });
+      cartPanel.close({ restoreFocus: false, navigating: true });
       productGallery?.suspend();
       galleryElement.hidden = true;
       editorElement.hidden = false;
@@ -3707,7 +3745,7 @@
           cartPanel.message('Der Entwurf konnte in diesem Browser nicht gesichert werden. Bitte lasst diese Seite geöffnet.');
           return;
         }
-        cartPanel.close({ restoreFocus: false });
+        cartPanel.close({ restoreFocus: false, navigating: true });
         navigateToShipping();
       } catch (error) {
         cartPanel.open();
@@ -3730,7 +3768,7 @@
           ?? products.find(candidate => candidate.key === removedItem?.productKey)?.defaultQuantity ?? 1;
         cart.remove(configurationId, { quantity });
         removedEditingState = editingState;
-        if (removedItem) globalThis.WolkenworteAnalytics?.track('remove_from_cart', { itemId: removedItem.productKey });
+        if (removedItem) globalThis.WolkenworteAnalytics?.cartChange(analyticsCartItem(removedItem, quantity), null);
         if (editingOrderItemId === configurationId) {
           editingOrderItemId = null;
           savedDesignFingerprint = null;
@@ -3757,6 +3795,7 @@
         if (!restored) { renderRemovalNotice(); return; }
         WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
           .restoreConfiguration(restored.item.id, restored.quantity);
+        globalThis.WolkenworteAnalytics?.cartChange(null, analyticsCartItem(restored.item, restored.quantity));
         const sameWorkingCopy = removedEditingState?.id === restored.item.id &&
           currentDesignFingerprint() === removedEditingState.fingerprint;
         const openedRemovedDesign = new URLSearchParams(location.search).get('edit') === restored.item.id;
@@ -3785,7 +3824,6 @@
         ? `configuration=${encodeURIComponent(ids[0])}`
         : `configurations=${encodeURIComponent(ids.join(','))}`;
       allowNavigation = true;
-      globalThis.WolkenworteAnalytics?.markNextPageEvent('begin_checkout');
       location.assign(`/e/${encodeURIComponent(slug)}/shipping?${query}&edit=${encodeURIComponent(editingOrderItemId || ids[0])}`);
     }
 
@@ -4015,7 +4053,8 @@
       });
       const layoutOptions = { fontFamily: (item) => DesignFonts.cssFamily(item.fontFamily),
         printDpi: options.allowSmallText ? undefined : Number(view.printFile.dpi),
-        signal: options.signal, priority: options.priority };
+        signal: options.signal, priority: options.priority,
+        waitForIdle: options.waitForIdle, timeSliceMs: mobileDevice ? 4 : 8 };
       const optimized = options.background
         ? printLayoutJobs().automatic(design, slots, measurementContext, layoutOptions)
         : DesignLayout.optimizeDesign(design, slots, measurementContext, layoutOptions);
@@ -5001,7 +5040,8 @@
         }
       } finally { productTransitionPending = false; }
       if (nextProduct?.key === product?.key && (another || previousProductKey !== product.key)) {
-        globalThis.WolkenworteAnalytics?.track('select_item', { itemId: product.key });
+        analyticsCommerce('select_item', [globalThis.WolkenworteAnalytics?.item(product)]);
+        analyticsEditorView();
       }
       updateProductOptionSelection();
     }
@@ -5552,8 +5592,10 @@
           pendingConfiguration = { revision, data };
         }
         if (previousId && !loadOrderItems().some(item => item.id === previousId)) throw new Error('cart_changed');
+        const previousAnalyticsItem = previousId ? analyticsCartItem(loadOrderItems().find(item => item.id === previousId)) : null;
         addOrderItem(data, { replaceId: previousId });
-        if (!previousId) globalThis.WolkenworteAnalytics?.track('add_to_cart', { itemId: data.productKey });
+        globalThis.WolkenworteAnalytics?.cartChange(previousAnalyticsItem,
+          analyticsCartItem({ productKey: data.productKey }, previousAnalyticsItem?.quantity ?? product.defaultQuantity));
         try {
           WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
             .replaceConfiguration(previousId, data.id);
@@ -5845,10 +5887,12 @@
       refreshWorkspaceLayout();
       renderAll();
       loading.hidden = true;
+      analyticsEditorView();
     }
 
     function showProductGallery(snapshot = null, { push = false } = {}) {
       updateGalleryLocation(snapshot, { push });
+      globalThis.WolkenworteAnalytics?.page('gallery', analyticsFlow());
       updateProductBackLink(true);
       const sourceWords = (liveWords.length ? liveWords : words).map(pair => [...pair]);
       const theme = selectedTheme;
@@ -5866,19 +5910,19 @@
       updateHeaderCart(loadOrderItems());
       if (productGallery) { void productGallery.resume(snapshot); return; }
       productGallery = new WolkenworteProductGallery.Gallery({
-        element: galleryElement, products, i18n: WolkenworteI18n,
+        element: galleryElement, products, i18n: WolkenworteI18n, mobile: mobileDevice,
         getView: (candidate, orientation) => productView(candidate, orientation, candidate.printSurfaces[0].key),
         configureFlat: configureProductMockup,
         paintFlat: paintFlatProductPreview,
         preview: cartProductPreview,
         renderArtwork: renderPreviewArtwork,
-        prepare: async (candidate, { signal, allowSmallText = false }) => {
+        prepare: async (candidate, { signal, allowSmallText = false, waitForIdle }) => {
           const orientation = candidate.defaultOrientation || 'default';
           const designs = {};
           for (const surface of candidate.printSurfaces) {
             await new Promise(resolve => setTimeout(resolve, 0));
             designs[surface.key] = sourceWords.length ? await buildAutomaticDesign(surface.key, {
-              product: candidate, orientation, words: sourceWords, colors, background: true, signal, allowSmallText,
+              product: candidate, orientation, words: sourceWords, colors, background: true, signal, allowSmallText, waitForIdle,
             }) : [];
           }
           return { productKey: candidate.key, orientation, theme, currentDesignEdited: allowSmallText,
@@ -5888,6 +5932,7 @@
           THREE: window.THREE, host, product: candidate, onStatus,
           fitToView: true, framingFill: () => .92,
           maxPixelRatio: 1.5, maxRenderPixels: 300000,
+          maxTextureSize: 1024,
           modelOptions: { maxTextureSize: 1024 },
           drawTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, candidate.previewMesh?.back || candidate.previewModel?.kind === 'pillow' ? (designs?.front || design) : design),
           drawBackTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, designs?.back || []),
@@ -5896,6 +5941,9 @@
           host, product: candidate, onStatus, maxPixelRatio: 1.5, maxRenderPixels: 500000,
           drawTexture: ctx => drawDesign(ctx, 0, 0, 1, design),
         }),
+        onImpression: candidate => analyticsCommerce('view_item_list', [globalThis.WolkenworteAnalytics?.item(candidate)]),
+        onSelect: candidate => analyticsCommerce('select_item', [globalThis.WolkenworteAnalytics?.item(candidate)]),
+        onView: candidate => analyticsCommerce('view_item', [globalThis.WolkenworteAnalytics?.item(candidate)]),
         onChoose: openGalleryDesign,
         onAdd: addGalleryDesign,
         isInCart: id => loadOrderItems().some(item => item.id === id),
@@ -5950,6 +5998,7 @@
         history.pushState(null, '', href);
       } else history.replaceState(null, '', href);
       updateProductBackLink(false);
+      analyticsEditorView();
     }
 
     function updateGalleryLocation(snapshot, { push = false } = {}) {
@@ -6030,10 +6079,14 @@
       if (previous && !cart.read().some(item => item.id === previous.id)) {
         fail('Der Warenkorb hat sich geändert. Bitte öffnet das Design erneut, bevor ihr Änderungen übernehmt.');
       }
+      const previousAnalyticsItem = previous ? analyticsCartItem(previous) : null;
       cart.replace({ ...orderItemFromConfiguration(data), lineId: previous?.lineId || previous?.id || data.id,
         ...(snapshot.accountDesign?.id ? { accountDesignId: snapshot.accountDesign.id } : {}) }, previous?.id);
       galleryPendingConfigurations.delete(snapshot.productKey);
-      if (!previous) globalThis.WolkenworteAnalytics?.track('add_to_cart', { itemId: data.productKey });
+      const analyticsItem = analyticsCartItem({ productKey: data.productKey }, previousAnalyticsItem?.quantity
+        ?? products.find(candidate => candidate.key === data.productKey)?.defaultQuantity);
+      analyticsCommerce('view_item', [analyticsItem]);
+      globalThis.WolkenworteAnalytics?.cartChange(previousAnalyticsItem, analyticsItem);
       try {
         WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage).replaceConfiguration(previous?.id, data.id);
       } catch { /* Quantity drafts do not authorize checkout. */ }
@@ -6175,6 +6228,7 @@
       content.inert = true;
       suppressDirty = true;
       try {
+        await ensureEditorRuntime();
         cart.read();
         if (initialDesign) {
           product = products.find(candidate => candidate.key === initialDesign.productKey);

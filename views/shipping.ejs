@@ -469,7 +469,6 @@
     ].map((id) => id.trim()).filter((id, index, list) => id && list.indexOf(id) === index);
     const savedQuoteId = query.get('quote');
     const checkoutWasCancelled = query.get('checkout') === 'cancelled';
-    if (checkoutWasCancelled) globalThis.WolkenworteAnalytics?.track('checkout_cancelled');
     const loading = document.getElementById('loading');
     const pageContent = document.getElementById('page-content');
     const fatalError = document.getElementById('fatal-error');
@@ -488,6 +487,8 @@
     let activeShippingRequest = null;
     let countryDisplayNames = null;
     let shippingDraftReady = false;
+    let analyticsCheckoutStarted = false;
+    let analyticsShippingRows = new Map();
     let shippingDraft = null;
     let shippingDraftUnstored = false;
     const cart = WolkenworteConfiguratorSession.createCart(slug);
@@ -584,6 +585,37 @@
     setBackHref(galleryHref);
     backLinks.forEach((link) => { link.addEventListener('click', saveShippingDraft); });
 
+    function currentAnalyticsRows() {
+      const { shipments, quantityError } = collectShipments({ validate: false });
+      if (quantityError) return null;
+      const quantities = new Map();
+      for (const shipment of shipments) for (const item of shipment.items) {
+        quantities.set(item.configurationId, (quantities.get(item.configurationId) || 0) + item.quantity);
+      }
+      return new Map(configurations.filter(item => quantities.get(item.id) > 0).map(item => [item.id,
+        globalThis.WolkenworteAnalytics?.item(item.product, quantities.get(item.id))]));
+    }
+    function trackShippingEntry() {
+      if (!shippingDraftReady || analyticsCheckoutStarted) return;
+      const rows = currentAnalyticsRows();
+      if (!rows?.size) return;
+      analyticsCheckoutStarted = globalThis.WolkenworteAnalytics?.commerce('begin_checkout', {
+        currency: 'EUR', items: [...rows.values()],
+      }) === true;
+    }
+    function trackShippingQuantityChanges() {
+      if (!shippingDraftReady) return;
+      const next = currentAnalyticsRows();
+      if (!next) return;
+      for (const id of new Set([...analyticsShippingRows.keys(), ...next.keys()])) {
+        const previous = analyticsShippingRows.get(id), item = next.get(id);
+        if (previous?.quantity !== item?.quantity) globalThis.WolkenworteAnalytics?.cartChange(previous, item);
+      }
+      analyticsShippingRows = next;
+    }
+    window.addEventListener('wolkenworte:analytics-granted', trackShippingEntry);
+    form.addEventListener('change', trackShippingQuantityChanges);
+
     function saveShippingDraft() {
       if (!shippingDraftReady) return;
       shippingDraftUnstored = !shippingDraft?.write(collectShipments({ validate: false }).shipments);
@@ -608,7 +640,9 @@
       try {
         const quantity = collectShipments({ validate: false }).shipments[0]?.items
           .find(item => item.configurationId === configurationId)?.quantity;
+        const analyticsItem = currentAnalyticsRows()?.get(configurationId);
         cart.remove(configurationId, { quantity });
+        if (analyticsItem) globalThis.WolkenworteAnalytics?.cartChange(analyticsItem, null);
         const remaining = cart.read();
         shippingDraft?.removeConfigurations([configurationId], { keepRecipient: true });
         const remainingIds = remaining.map((item) => item.id);
@@ -634,6 +668,7 @@
       try {
         const restored = cart.undoRemoval();
         if (!restored) { renderRemovalNotice(); return; }
+        globalThis.WolkenworteAnalytics?.restoreCartItem(restored.item.productKey, restored.quantity);
         saveShippingDraft();
         shippingDraft?.restoreConfiguration(restored.item.id, restored.quantity);
         shippingDraftReady = false;
@@ -1727,6 +1762,10 @@
           setText(formError, 'Bitte prüft Preise und Lieferung erneut.');
         }
         shippingDraftReady = true;
+        globalThis.WolkenworteAnalytics?.page('shipping', eventData.directDesign ? 'direct' : 'cloud');
+        analyticsShippingRows = currentAnalyticsRows() || new Map();
+        trackShippingEntry();
+        if (checkoutWasCancelled) globalThis.WolkenworteAnalytics?.track('checkout_cancelled');
         saveShippingDraft();
         submitButton.disabled = false;
         loading.hidden = true;
@@ -1767,6 +1806,7 @@
         );
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (!response.ok) {
+          globalThis.WolkenworteAnalytics?.track('checkout_error', { stage: 'shipping', reason: result.error });
           if (Array.isArray(result.fields)) markInvalidFields(result.fields);
           throw customerError(customerErrorSource(result, 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.'));
         }
@@ -1788,6 +1828,7 @@
         );
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (!checkoutResponse.ok) {
+          globalThis.WolkenworteAnalytics?.track('checkout_error', { stage: 'shipping', reason: checkoutResult.error });
           if (checkoutResult.quote &&
               (checkoutResult.error === 'quote_changed' || checkoutResult.error === 'quote_shipping_changed')) {
             showQuote(checkoutResult.quote);
@@ -1806,10 +1847,12 @@
           return;
         }
         showQuote(checkoutResult.quote);
-        globalThis.WolkenworteAnalytics?.track('shipping_quote');
+        globalThis.WolkenworteAnalytics?.commerce('shipping_quote', { currency: 'EUR', items: checkoutResult.quote.analyticsItems });
+        globalThis.WolkenworteAnalytics?.commerce('add_shipping_info', { currency: 'EUR', items: checkoutResult.quote.analyticsItems });
         setButtonLabel(submitButton, 'Preise aktualisieren');
       } catch (error) {
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
+        if (!error.customerSource) globalThis.WolkenworteAnalytics?.track('checkout_error', { stage: 'shipping', reason: 'network' });
         setText(formError,
           error.customerSource || 'Preise und Lieferung konnten gerade nicht geprüft werden. Bitte versucht es gleich noch einmal.');
         setButtonLabel(submitButton, 'Erneut versuchen');
@@ -1849,6 +1892,7 @@
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
         if (result.quote) showQuote(result.quote);
         if (!response.ok) {
+          globalThis.WolkenworteAnalytics?.track('checkout_error', { stage: 'payment', reason: result.error });
           if (result.error === 'mockup_approval_required') productApproval.reset();
           if (['quote_expired', 'quote_not_found', 'invalid_address', 'shipping_unavailable',
             'selection_not_available', 'product_shipping_restricted', 'pricing_unavailable', 'pricing_currency_mismatch', 'pricing_not_configured'].includes(result.error)) {
@@ -1870,11 +1914,12 @@
         const destination = result.confirmationUrl || result.url;
         if (!destination) throw customerError(
           'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.');
-        if (result.url) globalThis.WolkenworteAnalytics?.track('payment_redirect');
+        if (result.url) globalThis.WolkenworteAnalytics?.commerce('payment_redirect', { currency: 'EUR', items: (result.quote || currentQuote).analyticsItems });
         location.assign(destination);
         navigating = true;
       } catch (error) {
         if (activeShippingRequest !== request || request.revision !== shippingRevision) return;
+        if (!error.customerSource) globalThis.WolkenworteAnalytics?.track('checkout_error', { stage: 'payment', reason: 'network' });
         setText(checkoutError,
           error.customerSource || 'Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versucht es erneut.');
         setButtonLabel(checkoutButton, 'Weiter zur Zahlung');

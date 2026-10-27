@@ -360,7 +360,12 @@ async function createCheckoutSession({
       error.code = 'STRIPE_TAX_CALCULATION_INCOMPLETE';
       throw error;
     }
-    pricedItems = pricing.items.map((item, index) => ({ ...item, grossTotalCents: lines.data[index].amount_total }));
+    pricedItems = pricing.items.map((item, index) => {
+      const line = lines.data[index];
+      return { ...item, grossTotalCents: line.amount_total,
+        ...(Number.isSafeInteger(line.amount_tax) && line.amount_tax >= 0 && line.amount_tax <= line.amount_total
+          ? { netTotalCents: line.amount_total - line.amount_tax } : {}) };
+    });
   }
 
   return {

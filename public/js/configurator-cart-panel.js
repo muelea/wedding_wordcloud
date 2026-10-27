@@ -6,7 +6,7 @@
 })(typeof window === 'object' ? window : globalThis, function () {
   'use strict';
 
-  function create({ dialog, trigger, items, describe, thumbnail, pendingRemoval, onEdit, onRemove, onUndo, onContinue, onQuantity, i18n }) {
+  function create({ dialog, trigger, items, describe, thumbnail, pendingRemoval, onEdit, onRemove, onUndo, onContinue, onQuantity, onOpen, onClose, i18n }) {
     const document = dialog.ownerDocument;
     const window = document.defaultView;
     const list = dialog.querySelector('[data-cart-panel-list]');
@@ -20,6 +20,7 @@
     trigger.setAttribute('aria-expanded', 'false');
     let busy = false;
     let restoreFocusOnClose = true;
+    let navigatingOnClose = false;
     const node = (tag, className, text) => {
       const element = document.createElement(tag);
       element.className = className;
@@ -139,16 +140,18 @@
         }
       }
     }
-    function close({ restoreFocus = true } = {}) {
+    function close({ restoreFocus = true, navigating = false } = {}) {
       restoreFocusOnClose = restoreFocus;
+      navigatingOnClose = navigating;
       if (dialog.open) dialog.close();
     }
     function open() {
       restoreFocusOnClose = true;
+      navigatingOnClose = false;
       message('');
       render();
       position();
-      if (!dialog.open) dialog.showModal();
+      if (!dialog.open) { dialog.showModal(); onOpen?.(); }
       trigger.setAttribute('aria-expanded', 'true');
       dialog.querySelector('h2').focus({ preventScroll: true });
     }
@@ -163,6 +166,7 @@
     dialog.addEventListener('pointerdown', event => { backdrop = outside(event); });
     dialog.addEventListener('click', event => { if (backdrop && outside(event)) close(); backdrop = false; });
     dialog.addEventListener('close', () => {
+      onClose?.({ navigating: navigatingOnClose });
       trigger.setAttribute('aria-expanded', 'false');
       if (restoreFocusOnClose && !trigger.hidden) trigger.focus({ preventScroll: true });
     });

@@ -6,12 +6,13 @@ const fs = require('node:fs');
 const { JSDOM } = require('jsdom');
 const Preview = require('../public/js/print-preview');
 
-function harness(t, mockups, options = {}) {
+function harness(t, mockups, options = {}, setupWindow = () => {}) {
   const markup = fs.readFileSync(require.resolve('../views/partials/print-preview.ejs'), 'utf8');
   const dom = new JSDOM(`<form><input name="city" value="Berlin"><input name="quantity" value="3"><button type="button" id="opener">View design</button></form>${markup}`,
     { url: 'https://example.test/shipping' });
   t.after(() => dom.window.close());
   const { window } = dom;
+  setupWindow(window);
   let locale = 'de';
   const dialog = window.document.querySelector('dialog');
   dialog.showModal = () => dialog.setAttribute('open', '');
@@ -482,6 +483,62 @@ test('media tabs support keyboard selection, retain the model, and expansion kee
   assert.ok(resized > 1);
   h.dialog.close(); h.api.open(item, h.opener);
   assert.equal(h.dialog.classList.contains('is-expanded'), false);
+});
+
+test('phones and tablets cannot expand the overview at portrait or landscape widths', t => {
+  for (const navigator of [
+    { userAgent: 'iPhone Safari', maxTouchPoints: 5 },
+    { userAgent: 'Macintosh Safari', maxTouchPoints: 5 },
+    { userAgent: 'Android Chrome', maxTouchPoints: 5 },
+  ]) {
+    const h = harness(t, undefined, {}, window => {
+      for (const [key, value] of Object.entries(navigator)) Object.defineProperty(window.navigator, key, { value });
+      window.innerWidth = 390;
+    });
+    h.api.open(h.configuration(), h.opener);
+    const expand = h.query('[data-preview-expand]');
+    for (const width of [390, 844, 1366]) {
+      h.window.innerWidth = width;
+      h.window.dispatchEvent(new h.window.Event('resize'));
+      assert.equal(expand.hidden, true, `${navigator.userAgent} at ${width}px`);
+      expand.click();
+      assert.equal(h.dialog.classList.contains('is-expanded'), false, 'even direct activation cannot hide the mobile description');
+      assert.equal(expand.getAttribute('aria-pressed'), 'false');
+    }
+  }
+});
+
+test('compact desktop resizing exits expansion and preserves the active photo and keyboard focus', t => {
+  const h = harness(t);
+  const item = h.configuration();
+  item.product.productPhoto = '/plain.jpg';
+  h.api.open(item, h.opener);
+  const photo = h.query('[data-preview-view="photo"]');
+  photo.click();
+  const image = h.photo(), expand = h.query('[data-preview-expand]');
+  assert.equal(expand.hidden, false);
+  expand.focus();
+  expand.click();
+  assert.equal(h.dialog.classList.contains('is-expanded'), true);
+
+  h.window.innerWidth = 700;
+  h.window.dispatchEvent(new h.window.Event('resize'));
+  assert.equal(expand.hidden, true);
+  assert.equal(h.dialog.classList.contains('is-expanded'), false);
+  assert.equal(expand.getAttribute('aria-pressed'), 'false');
+  assert.equal(h.window.document.activeElement, h.query('[data-preview-title]'));
+  assert.equal(photo.getAttribute('aria-selected'), 'true');
+  assert.equal(h.photo(), image, 'resizing does not reload the active photo');
+  expand.click();
+  assert.equal(h.dialog.classList.contains('is-expanded'), false);
+
+  h.window.innerWidth = 701;
+  h.window.dispatchEvent(new h.window.Event('resize'));
+  assert.equal(expand.hidden, false);
+  assert.equal(h.dialog.classList.contains('is-expanded'), false, 'a larger viewport never expands automatically');
+  expand.click();
+  assert.equal(h.dialog.classList.contains('is-expanded'), true);
+  assert.equal(photo.getAttribute('aria-selected'), 'true');
 });
 
 test('photo-only variant browsing never loads artwork or initializes a model', t => {

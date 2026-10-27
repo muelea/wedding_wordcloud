@@ -86,7 +86,8 @@
     scene.add(group);
 
     const dimensions = textureSizeFor(product);
-    const textureScale = product.previewModel || providerModel ? Math.min(1, 2048 / Math.max(dimensions.width, dimensions.height)) : 1;
+    const textureLimit = options.maxTextureSize || (product.previewModel || providerModel ? 2048 : Infinity);
+    const textureScale = Math.min(1, textureLimit / Math.max(dimensions.width, dimensions.height));
     const textureCanvas = document.createElement('canvas');
     textureCanvas.width = Math.ceil(dimensions.width * textureScale);
     textureCanvas.height = Math.ceil(dimensions.height * textureScale);
@@ -451,7 +452,7 @@
       camera.updateProjectionMatrix();
     }
 
-    function resize() {
+    function resize(paint = true) {
       const rect = host.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const densityLimit = options.maxPixelRatio || 2;
@@ -468,7 +469,7 @@
       camera.far = Math.max(100, distance + framingRadius * 2);
       camera.near = Math.max(.1, (Math.max(defaultCameraDistance, distance) - framingRadius) * .5);
       camera.updateProjectionMatrix();
-      render();
+      if (paint) render();
     }
 
     function printDrawingOptions() {
@@ -704,7 +705,7 @@
     }
 
     try {
-      resize();
+      resize(false);
       updateTexture();
       if (renderer.getContext().isContextLost()) throw new Error('webgl_context_lost');
       if (options.autoRotate && !modelPending) startAutoRotate();
@@ -728,8 +729,9 @@
       modelPending = false;
       measureModel();
       canvas.setAttribute('data-product-mesh', providerModel.id);
+      // load() has already painted the current artwork into the provider atlas.
+      // One render also makes that exact frame available to gallery thumbnails.
       resize();
-      updateTexture();
       if (renderer.getContext().isContextLost()) reportStatus('error');
       else { reportStatus('ready'); if (options.autoRotate) startAutoRotate(); }
       return true;

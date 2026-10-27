@@ -45,7 +45,7 @@ test('async fill uses page-measured boxes and returns the identical mixed-font p
         await new Promise(resolve => setImmediate(resolve));
         return Core.layoutBoxesInArea(boxes, width, height);
       }, { concurrency: 4 });
-    const actual = await Layout.optimizeDesignAsync(design, slots, context(), { fontFamily, pack });
+    const actual = await Layout.optimizeDesignAsync(design, slots, context(), { fontFamily, pack, timeSliceMs: 4 });
     assert.ok(packs > 0);
     assert.deepEqual(actual, expected);
     assert.deepEqual(design, original);

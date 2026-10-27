@@ -190,6 +190,7 @@
           })(), 20000);
         }
         const ids = WolkenworteConfiguratorSession.prepareReorder(slug, reorderConfigurations);
+        globalThis.WolkenworteAnalytics?.markNextPageEvent('reorder_started');
         location.assign(`/e/${encodeURIComponent(slug)}/shipping?configurations=${encodeURIComponent(ids.join(','))}`);
         reorderRequestId = null;
         reorderConfigurations = null;

@@ -6,6 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="<%= asset('/z_icons/icon.svg') %>" />
   <%- include('partials/pwa-head') %>
   <%- include('partials/site-fonts') %>
+  <%- include('partials/analytics-head') %>
   <link rel="stylesheet" href="<%= asset('/i18n.css') %>" /><link rel="stylesheet" href="<%= asset('/site-header.css') %>" />
   <link rel="stylesheet" href="<%= asset('/site-footer.css') %>" /><link rel="stylesheet" href="<%= asset('/mobile-foundation.css') %>" />
   <link rel="stylesheet" href="<%= asset('/account.css') %>" />
@@ -69,5 +70,6 @@
     <p>Bestätige deine Identität, bevor du dein Konto dauerhaft löschst.</p><button class="ww-account-primary" type="button" data-reauth-google>Mit Google bestätigen</button>
     <form data-reauth-form><label>Passwort<input type="password" name="password" autocomplete="current-password" required maxlength="256" /></label><button class="ww-account-primary" type="submit">Bestätigen</button></form><p data-reauth-status role="status"></p></dialog>
   <%- include('partials/site-footer') %>
+  <%- include('partials/analytics-ui') %>
   <script src="<%= asset('/js/configurator-session.js') %>"></script><script src="<%= asset('/js/account.js') %>"></script>
 </body></html>

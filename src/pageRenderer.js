@@ -127,6 +127,8 @@ async function renderPage(req, res, view, options = {}) {
       ? ''
       : localeCatalogUrls[resolved.locale],
     analyticsMeasurementId: analyticsConfig.measurementId(),
+    analyticsEnvironment: ['local', 'hosted-test', 'production'].includes(process.env.APP_ENVIRONMENT)
+      ? process.env.APP_ENVIRONMENT : 'local',
     t: (source, params) => translate(source, resolved.locale, params),
   };
   const renderedHtml = await ejs.renderFile(path.join(VIEW_ROOT, `${view}.ejs`), locals);
