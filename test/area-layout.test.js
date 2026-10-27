@@ -23,7 +23,7 @@ const apply = (design, product) => Layout.applyLayoutAction(design, product.layo
 
 function automatic(product, words, allowSmallText = false) {
   return JSON.parse(JSON.stringify(vm.runInNewContext(automaticSource + '\nbuildAutomaticDesign(activeSurface, { allowSmallText })', {
-    allowSmallText,
+    allowSmallText, mobileDevice: false,
     product, activeSurface: product.printSurfaces[0].key, productView: () => product, words, WordCloudCore: Core, DesignFonts: Fonts, DesignLayout: Layout,
     document: { createElement: () => createCanvas(1, 1) }, selectedTheme: 'konfetti',
     getPalette: () => ({ colors: ['#2455f5', '#ed2446', '#18a84b', '#efbf00', '#f77500', '#e600b8'] }),

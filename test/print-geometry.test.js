@@ -22,7 +22,7 @@ function pageFunction(name) {
 }
 function page(productKey) {
   const context = vm.createContext({ product: getPublicProduct(getProduct(productKey)),
-    activeSurface: 'front', selectedOrientation: 'default', selectedTheme: 'konfetti',
+    activeSurface: 'front', selectedOrientation: 'default', selectedTheme: 'konfetti', mobileDevice: false,
     document: { createElement: () => createCanvas(1, 1) },
     words: [['liebe', 1], ['glück', 1], ['gemeinsam', 1], ['🎉', 1], ['😍', 1], ['2026', 1]],
     WordCloudCore: Core, DesignLayout: Layout, DesignFonts: Fonts,

@@ -38,7 +38,7 @@ function automatic(product, words) {
   // Exercise the real page controller. Live placement is deliberately made
   // unavailable, proving the product has its own placement decision.
   return JSON.parse(JSON.stringify(vm.runInNewContext(automaticSource + '\nbuildAutomaticDesign()', {
-    product, productView: () => product, activeSurface: product.printSurfaces[0].key,
+    product, productView: () => product, activeSurface: product.printSurfaces[0].key, mobileDevice: false,
     words, WordCloudCore: { ...Core, layoutWordsInArea() { throw new Error('Live placement must not build print designs'); } },
     DesignLayout: Layout, DesignFonts: Fonts, CloudLimits: Limits,
     document: { createElement: () => createCanvas(1, 1) }, selectedTheme: 'konfetti',
