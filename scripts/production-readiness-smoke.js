@@ -1,5 +1,8 @@
 'use strict';
 
+const { generateEventSlug } = require('../src/slug');
+const crypto = require('node:crypto');
+
 const PUBLIC_URL = 'https://wolkenworte.io';
 const WWW_URL = 'https://www.wolkenworte.io';
 
@@ -49,13 +52,15 @@ async function run({ expected = parseExpected(), fetchImpl = fetch, output = con
     if (root.status !== 200 || !String(root.headers.get('content-type')).includes('text/html')) {
       throw new Error('The active production landing page is not healthy.');
     }
+    const probeSlug = generateEventSlug();
+    const probeConfiguration = crypto.randomBytes(18).toString('base64url');
     const [legal, event] = await Promise.all([
       request(fetchImpl, `${PUBLIC_URL}/bestellinformationen`),
-      request(fetchImpl, `${PUBLIC_URL}/api/events/release-read-only-unknown/configurations/release-read-only-unknown`),
+      request(fetchImpl, `${PUBLIC_URL}/api/events/${probeSlug}/configurations/${probeConfiguration}`),
     ]);
     if (legal.status !== 200 || event.status !== 404 ||
         (await event.json()).error !== 'configuration_not_found') {
-      throw new Error('Representative read-only application routes failed.');
+      throw new Error(`Representative read-only application routes failed (legal=${legal.status}, configuration=${event.status}).`);
     }
   }
   const result = {

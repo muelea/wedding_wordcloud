@@ -327,13 +327,16 @@ function validateMachinePosture(json, posture, { requireHealthy = false } = {}) 
 }
 
 function parseOptions(argv = process.argv.slice(2)) {
-  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm', 'release']);
+  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm', 'release', 'recover-check', 'recover']);
   const options = {
     phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false, enableDesignAccounts:false,
+    verifiedCommit: '', imageDigest: '',
   };
   for (const argument of argv) {
     if (argument.startsWith('--phase=')) options.phase = argument.slice('--phase='.length);
     else if (argument.startsWith('--confirm-commit=')) options.commit = argument.slice('--confirm-commit='.length);
+    else if (argument.startsWith('--verified-commit=')) options.verifiedCommit = argument.slice('--verified-commit='.length);
+    else if (argument.startsWith('--confirm-image=')) options.imageDigest = argument.slice('--confirm-image='.length);
     else if (argument.startsWith('--preserve-event-slug=')) {
       options.preserveEventSlug = argument.slice('--preserve-event-slug='.length);
     } else if (argument === '--preserve-none') options.preserveNone = true;
@@ -345,12 +348,18 @@ function parseOptions(argv = process.argv.slice(2)) {
       '--confirm-live-activation',
       '--confirm-emergency-rearm',
       '--confirm-production-release',
+      '--confirm-production-recovery',
     ].includes(argument)) options.confirmations.add(argument);
     else fail(`Unknown cutover argument: ${argument}.`);
   }
   if (!allowedPhases.has(options.phase)) {
-    fail('Use exactly one --phase=preflight|lock|arm|autosleep|activate|rearm|release.');
+    fail('Use exactly one supported cutover phase.');
   }
+  if (['recover-check', 'recover'].includes(options.phase)) {
+    if (!/^[a-f0-9]{40}$/.test(options.verifiedCommit) || !/^sha256:[a-f0-9]{64}$/.test(options.imageDigest)) {
+      fail('Recovery requires --verified-commit=<full-sha> and --confirm-image=sha256:<digest>.');
+    }
+  } else if (options.verifiedCommit || options.imageDigest) fail('Image recovery arguments are allowed only for recover-check and recover.');
   if(options.enableDesignAccounts&&options.phase!=='release') fail('--enable-design-accounts is allowed only with the approved production release phase.');
   const hasPreservedSlug = Boolean(options.preserveEventSlug);
   if (hasPreservedSlug && !/^[A-Za-z0-9_-]{1,120}$/.test(options.preserveEventSlug)) {
@@ -374,6 +383,10 @@ function preservationArgument(options) {
 
 function assertPhaseConfirmation(options, commit) {
   if (options.phase === 'preflight') return true;
+  if (options.phase === 'recover-check') {
+    if (options.confirmations.size) fail('Recovery preflight accepts no mutating confirmation.');
+    return true;
+  }
   const required = {
     lock: '--confirm-maintenance-lock',
     arm: '--confirm-production-arm',
@@ -381,6 +394,7 @@ function assertPhaseConfirmation(options, commit) {
     activate: '--confirm-live-activation',
     rearm: '--confirm-emergency-rearm',
     release: '--confirm-production-release',
+    recover: '--confirm-production-recovery',
   }[options.phase];
   if (!options.confirmations.has(required)) fail(`Explicit confirmation missing: ${required}.`);
   if (!/^[a-f0-9]{40}$/.test(options.commit) || options.commit !== commit) {
@@ -516,15 +530,33 @@ function verifyCertificates() {
   runCapture('flyctl', ['certs', 'check', 'www.wolkenworte.io', '--app', APP_NAME, '--json']);
 }
 
-function rearmAfterFailedActivation(originalError, action = 'Activation') {
+function rearmAfterFailedActivation(originalError, action = 'Activation', imageDigest = null) {
   try {
-    runStep(deployStep('armed', 'Re-arm maintenance and disable every live gate'));
+    runStep(imageDigest ? imageDeployStep('armed', imageDigest) : deployStep('armed', 'Re-arm maintenance and disable every live gate'));
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
   } catch (rearmError) {
     fail(`${action} failed (${originalError.message}); automatic re-arm also failed (${rearmError.message}).`);
   }
   fail(`${action} failed and the app was safely re-armed: ${originalError.message}`);
+}
+
+function imageDeployStep(posture, digest) {
+  if (!/^sha256:[a-f0-9]{64}$/.test(digest)) fail('An immutable production image digest is required.');
+  return { label: `Restore ${posture} posture with the exact already-tested image`, command: 'flyctl',
+    args: ['deploy', '--image', `registry.fly.io/wolkenworte@${digest}`, '--ha=false',
+      '--config', CONFIGS[posture], '--app', APP_NAME, '--yes'] };
+}
+
+function deployRecoveredRelease(commit, digest, { checkCommit = assertGitReleaseCandidate,
+  execute = runStep, verify = verifyRemote, recover = rearmAfterFailedActivation } = {}) {
+  if (checkCommit() !== commit) fail('Approved recovery commit changed during verification.');
+  verify('armed', 'production', { healthy: true });
+  try {
+    execute(imageDeployStep('active', digest));
+    execute(smokeStep('active'));
+    verify('active', 'production', { healthy: true });
+  } catch (error) { recover(error, 'Production recovery', digest); throw error; }
 }
 
 function deployActiveRelease(commit, {
@@ -580,6 +612,23 @@ async function main() {
       runCapture('flyctl', ['config', 'validate', '--strict', '--config', filename, '--app', APP_NAME]);
     }
     console.log(JSON.stringify({ approvedCommit: commit, currentPosture, mutation: false }, null, 2));
+    return;
+  }
+
+  if (['recover-check', 'recover'].includes(options.phase)) {
+    if (currentPosture !== 'armed') fail('Recovery requires the exact re-armed production posture.');
+    const proof = require('./production-image-proof');
+    proof.assertOperatorOnlyChanges(options.verifiedCommit);
+    runStep(smokeStep('maintenance'));
+    verifyRemote('armed', 'production', { healthy: true });
+    runStep({ label: 'Read-only recovery database verification', command: 'node',
+      args: ['scripts/verify-release-database.js', '--current'] });
+    const imageProof = proof.verifyImage(parseMachineRecords(currentMachineJson())[0], options.imageDigest);
+    console.log(JSON.stringify({ recoveryCommit: commit, verifiedApplicationCommit: options.verifiedCommit,
+      ...imageProof, mutation: false }, null, 2));
+    if (options.phase === 'recover-check') return;
+    deployRecoveredRelease(commit, options.imageDigest);
+    console.log(`\n[cutover:production] recover complete for ${APP_NAME} @ ${commit}.`);
     return;
   }
 
@@ -676,6 +725,7 @@ module.exports = {
   assertPhaseConfirmation,
   detectMachinePosture,
   deployActiveRelease,
+  deployRecoveredRelease, imageDeployStep,
   parseOptions,
   productionSecretValues,
   designAccountSettings,stageDesignAccountSettings,DESIGN_ACCOUNT_SETTINGS,

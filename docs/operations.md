@@ -247,6 +247,38 @@ stage secrets or send provider orders. Never repeat the initial `arm`/`activate`
 sequence or use `deploy:hosted` for a post-launch update. Each release requires
 explicit maintainer deployment approval for its exact reviewed commit.
 
+### Recovering an automatically re-armed release
+
+If a release's post-deployment smoke fails, production stays in maintenance.
+Fix and test the operator check before restoring sales. Never repeat initial
+cutover cleanup or improvise Fly secret/config commands. The guarded `recover`
+phase requires a separate maintainer recovery approval, the exact current
+operator commit, the previously fully verified application commit and the exact
+already-deployed image digest.
+
+`recover-check` is read-only: it requires the armed production posture and secret
+boundary, checks maintenance health and database compatibility, rejects any
+application/dependency/migration/Fly-config change since the verified commit,
+and compares the deployed application file tree byte for byte with Git (ignoring
+only Finder's `.DS_Store` metadata). Only
+operator scripts, tests and documentation may differ. Review this output first:
+
+```bash
+npm run cutover:production -- --phase=recover-check \
+  --verified-commit=<fully-tested-application-sha> --confirm-image=sha256:<image-digest>
+```
+
+After the separate approval, run the same arguments with `--phase=recover`,
+`--confirm-commit=<current-operator-sha>` and `--confirm-production-recovery`.
+Recovery deploys that immutable existing image with the reviewed active config;
+it does not rebuild, migrate, clean business data or stage secrets. The full
+suite and Linux image checks are reused only because the application image and
+application source are unchanged from the verified release. The corrected
+operator smoke must have its focused and real-router regression checks pass.
+Public health, read-only application routes, webhook authentication, production
+posture and Machine health are verified again. Any failure re-arms maintenance
+with the same pinned image.
+
 ## Retention holds
 
 The approved retention policy, data categories and guarded per-order hold /

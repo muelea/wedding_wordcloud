@@ -27,6 +27,28 @@ const {
 
 const ROOT = path.join(__dirname, '..');
 
+test('production read-only smoke reaches the real configuration lookup using valid opaque IDs', async t => {
+  const hosted = await startTestServer();
+  t.after(hosted.close);
+  const smoke = require('../scripts/production-readiness-smoke');
+  const { isEventSlug } = require('../src/slug');
+  const probes = [];
+  const result = await smoke.run({ expected: 'active', output() {}, fetchImpl: async (url, options) => {
+    if (url.startsWith(smoke.WWW_URL)) return new Response('', { status: 308, headers: { location: smoke.PUBLIC_URL + '/' } });
+    if (url.includes('/webhook/')) return new Response('', { status: 400 });
+    const pathname = new URL(url).pathname;
+    if (pathname.startsWith('/api/events/')) {
+      const parts = pathname.split('/');
+      assert.equal(isEventSlug(parts[3]), true, 'malformed IDs would bypass the real database read');
+      assert.match(parts[5], /^[A-Za-z0-9_-]{24}$/);
+      probes.push(pathname);
+    }
+    return fetch(hosted.baseUrl + pathname, options);
+  } });
+  assert.equal(result.applicationReads, 'ok');
+  assert.equal(probes.length, 1);
+});
+
 function requestWithHost(baseUrl, pathname, host) {
   const target = new URL(baseUrl);
   return new Promise((resolve, reject) => {

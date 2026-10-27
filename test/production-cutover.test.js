@@ -341,6 +341,47 @@ test('post-launch release invokes the existing maintenance recovery on deploy, s
   }
 });
 
+test('recovery has a separate exact-commit approval and pins the already-tested image', () => {
+  const commit = 'a'.repeat(40), verified = 'b'.repeat(40), digest = 'sha256:' + 'c'.repeat(64);
+  const args = ['--phase=recover', `--confirm-commit=${commit}`, `--verified-commit=${verified}`, `--confirm-image=${digest}`];
+  assert.throws(() => cutover.assertPhaseConfirmation(cutover.parseOptions(args), commit), /confirm-production-recovery/);
+  const options = cutover.parseOptions([...args, '--confirm-production-recovery']);
+  assert.equal(cutover.assertPhaseConfirmation(options, commit), true);
+  assert.throws(() => cutover.assertPhaseConfirmation(options, verified), /exact approved commit/);
+  assert.throws(() => cutover.parseOptions(['--phase=recover']), /verified-commit/);
+  assert.throws(() => cutover.parseOptions(['--phase=release', `--confirm-image=${digest}`]), /only for recover/);
+  assert.throws(() => cutover.parseOptions([...args, '--preserve-none']), /only for arm and activate/);
+  const check = cutover.parseOptions([`--phase=recover-check`, `--verified-commit=${verified}`, `--confirm-image=${digest}`]);
+  assert.equal(cutover.assertPhaseConfirmation(check, commit), true);
+  assert.throws(() => cutover.assertPhaseConfirmation({ ...check, confirmations: new Set(['--confirm-production-recovery']) }, commit), /no mutating confirmation/);
+  assert.deepEqual(cutover.imageDeployStep('active', digest).args, ['deploy', '--image',
+    `registry.fly.io/wolkenworte@${digest}`, '--ha=false', '--config', 'fly.production.toml', '--app', 'wolkenworte', '--yes']);
+  assert.throws(() => cutover.imageDeployStep('active', 'latest'), /immutable/);
+});
+
+test('recovery changes only posture for the pinned image and retains guarded failure recovery', () => {
+  const commit = 'a'.repeat(40), digest = 'sha256:' + 'c'.repeat(64), calls = [];
+  cutover.deployRecoveredRelease(commit, digest, {
+    checkCommit() { return commit; }, verify(posture, target, options) { calls.push({ posture, target, options }); },
+    execute(step) { calls.push(step); }, recover() { assert.fail('A successful recovery must not re-arm'); },
+  });
+  assert.equal(calls[0].posture, 'armed');
+  assert.ok(calls[1].args.includes(`registry.fly.io/wolkenworte@${digest}`));
+  assert.deepEqual(calls[2].args, ['scripts/production-readiness-smoke.js', '--expect-active']);
+  assert.equal(calls[3].posture, 'active');
+  assert.equal(calls.length, 4, 'No rebuild, migration, cleanup or secret staging is permitted');
+  assert.throws(() => cutover.deployRecoveredRelease(commit, digest, {
+    checkCommit() { return 'b'.repeat(40); }, execute() { assert.fail(); },
+  }), /recovery commit changed/);
+  assert.throws(() => cutover.deployRecoveredRelease(commit, digest, {
+    checkCommit() { return commit; }, verify() { throw new Error('wrong posture'); }, execute() { assert.fail(); },
+  }), /wrong posture/);
+  assert.throws(() => cutover.deployRecoveredRelease(commit, digest, {
+    checkCommit() { return commit; }, verify() {}, execute() { throw new Error('smoke failed'); },
+    recover(error, action, image) { assert.equal(error.message, 'smoke failed'); assert.equal(image, digest); throw new Error('re-armed same image'); },
+  }), /re-armed same image/);
+});
+
 test('the cleanup-boundary verifier is read-only and rejects unrelated rows', async () => {
   const database = {
     async assertDatabaseReady() {},

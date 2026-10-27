@@ -1831,6 +1831,13 @@ privilege checks use the real restricted runtime role; customer rows are never
 loaded. Pending candidate migrations are allowed only before the migration
 step. Missing access or schema drift stops the release before deployment.
 
+An automatically re-armed update can be recovered only with separate maintainer
+approval through `cutover:production --phase=recover`. Its read-only
+`recover-check` proves that the existing fully tested image and application
+source are unchanged; only operator scripts, tests and documentation may differ.
+It restores that exact immutable image without initial-cutover cleanup, new
+migrations or rebuilding. See [operations.md](docs/operations.md#recovering-an-automatically-re-armed-release).
+
 ## Socket capacity qualification
 
 Socket capacity has a guarded hosted-test-only runner:
