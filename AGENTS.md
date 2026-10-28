@@ -39,6 +39,13 @@ scope, a failure or an unresolved concern justifies it.
   `npm test -- test/<concern>.test.js` for focused checks. Never supply a hosted
   test URL or restore fallback to the application/migration database. Docker
   must be running; no manual test-database configuration is needed.
+- Production updates use the full `release` phase by default. The separate
+  `release-light` phase is allowed only when the human maintainer explicitly
+  approves **a lighter deployment of that exact commit**. Ordinary deployment
+  approval, a small diff, a previous light-release approval, or permission to
+  prepare the tooling never authorizes it. Never select it automatically or
+  fall back to it after a failed full check. See `docs/operations.md` for its
+  separate confirmation flag and retained checks.
 
 The following high-risk mappings remain mandatory whenever the described
 behavior changes, even during focused iteration:
@@ -235,6 +242,12 @@ After production activation, approved updates use that command's `release`
 phase with the exact commit and `--confirm-production-release`. It keeps the
 active production posture and customer data, runs the full suite and Linux
 image/font checks, and re-arms maintenance on failed deployment verification.
+Only explicit maintainer approval for a lighter deployment of an exact commit
+allows `release-light` with `--confirm-production-light-release`. This skips
+the full suite and local image/font verification, keeps target/configuration,
+read-only current-schema/runtime and post-deployment checks plus automatic
+re-arm, and refuses pending migrations or account activation. It does not
+change the default release policy or authorize any later deployment.
 Never rerun initial-cutover cleanup or use `deploy:hosted` for a live update.
 
 The Supabase/Postgres foundation and least-privileged runtime role are active.

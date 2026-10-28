@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
+const { createRequire } = require('node:module');
 const stripeConfig = require('../src/stripeConfig');
 const cutover = require('../scripts/production-cutover');
 const cutoverTarget = require('../scripts/verify-cutover-target');
@@ -74,6 +76,42 @@ function machine(posture, overrides = {}) {
     checks: [{ status: 'passing' }],
     ...overrides,
   };
+}
+
+function simulatedCutover(args, calls, failedArg = null) {
+  const filename = path.join(ROOT, 'scripts/production-cutover.js');
+  const load = createRequire(filename);
+  const mockRequire = name => {
+    if (name === 'node:fs') return {
+      ...fs,
+      existsSync(file) { return file === path.join(ROOT, '.env') || fs.existsSync(file); },
+      readFileSync(file, ...options) {
+        assert.notEqual(file, path.join(ROOT, '.env'), 'The test must never read operator secrets');
+        return fs.readFileSync(file, ...options);
+      },
+    };
+    if (name === 'dotenv') return { config() { return {}; } };
+    if (name === './check-environment') return {
+      async ensureEnvironment() {}, assertFlyAccess() {},
+    };
+    if (name === './deploy-hosted') return {
+      validateOperatorEnvironment: load(name).validateOperatorEnvironment,
+      assertGitReleaseCandidate() { return 'a'.repeat(40); },
+    };
+    if (name === 'node:child_process') return { spawnSync(command, args) {
+      calls.push({ command, args: Array.from(args) });
+      let stdout = '';
+      if (args[0] === 'machine') stdout = JSON.stringify([machine('active')]);
+      if (args[0] === 'secrets') stdout = secretList('production');
+      return { status: failedArg && args.includes(failedArg) ? 1 : 0, stdout };
+    } };
+    return load(name);
+  };
+  return vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmain();', {
+    require: mockRequire, module: { exports: {} }, __dirname: path.dirname(filename),
+    process: { argv: ['node', filename, ...args], env: localCutoverEnv(), versions: { node: '22.0.0' } },
+    console: { log() {}, error() {} }, URL,
+  }, { filename });
 }
 
 test('reviewed Fly configs encode each one-way cutover posture', () => {
@@ -248,6 +286,129 @@ test('Linux candidate checks stop the release before migrations on failed image 
   }), /Linux pixels missing/);
   assert.equal(executed.some(step => step.args.includes('db:migrate')), false);
   assert.equal(executed.at(-1).args.includes('test/print-raster.test.js'), true);
+});
+
+test('light releases need their own per-release approval and exact commit', () => {
+  const commit = 'a'.repeat(40);
+  const args = ['--phase=release-light', `--confirm-commit=${commit}`];
+  for (const confirmations of [[], ['--confirm-production-release'], ['--confirm-live-activation']]) {
+    assert.throws(() => cutover.assertPhaseConfirmation(
+      cutover.parseOptions([...args, ...confirmations]), commit), /confirm-production-light-release/);
+  }
+  const light = cutover.parseOptions([...args, '--confirm-production-light-release']);
+  assert.equal(cutover.assertPhaseConfirmation(light, commit), true);
+  assert.throws(() => cutover.assertPhaseConfirmation(light, 'b'.repeat(40)), /exact approved commit/);
+  assert.throws(() => cutover.assertPhaseConfirmation(cutover.parseOptions([
+    '--phase=release-light', '--confirm-production-light-release',
+  ]), commit), /exact approved commit/);
+  assert.throws(() => cutover.assertPhaseConfirmation(cutover.parseOptions([
+    ...args, '--confirm-production-light-release', '--confirm-production-release',
+  ]), commit), /Only the confirmation/);
+  assert.throws(() => cutover.assertPhaseConfirmation(cutover.parseOptions([
+    '--phase=release', `--confirm-commit=${commit}`, '--confirm-production-light-release',
+  ]), commit), /confirm-production-release/);
+  assert.throws(() => cutover.parseOptions([
+    ...args, '--confirm-production-light-release', '--enable-design-accounts',
+  ]), /only.*release/);
+  assert.throws(() => cutover.parseOptions([
+    ...args, '--confirm-production-light-release', '--preserve-none',
+  ]), /only for arm and activate/);
+  assert.throws(() => cutover.parseOptions([
+    '--phase=release', '--skip-tests',
+  ]), /Unknown cutover argument/);
+});
+
+test('light verification retains config and current-schema checks without tests, local builds or migrations', () => {
+  const commit = 'a'.repeat(40);
+  const steps = cutover.verificationSteps('active', commit.slice(0, 12), { lightRelease: true });
+  assert.deepEqual(steps.map(({ command, args }) => [command, args]), [
+    ['npm', ['ci']],
+    ['flyctl', ['config', 'validate', '--strict', '--config', 'fly.production.toml', '--app', 'wolkenworte']],
+    ['node', ['scripts/verify-release-database.js', '--current']],
+  ]);
+  assert.equal(steps.at(-1).releaseBoundary, true);
+  assert.throws(() => cutover.verificationSteps('armed', commit.slice(0, 12), { lightRelease: true }),
+    /require active production/);
+
+  const calls = [];
+  cutover.runVerificationSteps('active', commit, {
+    lightRelease: true,
+    checkCommit() { calls.push('commit'); return commit; },
+    execute(step) { calls.push(step); },
+  });
+  assert.deepEqual(calls, [steps[0], steps[1], 'commit', steps[2]]);
+
+  // A prior light run must never change the default for the next release.
+  const full = [];
+  cutover.runVerificationSteps('active', commit, {
+    checkCommit() { return commit; }, execute(step) { full.push(step); },
+  });
+  assert.ok(full.some(step => step.command === 'npm' && step.args[0] === 'test'));
+  assert.ok(full.some(step => step.command === 'docker' && step.args[0] === 'build'));
+  assert.ok(full.some(step => step.args.includes('test/print-raster.test.js')));
+  assert.ok(full.some(step => step.args.includes('db:migrate')));
+});
+
+test('failed light verification and commit changes stop before deployment', () => {
+  const commit = 'a'.repeat(40);
+  for (const failedArg of ['ci', 'validate', '--current']) {
+    const calls = [];
+    assert.throws(() => cutover.runVerificationSteps('active', commit, {
+      lightRelease: true,
+      checkCommit() { return commit; },
+      execute(step) {
+        calls.push(step);
+        if (step.args.includes(failedArg)) throw new Error('light verification failed');
+      },
+    }), /light verification failed/);
+    assert.ok(calls.at(-1).args.includes(failedArg));
+    assert.equal(calls.some(step => step.args.includes('db:migrate') || step.args[0] === 'deploy'), false);
+  }
+  const calls = [];
+  assert.throws(() => cutover.runVerificationSteps('active', commit, {
+    lightRelease: true,
+    checkCommit() { return 'b'.repeat(40); }, execute(step) { calls.push(step); },
+  }), /commit changed/);
+  assert.equal(calls.length, 2, 'A changed commit must fail before contacting the database');
+});
+
+test('the real command routes approved light releases through the shared guarded deploy and smoke', async () => {
+  for (const phase of ['release', 'release-light']) {
+    const calls = [];
+    const light = phase === 'release-light';
+    await simulatedCutover([
+      `--phase=${phase}`, `--confirm-commit=${'a'.repeat(40)}`,
+      light ? '--confirm-production-light-release' : '--confirm-production-release',
+    ], calls);
+    assert.equal(calls.some(call => call.command === 'npm' && call.args[0] === 'test'), !light);
+    assert.equal(calls.some(call => call.args.includes('test/print-raster.test.js')), !light);
+    assert.equal(calls.some(call => call.args.includes('db:migrate')), !light);
+    const schema = calls.findIndex(call => call.args.includes('--current'));
+    const deploy = calls.findIndex(call => call.args[0] === 'deploy');
+    const smoke = calls.findIndex(call => call.args.includes('--expect-active'));
+    assert.ok(schema > 0 && deploy > schema && smoke > deploy);
+    assert.ok(calls[deploy].args.includes('fly.production.toml'));
+    assert.ok(calls.at(-1).args.includes('status'));
+    assert.equal(calls.some(call => call.args.includes('import') || call.args.includes('ops:verify-prelive-empty')), false);
+  }
+});
+
+test('the command never reaches production without light approval or falls back after failed verification', async () => {
+  const args = ['--phase=release-light', `--confirm-commit=${'a'.repeat(40)}`];
+  const calls = [];
+  await assert.rejects(simulatedCutover(args, calls), /confirm-production-light-release/);
+  assert.equal(calls.length, 0, 'Missing approval must fail before target checks or deployment');
+  for (const [phase, flag, failure] of [
+    ['release-light', '--confirm-production-light-release', '--current'],
+    ['release', '--confirm-production-release', 'test'],
+  ]) {
+    const calls = [];
+    await assert.rejects(simulatedCutover([
+      `--phase=${phase}`, `--confirm-commit=${'a'.repeat(40)}`, flag,
+    ], calls, failure), /failed with exit/);
+    assert.equal(calls.some(call => call.args[0] === 'deploy'), false);
+    assert.ok(calls.at(-1).args.includes(failure));
+  }
 });
 
 test('post-launch release rechecks production then deploys and verifies without initial-cutover work', () => {

@@ -247,6 +247,45 @@ stage secrets or send provider orders. Never repeat the initial `arm`/`activate`
 sequence or use `deploy:hosted` for a post-launch update. Each release requires
 explicit maintainer deployment approval for its exact reviewed commit.
 
+### Explicitly approved light releases
+
+The full `release` phase remains the default. For a small reviewed update, the
+maintainer may separately approve a **lighter deployment of the exact commit**:
+
+```bash
+npm run cutover:production -- \
+  --phase=release-light \
+  --confirm-commit=<40-character-approved-commit> \
+  --confirm-production-light-release
+```
+
+The phase and confirmation flag must match; the normal production-release
+confirmation does not approve a light release. Approval to prepare this mode,
+ordinary deployment approval, the size of a diff, and a previous light release
+never authorize its use. Coding agents must obtain that explicit human approval
+for each light deployment. There is no persistent skip setting, generic
+`--skip-tests` option or automatic fallback after a failed full release check.
+
+| Check or action | Full `release` | Approved `release-light` |
+| --- | --- | --- |
+| Reproducible `npm ci` and clean `main` matching `origin/main` | Required | Required |
+| Exact commit, production posture, certificates, secret boundary and strict Fly config | Required | Required |
+| Complete local functional suite | Required | Skipped |
+| Local AMD64 image build and Linux pixel/font/geometry/emoji tests | Required | Skipped |
+| Read-only target schema and least-privileged runtime access | Before and after migrations | Current schema must already match |
+| Ordered database migrations | Applied | Never applied; pending migrations block release |
+| Remote image build and production deployment | Required | Required |
+| Post-deployment smoke/health checks and automatic maintenance re-arm on failure | Required | Required |
+
+Light mode uses the same guarded production deployment and failure recovery;
+it does not stage secrets, change Cron, clean up customer data or enable
+accounts. `--enable-design-accounts` requires the full release phase. Docker
+and the existing local operator credentials remain necessary: the read-only
+database verifier still builds its reference only in disposable local Postgres.
+All meaningful focused checks for the approved change should pass before
+deployment. A light release does not establish that the full suite or Linux
+image tests passed.
+
 ### Recovering an automatically re-armed release
 
 If a release's post-deployment smoke fails, production stays in maintenance.

@@ -327,7 +327,7 @@ function validateMachinePosture(json, posture, { requireHealthy = false } = {}) 
 }
 
 function parseOptions(argv = process.argv.slice(2)) {
-  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm', 'release', 'recover-check', 'recover']);
+  const allowedPhases = new Set(['preflight', 'lock', 'arm', 'autosleep', 'activate', 'rearm', 'release', 'release-light', 'recover-check', 'recover']);
   const options = {
     phase: '', commit: '', confirmations: new Set(), preserveEventSlug: '', preserveNone: false, enableDesignAccounts:false,
     verifiedCommit: '', imageDigest: '',
@@ -348,6 +348,7 @@ function parseOptions(argv = process.argv.slice(2)) {
       '--confirm-live-activation',
       '--confirm-emergency-rearm',
       '--confirm-production-release',
+      '--confirm-production-light-release',
       '--confirm-production-recovery',
     ].includes(argument)) options.confirmations.add(argument);
     else fail(`Unknown cutover argument: ${argument}.`);
@@ -394,6 +395,7 @@ function assertPhaseConfirmation(options, commit) {
     activate: '--confirm-live-activation',
     rearm: '--confirm-emergency-rearm',
     release: '--confirm-production-release',
+    'release-light': '--confirm-production-light-release',
     recover: '--confirm-production-recovery',
   }[options.phase];
   if (!options.confirmations.has(required)) fail(`Explicit confirmation missing: ${required}.`);
@@ -423,10 +425,26 @@ function runStep({ label, command, args }) {
   if (result.status !== 0) fail(`${label} failed with exit ${result.status}.`);
 }
 
-function verificationSteps(posture, shortSha) {
+function verificationSteps(posture, shortSha, { lightRelease = false } = {}) {
   const config = CONFIGS[posture];
+  const install = { label: 'Install dependencies reproducibly', command: 'npm', args: ['ci'] };
+  const validateConfig = {
+    label: `Validate ${config} strictly`,
+    command: 'flyctl',
+    args: ['config', 'validate', '--strict', '--config', config, '--app', APP_NAME],
+  };
+  const verifyCurrentSchema = {
+    label: 'Verify the current target schema and restricted runtime access before deployment', command: 'node',
+    args: ['scripts/verify-release-database.js', '--current'], releaseBoundary: true,
+  };
+  if (lightRelease) {
+    if (posture !== 'active') fail('Light releases require active production.');
+    // No migration step: --current rejects pending migrations as well as drift.
+    // The ordinary remote deployment still builds the candidate image.
+    return [install, validateConfig, verifyCurrentSchema];
+  }
   return [
-    { label: 'Install dependencies reproducibly', command: 'npm', args: ['ci'] },
+    install,
     { label: 'Run complete test suite', command: 'npm', args: ['test'] },
     {
       label: 'Build the approved production image locally',
@@ -442,16 +460,11 @@ function verificationSteps(posture, shortSha) {
         'test/print-raster.test.js', 'test/design-font-contract.test.js', 'test/design-font-geometry.test.js',
         'test/text-style.test.js', 'test/emoji-rendering.test.js', 'test/emoji.test.js'],
     },
-    {
-      label: `Validate ${config} strictly`,
-      command: 'flyctl',
-      args: ['config', 'validate', '--strict', '--config', config, '--app', APP_NAME],
-    },
+    validateConfig,
     { label: 'Verify target schema, pending migrations and restricted runtime access', command: 'node',
       args: ['scripts/verify-release-database.js', '--before-migrations'], releaseBoundary: true },
     { label: 'Apply ordered database migrations', command: 'npm', args: ['run', 'db:migrate'], releaseBoundary: true },
-    { label: 'Verify the migrated target before deployment', command: 'node',
-      args: ['scripts/verify-release-database.js', '--current'], releaseBoundary: true },
+    verifyCurrentSchema,
   ];
 }
 
@@ -501,9 +514,9 @@ function loadLocalEnvironment() {
 }
 
 function runVerificationSteps(posture, commit, {
-  checkCommit = assertGitReleaseCandidate, execute = runStep,
+  checkCommit = assertGitReleaseCandidate, execute = runStep, lightRelease = false,
 } = {}) {
-  for (const step of verificationSteps(posture, commit.slice(0, 12))) {
+  for (const step of verificationSteps(posture, commit.slice(0, 12), { lightRelease })) {
     if (step.releaseBoundary) {
       const rechecked = checkCommit();
       if (rechecked !== commit) fail('Approved release commit changed during verification.');
@@ -565,7 +578,7 @@ function deployActiveRelease(commit, {
   accountSettings=null,stageAccounts=stageDesignAccountSettings,
 } = {}) {
   if (checkCommit() !== commit) fail('Approved release commit changed during verification.');
-  // Recheck after the slow test/build gate, before any deployment. A stopped
+  // Recheck after the selected verification gate, before any deployment. A stopped
   // auto-start Machine is allowed here; the post-release smoke wakes it.
   verify('active', 'production');
   if(accountSettings) stageAccounts(accountSettings);
@@ -596,6 +609,11 @@ async function main() {
   validateLocalCutoverEnvironment();
   const commit = assertGitReleaseCandidate();
   assertPhaseConfirmation(options, commit);
+  const lightRelease = options.phase === 'release-light';
+  if (lightRelease) {
+    console.log(`[cutover:production] Explicitly approved light release @ ${commit}.`);
+    console.log('[cutover:production] Skipping the full suite, local image build and Linux image/font tests; migrations and account activation are not allowed.');
+  }
   const accountSettings=options.enableDesignAccounts?designAccountSettings():null;
 
   assertFlyAccess();
@@ -634,7 +652,7 @@ async function main() {
 
   const requiredPosture = {
     lock: 'hosted', arm: 'locked', autosleep: ['armedPinned', 'armed'], activate: 'armed', rearm: 'active',
-    release: 'active',
+    release: 'active', 'release-light': 'active',
   }[options.phase];
   const acceptedPostures = Array.isArray(requiredPosture) ? requiredPosture : [requiredPosture];
   if (!acceptedPostures.includes(currentPosture)) {
@@ -642,6 +660,7 @@ async function main() {
   }
   const targetPosture = {
     lock: 'locked', arm: 'armed', autosleep: 'armed', activate: 'active', rearm: 'armed', release: 'active',
+    'release-light': 'active',
   }[options.phase];
   if (options.phase === 'rearm') {
     runStep(deployStep('armed', 'Emergency re-arm: enable maintenance and disable every live gate'));
@@ -651,7 +670,7 @@ async function main() {
     console.log(`\n[cutover:production] rearm complete for ${APP_NAME} @ ${commit}.`);
     return;
   }
-  runVerificationSteps(targetPosture, commit);
+  runVerificationSteps(targetPosture, commit, { lightRelease });
 
   if (options.phase === 'lock') {
     runStep(deployStep('locked'));
@@ -682,7 +701,7 @@ async function main() {
     runStep(deployStep('armed', 'Apply the automatic stop/start armed production posture'));
     runStep(smokeStep('maintenance'));
     verifyRemote('armed', 'production', { healthy: true });
-  } else if (options.phase === 'release') {
+  } else if (options.phase === 'release' || lightRelease) {
     deployActiveRelease(commit,{accountSettings});
   } else {
     runStep({

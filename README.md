@@ -1755,6 +1755,18 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
   maintenance if deployment or post-release verification fails. It never runs
   initial-cutover cleanup. See [the operations runbook](docs/operations.md) for
   its prerequisites; `deploy:hosted` remains restricted to hosted testing.
+- A small reviewed production update may use the separate `release-light`
+  phase only with explicit maintainer approval for a lighter deployment of
+  that exact commit and `--confirm-production-light-release`. It skips the
+  full suite, local AMD64 image build and Linux image/font tests. It retains
+  reproducible dependency installation, Git/target/configuration/secret checks,
+  read-only current-schema/runtime verification, the ordinary remote image
+  build and deployment, post-release smoke/health checks and automatic
+  maintenance re-arm. It applies no migrations and cannot enable accounts;
+  pending migrations require the full release. Docker remains required for
+  the disposable local schema reference. The default stays the full `release`
+  phase, with no automatic fallback or persistent skip setting. See the
+  [light release instructions](docs/operations.md#explicitly-approved-light-releases).
 - The checked-in Fly configuration specifies one
   `shared-cpu-2x`/1024 MiB stateless web Machine for the `wolkenworte` hosted
   test app in `fra`, no volume, automatic stop/start
@@ -1819,14 +1831,18 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 ### Database verification for releases
 
 This policy applies to every deployment, including the final check immediately
-before release. The full functional suite always runs on disposable local
+before release. Whenever the functional suite runs, it uses disposable local
 Postgres with the committed application migrations. There is no exception for
 running that suite against the hosted application database. Separate test
 schemas still share the hosted instance's resources and do not prove that the
 real runtime role can use the actual application schema.
 
-1. Run the complete local suite and the image/font checks required by the
-   guarded release command for the exact candidate commit.
+1. By default, run the complete local suite and the image/font checks required
+   by the guarded release command for the exact candidate commit. Only explicit
+   maintainer approval for a lighter deployment of that exact commit permits
+   `release-light` to omit those checks. Ordinary deployment approval or a
+   previous light release is insufficient; never fall back after a failed full
+   check. All target and post-release checks below still apply.
 2. Before deployment, check the real Supabase target with bounded read-only
    transactions and the real restricted runtime role: target identity,
    connectivity, applied migration versions, required tables/columns and
@@ -1856,6 +1872,9 @@ reference built only in disposable local Postgres. Read-only catalog and
 privilege checks use the real restricted runtime role; customer rows are never
 loaded. Pending candidate migrations are allowed only before the migration
 step. Missing access or schema drift stops the release before deployment.
+The separately approved `release-light` phase instead runs that verifier once
+with `--current` and performs no migration writes. Any pending migration, schema
+drift or missing runtime privilege blocks deployment.
 
 An automatically re-armed update can be recovered only with separate maintainer
 approval through `cutover:production --phase=recover`. Its read-only
