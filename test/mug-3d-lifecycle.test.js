@@ -589,6 +589,72 @@ test('native touch scrolling stays available in transparent provider-mug bounds 
   assert.equal(host.listenerOptions.size, 0);
 });
 
+test('every gallery 3D variant leaves both sides scrollable and retains its direct product drag', async t => {
+  const products = require('../src/products').getPublicProducts()
+    .filter(product => ['mug', '3d'].includes(product.previewType));
+  for (const product of products) await t.test(product.key, async () => {
+    const { root, host, THREE } = fixture();
+    const viewer = root.Mug3DViewer.create({ host, THREE, product,
+      fitToView: true, framingFill: () => .92, maxTextureSize: 1024 });
+    try {
+      assert.equal(await viewer.ready, true);
+      const ray = new THREE.Raycaster();
+      const hit = point => {
+        ray.setFromCamera(new THREE.Vector2(point.clientX / 400 * 2 - 1,
+          1 - point.clientY / 300 * 2), viewer.camera);
+        return ray.intersectObject(viewer.group, true).length > 0;
+      };
+      const nativeStart = (point, contacts = 1) => {
+        const event = { touches: Array.from({ length: contacts }, () => point), prevented: false,
+          preventDefault() { this.prevented = true; } };
+        host.listeners.get('touchstart')(event);
+        return event;
+      };
+      const pointer = (point, pointerId = 1) => ({ ...point, pointerId, pointerType: 'touch', isPrimary: true,
+        prevented: false, preventDefault() { this.prevented = true; } });
+      const productPoint = [150, 120, 180].flatMap(clientY => [200, 160, 240]
+        .map(clientX => ({ clientX, clientY }))).find(hit);
+      assert.ok(productPoint, 'a real product hit is required, including thin or angled products');
+      const blankPoints = [2, 398].map(clientX => ({ clientX, clientY: productPoint.clientY }));
+      for (const blank of blankPoints) {
+        assert.equal(hit(blank), false, 'both sides of the preview must contain background');
+        assert.equal(nativeStart(blank).prevented, false, 'background touch starts stay native');
+        assert.equal(nativeStart(blank, 2).prevented, false, 'background pinch zoom stays native');
+        const rotation = viewer.group.rotation.toArray();
+        const down = pointer(blank);
+        host.listeners.get('pointerdown')(down);
+        host.listeners.get('pointermove')(pointer(productPoint));
+        host.listeners.get('pointerup')(pointer(productPoint));
+        assert.equal(down.prevented, false);
+        assert.deepEqual(viewer.group.rotation.toArray(), rotation, 'a scroll cannot turn into rotation halfway through');
+        if (viewer.cloth) assert.equal(viewer.cloth.simulation.grabbed, -1);
+      }
+      assert.equal(nativeStart(productPoint).prevented, true, 'a product hit reserves its native gesture');
+      const down = pointer(productPoint);
+      host.listeners.get('pointerdown')(down);
+      const rotation = viewer.group.rotation.toArray();
+      const moved = pointer({ clientX: productPoint.clientX + 16, clientY: productPoint.clientY + 20 });
+      host.listeners.get('pointermove')(moved);
+      assert.equal(down.prevented, true);
+      assert.equal(moved.prevented, true);
+      if (viewer.cloth) {
+        assert.ok(viewer.cloth.simulation.grabbed >= 0, 'blanket drags retain their fabric grip');
+        assert.deepEqual(viewer.group.rotation.toArray(), rotation, 'pulling fabric must not rotate the blanket');
+      } else {
+        assert.notEqual(viewer.group.rotation.x, rotation[0], 'vertical rotation survives');
+        assert.notEqual(viewer.group.rotation.y, rotation[1], 'horizontal rotation survives');
+      }
+      host.listeners.get('pointercancel')(moved);
+      assert.equal(host.captures.size, 0, 'cancelled drags release capture');
+      if (viewer.cloth) assert.equal(viewer.cloth.simulation.grabbed, -1);
+      for (const blank of blankPoints.filter(point => !hit(point))) {
+        assert.equal(nativeStart(blank).prevented, false, 'scrolling is available again after the drag');
+      }
+    } finally { viewer.destroy(); }
+    assert.equal(host.listeners.size, 0, 'disposed previews release their gesture listeners');
+  });
+});
+
 test('immersive product preview rotates from transparent space and restores page scrolling on exit', () => {
   const { root, host, THREE } = fixture();
   let immersive = true;
