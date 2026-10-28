@@ -702,7 +702,7 @@ test('event locale is validated, persisted and returned by public APIs', async (
   assert.match(frenchLanding.headers.get('set-cookie') || '', /wolkenworte-language=fr/);
   const frenchLandingHtml = await frenchLanding.text();
   assert.match(frenchLandingHtml, /<html lang="fr"(?:\s|>)/);
-  assert.match(frenchLandingHtml, /Wolkenworte – Vos souvenirs en un mot/);
+  assert.ok(frenchLandingHtml.includes(I18n.translate('Wolkenworte – Entdecke, was aus Worten werden kann.', 'fr')));
   assert.match(frenchLandingHtml, /Commencer ici/);
   assert.match(frenchLandingHtml, /ww-language-current-name">Français/);
 
