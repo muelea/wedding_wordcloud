@@ -22,7 +22,9 @@
 .product-gallery-preview .flat-product-preview[hidden], .product-gallery-preview .product-gallery-mug[hidden] { display: none; }
 .product-gallery-preview .product-gallery-mug { display: block; position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; }
 .product-gallery-mug > canvas { display: block; width: 100%; height: 100%; visibility: visible; }
-.product-gallery-mug .mug-interaction-region { pointer-events: auto; }
+/* The model's rectangular bounds include transparent space. Only a real
+   product hit reserves a touch for rotation; blank space keeps page scrolling. */
+.product-gallery-mug .mug-interaction-region { pointer-events: auto; touch-action: pan-y pinch-zoom; }
 .product-gallery-details { position: relative; }
 .product-gallery-caption { display: grid; gap: 10px; padding: 22px 22px 20px; }
 .product-gallery-photo-button { padding: 0; overflow: hidden; background: #fff; cursor: zoom-in; }

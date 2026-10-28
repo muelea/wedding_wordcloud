@@ -7,15 +7,15 @@ const Three = require('three');
 
 function fixture({ modelOptions = {} } = {}) {
   const renderers = [];
-  const element = () => ({ listeners: new Map(), removed: false, captures: new Set(), classes: new Set(), attributes: new Map(), style: {},
+  const element = () => ({ listeners: new Map(), listenerOptions: new Map(), removed: false, captures: new Set(), classes: new Set(), attributes: new Map(), style: {},
     classList: {
       add(value) { this.owner.classes.add(value); },
       remove(value) { this.owner.classes.delete(value); },
       contains(value) { return this.owner.classes.has(value); },
       owner: null,
     },
-    addEventListener(name, callback) { this.listeners.set(name, callback); },
-    removeEventListener(name) { this.listeners.delete(name); },
+    addEventListener(name, callback, options) { this.listeners.set(name, callback); this.listenerOptions.set(name, options); },
+    removeEventListener(name) { this.listeners.delete(name); this.listenerOptions.delete(name); },
     setAttribute(name, value) { this.attributes.set(name, value); },
     setPointerCapture(id) { this.captures.add(id); },
     hasPointerCapture(id) { return this.captures.has(id); },
@@ -529,6 +529,64 @@ test('touches on the mug exclusively rotate in both axes while transparent space
     assert.equal(nativeEvent.prevented, true, `${eventName} is suppressed on the mug interaction region`);
   }
   viewer.destroy();
+});
+
+test('native touch scrolling stays available in transparent provider-mug bounds while mug drags rotate', async t => {
+  const { root, host, THREE } = fixture();
+  const products = require('../src/products');
+  const viewer = root.Mug3DViewer.create({ host, THREE,
+    product: products.getPublicProduct(products.MUG_11), fitToView: true, framingFill: () => .92 });
+  t.after(() => viewer.destroy());
+  await viewer.ready;
+
+  const ray = new THREE.Raycaster();
+  const hit = ({ clientX, clientY }) => {
+    ray.setFromCamera(new THREE.Vector2(clientX / 400 * 2 - 1, 1 - clientY / 300 * 2), viewer.camera);
+    return ray.intersectObject(viewer.group, true).length > 0;
+  };
+  const mug = { clientX: 200, clientY: 150 };
+  const region = viewer.interactionRegion.style;
+  const right = parseFloat(region.left) + parseFloat(region.width);
+  const blank = { clientX: right - 2, clientY: 150 };
+  assert.ok(hit(mug), 'the test must touch the actual provider mesh');
+  assert.ok(blank.clientX > parseFloat(region.left) && blank.clientX < right);
+  assert.equal(hit(blank), false, 'the regression point is blank space inside the old scroll-blocking rectangle');
+
+  const nativeStart = (point, contacts = 1) => {
+    const event = { touches: Array.from({ length: contacts }, () => point), prevented: false,
+      preventDefault() { this.prevented = true; } };
+    host.listeners.get('touchstart')(event);
+    return event;
+  };
+  assert.equal(host.listenerOptions.get('touchstart').passive, false,
+    'a real mesh hit must be able to stop native scrolling before it cancels the pointer drag');
+  assert.equal(host.listeners.has('touchmove'), false, 'background scrolling must not wait for a move listener');
+  assert.equal(nativeStart(blank).prevented, false);
+  assert.equal(nativeStart(blank, 2).prevented, false, 'background pinch zoom stays native');
+  assert.equal(nativeStart(mug).prevented, true, 'claiming the native gesture does not depend on pointer/touch dispatch order');
+
+  const pointer = (point, id = 1) => ({ ...point, pointerId: id, pointerType: 'touch', isPrimary: true,
+    prevented: false, preventDefault() { this.prevented = true; } });
+  const down = pointer(mug);
+  host.listeners.get('pointerdown')(down);
+  assert.equal(down.prevented, true);
+  assert.equal(nativeStart(mug).prevented, true);
+  const before = viewer.group.rotation.toArray();
+  host.listeners.get('pointermove')(pointer({ clientX: 220, clientY: 175 }));
+  assert.notDeepEqual(viewer.group.rotation.toArray(), before, 'the same touch still rotates the mug');
+  host.listeners.get('pointerup')(pointer(mug));
+
+  // Start on transparent space after rotating too. Moving onto the mug must
+  // continue the background gesture instead of claiming it halfway through.
+  const after = viewer.group.rotation.toArray();
+  const outside = { clientX: 8, clientY: 150 };
+  assert.equal(nativeStart(outside).prevented, false);
+  host.listeners.get('pointerdown')(pointer(outside, 2));
+  host.listeners.get('pointermove')(pointer(mug, 2));
+  assert.deepEqual(viewer.group.rotation.toArray(), after);
+  viewer.destroy();
+  assert.equal(host.listeners.has('touchstart'), false, 'destroy releases the native touch listener');
+  assert.equal(host.listenerOptions.size, 0);
 });
 
 test('immersive product preview rotates from transparent space and restores page scrolling on exit', () => {

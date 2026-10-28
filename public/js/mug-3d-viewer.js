@@ -621,6 +621,14 @@
       resetPointer(event);
       releaseCloth();
     };
+    // Gallery touch-action permits scrolling through the model's transparent
+    // rectangular bounds. Cancel the native gesture only when it starts on
+    // actual geometry; cancelling pointerdown alone cannot reserve touch pans.
+    // Keep this local to the viewer and out of the continuous move path.
+    const handleTouchStart = (event) => {
+      if (event.touches.length !== 1) return;
+      if (options.rotateAnywhere?.() || pointerHit(event.touches[0])) event.preventDefault();
+    };
     const handleKeydown = (event) => {
       if (clothView && (event.key === ' ' || event.code === 'Space')) {
         if (event.repeat || activePointer !== null) { event.preventDefault(); return; }
@@ -647,6 +655,7 @@
     interactionElement.addEventListener('pointercancel', finishPointer);
     interactionElement.addEventListener('lostpointercapture', finishPointer);
     interactionElement.addEventListener('keydown', handleKeydown);
+    interactionElement.addEventListener('touchstart', handleTouchStart, { passive: false });
     const preventNativeInteraction = (event) => event.preventDefault();
     interactionRegion.addEventListener('contextmenu', preventNativeInteraction);
     interactionRegion.addEventListener('dragstart', preventNativeInteraction);
@@ -682,6 +691,7 @@
       interactionElement.removeEventListener('pointercancel', finishPointer);
       interactionElement.removeEventListener('lostpointercapture', finishPointer);
       interactionElement.removeEventListener('keydown', handleKeydown);
+      interactionElement.removeEventListener('touchstart', handleTouchStart);
       interactionRegion.removeEventListener('contextmenu', preventNativeInteraction);
       interactionRegion.removeEventListener('dragstart', preventNativeInteraction);
       interactionRegion.removeEventListener('selectstart', preventNativeInteraction);

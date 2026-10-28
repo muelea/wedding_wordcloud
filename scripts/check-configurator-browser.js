@@ -52,9 +52,9 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
     <html lang="en"><head><meta charset="utf-8"><title>Responsive test word cloud</title></head>
     <body><a id="fixture-configure-link" href="/e/${FIXTURE_SLUG}/configure?lang=en&view=products">Create a keepsake</a></body></html>`));
   app.get(`/e/${FIXTURE_SLUG}/configure`, (req, res, next) => {
-    if (['1', 'area', 'touch', 'review', 'gallery', 'product-ux', 'performance', 'scroll', 'gallery-input', 'mobile-performance'].includes(req.query.probe)) {
+    if (['1', 'area', 'touch', 'review', 'gallery', 'product-ux', 'performance', 'scroll', 'gallery-input', 'mobile-performance', 'editor-performance'].includes(req.query.probe)) {
       const send = res.send.bind(res);
-      const probe = req.query.probe === 'scroll' ? 'overlay-scroll' : req.query.probe === 'product-ux' ? 'product-ux' : req.query.probe === 'gallery' ? 'product-gallery' : req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
+      const probe = req.query.probe === 'editor-performance' ? 'editor-performance' : req.query.probe === 'scroll' ? 'overlay-scroll' : req.query.probe === 'product-ux' ? 'product-ux' : req.query.probe === 'gallery' ? 'product-gallery' : req.query.probe === 'review' ? 'review' : req.query.probe === 'area' ? 'area-layout' : req.query.probe === 'touch' ? 'mobile-canvas' : 'responsive';
       res.send = html => {
         if (req.query.probe === 'mobile-performance') {
           html = html.replace('<head>', `<head><script>
@@ -188,6 +188,7 @@ function createFixture({ words = [['test', 1]], directDesign = false, review = f
   app.get('/print-layout-performance-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/print-layout-performance-probe.js')));
   app.get('/gallery-input-scroll-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/gallery-input-scroll-probe.js')));
   app.get('/mobile-gallery-performance-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/mobile-gallery-performance-probe.js')));
+  app.get('/editor-performance-probe.js', (req, res) => res.sendFile(path.join(root, 'test/browser/editor-performance-probe.js')));
   app.use(ASSET_BASE, makeEmojiArtworkRouter());
   app.get('/vendor/three.min.js', (req, res) => res.sendFile(path.join(root, 'node_modules/three/build/three.min.js')));
   app.use('/vendor/three', express.static(path.join(root, 'node_modules/three'), { index: false, dotfiles: 'deny' }));

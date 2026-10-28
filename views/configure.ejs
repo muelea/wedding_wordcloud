@@ -2774,6 +2774,7 @@
     let selectedOrientation = 'default';
     let customColors = [];
     let renderFrame = null;
+    let productPreviewRenderTimer = null;
     let mug3D = null;
     let mug3DLoadPromise = null;
     let mug3DGeneration = 0;
@@ -4710,6 +4711,10 @@
           framingFill: () => mobileDevice && mobileEditorMedia.matches && !mobileEditorExpanded && !workspace.mobileCanvas?.active ? .96 : .92,
           product: productView(),
           fitToView: true,
+          // Screen previews do not need a 4096² provider atlas. Safari's
+          // canvas-to-WebGL upload of that mostly blank image blocks input.
+          // Artwork still draws directly in print coordinates at this scale.
+          modelOptions: { maxTextureSize: 2048 },
           onStatus: (state) => { if (generation === mug3DGeneration) setMugPreviewState(state); },
           drawBackTexture: (ctx, { offsetX, offsetY }) => drawDesign(ctx, offsetX, offsetY, 1, activeSurface === 'back' ? getCurrentDesign() : (surfaceStates.get('back')?.design || [])),
           drawTexture: (ctx, { offsetX, offsetY }) => {
@@ -4733,6 +4738,9 @@
 
     function renderProductPreview() {
       if (editorElement.hidden || !product) return;
+      // The phone's Canvas view hides the product. Its next Product/layout
+      // update paints the latest design, including edits made while hidden.
+      if (workspace.mobileCanvas?.active && workspace.mobileCanvas.view === 'canvas') return;
       if (['mug', '3d', 'photo'].includes(product.previewType)) updateMug3DTexture();
       else paintFlatProductPreview(flatCanvas, productView(), getCurrentDesign(), activeSurface);
       scheduleSelectedProductThumbnail();
@@ -4783,9 +4791,18 @@
 
     function renderAll() {
       cancelAnimationFrame(renderFrame);
+      clearTimeout(productPreviewRenderTimer);
+      clearTimeout(selectedProductThumbnailTimer);
       renderFrame = requestAnimationFrame(() => {
-        renderProductPreview();
+        renderFrame = null;
         overlapWarnings?.schedule();
+        // Fabric already paints the edit on its own frame. Keep texture
+        // painting/upload and thumbnail readback out of continuous dragging,
+        // typing and gestures; coalesce them into the latest settled design.
+        productPreviewRenderTimer = setTimeout(() => {
+          productPreviewRenderTimer = null;
+          renderProductPreview();
+        }, 120);
       });
     }
 
@@ -4897,6 +4914,10 @@
     }
 
     function destroyMug3D() {
+      cancelAnimationFrame(renderFrame);
+      renderFrame = null;
+      clearTimeout(productPreviewRenderTimer);
+      productPreviewRenderTimer = null;
       clearTimeout(selectedProductThumbnailTimer);
       selectedProductThumbnailTimer = null;
       mug3DGeneration += 1;
