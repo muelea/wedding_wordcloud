@@ -33,10 +33,12 @@ test('production read-only smoke reaches the real configuration lookup using val
   const smoke = require('../scripts/production-readiness-smoke');
   const { isEventSlug } = require('../src/slug');
   const probes = [];
-  const result = await smoke.run({ expected: 'active', output() {}, fetchImpl: async (url, options) => {
+  let readyProbes = 0;
+  const result = await smoke.run({ expected: 'active', output() {}, sleepImpl: async () => {}, fetchImpl: async (url, options) => {
     if (url.startsWith(smoke.WWW_URL)) return new Response('', { status: 308, headers: { location: smoke.PUBLIC_URL + '/' } });
     if (url.includes('/webhook/')) return new Response('', { status: 400 });
     const pathname = new URL(url).pathname;
+    if (pathname === '/health/ready' && ++readyProbes === 1) return new Response('{}', { status: 503 });
     if (pathname.startsWith('/api/events/')) {
       const parts = pathname.split('/');
       assert.equal(isEventSlug(parts[3]), true, 'malformed IDs would bypass the real database read');
@@ -47,6 +49,7 @@ test('production read-only smoke reaches the real configuration lookup using val
   } });
   assert.equal(result.applicationReads, 'ok');
   assert.equal(probes.length, 1);
+  assert.equal(readyProbes, 3);
 });
 
 function requestWithHost(baseUrl, pathname, host) {

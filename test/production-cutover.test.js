@@ -629,13 +629,49 @@ test('production smoke checks health, maintenance, canonical redirect and signat
     });
   };
   const result = await productionSmoke.run({
-    expected: 'maintenance', fetchImpl: fakeFetch, output() {},
+    expected: 'maintenance', fetchImpl: fakeFetch, output() {}, sleepImpl: async () => {},
   });
   assert.equal(result.publicStatus, 503);
   assert.equal(result.webhookReachability, 'ok');
-  assert.equal(requested.filter((request) => request.method === 'GET').length, 4);
+  assert.equal(requested.filter((request) => request.method === 'GET').length, 6);
   assert.equal(requested.filter((request) => request.method === 'POST').length, 3);
-  assert.equal(requested.length, 7);
+  assert.equal(requested.length, 9);
+});
+
+test('production health requires two consecutive successes and resets after another transient failure', async () => {
+  const statuses = [503, 200, 503, 200, 200];
+  let probes = 0;
+  const delays = [];
+  await productionSmoke.waitForHealth(async url => {
+    if (url.endsWith('/health/live')) return new Response('{}');
+    return new Response('{}', { status: statuses[probes++] });
+  }, async delay => { delays.push(delay); });
+  assert.equal(probes, 5);
+  assert.deepEqual(delays, [1000, 1000, 1000, 1000]);
+});
+
+test('production health recovers from a transport failure', async () => {
+  let probes = 0;
+  await productionSmoke.waitForHealth(async url => {
+    if (url.endsWith('/health/ready') && ++probes === 1) throw new TypeError('connection reset');
+    return new Response('{}');
+  }, async () => {});
+  assert.equal(probes, 3);
+});
+
+test('persistent health failure stays bounded and prevents every application or webhook probe', async () => {
+  const requested = [];
+  let waits = 0;
+  await assert.rejects(productionSmoke.run({ expected: 'active', output() {},
+    sleepImpl: async () => { waits += 1; },
+    fetchImpl: async (url, options) => {
+      requested.push({ url, method: options.method || 'GET' });
+      return new Response('{}', { status: url.endsWith('/health/ready') ? 503 : 200 });
+    },
+  }), /Production health failed.*ready=503/);
+  assert.equal(waits, 5);
+  assert.equal(requested.length, 12);
+  assert.ok(requested.every(probe => probe.method === 'GET' && /\/health\/(live|ready)$/.test(probe.url)));
 });
 
 test('active production smoke requires representative application and database-backed reads', async () => {
@@ -648,7 +684,7 @@ test('active production smoke requires representative application and database-b
     if (url.includes('/api/events/')) return Response.json({ error: 'configuration_not_found' }, { status: failure ? 500 : 404 });
     return new Response('<html>ok</html>', { headers: { 'content-type': 'text/html' } });
   };
-  assert.equal((await productionSmoke.run({ expected: 'active', fetchImpl, output() {} })).applicationReads, 'ok');
+  assert.equal((await productionSmoke.run({ expected: 'active', fetchImpl, output() {}, sleepImpl: async () => {} })).applicationReads, 'ok');
   failure = true;
-  await assert.rejects(productionSmoke.run({ expected: 'active', fetchImpl, output() {} }), /read-only application routes/);
+  await assert.rejects(productionSmoke.run({ expected: 'active', fetchImpl, output() {}, sleepImpl: async () => {} }), /read-only application routes/);
 });

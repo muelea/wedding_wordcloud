@@ -318,6 +318,12 @@ Public health, read-only application routes, webhook authentication, production
 posture and Machine health are verified again. Any failure re-arms maintenance
 with the same pinned image.
 
+The read-only smoke requires two consecutive successful live/readiness probe
+pairs, with at most six attempts one second apart. A transient startup 503 or
+connection failure resets the success streak; persistent failures still abort.
+Other application reads and the single signature-rejection probe per webhook
+start only after health has stabilized. Webhook POSTs are never retried.
+
 ## Retention holds
 
 The approved retention policy, data categories and guarded per-order hold /
