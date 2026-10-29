@@ -75,6 +75,7 @@
       this.onChange = options.onChange || (() => {});
       this.onReset = options.onReset || (() => {});
       this.onSelectionChange = options.onSelectionChange;
+      this.getImageDesigns = options.getImageDesigns;
       this.openTextEditor = options.openTextEditor;
       this.shell = options.shell;
       this.scroll = options.scroll;
@@ -152,6 +153,10 @@
       this.canvas.renderAll();
       this.bindCanvasEvents();
       this.renderFontOptions();
+      this.imageUsage = root.DesignImageUsage?.create({
+        element: options.imageButton.closest('.editor-add-controls'),
+        getDesigns: () => this.getImageDesigns ? this.getImageDesigns() : this.getDesign(),
+      });
       this.bindControls(options);
       this.renderSwatches();
       this.renderIconPicker();
@@ -885,8 +890,12 @@
         options.imageButton.disabled = true;
         try {
           await this.addImageFile(file);
-        } catch {
-          this.setFeedback('Das Bild konnte nicht verarbeitet werden. Bitte wählt eine PNG- oder JPG-Datei bis 15 MB.');
+        } catch (error) {
+          const message = error.message === 'invalid_image_dimensions'
+            ? 'Diese Bildauflösung wird nicht unterstützt. Wählt ein Bild mit höchstens 40 Megapixeln.'
+            : 'Das Bild konnte nicht verarbeitet werden. Bitte wählt eine PNG- oder JPG-Datei bis 15 MB.';
+          this.imageUsage?.showError(message);
+          this.setFeedback(message);
         } finally {
           options.imageButton.disabled = false;
         }
@@ -1626,6 +1635,7 @@
       this.changeFrame = requestAnimationFrame(() => {
         this.changeFrame = null;
         this.onChange(cloneDesign(this.getDesign()));
+        this.imageUsage?.update();
       });
     }
 
@@ -1634,6 +1644,7 @@
       cancelAnimationFrame(this.changeFrame);
       this.changeFrame = null;
       this.onChange(cloneDesign(this.getDesign()));
+      this.imageUsage?.update();
     }
 
     hasPendingTextChange() {
@@ -1791,8 +1802,12 @@
     }
 
     async addImageFile(file) {
+      this.imageUsage?.clearError();
       this.closeIconPicker();
       const upload = await this.normalizedImageUpload(file);
+      const existing = this.getImageDesigns ? this.getImageDesigns() : this.getDesign();
+      const problem = root.DesignImageData?.problem([existing, { type: 'image', src: upload.dataUrl }]);
+      if (problem) { this.imageUsage?.showError(problem); this.setFeedback(problem); return; }
       await this.loadImageSource(upload.dataUrl);
       if (!this.canAddElements()) return;
       const { width: availableWidth, height: availableHeight } = this.getSafeArea();

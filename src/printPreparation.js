@@ -8,7 +8,7 @@ function specification(product, design) {
   return crypto.createHash('sha256').update(JSON.stringify([
     product.key, product.printful.variantId, product.orientation,
     product.printFile.width, product.printFile.height, product.printful.placements,
-    product.printful.options, product.printful.technique, design,
+    product.printful.options, product.printful.technique, require('./designImageAssets').canonical(design),
   ])).digest('hex');
 }
 

@@ -173,6 +173,8 @@ test('paid artifacts, leased work, maintenance and Printful reconciliation', asy
     assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), artifacts[0].sha256);
     const [orderItem] = await db.getOrderItems(paid.order.id);
     const snapshot = JSON.parse(orderItem.configuration_snapshot_json);
+    assert.doesNotMatch(JSON.stringify(snapshot), /data:image/);
+    snapshot.design = await require('../src/designImageAssets').hydrate(snapshot.design);
     const { buildProviderPrintSvg } = require('../src/mugPrint');
     const { renderProviderPng } = require('../src/printRaster');
     const { getProduct, resolveProductOrientation } = require('../src/products');

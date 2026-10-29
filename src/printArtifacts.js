@@ -79,7 +79,8 @@ async function renderItemSurfaces(orderItem) {
       Number(snapshot.printHeight) !== product.printFile.height) {
     throw new Error('Die gespeicherte Druckkonfiguration passt nicht zum Produkt.');
   }
-  return withRenderSlot(() => renderProductSurfaces(product, snapshot.design));
+  const hydrated = await require('./designImageAssets').hydrate(snapshot.design);
+  return withRenderSlot(() => renderProductSurfaces(product, hydrated));
 }
 
 async function validateProductPrintability(product, design) {

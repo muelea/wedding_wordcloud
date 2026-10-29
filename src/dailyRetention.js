@@ -6,12 +6,13 @@ const storage = require('./privateStorage');
 const auth = require('./accountAuth');
 const savedDesigns = require('./savedDesigns');
 
-const CATEGORIES = ['discovery', 'events', 'designs', 'accounts', 'artifacts', 'commerce', 'metadata', 'objects', 'accountDeletions', 'preparedFiles', 'mockups'];
+const CATEGORIES = ['discovery', 'events', 'designs', 'accounts', 'artifacts', 'commerce', 'metadata', 'objects', 'accountDeletions', 'preparedFiles', 'mockups', 'designImages'];
 const PAGE_SIZE = 50;
 const SLICE_MS = 10_000;
 const room = deadline => Date.now() + 2_000 < deadline;
 
 async function processCandidate(category, id) {
+  if (category === 'designImages') return require('./designImageAssets').cleanupOne(id);
   if (category === 'preparedFiles') {
     const file=await db.claimExpiredPreparedPrintFile(id);
     if (!file) return await db.retentionCandidateExists(category,id) ? {reason:'prepared_file_protected_or_busy'} : {skipped:1};
@@ -151,7 +152,7 @@ async function run({deadline = Date.now()+SLICE_MS} = {}) {
         if (!ids.length) state.done = true;
         for (const id of ids) {
           if (!room(deadline)) break;
-          if (['objects','accountDeletions','artifacts','preparedFiles'].includes(category) && Date.now()+5_000>=deadline) return report('running');
+          if (['objects','accountDeletions','artifacts','preparedFiles','designImages'].includes(category) && Date.now()+5_000>=deadline) return report('running');
           await db.checkpointDailyRetention(run,progress);
           addStats(state,await attempt(category,id));
           state.cursor = id;

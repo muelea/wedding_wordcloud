@@ -1005,7 +1005,7 @@ Generated results and provider task IDs live in the shared durable queue for
 12 hours. The browser restores pending jobs across page reloads. **Neu erzeugen**
 creates a fresh explicit command; retries of that same command remain idempotent.
 The server resumes queued work after restart instead of losing the task IDs.
-Schema version 9 is required: apply the committed ordered migrations with the
+Schema version 10 is required: apply the committed ordered migrations with the
 existing local operator command `npm run db:migrate` before restarting the app.
 
 The shared scheduler uses the lower Printful allowance of two creation requests
@@ -1821,12 +1821,44 @@ Socket.io room. Any change to `src/socket.js` should keep this green.
 - Keep one web Machine until both an official Socket.io cross-Machine adapter
   and tested Fly affinity/replay for long-polling exist. Increasing the Machine
   count with the current in-memory adapter would split rooms and is unsupported.
-- The Supabase bucket is private and accepts frozen PNG print artifacts up to
-  24 MiB. Fly holds the backend-only Storage key; Printful receives only an
-  opaque application capability URL, never a Storage URL. Large designs are
+- The Supabase bucket is private and accepts immutable PNG print artifacts up to
+  40 MiB and private PNG/JPEG source images. Fly holds the backend-only Storage
+  key; Printful receives only an opaque application capability URL, never a Storage URL. Large designs are
   rasterized and checked against the bucket limit when approved in the
   configurator, before a customer can pay. If an uploaded image would exceed
   the limit, the customer must reduce or remove images before saving.
+
+### Design image storage and limits
+
+A design supports **20 distinct photos**, **10 MiB of compressed source bytes**
+and **64 million decoded pixels**, counted once across all print sides and
+retained transfer artwork. Reusing a photo does not consume another source slot.
+The browser keeps the existing 15 MiB original-upload limit and normalizes each
+upload to at most 2700 pixels per edge and 1,000,000 bytes; the server independently
+validates PNG/JPEG bytes, dimensions and print geometry. A generated print PNG is
+limited to 40 MiB before checkout, including large canvas collages.
+
+New configurations, order snapshots and library snapshots store immutable image
+IDs. Source files live in the private `wolkenworte-private` Storage bucket under
+opaque `design-images/` keys; Postgres stores their checksum, dimensions, byte
+size, lifecycle and foreign-key references. Identical sources are reused only
+within one event or account. Only an authorized editor restoration or print
+worker resolves the source bytes; cart summaries and checkout metadata stay
+compact. HTTP saves deduplicate repeated sources across sides into one image
+packet. Printful still receives the frozen print artifact through its existing
+application capability URL.
+
+Manual account saves retain the limits of **20 designs**, **100 MiB per account**
+and **20 MiB per saved design including its preview and source files**. Each saved
+design is charged its own source bytes even if another design reuses a file.
+Quota and pending image references are reserved before source uploads. Failed
+uploads leave retryable metadata; reference publication is atomic with the
+configuration, saved design or order item. Deleting a library entry or account
+cannot delete commerce files. Unreferenced sources are removed through leased,
+object-first cleanup after an upload grace period. Legacy inline snapshots remain
+readable and keep their original bytes; this additive migration does not rewrite
+existing purchases. Schema migration 10 also raises the private bucket limit to
+40 MiB and allows source JPEGs. Apply it through the normal guarded release path.
 
 ### Database verification for releases
 

@@ -5,7 +5,7 @@ const { buildProviderPrintSvg, isPrintDesignWithinBounds } = require('./mugPrint
 const stripPng = require('./stripPng');
 
 const MIME_TYPE = 'image/png';
-const MAX_ARTIFACT_BYTES = 24 * 1024 * 1024;
+const MAX_ARTIFACT_BYTES = 40 * 1024 * 1024;
 
 async function renderProviderPngInStrips(product, design) {
   const { width, height } = product.printFile, segments = [];

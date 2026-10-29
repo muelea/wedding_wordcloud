@@ -2125,5 +2125,22 @@
   "Option suchen…": "Rechercher une option…",
   "{{item}} suchen": "Rechercher : {{item}}",
   "Keine passenden Optionen.": "Aucune option correspondante.",
-  "Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.": "Ce design contient des caractères qui ne peuvent pas être imprimés fidèlement avec la police choisie. Choisissez une autre police ou remplacez ces caractères."
+  "Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.": "Ce design contient des caractères qui ne peuvent pas être imprimés fidèlement avec la police choisie. Choisissez une autre police ou remplacez ces caractères.",
+  "Verwendet bitte höchstens 20 verschiedene Bilder pro Design.": "Utilisez au maximum 20 images différentes par création.",
+  "Die Bilder sind zusammen zu groß. Verwendet höchstens 10 MB Bilddaten pro Design.": "Les images sont trop volumineuses au total. Utilisez au maximum 10 Mo de données d’image par création.",
+  "Die Bildauflösungen sind zusammen zu groß. Verkleinert einige Bilder oder entfernt ein Bild.": "La résolution totale des images est trop élevée. Réduisez certaines images ou supprimez-en une.",
+  "Die Bilder konnten nicht gespeichert oder geladen werden. Dein bisheriges Design bleibt erhalten. Bitte versuche es erneut.": "Les images n’ont pas pu être enregistrées ou chargées. Votre création précédente est conservée. Veuillez réessayer.",
+  "Verwende höchstens 20 verschiedene Bilder mit zusammen 10 MB und 64 Megapixeln.": "Utilisez au maximum 20 images différentes totalisant 10 Mo et 64 mégapixels.",
+  "{{count}}/20 Bilder · {{size}}/10 MB": "{{count}}/20 images · {{size}}/10 Mo",
+  "Bildlimits anzeigen": "Afficher les limites des images",
+  "Bilder & Limits": "Images et limites",
+  "JPG oder PNG · bis 15 MB und 40 Megapixel pro Originaldatei.": "JPG ou PNG · jusqu’à 15 Mo et 40 mégapixels par fichier d’origine.",
+  "Bilder werden beim Hinzufügen automatisch optimiert.": "Les images sont automatiquement optimisées lors de l’ajout.",
+  "Pro Design: bis zu 20 verschiedene Bilder, zusammen 10 MB nach Optimierung und 64 Megapixel.": "Par création : jusqu’à 20 images différentes, totalisant 10 Mo après optimisation et 64 mégapixels.",
+  "Die Grenzen gelten für das gesamte Design über alle Druckseiten. Mehrfach verwendete Bilder zählen einmal.": "Les limites s’appliquent à toute la création, sur toutes les faces imprimées. Une image réutilisée ne compte qu’une fois.",
+  "20 Designs · 100 MB insgesamt · 20 MB pro Design inklusive Vorschau": "20 créations · 100 Mo au total · 20 Mo par création, aperçu inclus",
+  "Die Bilder überschreiten zusammen 64 Megapixel. Entfernt ein Bild oder ladet Bilder mit geringerer Auflösung hoch.": "Les images dépassent 64 mégapixels au total. Supprimez une image ou importez des images de résolution inférieure.",
+  "Diese Bildauflösung wird nicht unterstützt. Wählt ein Bild mit höchstens 40 Megapixeln.": "Cette résolution d’image n’est pas prise en charge. Choisissez une image de 40 mégapixels maximum.",
+  "Dein Konto bietet Platz für 20 Designs und 100 MB. Pro Design sind bis zu 20 MB inklusive Vorschau möglich. Lösche ein Design oder verwende kleinere Bilder.": "Votre compte peut contenir 20 créations et 100 Mo. Chaque création peut utiliser jusqu’à 20 Mo, aperçu inclus. Supprimez une création ou utilisez des images plus petites.",
+  "Die Druckdatei überschreitet 40 MB. Verkleinert oder entfernt einige Bilder und versucht es erneut.": "Le fichier d’impression dépasse 40 Mo. Réduisez ou supprimez certaines images, puis réessayez."
 }

@@ -103,13 +103,13 @@ async function schemaSnapshot(client, schema, names = null) {
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_language l ON l.oid=p.prolang
     WHERE n.nspname=$1 AND p.proname=ANY($2)
     ORDER BY p.proname COLLATE "C",pg_get_function_identity_arguments(p.oid) COLLATE "C"`,
-  [schema, ['set_event_expiry', 'touch_word_events', 'touch_configuration_event']])).rows;
+  [schema, ['set_event_expiry', 'touch_word_events', 'touch_configuration_event', 'sync_design_image_references']])).rows;
   const triggers = (await client.query(`SELECT c.relname AS table_name,t.tgname AS name,
     pg_get_triggerdef(t.oid,true) AS definition,t.tgenabled AS enabled FROM pg_trigger t
     JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname=$1 AND c.relname=ANY($2) AND NOT t.tgisinternal
     ORDER BY c.relname COLLATE "C",t.tgname COLLATE "C"`, [schema, tableNames])).rows;
-  const versions = (await client.query(`SELECT version::text FROM ${quote(schema)}.app_schema_versions ORDER BY version`)).rows;
+  const versions = (await client.query(`SELECT version::text FROM ${quote(schema)}.app_schema_versions ORDER BY app_schema_versions.version`)).rows;
   // pg_get_* qualifies names when the inspected schema is not on search_path.
   const normalize = value => JSON.parse(JSON.stringify(value).replaceAll(`${schema}.`, '').replaceAll(`${quote(schema)}.`, ''));
   return normalize({ tables, columns, constraints, indexes, sequences, functions, triggers, versions });

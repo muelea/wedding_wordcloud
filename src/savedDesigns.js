@@ -10,6 +10,8 @@ const { normalizeDesign, normalizeSnapshotWords } = require('./routes/events');
 const { buildProviderPrintSvg } = require('./mugPrint');
 const { withRenderSlot } = require('./printArtifacts');
 const I18n = require('./i18n');
+const imageAssets = require('./designImageAssets');
+const imageData = require('../public/js/design-image-data');
 
 const MAX_SNAPSHOT_BYTES = 20 * 1024 * 1024;
 let testStorage = null;
@@ -91,6 +93,11 @@ function normalizeSnapshot(raw,locale='de') {
 }
 
 function encodeSnapshot(snapshot) {
+  if(imageAssets.ids(snapshot).length) {
+    const bytes=Buffer.from(JSON.stringify({version:2,snapshot}));
+    if(bytes.length>MAX_SNAPSHOT_BYTES) throw db.accountError('design_quota',413);
+    return bytes;
+  }
   const images=[];
   const compact=JSON.parse(JSON.stringify(snapshot,(key,value)=> {
     if(key==='src'&&typeof value==='string'&&value.startsWith('data:image/')) {
@@ -108,9 +115,10 @@ function encodeSnapshot(snapshot) {
 function decodeSnapshot(bytes) {
   if(bytes.length>MAX_SNAPSHOT_BYTES) throw db.accountError('account_storage_unavailable',503);
   const packet=JSON.parse(bytes.toString());
-  if(packet.version!==1||!Array.isArray(packet.images)||packet.images.length>4||!packet.snapshot) throw db.accountError('account_storage_unavailable',503);
+  if(packet.version===2&&packet.snapshot) return packet.snapshot;
+  if(packet.version!==1||!Array.isArray(packet.images)||packet.images.length>imageData.MAX_IMAGES||!packet.snapshot) throw db.accountError('account_storage_unavailable',503);
   return JSON.parse(JSON.stringify(packet.snapshot),(key,value)=> {
-    if(key==='src'&&typeof value==='string'&&/^image:[0-3]$/.test(value)) {
+    if(key==='src'&&typeof value==='string'&&/^image:(0|[1-9]\d*)$/.test(value)) {
       const image=packet.images[Number(value.slice(6))];
       if(typeof image!=='string') throw db.accountError('account_storage_unavailable',503);
       return image;
@@ -174,18 +182,20 @@ async function save(accountId,body,locale) {
   const name=designName(body.name);
   if(!auth.UUID.test(body.requestId||'')||!auth.UUID.test(body.designId||'')||!Number.isInteger(body.version)||body.version<0) throw db.accountError('invalid_request',400);
   const snapshot=normalizeSnapshot(body.snapshot,locale);
-  const bytes=encodeSnapshot(snapshot);
   let preview;
   try { preview=await thumbnail(snapshot); }
   catch(error) {
     if(error.code==='PRINT_TEXT_UNSUPPORTED') throw db.accountError('unsupported_print_characters',422);
     throw error;
   }
-  if(bytes.length+preview.length>MAX_SNAPSHOT_BYTES) throw db.accountError('design_quota',413);
+  const prepared=await imageAssets.prepare(`account:${accountId}`,snapshot,{deferUploads:true});
+  const bytes=encodeSnapshot(prepared.value);
+  const byteSize=bytes.length+preview.length+prepared.imageBytes;
+  if(byteSize>MAX_SNAPSHOT_BYTES) throw db.accountError('design_quota',413);
   const sha256=crypto.createHash('sha256').update(bytes).digest('hex');
   const prefix=`${accountId}/${body.requestId}`;
   const write=await db.reserveSavedDesignWrite({id:body.requestId,accountId,designId:body.designId,expectedVersion:body.version,
-    name,productKey:snapshot.productKey,orientation:snapshot.orientation,sha256,byteSize:bytes.length+preview.length,
+    name,productKey:snapshot.productKey,orientation:snapshot.orientation,sha256,byteSize,imageAssetIds:prepared.assetIds,
     snapshotKey:`${prefix}.json`,previewKey:`${prefix}.png`});
   if(write.status==='complete') {
     const row=await db.getSavedDesign(accountId,write.design_id);
@@ -197,6 +207,7 @@ async function save(accountId,body,locale) {
   if(write.snapshot_key!==`${prefix}.json`) throw db.accountError('design_conflict');
   let row;
   try {
+    await prepared.commit();
     await storage().upload(write.snapshot_key,bytes,'application/json');
     await storage().upload(write.preview_key,preview,'image/png');
     row=await db.finishSavedDesignWrite(accountId,write.id);
@@ -229,7 +240,7 @@ async function load(accountId,id,{touch=false}={}) {
   if(current.version!==row.version) throw db.accountError('design_conflict');
   const active=touch?await db.touchSavedDesign(accountId,id,row.version):row;
   if(!active) throw db.accountError('design_not_found',404);
-  return {...summary(active),snapshot:decodeSnapshot(bytes)};
+  return {...summary(active),snapshot:JSON.parse(JSON.stringify(await imageAssets.hydrate(decodeSnapshot(bytes)),(key,value)=>key==='assetId'?undefined:value))};
 }
 
 async function deleteAccount(accountId) {

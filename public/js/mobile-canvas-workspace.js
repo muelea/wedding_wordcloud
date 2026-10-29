@@ -143,7 +143,7 @@
       this.mount(get('editor-overlap-trigger'), get('mobile-canvas-overlaps'));
       this.placeOverlapTrigger();
       this.mount(get('surface-editor'), get('mobile-canvas-surfaces'));
-      this.mount(this.document.querySelector('.editor-tools-primary'), get('mobile-canvas-add'));
+      this.mount(this.document.querySelector('.editor-add-controls') || this.document.querySelector('.editor-tools-primary'), get('mobile-canvas-add'));
       for (const group of ['selection', 'layout']) {
         this.mount(this.document.querySelector(`.editor-tools-${group}`), get('mobile-canvas-design-actions'));
       }

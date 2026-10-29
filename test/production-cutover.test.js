@@ -266,6 +266,7 @@ test('Linux candidate checks stop the release before migrations on failed image 
   const commit = 'a'.repeat(40);
   const steps = cutover.verificationSteps('active', commit.slice(0, 12));
   const linux = steps.find(step => step.args.includes('test/print-raster.test.js'));
+  assert.ok(linux.args.includes('test/print-storage-parity.test.js'), 'Linux must verify the Storage migration keeps print bytes identical');
   assert.equal(linux.command, 'docker');
   assert.ok(linux.args.includes('--read-only'));
   assert.ok(linux.args.includes('--pull=never'));
