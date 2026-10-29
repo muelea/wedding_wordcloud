@@ -137,9 +137,9 @@ finished before a new day starts. Every run has a fixed eligibility cutoff.
   bound operations, rather than aborting an in-flight remote deletion.
 - Categories advance independently and rotate between pages: Auth discovery,
   expired clouds, saved designs, dormant accounts, paid artifacts, commerce,
-  old metadata, queued design-object/Auth deletions, prepared print files and
-  expired mockup-cache records. Account expiry waits
-  for discovery and design expiry; external deletion waits for their producers.
+  old metadata, queued design-object/Auth deletions, prepared print files,
+  expired mockup-cache records and unreferenced design source images. Account
+  expiry waits for discovery and design expiry; external deletion waits for their producers.
   Every candidate is rechecked before deletion. Commerce policies/holds and
   payment ambiguity are unchanged; expired cloud cleanup detaches retained
   configurations and preserves slug reservations. Prepared sources still
@@ -155,6 +155,15 @@ finished before a new day starts. Every run has a fixed eligibility cutoff.
   their sanitized code and timestamp for diagnosis; a completed scan clears
   that transient error. File-deletion counters require the current lease owner
   to commit successfully.
+- Source photos have their own private immutable objects and metadata. Database
+  references from configurations, order items, saved designs and pending manual
+  saves pin them independently. Account/design deletion releases only its own
+  references. Commerce artwork redaction releases order references; retained
+  configurations and orders continue to protect sources. Cleanup locks the asset,
+  rechecks every reference and fences new references before deleting the object.
+  A one-hour reservation grace and upload deadline protect interrupted uploads;
+  failed deletions retain metadata and retry after five minutes. Legacy inline
+  snapshots follow their existing parent retention policy.
 - Short-lived quote/upload/session housekeeping, interrupted mockups and
   explicit account/file deletion retries stay on the five-minute wake-up.
   These do not rescan all long-lived business records.

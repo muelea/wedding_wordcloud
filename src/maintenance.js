@@ -53,6 +53,12 @@ async function execute(triggerKind) {
         log.error('mockup_source_cleanup_failed', { errorCode: sanitizedCode(error) });
       });
     }
+    const imagesRemoved = await require('./designImageAssets').cleanup({
+      deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250,
+    }).catch(error => {
+      log.error('design_image_cleanup_failed', { errorCode: sanitizedCode(error) });
+      return 0;
+    });
     let accounts = {};
     if (Date.now() + 1000 < startedAt + WALL_CLOCK_BUDGET_MS - 250) {
       accounts = await savedDesigns.maintenance({ deadline: startedAt + WALL_CLOCK_BUDGET_MS - 250, shortLivedOnly: true }).catch(error=> {
@@ -64,6 +70,7 @@ async function execute(triggerKind) {
       designsExpired: counts.designs?.deleted || 0,
       accountsExpired: counts.accounts?.queued || 0,
       designObjectsRemoved: accounts.objectsRemoved || 0,
+      designImagesRemoved: imagesRemoved,
       designAccountMaintenanceFailed: accounts.failed ? 1 : 0,
       fulfillmentClaimed: fulfillmentSummary.claimed,
       fulfillmentCompleted: fulfillmentSummary.completed,

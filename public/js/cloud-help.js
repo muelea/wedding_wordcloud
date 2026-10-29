@@ -32,7 +32,7 @@
     let destroyed = false;
     const steps = [
       ['Füge ein Wort hinzu', 'Tippe unten ein Wort ein und wähle „Hinzufügen“. Es erscheint sofort bei allen.', '.display-word-entry'],
-      ['Lade andere ein', 'Über „Gäste einladen“ teilst du den Link oder zeigst den QR-Code. Gäste brauchen weder Konto noch PIN.', '#share-cloud'],
+      ['Lade andere ein', 'Über „Teilen“ teilst du den Link oder zeigst den QR-Code. Gäste brauchen weder Konto noch PIN.', '#share-cloud'],
       ['Zeigen und verwalten', 'Präsentationsmodus für den großen Bildschirm. Im Organisatorbereich verwaltest du die Wolke mit deiner PIN.', '.ww-display-organizer-tools'],
       ['Erinnerung gestalten', 'Gestaltet mit euren Wörtern ein persönliches Andenken. Der Button wird aktiv, sobald die Wolke Wörter enthält.', '#memory-cta'],
     ];

@@ -167,9 +167,11 @@ test('event creation uses one canonical event URL', async (t) => {
   assert.match(displayHtml, /class="ww-keepsake-cta-label ww-keepsake-cta-label-compact" data-i18n-source="Andenken"/);
   assert.match(displayHtml, /id="word-submission-status" role="status" aria-live="polite" aria-atomic="true"/);
   assert.match(displayHtml, /id="share-cloud"/);
-  assert.match(displayHtml, /id="copy-cloud-link"/);
+  assert.doesNotMatch(displayHtml, /id="copy-cloud-link"/);
   assert.match(displayHtml, /id="share-dialog"/);
-  assert.match(displayHtml, /navigator\.share\(data\)/);
+  assert.match(displayHtml, /id="share-dialog-copy-link"/);
+  assert.match(displayHtml, /id="share-native"[^>]*\bhidden\b/);
+  assert.match(displayHtml, /shareButton\.addEventListener\('click', prepareShareDialog\)/);
   assert.match(displayHtml, /url:\s*eventUrl/);
   assert.doesNotMatch(displayHtml, /id="save-cloud"|beforeinstallprompt|appinstalled|serviceWorker\.register/);
   assert.match(displayHtml, /id="draft-settings-button"/);

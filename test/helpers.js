@@ -34,6 +34,7 @@ const APPLICATION_MIGRATIONS = [
   '20261026000000_durable_mockup_jobs.sql',
   '20261027000000_activity_retention.sql',
   '20261028000000_print_approval.sql',
+  '20261029000000_private_design_images.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {
@@ -54,6 +55,7 @@ function clearApplicationModules() {
     '../src/printfulMockups',
     '../src/mockupQueue',
     '../src/privateStorage',
+    '../src/designImageAssets',
     '../src/clientIdentity',
     '../src/rateLimits',
     '../src/performanceProbe',
@@ -140,6 +142,12 @@ async function startTestServer({ host = '127.0.0.1' } = {}) {
     process.env.MAINTENANCE_SECRET = 'test-maintenance-secret-that-is-long-enough';
     clearApplicationModules();
 
+    const imageObjects = new Map();
+    require('../src/designImageAssets').setStorageForTests({
+      async upload(key,bytes) { if(imageObjects.has(key)) throw new Error('object exists'); imageObjects.set(key,Buffer.from(bytes)); },
+      async download(key) { if(!imageObjects.has(key)) throw new Error('missing image'); return imageObjects.get(key); },
+      async remove(key) { imageObjects.delete(key); },
+    });
     const app = require('../server');
     ({ server, io, shutdown } = app);
     database = require('../src/db');

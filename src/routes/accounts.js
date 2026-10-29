@@ -197,6 +197,8 @@ function makeAccountRouter() {
     express.json({limit:'40mb'}),asyncRoute(async(req,res)=> {
       const context=await auth.requireAccount(req,res);
       await auth.limit(req,'design-save',{accountId:context.user.id,max:30,windowMs:60_000});
+      try { req.body=require('../../public/js/design-image-data').unpack(req.body); }
+      catch { throw db.accountError('invalid_design',400); }
       if(req.body?.ownerId&&req.body.ownerId!==context.user.id) throw db.accountError('account_unauthorized',401);
       const design=await designs.save(context.user.id,req.body,resolvePageLocale(req).locale);
       res.status(201).json({design});

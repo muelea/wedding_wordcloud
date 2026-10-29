@@ -870,3 +870,23 @@ html.mobile-canvas-open { overflow: hidden; scrollbar-gutter: auto; }
 
 .product-price-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .cart-panel-item-price { color: var(--ink); font-weight: 600; }
+
+/* Image limits move with Add into the mobile drawer. */
+.editor-add-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; max-width: 100%; }
+.editor-image-usage-row { display: flex; align-items: center; gap: 3px; max-width: 100%; color: #71656b; font-size: 11px; line-height: 1.4; }
+.editor-image-usage-row > span { min-width: 0; }
+.editor-image-info { display: grid; place-items: center; flex: 0 0 32px; width: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.editor-image-info > span { display: grid; place-items: center; width: 15px; height: 15px; border: 1px solid currentColor; border-radius: 50%; font: 600 10px Georgia, serif; }
+.editor-image-info:hover { background: rgba(123, 70, 82, .06); color: var(--berry); }
+.editor-image-info:focus-visible { outline: 2px solid var(--berry); outline-offset: 1px; }
+.editor-image-feedback { max-width: 290px; margin: 2px 0 0; color: #962d46; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.editor-image-feedback[hidden] { display: none; }
+.editor-image-limits-panel { width: min(380px, calc(100% - 24px)); }
+.editor-image-limits-panel .config-panel-head h2 { font-size: 18px; }
+.editor-image-limits-panel .config-panel-body { font-size: 13px; line-height: 1.55; }
+.editor-image-limits-panel .config-panel-body p { margin: 0 0 10px; }
+.editor-image-limits-panel .config-panel-body p:last-child { margin-bottom: 0; }
+.account-save-limits { color: #71656b; font-size: 12px; line-height: 1.5; }
+#mobile-canvas-add .editor-add-controls { width: 100%; }
+#mobile-canvas-add .editor-image-info { flex-basis: 44px; width: 44px; min-height: 44px; }
+#mobile-canvas-picker .editor-image-limits-panel .config-panel-body p { font-size: 12px; line-height: 1.55; }

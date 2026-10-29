@@ -38,7 +38,7 @@ function setup(t) {
       return {ok:true,status:200,json:async()=>data};}});
   const controller=root.WolkenworteAccount.createConfigurator({getSnapshot:()=>snapshot,getFingerprint:()=>JSON.stringify(snapshot),
     canSave:()=>available,prepare:async()=>{},preserve:async()=>preserve,onSourceChange:value=>{ref=value;}});
-  return {document,dom,calls,navigation,accountChanges,controller,setUser:v=>{user=v;},setPreserve:v=>{preserve=v;},
+  return {document,dom,root,calls,navigation,accountChanges,controller,setUser:v=>{user=v;},setPreserve:v=>{preserve=v;},
     setAvailable:v=>{available=v;},holdSave:v=>{saveGate=v;},setSnapshot:v=>{snapshot=v;},setDesigns:v=>{designList=v;},setSaveError:v=>{saveError=v;},loseNextResponse:()=>{loseResponse=true;},snapshot:()=>snapshot,flush:()=>timer?.(),source:()=>ref,user:()=>user};
 }
 test('edits never autosave to the account; only an explicit submit saves the full editable snapshot',async t=>{
@@ -210,4 +210,22 @@ test('opening the latest library version after a save conflict preserves local w
   h.setPreserve(false);latest.click();await settled();assert.equal(h.navigation.length,0);
   h.setPreserve(true);latest.click();await settled();
   assert.equal(h.navigation[0],`${h.dom.window.location.pathname}?accountDesign=${target.id}&accountLatest=1`);
+});
+
+test('account image-limit feedback names the exceeded budget and keeps unsaved artwork intact', async t => {
+  const h=setup(t),ImageData=require('../public/js/design-image-data');
+  h.root.DesignImageData=ImageData;
+  const snapshot={...h.snapshot(),designs:{front:Array.from({length:21},(_,i)=>({type:'image',src:`data:image/png;base64,${i}`}))}};
+  h.setSnapshot(snapshot);
+  h.document.querySelector('[data-account-save]').click();await settled();
+  const form=h.document.querySelector('#account-save-dialog form');
+  form.dispatchEvent(new h.dom.window.Event('submit',{cancelable:true}));await settled();
+  const notice=h.document.querySelector('[data-account-save-status]');
+  assert.equal(notice.textContent,ImageData.MESSAGES.images);
+  assert.equal(notice.dataset.error,'true');
+  h.flush();
+  assert.equal(notice.textContent,ImageData.MESSAGES.images);
+  assert.equal(h.calls.some(call=>call.body?.snapshot||call.body?.imagePacket),false);
+  assert.equal(h.document.getElementById('account-save-dialog').open,true);
+  assert.equal(h.snapshot(),snapshot);
 });

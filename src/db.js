@@ -10,7 +10,7 @@ const log = require('./structuredLog');
 const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
-const REQUIRED_SCHEMA_VERSION = '9';
+const REQUIRED_SCHEMA_VERSION = '10';
 const { yearEndDeadline, emailRetentionYears, evidenceAddresses } = require('./retentionPolicy');
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
@@ -93,7 +93,7 @@ async function closePool() {
 async function assertDatabaseReady() {
   const result = await getPool().query(`
     SELECT
-      (SELECT version::text FROM app_schema_versions ORDER BY version DESC LIMIT 1) AS version,
+      (SELECT version::text FROM app_schema_versions ORDER BY app_schema_versions.version DESC LIMIT 1) AS version,
       current_user AS current_user,
       has_schema_privilege(current_user, current_schema(), 'CREATE') AS can_create_schema_objects
   `);
@@ -2116,6 +2116,8 @@ async function createConfiguration({
   savedDesignSource = null,
 }) {
   if (!design) throw new TypeError('A configuration requires an immutable canvas design.');
+  const images = await require('./designImageAssets').prepare(`event:${eventId}`, design);
+  const storedDesign = images.value;
   return withTransaction(async (client) => {
     const eventResult = await client.query(`
       SELECT id, expires_at FROM events
@@ -2139,7 +2141,7 @@ async function createConfiguration({
       RETURNING *
     `, [
       id, eventId, productKey, printfulVariantId, quantity, unitPriceCents, theme,
-      jsonValue(words), jsonValue(design), orientation, printWidth, printHeight, event.expires_at,
+      jsonValue(words), jsonValue(storedDesign), orientation, printWidth, printHeight, event.expires_at,
     ]);
     if (savedDesignSource && accountSchemaAvailable) {
       await client.query(`UPDATE configurations SET saved_design_id=$2,saved_design_owner_id=$3
@@ -2151,12 +2153,18 @@ async function createConfiguration({
   });
 }
 
-async function getConfiguration(id) {
-  const result = await getPool().query('SELECT * FROM configurations WHERE id = $1', [id]);
-  return rowToBoundary(result.rows[0]);
+async function hydrateConfiguration(row) {
+  const value = rowToBoundary(row);
+  if (value?.design_json) value.design_json = JSON.stringify(await require('./designImageAssets').hydrate(JSON.parse(value.design_json)));
+  return value;
 }
 
-async function getEventConfiguration(slug, configurationId) {
+async function getConfiguration(id, { hydrateImages = false } = {}) {
+  const result = await getPool().query('SELECT * FROM configurations WHERE id = $1', [id]);
+  return hydrateImages ? hydrateConfiguration(result.rows[0]) : rowToBoundary(result.rows[0]);
+}
+
+async function getEventConfiguration(slug, configurationId, { hydrateImages = false } = {}) {
   const result = await getPool().query(`
     SELECT configurations.*
     FROM configurations
@@ -2172,7 +2180,7 @@ async function getEventConfiguration(slug, configurationId) {
         )
       )
   `, [configurationId, slug]);
-  return rowToBoundary(result.rows[0]);
+  return hydrateImages ? hydrateConfiguration(result.rows[0]) : rowToBoundary(result.rows[0]);
 }
 
 async function getEventConfigurations(slug, configurationIds) {
@@ -3121,6 +3129,7 @@ async function createProviderSmokeOrder({ productKey, recipient, includeRaster =
       }] : [])],
     ])),
   };
+  const images = await require('./designImageAssets').prepare(`smoke:${configurationId}`, design);
   return withTransaction(async (client) => {
     const configurationResult = await client.query(`
       INSERT INTO configurations (
@@ -3133,7 +3142,7 @@ async function createProviderSmokeOrder({ productKey, recipient, includeRaster =
         transaction_timestamp() + interval '30 days'
       ) RETURNING *
     `, [
-      configurationId, product.key, product.printful.variantId, jsonValue(design),
+      configurationId, product.key, product.printful.variantId, jsonValue(images.value),
       product.printFile.width, product.printFile.height,
     ]);
     const configuration = rowToBoundary(configurationResult.rows[0]);
@@ -3447,10 +3456,10 @@ async function reserveSavedDesignWrite(write) {
       throw accountError('design_busy');
     }
     const r = await client.query(`INSERT INTO saved_design_writes
-      (id,account_id,design_id,expected_version,snapshot_key,preview_key,snapshot_sha256,byte_size,additional_bytes,is_new,name,product_key,orientation)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      (id,account_id,design_id,expected_version,snapshot_key,preview_key,snapshot_sha256,byte_size,additional_bytes,is_new,name,product_key,orientation,image_asset_ids)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
     [write.id,write.accountId,write.designId,write.expectedVersion,write.snapshotKey,write.previewKey,
-      write.sha256,write.byteSize,additional,!previous,write.name,write.productKey,write.orientation]);
+      write.sha256,write.byteSize,additional,!previous,write.name,write.productKey,write.orientation,write.imageAssetIds || []]);
     for (const key of [write.snapshotKey, write.previewKey]) {
       await client.query(`INSERT INTO saved_design_objects(object_key,account_id,state,upload_deadline)
         VALUES ($1,$2,'uploading',transaction_timestamp() + interval '1 minute')`, [key, write.accountId]);
@@ -3471,15 +3480,15 @@ async function finishSavedDesignWrite(accountId, writeId) {
     let result;
     if (w.is_new) {
       result = await client.query(`INSERT INTO saved_designs
-        (id,account_id,name,product_key,orientation,snapshot_key,preview_key,snapshot_sha256,byte_size)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [w.design_id,accountId,w.name,w.product_key,w.orientation,w.snapshot_key,w.preview_key,w.snapshot_sha256,w.byte_size]);
+        (id,account_id,name,product_key,orientation,snapshot_key,preview_key,snapshot_sha256,byte_size,image_asset_ids)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [w.design_id,accountId,w.name,w.product_key,w.orientation,w.snapshot_key,w.preview_key,w.snapshot_sha256,w.byte_size,w.image_asset_ids]);
     } else {
       result = await client.query(`UPDATE saved_designs SET name=$3,product_key=$4,orientation=$5,
-        snapshot_key=$6,preview_key=$7,snapshot_sha256=$8,byte_size=$9,version=version+1,
+        snapshot_key=$6,preview_key=$7,snapshot_sha256=$8,byte_size=$9,image_asset_ids=$10,version=version+1,
         saved_at=transaction_timestamp(),last_activity_at=transaction_timestamp(),
         expires_at=transaction_timestamp() + interval '3 months' WHERE id=$1 AND account_id=$2 RETURNING *`,
-      [w.design_id,accountId,w.name,w.product_key,w.orientation,w.snapshot_key,w.preview_key,w.snapshot_sha256,w.byte_size]);
+      [w.design_id,accountId,w.name,w.product_key,w.orientation,w.snapshot_key,w.preview_key,w.snapshot_sha256,w.byte_size,w.image_asset_ids]);
       await queueDesignObjects(client, [old.snapshot_key,old.preview_key]);
     }
     await client.query("UPDATE saved_design_objects SET state='active' WHERE object_key = ANY($1::text[])", [[w.snapshot_key,w.preview_key]]);
@@ -3708,7 +3717,7 @@ async function recordAuthEmailReceipt(hash,payloadHash,delivered = false) {
 }
 
 async function getMockupConfiguration(id, now = Date.now()) {
-  return rowToBoundary((await getPool().query(`SELECT c.* FROM configurations c JOIN events e ON e.id=c.event_id
+  return hydrateConfiguration((await getPool().query(`SELECT c.* FROM configurations c JOIN events e ON e.id=c.event_id
     WHERE c.id=$1 AND e.expires_at > $2 AND c.expires_at > $2`, [id, new Date(now)])).rows[0]);
 }
 
@@ -3844,6 +3853,11 @@ const RETENTION_CATEGORIES = {
   mockups: { table:'mockup_jobs',type:'text',condition:'expires_at<=$1' },
   preparedFiles: { table:'prepared_print_files',type:'text',condition:`expires_at<=$1
     AND NOT EXISTS(SELECT 1 FROM print_artifacts a WHERE a.source_file_id=prepared_print_files.id)` },
+  designImages: { table:'design_image_assets',type:'uuid',condition:`protected_until<=$1 AND
+    NOT EXISTS(SELECT 1 FROM configuration_image_assets r WHERE r.asset_id=design_image_assets.id) AND
+    NOT EXISTS(SELECT 1 FROM order_item_image_assets r WHERE r.asset_id=design_image_assets.id) AND
+    NOT EXISTS(SELECT 1 FROM saved_design_image_assets r WHERE r.asset_id=design_image_assets.id) AND
+    NOT EXISTS(SELECT 1 FROM saved_design_write_image_assets r WHERE r.asset_id=design_image_assets.id)` },
   objects: { table:'saved_design_objects',key:'object_key',type:'text',condition: "state='delete_pending' AND delete_after<=greatest($1::timestamptz,transaction_timestamp())" },
   accountDeletions: { table:'account_deletions',key:'account_id',type:'uuid',condition: 'completed_at IS NULL AND created_at<=greatest($1::timestamptz,transaction_timestamp())' },
   commerce: { table: 'orders', type: 'bigint', condition: "created_at < $1::timestamptz - interval '30 days'" },
@@ -4065,7 +4079,62 @@ async function finishPreparedPrintFileDeletion(id,lease,success) {
   else return (await getPool().query("UPDATE prepared_print_files SET lease_until=transaction_timestamp()+interval '5 minutes' WHERE id=$1 AND lease=$2 AND lease_until>transaction_timestamp()",[id,lease])).rowCount===1;
 }
 
+async function reserveDesignImageAsset(image) {
+  return rowToBoundary((await getPool().query(`INSERT INTO design_image_assets
+    (id,scope_key,sha256,object_key,mime_type,byte_size,width,height,status,protected_until,upload_deadline)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'uploading',transaction_timestamp()+interval '1 hour',transaction_timestamp()+interval '2 minutes')
+    ON CONFLICT(scope_key,sha256) DO UPDATE SET
+      protected_until=greatest(design_image_assets.protected_until,transaction_timestamp()+interval '1 hour'),
+      upload_deadline=case when design_image_assets.status='uploading'
+        then greatest(design_image_assets.upload_deadline,transaction_timestamp()+interval '2 minutes')
+        else design_image_assets.upload_deadline end
+    RETURNING *`,[image.id,image.scope,image.sha256,image.objectKey,image.mimeType,image.byteSize,image.width,image.height])).rows[0]);
+}
+async function activateDesignImageAsset(id,sha256,bytes) {
+  return rowToBoundary((await getPool().query(`UPDATE design_image_assets SET status='active',last_error=null
+    WHERE id=$1 AND sha256=$2 AND byte_size=$3 AND status IN ('uploading','active')
+    AND upload_deadline>transaction_timestamp() RETURNING *`,[id,sha256,bytes])).rows[0]);
+}
+async function recordDesignImageFailure(id) {
+  await getPool().query("UPDATE design_image_assets SET last_error='upload_failed' WHERE id=$1 AND status='uploading'",[id]);
+}
+async function getDesignImageAssets(ids) {
+  return rowsToBoundary((await getPool().query("SELECT * FROM design_image_assets WHERE id=ANY($1::uuid[]) AND status='active'",[ids])).rows);
+}
+async function claimUnusedDesignImageAsset(exactId = null) {
+  return withTransaction(async client => {
+    const asset=(await client.query(`SELECT a.* FROM design_image_assets a
+      WHERE ($1::uuid IS NULL OR a.id=$1) AND a.protected_until<transaction_timestamp() AND a.upload_deadline+interval '1 minute'<transaction_timestamp()
+      AND a.next_attempt_at<=transaction_timestamp() AND (a.lease_until IS NULL OR a.lease_until<transaction_timestamp())
+      AND NOT EXISTS(SELECT 1 FROM configuration_image_assets r WHERE r.asset_id=a.id)
+      AND NOT EXISTS(SELECT 1 FROM order_item_image_assets r WHERE r.asset_id=a.id)
+      AND NOT EXISTS(SELECT 1 FROM saved_design_image_assets r WHERE r.asset_id=a.id)
+      AND NOT EXISTS(SELECT 1 FROM saved_design_write_image_assets r WHERE r.asset_id=a.id)
+      ORDER BY a.protected_until,a.id LIMIT 1 FOR UPDATE SKIP LOCKED`,[exactId])).rows[0];
+    if(!asset)return null;
+    // Publication can commit between the SELECT snapshot and its row lock.
+    // Recheck in a fresh READ COMMITTED statement while holding that lock;
+    // foreign keys alone would reject metadata deletion after the file is gone.
+    return rowToBoundary((await client.query(`UPDATE design_image_assets a SET status='deleting',lease=$2,
+      lease_until=transaction_timestamp()+interval '1 minute' WHERE a.id=$1
+      AND NOT EXISTS(SELECT 1 FROM configuration_image_assets r WHERE r.asset_id=a.id)
+      AND NOT EXISTS(SELECT 1 FROM order_item_image_assets r WHERE r.asset_id=a.id)
+      AND NOT EXISTS(SELECT 1 FROM saved_design_image_assets r WHERE r.asset_id=a.id)
+      AND NOT EXISTS(SELECT 1 FROM saved_design_write_image_assets r WHERE r.asset_id=a.id)
+      RETURNING a.*`,[asset.id,crypto.randomUUID()])).rows[0]);
+  });
+}
+async function finishDesignImageDeletion(id,lease,success) {
+  if(success) return (await getPool().query(`DELETE FROM design_image_assets WHERE id=$1 AND lease=$2
+    AND status='deleting' AND lease_until>transaction_timestamp()`,[id,lease])).rowCount===1;
+  return (await getPool().query(`UPDATE design_image_assets SET lease=null,lease_until=null,
+    last_error='delete_failed',next_attempt_at=transaction_timestamp()+interval '5 minutes'
+    WHERE id=$1 AND lease=$2 AND lease_until>transaction_timestamp()`,[id,lease])).rowCount===1;
+}
+
 module.exports = {
+  reserveDesignImageAsset, activateDesignImageAsset, recordDesignImageFailure, getDesignImageAssets,
+  claimUnusedDesignImageAsset, finishDesignImageDeletion,
   claimPreparedPrintFile, savePreparedPrintFile, releasePreparedPrintFile, getPreparedPrintFiles, recordMockupApproval,
   claimExpiredPreparedPrintFile, finishPreparedPrintFileDeletion,
   claimDailyRetentionRun, checkpointDailyRetention, releaseDailyRetention,

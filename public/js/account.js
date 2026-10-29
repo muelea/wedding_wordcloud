@@ -10,7 +10,9 @@
     over_email_send_rate_limit:'Bitte warte eine Minute, bevor du einen neuen Code anforderst.',over_request_rate_limit:'Bitte warte kurz, bevor du es erneut versuchst.',
     design_conflict:'Das Design wurde in einem anderen Fenster geändert. Öffne die gespeicherte Version erneut oder speichere eine neue Kopie.',
     design_busy:'Dieses Design wird gerade gespeichert. Bitte versuche es gleich erneut.',design_not_found:'Dieses Design ist nicht mehr verfügbar.',
-    design_quota:'Dein Konto bietet Platz für 20 Designs und 100 MB. Lösche ein Design oder verwende kleinere Bilder.',
+    design_quota:'Dein Konto bietet Platz für 20 Designs und 100 MB. Pro Design sind bis zu 20 MB inklusive Vorschau möglich. Lösche ein Design oder verwende kleinere Bilder.',
+    design_image_unavailable:'Die Bilder konnten nicht gespeichert oder geladen werden. Dein bisheriges Design bleibt erhalten. Bitte versuche es erneut.',
+    design_image_limit:'Verwende höchstens 20 verschiedene Bilder mit zusammen 10 MB und 64 Megapixeln.',
     invalid_design:'Dieses Design konnte nicht gespeichert werden. Prüfe deine Elemente und versuche es erneut.',
     unsupported_print_characters:'Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.',
     invalid_design_name:'Gib einen Designnamen mit höchstens 80 Zeichen ein.',invalid_email:'Bitte gib eine gültige E-Mail-Adresse ein.',
@@ -23,7 +25,7 @@
     if(path==='session'&&body===undefined&&root.WolkenworteAccountMenu)return root.WolkenworteAccountMenu.session();
     const response=await fetch(`/api/account/${path}`,{method:body===undefined?'GET':'POST',cache:'no-store',credentials:'same-origin',
       headers:{'Accept-Language':I()?.getLocale()||'de',...(body===undefined?{}:{'Content-Type':'application/json','X-Wolkenworte-Account':'1'})},
-      ...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)});
+      ...(body===undefined?{}:{body:JSON.stringify(path==='designs' && root.DesignImageData ? root.DesignImageData.pack(body) : body)}),signal:AbortSignal.timeout(30000)});
     const data=await response.json();
     if(!response.ok) throw Object.assign(new Error('Account request failed'),{code:data.error,status:response.status});
     return data;
@@ -346,6 +348,8 @@
       try{return await busy(form,async()=>{
         await prepare();
         const snapshot=getSnapshot(),fingerprint=getFingerprint();
+        const imageProblem=root.DesignImageData?.problem(snapshot);
+        if(imageProblem){status(notice,imageProblem,true);return;}
         const target=asNew?null:selectedTarget||source;
         const signature=JSON.stringify({name,fingerprint,asNew,id:target?.id,version:target?.version,owner:user.id,locale:I()?.getLocale()});
         if(pendingSave?.signature!==signature) pendingSave={signature,requestId:crypto.randomUUID(),

@@ -137,6 +137,8 @@ const REQUIRED_MESSAGES = [
   'Wortwolke erstellen',
   'Link kopieren',
   'Per WhatsApp teilen',
+  'Weitere Optionen …',
+  'Das Teilen-Menü konnte nicht geöffnet werden. Bitte nutzt eine der anderen Optionen.',
   '{{name}} – Wolkenworte',
   'Ihr seid eingeladen, die Wortwolke „{{name}}“ mitzugestalten. Fügt ein Wort hinzu und erlebt live, wie sie gemeinsam wächst.',
   'Live-Wortwolke',

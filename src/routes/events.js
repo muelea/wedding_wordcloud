@@ -41,8 +41,9 @@ const { analyticsItems } = require('../analyticsCommerce');
 const PIN_RE = /^\d{4,6}$/;
 const { MAX_EVENT_UNIQUE_WORDS: MAX_SNAPSHOT_WORDS,
   MAX_DESIGN_ELEMENTS, MIN_PRINT_FONT_SIZE } = require('../../public/js/cloud-limits');
-const MAX_DESIGN_IMAGES = 4;
-const MAX_DESIGN_IMAGE_BYTES = 5_000_000;
+const ImageData = require('../../public/js/design-image-data');
+const MAX_DESIGN_IMAGES = ImageData.MAX_IMAGES;
+const MAX_DESIGN_IMAGE_BYTES = ImageData.MAX_BYTES;
 const ADDRESS_LIMITS = Object.freeze({
   name: 100,
   address1: 120,
@@ -690,8 +691,9 @@ function normalizeDesign(
       if (!imageState.sources.has(src)) {
         imageState.sources.add(src);
         imageState.totalBytes += image.byteSize;
+        imageState.totalPixels = (imageState.totalPixels || 0) + image.width * image.height;
         if (imageState.sources.size > MAX_DESIGN_IMAGES ||
-            imageState.totalBytes > MAX_DESIGN_IMAGE_BYTES) return null;
+            imageState.totalBytes > MAX_DESIGN_IMAGE_BYTES || imageState.totalPixels > ImageData.MAX_PIXELS) return null;
       }
       normalized.push({
         ...common,
@@ -814,7 +816,7 @@ function configurationDesignSurfaces(product, design) {
     return Object.fromEntries(product.printSurfaces.map((surface) => [
       surface.key,
       Array.isArray(design.surfaces[surface.key])
-        ? design.surfaces[surface.key].map((item) => ({ ...item }))
+        ? design.surfaces[surface.key].map(({ assetId, ...item }) => item)
         : [],
     ]));
   }
@@ -1133,6 +1135,8 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   }));
 
   router.post('/events/:slug/configurations', express.json({ limit: '16mb' }), asyncRoute(async (req, res) => {
+    try { req.body = ImageData.unpack(req.body); }
+    catch { return res.status(400).json({ error: 'invalid_design' }); }
     const event = await db.getEventBySlug(req.params.slug);
     if (!event) return res.status(404).json({ error: 'event not found' });
     if (!consumeEventRequest(
@@ -1221,6 +1225,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
       });
     } catch (error) {
       if (error.code === 'configuration_limit') return rateLimited(res);
+      if (error.code === 'design_image_unavailable') return res.status(503).json({ error: error.code });
       throw error;
     }
 
@@ -1262,7 +1267,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
 
   router.get('/events/:slug/configurations/:configurationId/edit', asyncRoute(async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId, { hydrateImages: true });
     if (!configuration) return res.status(404).json({ error: 'configuration_not_found' });
     const response = editableConfigurationResponse(req.params.slug, configuration);
     if (!response) return res.status(500).json({ error: 'configuration_invalid' });
@@ -1594,7 +1599,7 @@ function makeRouter({ io, port, wordBroadcasts = null }) {
   ], asyncRoute(async (req, res) => {
     const pngPreview = req.path.endsWith('/print.png');
     if (pngPreview) res.set('Cache-Control', 'private, no-cache');
-    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId);
+    const configuration = await db.getEventConfiguration(req.params.slug, req.params.configurationId, { hydrateImages: true });
     if (!configuration) return res.status(404).send('configuration not found');
     const product = resolveProductOrientation(
       getProduct(configuration.product_key),

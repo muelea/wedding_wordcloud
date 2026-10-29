@@ -2228,6 +2228,7 @@
                     <div class="surface-tabs" id="surface-tabs" role="tablist" aria-label="Druckseite wählen"></div>
                     <button class="surface-copy" id="surface-copy" type="button" hidden>Vorderseite übernehmen</button>
                   </div>
+                <div class="editor-add-controls">
                 <div class="editor-tools editor-tools-primary" role="group" aria-label="Element hinzufügen">
                   <%- include('partials/editor-action', { action: { id: 'editor-add', icon: 'type', label: 'Wort hinzufügen', primary: true } }) %>
                   <div class="editor-emoji-picker" id="editor-emoji-picker">
@@ -2242,6 +2243,12 @@
                   </div>
                   <%- include('partials/editor-action', { action: { id: 'editor-image', icon: 'image-plus', label: 'Bild hinzufügen', primary: true } }) %>
                   <input id="editor-image-input" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" aria-label="Bild auswählen" hidden />
+                </div>
+                <div class="editor-image-usage-row">
+                  <span data-image-usage aria-live="off"><%= t('{{count}}/20 Bilder · {{size}}/10 MB', { count: 0, size: 0 }) %></span>
+                  <button class="editor-image-info" id="editor-image-info" type="button" data-panel-trigger="editor-image-limits-panel" aria-haspopup="dialog" aria-controls="editor-image-limits-panel" aria-expanded="false" aria-label="Bildlimits anzeigen"><span aria-hidden="true">i</span></button>
+                </div>
+                <p class="editor-image-feedback" data-image-feedback role="status" aria-live="polite" hidden></p>
                 </div>
                 <div class="editor-tools editor-tools-separated editor-tools-selection" role="group" aria-label="Auswahl">
                   <%- include('partials/editor-action', { action: { id: 'editor-select-all', icon: 'scan', label: 'Alles auswählen' } }) %>
@@ -2496,6 +2503,15 @@
     </div>
   </dialog>
 
+  <dialog class="config-panel editor-image-limits-panel" id="editor-image-limits-panel" aria-labelledby="editor-image-limits-title">
+    <div class="config-panel-head"><h2 id="editor-image-limits-title" tabindex="-1">Bilder &amp; Limits</h2><button type="button" class="ww-icon-button ww-close-button config-panel-close" data-panel-close aria-label="Schließen"></button></div>
+    <div class="config-panel-body">
+      <p>JPG oder PNG · bis 15 MB und 40 Megapixel pro Originaldatei.</p>
+      <p>Bilder werden beim Hinzufügen automatisch optimiert.</p>
+      <p>Pro Design: bis zu 20 verschiedene Bilder, zusammen 10 MB nach Optimierung und 64 Megapixel.</p>
+      <p>Die Grenzen gelten für das gesamte Design über alle Druckseiten. Mehrfach verwendete Bilder zählen einmal.</p>
+    </div>
+  </dialog>
   <dialog class="config-panel editor-options-panel" id="editor-options-panel" aria-labelledby="editor-options-title">
     <div class="config-panel-head"><h2 id="editor-options-title" tabindex="-1">Designoptionen</h2><button class="ww-icon-button ww-close-button" type="button" data-panel-close aria-label="Schließen"></button></div>
     <div class="config-panel-body" id="editor-options-actions">
@@ -2563,6 +2579,7 @@
   <dialog class="ww-account-dialog" id="account-auth-dialog" aria-labelledby="account-auth-title"><div class="ww-account-dialog-head"><h2 id="account-auth-title" tabindex="-1" autofocus>Designs im Konto speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div><%- include('partials/account-auth') %></dialog>
   <dialog class="ww-account-dialog" id="account-save-dialog" aria-labelledby="account-save-title"><div class="ww-account-dialog-head"><h2 id="account-save-title">Design speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-account-dialog-close aria-label="Schließen"></button></div>
     <form><label>Designname<input name="name" maxlength="80" required /></label><p>Nur mit diesem Klick wird dein Design im Konto gespeichert. Weitere Änderungen bleiben ungespeichert, bis du erneut speicherst.</p>
+      <p class="ww-account-small account-save-limits">20 Designs · 100 MB insgesamt · 20 MB pro Design inklusive Vorschau</p>
       <div class="ww-account-actions"><button class="ww-account-primary" type="submit">Im Konto speichern</button><button type="button" data-account-save-copy>Als neues Design speichern</button><button type="button" data-account-save-existing>Bestehendes Design auswählen</button><button type="button" data-account-open-latest hidden>Gespeicherte Version öffnen</button></div><div data-account-save-targets hidden></div><p data-account-save-status role="status" aria-live="polite"></p></form>
   </dialog>
   <% } %>
@@ -2577,6 +2594,8 @@
   <script src="<%= asset('/js/emoji-picker.js') %>"></script>
   <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
   <script src="<%= asset('/js/cloud-limits.js') %>"></script>
+  <script src="<%= asset('/js/design-image-data.js') %>"></script>
+  <script src="<%= asset('/js/design-image-usage.js') %>"></script>
   <script src="<%= asset('/js/text-print-quality.js') %>"></script>
   <script src="<%= asset('/js/blanket-cloth.js') %>"></script>
   <script src="<%= asset('/js/garment-cloth.js') %>"></script>
@@ -5476,6 +5495,7 @@
         defaultY: defaultSlot.y + (defaultSlot.height || defaultSlot.side) / 2,
         palette: getPalette(selectedTheme).colors,
         onSelectionChange: (capabilities) => workspace.updateSelection(capabilities),
+        getImageDesigns: () => [getAllSurfaceDesigns(), productDesignState?.surfaces || []],
         canUndoBoundary: () => Boolean(cloudRebuildUndo),
         canRedoBoundary: () => Boolean(cloudRebuildRedo),
         onUndoBoundary: () => { void restoreCloudHistory('undo'); },
@@ -5488,6 +5508,15 @@
         },
         onReset: () => workspace.toggleDesignOptions(),
       });
+      // Gallery drafts may contain uploads, emojis and fonts that are absent
+      // from the live word list. Prepare every print side before restoring it.
+      const initialElements = Object.values(initialDesigns).flat();
+      await Promise.all([
+        WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts(initialElements
+          .filter(item => item.type !== 'icon' && item.type !== 'image')
+          .map(item => item.fontFamily))),
+        WolkenworteConfiguratorSession.withTimeout(mugEditor.preloadImages(initialElements)),
+      ]);
       workspace.mobileCanvas = new MobileCanvasWorkspace({ document, editor: mugEditor, workspace,
         onEnter: () => setMobileEditorExpanded(true, { scroll: false }),
         onExit: () => setMobileEditorExpanded(false, { scroll: false }),
@@ -5596,10 +5625,9 @@
           { item: t(missingSurface.label) });
         return false;
       }
-      const uploadedImages = new Set(Object.values(designs).flat()
-        .filter((item) => item.type === 'image').map((item) => item.src));
-      if (uploadedImages.size > 4) {
-        setText(errorText, 'Verwendet bitte höchstens vier verschiedene Bilder pro Design.');
+      const imageProblem = globalThis.DesignImageData?.problem(designs);
+      if (imageProblem) {
+        setText(errorText, imageProblem);
         return false;
       }
       clearText(errorText);
@@ -5649,7 +5677,7 @@
         setText(errorText, error.message === 'cart_changed'
           ? 'Der Warenkorb hat sich geändert. Bitte öffnet das Design erneut, bevor ihr Änderungen übernehmt.'
           : error.message === 'print_file_too_large'
-          ? 'Die Druckdatei ist für dieses Produkt zu groß. Verkleinert oder entfernt einige Bilder und versucht es erneut.'
+          ? 'Die Druckdatei überschreitet 40 MB. Verkleinert oder entfernt einige Bilder und versucht es erneut.'
           : error.message === 'unsupported_print_characters'
           ? 'Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.'
           : 'Das Design konnte nicht gespeichert werden. Bitte versucht es erneut.');
@@ -6072,8 +6100,8 @@
       const response = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations`, {
         method: 'POST', signal: AbortSignal.timeout(30000),
         headers: { 'Content-Type': 'application/json', 'X-Wolkenworte-Guest-Id': guestId },
-        body: JSON.stringify({ productKey: snapshot.productKey, orientation: snapshot.orientation,
-          theme: snapshot.theme, words: snapshot.words, designs: snapshot.designs, accountDesignId }),
+        body: JSON.stringify((globalThis.DesignImageData?.pack || (value => value))({ productKey: snapshot.productKey, orientation: snapshot.orientation,
+          theme: snapshot.theme, words: snapshot.words, designs: snapshot.designs, accountDesignId })),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'save_failed');

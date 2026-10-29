@@ -1412,6 +1412,109 @@ test('editor restoration waits for its lazy runtime and a failed download leaves
   assert.equal(failed.content.inert, false);
 });
 
+function editorAssetHarness({ images = Promise.resolve(), emojis = Promise.resolve(), fonts = Promise.resolve() } = {}) {
+  const loadedEmojiTexts = new Set(), loadedFonts = new Set();
+  const calls = { painted: [], images: [], imageRequests: [], surfaces: null };
+  const root = { WolkenworteEmoji: { preloadTexts: async texts => {
+    await emojis;
+    texts.forEach(text => loadedEmojiTexts.add(text));
+  } } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/js/mug-editor.js'), 'utf8'), { window: root });
+  let design;
+  const { context: page } = harness({ workspaceReady: false, activeSurface: 'front', wrapCanvas: {},
+    productSurfaces: () => [{ key: 'front' }, { key: 'back' }],
+    selectedProductSlot: () => ({ x: 0, y: 0, width: 1000, height: 1000 }),
+    productView: () => ({ printFile: { width: 1000, height: 1000, dpi: 300 }, safeArea: {} }),
+    getPalette: () => ({ colors: ['#123456'] }),
+    buildOrientationOptions() {}, updateProductOptionSelection() {}, updateProductPresentation() {},
+    ensureDesignFonts: async keys => { await fonts; keys.forEach(key => loadedFonts.add(key)); },
+    MugPrintEditor: function () {
+      return Object.assign(Object.create(root.MugPrintEditor.prototype), {
+        imageElements: new Map(), imageLoadPromises: new Map(),
+        loadImageElement: async src => {
+          calls.imageRequests.push(src);
+          await images;
+          calls.images.push(src);
+          return { src };
+        },
+        setDesign(items) {
+          for (const item of items) {
+            if (item.type === 'image') assert.ok(this.getImageElement(item.src), 'uploaded pixels must be ready before painting');
+            else if (item.type !== 'icon') {
+              assert.ok(loadedFonts.has(item.fontFamily), 'the saved font must be ready before measuring');
+              assert.ok(loadedEmojiTexts.has(item.text), 'saved emoji artwork must be ready before painting');
+            }
+          }
+          design = items;
+          calls.painted.push(items);
+        },
+        getState: () => ({ design }), flushPendingChange() {},
+      });
+    },
+    MobileCanvasWorkspace: function () {}, ArtworkOverlapWarnings: function () {}, selectSurface() {},
+    configuratorEmojiPicker: {},
+    resetSurfaceStates: (state, surfaces) => { calls.surfaces = surfaces; },
+    buildAutomaticDesign: () => { throw new Error('retained artwork must never be rebuilt'); },
+  });
+  vm.runInContext(pageFunction('initEditor'), page);
+  const snapshot = { productKey: 'mug', orientation: 'default', theme: 'confetti', words: [],
+    customColors: ['#123456'], currentDesignEdited: true,
+    designs: { front: [{ id: 'photo', type: 'image', src: 'data:image/png;base64,front' },
+      { id: 'caption', text: 'Erinnerung ❤️', fontFamily: 'gelasio' }],
+    back: [{ id: 'back-photo', type: 'image', src: 'data:image/png;base64,back' },
+      { id: 'back-caption', text: '😁', fontFamily: 'classic' }] } };
+  return { page, calls, snapshot, loadedEmojiTexts, loadedFonts };
+}
+
+test('gallery editor entry waits for the retained photos, emojis and fonts on every print side', async () => {
+  let releaseImages, releaseEmojis, releaseFonts;
+  const h = editorAssetHarness({ images: new Promise(resolve => { releaseImages = resolve; }),
+    emojis: new Promise(resolve => { releaseEmojis = resolve; }),
+    fonts: new Promise(resolve => { releaseFonts = resolve; }) });
+  const before = JSON.stringify(h.snapshot);
+  const pending = h.page.initializeWorkspace(h.snapshot);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.painted.length, 0);
+  assert.equal(h.page.workspaceReady, false);
+  releaseImages(); releaseEmojis(); releaseFonts();
+  await pending;
+  assert.equal(h.page.restorationFailed, false);
+  assert.equal(h.page.workspaceReady, true);
+  assert.equal(h.calls.painted[0], h.snapshot.designs.front);
+  assert.equal(h.calls.surfaces, h.snapshot.designs);
+  assert.deepEqual(h.calls.images.sort(), ['data:image/png;base64,back', 'data:image/png;base64,front']);
+  assert.ok(h.loadedEmojiTexts.has('😁'), 'hidden-side emojis must also be ready for switching sides');
+  assert.ok(h.loadedFonts.has('classic'));
+  assert.equal(JSON.stringify(h.snapshot), before, 'asset loading must preserve exact artwork and source words');
+});
+
+test('a failed retained photo load never paints a partial gallery design and leaves recovery retryable', async () => {
+  let rejectImages;
+  const h = editorAssetHarness({ images: new Promise((resolve, reject) => { rejectImages = reject; }) });
+  const before = JSON.stringify(h.snapshot);
+  const pending = h.page.initializeWorkspace(h.snapshot);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.imageRequests.length, 2);
+  rejectImages(new Error('image_decode_failed'));
+  await pending;
+  assert.equal(h.calls.painted.length, 0);
+  assert.equal(h.page.workspaceReady, false);
+  assert.equal(h.page.restorationFailed, true);
+  assert.equal(h.page.retryConfigurator.hidden, false);
+  assert.equal(h.page.content.inert, false);
+  assert.equal(JSON.stringify(h.snapshot), before);
+});
+
+test('blank gallery designs still open without creating automatic words', async () => {
+  const h = editorAssetHarness();
+  h.snapshot.designs = { front: [], back: [] };
+  await h.page.initializeWorkspace(h.snapshot);
+  assert.equal(h.page.workspaceReady, true);
+  assert.equal(h.page.restorationFailed, false);
+  assert.equal(h.calls.painted[0].length, 0);
+  assert.deepEqual(h.calls.images, []);
+});
+
 test('recovering a manual draft never generates temporary automatic artwork from a dense live cloud', async () => {
   const draft = { productKey: 'mug', designs: { default: [{ id: 'manual', text: 'Klein', fontSize: 20 }] } };
   let initialized, restored;

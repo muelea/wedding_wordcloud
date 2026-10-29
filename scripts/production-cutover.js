@@ -457,7 +457,7 @@ function verificationSteps(posture, shortSha, { lightRelease = false } = {}) {
       args: ['run', '--rm', '--pull=never', '--platform', 'linux/amd64', '--network', 'none', '--read-only',
         '--mount', `type=bind,source=${path.join(ROOT, 'test')},target=/app/test,readonly`,
         `${APP_NAME}:${shortSha}`, 'node', '--test',
-        'test/print-raster.test.js', 'test/design-font-contract.test.js', 'test/design-font-geometry.test.js',
+        'test/print-raster.test.js', 'test/print-storage-parity.test.js', 'test/design-font-contract.test.js', 'test/design-font-geometry.test.js',
         'test/text-style.test.js', 'test/emoji-rendering.test.js', 'test/emoji.test.js'],
     },
     validateConfig,

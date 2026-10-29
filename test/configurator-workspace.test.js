@@ -275,3 +275,22 @@ test('an embedded palette focuses its heading without marking the back action as
   assert.deepEqual(focused,['mobile-canvas-panel-title']);
   assert.equal(workspace.active.mode,'embedded');
 });
+
+test('image limit information embeds into the mobile picker and restores focus to its trigger', () => {
+  const workspace = Object.create(WolkenworteWorkspace.prototype), focus = [], attributes = {};
+  const trigger = { setAttribute(name, value) { attributes[name] = value; },
+    getClientRects: () => [1], focus: () => focus.push('trigger') };
+  const panel = { id: 'editor-image-limits-panel', dataset: {}, style: { removeProperty() {} },
+    removeAttribute() {}, show() {} };
+  let embedded = null, restored = null;
+  workspace.mobileCanvas = { active: true, showPicker(value) { embedded = value; }, restorePicker(value) { restored = value; } };
+  workspace.document = { getElementById: () => ({ focus: () => focus.push('heading') }) };
+  workspace.show(panel, trigger);
+  assert.equal(embedded, panel);
+  assert.equal(workspace.active.mode, 'embedded');
+  assert.equal(attributes['aria-expanded'], 'true');
+  workspace.finishClose();
+  assert.equal(restored, panel);
+  assert.equal(attributes['aria-expanded'], 'false');
+  assert.deepEqual(focus, ['heading', 'trigger']);
+});

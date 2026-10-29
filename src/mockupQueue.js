@@ -74,7 +74,7 @@ function create({ parseConfiguration, compatibleStyle, normalizedMockups, truste
     const key = crypto.createHash('sha256').update(JSON.stringify([
       parsed.some(item => item.surfaces.length > 1) ? 'png-v3-side-styles' : 'png-v2',
       configuration.event_id, configuration.id, mode, product.key,
-      ...parsed.map(item => [item.configuration.id, item.product.printful, item.product.orientation, item.design]),
+      ...parsed.map(item => [item.configuration.id, item.product.printful, item.product.orientation, require('./designImageAssets').canonical(item.design)]),
     ])).digest('hex');
     const createdAt = now();
     const candidate = { id: crypto.randomBytes(18).toString('base64url'),

@@ -231,8 +231,8 @@ npm run cutover:production -- \
 ```
 
 The command runs `npm ci`, the complete test suite, an AMD64 production image
-build, uploaded-image pixel and font-contract/geometry tests inside that Linux
-candidate, strict configuration validation, read-only target schema/runtime
+build, uploaded-image pixel, Storage-reference byte-parity and font-contract/geometry
+tests inside that Linux candidate, strict configuration validation, read-only target schema/runtime
 permission checks, ordered migrations and a second schema/access check. A failed
 check stops before deployment. It rechecks the exact commit and active
 production boundary immediately before deploying `fly.production.toml`, then
@@ -317,6 +317,12 @@ operator smoke must have its focused and real-router regression checks pass.
 Public health, read-only application routes, webhook authentication, production
 posture and Machine health are verified again. Any failure re-arms maintenance
 with the same pinned image.
+
+The read-only smoke requires two consecutive successful live/readiness probe
+pairs, with at most six attempts one second apart. A transient startup 503 or
+connection failure resets the success streak; persistent failures still abort.
+Other application reads and the single signature-rejection probe per webhook
+start only after health has stabilized. Webhook POSTs are never retried.
 
 ## Retention holds
 

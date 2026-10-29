@@ -50,13 +50,18 @@ test('mobile More reuses the design-options controls and returns them to the clo
   workspace.placeOverlapTrigger=()=>{};workspace.syncViewport=()=>{};workspace.chooseTool=()=>{};
   workspace.closeKeyboardEditor=()=>{};workspace.closeEmojiPicker=()=>{};workspace.closePicker=()=>{};
   const actions=document.getElementById('editor-options-actions'),originalParent=actions.parentNode,check=document.getElementById('check-live-words');
+  const imageTools=document.querySelector('.editor-add-controls'),imageParent=imageTools.parentNode;
   let clicks=0;check.addEventListener('click',()=>{clicks++;});
   assert.equal(workspace.open(document.getElementById('mobile-editor-toggle')),true);
   assert.equal(check.closest('#mobile-canvas-more')!==null,true);
+  assert.equal(document.querySelector('#mobile-canvas-add [data-image-usage]')!==null,true);
+  assert.equal(document.querySelector('#mobile-canvas-add [data-image-feedback]')!==null,true);
+  assert.equal(document.getElementById('editor-image-info').closest('#mobile-canvas-add')!==null,true);
   assert.equal(document.querySelector('#mobile-canvas-more #editor-reset'),null,'no redundant desktop submenu inside More');
   check.click();assert.equal(clicks,1);
   workspace.close();
   assert.equal(actions.parentNode,originalParent);
+  assert.equal(imageTools.parentNode,imageParent);
   assert.equal(document.getElementById('editor-options-panel').open,false);
   assert.equal(document.getElementById('check-live-words'),check,'handlers and source state keep the same DOM node');
 });

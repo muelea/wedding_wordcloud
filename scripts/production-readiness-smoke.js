@@ -19,20 +19,42 @@ async function request(fetchImpl, url, options = {}) {
   return fetchImpl(url, { ...options, signal: AbortSignal.timeout(15_000) });
 }
 
-async function run({ expected = parseExpected(), fetchImpl = fetch, output = console.log } = {}) {
+const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+async function waitForHealth(fetchImpl, sleepImpl = sleep) {
+  let consecutive = 0;
+  let statuses = { live: 'unreachable', ready: 'unreachable' };
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      const [live, ready] = await Promise.all([
+        request(fetchImpl, `${PUBLIC_URL}/health/live`),
+        request(fetchImpl, `${PUBLIC_URL}/health/ready`),
+      ]);
+      statuses = { live: live.status, ready: ready.status };
+      consecutive = live.status === 200 && ready.status === 200 ? consecutive + 1 : 0;
+      if (consecutive === 2) return;
+    } catch {
+      consecutive = 0;
+      statuses = { live: 'unreachable', ready: 'unreachable' };
+    }
+    if (attempt < 5) await sleepImpl(1_000);
+  }
+  throw new Error(`Production health failed (live=${statuses.live}, ready=${statuses.ready}); two consecutive healthy probes were not reached.`);
+}
+
+async function run({ expected = parseExpected(), fetchImpl = fetch, output = console.log,
+  sleepImpl = sleep } = {}) {
+  // Let cold starts and transient database timeouts settle before other probes.
+  // Persistent failures still stop the guarded release.
+  await waitForHealth(fetchImpl, sleepImpl);
   const webhookProbe = { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' };
-  const [live, ready, root, www, stripeWebhook, printfulWebhook, resendWebhook] = await Promise.all([
-    request(fetchImpl, `${PUBLIC_URL}/health/live`),
-    request(fetchImpl, `${PUBLIC_URL}/health/ready`),
+  const [root, www, stripeWebhook, printfulWebhook, resendWebhook] = await Promise.all([
     request(fetchImpl, `${PUBLIC_URL}/`, { redirect: 'manual' }),
     request(fetchImpl, `${WWW_URL}/`, { redirect: 'manual' }),
     request(fetchImpl, `${PUBLIC_URL}/webhook/stripe`, webhookProbe),
     request(fetchImpl, `${PUBLIC_URL}/webhook/printful`, webhookProbe),
     request(fetchImpl, `${PUBLIC_URL}/webhook/resend`, webhookProbe),
   ]);
-  if (live.status !== 200 || ready.status !== 200) {
-    throw new Error(`Production health failed (live=${live.status}, ready=${ready.status}).`);
-  }
   if (www.status !== 308 || www.headers.get('location') !== `${PUBLIC_URL}/`) {
     throw new Error('The www host does not redirect exactly to the canonical apex.');
   }
@@ -82,4 +104,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { PUBLIC_URL, WWW_URL, parseExpected, run };
+module.exports = { PUBLIC_URL, WWW_URL, parseExpected, waitForHealth, run };

@@ -1350,8 +1350,7 @@ test('multiple overlapping uploads and duplicates survive saving, with image lim
   assert.equal(pixel(1950, 525)[3], 0);
 
   const fifth = await save('white-glossy-mug-duo-11oz', { default: [...design, image(4, 'fifth')] });
-  assert.equal(fifth.status, 400);
-  assert.equal((await fifth.json()).error, 'invalid_design');
+  assert.equal(fifth.status, 201, 'the previous four-photo ceiling is removed');
 
   const sides = { front: [image(0, 'front-red', 1425, 1425), image(1, 'front-green', 1700, 1425)],
     back: [image(2, 'back-blue', 1425, 1425), image(3, 'back-yellow', 1700, 1425),
@@ -1364,9 +1363,8 @@ test('multiple overlapping uploads and duplicates survive saving, with image lim
   const extraBack = await save('all-over-basic-pillow-18in', {
     ...sides, back: [...sides.back, image(4, 'back-fifth', 1700, 1700)],
   });
-  assert.equal(extraBack.status, 400, 'the four-source limit covers the whole product, not each side independently');
-  assert.equal((await extraBack.json()).error, 'invalid_design');
-  assert.equal(Number((await hosted.query('SELECT count(*) AS count FROM configurations')).rows[0].count), 2);
+  assert.equal(extraBack.status, 201, 'additional photos are accepted across both print sides');
+  assert.equal(Number((await hosted.query('SELECT count(*) AS count FROM configurations')).rows[0].count), 4);
 });
 
 test('oversized raster artwork is rejected before it can become a paid configuration', async (t) => {
@@ -1382,7 +1380,7 @@ test('oversized raster artwork is rejected before it can become a paid configura
     context.putImageData(pixels, 0, 0);
     return {
       id: `image-${index}`, type: 'image', src: source.toDataURL('image/jpeg', .65),
-      x, y, width: 1900, height: 1900, angle: 0,
+      x, y, width: 3000, height: 3000, angle: 0,
     };
   });
   const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {

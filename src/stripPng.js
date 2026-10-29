@@ -71,6 +71,8 @@ async function stripPng({ width, height, paint, maxBytes, rows = 128 }) {
     const header = Buffer.alloc(13);
     header.writeUInt32BE(width); header.writeUInt32BE(height, 4); header[8] = 8; header[9] = 6;
     return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), ...chunks, chunk('IEND', Buffer.alloc(0))]);
+  } catch (error) {
+    throw deflate.errored || error;
   } finally {
     deflate.destroy(); canvas.width = canvas.height = 0;
   }

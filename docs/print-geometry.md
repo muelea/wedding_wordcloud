@@ -304,7 +304,7 @@ Oversized canvas files reach 12,900 × 18,900 pixels. Above 40 million pixels,
 images and incremental lossless PNG compression in `src/stripPng.js`. This
 keeps the complete provider resolution, transparent pixels, outlined text,
 emoji, uploaded images and layer order without allocating two full-sized
-RGBA surfaces on the 1 GB host. The existing 24 MiB artifact cap still applies;
+RGBA surfaces on the 1 GB host. The 40 MiB artifact cap still applies;
 partial or failed renders never produce an artifact. Smaller exports retain
 the existing rendering path. Strip output is checked against whole-image
 pixels across strip boundaries and rotated uploads.
