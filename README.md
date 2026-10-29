@@ -1115,6 +1115,25 @@ contain only the title, normalized words/counts and palette, with a static
 real-engine fallback. After changing the wedding examples or default palette,
 regenerate these committed assets with `node scripts/generate-hero-cloud-assets.js`.
 
+For an iPhone Safari homepage crash, run `node scripts/check-landing-browser.js
+--lan` and open the printed same-Wi-Fi address on the phone. The local diagnostic
+panel compares the original homepage with `omit=video`, `omit=demo`,
+`omit=filters` or all three disabled. Once the mug has loaded, its
+“WebGL-Ausfall simulieren” button uses the browser's `WEBGL_lose_context`
+extension to check the static-cloud fallback; that simulates a lost context,
+not iPhone memory pressure. The homepage bounds its source texture and model
+atlas to 1024 pixels and stops the decorative renderer after a graphics failure.
+The fixture retains at most 40 browser-local
+breadcrumbs across reloads, without form values or exception messages. This
+fixture loads no `.env`, database or external providers, and blocks external
+browser requests. Its form submission only tests navigation to a local result
+page; it never creates an event or exercises the real event page. Use test names
+and PINs. Without `--lan` it listens on loopback only. Stop it with Ctrl-C.
+Desktop checks do not establish iPhone stability: reproduce on the affected
+device with remote Safari Web Inspector and correlate the timestamp with its
+WebKit/GPU crash or Jetsam report. A breadcrumb alone cannot identify why a
+process terminated, and surviving a feature omission only narrows the cause.
+
 The server prints a URL on startup (including the machine's LAN address, so
 phones on the same Wi-Fi can reach it). `/` is the landing page and `POST /start`
 creates an event. A complete collaborator `.env` enables private print artifacts,

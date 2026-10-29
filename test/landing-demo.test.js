@@ -46,6 +46,10 @@ function harness(reduce = false, config = {}) {
   });
   if (config.speed) node('root').setAttribute('data-demo-speed', config.speed);
   if (config.motion) node('root').setAttribute('data-demo-motion', config.motion);
+  if (config.createViewer) Object.assign(window, {
+    THREE: {}, PrintfulProductModel: {}, Mug3DViewer: { create: config.createViewer },
+    wolkenworteLandingMugProduct: { previewMesh: {}, size: { diameterCm: 8.2 } },
+  });
   vm.runInNewContext(source, { window, document,
     IntersectionObserver: class { constructor(cb) { observer = cb; } observe() {} },
     ResizeObserver: class { observe() {} },
@@ -73,6 +77,79 @@ test('each phone types its word, flies it, and reveals its matching cloud destin
     assert.equal(h.node(`[data-arrival="${i}"]`).style.opacity, '1');
   }
   assert.equal(h.node('[data-flights]').children.length, 7, 'six phone flights and one reusable reveal group stay bounded across cycles');
+});
+
+test('a lost homepage context releases its viewer and keeps the complete static cloud without retrying', () => {
+  let options, creations = 0, destructions = 0;
+  const h = harness(false, { createViewer(value) {
+    creations++; options = value;
+    return { ready: new Promise(() => {}), render() {}, resize() {}, stopAutoRotate() {},
+      canvas: { style: {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 450 }) },
+      destroy() { destructions++; } };
+  } });
+  h.visible(true); h.advance(500);
+  assert.equal(creations, 1);
+  assert.equal(options.maxTextureSize, 1024);
+  assert.equal(options.modelOptions.maxTextureSize, 1024);
+  assert.equal(h.frames.size, 1);
+  options.onStatus('error');
+  assert.equal(destructions, 1);
+  assert.equal(h.frames.size, 0);
+  assert.equal(h.node('root').getAttribute('data-demo-fallback'), 'static');
+  for (let index = 0; index < 6; index++) assert.equal(h.node(`[data-arrival="${index}"]`).style.opacity, '1');
+  h.visible(false); h.visible(true);
+  h.intro(true); h.intro(false);
+  h.window.fire('wolkenworte:localechange', { detail: { locale: 'en' } });
+  h.node('[data-demo-replay]').fire('click');
+  h.node('[data-demo-pause]').fire('click');
+  options.onStatus('ready'); options.onStatus('error');
+  h.advance(20000);
+  assert.equal(creations, 1, 'visibility, locale, replay and restoration never recreate the failed GPU preview');
+  assert.equal(destructions, 1);
+  assert.equal(h.frames.size, 0);
+  assert.equal(h.node('[data-demo-replay]').hidden, true);
+  assert.equal(h.node('[data-demo-pause]').hidden, true);
+});
+
+test('homepage WebGL initialization failure leaves a static cloud instead of retrying each frame', () => {
+  let creations = 0;
+  const h = harness(false, { createViewer() { creations++; throw new Error('GPU unavailable'); } });
+  h.visible(true); h.advance(30000); h.visible(false); h.visible(true);
+  assert.equal(creations, 1);
+  assert.equal(h.frames.size, 0);
+  assert.equal(h.node('root').getAttribute('data-demo-fallback'), 'static');
+});
+
+test('static fallback explicitly disposes the flying-word textures as well as the viewer', () => {
+  let texturesDisposed = 0, viewersDestroyed = 0, staticFrames = 0;
+  const context = { mugUnavailable: false, frame: 7, window: { cancelAnimationFrame() {} },
+    stickers: Array.from({ length: 17 }, () => ({ mesh: { material: { map: { dispose() { texturesDisposed++; } } } } })),
+    cupMaterials: [{}], mugViewer: { destroy() { viewersDestroyed++; } },
+    staticScene() { staticFrames++; }, pauseButton: {}, replayButton: {}, root: { setAttribute() {} } };
+  const start = source.indexOf('  function useStaticFallback('), end = source.indexOf('  function ensureMug(', start);
+  vm.createContext(context); vm.runInContext(source.slice(start, end), context);
+  context.useStaticFallback(); context.useStaticFallback();
+  assert.equal(texturesDisposed, 17);
+  assert.equal(viewersDestroyed, 1);
+  assert.equal(staticFrames, 1);
+  assert.equal(context.stickers.length, 0);
+  assert.equal(context.mugViewer, null);
+  assert.equal(context.frame, null);
+});
+
+test('late completion of a failed homepage viewer cannot touch the disposed model', async () => {
+  let options, complete;
+  const h = harness(false, { createViewer(value) {
+    options = value;
+    return { ready: new Promise(resolve => { complete = resolve; }), render() {}, resize() {},
+      stopAutoRotate() {}, destroy() {} };
+  } });
+  h.visible(true);
+  options.onStatus('error');
+  complete(true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.node('root').getAttribute('data-demo-fallback'), 'static');
+  assert.equal(h.frames.size, 0);
 });
 
 test('offscreen and hidden-document states stop frames without resetting progress', () => {
@@ -436,7 +513,8 @@ test('landing attaches its unchanged word animation only after the catalog mug i
       window: { THREE, PrintfulProductModel: {}, wolkenworteLandingMugProduct: product,
         Mug3DViewer: { create(options) { createdOptions = options; return viewer; } } },
       document: { fonts: { status: 'loaded' } },
-      mugViewer: null, mugHost: { addEventListener() {}, setAttribute() {} }, cupMaterials: [],
+      mugViewer: null, mugUnavailable: false, mugHost: { addEventListener() {}, setAttribute() {} }, cupMaterials: [],
+      useStaticFallback() { context.mugUnavailable = true; },
       limitCupView() {}, buildStickers() { attached++; },
     };
     vm.createContext(context); vm.runInContext(source.slice(start, end), context);

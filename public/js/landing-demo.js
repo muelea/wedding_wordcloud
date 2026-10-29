@@ -69,6 +69,7 @@
   var mugStage = root.querySelector('[data-demo-mug]');
   var mugHost = root.querySelector('[data-demo-mug-viewer]');
   var mugViewer = null;
+  var mugUnavailable = false;
   var mugTextured = false;
   var mugRotationStarted = false;
   var previousCycleTime = 0;
@@ -252,13 +253,31 @@
     if (pauseButton) pauseButton.hidden = enabled || reduced.matches;
     if (mugHost) mugHost.setAttribute('tabindex', '-1');
   }
+  function useStaticFallback() {
+    if (mugUnavailable) return;
+    mugUnavailable = true;
+    // A decorative preview must not keep re-uploading textures after the
+    // browser loses its GPU context. Keep the complete DOM cloud available.
+    window.cancelAnimationFrame(frame);
+    frame = null;
+    var viewer = mugViewer;
+    mugViewer = null;
+    stickers.forEach(function (sticker) { sticker.mesh.material.map.dispose(); });
+    stickers = [];
+    cupMaterials = [];
+    if (viewer) viewer.destroy();
+    staticScene();
+    if (pauseButton) pauseButton.hidden = true;
+    if (replayButton) replayButton.hidden = true;
+    root.setAttribute('data-demo-fallback', 'static');
+  }
   function ensureMug() {
-    if (mugViewer || !mugHost || !window.Mug3DViewer || !window.THREE) return;
+    if (mugUnavailable || mugViewer || !mugHost || !window.Mug3DViewer || !window.THREE) return;
     if (document.fonts && document.fonts.status === 'loading') return;
     try {
       var product = window.wolkenworteLandingMugProduct;
       if (!product || !window.PrintfulProductModel) return;
-      mugViewer = window.Mug3DViewer.create({
+      var viewer = mugViewer = window.Mug3DViewer.create({
         THREE: window.THREE,
         host: mugHost,
         // Align the catalog mesh with the original animation's cup axis and
@@ -272,10 +291,16 @@
         maxPixelRatio: 1.5,
         // Bound fragment work even in the full-window comparison preview.
         maxRenderPixels: 1200000,
+        // This small decorative cup does not need the editor's 4096 atlas.
+        // Bound both its source canvas and provider atlas (4 MiB vs 64 MiB).
+        maxTextureSize: 1024,
+        modelOptions: { maxTextureSize: 1024 },
         framingFill: function () { return .82; },
+        onStatus: function (status) { if (status === 'error') useStaticFallback(); },
       });
-      mugViewer.ready.then(function (ready) {
-        if (!ready) return;
+      viewer.ready.then(function (ready) {
+        if (mugUnavailable || mugViewer !== viewer) return;
+        if (!ready) { useStaticFallback(); return; }
         mugViewer.group.scale.setScalar(1.216);
         mugViewer.group.traverse(function (object) {
           var materials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
@@ -289,10 +314,10 @@
         });
         buildStickers();
         mugViewer.render();
-      });
+      }).catch(useStaticFallback);
       mugHost.setAttribute('tabindex', '-1');
       mugViewer.render();
-    } catch (_) { mugViewer = null; }
+    } catch (_) { useStaticFallback(); }
   }
   // One optimized layout is both the destination of every flight and the
   // finished print. Curved strips attach left-to-right to the ceramic surface.
@@ -580,6 +605,7 @@
       y: q * q * geometry.start.y + 2 * q * progress * geometry.control.y + progress * progress * geometry.end.y };
   }
   function draw() {
+    if (mugUnavailable) return;
     // Read layout before any style/geometry writes. In particular, radial
     // drift must not force a layout once per word on WebKit.
     frameBounds = {
@@ -667,6 +693,7 @@
     }
     if (mugActive) {
       ensureMug();
+      if (mugUnavailable) return;
       if (mugViewer) {
         mugViewer.stopAutoRotate();
         // Negative yaw moves the visible front surface to the viewer's left.
@@ -829,9 +856,14 @@
     if (previous !== null) elapsed += Math.max(0, now - previous) * playbackSpeed;
     previous = now;
     draw();
-    frame = storyFinished ? null : window.requestAnimationFrame(tick);
+    frame = storyFinished || mugUnavailable ? null : window.requestAnimationFrame(tick);
   }
   function updatePlayback() {
+    if (mugUnavailable) {
+      if (pauseButton) pauseButton.hidden = true;
+      if (replayButton) replayButton.hidden = true;
+      return;
+    }
     if (pauseButton) {
       pauseButton.hidden = storyFinished || reduced.matches;
       pauseButton.setAttribute('aria-label', t(paused ? 'Vorschau abspielen' : 'Vorschau pausieren'));
@@ -859,6 +891,7 @@
     });
   }
   function replayStory() {
+    if (mugUnavailable) return;
     setStoryFinished(false);
     elapsed = cupOnly ? mugStart : 0;
     previousCycleTime = cycleDuration;
