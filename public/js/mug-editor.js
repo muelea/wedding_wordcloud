@@ -51,12 +51,75 @@
     return Math.min(MAX_EDITOR_SCALE, MAX_EDITOR_DIMENSION / Math.max(width, height));
   }
 
+  // Fabric keeps its advance widths/line box for typing and caret placement.
+  // Only the outer object uses ink dimensions. Its saved anchor stays at the
+  // original baseline position, including when the ink is asymmetric.
+  function tightTextClass(editor) {
+    return class ContentText extends root.fabric.IText {
+      initDimensions() {
+        if (this.isEditing && this.editorFrameCenter) this.clearContextTop();
+        const previous = this.editorFrameCenter || { x: 0, y: 0 };
+        super.initDimensions();
+        this.editorLineWidth = this.width;
+        this.editorLineHeight = this.height;
+        const baseline = this._fontSizeMult * (.5 - this._fontSizeFraction);
+        const thickness = this.fontSize * this.textDecorationThickness / 1000;
+        const decorations = [
+          ...(this.underline ? [[(baseline + this.offsets.underline) * this.fontSize + thickness / 2, thickness]] : []),
+          ...(this.linethrough ? [[(baseline + this.offsets.linethrough) * this.fontSize, thickness]] : []),
+        ];
+        const bounds = root.DesignContentBounds.text({ text: this.text, fontSize: this.fontSize,
+          fontFamily: root.DesignFonts.FONTS.find(font => font.family === this.fontFamily)?.key,
+          fontWeight: this.fontWeight }, editor.measureContext, {
+          baseline, decorations, skew: false,
+          box: { width: this.editorLineWidth, runs: [{ type: 'text', text: this.text, x: 0, width: this.editorLineWidth }] },
+        });
+        const center = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+        this.width = Math.max(1, bounds.width);
+        this.height = Math.max(1, bounds.height);
+        this.editorFrameCenter = center;
+        const matrix = this.calcOwnMatrix();
+        const dx = center.x - previous.x, dy = center.y - previous.y;
+        this.left += matrix[0] * dx + matrix[2] * dy;
+        this.top += matrix[1] * dx + matrix[3] * dy;
+      }
+      _getLeftOffset() { return -(this.editorLineWidth ?? this.width) / 2 - (this.editorFrameCenter?.x || 0); }
+      _getTopOffset() { return -(this.editorLineHeight ?? this.height) / 2 - (this.editorFrameCenter?.y || 0); }
+      _getLineLeftOffset(index) {
+        const width = this.width;
+        this.width = this.editorLineWidth ?? width;
+        try { return super._getLineLeftOffset(index); } finally { this.width = width; }
+      }
+      _renderSelection(...args) {
+        const width = this.width;
+        this.width = this.editorLineWidth ?? width;
+        try { return super._renderSelection(...args); } finally { this.width = width; }
+      }
+      clearContextTop(restoreManually) {
+        const ctx = this.canvas?.contextTop;
+        if (!ctx) return;
+        ctx.save();
+        ctx.transform(...this.canvas.viewportTransform);
+        this.transform(ctx);
+        // The blinking caret and typing highlight still occupy the line box.
+        const left = Math.min(this._getLeftOffset(), -this.width / 2) - 4;
+        const top = Math.min(this._getTopOffset(), -this.height / 2) - 4;
+        const right = Math.max(this._getLeftOffset() + this.editorLineWidth, this.width / 2) + 4;
+        const bottom = Math.max(this._getTopOffset() + this.editorLineHeight, this.height / 2) + 4;
+        ctx.clearRect(left, top, right - left, bottom - top);
+        if (!restoreManually) ctx.restore();
+        return ctx;
+      }
+    };
+  }
+
   class MugPrintEditor {
     constructor(options) {
       if (!root.fabric) throw new Error('Fabric.js is required for the mug editor');
       if (!root.MugIcons) throw new Error('MugIcons is required for the mug editor');
       if (!root.DesignFonts) throw new Error('DesignFonts is required for the mug editor');
       if (!root.ImagePrintQuality) throw new Error('ImagePrintQuality is required for the mug editor');
+      if (!root.DesignContentBounds) throw new Error('Shared content bounds are required for the mug editor');
       if (!root.WordCloudCore || !root.WolkenworteEmoji) {
         throw new Error('The shared emoji renderer is required for the mug editor');
       }
@@ -189,7 +252,8 @@
       if (root.WolkenworteEmoji.hasEmoji(item.text)) return this.makeRichTextObject(item);
       const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
       const style = this.normalizedTextStyle(item);
-      const text = new root.fabric.IText(item.text, {
+      this.contentTextClass ||= tightTextClass(this);
+      const text = new this.contentTextClass(item.text, {
         left: item.x * this.editorScale,
         top: item.y * this.editorScale,
         originX: 'center',
@@ -214,6 +278,7 @@
         cornerSize: 14,
         touchCornerSize: 28,
         padding: 3,
+        strokeWidth: 0,
         cursorColor: '#9c1c4c',
         cursorWidth: 2,
         selectionColor: 'rgba(156, 28, 76, .14)',
@@ -234,110 +299,78 @@
       return text;
     }
 
+    contentObjectOptions(item) {
+      return {
+        left: item.x * this.editorScale, top: item.y * this.editorScale,
+        originX: 'center', originY: 'center', angle: item.angle || 0,
+        lockScalingFlip: true, centeredScaling: true, centeredRotation: true,
+        transparentCorners: false, cornerColor: '#ffffff', cornerStrokeColor: '#9c1c4c',
+        borderColor: '#9c1c4c', cornerStyle: 'circle', cornerSize: 14, touchCornerSize: 28,
+        padding: 3, strokeWidth: 0, hoverCursor: 'move', moveCursor: 'grabbing',
+      };
+    }
+
+    placeContentFrame(object, center) {
+      object.editorFrameCenter = center;
+      const matrix = object.calcOwnMatrix();
+      object.left += matrix[0] * center.x + matrix[2] * center.y;
+      object.top += matrix[1] * center.x + matrix[3] * center.y;
+      object.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+      object.setCoords();
+      return object;
+    }
+
     makeRichTextObject(item) {
       const fontKey = root.DesignFonts.normalizeKey(item.fontFamily);
-      const font = root.DesignFonts.get(fontKey);
       const style = this.normalizedTextStyle(item);
-      const fontSize = Math.max(
-        MIN_PRINT_FONT_SIZE * this.editorScale,
-        item.fontSize * this.editorScale
-      );
-      const box = root.WordCloudCore.measureTextBox(
-        item.text,
-        fontSize,
-        this.measureContext,
-        font.cssFamily,
-        style
-      );
-      const frame = new root.fabric.Rect({
-        left: 0,
-        top: 0,
-        originX: 'center',
-        originY: 'center',
-        width: box.width,
-        height: box.height,
-        fill: 'rgba(0,0,0,0)',
-        strokeWidth: 0,
-        evented: false,
-      });
-      const children = [frame];
-      const textChildren = [];
+      const fontSize = Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, item.fontSize * this.editorScale);
+      const box = root.WordCloudCore.measureTextBox(item.text, fontSize, this.measureContext,
+        root.DesignFonts.cssFamily(fontKey), style);
+      const children = [], textChildren = [];
       for (const run of box.runs) {
         const centerX = -box.width / 2 + run.x + run.width / 2;
         if (run.type === 'emoji') {
           const element = root.WolkenworteEmoji.getLoadedImage(run);
           if (!element) throw new Error('Emoji artwork must be loaded before restoring the design');
-          const image = new root.fabric.FabricImage(element, {
-            left: centerX,
-            top: 0,
-            originX: 'center',
-            originY: 'center',
-            evented: false,
-            selectable: false,
-          });
-          const sourceWidth = image.width || 1;
-          const sourceHeight = image.height || 1;
-          const scale = Math.min(run.width / sourceWidth, fontSize / sourceHeight);
-          image.set({ scaleX: scale, scaleY: scale });
-          children.push(image);
-          continue;
+          const width = element.naturalWidth || element.width, height = element.naturalHeight || element.height;
+          const scale = Math.min(run.width / width, fontSize / height);
+          const ink = root.DesignContentBounds.emoji(run.asset, fontSize);
+          const left = Math.max(0, (ink.left + width * scale / 2) / scale);
+          const top = Math.max(0, (ink.top + height * scale / 2) / scale);
+          const right = Math.min(width, (ink.left + ink.width + width * scale / 2) / scale);
+          const bottom = Math.min(height, (ink.top + ink.height + height * scale / 2) / scale);
+          children.push(new root.fabric.FabricImage(element, { left: centerX + (left + right - width) * scale / 2,
+            top: (top + bottom - height) * scale / 2, originX: 'center', originY: 'center',
+            cropX: left, cropY: top, width: right - left, height: bottom - top,
+            scaleX: scale, scaleY: scale, strokeWidth: 0, evented: false, selectable: false }));
+        } else {
+          this.contentTextClass ||= tightTextClass(this);
+          const text = new this.contentTextClass(run.text, { left: centerX, top: 0,
+            originX: 'center', originY: 'center', fontFamily: root.DesignFonts.get(fontKey).family,
+            fontSize, fontWeight: style.fontWeight, underline: style.underline, linethrough: style.linethrough,
+            fill: item.color, strokeWidth: 0, evented: false, selectable: false });
+          textChildren.push(text); children.push(text);
         }
-        const text = new root.fabric.FabricText(run.text, {
-          left: centerX,
-          top: 0,
-          originX: 'center',
-          originY: 'center',
-          fontFamily: font.family,
-          fontSize,
-          fontWeight: style.fontWeight,
-          fontStyle: 'normal',
-          underline: style.underline,
-          linethrough: style.linethrough,
-          fill: item.color,
-          evented: false,
-          selectable: false,
-        });
-        textChildren.push(text);
-        children.push(text);
       }
-      const group = new root.fabric.Group(children, {
-        left: item.x * this.editorScale,
-        top: item.y * this.editorScale,
-        originX: 'center',
-        originY: 'center',
-        angle: item.angle || 0,
-        skewX: style.fontStyle === 'italic' ? root.WordCloudCore.ITALIC_SKEW_DEGREES : 0,
-        lockScalingFlip: true,
-        centeredScaling: true,
-        centeredRotation: true,
-        transparentCorners: false,
-        cornerColor: '#ffffff',
-        cornerStrokeColor: '#9c1c4c',
-        borderColor: '#9c1c4c',
-        cornerStyle: 'circle',
-        cornerSize: 14,
-        touchCornerSize: 28,
-        padding: 3,
-        hoverCursor: 'move',
-        moveCursor: 'grabbing',
-      });
-      group.editorKind = 'text';
-      group.editorId = item.id || this.nextId();
-      group.editorFontKey = fontKey;
-      group.editorFontWeight = style.fontWeight;
-      group.editorFontStyle = style.fontStyle;
-      group.editorUnderline = style.underline;
-      group.editorLinethrough = style.linethrough;
-      group.editorColorLocked = item.colorLocked === true;
-      group.editorLayoutFontSize = Number.isFinite(item.layoutFontSize) ? item.layoutFontSize : undefined;
-      group.editorFontSize = fontSize;
-      group.editorText = item.text;
-      group.editorColor = item.color;
-      group.editorTextChildren = textChildren;
-      group.text = item.text;
-      group.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
-      group.setCoords();
-      return group;
+      const ink = root.DesignContentBounds.union(children.map(child => child.getBoundingRect()));
+      const center = { x: ink.left + ink.width / 2, y: ink.top + ink.height / 2 };
+      const object = new root.fabric.Group(children, { ...this.contentObjectOptions(item),
+        skewX: style.fontStyle === 'italic' ? root.WordCloudCore.ITALIC_SKEW_DEGREES : 0 });
+      object.editorKind = 'text';
+      object.editorId = item.id || this.nextId();
+      object.editorFontKey = fontKey;
+      object.editorFontWeight = style.fontWeight;
+      object.editorFontStyle = style.fontStyle;
+      object.editorUnderline = style.underline;
+      object.editorLinethrough = style.linethrough;
+      object.editorColorLocked = item.colorLocked === true;
+      object.editorLayoutFontSize = Number.isFinite(item.layoutFontSize) ? item.layoutFontSize : undefined;
+      object.editorFontSize = fontSize;
+      object.editorText = item.text;
+      object.editorColor = item.color;
+      object.editorTextChildren = textChildren;
+      object.text = item.text;
+      return this.placeContentFrame(object, center);
     }
 
     objectText(object) {
@@ -382,96 +415,55 @@
     makeImageObject(item) {
       const element = this.imageElements.get(item.src);
       if (!element) throw new Error('Uploaded image must be loaded before restoring the design');
-      const image = new root.fabric.FabricImage(element, {
-        left: item.x * this.editorScale,
-        top: item.y * this.editorScale,
-        originX: 'center',
-        originY: 'center',
-        angle: item.angle || 0,
-        lockScalingFlip: true,
-        centeredScaling: true,
-        centeredRotation: true,
-        transparentCorners: false,
-        cornerColor: '#ffffff',
-        cornerStrokeColor: '#9c1c4c',
-        borderColor: '#9c1c4c',
-        cornerStyle: 'circle',
-        cornerSize: 14,
-        touchCornerSize: 28,
-        padding: 3,
-        hoverCursor: 'move',
-        moveCursor: 'grabbing',
+      const sourceWidth = element.naturalWidth || element.width;
+      const sourceHeight = element.naturalHeight || element.height;
+      const ink = root.DesignContentBounds.image(element, (width, height) => {
+        // Fabric's environment works in browsers and in the Node geometry tests.
+        const surface = root.fabric.util.createCanvasElement();
+        surface.width = width; surface.height = height;
+        return surface;
+      });
+      const cropX = (ink.left + .5) * sourceWidth;
+      const cropY = (ink.top + .5) * sourceHeight;
+      const width = ink.width * sourceWidth, height = ink.height * sourceHeight;
+      const image = new root.fabric.FabricImage(element, { ...this.contentObjectOptions(item),
+        cropX, cropY, width, height,
+        scaleX: item.width * this.editorScale / sourceWidth,
+        scaleY: item.height * this.editorScale / sourceHeight,
       });
       image.editorKind = 'image';
       image.editorSrc = item.src;
       image.editorId = item.id || this.nextId('bild');
-      image.set({
-        scaleX: item.width * this.editorScale / Math.max(1, image.width),
-        scaleY: item.height * this.editorScale / Math.max(1, image.height),
+      image.editorSourceWidth = sourceWidth;
+      image.editorSourceHeight = sourceHeight;
+      // Draw the full source at its original placement so transparent margins
+      // retain identical interpolation in the editor and immutable print file.
+      image._renderFill = function (ctx) {
+        ctx.drawImage(this.getElement(), -this.width / 2 - this.cropX,
+          -this.height / 2 - this.cropY, this.editorSourceWidth, this.editorSourceHeight);
+      };
+      return this.placeContentFrame(image, {
+        x: cropX + width / 2 - sourceWidth / 2, y: cropY + height / 2 - sourceHeight / 2,
       });
-      image.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
-      image.setCoords();
-      return image;
     }
 
     makeIconObject(item) {
       const definition = root.MugIcons.get(item.icon);
       if (!definition) throw new Error(`Unknown mug icon: ${item.icon}`);
-      const viewBox = root.MugIcons.VIEWBOX_SIZE;
-      const color = item.color || this.palette[0];
-      const frame = new root.fabric.Rect({
-        left: 0,
-        top: 0,
-        originX: 'center',
-        originY: 'center',
-        width: viewBox,
-        height: viewBox,
-        fill: 'rgba(0,0,0,0)',
-        strokeWidth: 0,
-        evented: false,
-      });
-      const drawing = new root.fabric.Path(definition.path, {
-        left: 0,
-        top: 0,
-        originX: 'center',
-        originY: 'center',
-        fill: null,
-        stroke: color,
-        strokeWidth: root.MugIcons.STROKE_WIDTH,
-        strokeLineCap: 'round',
-        strokeLineJoin: 'round',
-        evented: false,
-      });
-      const icon = new root.fabric.Group([frame, drawing], {
-        left: item.x * this.editorScale,
-        top: item.y * this.editorScale,
-        originX: 'center',
-        originY: 'center',
-        angle: item.angle || 0,
-        lockScalingFlip: true,
-        centeredScaling: true,
-        centeredRotation: true,
-        transparentCorners: false,
-        cornerColor: '#ffffff',
-        cornerStrokeColor: '#9c1c4c',
-        borderColor: '#9c1c4c',
-        cornerStyle: 'circle',
-        cornerSize: 14,
-        touchCornerSize: 28,
-        padding: 3,
-        hoverCursor: 'move',
-        moveCursor: 'grabbing',
+      const icon = new root.fabric.Path(definition.path, { ...this.contentObjectOptions(item),
+        fill: null, stroke: item.color || this.palette[0], strokeWidth: root.MugIcons.STROKE_WIDTH,
+        strokeLineCap: 'round', strokeLineJoin: 'round',
       });
       icon.editorKind = 'icon';
       icon.editorIcon = definition.id;
       icon.editorIconLabel = definition.label;
-      icon.editorDrawing = drawing;
       icon.editorId = item.id || this.nextId('motiv');
       icon.editorColorLocked = item.colorLocked === true;
       this.setIconSize(icon, Math.max(MIN_PRINT_ICON_SIZE, item.size || 160));
-      icon.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
-      icon.setCoords();
-      return icon;
+      return this.placeContentFrame(icon, {
+        x: icon.pathOffset.x - root.MugIcons.VIEWBOX_SIZE / 2,
+        y: icon.pathOffset.y - root.MugIcons.VIEWBOX_SIZE / 2,
+      });
     }
 
     nextId(prefix = 'wort') {
@@ -785,10 +777,7 @@
         this.setFeedback('Dieses Emoji wird noch nicht unterstützt. Bitte wählt ein anderes.');
         return '';
       }
-      return root.WolkenworteEmoji.truncateGraphemes(
-        root.WolkenworteEmoji.canonicalizeText(text),
-        30
-      );
+      return root.WolkenworteEmoji.canonicalizeText(text);
     }
 
     loadImageElement(src) {
@@ -1497,20 +1486,28 @@
       if (this.isActiveSelection(object)) return;
       if (object.editorKind === 'image') return;
       if (object.editorKind === 'icon') {
-        const size = Math.max(object.width * object.scaleX, object.height * object.scaleY) / this.editorScale;
+        const size = root.MugIcons.VIEWBOX_SIZE * object.scaleX / this.editorScale;
         this.setIconSize(object, Math.max(MIN_PRINT_ICON_SIZE, size));
         object.setCoords();
         return;
       }
       if (object.editorText !== undefined) return;
+      const before = object.calcOwnMatrix();
+      const center = object.editorFrameCenter || { x: 0, y: 0 };
+      const anchor = { x: before[4] - before[0] * center.x - before[2] * center.y,
+        y: before[5] - before[1] * center.x - before[3] * center.y };
       const nextSize = Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, object.fontSize * object.scaleX);
       if (Number.isFinite(object.editorLayoutFontSize)) object.editorLayoutFontSize *= Math.abs(object.scaleX);
       object.set({ fontSize: nextSize, scaleX: 1, scaleY: 1 });
+      const after = object.calcOwnMatrix();
+      const next = object.editorFrameCenter || { x: 0, y: 0 };
+      object.set({ left: object.left + anchor.x - (after[4] - after[0] * next.x - after[2] * next.y),
+        top: object.top + anchor.y - (after[5] - after[1] * next.x - after[3] * next.y) });
       object.setCoords();
     }
 
     setIconSize(object, printSize) {
-      const baseSize = Math.max(object.width, object.height) || root.MugIcons.VIEWBOX_SIZE;
+      const baseSize = root.MugIcons.VIEWBOX_SIZE;
       const scale = printSize * this.editorScale / baseSize;
       object.set({ scaleX: scale, scaleY: scale });
     }
@@ -1518,7 +1515,7 @@
     getObjectColor(object) {
       if (object.editorKind === 'image') return null;
       return String(object.editorKind === 'icon'
-        ? object.editorDrawing.stroke
+        ? object.stroke
         : object.editorText !== undefined
           ? object.editorColor
           : object.fill);
@@ -1547,40 +1544,18 @@
     }
 
     getConstrainedBounds(object) {
-      const bounds = object.getBoundingRect();
-      let left = bounds.left;
-      let top = bounds.top;
-      let right = left + bounds.width;
-      let bottom = top + bounds.height;
-      // Fabric's selection box and the print renderer use different text line
-      // boxes. Contain both, using the same measured text as server validation.
-      for (const child of this.selectedObjects(object)) {
+      const boxes = this.selectedObjects(object).flatMap(child => {
         const item = this.serializeObject(child);
-        const box = item.type === 'image' ? item
-          : item.type === 'icon' ? { width: item.size, height: item.size }
-          : (() => {
-            const measured = root.WordCloudCore.measureTextBox(
-              item.text,
-              item.fontSize,
-              this.measureContext,
-              root.DesignFonts.cssFamily(item.fontFamily),
-              item
-            );
-            return root.WordCloudCore.styledTextBox(measured, item);
-          })();
-        const radians = item.angle * Math.PI / 180;
-        const cos = Math.abs(Math.cos(radians));
-        const sin = Math.abs(Math.sin(radians));
-        const halfWidth = (box.width * cos + box.height * sin) * this.editorScale / 2;
-        const halfHeight = (box.width * sin + box.height * cos) * this.editorScale / 2;
-        const x = item.x * this.editorScale;
-        const y = item.y * this.editorScale;
-        left = Math.min(left, x - halfWidth);
-        right = Math.max(right, x + halfWidth);
-        top = Math.min(top, y - halfHeight);
-        bottom = Math.max(bottom, y + halfHeight);
-      }
-      return { left, top, width: right - left, height: bottom - top };
+        const assets = item.type === 'image' ? { image: root.DesignContentBounds.image(
+          this.imageElements.get(item.src), (width, height) => {
+            const canvas = root.fabric.util.createCanvasElement();
+            canvas.width = width; canvas.height = height; return canvas;
+          }) } : undefined;
+        const print = root.DesignContentBounds.bounds(item, this.measureContext, assets);
+        return [child.getBoundingRect(), { left: print.left * this.editorScale,
+          top: print.top * this.editorScale, width: print.width * this.editorScale, height: print.height * this.editorScale }];
+      });
+      return root.DesignContentBounds.union(boxes);
     }
 
     keepInside(object) {
@@ -1942,11 +1917,13 @@
     }
 
     serializeObject(object) {
-      const transform = root.fabric.util.qrDecompose(object.calcTransformMatrix());
+      const matrix = object.calcTransformMatrix();
+      const transform = root.fabric.util.qrDecompose(matrix);
+      const center = object.editorFrameCenter || { x: 0, y: 0 };
       const common = {
         id: object.editorId,
-        x: transform.translateX / this.editorScale,
-        y: transform.translateY / this.editorScale,
+        x: (transform.translateX - matrix[0] * center.x - matrix[2] * center.y) / this.editorScale,
+        y: (transform.translateY - matrix[1] * center.x - matrix[3] * center.y) / this.editorScale,
         angle: transform.angle || 0,
         ...(object.editorLayoutFingerprint ? { layoutFingerprint: object.editorLayoutFingerprint } : {}),
       };
@@ -1955,8 +1932,8 @@
           ...common,
           type: 'image',
           src: object.editorSrc,
-          width: object.width * Math.abs(transform.scaleX) / this.editorScale,
-          height: object.height * Math.abs(transform.scaleY) / this.editorScale,
+          width: (object.editorSourceWidth || object.width) * Math.abs(transform.scaleX) / this.editorScale,
+          height: (object.editorSourceHeight || object.height) * Math.abs(transform.scaleY) / this.editorScale,
         };
       }
       common.color = this.getObjectColor(object);
@@ -1966,10 +1943,7 @@
           ...common,
           type: 'icon',
           icon: object.editorIcon,
-          size: Math.max(
-            object.width * Math.abs(transform.scaleX),
-            object.height * Math.abs(transform.scaleY)
-          ) / this.editorScale,
+          size: root.MugIcons.VIEWBOX_SIZE * Math.abs(transform.scaleX) / this.editorScale,
         };
       }
       return {
@@ -2023,7 +1997,7 @@
     rotateActive(delta) {
       const active = this.canvas.getActiveObject();
       if (!active) return;
-      active.rotate((active.angle || 0) + delta);
+      this.rotateAroundAnchor(active, (active.angle || 0) + delta);
       this.keepInside(active);
       this.canvas.requestRenderAll();
       this.recordHistory();
@@ -2031,6 +2005,16 @@
       this.updateSelectionPanel();
       this.showAngleBadge(active);
       this.finishAngleBadge();
+    }
+
+    rotateAroundAnchor(object, angle) {
+      const before = object.calcOwnMatrix();
+      object.rotate(angle);
+      const center = object.editorFrameCenter;
+      if (!center) return;
+      const after = object.calcOwnMatrix();
+      object.set({ left: object.left + (after[0] - before[0]) * center.x + (after[2] - before[2]) * center.y,
+        top: object.top + (after[1] - before[1]) * center.x + (after[3] - before[3]) * center.y });
     }
 
     selectionAngle() {
@@ -2078,7 +2062,7 @@
       const multiple = this.isActiveSelection(active);
       if (multiple) this.canvas.discardActiveObject();
       selected.forEach(object => {
-        object.rotate(angle);
+        this.rotateAroundAnchor(object, angle);
         this.keepInside(object);
       });
       const selection = multiple ? this.setActiveObjects(selected) : active;
@@ -2197,21 +2181,9 @@
     }
 
     textItemFitsPrintArea(item) {
-      const measured = root.WordCloudCore.measureTextBox(
-        item.text,
-        item.fontSize,
-        this.measureContext,
-        root.DesignFonts.cssFamily(item.fontFamily),
-        item
-      );
-      const box = root.WordCloudCore.styledTextBox(measured, item);
-      const radians = (Number(item.angle) || 0) * Math.PI / 180;
-      const cosine = Math.abs(Math.cos(radians));
-      const sine = Math.abs(Math.sin(radians));
-      const width = box.width * cosine + box.height * sine;
-      const height = box.width * sine + box.height * cosine;
+      const box = root.DesignContentBounds.bounds(item, this.measureContext);
       const area = this.getSafeArea();
-      return width <= area.width - 4 && height <= area.height - 4;
+      return box.width <= area.width - 4 && box.height <= area.height - 4;
     }
 
     setActiveFontSize(value) {

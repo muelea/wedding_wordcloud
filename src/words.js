@@ -2,9 +2,10 @@
 
 const EmojiCatalog = require('../public/js/emoji-catalog.js');
 
-const MAX_WORD_LENGTH = 30;
+const { MAX_WORD_LENGTH } = require('../public/js/cloud-limits');
 
-function normalizeWordInput(rawWord, locale = 'de') {
+// Shared character safety; design text deliberately has no contribution limit.
+function normalizeTextInput(rawWord) {
   if (typeof rawWord !== 'string') return { word: '', error: 'invalid_word' };
   let word = rawWord.normalize('NFC').trim()
     .replace(/[\x00-\x1f\x7f]/g, '')
@@ -14,13 +15,20 @@ function normalizeWordInput(rawWord, locale = 'de') {
     return { word: '', error: 'unsupported_emoji' };
   }
   word = EmojiCatalog.canonicalizeText(word);
-  word = EmojiCatalog.truncateGraphemes(word, MAX_WORD_LENGTH).trim();
   if (!word) return { word: '', error: 'invalid_word' };
   return { word, error: null };
+}
+
+function normalizeWordInput(rawWord, locale = 'de') {
+  const result = normalizeTextInput(rawWord);
+  if (result.word && EmojiCatalog.graphemeLength(result.word) > MAX_WORD_LENGTH) {
+    return { word: '', error: 'word_too_long' };
+  }
+  return result;
 }
 
 function normalizeWord(rawWord, locale = 'de') {
   return normalizeWordInput(rawWord, locale).word;
 }
 
-module.exports = { normalizeWord, normalizeWordInput, MAX_WORD_LENGTH };
+module.exports = { normalizeWord, normalizeWordInput, normalizeTextInput, MAX_WORD_LENGTH };

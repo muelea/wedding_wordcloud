@@ -19,6 +19,51 @@ test('Home gives the remembered journey a clear unboxed re-entry hierarchy', () 
 function storage() { const values = new Map(); return {
   getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key),
 }; }
+test('Home keeps remembered clouds and designs hidden on load and history restore until re-enabled', async () => {
+  const { JSDOM } = require('jsdom');
+  const markup = landingTemplate.match(/<aside\b[^>]*id="resume-journey"[\s\S]*?<\/aside>/)?.[0];
+  const initialization = [...landingTemplate.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+    .map(match => match[1]).find(source => source.includes('WolkenworteJourney.mountHome(document)'));
+  assert.ok(markup);
+  assert.ok(initialization);
+  for (const directDesign of [false, true]) {
+    const dom = new JSDOM(markup);
+    try {
+      const { window } = dom;
+      const card = window.document.getElementById('resume-journey');
+      const local = storage();
+      const slug = '-_AbCdEf0123456789xyZQ';
+      Journey.remember(slug, 'Cloud', true, local, Date.now(), directDesign);
+      local.setItem(`wolkenworte-order:${slug}`, JSON.stringify([{ id: 'a'.repeat(16) }]));
+      local.setItem(`wolkenworte-order:${slug}:expires`, String(Date.now() + Journey.TTL));
+      const saved = local.getItem('wolkenworte-recent-event');
+      let lookups = 0;
+      const scope = { window, document: window.document, localStorage: local, AbortSignal,
+        fetch: async () => { lookups++; return { status: 200 }; } };
+      vm.createContext(scope);
+      vm.runInContext(fs.readFileSync(require.resolve('../public/js/site-journey'), 'utf8'), scope);
+      vm.runInContext(initialization, scope);
+      assert.equal(card.hidden, true, 'initial load keeps the complete section hidden');
+      // A history-restored page must also hide a previously visible section.
+      card.hidden = false;
+      window.dispatchEvent(new window.PageTransitionEvent('pageshow', { persisted: true }));
+      assert.equal(card.hidden, true);
+      assert.equal(lookups, 0, 'the disabled section does not validate a return link');
+      assert.equal(local.getItem('wolkenworte-recent-event'), saved);
+      assert.equal(scope.WolkenworteJourney.recent().slug, slug);
+
+      card.dataset.resumeEnabled = 'true';
+      await scope.WolkenworteJourney.mountHome(window.document);
+      assert.equal(card.hidden, false, 'the retained section can be restored with its switch');
+      assert.equal(lookups, 1);
+      assert.equal(card.querySelector('[data-resume-cloud]').getAttribute('href'), directDesign
+        ? `/e/${slug}/configure?view=products` : `/e/${slug}`);
+      const cartLink = card.querySelector('[data-resume-design]');
+      assert.equal(cartLink.hidden, false);
+      assert.equal(cartLink.getAttribute('href'), `/e/${slug}/configure?cart=1`);
+    } finally { dom.window.close(); }
+  }
+});
 test('the last opened event survives Home without conflating a new cloud or storing a PIN', () => {
   const local = storage();
   Journey.remember('-_AbCdEf0123456789xyZQ', 'Erste Wolke', true, local, 100);

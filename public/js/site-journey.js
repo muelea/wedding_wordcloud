@@ -35,9 +35,10 @@
   }
   async function mountHome(document, fetcher = fetch) {
     const card = document.getElementById('resume-journey');
-    const saved = recent();
     if (!card) return;
     card.hidden = true;
+    if (card.dataset?.resumeEnabled === 'false') return;
+    const saved = recent();
     if (!saved) return;
     const cloudLink = card.querySelector('[data-resume-cloud]');
     const designLink = card.querySelector('[data-resume-design]');

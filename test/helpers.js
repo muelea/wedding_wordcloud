@@ -35,6 +35,7 @@ const APPLICATION_MIGRATIONS = [
   '20261027000000_activity_retention.sql',
   '20261028000000_print_approval.sql',
   '20261029000000_private_design_images.sql',
+  '20261031000000_account_cloud_bookmarks.sql',
 ].map((filename) => path.join(__dirname, '..', 'supabase', 'migrations', filename));
 
 function clearApplicationModules() {

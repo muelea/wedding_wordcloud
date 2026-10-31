@@ -9,10 +9,11 @@ const fonts = require('../src/designFonts');
 const core = require('../public/js/wordcloud-core');
 
 function fixture(t, mobileViewport) {
-  const root = { fabric, DesignFonts: fonts, WordCloudCore: core, WolkenworteEmoji: { hasEmoji: () => false } };
+  const root = { fabric, DesignContentBounds: require('../public/js/design-content-bounds'), DesignFonts: fonts, WordCloudCore: core, WolkenworteEmoji: { hasEmoji: () => false } };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), { window: root, setTimeout, clearTimeout });
   const editor = Object.create(root.MugPrintEditor.prototype);
   Object.assign(editor, { editorScale: .5, canvasWidth: 500, canvasHeight: 300, mobileViewport,
+    measureContext: createCanvas(1, 1).getContext('2d'),
     history: ['unchanged history'], historyIndex: 0,
     canvas: new fabric.Canvas(null, { width: 500, height: 300, enableRetinaScaling: false }),
     shell: { clientWidth: 1000, clientHeight: 600 }, scroll: { clientWidth: 300, clientHeight: 240 },

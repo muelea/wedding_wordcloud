@@ -277,3 +277,25 @@ test('rotation guidance can be dismissed for the session without changing the ar
   root.innerWidth=390;root.innerHeight=844;workspace.syncOrientationHint();
   assert.equal(document.getElementById('mobile-canvas-orientation-hint').hidden,true);
 });
+
+test('mobile personal text has no character cap after numeric and search sessions', async t => {
+  const { dom, document, workspace } = fixture();
+  t.after(() => dom.window.close());
+  const text = 'Unsere Erinnerungen bleiben für immer. '.repeat(35).trim();
+  const object = { editorKind: 'text', text };
+  workspace.editor = { selectedObjects: () => [object], objectText: target => target.text,
+    updateSelectionPanel() {}, async applyTextChange(target, value) { target.text = value; } };
+  const input = document.getElementById('mobile-canvas-text');
+  input.maxLength = 32;
+  workspace.openTextEditor();
+  assert.equal(input.hasAttribute('maxlength'), false);
+  assert.equal(input.value, text);
+  workspace.closeKeyboardEditor();
+  input.maxLength = 1024;
+  workspace.openTextEditor();
+  assert.equal(input.hasAttribute('maxlength'), false);
+  assert.equal(input.value, text);
+  input.value = text + ' Ein persönlicher Abschluss.';
+  assert.equal(await workspace.saveKeyboardEditor(), true);
+  assert.equal(object.text, text + ' Ein persönlicher Abschluss.');
+});

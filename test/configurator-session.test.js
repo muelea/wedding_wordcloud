@@ -2214,3 +2214,14 @@ test('ordinary source feedback stays in options while actionable feedback can oc
     assert.ok([...page.document.querySelectorAll('[data-cloud-feedback]')].every(element=>element.hidden));
   } finally {dom.window.close();}
 });
+
+test('long personal text survives local draft storage and restoration without shortening', async () => {
+  const backend = draftBackend();
+  const text = 'Unsere Erinnerungen bleiben für immer. '.repeat(35).trim();
+  const store = Session.createDraftStore('long-text-event', { backend });
+  await store.save({ productKey: 'mug', orientation: 'default', theme: 'confetti', words: [],
+    designs: { default: [{ id: 'personal', type: 'text', text }] }, currentDesignEdited: true });
+  const reopened = Session.createDraftStore('long-text-event', { backend });
+  assert.equal((await reopened.loadActive()).designs.default[0].text, text);
+  assert.equal((await reopened.loadFor({ productKey: 'mug' })).designs.default[0].text, text);
+});

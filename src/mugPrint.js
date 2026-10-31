@@ -7,6 +7,7 @@ const MugIcons = require('../public/js/mug-icons.js');
 const DesignFonts = require('./designFonts');
 const { inspectRasterDataUrl } = require('./designImages');
 const EmojiAssets = require('./emojiAssets');
+const ContentBounds = require('./designContentBounds');
 
 const measureCanvas = createCanvas(10, 10);
 const measureCtx = measureCanvas.getContext('2d');
@@ -167,7 +168,8 @@ function isPrintDesignWithinBounds(
   design,
   width,
   height,
-  safeMargin = DESIGN_SAFE_MARGIN
+  safeMargin = DESIGN_SAFE_MARGIN,
+  legacy = false
 ) {
   if (!Array.isArray(design) || design.length === 0 ||
       !Number.isFinite(width) || !Number.isFinite(height)) return false;
@@ -182,14 +184,20 @@ function isPrintDesignWithinBounds(
     if (item.type === 'image' && (!inspectRasterDataUrl(item.src) ||
         !Number.isFinite(item.width) || !Number.isFinite(item.height) ||
         item.width <= 0 || item.height <= 0)) return false;
-    const bounds = getDesignBounds(item);
-    const halfWidth = bounds.width / 2;
-    const halfHeight = bounds.height / 2;
-    return item.x - halfWidth >= area.x &&
-      item.x + halfWidth <= area.x + area.width &&
-      item.y - halfHeight >= area.y &&
-      item.y + halfHeight <= area.y + area.height;
+    const previous = legacy ? getDesignBounds(item) : null;
+    const bounds = legacy ? { left: item.x - previous.width / 2,
+      top: item.y - previous.height / 2, ...previous } : ContentBounds.bounds(item);
+    return bounds && [bounds.left, bounds.top, bounds.width, bounds.height].every(Number.isFinite) &&
+      bounds.left >= area.x && bounds.left + bounds.width <= area.x + area.width &&
+      bounds.top >= area.y && bounds.top + bounds.height <= area.y + area.height;
   });
+}
+
+// Existing accepted snapshots keep their original print bytes/geometry. Only
+// rendering may use the former guard; new editable saves always use ink bounds.
+function isRenderablePrintDesign(design, width, height, safeMargin) {
+  return isPrintDesignWithinBounds(design, width, height, safeMargin) ||
+    isPrintDesignWithinBounds(design, width, height, safeMargin, true);
 }
 
 function designElements(design, { outlineText = false, outlineSymbols = null } = {}) {
@@ -268,7 +276,7 @@ function buildProductPrintSvg(product, design) {
   const { width, height } = product.printFile;
   // Approved snapshots retain their original geometry as catalog safe areas
   // evolve. New saves enforce the current per-surface areas in events.js.
-  if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+  if (!isRenderablePrintDesign(design, width, height, product.designSafeMargin)) {
     throw new Error('Cannot build a print with an invalid design');
   }
 
@@ -284,7 +292,7 @@ function buildProductPrintSvg(product, design) {
 function buildProviderPrintSvg(product, design) {
   if (!product?.printFile) throw new Error('Cannot build a print for an invalid product');
   const { width, height } = product.printFile;
-  if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+  if (!isRenderablePrintDesign(design, width, height, product.designSafeMargin)) {
     throw new Error('Cannot build a print with an invalid design');
   }
   const outlineSymbols = new Map();
@@ -304,4 +312,5 @@ module.exports = {
   buildProductPrintSvg,
   buildProviderPrintSvg,
   isPrintDesignWithinBounds,
+  isRenderablePrintDesign,
 };

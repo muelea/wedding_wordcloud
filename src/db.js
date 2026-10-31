@@ -10,7 +10,8 @@ const log = require('./structuredLog');
 const { paymentAmounts } = require('./checkoutTax');
 const { generateEventSlug } = require('./slug');
 
-const REQUIRED_SCHEMA_VERSION = '10';
+const REQUIRED_SCHEMA_VERSION = '11';
+const MAX_SAVED_CLOUDS = 100;
 const { yearEndDeadline, emailRetentionYears, evidenceAddresses } = require('./retentionPolicy');
 const { MAX_EVENT_CONTRIBUTIONS, MAX_EVENT_UNIQUE_WORDS,
   MAX_OWNER_CONTRIBUTIONS } = require('../public/js/cloud-limits');
@@ -3516,6 +3517,44 @@ async function listSavedDesigns(accountId) {
     AND d.expires_at > transaction_timestamp() ORDER BY d.saved_at DESC LIMIT 20`, [accountId])).rows);
 }
 
+async function saveCloudBookmark(accountId, slug) {
+  return withTransaction(async client => {
+    await lockDesignAccount(client, accountId);
+    // No event update: bookmarking must never renew the shared cloud's life.
+    const event = (await client.query(`SELECT id, title FROM events WHERE slug=$1
+      AND expires_at > clock_timestamp() AND organizer_pin_hash IS NOT NULL
+      AND organizer_pin_salt IS NOT NULL FOR KEY SHARE`, [slug])).rows[0];
+    if (!event) throw accountError('cloud_not_found', 404);
+    const prior = (await client.query('SELECT id FROM saved_clouds WHERE account_id=$1 AND slug=$2', [accountId, slug])).rows[0];
+    if (prior) return prior.id;
+    const count = (await client.query('SELECT count(*)::integer AS count FROM saved_clouds WHERE account_id=$1', [accountId])).rows[0].count;
+    if (count >= MAX_SAVED_CLOUDS) throw accountError('cloud_quota', 413);
+    const id = crypto.randomUUID();
+    await client.query('INSERT INTO saved_clouds(id,account_id,event_id,slug,title) VALUES($1,$2,$3,$4,$5)',
+      [id, accountId, event.id, slug, event.title]);
+    return id;
+  });
+}
+
+async function listSavedClouds(accountId, slug = null) {
+  return rowsToBoundary((await getPool().query(`SELECT b.id,b.slug,b.saved_at,
+    coalesce(e.title,b.title) AS title,e.expires_at,e.id IS NOT NULL AS available,
+    coalesce(preview.words,'[]'::jsonb) AS preview_words
+    FROM saved_clouds b JOIN design_accounts a ON a.id=b.account_id AND a.status='active'
+    LEFT JOIN events e ON e.id=b.event_id AND e.expires_at > transaction_timestamp()
+    LEFT JOIN LATERAL (SELECT jsonb_agg(jsonb_build_array(w.word,w.count) ORDER BY w.count DESC,w.word) AS words
+      FROM (SELECT word,count FROM words WHERE event_id=e.id ORDER BY count DESC,word LIMIT 24) w) preview ON true
+    WHERE b.account_id=$1 AND ($2::text IS NULL OR b.slug=$2)
+    ORDER BY b.saved_at DESC,b.id LIMIT $3`, [accountId, slug, MAX_SAVED_CLOUDS])).rows);
+}
+
+async function deleteCloudBookmark(accountId, id) {
+  return withTransaction(async client => {
+    await lockDesignAccount(client, accountId);
+    return (await client.query('DELETE FROM saved_clouds WHERE account_id=$1 AND id=$2', [accountId, id])).rowCount > 0;
+  });
+}
+
 async function getSavedDesign(accountId, id) {
   return rowToBoundary((await getPool().query(`SELECT d.* FROM saved_designs d JOIN design_accounts a
     ON a.id=d.account_id AND a.status='active' WHERE d.account_id=$1 AND d.id=$2
@@ -3582,6 +3621,7 @@ async function beginDesignAccountDeletion(accountId) {
     await client.query('DELETE FROM account_sessions WHERE account_id=$1',[accountId]);
     await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_owner_id=$1',[accountId]);
     await client.query('DELETE FROM account_oauth_flows WHERE account_id=$1',[accountId]);
+    await client.query('DELETE FROM saved_clouds WHERE account_id=$1',[accountId]);
     await abandonDesignWrites(client,accountId);
     await client.query('DELETE FROM saved_design_writes WHERE account_id=$1',[accountId]);
     const rows = (await client.query('DELETE FROM saved_designs WHERE account_id=$1 RETURNING snapshot_key,preview_key',[accountId])).rows;
@@ -3681,7 +3721,9 @@ async function sweepDesignAccountRetention({ deadline = Date.now() + 3000, short
   const dormant=(await getPool().query(`SELECT id FROM design_accounts a WHERE status='active' AND
     ((NOT verified AND created_at < transaction_timestamp()-interval '7 days') OR
     (verified AND last_activity_at < transaction_timestamp()-interval '12 months'
-        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id))) LIMIT 5`)).rows;
+        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)
+        AND NOT EXISTS(SELECT 1 FROM saved_clouds b JOIN events e ON e.id=b.event_id
+          WHERE b.account_id=a.id AND e.expires_at>transaction_timestamp()))) LIMIT 5`)).rows;
   // Eligibility is rechecked under the account lock, so a concurrent login/save wins safely.
   for(const row of dormant) { if (Date.now() >= deadline) break; await withTransaction(async client=> {
     const a=(await client.query(`SELECT * FROM design_accounts WHERE id=$1 AND status='active' FOR UPDATE`,[row.id])).rows[0];
@@ -3689,11 +3731,14 @@ async function sweepDesignAccountRetention({ deadline = Date.now() + 3000, short
     const eligible=await client.query(`SELECT id FROM design_accounts a WHERE id=$1 AND
       ((NOT verified AND created_at < transaction_timestamp()-interval '7 days') OR
       (verified AND last_activity_at < transaction_timestamp()-interval '12 months'
-        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)))`,[row.id]);
+        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)
+        AND NOT EXISTS(SELECT 1 FROM saved_clouds b JOIN events e ON e.id=b.event_id
+          WHERE b.account_id=a.id AND e.expires_at>transaction_timestamp())))`,[row.id]);
     if(!eligible.rowCount) return;
     await client.query("UPDATE design_accounts SET status='deleting' WHERE id=$1",[row.id]);
     await client.query('DELETE FROM account_sessions WHERE account_id=$1',[row.id]);
     await client.query('DELETE FROM account_oauth_flows WHERE account_id=$1',[row.id]);
+    await client.query('DELETE FROM saved_clouds WHERE account_id=$1',[row.id]);
     await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_owner_id=$1',[row.id]);
     await abandonDesignWrites(client,row.id);
     await client.query('DELETE FROM saved_design_writes WHERE account_id=$1',[row.id]);
@@ -3848,7 +3893,9 @@ const RETENTION_CATEGORIES = {
   accounts: { table: 'design_accounts', type: 'uuid', condition: `status='active' AND
     ((NOT verified AND created_at < $1::timestamptz - interval '7 days') OR
      (verified AND last_activity_at < $1::timestamptz - interval '12 months'
-      AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=design_accounts.id)))` },
+      AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=design_accounts.id)
+      AND NOT EXISTS(SELECT 1 FROM saved_clouds b JOIN events e ON e.id=b.event_id
+        WHERE b.account_id=design_accounts.id AND e.expires_at>$1)))` },
   artifacts: { table: 'print_artifacts', type: 'text', condition: 'expires_at <= $1' },
   mockups: { table:'mockup_jobs',type:'text',condition:'expires_at<=$1' },
   preparedFiles: { table:'prepared_print_files',type:'text',condition:`expires_at<=$1
@@ -3977,11 +4024,14 @@ async function expireDesignAccount(id) {
     const eligible=await client.query(`SELECT id FROM design_accounts a WHERE id=$1 AND
       ((NOT verified AND created_at<transaction_timestamp()-interval '7 days') OR
        (verified AND last_activity_at<transaction_timestamp()-interval '12 months'
-        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)))`,[id]);
+        AND NOT EXISTS(SELECT 1 FROM saved_designs d WHERE d.account_id=a.id)
+        AND NOT EXISTS(SELECT 1 FROM saved_clouds b JOIN events e ON e.id=b.event_id
+          WHERE b.account_id=a.id AND e.expires_at>transaction_timestamp())))`,[id]);
     if (!eligible.rowCount) return false;
     await client.query("UPDATE design_accounts SET status='deleting' WHERE id=$1",[id]);
     await client.query('DELETE FROM account_sessions WHERE account_id=$1',[id]);
     await client.query('DELETE FROM account_oauth_flows WHERE account_id=$1',[id]);
+    await client.query('DELETE FROM saved_clouds WHERE account_id=$1',[id]);
     await client.query('UPDATE configurations SET saved_design_id=null,saved_design_owner_id=null WHERE saved_design_owner_id=$1',[id]);
     await abandonDesignWrites(client,id);
     await client.query('DELETE FROM saved_design_writes WHERE account_id=$1',[id]);
@@ -4151,6 +4201,7 @@ module.exports = {
   claimAccountSessionRefresh, finishAccountSessionRefresh, releaseAccountSessionRefresh, completeAccountRecovery,
   createAccountOAuthFlow, consumeAccountOAuthFlow, consumeAccountRateLimits,
   reserveSavedDesignWrite, finishSavedDesignWrite, failSavedDesignWrite,
+  MAX_SAVED_CLOUDS, saveCloudBookmark, listSavedClouds, deleteCloudBookmark,
   listSavedDesigns, getSavedDesign, touchSavedDesign, renameSavedDesign,
   deleteSavedDesign, savedDesignWorkspace, beginDesignAccountDeletion,
   claimDesignObjectDeletion, finishDesignObjectDeletion,

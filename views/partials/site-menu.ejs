@@ -15,7 +15,13 @@
       <% if (accountsEnabled) { %><%- include('account-menu') %><% } %>
       <section data-browser-baskets hidden aria-label="Warenkörbe in diesem Browser"></section>
     </nav>
-    <% if (variant === 'display') { %><%- include('cloud-settings', { paletteOptions }) %><% } %>
+    <% if (variant === 'display') { %>
+    <% if (accountsEnabled) { %>
+    <button class="ww-header-menu-item" type="button" data-cloud-bookmark aria-haspopup="dialog" aria-controls="cloud-bookmark-auth">Wortwolke im Konto speichern</button>
+    <a class="ww-header-menu-item" href="/konto#wortwolken" data-cloud-bookmark-saved hidden>Im Konto gespeichert</a>
+    <p class="ww-account-small" data-cloud-bookmark-status role="status" aria-live="polite" hidden></p>
+    <% } %>
+    <%- include('cloud-settings', { paletteOptions }) %><% } %>
     <section class="ww-site-menu-preferences" aria-label="Sprache">
       <div class="ww-site-menu-language-row">
         <span class="ww-site-menu-label">Sprache</span>

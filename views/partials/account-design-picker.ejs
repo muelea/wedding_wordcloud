@@ -1,0 +1,14 @@
+<dialog class="ww-account-dialog ww-design-picker" id="account-design-picker" aria-labelledby="account-design-picker-title">
+  <div class="ww-account-dialog-head"><h2 id="account-design-picker-title" tabindex="-1" autofocus>Wie möchtest du starten?</h2><button class="ww-icon-button ww-close-button" type="button" data-design-picker-close aria-label="Schließen"></button></div>
+  <button class="ww-account-link" type="button" data-design-picker-back hidden>Zurück zur Auswahl</button>
+  <div class="ww-design-start-choices" data-design-picker-choices>
+    <form action="/design/start" method="post"><button class="ww-account-primary" type="submit">Leer starten</button><p>Mit eigenen Worten, Bildern und Motiven gestalten.</p></form>
+    <div><button type="button" data-design-picker-clouds>Mit einer Wortwolke starten</button><p>Eine gespeicherte Wortwolke auswählen.</p></div>
+  </div>
+  <section data-design-picker-selection hidden aria-label="Gespeicherte Wortwolken">
+    <p data-design-picker-status role="status" aria-live="polite"></p>
+    <button type="button" data-design-picker-retry hidden>Erneut versuchen</button>
+    <div class="ww-account-grid" data-design-picker-list></div>
+    <p data-design-picker-empty hidden>Du hast noch keine Wortwolken gespeichert. Öffne eine Wortwolke und speichere ihren Link über das Menü in deinem Konto.</p>
+  </section>
+</dialog>

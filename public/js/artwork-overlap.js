@@ -1,9 +1,9 @@
 (function (root, factory) {
   'use strict';
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('./wordcloud-core'), require('./design-fonts'), require('./mug-icons'));
-  } else root.ArtworkOverlap = factory(root.WordCloudCore, root.DesignFonts, root.MugIcons);
-})(typeof window === 'object' ? window : globalThis, function (core, fonts, icons) {
+    module.exports = factory(require('./wordcloud-core'), require('./design-fonts'), require('./mug-icons'), require('./design-content-bounds'));
+  } else root.ArtworkOverlap = factory(root.WordCloudCore, root.DesignFonts, root.MugIcons, root.DesignContentBounds);
+})(typeof window === 'object' ? window : globalThis, function (core, fonts, icons, contentBounds) {
   'use strict';
   const TILE_SIZE = 128;
   const MAX_CACHED_TILES = 512;
@@ -56,39 +56,12 @@
   }
 
   function bounds(item, ctx) {
-    let left, top, right, bottom;
-    if (item.type === 'image' || item.type === 'icon') {
-      const extra = item.type === 'icon' ? item.size * icons.STROKE_WIDTH / icons.VIEWBOX_SIZE : 0;
-      const width = (item.width || item.size) + extra;
-      const height = (item.height || item.size) + extra;
-      left = -width / 2; right = width / 2; top = -height / 2; bottom = height / 2;
-    } else {
-      const box = core.measureTextBox(item.text, item.fontSize, ctx, fonts.cssFamily(item.fontFamily), item);
-      left = -box.width / 2; right = box.width / 2;
-      top = -box.height / 2; bottom = box.height / 2;
-      for (const run of box.runs.filter(run => run.type === 'text')) {
-        const metrics = ctx.measureText(run.text);
-        const x = -box.width / 2 + run.x;
-        const baseline = item.fontSize * core.TEXT_BASELINE_OFFSET;
-        left = Math.min(left, x - (metrics.actualBoundingBoxLeft || 0));
-        right = Math.max(right, x + (metrics.actualBoundingBoxRight || run.width));
-        top = Math.min(top, baseline - (metrics.actualBoundingBoxAscent || 0));
-        bottom = Math.max(bottom, baseline + (metrics.actualBoundingBoxDescent || 0));
-      }
-      if (item.fontStyle === 'italic') {
-        const slant = Math.tan(core.ITALIC_SKEW_DEGREES * Math.PI / 180);
-        const shifts = [top * slant, bottom * slant];
-        left += Math.min(...shifts); right += Math.max(...shifts);
-      }
-    }
-    const angle = (item.angle || 0) * Math.PI / 180;
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    const corners = [[left, top], [right, top], [left, bottom], [right, bottom]]
-      .map(([x, y]) => ({ x: item.x + x * cos - y * sin, y: item.y + x * sin + y * cos }));
-    return { left: Math.floor(Math.min(...corners.map(p => p.x)) - 2),
-      top: Math.floor(Math.min(...corners.map(p => p.y)) - 2),
-      right: Math.ceil(Math.max(...corners.map(p => p.x)) + 2),
-      bottom: Math.ceil(Math.max(...corners.map(p => p.y)) + 2) };
+    // Candidate rectangles and the final pixel masks share the same painted
+    // geometry as the editor/print validator. Image rectangles may remain
+    // conservative here: transparent pixels are rejected by the mask itself.
+    const box = contentBounds.bounds(item, ctx);
+    return { left: Math.floor(box.left - 2), top: Math.floor(box.top - 2),
+      right: Math.ceil(box.left + box.width + 2), bottom: Math.ceil(box.top + box.height + 2) };
   }
 
   function create({ createCanvas, draw = drawItem, assets = {}, yieldTask = () => new Promise(resolve => setTimeout(resolve, 0)),

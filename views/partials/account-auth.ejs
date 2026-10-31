@@ -1,5 +1,9 @@
 <section class="ww-account-auth" data-account-auth>
-  <p>Speichere deine Designs und arbeite später weiter. Gestalten und bestellen geht auch ohne Konto.</p>
+  <% if (typeof cloudBookmarkAuth !== 'undefined' && cloudBookmarkAuth) { %>
+  <p>Speichere den Link zu dieser Wortwolke in deinem Konto. Teilnehmen und gestalten geht auch ohne Konto.</p>
+  <% } else { %>
+  <p>Speichere Designs und Links zu Wortwolken in deinem Konto. Gestalten und bestellen geht auch ohne Konto.</p>
+  <% } %>
   <button class="ww-account-primary ww-account-google" type="button" data-auth-google>Mit Google fortfahren</button>
   <p class="ww-account-divider">oder mit E-Mail</p>
   <div class="ww-account-tabs" aria-label="Anmeldung wählen">

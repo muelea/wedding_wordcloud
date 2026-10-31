@@ -112,3 +112,25 @@
 .ww-account-main .ww-account-signout:hover { color: #9c1c4c; }
 .ww-design-options-icon { display: flex; gap: 3px; }
 .ww-design-options-icon i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.ww-cloud-preview { box-sizing: border-box; height: 220px; padding: 26px 20px; border-radius: 20px; background: #fbf5ed; display: flex; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 5px 10px; overflow: hidden; color: #8a7178; font-family: 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
+.ww-cloud-preview span { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
+.ww-cloud-card .ww-account-actions { flex-wrap: wrap; justify-content: flex-start; gap: 10px; }
+.ww-account-main a.ww-cloud-action, .ww-account-dialog a.ww-cloud-action { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 11px 18px; border: 1px solid #eadce1; border-radius: 999px; text-decoration: none; font-size: 14px; color: #400f26; }
+.ww-cloud-remove { margin-top: 8px; }
+.ww-design-picker { max-width: 920px; }
+.ww-design-start-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; margin: 16px 0 28px; }
+.ww-design-start-choices > * { min-width: 0; padding: 20px; border: 1px solid #eadce1; border-radius: 18px; }
+.ww-design-start-choices form { margin: 0; }
+.ww-design-start-choices p { margin-bottom: 0; font-size: 14px; color: #8a7178; }
+.ww-design-start-choices button { width: 100%; }
+.ww-cloud-feedback { position: fixed; bottom: max(24px,env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 10000; box-sizing: border-box; width: max-content; max-width: min(90vw,600px); margin: 0; padding: 14px 20px; border: 1px solid #eadce1; border-radius: 16px; background: #fffdfa; color: #400f26; box-shadow: 0 8px 30px #400f2626; font: 14px/1.5 'Jost','Wolkenworte Jost Fallback',system-ui,sans-serif; }
+.ww-cloud-feedback[hidden] { display: none; }
+.ww-cloud-feedback[data-error=true] { color: #a31b43; }
+.ww-account-navigation { gap: 12px; flex-wrap: wrap; }
+.ww-account-main .ww-account-navigation button { padding: 10px 16px; }
+@media (max-width: 560px) {
+  .ww-account-navigation { gap: 4px; }
+  .ww-account-main .ww-account-navigation button { padding: 10px 12px; }
+  .ww-design-start-choices { grid-template-columns: 1fr; gap: 12px; }
+  .ww-cloud-preview { height: 240px; }
+}

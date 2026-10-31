@@ -56,6 +56,36 @@ test('checks actual rotated artwork, opaque image backgrounds and narrow text st
     word('small-copy', 'iii', { fontSize: 8 })])).findings.length, 1);
 });
 
+test('glyph overhangs remain overlap candidates with browser and Pango metric conventions', async () => {
+  const dot = image(1);
+  const check = checker(new Map([['dot', dot]]));
+  const canvas = createCanvas(800, 800), ctx = canvas.getContext('2d');
+  for (const font of fonts.FONTS) {
+    const item = word('overhang', 'j', { x: 400, y: 400, fontSize: 200, fontFamily: font.key });
+    ctx.clearRect(0, 0, 800, 800); overlap.drawItem(ctx, item);
+    const pixels = ctx.getImageData(0, 0, 800, 800).data;
+    let point = null;
+    for (let x = 0; x < 800 && !point; x++) for (let y = 0; y < 800; y++) {
+      if (pixels[(y * 800 + x) * 4 + 3] >= 200) { point = { x: x + .5, y: y + .5 }; break; }
+    }
+    assert.ok(point);
+    const result = await check.check([item, picture('dot', { ...point, width: 1, height: 1 })]);
+    assert.equal(result.findings.length, 1, `${font.key}: overlapping the painted overhang must be detected`);
+    const browserMetrics = {
+      canvas: {},
+      get font() { return ctx.font; }, set font(value) { ctx.font = value; },
+      get textAlign() { return ctx.textAlign; }, set textAlign(value) { ctx.textAlign = value; },
+      get textBaseline() { return ctx.textBaseline; }, set textBaseline(value) { ctx.textBaseline = value; },
+      measureText(text) {
+        const metrics = ctx.measureText(text);
+        return { ...metrics, actualBoundingBoxLeft: -metrics.actualBoundingBoxLeft };
+      },
+    };
+    assert.deepEqual(overlap.bounds(item, browserMetrics), overlap.bounds(item, ctx),
+      `${font.key}: browser and server conventions produce identical candidate rectangles`);
+  }
+});
+
 test('font style, text decorations, undo-like snapshots and deleted elements invalidate masks', async () => {
   const check = checker();
   for (const font of fonts.FONTS) for (const style of [{}, { fontWeight: 700 }, { fontStyle: 'italic' },

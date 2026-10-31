@@ -53,8 +53,8 @@ function origin(req) {
 function safeReturnTo(value) {
   if (typeof value !== 'string' || value.length > 1200 || !value.startsWith('/') || value.startsWith('//')) return '/konto';
   const url = new URL(value, 'https://wolkenworte.invalid');
-  if (url.origin !== 'https://wolkenworte.invalid' || !/^(?:\/konto(?:\/einstellungen)?|\/e\/[A-Za-z0-9_-]{22}\/configure)$/.test(url.pathname)) return '/konto';
-  return url.pathname + url.search;
+  if (url.origin !== 'https://wolkenworte.invalid' || !/^(?:\/konto(?:\/einstellungen)?|\/e\/[A-Za-z0-9_-]{22}(?:\/configure)?)$/.test(url.pathname)) return '/konto';
+  return url.pathname + url.search + (['#wortwolken','#einstellungen'].includes(url.hash) ? url.hash : '');
 }
 
 function cookieName(kind) {

@@ -39,7 +39,12 @@
           if (!(child instanceof fabric.FabricImage)) continue;
           context.save();
           context.transform(...child.calcTransformMatrix());
-          context.drawImage(child.getElement(), -child.width / 2, -child.height / 2, child.width, child.height);
+          const source = child.getElement();
+          const width = source.naturalWidth || source.width, height = source.naturalHeight || source.height;
+          // Undo the transparent-margin crop to independently draw the complete
+          // original image at the same placement and scale.
+          context.drawImage(source, -child.width / 2 - child.cropX,
+            -child.height / 2 - child.cropY, width, height);
           context.restore();
           mixedEmojiRects.push(child.getBoundingRect());
         }

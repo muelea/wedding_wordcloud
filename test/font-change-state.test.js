@@ -12,7 +12,7 @@ const WolkenworteEmoji = require('../public/js/emoji-catalog');
 
 function setup(t) {
   const downloads = [];
-  const root = { fabric, DesignFonts, WordCloudCore, WolkenworteEmoji };
+  const root = { fabric, DesignContentBounds: require('../public/js/design-content-bounds'), DesignFonts, WordCloudCore, WolkenworteEmoji };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), {
     window: root, document: { fonts: { load: () => new Promise((resolve, reject) => downloads.push({
       resolve: () => resolve([{ status: 'loaded' }]), reject,

@@ -57,7 +57,8 @@ test('real Postgres rejects writes in hosted checks and detects schema drift and
     await client.query('SET search_path TO release_contract, public');
     for (const file of verifier.migrations()) await client.query(file.sql);
     const expected = await verifier.schemaSnapshot(client, 'release_contract');
-    assert.equal(expected.versions.at(-1).version, '10');
+    assert.equal(expected.versions.at(-1).version, '11');
+    assert.ok(expected.tables.some(table => table.name === 'saved_clouds'));
     assert.ok(expected.tables.some(table => table.name === 'prepared_print_files'));
     await verifier.readOnly(client, async read => {
       assert.equal((await read.query('SHOW transaction_read_only')).rows[0].transaction_read_only, 'on');

@@ -2281,7 +2281,7 @@
                 <div class="editor-properties" id="editor-properties">
                 <div class="editor-selection-row">
                   <label class="editor-field-label" data-editor-section="text"><span class="editor-field-label-text" id="editor-text-label">Ausgewähltes Element</span>
-                    <input class="editor-text-input" id="editor-text" type="text" maxlength="1024" autocomplete="off" placeholder="Wort auswählen" disabled />
+                    <input class="editor-text-input" id="editor-text" type="text" autocomplete="off" placeholder="Wort auswählen" disabled />
                   </label>
                   <div class="editor-field-label editor-field-label-font" data-editor-section="font">
                     <span class="editor-field-label-text">Schriftart</span>
@@ -2604,6 +2604,8 @@
   <script src="<%= asset('/js/mug-3d-viewer.js') %>"></script>
   <script src="<%= asset('/js/mug-icons.js') %>"></script>
   <script src="<%= asset('/js/design-fonts.js') %>"></script>
+  <script src="<%= asset('/js/artwork-bounds-data.js') %>"></script>
+  <script src="<%= asset('/js/design-content-bounds.js') %>"></script>
   <script src="<%= asset('/js/artwork-overlap.js') %>"></script>
   <script src="<%= asset('/js/design-layout.js') %>"></script>
   <script src="<%= asset('/js/print-layout-client.js') %>"></script>
@@ -2638,7 +2640,7 @@
     // The content fingerprint is also the revision of untouched automatic
     // drafts. A new layout engine regenerates those drafts on the next visit,
     // while explicit customer edits and immutable cart designs stay intact.
-    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}|${asset('/js/text-print-quality.js')}`) %>;
+    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}|${asset('/js/text-print-quality.js')}|${asset('/js/design-content-bounds.js')}|${asset('/js/artwork-bounds-data.js')}`) %>;
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
     const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
     const mobileDevice = WolkenworteDevice.isMobileDevice(navigator);

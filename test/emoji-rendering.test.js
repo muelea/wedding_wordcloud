@@ -146,7 +146,7 @@ function createProbeEnvironment(fabricRuntime = fabric) {
     },
     getLoadedImage: (run) => images.get(run.asset),
   };
-  const root = { fabric: fabricRuntime, WolkenworteEmoji: emoji, WordCloudCore, DesignFonts };
+  const root = { fabric: fabricRuntime, DesignContentBounds: require('../public/js/design-content-bounds'), WolkenworteEmoji: emoji, WordCloudCore, DesignFonts };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), { window: root });
   return {
     fabric: fabricRuntime, emoji, WordCloudCore, DesignFonts, createCanvas, MugPrintEditor: root.MugPrintEditor,

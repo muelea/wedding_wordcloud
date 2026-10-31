@@ -492,7 +492,8 @@
       </div>
     </section>
 
-    <aside class="shell" id="resume-journey" hidden aria-label="Hier weitermachen">
+    <%# Temporarily hidden; set data-resume-enabled to true to restore this section. %>
+    <aside class="shell" id="resume-journey" data-resume-enabled="false" hidden aria-label="Hier weitermachen">
       <div class="resume-intro">
         <p class="resume-kicker">Zuletzt geöffnet</p>
         <h2 class="resume-heading">Dein Erinnerungsstück</h2>
@@ -939,6 +940,9 @@
     }).replace(/</g, '\\u003c') %>;
   </script>
   <script src="<%= asset('/js/cloud-limits.js') %>" defer></script>
+  <script src="<%= asset('/js/design-fonts.js') %>" defer></script>
+  <script src="<%= asset('/js/artwork-bounds-data.js') %>" defer></script>
+  <script src="<%= asset('/js/design-content-bounds.js') %>" defer></script>
   <script src="<%= asset('/js/design-layout.js') %>" defer></script>
   <script src="<%= asset('/js/printful-product-model.js') %>" defer></script>
   <script src="<%= asset('/js/blanket-cloth.js') %>" defer></script>

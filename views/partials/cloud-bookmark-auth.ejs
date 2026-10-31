@@ -1,0 +1,6 @@
+<dialog class="ww-account-dialog" id="cloud-bookmark-auth" aria-labelledby="cloud-bookmark-auth-title">
+  <div class="ww-account-dialog-head"><h2 id="cloud-bookmark-auth-title" tabindex="-1" autofocus>Wortwolke speichern</h2><button class="ww-icon-button ww-close-button" type="button" data-cloud-auth-close aria-label="Schließen"></button></div>
+  <%- include('account-auth', {cloudBookmarkAuth:true}) %>
+  <p class="ww-account-small">Der Link verlängert die Verfügbarkeit der Wortwolke nicht. Wortwolken laufen drei Monate nach der letzten Änderung ab.</p>
+</dialog>
+<p class="ww-cloud-feedback" data-cloud-bookmark-feedback role="status" aria-live="polite" hidden></p>

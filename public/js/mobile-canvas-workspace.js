@@ -326,7 +326,8 @@
       input.inputMode = session.unit ? 'decimal' : 'text';
       input.spellcheck = session.kind === 'word';
       input.autocapitalize = session.kind === 'word' ? 'sentences' : 'none';
-      input.maxLength = session.unit ? 32 : 1024;
+      if (session.kind === 'word') input.removeAttribute('maxlength');
+      else input.maxLength = session.unit ? 32 : 1024;
       input.value = session.value;
       const form = this.document.getElementById('mobile-canvas-text-editor');
       if (root.WolkenworteI18n) root.WolkenworteI18n.setAttribute(form, 'aria-label', session.label);

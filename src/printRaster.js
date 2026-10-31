@@ -1,7 +1,7 @@
 'use strict';
 
 const { createCanvas, loadImage, Image } = require('canvas');
-const { buildProviderPrintSvg, isPrintDesignWithinBounds } = require('./mugPrint');
+const { buildProviderPrintSvg, isRenderablePrintDesign } = require('./mugPrint');
 const stripPng = require('./stripPng');
 
 const MIME_TYPE = 'image/png';
@@ -10,7 +10,7 @@ const MAX_ARTIFACT_BYTES = 40 * 1024 * 1024;
 async function renderProviderPngInStrips(product, design) {
   const { width, height } = product.printFile, segments = [];
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 ||
-      !isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+      !isRenderablePrintDesign(design, width, height, product.designSafeMargin)) {
     throw new Error('Cannot build a print with an invalid design');
   }
   let vectors = [];
@@ -65,7 +65,7 @@ async function renderProviderPng(product, design) {
     throw new Error('Die gespeicherte Druckfläche ist ungültig.');
   }
 
-  if (!isPrintDesignWithinBounds(design, width, height, product.designSafeMargin)) {
+  if (!isRenderablePrintDesign(design, width, height, product.designSafeMargin)) {
     throw new Error('Cannot build a print with an invalid design');
   }
   if (product.previewModel?.kind === 'canvas' && width * height > 40_000_000) {

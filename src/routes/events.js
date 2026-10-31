@@ -14,7 +14,7 @@ const printArtifacts = require('../printArtifacts');
 const mockupApproval = require('../mockupApproval');
 const { shippingTermsDiffer } = require('../printfulShipping');
 const { buildCustomerQuoteForShipments } = require('../pricing');
-const { normalizeWord, MAX_WORD_LENGTH } = require('../words');
+const { normalizeWord, normalizeTextInput } = require('../words');
 const EmojiCatalog = require('../../public/js/emoji-catalog.js');
 const { MAX_EVENT_NAME_LENGTH, normalizeEventName } = require('../eventNames');
 const { isDirectDesignEvent } = require('../directDesign');
@@ -631,19 +631,7 @@ function normalizeSnapshotWords(rawWords, locale = I18n.DEFAULT_LOCALE, allowEmp
 }
 
 function normalizeDesignText(rawText, locale = I18n.DEFAULT_LOCALE) {
-  if (typeof rawText !== 'string') return '';
-  let text = rawText.normalize('NFC').trim()
-    .replace(/[\x00-\x1f\x7f]/g, '')
-    .replace(/ {2,}/g, ' ')
-    .trim();
-  if (EmojiCatalog.containsUnsupportedEmoji(text)) return '';
-  text = EmojiCatalog.truncateGraphemes(
-    EmojiCatalog.canonicalizeText(text),
-    MAX_WORD_LENGTH
-  ).trim();
-  // Reuse the guest-word sanitizer as the source of truth for unsupported
-  // characters, but preserve intentional capitalization in the editor.
-  return normalizeWord(text, locale) === text ? text : '';
+  return normalizeTextInput(rawText).word;
 }
 
 function normalizeDesign(
@@ -659,6 +647,9 @@ function normalizeDesign(
   }
   const ids = new Set();
   const normalized = [];
+  // Ink can occupy much less than an em square or motif viewport. Bound the
+  // numeric transform separately, then validate the actual painted rectangle.
+  const maxElementSize = Math.max(width, height) * 16;
   for (const [index, rawItem] of rawDesign.entries()) {
     if (!rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) return null;
     const type = rawItem.type == null || rawItem.type === 'text' ? 'text' : rawItem.type;
@@ -686,7 +677,8 @@ function normalizeDesign(
       const imageWidth = Number(rawItem.width);
       const imageHeight = Number(rawItem.height);
       if (!image || !Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) ||
-          imageWidth < 24 || imageHeight < 24 || imageWidth > width || imageHeight > height ||
+          imageWidth < 24 || imageHeight < 24 ||
+          imageWidth > width * image.width || imageHeight > height * image.height ||
           Math.abs((imageWidth / imageHeight) / (image.width / image.height) - 1) > 0.01) return null;
       if (!imageState.sources.has(src)) {
         imageState.sources.add(src);
@@ -710,7 +702,7 @@ function normalizeDesign(
     if (type === 'icon') {
       const icon = String(rawItem.icon || '');
       const size = Number(rawItem.size);
-      if (!MugIcons.has(icon) || !Number.isFinite(size) || size < 48 || size > height) return null;
+      if (!MugIcons.has(icon) || !Number.isFinite(size) || size < 48 || size > maxElementSize) return null;
       normalized.push({ ...common, color, ...colorMetadata, icon, size: Math.round(size * 10) / 10 });
       continue;
     }
@@ -726,7 +718,8 @@ function normalizeDesign(
         ![400, 700].includes(fontWeight) ||
         !['normal', 'italic'].includes(fontStyle) ||
         typeof underline !== 'boolean' || typeof linethrough !== 'boolean' ||
-        !text || !Number.isFinite(fontSize) || fontSize < MIN_PRINT_FONT_SIZE || fontSize > height) return null;
+        !text || !Number.isFinite(fontSize) || fontSize < MIN_PRINT_FONT_SIZE ||
+        fontSize > maxElementSize) return null;
     const canStyle = EmojiCatalog.parse(text).some((run) =>
       run.type === 'text' && run.text.trim());
     normalized.push({

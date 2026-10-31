@@ -26,7 +26,7 @@ async function capture() {
       images.set(run.asset, await loadImage(Buffer.from(await loadBrowserSvg(run.asset))));
     }
   }
-  const root = { fabric, DesignFonts, WordCloudCore, WolkenworteEmoji: {
+  const root = { fabric, DesignContentBounds: require('../../public/js/design-content-bounds'), DesignFonts, WordCloudCore, WolkenworteEmoji: {
     ...EmojiCatalog, getLoadedImage: run => images.get(run.asset), async preloadTexts() {},
   } };
   vm.runInNewContext(fs.readFileSync(require.resolve('../../public/js/mug-editor'), 'utf8'), { window: root });

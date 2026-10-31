@@ -48,6 +48,7 @@
   <link rel="stylesheet" href="<%= asset('/action-state.css') %>" />
   <link rel="stylesheet" href="<%= asset('/emoji-picker.css') %>" />
   <link rel="stylesheet" href="<%= asset('/live-cloud-transition.css') %>" />
+  <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %><link rel="stylesheet" href="<%= asset('/account.css') %>" /><% } %>
   <script src="<%= asset('/js/i18n.js') %>"></script>
   <%- include('partials/analytics-head') %>
   <script src="<%= asset('/js/action-state.js') %>"></script>
@@ -175,6 +176,7 @@
       box-shadow: 0 10px 28px rgba(64,15,38,.1);
     }
     #display-word-input { flex: 1; min-width: 0; padding: 0 15px; border: 0; outline: 0; background: transparent; color: var(--text); font: 16px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; }
+    #display-word-count { align-self: center; flex: 0 0 auto; margin-right: 6px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
     #display-word-submit { padding: 0 19px; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: 600 13px 'Jost', 'Wolkenworte Jost Fallback', system-ui, sans-serif; cursor: pointer; }
     .display-own-words-shortcut {
       display: grid;
@@ -663,7 +665,8 @@
     </div>
   </div>
   <form class="display-word-entry" id="display-word-entry">
-    <input id="display-word-input" maxlength="1024" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" aria-describedby="display-guest-guidance" />
+    <input id="display-word-input" autocomplete="off" placeholder="Gib dein Wort hier ein…" aria-label="Ein Wort eingeben" aria-describedby="display-guest-guidance display-word-count" />
+    <span id="display-word-count">0/30</span>
     <button
       class="display-emoji-trigger"
       id="display-emoji-trigger"
@@ -841,6 +844,7 @@
 <script src="<%= asset('/js/emoji-picker.js') %>"></script>
 <script src="<%= asset('/js/wordcloud-core.js') %>"></script>
 <script src="<%= asset('/js/cloud-limits.js') %>"></script>
+<script src="<%= asset('/js/contribution-input.js') %>"></script>
 <script src="<%= asset('/js/live-cloud-layout.js') %>"></script>
 <script src="<%= asset('/js/live-cloud-transition.js') %>"></script>
 <script src="<%= asset('/js/cloud-word-actions.js') %>"></script>
@@ -903,6 +907,13 @@
   const setText = (element, source, params) => WolkenworteI18n.setText(element, source, params);
   const setI18nAttribute = (element, name, source, params) => WolkenworteI18n.setAttribute(element, name, source, params);
   const clearText = (element) => WolkenworteI18n.clearText(element);
+  const contributionInput = ContributionInput.bind(displayWordInput, {
+    onChange(count, maximum) {
+      const counter = document.getElementById('display-word-count');
+      counter.textContent = `${count}/${maximum}`;
+      setI18nAttribute(counter, 'aria-label', '{{count}} von {{maximum}} Zeichen', { count, maximum });
+    },
+  });
 
   let currentWords = <%- JSON.stringify(pageData.initialWords || []).replace(/</g, '\\u003c') %>;
   let renderTimer  = null;
@@ -954,14 +965,8 @@
   let getWordColor = WordCloudCore.makePaletteAssigner(PALETTES[defaultPaletteKey].colors);
 
   function insertDisplayEmoji(emoji) {
-    const value = displayWordInput.value;
-    const start = displayWordInput.selectionStart ?? value.length;
-    const end = displayWordInput.selectionEnd ?? start;
-    displayWordInput.value = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
-    const caret = start + emoji.length;
+    contributionInput.insert(emoji);
     displayWordInput.focus({ preventScroll: true });
-    displayWordInput.setSelectionRange(caret, caret);
-    displayWordInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   const displayEmojiPicker = WolkenworteEmojiPicker.create({
@@ -1419,8 +1424,12 @@
 
   displayWordEntry.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (event.isComposing || !contributionInput.enforce()) return;
     const word = displayWordInput.value.trim();
-    if (submitDisplayWord(word)) displayWordInput.value = '';
+    if (submitDisplayWord(word)) {
+      displayWordInput.value = '';
+      contributionInput.refresh();
+    }
   });
 
   function groupedOwnContributions() {
@@ -1642,10 +1651,12 @@
   socket.on('word-error', ({ error } = {}) => {
     const wasCloudAction = pendingWordSubmissionOrigin === 'cloud';
     if (!wasCloudAction && pendingWordSubmission && !displayWordInput.value) displayWordInput.value = pendingWordSubmission;
+    contributionInput.enforce();
     pendingWordSubmission = '';
     pendingWordSubmissionOrigin = '';
     if (wasCloudAction) cloudWordSupport.disabled = false;
     const limit = {
+      word_too_long: ['Bitte gebt höchstens {{count}} Zeichen ein.', CloudLimits.MAX_WORD_LENGTH],
       guest_contribution_limit: ['Ihr habt in diesem Browser bereits {{count}} Beiträge zu dieser Wortwolke hinzugefügt.', CloudLimits.MAX_OWNER_CONTRIBUTIONS],
       unique_word_limit: ['Diese Wortwolke enthält bereits {{count}} verschiedene Wörter. Vorhandene Wörter könnt ihr weiterhin unterstützen.', CloudLimits.MAX_EVENT_UNIQUE_WORDS],
       event_contribution_limit: ['Diese Wortwolke hat insgesamt {{count}} Beiträge erreicht.', CloudLimits.MAX_EVENT_CONTRIBUTIONS],
@@ -1923,6 +1934,10 @@
     resizeCloud();
   });
 </script>
+  <% if (typeof designAccountsEnabled !== 'undefined' && designAccountsEnabled) { %>
+  <%- include('partials/cloud-bookmark-auth') %>
+  <script src="<%= asset('/js/cloud-bookmarks.js') %>"></script><script src="<%= asset('/js/account.js') %>"></script>
+  <% } %>
   <%- include('partials/analytics-ui') %>
 </body>
 </html>

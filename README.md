@@ -291,7 +291,13 @@ frozen snapshot of the word cloud.
    shortcuts. Text elements can use the classic default or one of four curated,
    locally bundled print fonts and can be formatted as bold, italic, underlined
    or struck through. Formatting and font changes also work across a mixed
-   multi-selection and affect only its text elements. Automatic filling runs on
+   multi-selection and affect only its text elements. Selection frames follow
+   the visible letters, emoji, motifs and image pixels, with a small handle gap.
+   Accents, descenders and formatting update the frame automatically; transparent
+   image margins are excluded while opaque backgrounds remain intact. Browser
+   boundary guards and new server saves measure the same painted content, while
+   existing saved coordinates and approved print output retain their geometry.
+   Automatic filling runs on
    creation and product/orientation changes, never during manual editing. There
    is no layout chooser. The immutable canvas design is the only source for
    preview and Printful output. Words can also be edited directly. Hard bounds keep
@@ -306,9 +312,11 @@ frozen snapshot of the word cloud.
    loading failures cannot leave the workspace permanently inert. Direct
    design links open the requested immutable design even without a local cart;
    adding that detached design to a cart remains an explicit action. The home
-   page offers a seven-day, browser-local return link to the last opened cloud
-   plus a link to its current tab's basket, without storing a PIN. This browser
-   recovery remains independent of the optional account library below.
+   page's “Zuletzt geöffnet” return section is temporarily hidden through
+   `data-resume-enabled="false"` in `views/landing.ejs`; setting it to `true`
+   restores the retained section. Seven-day browser-local journey storage
+   continues without storing a PIN and remains independent of the optional
+   account library below. Saved baskets remain accessible through the shared menu.
 6. The saved designs continue to a dedicated, mobile-first shipping-address
    page. Products, address and the price result share one card. Products appear
    only once beside their quantity controls; prices and delivery details appear
@@ -552,7 +560,7 @@ Guests can create clouds, participate, configure products and order without an
 account. `DESIGN_ACCOUNTS_ENABLED=true` adds subtle configurator save controls,
 one consistent account entry in the overflow menu on every page and `/konto`. This single
 account page opens on “Meine Designs”; the current email and sign-out action sit
-above both tabs. The global menu shows the email and sign-out action when signed
+above the “Meine Designs”, “Wortwolken” and “Einstellungen” tabs. The global menu shows the email and sign-out action when signed
 in, or “Anmelden” when signed out. “Einstellungen” contains security, data export
 and deletion. Existing `/konto/einstellungen` links
 redirect to its Settings tab, preserving the language query. Google or verified email/password
@@ -569,6 +577,27 @@ Existing seven-day IndexedDB recovery remains browser-local; account-bound recor
 checked against the current owner and live design before restoration. Reopening
 a library design preserves newer local unsaved work where available. Library
 access never grants event organizer privileges.
+
+The live-cloud menu offers **Wortwolke im Konto speichern**. Signed-out visitors
+use the existing email/Google flow and resume that explicit bookmark request.
+Each account can save up to 100 distinct cloud links, independently of the design
+and image quotas. Creators and invited guests use the same action; bookmarks
+grant no organizer rights and do not change browser-bound contribution receipts.
+The private “Wortwolken” collection shows current titles and bounded word previews,
+availability dates, Open, Create a keepsake and Remove from account. Removing a
+bookmark never deletes the shared cloud. Expired/deleted clouds retain only their
+bookmark metadata and cannot expose former words. Saving, browsing and opening
+bookmarks never renew the source event's three-month activity deadline.
+
+The account's new-design action offers a blank start or a saved-cloud picker.
+**Damit gestalten** uses exactly `/e/<slug>/configure?view=products`, the existing
+live-cloud keepsake entry. Gallery layouts, live-word change notices, explicit
+refresh, local drafts and baskets keep their existing behavior. Browsing the
+collection/picker creates no workspace, design or cart item. Empty clouds can
+be bookmarked and opened; designing becomes available once they contain words.
+Bookmarks are included in account export and removed with the account, while
+shared clouds and commerce remain independent. Schema 11 is supplied through
+`20261031000000_account_cloud_bookmarks.sql`.
 
 Each explicit save stores an allowlisted editable snapshot, including both print
 faces, uploads, text styles, product/orientation and retained product layouts,
@@ -596,8 +625,9 @@ then deletes Supabase Auth data and all designs. A UUID-only tombstone survives
 35 days to prevent stale in-flight login responses recreating a deleted account.
 Independent cart snapshots, order records and frozen paid print files retain
 their existing lifecycle. Never cascade an account deletion into commerce.
-Unverified registrations expire after seven days; verified empty accounts after
-twelve months of account inactivity. The existing authenticated maintenance
+Unverified registrations expire after seven days; verified accounts with neither
+designs nor an available bookmarked cloud expire after twelve months of account
+inactivity. Unavailable bookmarks do not prevent that cleanup. The existing authenticated maintenance
 wake-up performs bounded cleanup, including when account UI is disabled.
 
 Account cookies are opaque, HttpOnly, SameSite=Lax and Secure in production,
@@ -910,6 +940,18 @@ the editor, product preview and print SVG. Gelasio is the complete
 `public/assets/design-fonts/gelasio/VERSION`. Both renderers use that file;
 the old npm WOFF endpoint is retained only for cached-client compatibility,
 not for new designs. Font updates require deliberate version/metric checks.
+
+Visible-content measurements live in `public/js/design-content-bounds.js` and
+are shared by the editor, automatic placement, overlap candidate checks and
+server print validation. Placement keeps deliberate breathing room while
+reserving asymmetric glyph overhangs and descenders; overlap findings still
+require intersecting painted pixels. After deliberately updating
+the pinned emoji or motif artwork, regenerate its conservative ink rectangles
+with `node scripts/generate-artwork-bounds.js`; the resulting
+`public/js/artwork-bounds-data.js` is tracked and needs no startup/build step.
+Uploaded image bounds are derived from decoded alpha pixels and cached; client
+supplied bounds are never trusted. Focused coverage lives in
+`test/content-bounds.test.js` and `test/configurator.test.js`.
 
 The website interface also serves its pinned Jost, Playfair Display and
 Cormorant Garamond WOFF2 files locally from `public/assets/site-fonts/`.

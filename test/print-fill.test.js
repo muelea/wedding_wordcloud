@@ -199,8 +199,11 @@ test('dense print layouts reserve space between horizontal, vertical and stagger
   assert.deepEqual(design.map(item => item.text).sort(), DENSE_SCREENSHOT.map(([word]) => word).sort());
   assertSafe(design, product);
   assertBreathingRoom(design);
+  // Packing now reserves real glyph overhangs. This legacy line-box coverage
+  // proxy excludes those pixels, so allow one percentage point of metric drift;
+  // exact painted boundaries, separation and vote-size hierarchy stay strict.
   assert.ok(occupiedFraction(boxes(design), { x1: slot.x, y1: slot.y,
-    x2: slot.x + slot.width, y2: slot.y + slot.height }) > .5, 'spacing still uses the whole surface well');
+    x2: slot.x + slot.width, y2: slot.y + slot.height }) > .49, 'spacing still uses the whole surface well');
   assert.ok(design.find(item => item.text === 'liebe').fontSize >
     design.find(item => item.text === 'mitternachtssnack').fontSize * 1.5);
   assert.deepEqual(Layout.applyLayoutAction(JSON.parse(JSON.stringify(design)), [slot], context, options), design);
@@ -395,7 +398,7 @@ test('fill can repair an old vertical layout without changing text, fonts or for
 
 test('Fabric draft round trips preserve fill references and edits invalidate completed layout provenance', async t => {
   const product = getProduct('white-glossy-mug-duo-11oz');
-  const root = { fabric, DesignFonts: Fonts, WordCloudCore: Core, WolkenworteEmoji: Emoji };
+  const root = { fabric, DesignContentBounds: require('../public/js/design-content-bounds'), DesignFonts: Fonts, WordCloudCore: Core, WolkenworteEmoji: Emoji };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), { window: root });
   const editor = Object.create(root.MugPrintEditor.prototype);
   Object.assign(editor, { width: 2700, height: 1050, editorScale: .5, printMargin: 36, margin: 18,

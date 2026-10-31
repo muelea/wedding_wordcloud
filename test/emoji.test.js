@@ -70,7 +70,7 @@ test('both pages share an accessible emoji picker, with mobile canvas opt-in', (
   assert.match(displaySource, /\.display-emoji-trigger \{ display: none; \}/);
   assert.match(displaySource, /@media \(min-width: 621px\) and \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?\.display-emoji-trigger \{ display: grid; \}/);
   assert.match(displaySource, /WolkenworteEmojiPicker\.create\(\{[\s\S]*?idPrefix: 'display-emoji'/);
-  assert.match(displaySource, /value\.slice\(0, start\)\}\$\{emoji\}\$\{value\.slice\(end\)/);
+  assert.match(displaySource, /contributionInput\.insert\(emoji\)/);
   assert.match(configureSource, /id: 'editor-add'[\s\S]*?id: 'editor-emoji-toggle'[\s\S]*?id: 'editor-image'/);
   assert.match(configureSource, /\.editor-emoji-picker \{ position: relative; display: none; \}/);
   assert.match(configureSource, /WolkenworteEmojiPicker\.create\(\{[\s\S]*?idPrefix: 'editor-emoji'/);
@@ -195,7 +195,8 @@ test('guest normalization keeps supported emoji and applies the limit by graphem
     error: null,
   });
   const family = '👨‍👩‍👧‍👦';
-  assert.equal(normalizeWordInput(family.repeat(31)).word, family.repeat(30));
+  assert.equal(normalizeWordInput(family.repeat(30)).word, family.repeat(30));
+  assert.deepEqual(normalizeWordInput(family.repeat(31)), { word: '', error: 'word_too_long' });
   assert.deepEqual(normalizeWordInput('😀‍😀'), {
     word: '',
     error: 'unsupported_emoji',

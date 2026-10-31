@@ -1830,8 +1830,8 @@ test('full-wrap drinkware saves and reopens three-pixel edge designs while rejec
     const print = await fetch(baseUrl + saved.printFileUrl);
     assert.equal(print.status, 200);
     assert.equal(await print.text(), buildProductPrintSvg(product, design));
-    for (const [index, changes] of [[0, { x: 26.9 }], [1, { x: width - 26.9 }],
-      [0, { y: area.y + 23.9 }], [0, { y: height - area.y - 23.9 }]]) {
+    for (const [index, changes] of [[0, { x: area.x + 1 }], [1, { x: width - area.x - 1 }],
+      [0, { y: area.y + 1 }], [0, { y: height - area.y - 1 }]]) {
       const invalid = design.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item);
       const rejected = await save(invalid);
       assert.equal(rejected.status, 400, key + ': ' + JSON.stringify(changes));
@@ -1857,7 +1857,7 @@ test('new saves reject unsafe artwork on every product, orientation and print si
         const payload = productDesignPayload(product.key,orientation.key);
         const area = product.designSafeAreas[surface.key];
         payload.designs[surface.key] = [{id:'unsafe',type:'icon',icon:'heart',size:48,
-          x:area.x+23,y:area.y+area.height/2,angle:0,color:'#0055ff'}];
+          x:area.x+1,y:area.y+area.height/2,angle:0,color:'#0055ff'}];
         const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
           method:'POST', headers:{'Content-Type':'application/json',
             'X-Wolkenworte-Guest-Id': require('node:crypto').createHash('sha256').update(`${product.key}/${orientation.key}/${surface.key}`).digest('hex').slice(0,32)},
@@ -1868,4 +1868,69 @@ test('new saves reject unsafe artwork on every product, orientation and print si
       }
     }
   }
+});
+
+test('tight text, emoji, motif and transparent-image placement saves exact artwork and ignores forged bounds', async t => {
+  const { baseUrl, close } = await startTestServer(); t.after(close);
+  const event = await createEvent(baseUrl);
+  const image = createCanvas(100, 100);
+  image.getContext('2d').fillRect(60, 40, 20, 20);
+  const samples = [
+    { id: 'text', type: 'text', text: 'were', x: 1300, y: 60, fontSize: 200,
+      fontFamily: 'classic', color: '#123456', angle: 0, fontWeight: 400,
+      fontStyle: 'normal', underline: false, linethrough: false },
+    { id: 'emoji', type: 'text', text: '🫶', x: 1300, y: 100, fontSize: 200,
+      fontFamily: 'classic', color: '#123456', angle: 0, fontWeight: 400,
+      fontStyle: 'normal', underline: false, linethrough: false },
+    { id: 'image', type: 'image', src: image.toDataURL(), x: 10, y: 500,
+      width: 200, height: 200, angle: 0 },
+    { id: 'motif', type: 'icon', icon: 'heart', x: 1350, y: 480,
+      size: 1100, angle: 0, color: '#123456' },
+  ];
+  const save = item => fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productKey: 'white-glossy-mug-duo-11oz', quantity: 1,
+      theme: 'pastel', words: [['liebe', 1]], ...oneSurfaceDesign([item]) }),
+  });
+  for (const item of samples) {
+    const response = await save(item);
+    assert.equal(response.status, 201, item.id + ': ' + await response.clone().text());
+    const saved = await response.json();
+    const reopened = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${saved.id}/edit`).then(res => res.json());
+    assert.deepEqual(reopened.designs.default, [item], 'preserve coordinates, font size and original image bytes');
+    const original = await fetch(baseUrl + saved.printFileUrl).then(res => res.text());
+    const forged = { ...item, ...(item.type === 'image' ? { x: -100 } : { y: -100 }),
+      contentBounds: { left: 100, top: 100, width: 1, height: 1 } };
+    assert.equal((await save(forged)).status, 400, item.id + ': validate painted content on the server');
+    assert.equal(await fetch(baseUrl + saved.printFileUrl).then(res => res.text()), original);
+  }
+});
+
+test('personal text beyond 1024 characters survives cart freezing, reopening and immutable print output', async t => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { title: 'Persönlicher Text' });
+  const text = 'Unsere Erinnerungen bleiben für immer. '.repeat(35).trim();
+  assert.ok(text.length > 1024);
+  const design = [{ id: 'personal', text, x: 1350, y: 525, fontSize: 2, angle: 0,
+    color: '#123456', fontFamily: 'classic', fontWeight: 700, fontStyle: 'italic', underline: true }];
+  const payload = { productKey: 'white-glossy-mug-duo-11oz', quantity: 1,
+    theme: 'custom', words: [['Liebe', 1]], ...oneSurfaceDesign(design) };
+  const save = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  assert.equal(save.status, 201, await save.clone().text());
+  const configuration = await save.json();
+  const editable = await fetch(`${baseUrl}/api/events/${event.slug}/configurations/${configuration.id}/edit`);
+  assert.equal(editable.status, 200);
+  const restored = await editable.json();
+  assert.equal(restored.designs.default[0].text, text);
+  const print = await fetch(baseUrl + configuration.printFileUrl);
+  assert.equal(print.status, 200);
+  assert.ok((await print.text()).includes(text), 'the print file must contain the entire personal text');
+  payload.designs.default[0].fontSize = 300;
+  const overflowing = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  assert.equal(overflowing.status, 400, 'long text must still respect the print area');
 });

@@ -30,6 +30,7 @@
     </div>
     <nav class="ww-account-navigation" data-account-navigation role="tablist" aria-label="Mein Konto" <%= accountSignedIn ? '' : 'hidden' %>>
       <button type="button" id="account-designs-tab" data-account-tab="designs" role="tab" aria-selected="true" aria-controls="account-designs-panel">Meine Designs</button>
+      <button type="button" id="account-clouds-tab" data-account-tab="clouds" role="tab" aria-selected="false" aria-controls="account-clouds-panel" tabindex="-1">Wortwolken</button>
       <button type="button" id="account-settings-tab" data-account-tab="settings" role="tab" aria-selected="false" aria-controls="account-settings-panel" tabindex="-1">Einstellungen</button>
     </nav>
     <p class="ww-account-small" data-account-loading role="status" <%= accountSignedIn ? '' : 'hidden' %>>Deine Designs werden geladen…</p>
@@ -43,6 +44,14 @@
         <%- include('partials/account-new-design') %>
       </div>
       <p class="ww-account-retention">Designs werden nach drei Monaten ohne Nutzung dauerhaft gelöscht. Öffnen, Speichern oder ein erfolgreicher Kauf verlängern die Frist.</p>
+    </section>
+    <section id="account-clouds-panel" data-account-clouds role="tabpanel" aria-labelledby="account-clouds-tab" hidden>
+      <div class="ww-account-library-heading"><h2>Gespeicherte Wortwolken</h2><%- include('partials/account-new-design') %></div>
+      <p class="ww-account-small" data-account-clouds-status role="status" aria-live="polite"></p>
+      <button type="button" data-account-clouds-retry hidden>Erneut versuchen</button>
+      <div class="ww-account-grid" data-account-cloud-list></div>
+      <div class="ww-account-empty" data-account-clouds-empty hidden><h2>Deine Wortwolken zum Wiederfinden.</h2><p>Öffne eine Wortwolke und wähle im Menü „Wortwolke im Konto speichern“. Auch eingeladene Wortwolken finden hier ihren Platz.</p></div>
+      <p class="ww-account-retention">Gespeichert wird der Link zur gemeinsamen Wortwolke. Speichern und Öffnen verlängern ihre Verfügbarkeit nicht. Wortwolken laufen drei Monate nach der letzten Änderung ab.</p>
     </section>
     <section id="account-settings-panel" data-account-settings role="tabpanel" aria-labelledby="account-settings-tab" hidden>
       <div class="ww-account-card">
@@ -59,9 +68,9 @@
           <label data-account-password-code hidden>Sicherheitscode<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" /></label>
           <button class="ww-account-primary" type="submit">Passwort speichern</button><button type="button" class="ww-account-link" data-account-password-request hidden>Sicherheitscode anfordern</button></form>
       </div>
-      <div class="ww-account-card"><h2>Deine Daten</h2><p>Du kannst deine Kontodaten und alle gespeicherten, bearbeitbaren Designs herunterladen.</p>
+      <div class="ww-account-card"><h2>Deine Daten</h2><p>Du kannst deine Kontodaten, gespeicherten Wortwolken-Links und bearbeitbaren Designs herunterladen.</p>
         <a href="/api/account/export" class="ww-account-link" download>Daten herunterladen</a></div>
-      <div class="ww-account-card"><h2>Konto löschen</h2><p>Dein Konto und alle gespeicherten Designs werden dauerhaft gelöscht. Bestehende Warenkorbkopien und notwendige Bestelldaten bleiben davon unabhängig.</p>
+      <div class="ww-account-card"><h2>Konto löschen</h2><p>Dein Konto, gespeicherte Wortwolken-Links und Designs werden dauerhaft gelöscht. Die gemeinsamen Wortwolken, bestehende Warenkorbkopien und notwendige Bestelldaten bleiben davon unabhängig.</p>
         <button class="ww-account-danger" type="button" data-account-delete>Konto dauerhaft löschen</button></div>
     </section>
   </main>
@@ -69,7 +78,8 @@
   <dialog class="ww-account-dialog" id="account-reauth-dialog" aria-labelledby="account-reauth-title"><div class="ww-account-dialog-head"><h2 id="account-reauth-title" tabindex="-1" autofocus>Identität bestätigen</h2><button class="ww-icon-button ww-close-button" type="button" data-reauth-close aria-label="Schließen"></button></div>
     <p>Bestätige deine Identität, bevor du dein Konto dauerhaft löschst.</p><button class="ww-account-primary" type="button" data-reauth-google>Mit Google bestätigen</button>
     <form data-reauth-form><label>Passwort<input type="password" name="password" autocomplete="current-password" required maxlength="256" /></label><button class="ww-account-primary" type="submit">Bestätigen</button></form><p data-reauth-status role="status"></p></dialog>
+  <%- include('partials/account-design-picker') %>
   <%- include('partials/site-footer') %>
   <%- include('partials/analytics-ui') %>
-  <script src="<%= asset('/js/configurator-session.js') %>"></script><script src="<%= asset('/js/design-image-data.js') %>"></script><script src="<%= asset('/js/account.js') %>"></script>
+  <script src="<%= asset('/js/configurator-session.js') %>"></script><script src="<%= asset('/js/design-image-data.js') %>"></script><script src="<%= asset('/js/cloud-bookmarks.js') %>"></script><script src="<%= asset('/js/account.js') %>"></script>
 </body></html>

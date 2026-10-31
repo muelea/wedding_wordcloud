@@ -13,6 +13,8 @@
     design_quota:'Dein Konto bietet Platz für 20 Designs und 100 MB. Pro Design sind bis zu 20 MB inklusive Vorschau möglich. Lösche ein Design oder verwende kleinere Bilder.',
     design_image_unavailable:'Die Bilder konnten nicht gespeichert oder geladen werden. Dein bisheriges Design bleibt erhalten. Bitte versuche es erneut.',
     design_image_limit:'Verwende höchstens 20 verschiedene Bilder mit zusammen 10 MB und 64 Megapixeln.',
+    cloud_not_found:'Diese Wortwolke ist nicht mehr verfügbar.',
+    cloud_quota:'Dein Konto bietet Platz für 100 Wortwolken-Links. Entferne einen Link, um einen weiteren zu speichern.',
     invalid_design:'Dieses Design konnte nicht gespeichert werden. Prüfe deine Elemente und versuche es erneut.',
     unsupported_print_characters:'Dieses Design enthält Zeichen, die mit der gewählten Schrift nicht zuverlässig gedruckt werden können. Bitte wählt eine andere Schrift oder ersetzt diese Zeichen.',
     invalid_design_name:'Gib einen Designnamen mit höchstens 80 Zeichen ein.',invalid_email:'Bitte gib eine gültige E-Mail-Adresse ein.',
@@ -105,15 +107,18 @@
     // The server has already verified this session before rendering the page.
     let current=JSON.parse(page.dataset.accountUser||'null'),pendingEmail=null;
     let libraryReady=false,libraryLoading=Boolean(current&&!current.recovery);
-    let section=location.hash==='#einstellungen'||page.dataset.page==='settings'?'settings':'designs';
+    let cloudsReady=false,cloudsLoading=false,cloudsReload=false,cloudsRevision=0;
+    const hashSection=()=>location.hash==='#wortwolken'?'clouds':location.hash==='#einstellungen'?'settings':'designs';
+    let section=page.dataset.page==='settings'?'settings':hashSection();
     const sectionButtons=[...page.querySelectorAll('[data-account-tab]')];
     function showSection(next,{updateUrl=false}={}){
-      section=next==='settings'?'settings':'designs';
+      section=['settings','clouds'].includes(next)?next:'designs';
       const loggedIn=Boolean(current&&!current.recovery);
       page.querySelector('[data-account-navigation]').hidden=!loggedIn;
       page.querySelector('[data-account-library]').hidden=!loggedIn||section!=='designs'||!libraryReady;
       page.querySelector('[data-account-loading]').hidden=!loggedIn||section!=='designs'||!libraryLoading;
       page.querySelector('[data-account-settings]').hidden=!loggedIn||section!=='settings';
+      page.querySelector('[data-account-clouds]').hidden=!loggedIn||section!=='clouds';
       page.querySelector('[data-account-usage]').hidden=!loggedIn;
       page.querySelector('[data-account-email]').hidden=!loggedIn;
       page.querySelector('[data-account-logout]').hidden=!loggedIn;
@@ -122,7 +127,8 @@
         const selected=button.dataset.accountTab===section;
         button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
       });
-      if(updateUrl)history.replaceState(null,'',location.pathname+(location.search||'')+(section==='settings'?'#einstellungen':''));
+      if(updateUrl)history.replaceState(null,'',location.pathname+(location.search||'')+(section==='settings'?'#einstellungen':section==='clouds'?'#wortwolken':''));
+      if(loggedIn&&section==='clouds'&&!cloudsReady&&!cloudsLoading)void loadCloudLibrary();
     }
     showSection(section);
     sectionButtons.forEach((button,index)=>{
@@ -133,18 +139,22 @@
         if(next===null)return;event.preventDefault();sectionButtons[next].focus();sectionButtons[next].click();
       });
     });
-    root.addEventListener('hashchange',()=>showSection(location.hash==='#einstellungen'?'settings':'designs'));
+    root.addEventListener('hashchange',()=>showSection(hashSection()));
+    root.WolkenworteCloudBookmarks?.initializePicker(page);
+    page.querySelector('[data-account-clouds-retry]').addEventListener('click',()=>void loadCloudLibrary());
     const authControl=bindAuth(page.querySelector('[data-account-auth]'),{onDone:async()=>{
       if(page.dataset.page==='signin'&&page.dataset.returnTo!=='/konto') location.assign(page.dataset.returnTo);
       else await refresh();
-    },returnTo:page.dataset.page==='signin'?page.dataset.returnTo:section==='settings'?'/konto/einstellungen':location.pathname});
+    },returnTo:page.dataset.page==='signin'?page.dataset.returnTo:section==='settings'?'/konto/einstellungen':location.pathname+(section==='clouds'?'#wortwolken':'')});
     if(new URLSearchParams(location.search).has('error'))status(notice,'Die Google-Anmeldung konnte nicht abgeschlossen werden. Bitte versuche es erneut.',true);
 
     async function refresh(){
       libraryLoading=true;
       try {
         const data=await api('session');
-        if(current?.id!==data.user?.id)libraryReady=false;
+        if(current?.id!==data.user?.id){libraryReady=false;cloudsReady=false;cloudsRevision++;
+          if(cloudsLoading)cloudsReload=true;
+          page.querySelector('[data-account-cloud-list]').replaceChildren();}
         current=data.user;
         const loggedIn=Boolean(current&&!current.recovery);
         page.classList.toggle('is-signin',!loggedIn);
@@ -179,6 +189,30 @@
       text(page.querySelector('[data-account-count]'),'{{count}} von 20 Designs',{count:designs.length});
       text(page.querySelector('[data-account-storage]'),'{{size}} von 100 MB',{
         size:new Intl.NumberFormat(I()?.getLocale()||'de',{maximumFractionDigits:1}).format(designs.reduce((n,d)=>n+d.byteSize,0)/1024/1024)});
+    }
+    async function loadCloudLibrary(){
+      if(cloudsLoading){cloudsReload=true;return;}
+      if(!current||current.recovery)return;
+      cloudsLoading=true;const ownerId=current.id,revision=++cloudsRevision;
+      const target=page.querySelector('[data-account-clouds-status]');
+      const retry=page.querySelector('[data-account-clouds-retry]');
+      const list=page.querySelector('[data-account-cloud-list]');
+      const empty=page.querySelector('[data-account-clouds-empty]');
+      retry.hidden=true;empty.hidden=true;status(target,'Deine Wortwolken werden geladen…');
+      try{
+        const data=await api('clouds');
+        if(current?.id!==ownerId||revision!==cloudsRevision)return;
+        list.replaceChildren();
+        for(const cloud of data.clouds)list.append(root.WolkenworteCloudBookmarks.card(cloud,{remove:async()=>{
+          try{
+            await api(`clouds/${cloud.id}/delete`,{});
+            cloudsReady=false;await loadCloudLibrary();
+          }catch(error){status(target,message(error),true);}
+        }}));
+        empty.hidden=data.clouds.length!==0;cloudsReady=true;status(target,'');
+      }catch(error){
+        if(current?.id===ownerId&&revision===cloudsRevision){status(target,message(error),true);retry.hidden=false;}
+      }finally{cloudsLoading=false;if(cloudsReload){cloudsReload=false;void loadCloudLibrary();}}
     }
     async function loadLibrary(){
       const data=await api('designs');const list=page.querySelector('[data-account-design-list]');list.replaceChildren();
@@ -275,7 +309,7 @@
     page.querySelector('[data-account-delete]').addEventListener('click',()=>void busy(page,async()=>{
       if(!current.recent){reauth.querySelector('[data-reauth-google]').hidden=!current.providers.includes('google');
         reauth.querySelector('[data-reauth-form]').hidden=!current.providers.includes('email');reauth.showModal();return;}
-      if(!await confirm({title:'Konto dauerhaft löschen?',description:'Dein Konto und alle gespeicherten Designs werden sofort dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',action:'Konto löschen'}))return;
+      if(!await confirm({title:'Konto dauerhaft löschen?',description:'Dein Konto, gespeicherte Wortwolken-Links und Designs werden dauerhaft gelöscht. Die gemeinsamen Wortwolken bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden.',action:'Konto löschen'}))return;
       const id=current.id;
       try { await api('delete',{confirm:true}); }
       catch(error) { if(error.code==='reauthentication_needed'){current.recent=false;reauth.showModal();}throw error; }
@@ -292,7 +326,7 @@
       await clearOwnedDrafts(ownerId);
       location.assign('/');
     },notice));
-    root.addEventListener('wolkenworte:localechange',()=>void refresh().catch(error=>status(notice,message(error),true)));
+    root.addEventListener('wolkenworte:localechange',()=>{cloudsReady=false;void refresh().catch(error=>status(notice,message(error),true));});
     await refresh();
   }
 
@@ -417,6 +451,7 @@
   root.WolkenworteAccount={api,bindAuth,createConfigurator,message};
   const pageFailure=error=>status(document.getElementById('account-page-status'),message(error),true);
   root.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void initializePage().catch(pageFailure));
-  else void initializePage().catch(pageFailure);
+  async function initialize(){await initializePage();await root.WolkenworteCloudBookmarks?.initializeDisplay();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void initialize().catch(pageFailure));
+  else void initialize().catch(pageFailure);
 }(window));

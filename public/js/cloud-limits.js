@@ -5,6 +5,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return Object.freeze({
+    MAX_WORD_LENGTH: 30,
     MAX_EVENT_UNIQUE_WORDS: 500,
     MAX_EVENT_CONTRIBUTIONS: 5000,
     MAX_OWNER_CONTRIBUTIONS: 500,

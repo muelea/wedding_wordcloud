@@ -7,6 +7,14 @@ const auth=require('../accountAuth');
 const designs=require('../savedDesigns');
 const {renderPage,resolvePageLocale}=require('../pageRenderer');
 const {asyncRoute}=require('../asyncRoute');
+const {isEventSlug}=require('../slug');
+
+function cloudSummary(row) {
+  const url = `/e/${row.slug}`;
+  return {id:row.id,slug:row.slug,title:row.title,savedAt:row.saved_at,expiresAt:row.expires_at,
+    available:row.available,previewWords:row.preview_words,
+    url:row.available?url:null,designUrl:row.available?`${url}/configure?view=products`:null};
+}
 
 const code=value=> {
   if(typeof value!=='string'||!/^\d{6}$/.test(value)) throw db.accountError('otp_expired',400);
@@ -187,6 +195,36 @@ function makeAccountRouter() {
     auth.clearCookie(req,res); res.json({ok:true});
   });
 
+  router.get('/api/account/clouds',asyncRoute(async(req,res)=> {
+    const context=await auth.requireAccount(req,res);
+    res.json({clouds:(await db.listSavedClouds(context.user.id)).map(cloudSummary),limit:db.MAX_SAVED_CLOUDS});
+  }));
+
+  router.get('/api/account/clouds/:slug',asyncRoute(async(req,res)=> {
+    const context=await auth.requireAccount(req,res);
+    if(!isEventSlug(req.params.slug)) throw db.accountError('cloud_not_found',404);
+    const row=(await db.listSavedClouds(context.user.id,req.params.slug))[0];
+    res.json({cloud:row?cloudSummary(row):null});
+  }));
+
+  post('clouds',async(req,res)=> {
+    const context=await auth.requireAccount(req,res);
+    if(!isEventSlug(req.body?.slug)) throw db.accountError('cloud_not_found',404);
+    if(req.body.ownerId!==context.user.id) throw db.accountError('account_unauthorized',401);
+    await auth.limit(req,'cloud-save',{accountId:context.user.id,max:30,windowMs:60_000});
+    await db.saveCloudBookmark(context.user.id,req.body.slug);
+    const row=(await db.listSavedClouds(context.user.id,req.body.slug))[0];
+    if(!row) throw db.accountError('cloud_not_found',404);
+    res.status(201).json({cloud:cloudSummary(row)});
+  });
+
+  post('clouds/:id/delete',async(req,res)=> {
+    const context=await auth.requireAccount(req,res);
+    if(!auth.UUID.test(req.params.id)) throw db.accountError('cloud_not_found',404);
+    await db.deleteCloudBookmark(context.user.id,req.params.id);
+    res.json({ok:true});
+  });
+
   router.get('/api/account/designs',asyncRoute(async(req,res)=> {
     const context=await auth.requireAccount(req,res);
     res.json({designs:(await db.listSavedDesigns(context.user.id)).map(designs.summary),limits:{designs:20,bytes:100*1024*1024}});
@@ -247,8 +285,9 @@ function makeAccountRouter() {
     await auth.limit(req,'export',{accountId:context.user.id,max:2,windowMs:60_000});
     const rows=await db.listSavedDesigns(context.user.id);
     const account=await db.getDesignAccount(context.user.id);
+    const clouds=(await db.listSavedClouds(context.user.id)).map(row=>({id:row.id,slug:row.slug,title:row.title,savedAt:row.saved_at}));
     res.set('Content-Disposition','attachment; filename="wolkenworte-designs.json"'); res.type('json');
-    res.write(JSON.stringify({version:1,exportedAt:new Date().toISOString(),account:{email:context.user.email,
+    res.write(JSON.stringify({version:1,exportedAt:new Date().toISOString(),clouds,account:{email:context.user.email,
       newEmail:context.user.new_email||null,locale:account.locale,createdAt:account.created_at,lastActivityAt:account.last_activity_at,
       lastSignInAt:context.user.last_sign_in_at||null,profile:context.user.user_metadata||{},
       identities:(context.user.identities||[]).map(identity=>({provider:identity.provider,id:identity.id,createdAt:identity.created_at,profile:identity.identity_data})),

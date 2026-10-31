@@ -14,7 +14,7 @@ const { PRODUCTS, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
 
 function setup(t, product, side = 'front', { mobile = true } = {}) {
-  const root = { fabric, CanvasTouch, CanvasViewport, devicePixelRatio: 3, DesignFonts, WordCloudCore, WolkenworteEmoji: EmojiCatalog,
+  const root = { fabric, DesignContentBounds: require('../public/js/design-content-bounds'), CanvasTouch, CanvasViewport, devicePixelRatio: 3, DesignFonts, WordCloudCore, WolkenworteEmoji: EmojiCatalog,
     WolkenworteDevice: require('../public/js/device'),
     navigator: { userAgent: mobile ? 'Android Chrome' : 'Windows Chrome', maxTouchPoints: 10 },
     innerWidth: 390,

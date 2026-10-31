@@ -25,3 +25,17 @@ test('editable snapshots retain both faces, images, text styles and hidden produ
   assert.throws(()=>designs.normalizeSnapshot(unsafe),/invalid_design/);
   assert.throws(()=>designs.designName('x'.repeat(81)),/invalid_design_name/);
 });
+
+test('account snapshots preserve long personal text through normalization, encoding and decoding', () => {
+  const product = getProduct('white-glossy-mug-duo-11oz');
+  const text = 'Unsere Erinnerungen bleiben für immer. '.repeat(35).trim();
+  assert.ok(text.length > 1024);
+  const payload = { productKey: product.key, orientation: 'default', theme: 'pastel', words: [],
+    ...productDesignPayload(product.key) };
+  for (const surface of product.printSurfaces) {
+    Object.assign(payload.designs[surface.key][0], { text, fontSize: 2 });
+  }
+  const snapshot = designs.normalizeSnapshot(payload);
+  const decoded = designs.decodeSnapshot(designs.encodeSnapshot(snapshot));
+  for (const surface of product.printSurfaces) assert.equal(decoded.designs[surface.key][0].text, text);
+});

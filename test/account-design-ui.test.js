@@ -28,7 +28,7 @@ function render(view, locale = 'en', page = 'library', enabled = true, {user = n
 }
 const settle = async () => {for (let i = 0; i < 20; i++) await new Promise(resolve => setImmediate(resolve));};
 function mount(t, {user = owner, serverUser = user, designs = [], page = 'library', locale = 'en', deferredSession = null,
-  deferredDesigns = null, failRequest = null, failLogout = false} = {}) {
+  deferredDesigns = null, clouds = [], deferredClouds = null, failRequest = null, failLogout = false} = {}) {
   const dom = new JSDOM(render('account.ejs', locale, page, true, {user:serverUser}), {url: 'https://wolkenworte.invalid/konto'});
   t.after(() => dom.window.close());
   const document = dom.window.document;
@@ -51,11 +51,16 @@ function mount(t, {user = owner, serverUser = user, designs = [], page = 'librar
       let data = {ok:true};
       if (url.endsWith('/session')) data = deferredSession ? await deferredSession : {user};
       if (url.endsWith('/designs')) data = deferredDesigns ? await deferredDesigns : {designs};
+      if (url.endsWith('/clouds')) data = deferredClouds ? await deferredClouds : {clouds};
+      if (/\/clouds\/[^/]+\/delete$/.test(url)) clouds = clouds.filter(cloud => !url.includes('/'+cloud.id+'/'));
       if (url.endsWith('/open')) data = {url:'/e/new-workspace/configure?accountDesign=private'};
       return {ok: !(failLogout && url.endsWith('/logout')),json:async()=>data};
     }};
-  return {dom,document,calls,navigation,cleared,setUser:next=>{user=next;},run:file=>{
-    if(file==='public/js/account.js')vm.runInNewContext(fs.readFileSync('public/js/site-header.js','utf8'),context);
+  return {dom,document,calls,navigation,cleared,context,setFailure:value=>{failRequest=value;},setUser:next=>{user=next;},run:file=>{
+    if(file==='public/js/account.js'){
+      vm.runInNewContext(fs.readFileSync('public/js/site-header.js','utf8'),context);
+      vm.runInNewContext(fs.readFileSync('public/js/cloud-bookmarks.js','utf8'),context);
+    }
     return vm.runInNewContext(fs.readFileSync(file,'utf8'),context);
   }};
 }
@@ -177,7 +182,7 @@ test('both empty and populated collection actions deliberately POST a fresh work
   for (const locale of locales) {
     const dom = new JSDOM(render('account.ejs',locale));
     const forms = [...dom.window.document.querySelectorAll('.ww-account-create')];
-    assert.equal(forms.length,2);
+    assert.equal(forms.length,3);
     for (const form of forms) {
       assert.equal(form.getAttribute('action'),'/design/start');
       assert.equal(form.method,'post');
@@ -263,7 +268,7 @@ test('one account page switches sections with clicks, arrow keys and an addressa
   assert.equal(h.document.querySelector('[data-account-settings]').hidden,false);
   assert.equal(h.document.querySelector('[data-account-library]').hidden,true);
   assert.equal(settings.getAttribute('aria-selected'),'true');
-  settings.dispatchEvent(new h.dom.window.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));
+  settings.dispatchEvent(new h.dom.window.KeyboardEvent('keydown',{key:'Home',bubbles:true}));
   assert.equal(h.document.activeElement,designs);
   assert.equal(h.document.querySelector('[data-account-library]').hidden,false);
   assert.equal(settings.tabIndex,-1);
@@ -318,4 +323,85 @@ test('failed account sign-out remains retryable and preserves local drafts', asy
   const button = h.document.querySelector('[data-account-logout]');button.click();await settle();
   assert.equal(button.disabled,false);assert.equal(h.cleared.length,0);assert.equal(h.navigation.length,0);
   assert.match(h.document.querySelector('#account-page-status').textContent,/try again/i);
+});
+
+const savedCloud = (overrides={}) => ({id:'bookmark-one',slug:'AbCdEfGhIjKlMnOpQrStUQ',title:'Our celebration',available:true,
+  expiresAt:'2027-01-31',previewWords:[['Liebe',3],['Freude',1]],url:'/e/AbCdEfGhIjKlMnOpQrStUQ',
+  designUrl:'/e/AbCdEfGhIjKlMnOpQrStUQ/configure?view=products',...overrides});
+
+test('the cloud tab shows shared live contents, existing gallery links and account-only removal', async t => {
+  const cloud=savedCloud(),h=mount(t,{clouds:[cloud]});h.run('public/js/account.js');await settle();
+  const tab=h.document.getElementById('account-clouds-tab');tab.click();await settle();
+  const panel=h.document.querySelector('[data-account-clouds]');
+  assert.equal(panel.hidden,false);assert.equal(tab.getAttribute('aria-selected'),'true');
+  assert.equal(h.document.querySelector('[data-account-library]').hidden,true);
+  assert.equal(panel.querySelector('h2').textContent,'Saved word clouds');
+  assert.equal(panel.querySelector('.ww-cloud-card h2').textContent,cloud.title);
+  assert.equal(panel.querySelector('.ww-cloud-preview').textContent,'LiebeFreude');
+  assert.equal(panel.querySelectorAll('a')[0].getAttribute('href'),cloud.url);
+  assert.equal(panel.querySelectorAll('a')[1].getAttribute('href'),cloud.designUrl);
+  panel.querySelector('.ww-cloud-remove').click();await settle();
+  const write=h.calls.find(call=>call.url.endsWith('/delete'));
+  assert.equal(write.url,`/api/account/clouds/${cloud.id}/delete`);
+  assert.equal(write.options.headers['X-Wolkenworte-Account'],'1');
+  assert.equal(h.document.querySelector('[data-account-clouds-empty]').hidden,false);
+  assert.equal(h.navigation.length,0);
+});
+
+test('new design choices browse the same saved clouds without creating workspaces or designs', async t => {
+  const cloud=savedCloud(),h=mount(t,{clouds:[cloud]});h.run('public/js/account.js');await settle();
+  const form=h.document.querySelector('[data-account-new-design]');
+  const event=new h.dom.window.Event('submit',{cancelable:true});form.dispatchEvent(event);
+  assert.equal(event.defaultPrevented,true);
+  const dialog=h.document.getElementById('account-design-picker');assert.equal(dialog.open,true);
+  assert.equal(dialog.querySelector('form').action,'https://wolkenworte.invalid/design/start');
+  assert.equal(dialog.querySelector('form').method,'post');
+  dialog.querySelector('[data-design-picker-clouds]').click();await settle();
+  assert.equal(dialog.querySelector('.ww-cloud-card h2').textContent,cloud.title);
+  assert.equal(dialog.querySelector('.ww-cloud-card a').getAttribute('href'),cloud.designUrl);
+  assert.equal(h.calls.some(call=>call.options.method==='POST'),false);
+  dialog.querySelector('[data-design-picker-close]').click();assert.equal(dialog.open,false);
+});
+
+test('unavailable and empty clouds have clear states and never offer a design action', async t => {
+  const h=mount(t,{clouds:[savedCloud({title:'<img src=x onerror=alert(1)>',available:false,url:null,designUrl:null,previewWords:[['private old words',1]]}),
+    savedCloud({id:'empty',previewWords:[]})]});h.run('public/js/account.js');await settle();
+  h.document.getElementById('account-clouds-tab').click();await settle();
+  const cards=h.document.querySelectorAll('[data-account-cloud-list] .ww-cloud-card');
+  assert.equal(cards[0].querySelector('img'),null);assert.equal(cards[0].querySelectorAll('a').length,0);
+  assert.equal(cards[0].querySelector('.ww-cloud-preview').textContent,'No longer available');
+  assert.ok(!cards[0].textContent.includes('private old words'));
+  assert.equal(cards[1].querySelectorAll('a').length,1);assert.equal(cards[1].querySelector('a').textContent,'Open word cloud');
+});
+
+test('cloud failures have a retry and leave the design library available', async t => {
+  const h=mount(t,{clouds:[savedCloud()],failRequest:'clouds'});h.run('public/js/account.js');await settle();
+  h.document.getElementById('account-clouds-tab').click();await settle();
+  assert.equal(h.document.querySelector('[data-account-clouds-retry]').hidden,false);
+  assert.equal(h.document.querySelector('[data-account-clouds-empty]').hidden,true);
+  h.document.getElementById('account-designs-tab').click();
+  assert.equal(h.document.querySelector('[data-account-library]').hidden,false);
+  h.setFailure(null);h.document.getElementById('account-clouds-tab').click();await settle();
+  assert.equal(h.document.querySelectorAll('.ww-cloud-card').length,1);
+});
+
+test('late cloud responses cannot restore a signed-out account collection', async t => {
+  let finish;const deferredClouds=new Promise(resolve=>{finish=resolve;});
+  const h=mount(t,{deferredClouds});h.run('public/js/account.js');await settle();
+  h.document.getElementById('account-clouds-tab').click();await settle();
+  h.setUser(null);h.dom.window.dispatchEvent(new h.dom.window.Event('wolkenworte:localechange'));await settle();
+  finish({clouds:[savedCloud()]});await settle();
+  assert.equal(h.document.querySelector('[data-account-clouds]').hidden,true);
+  assert.equal(h.document.querySelectorAll('.ww-cloud-card').length,0);
+});
+
+test('bookmark cards and the picker are localized in all supported languages', async t => {
+  for(const locale of locales){
+    const h=mount(t,{locale,clouds:[savedCloud()]});h.run('public/js/account.js');await settle();
+    h.document.getElementById('account-clouds-tab').click();await settle();
+    assert.equal(h.document.querySelector('.ww-cloud-card a').textContent,I18n.translate('Wortwolke öffnen',locale));
+    assert.equal(h.document.querySelector('[data-design-picker-clouds]').textContent,I18n.translate('Mit einer Wortwolke starten',locale));
+    const date=I18n.translate('Verfügbar bis {{date}}, sofern keine weiteren Änderungen erfolgen.',locale,{date:'DATE'});
+    assert.match(date,/DATE/);if(locale!=='de')assert.notEqual(date,'Verfügbar bis DATE, sofern keine weiteren Änderungen erfolgen.');
+  }
 });

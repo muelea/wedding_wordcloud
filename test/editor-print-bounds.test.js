@@ -12,7 +12,7 @@ const EmojiCatalog = require('../public/js/emoji-catalog');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
 
 function createEditor() {
-  const root = { fabric, DesignFonts, WordCloudCore, WolkenworteEmoji: {
+  const root = { fabric, DesignContentBounds: require('../public/js/design-content-bounds'), DesignFonts, WordCloudCore, WolkenworteEmoji: {
     ...EmojiCatalog, async preloadTexts() {},
   } };
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/mug-editor'), 'utf8'), { window: root });

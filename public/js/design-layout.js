@@ -9,10 +9,12 @@
     : root.CloudLimits;
   const printQuality = typeof module === 'object' && module.exports
     ? require('./text-print-quality.js') : root.TextPrintQuality;
-  const api = factory(wordCloudCore, cloudLimits, printQuality);
+  const contentBounds = typeof module === 'object' && module.exports
+    ? require('./design-content-bounds.js') : root.DesignContentBounds;
+  const api = factory(wordCloudCore, cloudLimits, printQuality, contentBounds);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.DesignLayout = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore, CloudLimits, TextPrintQuality) {
+})(typeof window !== 'undefined' ? window : globalThis, function (WordCloudCore, CloudLimits, TextPrintQuality, ContentBounds) {
   'use strict';
 
   const MIN_PRINT_FONT_SIZE = CloudLimits.MIN_PRINT_FONT_SIZE;
@@ -93,8 +95,13 @@
           item
         );
         const styledBox = WordCloudCore.styledTextBox(textBox, item);
-        width = styledBox.width;
-        height = styledBox.height;
+        const ink = ContentBounds.text({ ...item, fontSize }, measureContext,
+          { box: textBox, fontFamily: itemFontFamily });
+        // Packing reserves intentional breathing room around the saved anchor.
+        // Include asymmetric glyph overhangs/descenders as well as that spacing,
+        // using the same ink geometry as selection and trusted print validation.
+        width = Math.max(styledBox.width, Math.abs(ink.left) * 2, Math.abs(ink.left + ink.width) * 2);
+        height = Math.max(styledBox.height, Math.abs(ink.top) * 2, Math.abs(ink.top + ink.height) * 2);
       } else {
         width = Math.max(1, String(item.text || '').length * fontSize * .58);
         height = fontSize * WordCloudCore.TEXT_LINE_HEIGHT;
@@ -246,6 +253,11 @@
     let entries = 0, boxEntries = 0;
     let font = context.font;
     const cached = {
+      get canvas() { return context.canvas; },
+      get textAlign() { return context.textAlign; },
+      set textAlign(value) { context.textAlign = value; },
+      get textBaseline() { return context.textBaseline; },
+      set textBaseline(value) { context.textBaseline = value; },
       get font() { return font; },
       set font(value) { font = value; },
       measureText(text) {
@@ -893,40 +905,17 @@
   }
 
   function printInkBox(item, box, measureContext, fontFamily) {
-    // Line boxes contain font leading; balancing those boxes alone leaves
-    // visibly larger vertical gaps. Measure the actual glyphs for spacing,
-    // while retaining the conservative line boxes as hard safety bounds.
-    let left = -box.width / 2, right = box.width / 2;
-    let top = -box.height / 2, bottom = box.height / 2;
-    if (item.type !== 'image' && item.type !== 'icon' && measureContext &&
-        item.fontStyle !== 'italic' && !item.underline && !item.linethrough) {
-      const family = typeof fontFamily === 'function' ? fontFamily(item) : fontFamily;
-      const measured = measuredTextBox(item.text, item.fontSize, measureContext, family, item);
-      left = -measured.width / 2; right = measured.width / 2;
-      top = -measured.height / 2; bottom = measured.height / 2;
-      if (box.emoji) {
-        left = top = -item.fontSize * WordCloudCore.EMOJI_SIZE_RATIO / 2;
-        right = bottom = -left;
-      } else if (measured.runs.every(run => run.type === 'text')) {
-        const ink = measureContext.measureText(item.text);
-        const values = [ink.actualBoundingBoxLeft, ink.actualBoundingBoxRight,
-          ink.actualBoundingBoxAscent, ink.actualBoundingBoxDescent];
-        if (values.every(Number.isFinite) && ink.actualBoundingBoxAscent + ink.actualBoundingBoxDescent > 0 &&
-            ink.actualBoundingBoxLeft + ink.actualBoundingBoxRight > 0) {
-          left = -measured.width / 2 - ink.actualBoundingBoxLeft;
-          right = -measured.width / 2 + ink.actualBoundingBoxRight;
-          top = item.fontSize * WordCloudCore.TEXT_BASELINE_OFFSET - ink.actualBoundingBoxAscent;
-          bottom = item.fontSize * WordCloudCore.TEXT_BASELINE_OFFSET + ink.actualBoundingBoxDescent;
-        }
-      }
-      const radians = (Number(item.angle) || 0) * Math.PI / 180;
-      const corners = [[left, top], [left, bottom], [right, top], [right, bottom]].map(([x, y]) =>
-        [x * Math.cos(radians) - y * Math.sin(radians), x * Math.sin(radians) + y * Math.cos(radians)]);
-      left = Math.min(...corners.map(point => point[0])); right = Math.max(...corners.map(point => point[0]));
-      top = Math.min(...corners.map(point => point[1])); bottom = Math.max(...corners.map(point => point[1]));
-    }
-    return { x1: item.x + left, x2: item.x + right, y1: item.y + top, y2: item.y + bottom,
-      width: right - left, height: bottom - top };
+    // Keep hard packing envelopes and visible spacing distinct. Both use the
+    // shared ink measurements, including accents, italic slant and decoration.
+    if (!measureContext) return { ...box };
+    const text = item.type !== 'image' && item.type !== 'icon';
+    const family = typeof fontFamily === 'function' ? fontFamily(item) : fontFamily;
+    const local = text ? ContentBounds.text(item, measureContext, {
+      box: measuredTextBox(item.text, item.fontSize, measureContext, family, item), fontFamily: family,
+    }) : ContentBounds.local(item, measureContext);
+    const ink = ContentBounds.transform(local, item);
+    return { x1: ink.left, y1: ink.top, x2: ink.left + ink.width, y2: ink.top + ink.height,
+      width: ink.width, height: ink.height };
   }
 
   function* balancePrintSpacingSteps(items, slot, measureContext, fontFamily) {
@@ -1193,7 +1182,7 @@
       qualities.set(design, result);
       return { ...result };
     }
-    function fingerprint(design, revision = 11) {
+    function fingerprint(design, revision = 12) {
       // Working-draft provenance only. Include all geometry and measured font
       // choices so any edit/product change invalidates it; never trust it in
       // place of the measured overlap/boundary checks above.
@@ -1639,7 +1628,7 @@
     })]);
     let hash = 2166136261;
     for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data.charCodeAt(i), 16777619);
-    return `readable-1-${(hash >>> 0).toString(16)}`;
+    return `readable-2-${(hash >>> 0).toString(16)}`;
   }
 
   function safeSlotDesign(design, slot, context, fontFamily) {

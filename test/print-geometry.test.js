@@ -56,7 +56,7 @@ test('all catalog print files and placements match the checked Printful API snap
         assert.ok(area.x + area.width <= view.printFile.width && area.y + area.height <= view.printFile.height);
         for (const [x,y] of [[area.x+24,area.y+24], [area.x+area.width-24,area.y+area.height-24]]) {
           assert.ok(isPrintDesignWithinBounds([heart(x,y)], view.printFile.width, view.printFile.height, area));
-          assert.equal(isPrintDesignWithinBounds([heart(area.x+23,y)], view.printFile.width, view.printFile.height, area), false);
+          assert.equal(isPrintDesignWithinBounds([heart(area.x+1,y)], view.printFile.width, view.printFile.height, area), false);
         }
       }
     }

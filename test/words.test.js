@@ -284,3 +284,25 @@ test('emoji survive socket normalization, Postgres storage and receipt hydration
   assert.deepEqual(storedWords, [['LIEBE ❤️ 👨‍👩‍👧‍👦', 1]]);
   assert.deepEqual(ownWords, [{ receipt, word: 'LIEBE ❤️ 👨‍👩‍👧‍👦' }]);
 });
+
+test('oversized contributions return an error without storing a truncated word or receipt', async t => {
+  const { baseUrl, close } = await startTestServer();
+  t.after(close);
+  const event = await createEvent(baseUrl, { title: 'Zeichenlimit' });
+  const guestId = 'c'.repeat(32);
+  const { socket } = await connectSocket(baseUrl, event.slug, guestId);
+  t.after(() => socket.close());
+  for (const text of ['a'.repeat(31), '👨‍👩‍👧‍👦'.repeat(31)]) {
+    const rejected = waitFor(socket, 'word-error');
+    socket.emit('submit-word', text);
+    assert.deepEqual(await rejected, { error: 'word_too_long' });
+  }
+  const { socket: reloaded, initialWords, ownWords } = await connectSocket(baseUrl, event.slug, guestId);
+  t.after(() => reloaded.close());
+  assert.deepEqual(initialWords, []);
+  assert.deepEqual(ownWords, []);
+  const text = '👨‍👩‍👧‍👦'.repeat(30);
+  const accepted = waitForArgs(socket, 'word-accepted');
+  socket.emit('submit-word', text);
+  assert.equal((await accepted)[0], text);
+});

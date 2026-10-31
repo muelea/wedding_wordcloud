@@ -203,6 +203,7 @@
     canonicalizeText,
     containsUnsupportedEmoji,
     hasEmoji,
+    graphemes,
     graphemeLength,
     truncateGraphemes,
     stringToKey,

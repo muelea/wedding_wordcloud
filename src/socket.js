@@ -103,7 +103,7 @@ function attachSocketHandlers(io, { wordBroadcasts } = {}) {
       })) return;
       const normalized = normalizeWordInput(rawWord, event.locale);
       if (!normalized.word) {
-        if (normalized.error === 'unsupported_emoji') {
+        if (normalized.error === 'unsupported_emoji' || normalized.error === 'word_too_long') {
           socket.emit('word-error', { error: normalized.error });
         }
         return;

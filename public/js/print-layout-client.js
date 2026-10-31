@@ -56,6 +56,11 @@
       const stateId = states.get(state);
       let font = context.font;
       return {
+        get canvas() { return context.canvas; },
+        get textAlign() { return context.textAlign; },
+        set textAlign(value) { context.textAlign = value; },
+        get textBaseline() { return context.textBaseline; },
+        set textBaseline(value) { context.textBaseline = value; },
         get font() { return font; },
         set font(value) { font = value; },
         measureText(text) {

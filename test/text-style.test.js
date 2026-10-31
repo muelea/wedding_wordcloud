@@ -19,7 +19,6 @@ const {
 } = require('../src/mugPrint');
 const { PRODUCTS, resolveProductOrientation } = require('../src/products');
 const { MAX_DESIGN_ELEMENTS } = require('../public/js/cloud-limits');
-const { MAX_WORD_LENGTH } = require('../src/words');
 
 test('missing glyphs cannot silently become print boxes, including within mixed emoji text', () => {
   const product = { printFile: { width: 2700, height: 1050 }, designSafeMargin: 24 };
@@ -94,7 +93,7 @@ async function createEditor(t) {
       images.set(run.asset, await loadImage(Buffer.from(await loadBrowserSvg(run.asset))));
     }
   }
-  const root = { fabric, DesignFonts, WordCloudCore, MugIcons,
+  const root = { fabric, DesignContentBounds: require('../public/js/design-content-bounds'), DesignFonts, WordCloudCore, MugIcons,
     TextPrintQuality: require('../public/js/text-print-quality'), WolkenworteEmoji: {
     ...EmojiCatalog,
     getLoadedImage: run => images.get(run.asset),
@@ -396,12 +395,12 @@ test('outlined provider print stays valid on every product orientation and surfa
   }
 });
 
-test('maximum allowed Caveat design remains inside the immutable artifact budget', () => {
+test('a full 1200-element Caveat design remains inside the immutable artifact budget', () => {
   const product = resolveProductOrientation(
     PRODUCTS.find((candidate) => candidate.key === 'throw-blanket-50x60in'),
     'default'
   );
-  const text = 'favouritepeople'.repeat(3).slice(0, MAX_WORD_LENGTH);
+  const text = 'favouritepeople'.repeat(3);
   const design = Array.from({ length: MAX_DESIGN_ELEMENTS }, (_, index) => ({
     id: `maximum-${index}`,
     type: 'text',
@@ -434,4 +433,26 @@ test('legacy text styles default safely and standalone emoji ignore meaningless 
     DesignFonts.cssFamily('classic'), { fontWeight: 700 });
   assert.notEqual(normal.width, bold.width);
   assert.ok(WordCloudCore.styledTextBox(normal, { fontStyle: 'italic' }).width > normal.width);
+});
+
+test('long personal text survives editor changes, undo, redo and reload without a contribution cap', async t => {
+  const editor = await createEditor(t);
+  const text = 'Unsere Erinnerungen bleiben für immer. '.repeat(35).trim();
+  assert.ok(text.length > 1024);
+  editor.setDesign([{ id: 'personal', text: 'Liebe', x: 1350, y: 525, fontSize: 2,
+    angle: 0, color: '#2455f5', fontFamily: 'classic', fontWeight: 700, underline: true }],
+  { resetHistory: true });
+  const object = editor.canvas.getObjects()[0];
+  await editor.applyTextChange(object, text, { finalize: true, record: true });
+  assert.equal(editor.getDesign()[0].text, text);
+  assert.equal(editor.textInput.value, text);
+  editor.undo();
+  assert.equal(editor.getDesign()[0].text, 'Liebe');
+  editor.redo();
+  assert.equal(editor.getDesign()[0].text, text);
+  const saved = JSON.parse(JSON.stringify(editor.getDesign()));
+  editor.setDesign(saved, { resetHistory: true });
+  assert.equal(editor.getDesign()[0].text, text);
+  assert.equal(editor.getDesign()[0].fontWeight, 700);
+  assert.equal(editor.getDesign()[0].underline, true);
 });

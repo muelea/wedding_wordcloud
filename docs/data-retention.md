@@ -103,6 +103,7 @@ condition instead of falsely promising preservation.
 | Frozen paid print artifact | At least 90 days from submission, extended to 60 days after delivery where later; holds override deletion |
 | Prepared preview/print file | Initially 24 hours; paid artifacts, unfinished paid fulfillment, holds and unresolved attempted Checkouts protect the shared source until it can safely be deleted |
 | Reserved opaque event slug | Indefinite, to prevent reuse of expired public URLs |
+| Private account cloud bookmark | Until removal or account deletion; source expiry hides all words/previews and deletion detaches the reference, leaving only bookmark metadata |
 | Hashed PIN-attempt source identity | Older than one day: removed on PIN checks; also removed with the event; never contains raw IP addresses |
 
 Schema 8 changes event expiry through a new ordered migration; it does not
@@ -115,6 +116,14 @@ parent event. Viewing, connecting, failed writes and no-op edits do not. Word
 changes touch the parent in the same transaction, once per affected event per
 SQL statement. Expired events cannot be revived by those touches. Account saves
 remain manual and keep their independent existing three-month rules.
+
+Saving, listing and opening account cloud bookmarks are reads of the shared
+event and do not renew it. The bookmark stores the opaque slug, fallback title
+and save timestamp, never a word archive or organizer credential. Only available
+source events supply current titles and up to 24 preview words. Removing a
+bookmark or deleting its account cannot delete the shared event. Available
+bookmarked clouds, like saved designs, prevent empty-account cleanup; unavailable
+bookmarks do not retain an otherwise empty account after twelve inactive months.
 
 ## Daily activity cleanup and worker scheduling
 
