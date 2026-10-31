@@ -1,9 +1,10 @@
 (function (root, factory) {
   'use strict';
-  const api = factory();
+  const api = factory(typeof module === 'object' && module.exports
+    ? require('./product-orientation') : root.ProductOrientation);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.WolkenworteProductPicker = api;
-})(typeof window === 'object' ? window : globalThis, function () {
+})(typeof window === 'object' ? window : globalThis, function (Orientation) {
   'use strict';
 
   const group = p => p.catalogGroup || (p.previewType === 'mug' ? 'mug' : p.previewShape);
@@ -69,7 +70,7 @@
     return { product: candidates[0]?.product, selected, options };
   }
 
-  function create(host, { products, families = [], selectedKey, browse = false, i18n,
+  function create(host, { products, families = [], selectedKey, selectedOrientation, browse = false, i18n,
     photo, price, onConfirm, onPhoto, onNavigate = () => {}, onResize = () => {} }) {
     const document = host.ownerDocument;
     const tr = (text, params) => i18n.t(text, params);
@@ -81,6 +82,7 @@
       return element;
     };
     const original = products.find(p => p.key === selectedKey) || products[0];
+    let preferredOrientation = Orientation.selected(original, selectedOrientation)?.key || selectedOrientation;
     const remembered = new Map([[type(original), record(original).attributes]]);
     let stage = browse ? 'families' : 'options', familyKey = original.familyKey;
     let productType = type(original), state, content, actions;
@@ -115,20 +117,22 @@
     }
 
     function applyOption(key, value) {
-      remembered.set(productType, { ...state.selected, [key]: value });
+      if (key === 'orientation') preferredOrientation = value;
+      else remembered.set(productType, { ...state.selected, [key]: value });
       render();
       host.querySelector(`[data-option-key="${key}"] button[aria-pressed="true"], [data-option-key="${key}"] .product-picker-select`)?.focus({ preventScroll: true });
     }
 
     function renderField(field) {
       if (field.values.length < 2) return;
+      const labelFor = value => tr(field.labels?.[value] || field.format?.(value) || value);
       const box = node('fieldset', 'product-picker-field', content);
       box.dataset.optionKey = field.key;
       node('legend', '', box, tr(field.label));
       if (field.values.length <= 8) {
         const options = node('div', 'product-picker-buttons', box);
         for (const value of field.values) {
-          const button = node('button', 'product-picker-option', options, tr(value));
+          const button = node('button', 'product-picker-option', options, labelFor(value));
           button.type = 'button'; button.dataset.value = value;
           button.setAttribute('aria-pressed', String(value === field.value));
           button.addEventListener('click', () => applyOption(field.key, value));
@@ -136,7 +140,7 @@
         return;
       }
       const id = `product-picker-options-${++sequence}`;
-      const toggle = node('button', 'product-picker-select', box, tr(field.value));
+      const toggle = node('button', 'product-picker-select', box, labelFor(field.value));
       toggle.type = 'button'; toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', id);
       const popup = node('div', 'product-picker-search', box); popup.hidden = true;
       const input = node('input', '', popup); input.type = 'search'; input.autocomplete = 'off';
@@ -159,8 +163,8 @@
       }
       function results() {
         list.replaceChildren(); active = -1; input.removeAttribute('aria-activedescendant');
-        for (const value of field.values.filter(v => normalized(tr(v)).includes(normalized(input.value)))) {
-          const option = node('button', 'product-picker-result', list, tr(value));
+        for (const value of field.values.filter(v => normalized(labelFor(v)).includes(normalized(input.value)))) {
+          const option = node('button', 'product-picker-result', list, labelFor(value));
           option.type = 'button'; option.tabIndex = -1; option.id = `${id}-${list.children.length}`;
           option.setAttribute('role', 'option'); option.setAttribute('aria-selected', String(value === field.value));
           option.addEventListener('click', () => applyOption(field.key, value));
@@ -217,18 +221,26 @@
         title = labels[productType] || state.product.displayName;
         if (browse) node('p', 'product-picker-path', content,
           `${tr(familyKey === 'posters' ? 'Wandbilder' : family?.label || '')} / ${tr(title)}`);
-        for (const field of state.options) renderField(field);
+        const orientation = Orientation.selected(state.product, preferredOrientation);
+        const view = Orientation.view(state.product, orientation?.key);
+        const sizeOrientation = orientation?.key || (candidates.some(product => product.orientations.length) && preferredOrientation);
+        for (const field of state.options) renderField({ ...field,
+          ...(field.key === 'size' && sizeOrientation ? { label: 'Größe (Breite × Höhe)',
+            format: value => Orientation.dimensions(value, sizeOrientation) } : {}) });
+        if (orientation) renderField({ key: 'orientation', label: 'Ausrichtung',
+          values: state.product.orientations.map(option => option.key), value: orientation.key,
+          labels: Orientation.labels });
         actions = node('div', 'product-picker-actions', host);
         const summary = node('div', 'product-picker-summary', actions);
         const imageButton = node('button', 'product-picker-photo', summary); imageButton.type = 'button';
         imageButton.setAttribute('aria-label', tr('Details & Vorschau'));
         const image = node('img', '', imageButton); image.alt = ''; image.src = photo(state.product);
-        imageButton.addEventListener('click', () => onPhoto?.(state.product, imageButton));
+        imageButton.addEventListener('click', () => onPhoto?.(view, imageButton));
         const copy = node('div', '', summary);
-        node('strong', '', copy, tr(state.product.variantLabel || state.product.size.label));
+        node('strong', '', copy, Orientation.summary(view, i18n, { detail: false }));
         node('span', '', copy, price(state.product));
         const apply = node('button', 'product-picker-apply', actions, tr('Produkt übernehmen'));
-        apply.type = 'button'; apply.addEventListener('click', () => onConfirm(state.product));
+        apply.type = 'button'; apply.addEventListener('click', () => onConfirm(state.product, orientation?.key || 'default'));
         content.scrollTop = scrollTop;
       }
       host.dataset.pickerStage = stage;

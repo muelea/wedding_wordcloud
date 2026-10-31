@@ -1,10 +1,11 @@
 (function (root, factory) {
   'use strict';
   const api = factory(typeof module === 'object' && module.exports
-    ? require('./product-photo-preview') : root.ProductPhotoPreview);
+    ? require('./product-photo-preview') : root.ProductPhotoPreview,
+    typeof module === 'object' && module.exports ? require('./product-orientation') : root.ProductOrientation);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.WolkenworteCartProductPreview = api;
-})(typeof window === 'object' ? window : globalThis, function (PhotoPreview) {
+})(typeof window === 'object' ? window : globalThis, function (PhotoPreview, Orientation) {
   'use strict';
 
   const thumbnails = new Map();
@@ -17,14 +18,7 @@
     photo(product) ? [{ src: photo(product), label: 'Produktfoto' }] : [];
 
   function variant(product, i18n) {
-    const size = product?.size || {};
-    let label = i18n.t(product?.variantLabel || size.label || '');
-    if (product?.orientation === 'landscape' && size.label) {
-      // Keep color/finish identity while using the oriented metric dimensions.
-      label = label.replace(/^.*?\d+(?:[.,]\d+)?\s+×\s+\d+(?:[.,]\d+)?\s+(?:cm|mm)/,
-        i18n.t(size.label));
-    }
-    return size.detail ? `${label} · ${i18n.t(size.detail)}` : label;
+    return Orientation.summary(product, i18n);
   }
 
   function configuration(item, product) {

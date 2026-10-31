@@ -80,7 +80,7 @@
         if (product.key === next.key) await gate;
         return prepare(product, options);
       };
-      gallery.entries.delete(next.key);
+      gallery.entries.delete(ProductOrientation.key(next));
       const pending = gallery.load(mug, next);
       await new Promise(requestAnimationFrame);
       check('the card and actions do not move while loading', JSON.stringify(before) === JSON.stringify(bounds()));

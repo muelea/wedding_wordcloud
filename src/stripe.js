@@ -4,6 +4,7 @@ const I18n = require('./i18n');
 const { checkoutRequest, paymentAmounts } = require('./checkoutTax');
 const performanceProbe = require('./performanceProbe');
 const stripeConfig = require('./stripeConfig');
+const ProductOrientation = require('../public/js/product-orientation');
 
 const PERSONALIZED_GOODS_NOTICE = 'Die Produkte werden nach euren individuellen Vorgaben angefertigt. Für solche personalisierten Waren besteht grundsätzlich kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 1 BGB). Eure gesetzlichen Rechte bei Mängeln bleiben unberührt.';
 const CUSTOMS_NOTICE = 'Bei Lieferungen in bestimmte Länder können zusätzliche Zölle, Einfuhrsteuern oder sonstige Einfuhrgebühren anfallen. Diese sind vom Empfänger zu tragen.';
@@ -69,6 +70,7 @@ function notConfiguredError() {
 
 function freezeProduct(product) {
   if (!product) return null;
+  const orientation = ProductOrientation.selected(product);
   return {
     key: String(product.key || ''),
     name: String(product.name || ''),
@@ -77,6 +79,9 @@ function freezeProduct(product) {
       plural: String(product.unit?.plural || 'Produkte'),
     },
     size: { label: String(product.size?.label || '') },
+    ...(product.variantLabel ? { variantLabel: String(product.variantLabel) } : {}),
+    ...(orientation ? { orientation: orientation.key,
+      orientationOptions: [{ key: orientation.key, label: orientation.label }] } : {}),
     // Pin the category with new orders. Older frozen requests keep their
     // original generic category and identical idempotent retry payload.
     ...(product.familyKey === 'clothing' ? { taxCode: 'txcd_30011000' } : {}),
@@ -261,7 +266,8 @@ async function createCheckoutSession({
       await persistCustomer(customerId);
     }
     const basketDescription = basket.map((item) =>
-      `${item.quantity} × ${I18n.translate(item.product.name, checkoutLocale)} · ${I18n.translate(item.product.size.label, checkoutLocale)}`
+      `${item.quantity} × ${I18n.translate(item.product.name, checkoutLocale)} · ${ProductOrientation.summary(item.product,
+        { t: source => I18n.translate(source, checkoutLocale) }, { detail: false })}`
     ).join('; ');
     session = await client.checkout.sessions.create({
       mode: 'payment',
@@ -283,7 +289,8 @@ async function createCheckoutSession({
         currency, unit_amount: item.unitAmountCents, tax_behavior: taxBehavior,
         product_data: {
           name: I18n.translate(basket[index].product.name, checkoutLocale),
-          description: I18n.translate(basket[index].product.size.label, checkoutLocale),
+          description: ProductOrientation.summary(basket[index].product,
+            { t: source => I18n.translate(source, checkoutLocale) }, { detail: false }),
           tax_code: basket[index].product.taxCode || 'txcd_99999999',
           metadata: { configurationId: item.configurationId },
         },

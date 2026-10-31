@@ -70,6 +70,7 @@ function harness(extra = {}) {
     },
   };
   const context = vm.createContext({
+    ProductOrientation: require('../public/js/product-orientation'), pendingOrientation: null,
     accountController:null,accountDesignReference:null,
     workingDesignId: 'w'.repeat(32), draftStorageVersion: 0, dismissedCloud: '',
     cloudSourceState: 'ready', cloudCheckPending: false, cloudCheckGeneration: 0, lastCloudCheck: 0,
@@ -1047,7 +1048,7 @@ test('an untouched automatic product switches directly, while selecting the same
   const { context: page, calls } = switchingHarness();
   await page.confirmProductDialog();
   assert.equal(calls.switches[0][0], 'pillow');
-  assert.equal(calls.switches[0][1], undefined);
+  assert.equal(calls.switches[0][1], 'default');
   assert.equal(calls.switches[0][2].preserveEditingItem, false);
   assert.equal(calls.warnings.length, 0);
   assert.equal(calls.posts, 0, 'an automatic design is not silently added to the basket');
@@ -1825,7 +1826,7 @@ test('editing a notebook or pillow back keeps its stored front on the front of t
 
 test('a failed 3D initialization exposes retry and never introduces a flat mug', async () => {
   const states = [];
-  const page = vm.createContext({ product: { previewType: 'mug', key: 'mug' },
+  const page = vm.createContext({ ProductOrientation: require('../public/js/product-orientation'), product: { previewType: 'mug', key: 'mug' },
     editorElement: { hidden: false }, selectedOrientation: 'default', productView() { return page.product; },
     mug3D: null, mug3DLoadPromise: null, mug3DGeneration: 0, mugViewer: {},
     window: { THREE: {} }, console: { warn() {} },

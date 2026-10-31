@@ -23,6 +23,8 @@ const {
 test('new phone variants prefer their explicit mockup styles over legacy generic styles', () => {
   const product = getProduct('tough-case-21474');
   const row = styles => ({ placement: 'default', technique: product.printful.technique,
+    print_area_width: product.printFile.width / product.printFile.dpi,
+    print_area_height: product.printFile.height / product.printFile.dpi,
     print_area_type: 'simple', mockup_styles: styles });
   const generic = { id: 8112, category_name: 'Flat 2', restricted_to_variants: null };
   const unrelated = { id: 111, category_name: 'Flat', restricted_to_variants: [21473] };
@@ -62,6 +64,8 @@ function mockupStyleRows(product) {
   return product.printful.placements.map((placement, index) => ({
     placement,
     technique: product.printful.technique,
+    print_area_width: product.printFile.width / product.printFile.dpi,
+    print_area_height: product.printFile.height / product.printFile.dpi,
     print_area_type: 'simple',
     mockup_styles: [{
       id: 700 + index,

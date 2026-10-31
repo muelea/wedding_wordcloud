@@ -2611,6 +2611,7 @@
   <script src="<%= asset('/js/print-layout-client.js') %>"></script>
   <script src="<%= asset('/js/design-transfer.js') %>"></script>
   <script src="<%= asset('/js/product-photo-preview.js') %>"></script>
+  <script src="<%= asset('/js/product-orientation.js') %>"></script>
   <script src="<%= asset('/js/product-picker.js') %>"></script>
   <script src="<%= asset('/js/product-gallery.js') %>"></script>
   <script src="<%= asset('/js/configurator-cart-panel.js') %>"></script>
@@ -2788,6 +2789,7 @@
     const galleryPendingConfigurations = new Map();
     let selectedFamilyKey = null;
     let pendingProductKey = null;
+    let pendingOrientation = null;
     let pendingFamilyKey = null;
     let productDialogCloseReason = 'cancel';
     // Resolved from the shared catalog (or a saved choice) when the product loads.
@@ -3387,16 +3389,7 @@
 
     function productView(candidate = product, orientation = null, surfaceKey = activeSurface) {
       if (!candidate) return null;
-      const options = Array.isArray(candidate.orientations) ? candidate.orientations : [];
-      const key = orientation || (candidate === product ? selectedOrientation : null) ||
-        candidate.defaultOrientation || candidate.orientation || options[0]?.key;
-      const selected = options.find((option) => option.key === key) ||
-        options.find((option) => option.key === candidate.defaultOrientation) || options[0];
-      const view = selected ? { ...candidate, orientation: selected.key,
-        size: selected.size, printFile: selected.printFile,
-        designSafeAreas: selected.designSafeAreas, layoutGeometry: selected.layoutGeometry,
-        previewMockup: selected.previewMockup, previewModel: selected.previewModel || candidate.previewModel } :
-        { ...candidate, orientation: 'default' };
+      const view = ProductOrientation.view(candidate, orientation || (candidate === product ? selectedOrientation : null));
       const areas = view.designSafeAreas || {};
       const safeArea = areas[surfaceKey] || Object.values(areas)[0];
       return {
@@ -3413,9 +3406,7 @@
     }
 
     function selectedOrientationOption(candidate = product, orientation = selectedOrientation) {
-      const options = Array.isArray(candidate?.orientations) ? candidate.orientations : [];
-      return options.find((option) => option.key === orientation) ||
-        options.find((option) => option.key === candidate?.defaultOrientation) || options[0] || null;
+      return ProductOrientation.selected(candidate, orientation);
     }
 
     function productSizeText(candidate, orientation = null) {
@@ -3633,10 +3624,9 @@
       setText(orderCount, countSource, countParams);
       items.forEach((item) => {
         const itemProduct = products.find((candidate) => candidate.key === item.productKey);
-        const orientation = selectedOrientationOption(itemProduct, item.orientation);
         const productName = t(itemProduct?.displayName || 'Wolkenworte Design');
         const itemSize = itemProduct
-          ? `${productSizeText(itemProduct, item.orientation)}${orientation ? ` · ${t(orientation.label)}` : ''}`
+          ? productSizeText(itemProduct, item.orientation)
           : t('Wolkenworte Design');
         const isEditing = item.id === editingOrderItemId;
         const row = document.createElement('div');
@@ -3714,7 +3704,6 @@
 
     function describeCartItem(item) {
       const candidate = products.find(product => product.key === item.productKey);
-      const orientation = selectedOrientationOption(candidate, item.orientation);
       let quantity = candidate?.defaultQuantity ?? 1;
       try {
         quantity = WolkenworteConfiguratorSession.createShippingDraft(slug, sessionStorage)
@@ -3723,7 +3712,7 @@
       return { name: t(candidate?.displayName || 'Wolkenworte Design'),
         quantity, maxQuantity: candidate?.maxQuantity || 99,
         price: candidate?.price ? WolkenworteI18n.formatCurrency(candidate.price.unitGrossCents * quantity, candidate.price.currency) : '',
-        size: candidate ? `${productSizeText(candidate, item.orientation)}${orientation ? ` · ${t(orientation.label)}` : ''}` : '' };
+        size: candidate ? productSizeText(candidate, item.orientation) : '' };
     }
 
     async function openCartPanelDesign(id) {
@@ -4252,7 +4241,8 @@
         activeSurface = productSurfaces()[0].key;
         selectedFamilyKey = product.familyKey;
         const savedOrientation = selectedOrientationOption(product, configurationData.orientation);
-        selectedOrientation = savedOrientation?.key || product.defaultOrientation || 'default';
+        selectedOrientation = configurationData.orientation === 'default' && product.legacyDefaultOrientation
+          ? 'default' : savedOrientation?.key || product.defaultOrientation || 'default';
         selectedTheme = product.themes.some((option) => option.key === configurationData.theme)
           ? configurationData.theme
           : product.themes[0].key;
@@ -5034,6 +5024,7 @@
           : 'Euer Design wird auf das neue Produkt übertragen. Es wird erst durch „In den Warenkorb“ zur Bestellung hinzugefügt.');
       setText(productDialogDone, startingAnotherProduct ? 'Weiteres Design starten' : 'Produkt ändern');
       pendingProductKey = product?.key || null;
+      pendingOrientation = selectedOrientation;
       pendingFamilyKey = selectedFamilyKey;
       productDialogCloseReason = 'cancel';
       buildProductOptions();
@@ -5054,12 +5045,14 @@
 
     function resetProductDialogSelection() {
       pendingProductKey = null;
+      pendingOrientation = null;
       pendingFamilyKey = null;
     }
 
     async function confirmProductDialog() {
       if (leavingPage || orderActionPending || productTransitionPending) return;
       const nextProduct = dialogSelectedProduct();
+      const nextOrientation = pendingOrientation || ProductOrientation.selected(nextProduct, selectedOrientation)?.key || 'default';
       const another = startingAnotherProduct;
       const previousProductKey = product?.key;
       productDialogCloseReason = 'confirm';
@@ -5074,9 +5067,10 @@
             if (choice === 'save' && !await saveCurrentDesign(designAnotherButton)) return;
             if (!['save', 'skip'].includes(choice)) return;
           }
-          await runNavigation(() => startProductDesign(nextProduct, undefined, { independent: true }));
-        } else if (nextProduct?.key !== product?.key) {
-          await runNavigation(() => startProductDesign(nextProduct, undefined, {
+          await runNavigation(() => startProductDesign(nextProduct, nextOrientation, { independent: true }));
+        } else if (nextProduct?.key !== product?.key ||
+            ProductOrientation.key(nextProduct, nextOrientation) !== ProductOrientation.key(product, selectedOrientation)) {
+          await runNavigation(() => startProductDesign(nextProduct, nextOrientation, {
             preserveEditingItem: Boolean(editingOrderItemId),
           }));
         }
@@ -5283,9 +5277,10 @@
       initMug3D();
     }
 
-    function selectDialogProduct(candidate) {
+    function selectDialogProduct(candidate, orientation) {
       if (!candidate) return;
       pendingProductKey = candidate.key;
+      pendingOrientation = orientation;
       pendingFamilyKey = candidate.familyKey;
       updateProductOptionSelection();
     }
@@ -5324,9 +5319,10 @@
       productOptions.hidden = false;
       productPicker = WolkenworteProductPicker.create(productOptions, {
         products, families: productFamilies, selectedKey: pendingProductKey || product?.key, browse: true,
+        selectedOrientation: pendingOrientation || selectedOrientation,
         i18n: WolkenworteI18n, photo: WolkenworteCartProductPreview.photo, price: productPriceText,
         onPhoto: openPickerProductInfo,
-        onConfirm: candidate => { selectDialogProduct(candidate); void confirmProductDialog(); },
+        onConfirm: (candidate, orientation) => { selectDialogProduct(candidate, orientation); void confirmProductDialog(); },
         onResize: () => { if (workspace.active?.panel === productDialog) workspace.positionChooser(); },
         onNavigate: ({ title, canBack, stage }) => {
           setText(document.getElementById('product-dialog-title'), title);
@@ -5339,7 +5335,7 @@
     }
 
     async function activateOrientation(orientation) {
-      if (!orientation || orientation.key === selectedOrientation) return;
+      if (!orientation || orientation.key === (ProductOrientation.selected(product, selectedOrientation)?.key || selectedOrientation)) return;
       closeToolbarMenus();
       // A radio changes before its handler runs. Restore the actual choice
       // until the new draft is ready to replace the current surface.
@@ -5360,7 +5356,8 @@
         updateToolbarSummaries();
         return;
       }
-      if (!options.some((option) => option.key === selectedOrientation)) {
+      if (!options.some((option) => option.key === selectedOrientation) &&
+          !(selectedOrientation === 'default' && product.legacyDefaultOrientation)) {
         selectedOrientation = product.defaultOrientation || options[0].key;
       }
       for (const orientation of options) {
@@ -5370,7 +5367,7 @@
         input.type = 'radio';
         input.name = 'orientation';
         input.value = orientation.key;
-        input.checked = orientation.key === selectedOrientation;
+        input.checked = orientation.key === selectedOrientationOption()?.key;
         input.addEventListener('change', () => activateOrientation(orientation));
         const card = document.createElement('span');
         card.className = 'option-card';
@@ -5967,8 +5964,7 @@
         paintFlat: paintFlatProductPreview,
         preview: cartProductPreview,
         renderArtwork: renderPreviewArtwork,
-        prepare: async (candidate, { signal, allowSmallText = false, waitForIdle }) => {
-          const orientation = candidate.defaultOrientation || 'default';
+        prepare: async (candidate, { orientation = candidate.defaultOrientation || 'default', signal, allowSmallText = false, waitForIdle }) => {
           const designs = {};
           for (const surface of candidate.printSurfaces) {
             await new Promise(resolve => setTimeout(resolve, 0));
@@ -5978,6 +5974,26 @@
           }
           return { productKey: candidate.key, orientation, theme, currentDesignEdited: allowSmallText,
             customColors: paletteColors, words: sourceWords, designs };
+        },
+        transfer: async (snapshot, candidate, orientation) => {
+          const sourceProduct = products.find(item => item.key === snapshot.productKey);
+          const source = { productKey: snapshot.productKey, orientation: snapshot.orientation,
+            surfaces: sourceProduct.printSurfaces.map(surface => ({ key: surface.key,
+              area: productView(sourceProduct, snapshot.orientation, surface.key).safeArea,
+              design: snapshot.designs[surface.key] })) };
+          const target = { productKey: candidate.key, orientation,
+            surfaces: candidate.printSurfaces.map(surface => ({ key: surface.key,
+              area: productView(candidate, orientation, surface.key).safeArea })) };
+          const contents = source.surfaces.flatMap(surface => surface.design);
+          await ensureDesignFonts(contents.filter(item => item.type !== 'icon' && item.type !== 'image').map(item => item.fontFamily));
+          await WolkenworteEmoji.preloadTexts(contents.map(item => item.text || ''));
+          const transferred = await DesignTransfer.prepareAsync(snapshot.productDesignState, source, target,
+            mugEditor?.measureContext || document.createElement('canvas').getContext('2d'), {
+              fontFamily: item => DesignFonts.cssFamily(item.fontFamily), automatic: false,
+              printDpi: candidate.printFile.dpi, pack: printLayoutJobs().pack, priority: 100,
+            });
+          return { ...snapshot, productKey: candidate.key, orientation, designs: transferred.designs,
+            productDesignState: transferred.state, currentDesignEdited: true, needsCartUpdate: true };
         },
         createMug: ({ host, product: candidate, design, designs, onStatus }) => Mug3DViewer.create({
           THREE: window.THREE, host, product: candidate, onStatus,
@@ -6014,7 +6030,8 @@
       try {
         if (!workspaceReady) {
           await initializeWorkspace(snapshot);
-        } else if (snapshot.workingDesignId !== workingDesignId) {
+        } else if (snapshot.workingDesignId !== workingDesignId || snapshot.productKey !== product.key ||
+            ProductOrientation.key(product, snapshot.orientation) !== ProductOrientation.key(product, selectedOrientation)) {
           await applyLocalDraft({ currentDesignEdited: false, ...snapshot });
         }
         if (restorationFailed) return;

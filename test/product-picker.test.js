@@ -15,6 +15,25 @@ function source(name) {
   return template.slice(start, template.indexOf('\n    }', start) + 6);
 }
 
+test('opening legacy blanket orientation controls selects landscape without rewriting its stored default', t => {
+  const dom = new JSDOM('<div id="options"></div><div id="step"></div><div id="toolbar"></div>');
+  t.after(() => dom.window.close());
+  const product = catalog.getPublicProduct(catalog.getProduct('throw-blanket-50x60in'));
+  const Orientation = require('../public/js/product-orientation');
+  const context = vm.createContext({ product, selectedOrientation: 'default', document: dom.window.document,
+    orientationOptions: dom.window.document.getElementById('options'), orientationStep: dom.window.document.getElementById('step'),
+    designToolbarControls: dom.window.document.getElementById('toolbar'),
+    selectedOrientationOption: () => Orientation.selected(product, context.selectedOrientation),
+    updateToolbarSummaries() {}, activateOrientation() {}, t: value => value,
+    setText: (element, value) => { element.textContent = value; },
+  });
+  vm.runInContext(source('buildOrientationOptions'), context);
+  context.buildOrientationOptions();
+  assert.equal(context.selectedOrientation, 'default');
+  assert.equal(context.orientationStep.hidden, false);
+  assert.equal(context.orientationOptions.querySelector('input:checked').value, 'landscape');
+});
+
 test('the product trigger closes its tracked chooser after native light-dismiss, like the colour trigger', t => {
   const dom = new JSDOM('<button id="change-product" aria-expanded="false"></button>');
   t.after(() => dom.window.close());
@@ -116,7 +135,7 @@ test('the editor delegates browsing to the shared picker and transfers only the 
   t.after(() => dom.window.close());
   const document = dom.window.document, product = catalog.getPublicProducts()[0], confirmed = [];
   const context = vm.createContext({ document, product, products: catalog.getPublicProducts(),
-    productFamilies: catalog.getPublicProductFamilies(), pendingProductKey: product.key, productPicker: null,
+    productFamilies: catalog.getPublicProductFamilies(), pendingProductKey: product.key, selectedOrientation: 'default', pendingOrientation: null, productPicker: null,
     productOptions: document.getElementById('product-options'), productDialog: document.querySelector('dialog'),
     variantPanel: { hidden: false }, workspace: { close() {}, positionChooser() {},
       show(panel) { this.active = { panel }; } },
@@ -231,7 +250,7 @@ test('product details show the current side, retained sides and exact orientatio
     const before = JSON.stringify({ product, states: [...surfaceStates], latest });
     const renders = [], opened = [], infoButton = {};
     let closed = 0;
-    const context = vm.createContext({ product, selectedOrientation, activeSurface, surfaceStates,
+    const context = vm.createContext({ ProductOrientation: require('../public/js/product-orientation'), product, selectedOrientation, activeSurface, surfaceStates,
       workspaceReady: true, restorationFailed: false, productTransitionPending: false,
       workspace: { close(restoreFocus) { assert.equal(restoreFocus, false); closed++; } },
       productInfoButton: infoButton, getCurrentDesign: () => latest,

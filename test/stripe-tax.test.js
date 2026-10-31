@@ -149,6 +149,33 @@ test('catalog Checkout preserves unit prices, paginates large carts and rejects 
   assert.equal(listCalls, 2, 'both large-cart responses fetch all designs before validating totals');
 });
 
+test('new Checkout snapshots localize oriented dimensions and frame colors while legacy retries retain their descriptions', async t => {
+  process.env.STRIPE_PAYMENT_MODE = 'test'; process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_orientation_labels';
+  delete require.cache[require.resolve('../src/stripe')];
+  const integration = require('../src/stripe'), { getProduct, resolveProductOrientation } = require('../src/products');
+  const sdk = new Stripe('sk_test_sdk_mock'); let submitted;
+  t.mock.method(Object.getPrototypeOf(sdk.checkout.sessions), 'create', async params => {
+    submitted = params; return { ...fixture().session, url: 'https://checkout.stripe.test/orientations' };
+  });
+  const product = resolveProductOrientation(getProduct('framed-canvas-16041'), 'landscape');
+  const request = integration.freezeCheckoutRequest({ product, configurationId: 'design1', quantity: 2,
+    quoteId: 'quote1', slug: 'test', baseUrl: 'https://example.test', locale: 'en',
+    shipments: [{ quantity: 2, recipient: { name: 'Test', address1: 'Testweg 1', city: 'Berlin', zip: '10115', country_code: 'DE' } }],
+  });
+  const before = JSON.stringify(request);
+  await integration.createCheckoutSession({ order: fixture().order, ...request, customerId: 'cus_testtax' });
+  assert.match(submitted.line_items[0].price_data.product_data.description, /40\.6 × 30\.5 cm · Brown · Landscape/);
+  assert.equal(JSON.stringify(request), before);
+  const legacy = structuredClone(request);
+  for (const entry of [...legacy.basket.map(item => item.product), ...legacy.products]) {
+    delete entry.variantLabel; delete entry.orientation; delete entry.orientationOptions;
+    entry.size.label = '30,5 × 40,6 cm';
+  }
+  await integration.createCheckoutSession({ order: fixture().order, ...legacy, customerId: 'cus_testtax' });
+  assert.match(submitted.line_items[0].price_data.product_data.description, /30\.5 × 40\.6 cm$/);
+  assert.doesNotMatch(submitted.line_items[0].price_data.product_data.description, /Landscape|Brown/);
+});
+
 test('Stripe cancel and success URLs preserve the checkout origin and the complete cart', async t => {
   process.env.STRIPE_PAYMENT_MODE = 'test';
   process.env.STRIPE_TEST_SECRET_KEY = 'sk_test_return_unit';

@@ -114,7 +114,9 @@ function compatibleStyle(rows, product, placement) {
       Math.abs(Number(row.print_area_height) - height) < .04);
     // Rotatable products have different style IDs for each orientation. A
     // transposed match is rejected by Printful when the orientation is sent.
-    if (exact.length) candidates = exact;
+    // Never substitute an opposite-orientation style when the provider catalog
+    // changes: it would either reject the request or show misleading artwork.
+    candidates = exact;
   }
   // Phone catalogs can retain generic styles for older devices alongside
   // explicit styles for new variants. Prefer the exact variant restriction;

@@ -7,34 +7,39 @@ const Cloth = require('../public/js/blanket-cloth');
 const { getProduct, getPublicProduct } = require('../src/products');
 const contracts = require('./fixtures/printful-geometry.json').products;
 
-test('both blanket sizes keep their provider files and exact physical face crop on a white 6 mm shell', () => {
-  for (const [key, width, height] of [['throw-blanket-50x60in', 152.4, 127], ['throw-blanket-30x40in', 101.6, 76.2]]) {
-    const source = getProduct(key), product = getPublicProduct(source), model = product.previewModel;
-    const contract = contracts.find(p => p.productKey === key);
-    assert.equal(product.previewType, '3d'); assert.equal(model.kind, 'blanket');
-    assert.equal(model.width, width); assert.equal(model.height, height); assert.equal(model.depth, .6);
-    assert.equal(product.printFile.width, contract.printfile.width); assert.equal(product.printFile.height, contract.printfile.height);
-    assert.equal(source.printful.variantId, contract.variant.variant_id);
-    assert.equal(source.printful.printfileId, contract.printfile.printfile_id);
-    assert.equal(model.face.x * product.printFile.width, 225);
-    assert.ok(Math.abs(model.face.width * product.printFile.width - width / 2.54 * product.printFile.dpi) < 1e-7);
-    const group = new THREE.Group(), artwork = new THREE.Texture(), cloth = Cloth.create(THREE, group, artwork, product);
-    const mesh = cloth.mesh, vertices = mesh.geometry.attributes.position, count = vertices.count / 2, i = Math.floor(count / 2);
-    const sim = cloth.simulation, hangingSpan = sim.rest[sim.nx * 3] - sim.rest[0];
-    assert.ok(hangingSpan > sim.width * .95 && hangingSpan < sim.width,
-      'the hanging points keep the top open without stretching beyond the fabric width');
-    const topSag = sim.positions[1] - sim.positions[Math.floor(sim.nx / 2) * 3 + 1];
-    assert.ok(topSag > 0 && topSag < sim.height * .18,
-      'the upper hem keeps a gentle sag instead of folding down over the top of the print');
-    const front = new THREE.Vector3().fromBufferAttribute(vertices, i), back = new THREE.Vector3().fromBufferAttribute(vertices, i + count);
-    assert.ok(Math.abs(front.distanceTo(back) - .6) < .00002, 'the depth is physical, not a scaled visual layer');
-    assert.equal(mesh.material[0].map, artwork);
-    assert.equal(mesh.material[1].map, null, 'the reverse never repeats or mirrors the print');
-    assert.ok(mesh.material.every(material => material.color.getHexString() === 'ffffff'));
-    const uv = mesh.geometry.attributes.uv;
-    assert.ok(Math.abs(uv.getX(0) - model.face.x) < 1e-7);
-    assert.ok(Math.abs(uv.getY(0) - (1 - model.face.y)) < 1e-7);
-    cloth.dispose(); artwork.dispose(); assert.equal(group.children.length, 0);
+test('both blanket sizes and orientations keep their provider files and exact physical face crop on a white 6 mm shell', () => {
+  for (const [key, nativeWidth, nativeHeight] of [['throw-blanket-50x60in', 152.4, 127], ['throw-blanket-30x40in', 101.6, 76.2]]) {
+    for (const orientation of ['default', 'portrait', 'landscape']) {
+      const width = orientation === 'portrait' ? nativeHeight : nativeWidth;
+      const height = orientation === 'portrait' ? nativeWidth : nativeHeight;
+      const source = getProduct(key), product = getPublicProduct(source, orientation), model = product.previewModel;
+      const contract = contracts.find(p => p.productKey === key);
+      assert.equal(product.previewType, '3d'); assert.equal(model.kind, 'blanket');
+      assert.equal(model.width, width); assert.equal(model.height, height); assert.equal(model.depth, .6);
+      assert.equal(product.printFile.width, orientation === 'portrait' ? contract.printfile.height : contract.printfile.width);
+      assert.equal(product.printFile.height, orientation === 'portrait' ? contract.printfile.width : contract.printfile.height);
+      assert.equal(source.printful.variantId, contract.variant.variant_id);
+      assert.equal(source.printful.printfileId, contract.printfile.printfile_id);
+      assert.equal(model.face.x * product.printFile.width, 225);
+      assert.ok(Math.abs(model.face.width * product.printFile.width - width / 2.54 * product.printFile.dpi) < 1e-7);
+      const group = new THREE.Group(), artwork = new THREE.Texture(), cloth = Cloth.create(THREE, group, artwork, product);
+      const mesh = cloth.mesh, vertices = mesh.geometry.attributes.position, count = vertices.count / 2, i = Math.floor(count / 2);
+      const sim = cloth.simulation, hangingSpan = sim.rest[sim.nx * 3] - sim.rest[0];
+      assert.ok(hangingSpan > sim.width * .95 && hangingSpan < sim.width,
+        'the hanging points keep the top open without stretching beyond the fabric width');
+      const topSag = sim.positions[1] - sim.positions[Math.floor(sim.nx / 2) * 3 + 1];
+      assert.ok(topSag > 0 && topSag < sim.height * .18,
+        'the upper hem keeps a gentle sag instead of folding down over the top of the print');
+      const front = new THREE.Vector3().fromBufferAttribute(vertices, i), back = new THREE.Vector3().fromBufferAttribute(vertices, i + count);
+      assert.ok(Math.abs(front.distanceTo(back) - .6) < .00002, 'the depth is physical, not a scaled visual layer');
+      assert.equal(mesh.material[0].map, artwork);
+      assert.equal(mesh.material[1].map, null, 'the reverse never repeats or mirrors the print');
+      assert.ok(mesh.material.every(material => material.color.getHexString() === 'ffffff'));
+      const uv = mesh.geometry.attributes.uv;
+      assert.ok(Math.abs(uv.getX(0) - model.face.x) < 1e-7);
+      assert.ok(Math.abs(uv.getY(0) - (1 - model.face.y)) < 1e-7);
+      cloth.dispose(); artwork.dispose(); assert.equal(group.children.length, 0);
+    }
   }
 });
 

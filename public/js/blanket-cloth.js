@@ -8,6 +8,7 @@
 
   const STEP = 1 / 90;
   const WIDTH = 2.8;
+  const MAX_SETTLE_SECONDS = 8;
 
   // Simulation coordinates are normalized; the visible shell is in centimetres.
   // None of these positions or material effects enters the editable print file.
@@ -48,7 +49,7 @@
     const contactThickness = thickness * 1.8, cell = Math.max(.045, contactThickness);
     const gravity = 9.81 * WIDTH / (model.width / 100);
     const key = (x, y, z) => (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
-    let grabbed = -1, contactStep = 0, accumulator = 0, quiet = 0, awake = false;
+    let grabbed = -1, contactStep = 0, accumulator = 0, quiet = 0, age = 0, awake = false;
 
     function pin() {
       for (const i of [0, nx]) for (let k = 0; k < 3; k++) positions[i * 3 + k] = rest[i * 3 + k];
@@ -131,7 +132,7 @@
       if (grabbed >= 0) for (let k = 0; k < 3; k++) previous[grabbed * 3 + k] = positions[grabbed * 3 + k];
     }
 
-    function wake() { awake = true; quiet = 0; }
+    function wake() { awake = true; quiet = 0; age = 0; }
     function move(point) {
       if (grabbed < 0 || !point.every(Number.isFinite)) return;
       for (let k = 0; k < 3; k++) target[k] = point[k];
@@ -154,10 +155,13 @@
       while (accumulator >= STEP) {
         step(); accumulator -= STEP; changed = true;
         if (grabbed < 0) {
+          age += STEP;
           let energy = 0;
           for (let p = 0; p < positions.length; p++) energy += (positions[p] - previous[p]) ** 2;
           quiet = energy / count < .00000008 ? quiet + STEP : 0;
-          if (quiet > .6) { sleep(); break; }
+          // Residual solver motion in a tall portrait mesh must not keep an
+          // otherwise settled preview rendering indefinitely after release.
+          if (quiet > .6 || age >= MAX_SETTLE_SECONDS) { sleep(); break; }
         }
       }
       return changed;

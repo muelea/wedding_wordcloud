@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-31T21:00:02.752Z",
+  "physicalSamples": false,
+  "ordersCreated": false,
+  "proofs": [
+    {
+      "productKey": "throw-blanket-50x60in",
+      "orientation": "portrait",
+      "variantId": 10986,
+      "printWidth": 7950,
+      "printHeight": 9450,
+      "dpi": 150,
+      "styleId": 3052,
+      "sourceSha256": "d535c56841e21a4eb6d89cf74db76824ccbfe8d89bef9b76535df0eb98f935b8",
+      "proofSha256": "778c57887422859990acf1f9a7454a7be75ca62d0afee8c745ae1af90d2700ed",
+      "file": "throw-blanket-50x60in--portrait.png",
+      "taskIds": [
+        995110392
+      ]
+    },
+    {
+      "productKey": "throw-blanket-50x60in",
+      "orientation": "landscape",
+      "variantId": 10986,
+      "printWidth": 9450,
+      "printHeight": 7950,
+      "dpi": 150,
+      "styleId": 3051,
+      "sourceSha256": "4421fb7852b89c3278764509aba2ebf4415f682d471809c72253e1a15bbd6e20",
+      "proofSha256": "fce967ced82f8bede4e9ced97d68d51de1a7bb787785c91d97352d870c9b7bcf",
+      "file": "throw-blanket-50x60in--landscape.png",
+      "taskIds": [
+        995111292
+      ]
+    },
+    {
+      "productKey": "throw-blanket-30x40in",
+      "orientation": "portrait",
+      "variantId": 22609,
+      "printWidth": 4950,
+      "printHeight": 6450,
+      "dpi": 150,
+      "styleId": 27021,
+      "sourceSha256": "5ad4e0935a5ae0c754697e65d1d704ba38bf7f8b366633e410cb2c6936dede53",
+      "proofSha256": "1ba8a86ae21445a700c54414e6f440df1c019772a9272dff36c19c08f502c868",
+      "file": "throw-blanket-30x40in--portrait.png",
+      "taskIds": [
+        995111584
+      ]
+    },
+    {
+      "productKey": "throw-blanket-30x40in",
+      "orientation": "landscape",
+      "variantId": 22609,
+      "printWidth": 6450,
+      "printHeight": 4950,
+      "dpi": 150,
+      "styleId": 27022,
+      "sourceSha256": "bf4c23e8f1f49fe08629287f71482f3fa526086130c127c4c25a5c3661621a5a",
+      "proofSha256": "388b7bf68edf64af4532dfc729258d129d821129095b556a32d8ad718705adae",
+      "file": "throw-blanket-30x40in--landscape.png",
+      "taskIds": [
+        995111804
+      ]
+    }
+  ]
+}

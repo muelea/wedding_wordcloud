@@ -2,6 +2,7 @@
 
 const { getProductInformation } = require('./productInformation');
 const { getProductPhotos } = require('./productPhotos');
+const ProductOrientation = require('../public/js/product-orientation');
 
 const { models: PREVIEW_MODELS, adaptations: PREVIEW_ADAPTATIONS = [] } = require('./productPreviewModels.json');
 
@@ -197,6 +198,8 @@ function makeProduct({
   previewMockup,
   orientationOptions,
   defaultOrientation,
+  nativeOrientation = 'portrait',
+  legacyDefaultOrientation = null,
 }) {
   const printPlacement = printFile.placement || 'default';
   const exactMesh = PREVIEW_MODELS.find(model => model.productId === productId && model.printfileIds.includes(printfileId));
@@ -319,6 +322,8 @@ function makeProduct({
     printSurfaces: Object.freeze(resolvedPrintSurfaces),
     orientationOptions: Object.freeze(resolvedOrientationOptions),
     defaultOrientation: resolvedDefaultOrientation,
+    nativeOrientation,
+    legacyDefaultOrientation,
     size: Object.freeze(size),
     printFile: Object.freeze({ ...printFile, placement: printPlacement }),
     template: Object.freeze(template),
@@ -347,11 +352,6 @@ function transposeLayoutGeometry(layoutGeometry) {
   ]));
 }
 
-function landscapeSizeLabel(label) {
-  const match = /^(.*?)(\d+(?:[.,]\d+)?)\s+×\s+(\d+(?:[.,]\d+)?)\s+(cm|mm)(.*)$/.exec(String(label || ''));
-  return match ? `${match[1]}${match[3]} × ${match[2]} ${match[4]}${match[5]}` : String(label || '');
-}
-
 function rotateMockupCanvasClockwise(canvas) {
   if (!canvas) return canvas;
   const roundPercent = (value) => Math.round(value * 10_000) / 10_000;
@@ -368,23 +368,30 @@ function resolveProductOrientation(product, rawOrientation) {
   if (!product) return null;
   const options = product.orientationOptions || [];
   const requested = String(rawOrientation || product.defaultOrientation || 'default');
-  const orientation = requested === 'default' && options.length
+  // Legacy blankets keep their original orientation value and specification
+  // hash. Only newly accepted designs use the explicit named orientations.
+  const legacy = requested === 'default' && product.legacyDefaultOrientation;
+  const orientation = requested === 'default' && options.length && !legacy
     ? product.defaultOrientation
     : requested;
   if (options.length) {
-    if (!options.some((option) => option.key === orientation)) return null;
+    if (!legacy && !options.some((option) => option.key === orientation)) return null;
   } else if (orientation !== 'default') {
     return null;
   }
 
-  if (orientation !== 'landscape') return { ...product, orientation };
+  const effectiveOrientation = legacy || orientation;
+  const oriented = { ...product, orientation,
+    size: options.length ? { ...product.size,
+      label: ProductOrientation.dimensions(product.size.label, effectiveOrientation) } : product.size };
+  if (!options.length || effectiveOrientation === product.nativeOrientation) return oriented;
   if (!product.printFile?.canRotate) return null;
   return {
-    ...product,
+    ...oriented,
     orientation,
     size: {
       ...product.size,
-      label: landscapeSizeLabel(product.size.label),
+      label: oriented.size.label,
     },
     printFile: {
       ...product.printFile,
@@ -831,6 +838,11 @@ const THROW_BLANKET_50X60 = makeProduct({
   icon: '▰',
   previewType: '3d',
   previewShape: 'blanket',
+  orientationOptions: POSTER_ORIENTATIONS.map(option => ({ ...option,
+    description: option.key === 'portrait' ? 'Vertikal' : 'Horizontal' })),
+  defaultOrientation: 'portrait',
+  nativeOrientation: 'landscape',
+  legacyDefaultOrientation: 'landscape',
   previewModel: { kind: 'blanket', width: 152.4, height: 127, depth: .6, color: '#ffffff',
     face: { x: 225 / 9450, y: 225 / 7950, width: 9000 / 9450, height: 7500 / 7950 } },
   previewMockup: {
@@ -1065,6 +1077,7 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
     layouts: resolvedProduct.layouts,
     orientation: resolvedProduct.orientation,
     defaultOrientation: product.defaultOrientation,
+    legacyDefaultOrientation: product.legacyDefaultOrientation,
     orientations: product.orientationOptions.map((option) => {
       const oriented = resolveProductOrientation(product, option.key);
       return {
@@ -1075,6 +1088,8 @@ function getPublicProduct(product = DEFAULT_PRODUCT, orientation = product.defau
         designSafeAreas: oriented.designSafeAreas,
         previewMockup: oriented.previewMockup,
         previewModel: oriented.previewModel,
+        ...(product.printful.productId === 304 && /(?:61\s*×\s*91|91\s*×\s*61)\s*cm/.test(product.size.label)
+          ? { information: getProductInformation(oriented) } : {}),
       };
     }),
   };

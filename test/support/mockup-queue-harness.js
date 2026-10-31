@@ -75,7 +75,8 @@ function harness(options={}) {
   const uploaded=[],removed=[],payloads=[],reads=[],createReplies=[],pollReplies=[];
   const provider={
     async getCatalogProductMockupStyles(){return product.printful.placements.map((placement,index)=>({placement,
-      technique:product.printful.technique, print_area_type:'simple',mockup_styles:[{id:index+1}]}));},
+      technique:product.printful.technique, print_area_width:product.printFile.width/product.printFile.dpi,
+      print_area_height:product.printFile.height/product.printFile.dpi, print_area_type:'simple',mockup_styles:[{id:index+1}]}));},
     async createMockupTasks(payload){payloads.push(payload);const next=createReplies.shift();if(next instanceof Error)throw next;return next||[{id:payloads.length,status:'pending'}];},
     async getMockupTasks(ids){reads.push(ids);const next=pollReplies.shift();if(next instanceof Error)throw next;return next||ids.map(id=>({id,status:'completed',catalog_variant_mockups:[{
       catalog_variant_id:product.printful.variantId,mockups:product.printful.placements.map(placement=>({placement,style_id:1,mockup_url:'https://printful-upload.s3-accelerate.amazonaws.com/tmp/product.png'})),

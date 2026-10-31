@@ -36,7 +36,8 @@ test('cart identity retains the complete localized variant and raw provider phot
   const products = getPublicProducts();
   const i18n = { t: text => text };
   for (const product of products) {
-    assert.ok(Products.variant(product, i18n).includes(product.variantLabel || product.size.label), product.key);
+    const expected = product.orientations.length ? product.size.label : product.variantLabel || product.size.label;
+    assert.ok(Products.variant(product, i18n).includes(expected), product.key);
     if (product.productPhoto) assert.equal(Products.photo(product), product.productPhoto, product.key);
     else assert.match(Products.photo(product), /^\/assets\/product-(mockups|thumbnails)\//, product.key);
   }
@@ -49,7 +50,7 @@ test('landscape canvas identity uses the actual dimensions and retains the selec
   const I18n = require('../src/i18n');
   const i18n = { t: source => I18n.translate(source, 'en') };
   const large = getPublicProduct(getProduct('canvas-19330'), 'landscape');
-  assert.equal(Products.variant(large, i18n), '152.4 × 101.6 cm · 3.18 cm deep');
+  assert.equal(Products.variant(large, i18n), '152.4 × 101.6 cm · Landscape · 3.18 cm deep');
   const frame = getPublicProduct(getProduct('framed-canvas-16041'), 'landscape');
   const identity = Products.variant(frame, i18n);
   assert.match(identity, /^40\.6 × 30\.5 cm · Brown/);

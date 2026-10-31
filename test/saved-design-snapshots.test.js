@@ -5,6 +5,14 @@ const {createCanvas}=require('canvas');
 const {getProduct,resolveProductOrientation}=require('../src/products');
 const {productDesignPayload}=require('./helpers');
 const designs=require('../src/savedDesigns');
+test('blanket library snapshots retain each orientation and legacy horizontal arrangements through encoding', () => {
+  for (const key of ['throw-blanket-50x60in', 'throw-blanket-30x40in']) for (const orientation of ['default', 'portrait', 'landscape']) {
+    const payload = { productKey: key, orientation, theme: 'pastel', words: [['Liebe', 1]], ...productDesignPayload(key, orientation) };
+    const snapshot = designs.normalizeSnapshot(payload);
+    assert.equal(snapshot.orientation, orientation);
+    assert.deepEqual(designs.decodeSnapshot(designs.encodeSnapshot(snapshot)), snapshot);
+  }
+});
 test('editable snapshots retain both faces, images, text styles and hidden product arrangements with deduplicated pixels',()=>{
   const product=resolveProductOrientation(getProduct('all-over-basic-pillow-18in'),'default');
   const canvas=createCanvas(20,20);canvas.getContext('2d').fillRect(0,0,20,20);const src=canvas.toDataURL();

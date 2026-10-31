@@ -9,6 +9,7 @@ const ProductPreviews = require('../public/js/cart-product-preview');
 const { Gallery, groupProducts, shouldOpen } = require('../public/js/product-gallery');
 const { getPublicProducts } = require('../src/products');
 
+const Orientation = require('../public/js/product-orientation');
 const products = getPublicProducts();
 const translate = (source, values = {}) => source.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]);
 const snapshot = product => ({ productKey: product.key, orientation: product.defaultOrientation,
@@ -43,8 +44,9 @@ function harness(t, options = {}) {
   };
   const gallery = new Gallery({
     element: dom.window.document.querySelector('section'), products: options.products || products,
-    prepare: async (product, opts) => { prepared.push(product.key); return options.prepare ? options.prepare(product, opts) : snapshot(product); },
-    getView: options.getView || (product => product),
+    prepare: async (product, opts) => { prepared.push(product.key); return options.prepare ? options.prepare(product, opts) : { ...snapshot(product), orientation: opts.orientation }; },
+    getView: options.getView || Orientation.view,
+    transfer: options.transfer,
     preview,
     renderArtwork: (product, design, side) => {
       artwork.push({ product, design, side });
@@ -82,6 +84,77 @@ test('the gallery covers every catalog variant in distinct product groups', () =
   assert.equal(groups.find(group => group[0].catalogGroup === 'canvas').length, 46);
   assert.equal(groups.find(group => group[0].catalogGroup === 'thin-canvas').length, 13);
   assert.equal(groups.find(group => group[0].catalogGroup === 'framed-canvas').length, 39);
+});
+
+test('gallery orientation choices keep preview, customization, direct cart and retained editor labels in agreement', async t => {
+  const h = harness(t, { products: products.filter(p => p.previewShape === 'blanket') });
+  await h.settle();
+  const card = h.card('blanket');
+  assert.equal(card.snapshot.orientation, 'portrait', 'new blanket cards start in portrait');
+  assert.ok(card.view.printFile.width < card.view.printFile.height);
+  h.gallery.openVariants(card);
+  const list = h.gallery.variantDialog.list;
+  list.querySelector('[data-value="portrait"]').click();
+  list.querySelector('.product-picker-apply').click();
+  await h.settle();
+  assert.equal(card.snapshot.orientation, 'portrait');
+  assert.ok(card.viewer.params.product.printFile.width < card.viewer.params.product.printFile.height);
+  assert.match(card.variantLabel.textContent, /^127 × 153 cm · Hochformat$/);
+  await h.gallery.choose(card);
+  assert.equal(h.chosen.at(-1).orientation, 'portrait');
+  await h.gallery.add(card);
+  assert.equal(h.added.at(-1).orientation, 'portrait');
+  const retained = { ...card.snapshot, orientation: 'landscape' };
+  await h.gallery.resume(retained);
+  assert.equal(card.snapshot.orientation, 'landscape');
+  assert.match(card.variantLabel.textContent, /^153 × 127 cm · Querformat$/);
+  h.gallery.openVariants(card);
+  assert.equal(list.querySelector('[data-value="landscape"]').getAttribute('aria-pressed'), 'true');
+  assert.ok(h.gallery.entries.has(`${card.product.key}:portrait`));
+  assert.ok(h.gallery.entries.has(`${card.product.key}:landscape`));
+});
+
+test('gallery switches transfer edited content and preserve its cart target instead of rebuilding live words', async t => {
+  const transfers = [];
+  const h = harness(t, { products: products.filter(p => p.previewShape === 'blanket'),
+    transfer: async (source, product, orientation) => {
+      transfers.push({ source, product, orientation });
+      return { ...source, productKey: product.key, orientation, needsCartUpdate: true };
+    } });
+  await h.settle();
+  const card = h.card('blanket');
+  const edited = { ...card.snapshot, orientation: 'landscape', currentDesignEdited: true, editingOrderItemId: 'OriginalCart',
+    workingDesignId: 'w'.repeat(32), designs: { default: [{ id: 'personal', text: 'Mein Text', x: 200, y: 200 }] } };
+  await h.gallery.resume(edited);
+  await h.gallery.load(card, card.product, true, false, 'portrait');
+  assert.equal(transfers.length, 1);
+  assert.equal(transfers[0].source.designs.default[0].text, 'Mein Text');
+  assert.equal(card.snapshot.editingOrderItemId, 'OriginalCart');
+  assert.equal(card.snapshot.orientation, 'portrait');
+  assert.equal(card.snapshot.needsCartUpdate, true);
+  assert.equal(h.prepared.length, 1, 'manual content does not re-enter the automatic live-word layout');
+});
+
+test('rapid gallery orientation switches retain edited contents while a preceding transfer is still running', async t => {
+  let release, started;
+  const running = new Promise(resolve => { started = resolve; });
+  let count = 0;
+  const h = harness(t, { products: products.filter(p => p.previewShape === 'blanket'),
+    transfer: async (source, product, orientation) => {
+      if (++count === 1) { started(); await new Promise(resolve => { release = resolve; }); }
+      return { ...source, productKey: product.key, orientation, needsCartUpdate: true };
+    } });
+  await h.settle();
+  const card = h.card('blanket');
+  await h.gallery.resume({ ...card.snapshot, orientation: 'landscape', currentDesignEdited: true,
+    designs: { default: [{ id: 'personal', text: 'Behalten', x: 200, y: 200 }] } });
+  const portrait = h.gallery.load(card, card.product, true, false, 'portrait');
+  await running;
+  const landscape = h.gallery.load(card, card.product, true, false, 'landscape');
+  release(); await Promise.all([portrait, landscape]);
+  assert.equal(card.snapshot.orientation, 'landscape');
+  assert.equal(card.snapshot.designs.default[0].text, 'Behalten');
+  assert.equal(h.prepared.length, 1);
 });
 
 test('ordinary product entries always enter the gallery, including saved drafts and empty direct designs', () => {
@@ -232,7 +305,7 @@ test('every metric poster variant keeps its own photo, price and exact product i
     for (const variant of card.variants) {
       await h.gallery.load(card, variant);
       assert.equal(card.photo.getAttribute('src'), variant.productPhoto || variant.previewMockup.assets.default);
-      assert.equal(card.variantLabel.textContent, variant.variantLabel || variant.size.label);
+      assert.equal(card.variantLabel.textContent, Orientation.summary(variant, { t: value => value }, { detail: false }));
       assert.equal(card.price.textContent, new Intl.NumberFormat('de', { style: 'currency', currency: 'EUR' })
         .format(variant.price.unitGrossCents / 100));
       assert.equal(card.viewer.params.product.key, variant.key);
@@ -254,7 +327,7 @@ test('the canvas filter exposes all three ranges and every size/color keeps its 
   for (const card of cards) for (const variant of card.variants) {
     await h.gallery.load(card, variant);
     assert.equal(card.photo.getAttribute('src'), variant.productPhoto);
-    assert.equal(card.variantLabel.textContent, variant.variantLabel);
+    assert.equal(card.variantLabel.textContent, Orientation.summary(variant, { t: value => value }, { detail: false }));
     assert.equal(card.viewer.params.product.key, variant.key);
     await h.gallery.add(card);
     assert.equal(h.added.at(-1).productKey, variant.key);
@@ -269,10 +342,10 @@ test('every product has the same variant summary and only multiple variants offe
   for (const card of h.gallery.cards) {
     assert.equal(card.sizes.hidden, false, card.product.key);
     assert.equal(card.photoButton.parentElement, card.sizes);
-    assert.equal(card.variantLabel.textContent, card.product.variantLabel || card.product.size.label);
+    assert.equal(card.variantLabel.textContent, Orientation.summary(card.product, { t: value => value }, { detail: false }));
     assert.equal(card.detail.hidden, true, 'the variant appears once, in its summary row');
     const summary = card.sizes.querySelector('.product-gallery-variant-summary');
-    assert.equal(summary.tagName, card.variants.length > 1 ? 'BUTTON' : 'DIV');
+    assert.equal(summary.tagName, card.variants.length > 1 || card.product.orientations.length > 1 ? 'BUTTON' : 'DIV');
     assert.equal(Boolean(summary.querySelector('.product-variant-chevron')), card.variants.length > 1);
     if (card.variants.length === 1) {
       const before = structuredClone(card.snapshot);
@@ -428,7 +501,7 @@ test('the gallery thumbnail opens the shared overview with its exact variant and
     assert.equal(mug.photoButton.getAttribute('aria-haspopup'), 'dialog');
     assert.equal(photo.getAttribute('src'), variant.productPhoto);
     assert.equal(title.textContent, variant.displayName);
-    assert.equal(dialog.querySelector('[data-preview-detail]').textContent, variant.variantLabel || variant.size.label);
+    assert.equal(dialog.querySelector('[data-preview-detail]').textContent, Orientation.summary(variant, { t: value => value }, { detail: false }));
     assert.equal(dialog.querySelector('[data-preview-artwork] img').getAttribute('src'), `/gallery/${variant.key}/${mug.surface}.png`);
     assert.deepEqual(h.previewModels.at(-1).item.printPreviewUrls, Object.fromEntries(
       variant.printSurfaces.map(side => [side.key, `/gallery/${variant.key}/${side.key}.png`])));

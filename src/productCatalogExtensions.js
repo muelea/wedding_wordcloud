@@ -105,9 +105,12 @@ module.exports = function extendCatalog({ makeProduct, products, flatLayouts, mu
           : record.kind === 'tote' ? record.handleColor === '#ce252b' ? '10 l · rote Träger' : '10 l · gelbe Träger'
           : record.kind === 'eco-tote' ? 'Nur Vorderseite bedruckt' : record.detail || base?.size.detail },
       layoutGeometry, layouts: isColoredMug ? mugLayouts : flatLayouts,
-      // New physical models have a fixed, verified provider orientation.
-      orientationOptions: ['poster', 'frame', 'canvas'].includes(record.kind) && file.can_rotate ? orientations : [],
-      defaultOrientation: ['poster', 'frame', 'canvas'].includes(record.kind) && file.can_rotate ? 'portrait' : 'default',
+      orientationOptions: record.kind === 'blanket' ? base.orientationOptions :
+        ['poster', 'frame', 'canvas'].includes(record.kind) && file.can_rotate ? orientations : [],
+      defaultOrientation: record.kind === 'blanket' ? 'portrait' :
+        ['poster', 'frame', 'canvas'].includes(record.kind) && file.can_rotate ? 'portrait' : 'default',
+      nativeOrientation: record.kind === 'blanket' ? 'landscape' : 'portrait',
+      legacyDefaultOrientation: record.kind === 'blanket' ? 'landscape' : null,
     });
     byKey.set(product.key, product);
     return product;

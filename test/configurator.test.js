@@ -18,6 +18,34 @@ const { publicAssetUrl } = require('../src/publicAssets');
 const { PRODUCTS, getProduct, getPublicProduct, resolveProductOrientation } = require('../src/products');
 const { buildProductPrintSvg, isPrintDesignWithinBounds } = require('../src/mugPrint');
 
+test('both blanket sizes save and reopen portrait, landscape and legacy defaults with exact immutable print dimensions', async t => {
+  const app = await startTestServer(); t.after(() => app.close());
+  const event = await createEvent(app.baseUrl);
+  for (const key of ['throw-blanket-50x60in', 'throw-blanket-30x40in']) {
+    const base = getProduct(key);
+    for (const orientation of ['default', 'portrait', 'landscape']) {
+      const product = resolveProductOrientation(base, orientation);
+      const response = await fetch(`${app.baseUrl}/api/events/${event.slug}/configurations`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+          productKey: key, orientation, theme: 'pastel', words: [['Liebe', 1]], ...productDesignPayload(key, orientation),
+        }),
+      });
+      assert.equal(response.status, 201, `${key}/${orientation}`);
+      const saved = await response.json();
+      const stored = await require('../src/db').getConfiguration(saved.id);
+      assert.equal(stored.orientation, orientation);
+      assert.equal(Number(stored.printful_variant_id), base.printful.variantId);
+      assert.equal(Number(stored.print_width), product.printFile.width);
+      assert.equal(Number(stored.print_height), product.printFile.height);
+      const edit = await fetch(`${app.baseUrl}/api/events/${event.slug}/configurations/${saved.id}/edit`).then(r => r.json());
+      assert.equal(edit.orientation, orientation);
+      assert.deepEqual(edit.product.printFile, getPublicProduct(base, orientation).printFile);
+      const svg = await fetch(app.baseUrl + saved.printFileUrl).then(r => r.text());
+      assert.ok(svg.includes(`width="${product.printFile.width}" height="${product.printFile.height}"`));
+    }
+  }
+});
+
 test('restoration bootstrap remains readable after cloud reset without granting blank-cloud approval privileges', async t => {
   const app = await startTestServer(); t.after(() => app.close());
   const event = await createEvent(app.baseUrl);
@@ -738,7 +766,7 @@ test('configurator exposes every curated product with verified Printful geometry
         key: 'throw-blanket-50x60in',
         label: '127 × 153 cm',
         printFile: {
-          width: 9450, height: 7950, dpi: 150, fillMode: 'cover', canRotate: true, placement: 'default',
+          width: 7950, height: 9450, dpi: 150, fillMode: 'cover', canRotate: true, placement: 'default',
         },
       },
       {
@@ -815,7 +843,7 @@ test('configurator exposes every curated product with verified Printful geometry
       clipPath: 'polygon(6.7% 6.2%, 94.5% 6.2%, 91% 90.2%, 9.3% 90.2%)',
     },
     'throw-blanket-50x60in': {
-      left: 131 / 30, top: 353 / 30, width: 2714 / 30, height: 2282 / 30, fit: 'cover', clipPath: 'none',
+      left: 12.1667, top: 131 / 30, width: 2282 / 30, height: 2714 / 30, fit: 'cover', clipPath: 'none',
     },
     'spiral-notebook-dotted': {
       left: 543 / 30, top: 99 / 30, width: 1838 / 30, height: 2796 / 30, fit: 'cover', clipPath: 'none',
@@ -859,7 +887,7 @@ test('configurator exposes every curated product with verified Printful geometry
   assert.ok(posterProducts.filter(candidate => candidate.printFile.width !== candidate.printFile.height).every((candidate) =>
     candidate.orientations.map((orientation) => orientation.key).join(',') === 'portrait,landscape'
   ));
-  assert.ok(data.products.filter((candidate) => candidate.familyKey !== 'posters')
+  assert.ok(data.products.filter((candidate) => candidate.familyKey !== 'posters' && candidate.previewShape !== 'blanket')
     .every((candidate) => candidate.orientations.length === 0));
   assert.equal(data.product.defaultOrientation, 'default');
   assert.deepEqual(data.product.orientations, []);
@@ -878,7 +906,7 @@ test('configurator exposes every curated product with verified Printful geometry
     { key: 'framed-matte-poster-black-30x40cm', variantId: 9357, width: 3600, height: 4800 },
     { key: 'framed-poster-10298', variantId: 10298, width: 5906, height: 8268 },
     { key: 'all-over-tote-black-handles', variantId: 4533, width: 2550, height: 2475 },
-    { key: 'throw-blanket-50x60in', variantId: 10986, width: 9450, height: 7950 },
+    { key: 'throw-blanket-50x60in', variantId: 10986, width: 7950, height: 9450 },
     { key: 'all-over-basic-pillow-18in', variantId: 4532, width: 2850, height: 2850 },
     { key: 'spiral-notebook-dotted', variantId: 12141, width: 1725, height: 2625 },
     { key: 'colored-mug-11050', variantId: 11050, width: 2700, height: 1050 },
@@ -905,7 +933,7 @@ test('configurator exposes every curated product with verified Printful geometry
         quantity: 1,
         theme: 'pastel',
         words: [['liebe', 1]],
-        ...productDesignPayload(expected.key),
+        ...productDesignPayload(expected.key, getProduct(expected.key).defaultOrientation),
       }),
     });
     assert.equal(saveResponse.status, 201);
@@ -1386,7 +1414,7 @@ test('oversized raster artwork is rejected before it can become a paid configura
   const response = await fetch(`${baseUrl}/api/events/${event.slug}/configurations`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      productKey: 'throw-blanket-50x60in', theme: 'pastel', words: [['liebe', 1]],
+      productKey: 'throw-blanket-50x60in', orientation: 'landscape', theme: 'pastel', words: [['liebe', 1]],
       designs: { default: design },
     }),
   });

@@ -117,3 +117,28 @@ test('a scoped gallery picker exposes only its own product options and retains e
     h.window.close();
   }
 });
+
+test('gallery options confirm exact orientation without changing the physical variant, and retain it across square sizes', t => {
+  for (const group of ['poster', 'framed-poster', 'canvas', 'thin-canvas', 'framed-canvas', 'blanket']) {
+    const candidates = products.filter(p => (p.catalogGroup || p.previewShape) === group);
+    const original = candidates.find(p => p.orientations.length === 2);
+    const h = harness(t, { products: candidates, selectedKey: original.key, selectedOrientation: 'portrait', browse: false });
+    assert.ok(h.host.querySelector('[data-option-key="orientation"]'));
+    h.host.querySelector('[data-value="landscape"]').click();
+    assert.match(h.host.querySelector('.product-picker-summary strong').textContent, /Querformat/);
+    h.host.querySelector('.product-picker-apply').click();
+    assert.equal(h.confirmed[0], original);
+    const square = candidates.find(p => p.printFile.width === p.printFile.height);
+    if (square) {
+      h.host.querySelector('[data-option-key="size"] .product-picker-select')?.click();
+      const clickSize = size => [...h.host.querySelectorAll('[data-option-key="size"] button')]
+        .find(button => button.dataset.value === size || button.textContent === size)?.click();
+      clickSize(square.size.label);
+      assert.equal(h.host.querySelector('[data-option-key="orientation"]'), null);
+      h.host.querySelector('[data-option-key="size"] .product-picker-select')?.click();
+      clickSize(original.orientations.find(o => o.key === 'landscape').size.label);
+      assert.equal(h.host.querySelector('[data-value="landscape"]').getAttribute('aria-pressed'), 'true');
+    }
+    h.window.close();
+  }
+});

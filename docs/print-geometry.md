@@ -176,7 +176,7 @@ customer configurations were created.
 ## EU fulfillment selection — 2026-10-25
 
 The current storefront offers **343 variants across 26 product groups**, with
-**446 orientation states and 452 print surfaces**, including clothing, phone cases and the metric poster
+**448 orientation states and 454 print surfaces**, including clothing, phone cases and the metric poster
 and canvas expansions below. The initial read-only Printful checks for
 all 67 previously offered variants identified six that do not have EU
 fulfillment for German delivery. They have been removed from the shared
@@ -730,3 +730,44 @@ Implementation verification: the full `npm test` suite passed 890 tests on
 case-hole ray intersections, front/back reading direction, local photo hashes,
 and preview context lifecycle. Browser checks covered the gallery and editor in
 side-by-side and stacked layouts. Nothing was deployed or pushed.
+
+## Gallery and blanket orientation — 2026-10-31
+
+All 343 variants' rotation flags and allowed print dimensions were checked
+against current read-only Printful catalog responses. The 103 rectangular
+poster/canvas variants and both blankets support portrait and landscape;
+the 23 square canvases have no orientation choice. The catalog now has 448
+orientation states and 454 print surfaces, without adding physical variants.
+
+The gallery and editor share selection and summary handling. Dimensions are
+displayed as width × height, with orientation and the selected frame colour.
+Gallery preparation caches use product plus orientation; manual designs
+transfer their actual contents and retained arrangements rather than returning
+to live event words. Rapid switches retain those contents while work is pending.
+The exact displayed snapshot is used for direct cart additions and editor entry.
+
+Both blanket sizes default to portrait for new designs. Saved landscape choices
+and legacy defaults are preserved. Blankets retain their native horizontal
+files: 9450 × 7950 and 6450 × 4950 at
+150 DPI. Portrait transposes the complete file, safe rectangle, physical model
+and visible face crop. Historical `default` blanket configurations still resolve
+to their original horizontal geometry **and retain `orientation: default`** in
+the specification hash. Opening their editor controls does not rewrite that
+value. New designs start with explicit portrait/landscape values; edited legacy
+designs may retain the original alias. Existing
+paid snapshots, prepared files, artifacts and Stripe retry payloads are not
+rewritten. New Checkout descriptions and confirmation emails include localized
+format and frame identity; older frozen Checkout products retain their previous
+description when retried.
+
+Current mockup styles are matched to the exact oriented print area. A missing
+match fails instead of falling back to the opposite orientation. Completed live
+Printful proofs cover both blanket sizes in both orientations, using four
+distinct readable corner markers. The original images, input designs, hashes,
+variant/style IDs and visual review are in
+[`reports/product-orientation-2026-10-31`](../reports/product-orientation-2026-10-31/README.md).
+All temporary private source objects were deleted. No provider orders or physical
+samples were created. The payment/fulfillment/reorder integration regression
+uses disposable local Postgres and provider doubles, and verifies distinct
+approvals and reuse of the exact approved files for opposite orientations of
+the same physical variant. Full-resolution raster checks cover all 448 states.

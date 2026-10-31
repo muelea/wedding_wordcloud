@@ -3,10 +3,11 @@
   const api = factory(typeof module === 'object' && module.exports
     ? require('./print-layout-client') : root.PrintLayoutClient,
     typeof module === 'object' && module.exports ? require('./text-print-quality') : root.TextPrintQuality,
-    typeof module === 'object' && module.exports ? require('./product-picker') : root.WolkenworteProductPicker);
+    typeof module === 'object' && module.exports ? require('./product-picker') : root.WolkenworteProductPicker,
+    typeof module === 'object' && module.exports ? require('./product-orientation') : root.ProductOrientation);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.WolkenworteProductGallery = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (LayoutClient, TextPrintQuality, Picker) {
+})(typeof window !== 'undefined' ? window : globalThis, function (LayoutClient, TextPrintQuality, Picker, Orientation) {
   'use strict';
 
   const copy = value => JSON.parse(JSON.stringify(value));
@@ -60,8 +61,8 @@
   }
 
   class Gallery {
-    constructor({ element, products, prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, onImpression, onView, onSelect, isInCart, i18n, mobile = false }) {
-      Object.assign(this, { element, prepareDesign: prepare, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, onImpression, onView, onSelect, isInCart, i18n });
+    constructor({ element, products, prepare, transfer, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, onImpression, onView, onSelect, isInCart, i18n, mobile = false }) {
+      Object.assign(this, { element, prepareDesign: prepare, transfer, getView, configureFlat, paintFlat, createMug, createPhoto, renderArtwork, preview, onChoose, onAdd, onImpression, onView, onSelect, isInCart, i18n });
       this.document = element.ownerDocument;
       this.window = this.document.defaultView;
       this.mobile = mobile && Boolean(this.window.IntersectionObserver);
@@ -71,12 +72,12 @@
       this.cards = [];
       this.category = 'all';
       this.reportedItems = new Set();
-      this.preparationQueue = LayoutClient.createQueue({ limit: products.length,
+      this.preparationQueue = LayoutClient.createQueue({ limit: products.reduce((n, product) => n + Math.max(1, product.orientations?.length || 0), 0),
         concurrency: LayoutClient.parallelism(this.window.navigator?.hardwareConcurrency),
         warmup: true,
         yieldControl: () => new Promise(resolve => this.window.setTimeout(resolve, 0)),
         priority: key => {
-          const card = this.cards.find(card => card.product.key === key);
+          const card = this.cards.find(card => Orientation.key(card.product, card.orientation) === key);
           return !card || card.element.hidden ? -100 : card.visible ? 50 : 0;
         },
       });
@@ -392,14 +393,15 @@
       this.variantCard = card;
       title.textContent = `${this.i18n.t(card.product.displayName)} · ${this.i18n.t('Variante wählen')}`;
       this.variantDialog.picker = Picker.create(list, {
-        products: card.variants, selectedKey: card.product.key, i18n: this.i18n,
+        products: card.variants, selectedKey: card.product.key,
+        selectedOrientation: card.snapshot?.orientation || card.orientation, i18n: this.i18n,
         photo: referencePhoto, price: product => this.priceFor(product),
         onPhoto: (product, trigger) => this.openPhoto(card, product, trigger),
-        onConfirm: product => {
+        onConfirm: (product, orientation) => {
           dialog.close();
           if (!this.choosing) {
             this.onSelect?.(product);
-            void this.load(card, product);
+            void this.load(card, product, true, false, orientation);
           }
         },
         onNavigate: () => { if (dialog.open) this.positionVariants(); },
@@ -474,9 +476,10 @@
       this.i18n.setText(retry, 'Erneut versuchen');
       const card = { element, preview, stage, host, flat, canvas, image, previousPreview, name, detail, priceRow, price, priceNote, priceInfoButton, details, photo, photoButton, customize, sizes, add, status, retry,
         variants, product: variants[0], snapshot: null, version: 0, viewer: null, visible: !this.intersectionObserver };
-      const variantSummary = this.node(variants.length > 1 ? 'button' : 'div', 'product-gallery-variant-summary', sizes);
+      const hasOptions = variants.length > 1 || variants[0].orientations?.length > 1;
+      const variantSummary = this.node(hasOptions ? 'button' : 'div', 'product-gallery-variant-summary', sizes);
       card.variantLabel = this.node('span', '', variantSummary);
-      if (variants.length > 1) {
+      if (hasOptions) {
         const toggle = variantSummary;
         toggle.classList.add('product-gallery-variant-toggle');
         toggle.type = 'button'; toggle.setAttribute('aria-haspopup', 'dialog');
@@ -503,28 +506,31 @@
       }, { capture: true });
       this.listen(retry, 'click', () => {
         if (card.capacity) {
-          this.entries.delete(card.product.key);
+          this.entries.delete(Orientation.key(card.product, card.orientation));
           void this.load(card, card.product, true, true);
           return;
         }
         if (card.snapshot) this.render(card, true);
-        else { this.entries.delete(card.product.key); void this.load(card, card.product); }
+        else { this.entries.delete(Orientation.key(card.product, card.orientation)); void this.load(card, card.product); }
       });
       return card;
     }
 
-    prepared(product, deliberate = false, allowSmallText = false) {
-      if (!this.entries.has(product.key)) {
-        const promise = this.preparationQueue.add(product.key, async () => {
+    prepared(product, deliberate = false, allowSmallText = false, orientation = product.defaultOrientation, source = null) {
+      const key = Orientation.key(product, orientation);
+      if (!this.entries.has(key) || source) {
+        if (source) this.preparationQueue.cancel(key);
+        const promise = this.preparationQueue.add(key, async () => {
           if (this.destroyed) throw new Error('gallery_closed');
-          const prepared = await this.prepareDesign(product, { signal: this.controller.signal, allowSmallText,
+          const prepared = source && this.transfer ? await this.transfer(source, product, orientation) :
+            await this.prepareDesign(product, { orientation, signal: this.controller.signal, allowSmallText,
             waitForIdle: this.mobile ? () => this.waitForPreparation() : undefined });
           return { ...prepared, designs: printPrecision(prepared.designs) };
         }, deliberate ? 100 : 0);
-        this.entries.set(product.key, promise);
+        this.entries.set(key, promise);
       }
-      if (deliberate) this.preparationQueue.promote(product.key);
-      return this.entries.get(product.key);
+      if (deliberate) this.preparationQueue.promote(key);
+      return this.entries.get(key);
     }
 
     waitForPreparation() {
@@ -539,15 +545,22 @@
       this.preparationWaiters.clear();
     }
 
-    async load(card, product, deliberate = true, allowSmallText = false) {
+    async load(card, product, deliberate = true, allowSmallText = false, requestedOrientation = null) {
       card.started = true;
       const version = ++card.version;
       card.cachedPreviewVersion = null;
       this.previewQueue.delete(card);
       card.previousPreview.style.removeProperty('opacity');
       const previous = card.product;
-      if (previous.key !== product.key && this.preparationQueue.cancel(previous.key)) {
-        this.entries.delete(previous.key);
+      const previousKey = Orientation.key(previous, card.orientation);
+      const orientation = Orientation.selected(product, requestedOrientation || card.preferredOrientation)?.key || 'default';
+      const key = Orientation.key(product, orientation);
+      const retained = card.snapshot || card.pendingSource;
+      const source = (previousKey !== key || card.pendingSource) && (retained?.currentDesignEdited || retained?.editingOrderItemId)
+        ? copy(retained) : null;
+      card.pendingSource = source;
+      if (previousKey !== key && this.preparationQueue.cancel(previousKey)) {
+        this.entries.delete(previousKey);
       }
       if (card.viewer?.canvas && card.stage.dataset.ready === 'true') {
         try {
@@ -566,6 +579,9 @@
       card.failed = false;
       card.capacity = false;
       card.product = product;
+      card.orientation = orientation;
+      if (orientation !== 'default') card.preferredOrientation = orientation;
+      card.view = this.getView(product, orientation);
       card.customize.disabled = true;
       card.add.disabled = true;
       card.stage.dataset.ready = 'false';
@@ -577,10 +593,12 @@
       this.i18n.setText(card.status, 'Eure Produktvorschau wird vorbereitet…');
       this.localizeCard(card);
       try {
-        const snapshot = await this.prepared(product, deliberate, allowSmallText);
+        const snapshot = await this.prepared(product, deliberate, allowSmallText, orientation, source);
         if (this.destroyed || version !== card.version) return;
         card.snapshot = snapshot;
+        card.pendingSource = null;
         card.view = this.getView(product, snapshot.orientation);
+        this.localizeCard(card);
         card.surface = product.printSurfaces[0].key;
         card.host.hidden = !usesViewer(product);
         card.host.tabIndex = is3D(product) ? 0 : -1;
@@ -777,7 +795,9 @@
 
     localizeCard(card) {
       this.i18n.setText(card.name, card.product.displayName);
-      this.i18n.setText(card.detail, card.product.variantLabel || card.product.size.label);
+      const view = card.view || card.product;
+      const summary = Orientation.summary(view, this.i18n, { detail: false });
+      card.detail.textContent = summary;
       const price = card.product.price;
       card.priceRow.hidden = !price;
       if (price) {
@@ -796,16 +816,16 @@
         card.photo.alt = '';
         this.i18n.setAttribute(card.photoButton, 'aria-label', '{{view}}: {{product}}, {{variant}}', {
           view: this.i18n.t('Details & Vorschau'), product: this.i18n.t(card.product.displayName),
-          variant: this.i18n.t(card.product.variantLabel || card.product.size.label),
+          variant: summary,
         });
       }
       card.photoButton.disabled = !card.snapshot || this.choosing;
       this.i18n.setAttribute(card.host, 'aria-label', is3D(card.product) && ['blanket', 'garment'].includes(card.product.previewModel?.kind)
         ? '{{product}}, {{size}}. Stoff greifen und ziehen; daneben ziehen oder Pfeiltasten zum Drehen. Leertaste bewegt den Stoff.' : '{{product}}, {{size}}', {
-        product: this.i18n.t(card.product.displayName), size: this.i18n.t(card.product.size.label),
+        product: this.i18n.t(card.product.displayName), size: summary,
       });
       card.detail.hidden = true;
-      if (card.variantLabel) card.variantLabel.textContent = this.i18n.t(card.product.variantLabel || card.product.size.label);
+      if (card.variantLabel) card.variantLabel.textContent = summary;
       this.updateCartLabel(card);
     }
 
@@ -849,7 +869,7 @@
         const saved = await this.onAdd(copy(card.snapshot));
         if (!this.destroyed) {
           card.snapshot = copy(saved);
-          this.entries.set(card.product.key, Promise.resolve(card.snapshot));
+          this.entries.set(Orientation.key(card.product, card.snapshot.orientation), Promise.resolve(card.snapshot));
           card.status.hidden = true;
         }
       } catch (error) {
@@ -891,9 +911,14 @@
       if (snapshot) {
         const card = this.cards.find(card => card.variants.some(product => product.key === snapshot.productKey));
         if (card) {
-          this.preparationQueue.cancel(snapshot.productKey);
-          this.entries.set(snapshot.productKey, Promise.resolve(copy(snapshot)));
-          await this.load(card, card.variants.find(product => product.key === snapshot.productKey));
+          const product = card.variants.find(product => product.key === snapshot.productKey);
+          const key = Orientation.key(product, snapshot.orientation);
+          this.preparationQueue.cancel(key);
+          this.entries.set(key, Promise.resolve(copy(snapshot)));
+          // Resume the saved layout directly, without transferring the card's previous contents.
+          card.snapshot = null;
+          card.pendingSource = null;
+          await this.load(card, product, true, false, snapshot.orientation);
         }
       }
       this.updateActions();

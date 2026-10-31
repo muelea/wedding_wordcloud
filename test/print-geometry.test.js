@@ -21,7 +21,7 @@ function pageFunction(name) {
   return template.slice(start, template.indexOf('\n    }', start) + 6);
 }
 function page(productKey) {
-  const context = vm.createContext({ product: getPublicProduct(getProduct(productKey)),
+  const context = vm.createContext({ ProductOrientation: require('../public/js/product-orientation'), product: getPublicProduct(getProduct(productKey)),
     activeSurface: 'front', selectedOrientation: 'default', selectedTheme: 'konfetti', mobileDevice: false,
     document: { createElement: () => createCanvas(1, 1) },
     words: [['liebe', 1], ['glück', 1], ['gemeinsam', 1], ['🎉', 1], ['😍', 1], ['2026', 1]],

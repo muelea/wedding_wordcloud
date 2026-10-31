@@ -84,6 +84,14 @@ frozen snapshot of the word cloud.
    metric matte poster sizes and 21 Germany-available metric framed combinations
    are offered. Canvas has all 46 standard sizes, 13 thin sizes and 39 framed
    size/color combinations, in three separate groups with centimetre labels.
+   Rectangular posters, canvases and both blanket sizes offer portrait and
+   landscape in the gallery and editor. Both blanket sizes start in portrait.
+   Orientation changes the artwork,
+   dimensions and preview together while retaining the same Printful variant
+   and price basis. Squares have no orientation choice. Gallery summaries,
+   cart, shipping, Checkout and confirmation emails show the chosen format.
+   Existing blanket configurations with the historical `default` orientation
+   retain their original horizontal print files and approval hashes.
    Large canvas print exports use bounded strips to retain full provider
    resolution within the hosted server's memory budget. Source
    metadata and safe-area rules are documented in `docs/print-geometry.md`.

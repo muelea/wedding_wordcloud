@@ -59,6 +59,10 @@ test('framed posters show the matching wood and only applicable size instruction
   const portrait = getPublicProduct(getProduct('framed-poster-9359'), 'portrait').information.en;
   assert.match(landscape, /How to attach hooks/);
   assert.doesNotMatch(portrait, /How to attach hooks/);
+  const base = getPublicProduct(getProduct('framed-poster-9359'));
+  const view = require('../public/js/product-orientation').view;
+  assert.match(view(base, 'landscape').information.en, /How to attach hooks/);
+  assert.doesNotMatch(view(base, 'portrait').information.en, /How to attach hooks/);
   const a4 = getPublicProducts().find(product => product.key.startsWith('matte-poster-') && product.size.label === '21 × 30 cm');
   assert.match(a4.information.en, /A4/);
 });

@@ -1,0 +1,46 @@
+{
+  "productKey": "throw-blanket-50x60in",
+  "orientation": "landscape",
+  "design": [
+    {
+      "id": "corner-0",
+      "text": "TOP LEFT",
+      "x": 2250,
+      "y": 1815,
+      "fontSize": 110,
+      "fontFamily": "gelasio",
+      "angle": 0,
+      "color": "#e02424"
+    },
+    {
+      "id": "corner-1",
+      "text": "TOP RIGHT",
+      "x": 7200,
+      "y": 1815,
+      "fontSize": 110,
+      "fontFamily": "gelasio",
+      "angle": 0,
+      "color": "#2371d9"
+    },
+    {
+      "id": "corner-2",
+      "text": "BOTTOM LEFT",
+      "x": 2250,
+      "y": 6135,
+      "fontSize": 110,
+      "fontFamily": "gelasio",
+      "angle": 0,
+      "color": "#189750"
+    },
+    {
+      "id": "corner-3",
+      "text": "BOTTOM RIGHT",
+      "x": 7200,
+      "y": 6135,
+      "fontSize": 110,
+      "fontFamily": "gelasio",
+      "angle": 0,
+      "color": "#913cbd"
+    }
+  ]
+}

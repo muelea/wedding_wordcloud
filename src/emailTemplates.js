@@ -1,10 +1,11 @@
 'use strict';
 
 const I18n = require('./i18n');
+const ProductOrientation = require('../public/js/product-orientation');
 const { getProduct, resolveProductOrientation } = require('./products');
 
 const PurchaseTerms = require('./purchaseTerms');
-const TEMPLATE_VERSION = 'transactional-2026-10-13-v8';
+const TEMPLATE_VERSION = 'transactional-2026-10-31-v9';
 const CONTRACT_VERSION = PurchaseTerms.VERSION;
 const GENERAL_CUSTOMS_NOTICE = PurchaseTerms.SECTIONS.find((section) => section.id === 'customs').text;
 const SELLER = Object.freeze({
@@ -453,7 +454,8 @@ function itemView(item, locale) {
   return {
     quantity: Number(item.quantity),
     name: I18n.translate(product?.name || snapshot.productKey || item.product_key, locale),
-    size: I18n.translate(product?.size?.label || '', locale),
+    size: ProductOrientation.summary(product,
+      { t: text => I18n.translate(text, locale) }, { detail: false }),
     design: String(snapshot.configurationId || item.configuration_id || `order-item-${item.id}`),
   };
 }
