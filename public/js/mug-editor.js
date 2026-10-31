@@ -1496,7 +1496,10 @@
       const center = object.editorFrameCenter || { x: 0, y: 0 };
       const anchor = { x: before[4] - before[0] * center.x - before[2] * center.y,
         y: before[5] - before[1] * center.x - before[3] * center.y };
-      const nextSize = Math.max(MIN_PRINT_FONT_SIZE * this.editorScale, object.fontSize * object.scaleX);
+      // Reconstructing a save uses tenth-of-a-print-pixel font sizes. Measure
+      // that same size now: tiny differences can cross a font-hinting boundary.
+      const nextSize = Math.max(MIN_PRINT_FONT_SIZE,
+        round(object.fontSize * object.scaleX / this.editorScale)) * this.editorScale;
       if (Number.isFinite(object.editorLayoutFontSize)) object.editorLayoutFontSize *= Math.abs(object.scaleX);
       object.set({ fontSize: nextSize, scaleX: 1, scaleY: 1 });
       const after = object.calcOwnMatrix();
@@ -1966,7 +1969,14 @@
       active.scaleX *= factor;
       active.scaleY *= factor;
       this.keepInside(active);
-      this.absorbScale(active);
+      // Font hinting can change the ink bounds after scale becomes font size.
+      // Settle boundary-sized text before saving its final measured geometry.
+      for (let attempt = 0; attempt < 4; attempt++) {
+        this.absorbScale(active);
+        this.keepInside(active);
+        if (active.editorKind !== 'text' || active.editorText !== undefined || this.isActiveSelection(active) ||
+            (active.scaleX === 1 && active.scaleY === 1)) break;
+      }
       this.canvas.requestRenderAll();
       this.recordHistory();
       this.emitChange();
