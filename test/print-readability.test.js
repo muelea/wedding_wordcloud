@@ -85,16 +85,20 @@ test('insufficient capacity fails without mutating or omitting words; explicit s
   assert.ok(Quality.findings(override, 300).length);
 });
 
-test('manual product transfer keeps deliberate small text; automatic transfer enforces the target DPI', () => {
+test('unchanged print geometry keeps deliberate small text; changed resolution refills at the target DPI', () => {
   const area = { x: 0, y: 0, width: 600, height: 500 };
   const input = [{ id: 'a', text: 'Liebe', fontSize: 20, x: 300, y: 250, angle: 0, fontFamily: 'classic' }];
-  const from = { productKey: 'source', surfaces: [{ key: 'front', area, design: input }] };
-  const to = { productKey: 'target', surfaces: [{ key: 'front', area }] };
+  const printFile = { width: 600, height: 500, dpi: 150 };
+  const from = { productKey: 'source', surfaces: [{ key: 'front', area, printFile, design: input }] };
+  const to = { productKey: 'target', surfaces: [{ key: 'front', area, printFile }] };
   const ctx = context();
-  const manual = Transfer.prepare(null, from, to, ctx, options(300));
+  const manual = Transfer.prepare(null, from, to, ctx, options(150));
   assert.equal(manual.designs.front[0].fontSize, 20);
-  const automatic = Transfer.prepare(null, from, to, ctx, { ...options(300), automatic: true });
+  assert.equal(Quality.findings(manual.designs.front, 150).length, 1);
+  const changed = { ...to, surfaces: [{ key: 'front', area, printFile: { ...printFile, dpi: 300 } }] };
+  const automatic = Transfer.prepare(null, from, changed, ctx, options(300));
   assert.equal(Quality.findings(automatic.designs.front, 300).length, 0);
+  assert.equal(input[0].fontSize, 20, 'refilling never rewrites the source artwork');
 });
 
 test('constrained Fill retains uploaded images and motifs with their proportions', () => {
