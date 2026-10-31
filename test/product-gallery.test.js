@@ -10,6 +10,7 @@ const { Gallery, groupProducts, shouldOpen } = require('../public/js/product-gal
 const { getPublicProducts } = require('../src/products');
 
 const Orientation = require('../public/js/product-orientation');
+const Session = require('../public/js/configurator-session');
 const products = getPublicProducts();
 const translate = (source, values = {}) => source.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]);
 const snapshot = product => ({ productKey: product.key, orientation: product.defaultOrientation,
@@ -114,7 +115,7 @@ test('gallery orientation choices keep preview, customization, direct cart and r
   assert.ok(h.gallery.entries.has(`${card.product.key}:landscape`));
 });
 
-test('gallery switches transfer edited content and preserve its cart target instead of rebuilding live words', async t => {
+test('gallery variant switches preserve edited content while starting an independent cart design', async t => {
   const transfers = [];
   const h = harness(t, { products: products.filter(p => p.previewShape === 'blanket'),
     transfer: async (source, product, orientation) => {
@@ -124,12 +125,18 @@ test('gallery switches transfer edited content and preserve its cart target inst
   await h.settle();
   const card = h.card('blanket');
   const edited = { ...card.snapshot, orientation: 'landscape', currentDesignEdited: true, editingOrderItemId: 'OriginalCart',
-    workingDesignId: 'w'.repeat(32), designs: { default: [{ id: 'personal', text: 'Mein Text', x: 200, y: 200 }] } };
+    workingDesignId: 'w'.repeat(32), storageVersion: 7, savedDesignFingerprint: 'old', accountDesign: { id: 'library-source' },
+    designs: { default: [{ id: 'personal', text: 'Mein Text', x: 200, y: 200 }] } };
   await h.gallery.resume(edited);
   await h.gallery.load(card, card.product, true, false, 'portrait');
   assert.equal(transfers.length, 1);
   assert.equal(transfers[0].source.designs.default[0].text, 'Mein Text');
-  assert.equal(card.snapshot.editingOrderItemId, 'OriginalCart');
+  assert.equal(card.snapshot.editingOrderItemId, null);
+  assert.equal(card.snapshot.workingDesignId, null);
+  assert.equal(card.snapshot.storageVersion, 0);
+  assert.equal(card.snapshot.savedDesignFingerprint, null);
+  assert.equal(card.snapshot.accountDesign, null);
+  assert.equal(edited.editingOrderItemId, 'OriginalCart', 'the source purchase remains intact');
   assert.equal(card.snapshot.orientation, 'portrait');
   assert.equal(card.snapshot.needsCartUpdate, true);
   assert.equal(h.prepared.length, 1, 'manual content does not re-enter the automatic live-word layout');
@@ -155,6 +162,84 @@ test('rapid gallery orientation switches retain edited contents while a precedin
   assert.equal(card.snapshot.orientation, 'landscape');
   assert.equal(card.snapshot.designs.default[0].text, 'Behalten');
   assert.equal(h.prepared.length, 1);
+});
+
+test('untouched gallery variants also transfer their current contents and hand the exact result to cart and editor', async t => {
+  const transfers = [];
+  const h = harness(t, { products: products.filter(p => p.previewShape === 'blanket'),
+    transfer: async (source, product, orientation, options) => {
+      transfers.push({ source, options });
+      return { ...source, productKey: product.key, orientation,
+        designs: { default: source.designs.default.map(item => ({ ...item, x: 700, fontSize: 200 })) } };
+    } });
+  await h.settle();
+  const card = h.card('blanket');
+  const original = card.snapshot;
+  const smaller = card.variants.find(p => p.key !== card.product.key);
+  await h.gallery.load(card, smaller, true, false, 'landscape');
+  assert.equal(transfers.length, 1);
+  assert.deepEqual(transfers[0].source.designs, original.designs);
+  assert.equal(transfers[0].source.editingOrderItemId, null);
+  assert.equal(h.prepared.length, 1, 'a size switch does not regenerate an unrelated seed or reuse another destination');
+  assert.equal(transfers[0].options.allowSmallText, false);
+  assert.equal(transfers[0].options.signal.aborted, false);
+  const expected = structuredClone(card.snapshot);
+  await h.gallery.choose(card);
+  await h.gallery.add(card);
+  assert.deepEqual(h.chosen[0], expected);
+  assert.deepEqual(h.added[0], expected);
+});
+
+test('every gallery size, colour and orientation can coexist with earlier variants in the same group', async t => {
+  let checked = 0, sequence = 0;
+  for (const variants of groupProducts(products)) {
+    const values = new Map();
+    const cart = Session.createCart('variants', {
+      getItem: key => values.get(key) || null,
+      setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key),
+    });
+    const h = harness(t, { products: variants,
+      transfer: async (source, product, orientation) => ({ ...source, productKey: product.key, orientation }),
+      isInCart: id => cart.read().some(item => item.id === id),
+      onAdd: async snapshot => {
+        const id = `Variant${String(++sequence).padStart(9, '0')}`;
+        cart.replace({ id, productKey: snapshot.productKey, orientation: snapshot.orientation }, snapshot.editingOrderItemId);
+        return { ...snapshot, editingOrderItemId: id, needsCartUpdate: false,
+          workingDesignId: sequence.toString(16).padStart(32, '0'), storageVersion: 1 };
+      },
+    });
+    await h.settle();
+    const card = h.gallery.cards[0];
+    for (const product of variants) for (const orientation of product.orientations.length ? product.orientations.map(o => o.key) : ['default']) {
+      if (cart.read().length === Session.MAX_CART_ITEMS) cart.write([]);
+      const before = cart.read();
+      await h.gallery.load(card, product, true, false, orientation);
+      assert.equal(card.add.disabled, false, `${product.key}/${orientation} must be separately addable`);
+      await h.gallery.add(card);
+      const after = cart.read();
+      assert.equal(after.length, before.length + 1, `${product.key}/${orientation} appends a position`);
+      assert.deepEqual(after.slice(0, before.length), before, 'earlier variants never change');
+      assert.equal(after.at(-1).productKey, product.key);
+      assert.equal(after.at(-1).orientation, orientation);
+      assert.equal(card.add.disabled, true, 'an unchanged accepted selection is not duplicated by another click');
+      checked++;
+    }
+    h.gallery.destroy(); h.window.close();
+  }
+  assert.equal(checked, 448);
+});
+
+test('returning from an explicit cart edit can still update that exact selection', async t => {
+  const h = harness(t, { products: products.filter(p => p.previewShape === 'blanket') });
+  await h.settle();
+  const card = h.card('blanket');
+  const edited = { ...card.snapshot, editingOrderItemId: 'OriginalCart', workingDesignId: 'a'.repeat(32),
+    currentDesignEdited: true, needsCartUpdate: true };
+  await h.gallery.resume(edited);
+  assert.equal(card.snapshot.editingOrderItemId, 'OriginalCart');
+  assert.equal(card.add.textContent, 'Warenkorb aktualisieren');
+  await h.gallery.add(card);
+  assert.equal(h.added[0].editingOrderItemId, 'OriginalCart', 'only explicit edits retain the replacement target');
 });
 
 test('ordinary product entries always enter the gallery, including saved drafts and empty direct designs', () => {

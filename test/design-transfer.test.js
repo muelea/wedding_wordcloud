@@ -6,6 +6,7 @@ const { createCanvas } = require('canvas');
 const Transfer = require('../public/js/design-transfer');
 const Session = require('../public/js/configurator-session');
 const Fonts = require('../src/designFonts');
+const Bounds = require('../public/js/design-content-bounds');
 const { PRODUCTS, getProduct, resolveProductOrientation } = require('../src/products');
 const { isPrintDesignWithinBounds } = require('../src/mugPrint');
 
@@ -24,6 +25,74 @@ const target = (productKey, safeArea = area, orientation = 'default') => ({
   productKey, orientation, surfaces: [{ key: 'default', area: safeArea }],
 });
 const prepare = (state, from, to, extra = {}) => Transfer.prepare(state, from, to, context, { ...options, ...extra });
+const productSurface = (productKey, orientation, design) => {
+  const product = resolveProductOrientation(getProduct(productKey), orientation);
+  return { productKey, orientation, surfaces: product.printSurfaces.map(surface => {
+    const area = product.designSafeAreas[surface.key];
+    return { key: surface.key, area, printFile: product.printFile,
+      slots: product.printSurfaces.length > 1 ? [{ ...area, optimize: true }] : product.layoutGeometry['fit-area'],
+      ...(design ? { design } : {}) };
+  }) };
+};
+const coverage = (design, safeArea) => {
+  const box = Bounds.union(design.map(item => Bounds.bounds(item, context)));
+  return { width: box.width / safeArea.width, height: box.height / safeArea.height };
+};
+
+test('blanket size and orientation changes refill even when a sparse destination layout is remembered', async () => {
+  const contents = ['Liebe', 'Freude', 'Familie', 'Glück', 'Lachen', 'Tanzen', 'Zusammen', 'Zukunft', '❤️', 'Reisen', 'Treue', 'Wärme']
+    .map((text, i) => word(String(i), text, 400, 400));
+  let from = productSurface('throw-blanket-50x60in', 'portrait', contents);
+  const original = clone(contents);
+  let state = null;
+  for (const [productKey, orientation] of [
+    ['throw-blanket-30x40in', 'portrait'], ['throw-blanket-30x40in', 'landscape'],
+    ['throw-blanket-50x60in', 'landscape'], ['throw-blanket-50x60in', 'portrait'],
+    ['throw-blanket-30x40in', 'portrait'],
+  ]) {
+    const to = productSurface(productKey, orientation);
+    // A real older draft can remember an underfilled destination. Applying
+    // that size must use the current contents and fill, never restore it.
+    state = Transfer.capture(state, { ...to, surfaces: to.surfaces.map(s => ({ ...s, design: original })) });
+    const result = await Transfer.prepareAsync(state, from, to, context, { ...options, printDpi: 150 });
+    const design = result.designs.default, fill = coverage(design, to.surfaces[0].area);
+    assert.deepEqual(design.map(item => item.text), contents.map(item => item.text));
+    assert.ok(fill.width > .8 && fill.height > .8, `${productKey}/${orientation}: ${JSON.stringify(fill)}`);
+    assert.ok(isPrintDesignWithinBounds(design, to.surfaces[0].printFile.width,
+      to.surfaces[0].printFile.height, to.surfaces[0].area));
+    state = result.state;
+    from = { ...to, surfaces: to.surfaces.map(s => ({ ...s, design })) };
+  }
+  assert.deepEqual(contents, original, 'source artwork and its styles are never mutated');
+});
+
+test('identical print geometry keeps the current manual arrangement across colour and finish variants', () => {
+  const design = [word('manual', 'Unser Wort', 250, 350)];
+  const from = { ...source(design, 'black'), surfaces: [{ ...source(design).surfaces[0],
+    printFile: { width: 1000, height: 1000, dpi: 300 }, slots: [{ ...area, optimize: true }] }] };
+  const to = { ...target('white'), surfaces: [{ ...target('white').surfaces[0],
+    printFile: { width: 1000, height: 1000, dpi: 300 }, slots: [{ ...area, optimize: true }] }] };
+  const old = Transfer.capture(null, source([word('manual', 'Old', 700, 700)], 'white'));
+  assert.deepEqual(prepare(old, from, to).designs.default, design, 'an old destination cannot replace current placement');
+});
+
+test('changed print resolution or layout slots trigger refill even when the safe rectangle is unchanged', () => {
+  const design = [word('manual', 'Liebe', 300, 300), word('added', 'Freude', 600, 600)];
+  const from = { ...source(design), surfaces: [{ ...source(design).surfaces[0],
+    printFile: { width: 1200, height: 1200, dpi: 150 } }] };
+  for (const change of [
+    { printFile: { width: 1200, height: 1200, dpi: 300 } },
+    { printFile: from.surfaces[0].printFile, slots: [{ x: 0, y: 0, width: 450, height: 1000, optimize: true }] },
+  ]) {
+    const to = { ...target('other'), surfaces: [{ ...target('other').surfaces[0], ...change }] };
+    const result = prepare(null, from, to).designs.default;
+    assert.notDeepEqual(result, design);
+    if (change.slots) {
+      const bounds = Bounds.union(result.map(item => Bounds.bounds(item, context)));
+      assert.ok(bounds.left >= 0 && bounds.left + bounds.width <= 450, 'the actual target slot is filled');
+    }
+  }
+});
 
 test('every product and orientation carries edited text, emoji, motifs and photos inside its print boundaries', () => {
   const design = [
@@ -36,7 +105,7 @@ test('every product and orientation carries edited text, emoji, motifs and photo
   ];
   const original = clone(design);
   for (const product of PRODUCTS) {
-    for (const orientation of product.orientationOptions?.map(option => option.key) || ['default']) {
+    for (const orientation of product.orientationOptions.length ? product.orientationOptions.map(option => option.key) : ['default']) {
       const resolved = resolveProductOrientation(product, orientation);
       const to = { productKey: product.key, orientation,
         surfaces: resolved.printSurfaces.map(surface => ({ key: surface.key,
@@ -53,7 +122,7 @@ test('every product and orientation carries edited text, emoji, motifs and photo
         }
         assert.equal(result[1].text, '❤️');
         assert.equal(result[2].src, design[2].src);
-        assert.equal(result[2].width / result[2].height, 2, 'photos keep their aspect ratio');
+        assert.ok(Math.abs(result[2].width - result[2].height * 2) <= .2, 'photos keep their aspect ratio within print precision');
         assert.equal(result[3].icon, 'heart');
       }
     }
@@ -61,7 +130,7 @@ test('every product and orientation carries edited text, emoji, motifs and photo
   assert.deepEqual(design, original, 'conversion does not mutate the source design');
 });
 
-test('switching back restores product geometry while applying current additions, deletions and text styles', () => {
+test('switching back refills the area with current additions, deletions and text styles', () => {
   const initial = [word('keep', 'Liebe', 250, 250), word('delete', 'Entfernen', 600, 600)];
   const posterArea = { x: 0, y: 0, width: 2000, height: 3000 };
   const poster = prepare(null, source(initial), target('poster', posterArea));
@@ -74,21 +143,23 @@ test('switching back restores product geometry while applying current additions,
   assert.equal(back.designs.default[0].text, 'Freude');
   assert.equal(back.designs.default[0].color, '#abcdef');
   assert.equal(back.designs.default[0].fontWeight, 700);
-  for (const property of ['x', 'y', 'fontSize', 'angle']) {
-    assert.equal(back.designs.default[0][property], initial[0][property], property);
-  }
+  assert.ok(back.designs.default[0].fontSize > initial[0].fontSize, 'the old sparse arrangement is not restored');
+  assert.ok(isPrintDesignWithinBounds(back.designs.default, 1000, 1000, area));
   const again = prepare(back.state, source(back.designs.default), target('poster', posterArea));
-  assert.deepEqual(again.designs.default, edited, 'the poster keeps its own arrangement');
+  assert.deepEqual(again.designs.default.map(item => item.text), ['Freude', '🎉']);
+  assert.ok(isPrintDesignWithinBounds(again.designs.default, 2000, 3000, posterArea));
 });
 
-test('orientation round trips preserve exact manual placement and an empty edited design stays empty', () => {
+test('orientation round trips refill instead of restoring sparse manual placement, and deleted designs stay empty', () => {
   const portrait = [word('rotated', 'Liebe', 400, 500)];
   portrait[0].angle = 24;
   const landscapeArea = { x: 0, y: 0, width: 1500, height: 1000 };
   const landscape = prepare(null, source(portrait, 'poster', 'portrait'), target('poster', landscapeArea, 'landscape'));
   const back = prepare(landscape.state, source(landscape.designs.default, 'poster', 'landscape', landscapeArea),
     target('poster', area, 'portrait'));
-  assert.deepEqual(back.designs.default, portrait);
+  assert.equal(back.designs.default[0].text, portrait[0].text);
+  assert.ok(back.designs.default[0].fontSize > portrait[0].fontSize);
+  assert.ok(isPrintDesignWithinBounds(back.designs.default, 1000, 1000, area));
   const empty = prepare(back.state, source([], 'poster', 'portrait'), target('mug'));
   assert.deepEqual(empty.designs.default, [], 'deleting everything never regenerates baseline words');
 });
@@ -146,7 +217,7 @@ test('automatic conversion lays out the edited element set without losing object
   const design = [word('added', 'Freude', 200, 200), word('emoji', '❤️', 500, 500)];
   design[0].fontWeight = 700;
   const product = getProduct('cork-back-coaster');
-  const converted = prepare(null, source(design), target(product.key, product.designSafeAreas.default), { automatic: true });
+  const converted = prepare(null, source(design), target(product.key, product.designSafeAreas.default));
   assert.deepEqual(converted.designs.default.map(item => item.id), ['added', 'emoji']);
   assert.equal(converted.designs.default[0].fontWeight, 700);
   assert.ok(isPrintDesignWithinBounds(converted.designs.default, product.printFile.width, product.printFile.height,

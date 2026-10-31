@@ -17,6 +17,17 @@
   const validArea = area => area && ['x', 'y', 'width', 'height'].every(name => Number.isFinite(area[name])) &&
     area.width > 0 && area.height > 0;
 
+  function printGeometry(surface) {
+    const area = surface.area;
+    const file = surface.printFile;
+    return JSON.stringify([
+      area.x, area.y, area.width, area.height,
+      file ? [file.width, file.height, file.dpi] : null,
+      (surface.slots || [{ ...area, optimize: true }]).map(slot =>
+        [slot.x, slot.y, slot.width ?? slot.side, slot.height ?? slot.side, slot.optimize === true]),
+    ]);
+  }
+
   function normalizeState(state) {
     if (state?.version !== 1 || !Array.isArray(state.surfaces) || state.surfaces.length > 2 ||
         !Array.isArray(state.layouts) || state.layouts.length > MAX_LAYOUTS ||
@@ -71,27 +82,20 @@
   function* prepareSteps(state, source, target, measurementContext, options = {}) {
     const next = capture(state, source);
     if (options.independent) next.layouts = [];
-    const saved = next.layouts.find(layout => key(layout) === key(target));
     const designs = {};
     for (const [index, surface] of target.surfaces.entries()) {
       // Single-sided products use the front. A hidden back stays in the draft;
       // the first visit to a two-sided product initializes its back from front.
       const contents = next.surfaces[index] || next.surfaces[0];
-      let design = scaleDesign(contents, surface.area);
-      if (saved?.surfaces[index]) {
-        const positions = new Map(saved.surfaces[index].map(item => [item.id, item]));
-        design = design.map(item => {
-          const position = positions.get(item.id);
-          if (!position || position.type !== (item.type || 'text')) return item;
-          const restored = { ...item };
-          GEOMETRY.forEach(name => {
-            if (position[name] !== undefined) restored[name] = position[name];
-          });
-          return restored;
-        });
-      }
-      if (options.automatic && (!saved?.surfaces[index] || options.printDpi)) {
-        design = yield { design, slots: [{ ...surface.area, optimize: true }] };
+      // Current catalog geometry is authoritative. A hidden legacy side has
+      // only its saved area; unknown print metadata safely triggers a refill.
+      const changed = printGeometry(source.surfaces[index] || contents) !== printGeometry(surface);
+      let design = changed ? scaleDesign(contents, surface.area) : copy(contents.design);
+      // Applying a different print area always fills its actual slots with the
+      // current contents. Old destination arrangements must never bypass this,
+      // including for edited/cart designs and after returning to a prior size.
+      if (changed && design.length) {
+        design = yield { design, slots: surface.slots || [{ ...surface.area, optimize: true }] };
       }
       design = Layout.fitDesignToSafeArea(design, surface.area, measurementContext, options).design;
       designs[surface.key] = design;

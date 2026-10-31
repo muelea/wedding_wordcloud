@@ -522,7 +522,8 @@
         if (source) this.preparationQueue.cancel(key);
         const promise = this.preparationQueue.add(key, async () => {
           if (this.destroyed) throw new Error('gallery_closed');
-          const prepared = source && this.transfer ? await this.transfer(source, product, orientation) :
+          const prepared = source && this.transfer ? await this.transfer(source, product, orientation,
+            { signal: this.controller.signal, allowSmallText }) :
             await this.prepareDesign(product, { orientation, signal: this.controller.signal, allowSmallText,
             waitForIdle: this.mobile ? () => this.waitForPreparation() : undefined });
           return { ...prepared, designs: printPrecision(prepared.designs) };
@@ -556,8 +557,14 @@
       const orientation = Orientation.selected(product, requestedOrientation || card.preferredOrientation)?.key || 'default';
       const key = Orientation.key(product, orientation);
       const retained = card.snapshot || card.pendingSource;
-      const source = (previousKey !== key || card.pendingSource) && (retained?.currentDesignEdited || retained?.editingOrderItemId)
+      const source = (previousKey !== key || card.pendingSource) && this.transfer && retained
         ? copy(retained) : null;
+      if (source && previousKey !== key) {
+        // Browsing another gallery variant starts a separate purchase design.
+        // Only the exact retained selection may update its existing cart item.
+        Object.assign(source, { editingOrderItemId: null, workingDesignId: null, storageVersion: 0,
+          savedDesignFingerprint: null, needsCartUpdate: true, accountDesign: null });
+      }
       card.pendingSource = source;
       if (previousKey !== key && this.preparationQueue.cancel(previousKey)) {
         this.entries.delete(previousKey);

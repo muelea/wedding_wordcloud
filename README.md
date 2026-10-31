@@ -92,6 +92,14 @@ frozen snapshot of the word cloud.
    cart, shipping, Checkout and confirmation emails show the chosen format.
    Existing blanket configurations with the historical `default` orientation
    retain their original horizontal print files and approval hashes.
+   Applying a different print size or orientation refills its safe print area
+   with the current design's words, images and motifs in both gallery and editor,
+   including edited and basket-bound drafts. Remembered destination layouts never
+   override this refill. Colour/finish changes with identical print geometry keep
+   the arrangement. Basket updates remain explicit; approved print files stay frozen.
+   Choosing another gallery size, colour or orientation starts a separate cart
+   design, so multiple variants from the same product group can coexist. The
+   existing cart item remains available for explicit editing through the basket.
    Large canvas print exports use bounded strips to retain full provider
    resolution within the hosted server's memory budget. Source
    metadata and safe-area rules are documented in `docs/print-geometry.md`.

@@ -1249,7 +1249,9 @@ test('product changes transfer edited artwork offline without consulting unrelat
     page.ensureDesignFonts = async () => { if (failure === 'font') throw new Error('font failed'); };
     page.WolkenworteEmoji = { preloadTexts: async () => {} };
     page.mugEditor.preloadImages = async () => { if (failure === 'image') throw new Error('image failed'); };
-    page.productView = () => ({ safeArea: { x: 0, y: 0, width: 1500, height: 1000 } });
+    page.productView = () => ({ safeArea: { x: 0, y: 0, width: 1500, height: 1000 },
+      printFile: { width: 1500, height: 1000, dpi: 300 },
+      layoutGeometry: { 'fit-area': [{ x: 0, y: 0, width: 1500, height: 1000, optimize: true }] } });
     page.selectProduct = (product, orientation, designs) => {
       calls.switches.push({ product, orientation, designs });
       page.product = product;
@@ -1273,6 +1275,33 @@ test('product changes transfer edited artwork offline without consulting unrelat
     assert.equal(page.orderActionPending, false);
     assert.equal(page.suppressDirty, false);
   }
+});
+
+test('gallery handoff restores changed artwork after a size round trip and preserves an unchanged editor session', async () => {
+  const { context: page } = harness();
+  const design = [{ id: 'word', text: 'Liebe', x: 400, y: 400, fontSize: 80, colorLocked: true }];
+  let current = design, applied = 0;
+  Object.assign(page, { product: { key: 'mug' }, workingDesignId: 'same-working-design',
+    location: { pathname: '/configure', search: '?view=products' },
+    ProductOrientation: require('../public/js/product-orientation'),
+    productGallery: { suspend() {} },
+    getAllSurfaceDesigns: () => ({ default: current }),
+    applyLocalDraft: async snapshot => { applied++; current = snapshot.designs.default; },
+    updateGalleryEditorLocation() {}, scheduleDraftSave() {}, showRestorationError(error) { throw error; },
+    document: { getElementById: () => ({ focus() {}, scrollIntoView() {} }) },
+  });
+  vm.runInContext(pageFunction('openGalleryDesign'), page);
+  const snapshot = { workingDesignId: page.workingDesignId, productKey: page.product.key,
+    orientation: page.selectedOrientation, editingOrderItemId: page.editingOrderItemId,
+    theme: page.selectedTheme, words: page.words, customColors: page.customColors, designs: { default: design } };
+  await page.openGalleryDesign(snapshot);
+  assert.equal(applied, 0, 'the exact retained artwork keeps its editor and Undo history');
+  const refilled = { ...snapshot, designs: { default: [{ ...design[0], x: 500, fontSize: 200 }] } };
+  await page.openGalleryDesign(refilled);
+  assert.equal(applied, 1, 'matching product/size/working identity cannot hide changed gallery artwork');
+  assert.deepEqual(current, refilled.designs.default);
+  await page.openGalleryDesign(refilled);
+  assert.equal(applied, 1, 'opening the same result does not repack or reset the editor');
 });
 
 test('a new draft stays outside a nonempty cart when navigating to shipping', async () => {

@@ -2641,7 +2641,7 @@
     // The content fingerprint is also the revision of untouched automatic
     // drafts. A new layout engine regenerates those drafts on the next visit,
     // while explicit customer edits and immutable cart designs stay intact.
-    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}|${asset('/js/text-print-quality.js')}|${asset('/js/design-content-bounds.js')}|${asset('/js/artwork-bounds-data.js')}`) %>;
+    const AUTOMATIC_LAYOUT_VERSION = <%- JSON.stringify(`${asset('/js/wordcloud-core.js')}|${asset('/js/design-layout.js')}|${asset('/js/design-transfer.js')}|${asset('/js/text-print-quality.js')}|${asset('/js/design-content-bounds.js')}|${asset('/js/artwork-bounds-data.js')}`) %>;
     const configuratorEmojiPickerMedia = window.matchMedia('(min-width: 621px) and (hover: hover) and (pointer: fine)');
     const mobileEditorMedia = window.matchMedia('(max-width: 620px)');
     const mobileDevice = WolkenworteDevice.isMobileDevice(navigator);
@@ -4212,10 +4212,11 @@
       return {
         productKey: product.key,
         orientation: selectedOrientation,
-        surfaces: productSurfaces().map(surface => ({
-          key: surface.key, area: productView(product, null, surface.key).safeArea,
-          design: designs[surface.key],
-        })),
+        surfaces: productSurfaces().map(surface => {
+          const view = productView(product, null, surface.key);
+          return { key: surface.key, area: view.safeArea, printFile: view.printFile,
+            slots: view.layoutGeometry['fit-area'], design: designs[surface.key] };
+        }),
       };
     }
 
@@ -5158,15 +5159,18 @@
           const source = productDesignSource(getAllSurfaceDesigns());
           const surfaces = nextProduct.printSurfaces?.length ? nextProduct.printSurfaces : [{ key: 'default' }];
           const target = { productKey: nextProduct.key, orientation: nextOrientation,
-            surfaces: surfaces.map(surface => ({ key: surface.key,
-              area: productView(nextProduct, nextOrientation, surface.key).safeArea })) };
+            surfaces: surfaces.map(surface => {
+              const view = productView(nextProduct, nextOrientation, surface.key);
+              return { key: surface.key, area: view.safeArea, printFile: view.printFile,
+                slots: view.layoutGeometry['fit-area'] };
+            }) };
           const state = DesignTransfer.capture(productDesignState, source);
           const contents = state.surfaces.flatMap(surface => surface.design);
           await WolkenworteConfiguratorSession.withTimeout(ensureDesignFonts(contents
             .filter(item => item.type !== 'icon' && item.type !== 'image').map(item => item.fontFamily)));
           await WolkenworteConfiguratorSession.withTimeout(WolkenworteEmoji.preloadTexts(contents.map(item => item.text || '')));
           transferred = await DesignTransfer.prepareAsync(state, source, target, mugEditor.measureContext, {
-            fontFamily: item => DesignFonts.cssFamily(item.fontFamily), automatic: !wasEdited && !previousEditingId,
+            fontFamily: item => DesignFonts.cssFamily(item.fontFamily),
             printDpi: Number(nextProduct.printFile?.dpi),
             independent: Boolean(options.independent), pack: printLayoutJobs().pack, priority: 100,
           });
@@ -5975,25 +5979,32 @@
           return { productKey: candidate.key, orientation, theme, currentDesignEdited: allowSmallText,
             customColors: paletteColors, words: sourceWords, designs };
         },
-        transfer: async (snapshot, candidate, orientation) => {
+        transfer: async (snapshot, candidate, orientation, { signal, allowSmallText = false } = {}) => {
           const sourceProduct = products.find(item => item.key === snapshot.productKey);
           const source = { productKey: snapshot.productKey, orientation: snapshot.orientation,
-            surfaces: sourceProduct.printSurfaces.map(surface => ({ key: surface.key,
-              area: productView(sourceProduct, snapshot.orientation, surface.key).safeArea,
-              design: snapshot.designs[surface.key] })) };
+            surfaces: sourceProduct.printSurfaces.map(surface => {
+              const view = productView(sourceProduct, snapshot.orientation, surface.key);
+              return { key: surface.key, area: view.safeArea, printFile: view.printFile,
+                slots: view.layoutGeometry['fit-area'], design: snapshot.designs[surface.key] };
+            }) };
           const target = { productKey: candidate.key, orientation,
-            surfaces: candidate.printSurfaces.map(surface => ({ key: surface.key,
-              area: productView(candidate, orientation, surface.key).safeArea })) };
+            surfaces: candidate.printSurfaces.map(surface => {
+              const view = productView(candidate, orientation, surface.key);
+              return { key: surface.key, area: view.safeArea, printFile: view.printFile,
+                slots: view.layoutGeometry['fit-area'] };
+            }) };
           const contents = source.surfaces.flatMap(surface => surface.design);
           await ensureDesignFonts(contents.filter(item => item.type !== 'icon' && item.type !== 'image').map(item => item.fontFamily));
           await WolkenworteEmoji.preloadTexts(contents.map(item => item.text || ''));
           const transferred = await DesignTransfer.prepareAsync(snapshot.productDesignState, source, target,
             mugEditor?.measureContext || document.createElement('canvas').getContext('2d'), {
-              fontFamily: item => DesignFonts.cssFamily(item.fontFamily), automatic: false,
-              printDpi: candidate.printFile.dpi, pack: printLayoutJobs().pack, priority: 100,
+              fontFamily: item => DesignFonts.cssFamily(item.fontFamily), signal,
+              printDpi: allowSmallText ? undefined : candidate.printFile.dpi,
+              pack: printLayoutJobs().pack, priority: 100, timeSliceMs: mobileDevice ? 4 : 8,
             });
           return { ...snapshot, productKey: candidate.key, orientation, designs: transferred.designs,
-            productDesignState: transferred.state, currentDesignEdited: true, needsCartUpdate: true };
+            productDesignState: transferred.state, layoutVersion: AUTOMATIC_LAYOUT_VERSION,
+            currentDesignEdited: snapshot.currentDesignEdited === true || allowSmallText, needsCartUpdate: true };
         },
         createMug: ({ host, product: candidate, design, designs, onStatus }) => Mug3DViewer.create({
           THREE: window.THREE, host, product: candidate, onStatus,
@@ -6031,7 +6042,12 @@
         if (!workspaceReady) {
           await initializeWorkspace(snapshot);
         } else if (snapshot.workingDesignId !== workingDesignId || snapshot.productKey !== product.key ||
-            ProductOrientation.key(product, snapshot.orientation) !== ProductOrientation.key(product, selectedOrientation)) {
+            ProductOrientation.key(product, snapshot.orientation) !== ProductOrientation.key(product, selectedOrientation) ||
+            snapshot.editingOrderItemId !== editingOrderItemId ||
+            WolkenworteConfiguratorSession.designFingerprint({ designs: snapshot.designs, theme: snapshot.theme,
+              customColors: snapshot.customColors, words: snapshot.words }, true) !==
+            WolkenworteConfiguratorSession.designFingerprint({ designs: getAllSurfaceDesigns(), theme: selectedTheme,
+              customColors, words }, true)) {
           await applyLocalDraft({ currentDesignEdited: false, ...snapshot });
         }
         if (restorationFailed) return;

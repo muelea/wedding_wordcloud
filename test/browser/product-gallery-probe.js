@@ -16,6 +16,123 @@
   reset.textContent = 'Reset gallery fixture';
   reset.style.cssText = 'position:fixed;right:12px;top:90px;z-index:10000;padding:8px;background:white;color:black';
   document.body.append(reset);
+  const variantsCheck = document.createElement('button');
+  variantsCheck.type = 'button'; variantsCheck.textContent = 'Check multiple cart variants';
+  variantsCheck.style.cssText = 'position:fixed;right:12px;bottom:168px;z-index:10000;padding:12px;background:white;color:black';
+  const variantsReport = document.createElement('pre'); variantsReport.id = 'gallery-cart-variants-report';
+  document.body.append(variantsCheck, variantsReport);
+  variantsCheck.addEventListener('click', async () => {
+    variantsCheck.disabled = true;
+    const results = [];
+    const check = (name, pass) => {
+      results.push({ name, pass: Boolean(pass) });
+      if (!pass) throw new Error(name);
+    };
+    try {
+      const gallery = productGallery;
+      const accepted = [];
+      const addVariant = async (card, candidate, orientation) => {
+        const before = cart.read();
+        await gallery.load(card, candidate, true, false, orientation);
+        check(`${candidate.variantLabel || candidate.size.label}/${orientation} is separately addable`, !card.add.disabled);
+        await gallery.add(card);
+        const after = cart.read();
+        check('adding a variant retains every earlier position', after.length === before.length + 1 &&
+          before.every(item => after.some(row => row.id === item.id)));
+        accepted.push({ id: card.snapshot.editingOrderItemId, productKey: candidate.key, orientation,
+          workingDesignId: card.snapshot.workingDesignId });
+      };
+      gallery.filter('blanket');
+      const blanket = gallery.cards.find(card => card.product.previewShape === 'blanket');
+      for (const key of ['throw-blanket-30x40in', 'throw-blanket-50x60in']) {
+        const candidate = products.find(p => p.key === key);
+        for (const orientation of ['portrait', 'landscape']) await addVariant(blanket, candidate, orientation);
+      }
+      gallery.filter('clothing');
+      const shirt = gallery.cards.find(card => card.product.catalogGroup === 't-shirt');
+      for (const size of ['M', 'S', 'L']) await addVariant(shirt,
+        products.find(p => p.catalogGroup === 't-shirt' && p.variantLabel === `${size} · Weiß`), 'default');
+      check('all four blanket formats and three T-shirt sizes coexist', cart.read().length === 7);
+      check('each purchase design has an independent draft', new Set(accepted.map(item => item.workingDesignId)).size === 7);
+      await openCartPanelDesign(accepted[0].id);
+      check('explicit cart edit opens the requested blanket', workspaceReady && editingOrderItemId === accepted[0].id);
+      const design = mugEditor.getDesign(); design[0].color = '#123456'; design[0].colorLocked = true;
+      mugEditor.setDesign(design, { record: true }); mugEditor.flushPendingChange(); markDirty();
+      check('explicit cart edit can be approved', await saveCurrentDesign(saveDesignButton));
+      check('updating one item preserves the other six', cart.read().length === 7 &&
+        !cart.read().some(item => item.id === accepted[0].id) &&
+        accepted.slice(1).every(item => cart.read().some(row => row.id === item.id)));
+      await returnToGallery(); await new Promise(requestAnimationFrame);
+      cartPanel.open();
+    } catch (error) { results.push({ name: 'Variant cart check failed', pass: false, message: error.message }); }
+    variantsReport.textContent = JSON.stringify({ passed: results.every(result => result.pass), results }, null, 2);
+    variantsCheck.textContent = results.every(result => result.pass) ? 'Multiple cart variants passed' : 'Multiple cart variants failed';
+  });
+  const refill = document.createElement('button');
+  refill.type = 'button'; refill.textContent = 'Check product size refill';
+  refill.style.cssText = 'position:fixed;right:12px;bottom:116px;z-index:10000;padding:12px;background:white;color:black';
+  const refillReport = document.createElement('pre');
+  refillReport.id = 'product-refill-report';
+  document.body.append(refill, refillReport);
+  refill.addEventListener('click', async () => {
+    refill.disabled = true;
+    const results = [];
+    const check = (name, pass) => {
+      results.push({ name, pass: Boolean(pass) });
+      if (!pass) throw new Error(name);
+    };
+    const fingerprint = designs => WolkenworteConfiguratorSession.designFingerprint({ designs }, true);
+    const coverage = (design, area) => {
+      const ctx = document.createElement('canvas').getContext('2d');
+      const box = DesignContentBounds.union(design.map(item => DesignContentBounds.bounds(item, ctx)));
+      return { width: box.width / area.width, height: box.height / area.height };
+    };
+    const filled = (name, snapshot) => {
+      const candidate = products.find(p => p.key === snapshot.productKey);
+      const view = productView(candidate, snapshot.orientation, candidate.printSurfaces[0].key);
+      const fill = coverage(snapshot.designs.default, view.safeArea);
+      check(name, fill.width > .8 && fill.height > .8);
+    };
+    try {
+      const gallery = productGallery;
+      gallery.filter('blanket');
+      const card = gallery.cards.find(card => card.product.previewShape === 'blanket');
+      const big = products.find(p => p.key === 'throw-blanket-50x60in');
+      const small = products.find(p => p.key === 'throw-blanket-30x40in');
+      await gallery.load(card, big, true, false, 'portrait');
+      await gallery.add(card);
+      const originalId = card.snapshot.editingOrderItemId;
+      const originalUrl = `/api/events/${encodeURIComponent(slug)}/configurations/${originalId}/print.svg`;
+      const originalPrint = await fetch(originalUrl).then(r => r.text());
+      await gallery.choose(card);
+      check('the accepted design opens in the editor', workspaceReady && editingOrderItemId === originalId);
+      const edited = mugEditor.getDesign(); edited[0].text = 'Unser Wort';
+      mugEditor.setDesign(edited, { record: true }); mugEditor.flushPendingChange(); markDirty();
+      check('an edited cart design can apply the smaller portrait size',
+        await startProductDesign(small, 'portrait', { preserveEditingItem: true }));
+      filled('the editor refills the smaller portrait print area', draftSnapshot());
+      check('applying a size keeps the approved basket unchanged', cart.read()[0].id === originalId);
+      await returnToGallery(); await new Promise(requestAnimationFrame);
+      for (const [candidate, orientation] of [[small, 'landscape'], [big, 'landscape'], [big, 'portrait'], [small, 'portrait']]) {
+        await gallery.load(card, candidate, true, false, orientation);
+        filled(`${candidate.key}/${orientation} fills after repeated changes`, card.snapshot);
+        check('the current edited words survive', card.snapshot.designs.default.some(item => item.text === 'Unser Wort'));
+      }
+      const expected = structuredClone(card.snapshot);
+      await gallery.add(card);
+      const accepted = await fetch(`/api/events/${encodeURIComponent(slug)}/configurations/${card.snapshot.editingOrderItemId}/edit`).then(r => r.json());
+      check('adding the selected variant freezes the exact gallery artwork', fingerprint(accepted.designs) === fingerprint(expected.designs));
+      check('gallery size changes add a second position and retain the original',
+        cart.read().length === 2 && cart.read().some(item => item.id === originalId));
+      check('the earlier approved print remains unchanged', await fetch(originalUrl).then(r => r.text()) === originalPrint);
+      await gallery.choose(card);
+      check('opening the result in the editor does not repack it', fingerprint(getAllSurfaceDesigns()) === fingerprint(expected.designs));
+      await returnToGallery(); await new Promise(requestAnimationFrame);
+      card.element.scrollIntoView({ block: 'start' });
+    } catch (error) { results.push({ name: 'Refill flow failed', pass: false, message: error.message }); }
+    refillReport.textContent = JSON.stringify({ passed: results.every(result => result.pass), results }, null, 2);
+    refill.textContent = results.every(result => result.pass) ? 'Product refill checks passed' : 'Product refill checks failed';
+  });
   const calm = document.createElement('button');
   calm.type = 'button';
   calm.textContent = 'Check calm gallery loading';
