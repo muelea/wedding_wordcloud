@@ -1,5 +1,5 @@
 {
-  "source": "Pre-cold-load optimization, 24 October 2026; deterministic test metrics",
+  "source": "Ink-aware packing revision 13, 31 October 2026; deterministic test metrics",
   "cases": [
     {
       "count": 5,
@@ -12,7 +12,7 @@
           "optimize": true
         }
       ],
-      "sha256": "17703cdaa3b9db08b0d296ffb2e9e317cade96b67a32d4dfe92120b312e6b860"
+      "sha256": "0ec5068911ee69bc02187ffa1a64ad0ae12dc04eec9e0ecca04d1264a09f3d9b"
     },
     {
       "count": 5,
@@ -25,7 +25,7 @@
           "optimize": true
         }
       ],
-      "sha256": "85d3a6f9a2f5f57d2dba76fec70370bab258519fb30959f375295b4347b22d40"
+      "sha256": "c8bf84a8b05c8d889945edd868f92cf958d965b868f7e1780e7e66eba967f3f7"
     },
     {
       "count": 17,
@@ -38,7 +38,7 @@
           "optimize": true
         }
       ],
-      "sha256": "138b12924dcb2f17281018ce46802726b6026b8756aaec473d55dfeedb6bf8ba"
+      "sha256": "916c24e75e2195f51574dff880706577aba6f972c78ebe0d0da939ddbdb0bf0b"
     },
     {
       "count": 17,
@@ -51,7 +51,7 @@
           "optimize": true
         }
       ],
-      "sha256": "0645bebe485a89c0bce65460b8f7020c74a20c0cb517a8fd3067474c766fe8c4"
+      "sha256": "cc7695982c6fd41791b36fd5c740bc55355dc471473aab4567f6ef3f7147a678"
     },
     {
       "count": 40,
@@ -64,7 +64,7 @@
           "optimize": true
         }
       ],
-      "sha256": "ecd81108b86fd224c14b4ef76fa0c52e6045e2d314099ce648d929a78fbfa250"
+      "sha256": "8f94b78fcd7a2f8f2def1163a8ecd7e0100324f2d6a99be4370623d7c33fc492"
     },
     {
       "count": 40,
@@ -77,7 +77,7 @@
           "optimize": true
         }
       ],
-      "sha256": "8c65a32bfb1f6aa6007a54ea9c60f3025dbd653e4624c825119d1cd41acdd326"
+      "sha256": "547133c9e7af6d52dff6f506aad4d08b81658772d333f7b9ce419fe607e3824f"
     }
   ]
 }

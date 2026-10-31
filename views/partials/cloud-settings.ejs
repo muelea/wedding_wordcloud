@@ -37,6 +37,11 @@
   </section>
   <% } %>
   <div class="ww-display-menu-actions">
+    <% if (typeof accountsEnabled !== 'undefined' && accountsEnabled) { %>
+    <button class="ww-header-menu-item ww-display-menu-action" type="button" data-cloud-bookmark aria-haspopup="dialog" aria-controls="cloud-bookmark-auth">Wortwolke im Konto speichern</button>
+    <a class="ww-header-menu-item" href="/konto#wortwolken" data-cloud-bookmark-saved hidden>Im Konto gespeichert</a>
+    <p class="ww-account-small" data-cloud-bookmark-status role="status" aria-live="polite" hidden></p>
+    <% } %>
     <button class="ww-header-menu-item ww-display-menu-action" type="button" data-cloud-tour-start aria-haspopup="dialog" aria-controls="cloud-tour-tip">So geht’s</button>
     <button class="ww-header-menu-item ww-display-menu-action" id="display-own-words-button" type="button" aria-haspopup="dialog" aria-controls="display-own-words-dialog" hidden>
       <span>Deine Wörter</span>

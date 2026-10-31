@@ -21,7 +21,7 @@ const design = Array.from({ length: 17 }, (_, index) => ({ id: `word-${index}`,
   underline: index % 4 === 0, linethrough: index % 5 === 0,
 }));
 
-test('cold-load optimizations retain the original complete search decisions with portable font metrics', () => {
+test('complete ink-aware layout decisions match the reviewed reference with portable font metrics', () => {
   for (const [index, input] of parityCases.cases().entries()) {
     const expected = reference.cases[index];
     assert.equal(input.count, expected.count); assert.deepEqual(input.slots, expected.slots);

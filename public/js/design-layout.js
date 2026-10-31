@@ -73,7 +73,7 @@
     return candidate;
   }
 
-  function itemDimensions(item, scale, measureContext, fontFamily) {
+  function itemDimensions(item, scale, measureContext, fontFamily, reserveInk = true) {
     let width;
     let height;
     if (item.type === 'image') {
@@ -95,13 +95,13 @@
           item
         );
         const styledBox = WordCloudCore.styledTextBox(textBox, item);
-        const ink = ContentBounds.text({ ...item, fontSize }, measureContext,
-          { box: textBox, fontFamily: itemFontFamily });
+        const ink = reserveInk ? ContentBounds.text({ ...item, fontSize }, measureContext,
+          { box: textBox, fontFamily: itemFontFamily }) : null;
         // Packing reserves intentional breathing room around the saved anchor.
         // Include asymmetric glyph overhangs/descenders as well as that spacing,
         // using the same ink geometry as selection and trusted print validation.
-        width = Math.max(styledBox.width, Math.abs(ink.left) * 2, Math.abs(ink.left + ink.width) * 2);
-        height = Math.max(styledBox.height, Math.abs(ink.top) * 2, Math.abs(ink.top + ink.height) * 2);
+        width = ink ? Math.max(styledBox.width, Math.abs(ink.left) * 2, Math.abs(ink.left + ink.width) * 2) : styledBox.width;
+        height = ink ? Math.max(styledBox.height, Math.abs(ink.top) * 2, Math.abs(ink.top + ink.height) * 2) : styledBox.height;
       } else {
         width = Math.max(1, String(item.text || '').length * fontSize * .58);
         height = fontSize * WordCloudCore.TEXT_LINE_HEIGHT;
@@ -236,9 +236,9 @@
     ));
   }
 
-  function designBoxes(items, measureContext, fontFamily) {
+  function designBoxes(items, measureContext, fontFamily, reserveInk = true) {
     return items.map(item => {
-      const dimensions = itemDimensions(item, 1, measureContext, fontFamily);
+      const dimensions = itemDimensions(item, 1, measureContext, fontFamily, reserveInk);
       return { ...dimensions, emoji: WordCloudCore.isEmojiOnly(item.text),
         x1: item.x - dimensions.width / 2, x2: item.x + dimensions.width / 2,
         y1: item.y - dimensions.height / 2, y2: item.y + dimensions.height / 2 };
@@ -1182,7 +1182,7 @@
       qualities.set(design, result);
       return { ...result };
     }
-    function fingerprint(design, revision = 12) {
+    function fingerprint(design, revision = 13) {
       // Working-draft provenance only. Include all geometry and measured font
       // choices so any edit/product change invalidates it; never trust it in
       // place of the measured overlap/boundary checks above.
@@ -1593,6 +1593,31 @@
     polished.sort((a, b) => (b.quality.score + b.quality.pressure * .45 + verticalSpread(b.design) * .15) -
       (a.quality.score + a.quality.pressure * .45 + verticalSpread(a.design) * .15));
     if (polished.length) best = polished[0];
+    // Ink envelopes reserve overhangs for safety; their extra whitespace must
+    // not count as filled print area. Check the finished line-box coverage and
+    // select a comparable, well-spaced candidate from the full search when
+    // needed. Keep the existing orientation/spacing choices when no repair fits.
+    const areaQuality = design => printLayoutQuality(designBoxes(design, measureContext, fontFamily, false)
+      .map(box => ({ ...box, x1: box.x1 - slot.x, x2: box.x2 - slot.x,
+        y1: box.y1 - slot.y, y2: box.y2 - slot.y })), slot.width, slot.height);
+    const finishedArea = areaQuality(best.design);
+    if (finishedArea.corners.some(coverage => coverage <= .45)) {
+      const compatible = entry => entry.quality.alignment <= .12 && entry.quality.verticalNeighbours <= .12 &&
+        entry.quality.separation >= .8 && entry.quality.pressure <= Math.max(.01, best.quality.pressure) &&
+        (!verticalCount(best.design) || verticalCount(entry.design) > 0);
+      const repair = scored.filter(compatible).map(entry => ({ ...entry, area: areaQuality(entry.design) }))
+        .filter(entry => entry.area.corners.every(coverage => coverage > .45) &&
+          entry.area.coverage >= finishedArea.coverage * .9 && entry.area.emptyRegion <= finishedArea.emptyRegion + .003)
+        .sort((a, b) => b.area.score - a.area.score)[0];
+      if (repair) {
+        const design = yield* balancePrintSpacingSteps(repair.design, slot, measureContext, fontFamily);
+        const measured = quality(design), area = areaQuality(design);
+        const completed = measured && compatible({ design, quality: measured }) &&
+          area.corners.every(coverage => coverage > .45) && area.emptyRegion <= repair.area.emptyRegion + .003
+          ? { design, quality: measured } : repair;
+        best = completed;
+      }
+    }
     const completed = best.design;
     completed[0].layoutFingerprint = fingerprint(completed);
     return completed;
@@ -1628,7 +1653,7 @@
     })]);
     let hash = 2166136261;
     for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data.charCodeAt(i), 16777619);
-    return `readable-2-${(hash >>> 0).toString(16)}`;
+    return `readable-3-${(hash >>> 0).toString(16)}`;
   }
 
   function safeSlotDesign(design, slot, context, fontFamily) {

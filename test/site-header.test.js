@@ -51,6 +51,7 @@ test('all page variants share navigation and preferences, with cloud controls in
     assert.equal(h.menu.querySelectorAll('[data-language-picker]').length,1);
     assert.equal(h.menu.querySelectorAll('[data-ww-install]').length,1);
     assert.equal(Boolean(h.menu.querySelector('#display-palette-picker')),variant==='display');
+    assert.equal(Boolean(h.menu.querySelector('.ww-site-menu-cloud [data-cloud-bookmark]')),variant==='display');
     assert.equal(h.menu.querySelector('#mobile-back-link'),null);
     assert.equal(h.menu.querySelector('[data-account-menu-logout]').hidden,true);
   }
